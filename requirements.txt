@@ -1,8 +1,10 @@
 streamlit==1.36.0
-chromadb==0.5.0
 langchain==0.2.6
 langchain-community==0.2.6
-pysqlite3-binary
+langchain-openai==0.1.8
+langchain-google-genai==1.0.6
 psycopg2-binary
 supabase
 openai
+tiktoken
+google-generativeai
