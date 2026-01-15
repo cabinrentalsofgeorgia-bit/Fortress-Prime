@@ -1,85 +1,131 @@
 import streamlit as st
-import chromadb
 import os
-import shutil
-import time
-import json
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import SentenceTransformerEmbeddings
+from supabase import create_client, Client
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import SupabaseVectorStore
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+import google.generativeai as genai
 
-MASTER_DB_DIR = "/mnt/ai-data/chroma_db"
-SNAPSHOT_DIR = "/tmp/chroma_snapshot_read_only"
-STATUS_FILE = "/mnt/ai-data/ingestion_status.json"
+# --- 1. SETUP & CONFIGURATION ---
+st.set_page_config(page_title="Fortress Legal (Enterprise)", layout="wide")
 
-st.set_page_config(page_title="Fortress Mission Control", layout="wide", page_icon="🏰")
-st.title("🏰 Fortress Command Center")
+# Initialize Keys
+try:
+    supabase_url = st.secrets["SUPABASE_URL"]
+    supabase_key = st.secrets["SUPABASE_KEY"]
+    openai_api_key = st.secrets["OPENAI_API_KEY"]
+    google_api_key = st.secrets["GOOGLE_API_KEY"]
+except KeyError:
+    st.error("🚨 Missing Secrets! Please check your Streamlit Secrets.")
+    st.stop()
 
-# --- SIDEBAR (THE MONITOR) ---
+# Connect to Supabase
+supabase: Client = create_client(supabase_url, supabase_key)
+
+# Configure Gemini
+genai.configure(api_key=google_api_key)
+
+# --- 2. SIDEBAR: SYNC ENGINE ---
 with st.sidebar:
-    st.header("📡 Live Telemetry")
+    st.header("🗄️ Case Files")
+    st.info("Files are stored securely in Supabase Cloud.")
     
-    # Check Spark 2 Status
-    if os.path.exists(STATUS_FILE):
-        try:
-            with open(STATUS_FILE, "r") as f:
-                stats = json.load(f)
-            
-            if stats.get("status") == "active":
-                st.info("🟢 Spark 2: INGESTING")
-                
-                # Progress Bar
-                current = stats.get("files_processed", 0)
-                total = stats.get("total_files_estimated", 1000)
-                if total == 0: total = 1
-                progress = min(current / total, 1.0)
-                
-                st.progress(progress)
-                st.caption(f"{current} / {total} Files")
-                st.text(f"Scanning: {stats.get('current_file', '...')[:20]}...")
-            elif stats.get("status") == "complete":
-                st.success("✅ Ingestion Complete")
-        except:
-            st.warning("⚠️ Telemetry Signal Weak")
-    else:
-        st.error("🔴 Spark 2: OFFLINE")
-
-    st.divider()
+    input_method = st.radio("Input Method", ["Upload Text File", "Paste Text"])
+    documents = []
     
-    # Snapshot Controls
-    st.header("🧠 Knowledge Base")
-    if st.button("🔄 Sync with Master Brain"):
-        if os.path.exists(SNAPSHOT_DIR): shutil.rmtree(SNAPSHOT_DIR)
-        try:
-            shutil.copytree(MASTER_DB_DIR, SNAPSHOT_DIR, ignore=shutil.ignore_patterns('*.lock'))
-            st.success("Synced!")
-            time.sleep(1)
-            st.rerun()
-        except:
-            st.error("Sync Failed")
+    if input_method == "Upload Text File":
+        uploaded_files = st.file_uploader("Upload Contracts (TXT)", accept_multiple_files=True)
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                text = uploaded_file.read().decode("utf-8")
+                documents.append(text)
+                
+    elif input_method == "Paste Text":
+        pasted_text = st.text_area("Paste legal text here")
+        if pasted_text:
+            documents.append(pasted_text)
 
-# --- MAIN APP ---
-@st.cache_resource
-def load_db():
-    if not os.path.exists(SNAPSHOT_DIR):
-        return None
-    try:
-        embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-        db = Chroma(persist_directory=SNAPSHOT_DIR, embedding_function=embedding_function)
-        return db
-    except:
-        return None
+    if st.button("Sync to Secure Cloud"):
+        if not documents:
+            st.warning("Please provide content to sync.")
+        else:
+            with st.spinner("Encrypting and Vectorizing..."):
+                try:
+                    # Generate Embeddings & Store in Supabase
+                    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+                    vector_store = SupabaseVectorStore.from_texts(
+                        texts=documents,
+                        embedding=embeddings,
+                        client=supabase,
+                        table_name="documents",
+                        query_name="match_documents"
+                    )
+                    st.success(f"✅ Synced {len(documents)} documents to Fortress Cloud.")
+                except Exception as e:
+                    st.error(f"Sync Failed: {e}")
 
-db = load_db()
+# --- 3. MAIN INTERFACE ---
+st.title("🛡️ Fortress Legal")
+st.caption("Enterprise AI | Dual-Model Intelligence Layer")
 
-query = st.text_input("Query the Archive:", placeholder="Search legal docs...")
+tab1, tab2 = st.tabs(["📝 Drafting & Analysis", "⚖️ The Antagonist (Gemini)"])
 
-if query:
-    if db:
-        results = db.similarity_search(query, k=4)
-        st.write("### 🔍 Search Results")
-        for i, doc in enumerate(results):
-            source = os.path.basename(doc.metadata.get('source', 'Unknown'))
-            with st.expander(f"📄 {source}"):
-                st.info(doc.page_content)
-    else:
-        st.warning("⚠️ Brain not loaded. Click 'Sync' in the sidebar.")
+# --- TAB 1: OPENAI (The Drafter) ---
+with tab1:
+    user_query = st.text_area("What do you need to draft or analyze?", height=150)
+    
+    if st.button("Analyze with Fortress AI"):
+        if not user_query:
+            st.warning("Please enter a query.")
+        else:
+            with st.spinner("Retrieving Precedents..."):
+                try:
+                    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+                    vector_store = SupabaseVectorStore(
+                        client=supabase, 
+                        embedding=embeddings, 
+                        table_name="documents",
+                        query_name="match_documents"
+                    )
+                    retriever = vector_store.as_retriever()
+                    
+                    llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=openai_api_key)
+                    template = """
+                    You are a senior partner. Use the context to answer.
+                    Context: {context}
+                    Question: {question}
+                    """
+                    prompt = PromptTemplate.from_template(template)
+                    chain = (
+                        {"context": retriever, "question": RunnablePassthrough()}
+                        | prompt
+                        | llm
+                        | StrOutputParser()
+                    )
+                    
+                    response = chain.invoke(user_query)
+                    st.markdown("### 📄 Legal Analysis")
+                    st.write(response)
+                except Exception as e:
+                    st.error(f"Analysis Failed: {e}")
+
+# --- TAB 2: GEMINI (The Antagonist) ---
+with tab2:
+    st.info("Gemini 'Red Team' Mode: Attacks your arguments.")
+    argument_to_attack = st.text_area("Paste a clause to attack:", height=150)
+    
+    if st.button("Run Antagonist Simulation"):
+        if not argument_to_attack:
+            st.warning("Paste text first.")
+        else:
+            with st.spinner("Gemini is finding loopholes..."):
+                try:
+                    model = genai.GenerativeModel('gemini-1.5-pro')
+                    prompt = f"Find every loophole in this legal text:\n{argument_to_attack}"
+                    response = model.generate_content(prompt)
+                    st.markdown("### ⚠️ Risk Assessment")
+                    st.write(response.text)
+                except Exception as e:
+                    st.error(f"Simulation Failed: {e}")
