@@ -2,3 +2,7 @@ supabase==2.3.0
 streamlit
 openai
 google-generativeai
+langchain
+langchain-openai
+langchain-community
+tiktoken
