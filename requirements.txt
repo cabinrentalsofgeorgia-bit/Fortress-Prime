@@ -1,4 +1,4 @@
-supabase==2.3.0
+supabase
 streamlit
 openai
 google-generativeai
