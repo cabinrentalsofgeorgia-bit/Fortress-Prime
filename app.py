@@ -27,28 +27,35 @@ genai.configure(api_key=google_api_key)
 
 # --- 2. SIDEBAR: SETTINGS & SYNC ---
 with st.sidebar:
-    st.header("⚙️ Configuration")
+    st.header("⚙️ Intelligence Layer")
     
-    # --- AUTO-DETECT VALID GEMINI MODELS ---
+    # --- SMART MODEL FILTER ---
     try:
-        # Ask Google which models are available for this API key
         model_list = genai.list_models()
-        # Filter for models that can generate text (content)
-        valid_models = [m.name for m in model_list if 'generateContent' in m.supported_generation_methods]
         
-        # If the list is empty (rare), fallback to defaults
+        # FILTER: Only show "Gemini" models that are version "1.5" (The good ones)
+        valid_models = [
+            m.name for m in model_list 
+            if 'generateContent' in m.supported_generation_methods 
+            and 'gemini' in m.name
+            and '1.5' in m.name
+        ]
+        
+        # SORT: Put the newest/highest version at the top
+        valid_models.sort(reverse=True)
+        
+        # FALLBACK: If filter removes everything, just show standard pro
         if not valid_models:
-            valid_models = ["models/gemini-1.5-pro", "models/gemini-pro"]
+            valid_models = ["models/gemini-1.5-pro-latest", "models/gemini-pro"]
             
-        # Let the user pick (Best for Law is usually the latest Pro)
-        st.success(f"✅ Found {len(valid_models)} Google Models")
+        st.success(f"✅ Active Brains: {len(valid_models)}")
         selected_model_name = st.selectbox(
             "Select Antagonist Model", 
             valid_models, 
-            index=0  # Default to the first one found
+            index=0  # Default to the top (newest) one
         )
     except Exception as e:
-        st.error("Could not fetch Google Models. Using fallback.")
+        st.error("Connection Error. Defaulting to Pro.")
         selected_model_name = "models/gemini-pro"
 
     st.markdown("---")
@@ -81,7 +88,7 @@ with st.sidebar:
 
 # --- 3. MAIN INTERFACE ---
 st.title("🛡️ Fortress Legal")
-st.caption("Enterprise RAG | GPT-4o (Defense) vs Gemini (Prosecution)")
+st.caption("Enterprise RAG | GPT-4o (Defense) vs Gemini 1.5 (Prosecution)")
 
 tab1, tab2 = st.tabs(["📝 Evidence-Based Analysis", "⚖️ The Antagonist"])
 
@@ -138,16 +145,15 @@ with tab1:
 
 # --- TAB 2: PROSECUTION (Dynamic Gemini) ---
 with tab2:
-    st.info(f"Currently Running: **{selected_model_name}**")
+    st.info(f"Active Model: **{selected_model_name}**")
     text_to_attack = st.text_area("Paste a clause to attack:", height=150)
     
     if st.button("Simulate Opposing Counsel"):
         if not text_to_attack:
             st.warning("Paste a clause first.")
         else:
-            with st.spinner(f"Gemini ({selected_model_name}) is analyzing..."):
+            with st.spinner(f"Gemini is analyzing..."):
                 try:
-                    # USE THE USER-SELECTED MODEL
                     model = genai.GenerativeModel(selected_model_name)
                     
                     prompt = f"""
@@ -163,4 +169,3 @@ with tab2:
                     st.write(response.text)
                 except Exception as e:
                     st.error(f"Gemini Error: {e}")
-                    
