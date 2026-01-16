@@ -5,7 +5,8 @@ from supabase import create_client
 from datetime import datetime
 import time
 # --- IMPORTS ---
-from langchain_community.document_loaders import PyPDFLoader
+import pypdf
+from langchain.docstore.document import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import tempfile
@@ -13,7 +14,7 @@ import os
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal v7",
+    page_title="Fortress Legal v7.1",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -46,26 +47,47 @@ def get_system_health():
         return pd.DataFrame()
 
 def process_and_upload_pdf(uploaded_file):
-    """Reads PDF, splits it, creates vectors, and saves to Supabase."""
+    """Reads PDF carefully, ignores bad pages, splits, and saves."""
     try:
         # 1. Save Temp File
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
             tmp_path = tmp_file.name
 
-        # 2. Load & Split
-        loader = PyPDFLoader(tmp_path)
-        docs = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        splits = text_splitter.split_documents(docs)
+        # 2. Robust PDF Reading (The Fix)
+        text_content = ""
+        try:
+            reader = pypdf.PdfReader(tmp_path)
+            for page in reader.pages:
+                try:
+                    # Try to extract text from the page
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_content += page_text + "\n"
+                except Exception:
+                    # If a page fails (bbox error), skip it and keep going
+                    continue
+        except Exception as e:
+            return False, f"PDF Read Error: {e}"
 
-        # 3. Vectorize & Upload
+        if not text_content:
+            return False, "No readable text found in PDF (Is it a scanned image?)"
+
+        # 3. Create a Document Object
+        # We assume the whole file is one document for now to simplify metadata
+        raw_doc = Document(page_content=text_content, metadata={"source": uploaded_file.name})
+
+        # 4. Split Text
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents([raw_doc])
+
+        # 5. Vectorize & Upload
         progress_bar = st.progress(0, text="Vectorizing Document...")
         for i, split in enumerate(splits):
             vector = embeddings.embed_query(split.page_content)
             data = {
                 "content": split.page_content,
-                "metadata": {"source": uploaded_file.name, "page": split.metadata.get("page", 0)},
+                "metadata": {"source": uploaded_file.name, "page": i}, # Using chunk index as page proxy
                 "embedding": vector
             }
             supabase.table("documents").insert(data).execute()
@@ -89,29 +111,18 @@ with tab1:
     
     raw_df = get_system_health()
     if not raw_df.empty:
-        # Get latest status for each node
         snapshot = raw_df.sort_values(by="last_updated", ascending=False).drop_duplicates(subset=["node_id"], keep="first")
-        
-        # Display Cards
         cols = st.columns(len(snapshot))
         for index, (i, row) in enumerate(snapshot.iterrows()):
             with cols[index % len(cols)]:
-                # Create a card-like container
                 with st.container(border=True):
-                    # Header
                     icon = "⚓" if "2" in row['node_id'] else "🔥"
                     st.subheader(f"{icon} {row['node_id']}")
-                    
-                    # Metrics Row
                     m1, m2 = st.columns(2)
                     m1.metric("Temp", f"{row['gpu_temp']}°C")
                     m2.metric("VRAM", f"{row['vram_used']} MB")
-                    
-                    # Progress Bar
                     load = int(row['gpu_util']) if pd.notnull(row['gpu_util']) else 0
                     st.progress(load, text=f"GPU Load: {load}%")
-                    
-                    # Footer
                     st.caption(f"Last Pulse: {row['last_updated'].strftime('%H:%M:%S')}")
 
 # === TAB 2: INGESTION ENGINE ===
