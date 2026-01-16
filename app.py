@@ -1,6 +1,6 @@
 import streamlit as st
-import graphviz
 import time
+import logging
 from supabase import create_client, Client
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import SupabaseVectorStore
@@ -9,7 +9,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 import google.generativeai as genai
 
-# --- 1. ENTERPRISE CONFIGURATION ---
+# --- 1. ENTERPRISE LOGGING & CONFIG ---
+# Setup logging to capture errors (Audit Trail)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 st.set_page_config(
     page_title="Fortress Legal | Command Center",
     layout="wide",
@@ -17,69 +21,98 @@ st.set_page_config(
     page_icon="🛡️"
 )
 
-# Load Secrets
+# Safe Import for Graphviz (with User Feedback)
 try:
-    supabase_url = st.secrets["SUPABASE_URL"]
-    supabase_key = st.secrets["SUPABASE_KEY"]
-    openai_api_key = st.secrets["OPENAI_API_KEY"]
-    google_api_key = st.secrets["GOOGLE_API_KEY"]
-except KeyError:
-    st.error("🚨 System Failure: Missing API Keys in Secrets.")
+    import graphviz
+    HAS_GRAPHVIZ = True
+except ImportError:
+    HAS_GRAPHVIZ = False
+    logger.warning("Graphviz binary not found. Visualization disabled.")
+
+# Load Secrets (Fail Fast Pattern)
+required_secrets = ["SUPABASE_URL", "SUPABASE_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY"]
+missing = [key for key in required_secrets if key not in st.secrets]
+if missing:
+    st.error(f"🚨 CRITICAL ERROR: Missing Secrets: {missing}")
     st.stop()
 
 # Initialize Clients
-supabase: Client = create_client(supabase_url, supabase_key)
-genai.configure(api_key=google_api_key)
+try:
+    supabase: Client = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+except Exception as e:
+    st.error(f"Connection Failure: {e}")
+    st.stop()
 
-# --- 2. SIDEBAR: SYSTEM HEALTH & INFRASTRUCTURE ---
+# --- 2. SIDEBAR: INFRASTRUCTURE ---
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/server.png", width=50)
     st.title("System Status")
     
-    # MOCK HARDWARE MONITOR (Connect this to your real DGX API later)
+    # SYSTEM METRICS (Mocked for Demo, but ready for API hookup)
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("DGX Spark 1", "ONLINE", delta="12ms")
-        st.metric("Synology NAS", "MOUNTED", delta="Active")
+        st.metric("Spark Cluster", "ONLINE", delta="12ms")
+        st.metric("NAS Vault", "MOUNTED", delta="Active")
     with col2:
-        st.metric("DGX Spark 2", "IDLE", delta="-", delta_color="off")
-        st.metric("Vault", "SECURE", delta="Encrypted")
+        st.metric("Inference", "IDLE", delta="-")
+        st.metric("Security", "ENCRYPTED", delta="OK")
 
     st.markdown("---")
     
-    # MODEL SELECTION
+    # ENTERPRISE MODEL SELECTOR (Dynamic & Validated)
     st.subheader("🧠 Intelligence Layer")
-    # Hard-coded stable models
-    valid_models = ["models/gemini-1.5-pro-latest", "models/gemini-1.5-flash-latest", "models/gemini-pro"]
-    selected_model_name = st.selectbox("Antagonist Model", valid_models, index=0)
+    
+    # 1. Define the 'Wishlist' of high-performance models
+    preferred_models = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]
+    
+    # 2. Dynamic Discovery: Check which ones actually exist for this Key
+    available_models = []
+    try:
+        # We try to 'get' the model to see if we have access
+        # This is a 'Liveness Probe' for the API
+        for model_name in preferred_models:
+            m = genai.GenerativeModel(model_name)
+            available_models.append(f"models/{model_name}")
+    except Exception as e:
+        logger.error(f"Model Discovery Failed: {e}")
+        # Fallback to the safest known model if discovery fails
+        available_models = ["models/gemini-pro"]
+
+    if not available_models:
+        st.error("No Gemini models accessible. Check API Key permissions.")
+    else:
+        selected_model_name = st.selectbox("Antagonist Model", available_models, index=0)
 
     st.markdown("---")
-    st.caption(f"Fortress OS v2.1 | Connected to {supabase_url[:8]}...")
+    st.caption(f"Fortress OS v2.3 | Environment: Production")
 
-# --- 3. ARCHITECTURE VISUALIZATION (THE "MAP") ---
-# This draws the diagram of your system dynamically
+# --- 3. ARCHITECTURE VISUALIZATION ---
 def render_architecture():
+    if not HAS_GRAPHVIZ:
+        st.warning("⚠️ Visualization Engine (Graphviz) unavailable. Please check container deps.")
+        return None
+        
     graph = graphviz.Digraph()
     graph.attr(rankdir='LR', bgcolor='transparent')
     graph.attr('node', shape='box', style='filled', fontname="Helvetica")
     
-    # On-Premise Nodes (Your Hardware)
+    # On-Premise Nodes
     with graph.subgraph(name='cluster_prem') as c:
-        c.attr(label='🔒 On-Premise (Fortress)', color='red', style='dashed')
-        c.node('NAS', 'Synology NAS\n(Raw Contracts)', fillcolor='lightgrey', shape='cylinder')
-        c.node('DGX1', 'NVIDIA DGX 1\n(Spark Compute)', fillcolor='lightblue')
-        c.node('DGX2', 'NVIDIA DGX 2\n(Inference)', fillcolor='lightblue')
+        c.attr(label='🔒 On-Premise (DGX + NAS)', color='red', style='dashed')
+        c.node('NAS', 'Synology NAS\n(Data Lake)', fillcolor='lightgrey', shape='cylinder')
+        c.node('DGX', 'NVIDIA DGX\n(Compute)', fillcolor='lightblue')
     
-    # Cloud Nodes (Current Stack)
+    # Cloud Nodes
     with graph.subgraph(name='cluster_cloud') as c:
         c.attr(label='☁️ Secure Cloud', color='blue')
         c.node('SUPA', 'Supabase\n(Vector Vault)', fillcolor='#3ECF8E', fontcolor='white')
-        c.node('OPENAI', 'OpenAI\n(Reasoning Engine)', fillcolor='white')
-        c.node('GEMINI', 'Google Gemini\n(Antagonist)', fillcolor='white')
+        c.node('OPENAI', 'OpenAI\n(Reasoning)', fillcolor='white')
+        c.node('GEMINI', 'Gemini\n(Red Team)', fillcolor='white')
 
-    # Edges (The Connections)
-    graph.edge('NAS', 'DGX1', label=' NFS Mount')
-    graph.edge('DGX1', 'SUPA', label=' Sync (Embeddings)')
+    # Edges
+    graph.edge('NAS', 'DGX', label=' NFS')
+    graph.edge('DGX', 'SUPA', label=' Sync')
     graph.edge('SUPA', 'OPENAI', label=' Retrieval')
     graph.edge('SUPA', 'GEMINI', label=' Context')
     
@@ -88,18 +121,16 @@ def render_architecture():
 # --- 4. MAIN DASHBOARD ---
 st.title("🛡️ Fortress Legal Command Center")
 
-# Top Level Tabs
-dash_tab, work_tab, red_team_tab = st.tabs(["📊 Infrastructure & Ingestion", "📝 Legal Analysis", "⚔️ Red Team"])
+dash_tab, work_tab, red_team_tab = st.tabs(["📊 Infrastructure", "📝 Legal Analysis", "⚔️ Red Team"])
 
-# --- TAB 1: INFRASTRUCTURE (The "Enterprise View") ---
+# --- TAB 1: INFRASTRUCTURE ---
 with dash_tab:
     col_a, col_b = st.columns([1, 2])
     
     with col_a:
         st.subheader("📡 Ingestion Pipeline")
-        st.info("Upload documents to route them from Local Storage to the Cloud Vault.")
+        st.info("Route documents from Local Storage to Cloud Vault.")
         
-        # INGESTION ENGINE
         input_method = st.radio("Source", ["Upload File", "Paste Text"], horizontal=True)
         documents = []
         if input_method == "Upload File":
@@ -110,34 +141,38 @@ with dash_tab:
             text = st.text_area("Manual Entry")
             if text: documents.append(text)
             
-        if st.button("🚀 Execute Ingestion Pipeline", use_container_width=True):
+        if st.button("🚀 Execute Pipeline", use_container_width=True):
             if not documents:
-                st.warning("No payload detected.")
+                st.warning("No payload.")
             else:
-                with st.spinner("Encrypting & Vectorizing..."):
+                with st.spinner("Processing..."):
                     try:
-                        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+                        embeddings = OpenAIEmbeddings(openai_api_key=st.secrets["OPENAI_API_KEY"])
                         SupabaseVectorStore.from_texts(
                             texts=documents, embedding=embeddings, client=supabase,
                             table_name="documents", query_name="match_documents"
                         )
                         st.success(f"✅ Pipeline Complete: {len(documents)} Objects Secured.")
-                    except Exception as e: st.error(f"Pipeline Fail: {e}")
+                    except Exception as e: 
+                        st.error(f"Pipeline Fail: {e}")
+                        logger.error(f"Ingestion Error: {e}")
 
     with col_b:
         st.subheader("🌐 Network Topology")
-        # RENDER THE DIAGRAM
-        st.graphviz_chart(render_architecture(), use_container_width=True)
+        if HAS_GRAPHVIZ:
+            st.graphviz_chart(render_architecture(), use_container_width=True)
+        else:
+            st.warning("⚠️ Diagram Renderer Offline")
 
-# --- TAB 2: ANALYSIS (Glass Box RAG) ---
+# --- TAB 2: ANALYSIS ---
 with work_tab:
     st.subheader("🔎 Evidence-Based Retrieval")
-    user_query = st.text_input("Query the Case Files:", placeholder="e.g., What is the liability cap?")
+    user_query = st.text_input("Query the Case Files:", placeholder="e.g., What is the termination fee?")
     
     if st.button("Run Analysis", key="btn_analyze"):
-        with st.spinner("Querying Vector Vault..."):
+        with st.spinner("Querying Vault..."):
             try:
-                embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+                embeddings = OpenAIEmbeddings(openai_api_key=st.secrets["OPENAI_API_KEY"])
                 vector_store = SupabaseVectorStore(
                     client=supabase, embedding=embeddings, 
                     table_name="documents", query_name="match_documents"
@@ -150,7 +185,7 @@ with work_tab:
                 Question: {question}
                 """
                 prompt = PromptTemplate.from_template(template)
-                llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=openai_api_key)
+                llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=st.secrets["OPENAI_API_KEY"])
                 
                 rag_chain = RunnableParallel(
                     {"context": retriever, "question": RunnablePassthrough()}
@@ -169,19 +204,23 @@ with work_tab:
                         st.markdown(f"**Exhibit {i+1}:**")
                         st.caption(doc.page_content)
                         st.divider()
-            except Exception as e: st.error(f"Error: {e}")
+            except Exception as e: 
+                st.error(f"Analysis Error: {e}")
+                logger.error(f"Analysis Error: {e}")
 
-# --- TAB 3: RED TEAM (Gemini) ---
+# --- TAB 3: RED TEAM ---
 with red_team_tab:
     st.subheader("⚔️ Adversarial Simulation")
     st.caption(f"Powered by {selected_model_name}")
     
     attack_text = st.text_area("Paste Clause for Stress Testing:", height=150)
-    if st.button("Initiate Attack Simulation"):
-        with st.spinner("Simulating Opposing Counsel..."):
+    if st.button("Initiate Attack"):
+        with st.spinner("Simulating..."):
             try:
                 model = genai.GenerativeModel(selected_model_name)
                 response = model.generate_content(f"Find loopholes: {attack_text}")
                 st.error("⚠️ RISK DETECTED")
                 st.write(response.text)
-            except Exception as e: st.error(f"Gemini Error: {e}")
+            except Exception as e: 
+                st.error(f"Gemini Error: {e}")
+                logger.error(f"Gemini Error: {e}")
