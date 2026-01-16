@@ -1,133 +1,132 @@
 import streamlit as st
-import os
 from supabase import create_client, Client
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 import google.generativeai as genai
 
-# --- 1. SETUP & CONFIGURATION ---
-st.set_page_config(page_title="Fortress Legal (Enterprise)", layout="wide")
+# --- 1. SETUP ---
+st.set_page_config(page_title="Fortress Legal (Glass Box)", layout="wide")
 
-# Initialize Keys
 try:
     supabase_url = st.secrets["SUPABASE_URL"]
     supabase_key = st.secrets["SUPABASE_KEY"]
     openai_api_key = st.secrets["OPENAI_API_KEY"]
     google_api_key = st.secrets["GOOGLE_API_KEY"]
 except KeyError:
-    st.error("🚨 Missing Secrets! Please check your Streamlit Secrets.")
+    st.error("🚨 Secrets missing.")
     st.stop()
 
-# Connect to Supabase
 supabase: Client = create_client(supabase_url, supabase_key)
-
-# Configure Gemini
 genai.configure(api_key=google_api_key)
 
-# --- 2. SIDEBAR: SYNC ENGINE ---
+# --- 2. SIDEBAR (Ingestion) ---
 with st.sidebar:
     st.header("🗄️ Case Files")
-    st.info("Files are stored securely in Supabase Cloud.")
-    
-    input_method = st.radio("Input Method", ["Upload Text File", "Paste Text"])
+    input_method = st.radio("Input", ["Upload Text", "Paste Text"])
     documents = []
     
-    if input_method == "Upload Text File":
-        # FIX: Restrict to .txt only to prevent Unicode Errors
-        uploaded_files = st.file_uploader("Upload Contracts (TXT only)", type=["txt"], accept_multiple_files=True)
-        if uploaded_files:
-            for uploaded_file in uploaded_files:
-                # FIX: specific decoding to ignore errors
-                text = uploaded_file.read().decode("utf-8", errors="ignore")
-                documents.append(text)
-                
+    if input_method == "Upload Text":
+        files = st.file_uploader("Upload .txt", type=["txt"], accept_multiple_files=True)
+        if files:
+            for f in files: documents.append(f.read().decode("utf-8", errors="ignore"))
     elif input_method == "Paste Text":
-        pasted_text = st.text_area("Paste legal text here")
-        if pasted_text:
-            documents.append(pasted_text)
+        text = st.text_area("Paste here")
+        if text: documents.append(text)
 
-    if st.button("Sync to Secure Cloud"):
+    if st.button("Sync to Cloud"):
         if not documents:
-            st.warning("Please provide content to sync.")
+            st.warning("No docs.")
         else:
-            with st.spinner("Encrypting and Vectorizing..."):
+            with st.spinner("Indexing..."):
                 try:
-                    # Generate Embeddings & Store in Supabase
                     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-                    vector_store = SupabaseVectorStore.from_texts(
-                        texts=documents,
-                        embedding=embeddings,
-                        client=supabase,
-                        table_name="documents",
-                        query_name="match_documents"
+                    SupabaseVectorStore.from_texts(
+                        texts=documents, embedding=embeddings, client=supabase,
+                        table_name="documents", query_name="match_documents"
                     )
-                    st.success(f"✅ Synced {len(documents)} documents to Fortress Cloud.")
-                except Exception as e:
-                    st.error(f"Sync Failed: {e}")
+                    st.success(f"✅ Indexed {len(documents)} files.")
+                except Exception as e: st.error(f"Error: {e}")
 
-# --- 3. MAIN INTERFACE ---
+# --- 3. MAIN APP ---
 st.title("🛡️ Fortress Legal")
-st.caption("Enterprise AI | Dual-Model Intelligence Layer")
+st.caption("Enterprise RAG | Evidence-Based Analysis")
 
-tab1, tab2 = st.tabs(["📝 Drafting & Analysis", "⚖️ The Antagonist (Gemini)"])
+tab1, tab2 = st.tabs(["📝 Evidence-Based Analysis", "⚖️ The Antagonist"])
 
-# --- TAB 1: OPENAI (The Drafter) ---
+# --- TAB 1: GLASS BOX RAG ---
 with tab1:
-    user_query = st.text_area("What do you need to draft or analyze?", height=150)
+    user_query = st.text_area("Ask a question about your files:", height=100)
     
-    if st.button("Analyze with Fortress AI"):
+    if st.button("Analyze"):
         if not user_query:
-            st.warning("Please enter a query.")
+            st.warning("Please ask a question.")
         else:
-            with st.spinner("Retrieving Precedents..."):
+            with st.spinner("Retrieving Evidence..."):
                 try:
+                    # 1. Setup Retrieval
                     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
                     vector_store = SupabaseVectorStore(
-                        client=supabase, 
-                        embedding=embeddings, 
-                        table_name="documents",
-                        query_name="match_documents"
+                        client=supabase, embedding=embeddings, 
+                        table_name="documents", query_name="match_documents"
                     )
-                    retriever = vector_store.as_retriever()
                     
-                    llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=openai_api_key)
+                    # RETRIEVER: Get top 4 most relevant chunks
+                    retriever = vector_store.as_retriever(search_kwargs={"k": 4})
+                    
+                    # 2. Strict Legal Prompt
                     template = """
-                    You are a senior partner. Use the context to answer.
-                    Context: {context}
+                    You are a strict legal research assistant. 
+                    Answer the question based ONLY on the following context.
+                    If the answer is not in the context, say "I cannot find this information in the provided documents."
+                    Do not make up facts.
+                    
+                    Context:
+                    {context}
+                    
                     Question: {question}
                     """
                     prompt = PromptTemplate.from_template(template)
-                    chain = (
-                        {"context": retriever, "question": RunnablePassthrough()}
+                    llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=openai_api_key)
+                    
+                    # 3. The "Transparent" Chain
+                    # This captures BOTH the answer AND the source documents
+                    rag_chain_from_docs = (
+                        RunnablePassthrough.assign(context=(lambda x: x["context"]))
                         | prompt
                         | llm
                         | StrOutputParser()
                     )
                     
-                    response = chain.invoke(user_query)
-                    st.markdown("### 📄 Legal Analysis")
-                    st.write(response)
+                    rag_chain_with_source = RunnableParallel(
+                        {"context": retriever, "question": RunnablePassthrough()}
+                    ).assign(answer=rag_chain_from_docs)
+                    
+                    # 4. Run it
+                    result = rag_chain_with_source.invoke(user_query)
+                    
+                    # 5. Display Answer
+                    st.markdown("### 📋 Analysis")
+                    st.write(result["answer"])
+                    
+                    # 6. Display "Citations" (The actual text chunks used)
+                    st.markdown("---")
+                    st.markdown("#### 🔍 Evidence (Source Documents)")
+                    st.caption("The AI read these exact snippets to form its answer:")
+                    for i, doc in enumerate(result["context"]):
+                        with st.expander(f"Source Snippet #{i+1}"):
+                            st.info(doc.page_content)
+                            
                 except Exception as e:
-                    st.error(f"Analysis Failed: {e}")
+                    st.error(f"Analysis Error: {e}")
 
-# --- TAB 2: GEMINI (The Antagonist) ---
+# --- TAB 2: ANTAGONIST (Gemini) ---
 with tab2:
-    st.info("Gemini 'Red Team' Mode: Attacks your arguments.")
-    argument_to_attack = st.text_area("Paste a clause to attack:", height=150)
-    
-    if st.button("Run Antagonist Simulation"):
-        if not argument_to_attack:
-            st.warning("Paste text first.")
-        else:
-            with st.spinner("Gemini is finding loopholes..."):
-                try:
-                    model = genai.GenerativeModel('gemini-1.5-pro')
-                    prompt = f"Find every loophole in this legal text:\n{argument_to_attack}"
-                    response = model.generate_content(prompt)
-                    st.markdown("### ⚠️ Risk Assessment")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"Simulation Failed: {e}")
+    text_to_attack = st.text_area("Clause to attack:", height=100)
+    if st.button("Simulate Attack"):
+        try:
+            model = genai.GenerativeModel('gemini-1.5-pro')
+            st.write(model.generate_content(f"Destroy this legal clause: {text_to_attack}").text)
+        except Exception as e: st.error(f"Error: {e}")
