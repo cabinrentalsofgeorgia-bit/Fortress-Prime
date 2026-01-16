@@ -7,7 +7,7 @@ import time
 
 # --- 1. SETUP & CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal Command",
+    page_title="Fortress Legal Command v2",
     page_icon="🛡️",
     layout="wide"
 )
@@ -18,7 +18,7 @@ try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
     
-    # FIXED: No proxy arguments here, just the URL and Key
+    # FIXED: Clean connection line (No proxy argument)
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
     st.error(f"❌ Database Connection Failed: {e}")
@@ -81,6 +81,7 @@ with tab1:
                 icon = "⚓" if "Captain" in row['node_id'] or "2" in row['node_id'] else "🔥"
                 
                 with st.expander(f"{icon} {row['node_id']}", expanded=True):
+                    # Time calculation for display
                     st.write(f"**Last Heartbeat:** {row['last_updated'].strftime('%H:%M:%S')}")
                     
                     # GPU TEMPERATURE GAUGE
