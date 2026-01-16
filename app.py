@@ -4,9 +4,9 @@ import plotly.express as px
 from supabase import create_client
 from datetime import datetime
 import time
-# --- IMPORTS ---
+# --- UPDATED IMPORTS ---
 import pypdf
-from langchain.docstore.document import Document
+from langchain_core.documents import Document  # <--- FIXED LOCATION
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import tempfile
@@ -14,7 +14,7 @@ import os
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal v7.1",
+    page_title="Fortress Legal v7.2",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -54,18 +54,16 @@ def process_and_upload_pdf(uploaded_file):
             tmp_file.write(uploaded_file.getvalue())
             tmp_path = tmp_file.name
 
-        # 2. Robust PDF Reading (The Fix)
+        # 2. Robust PDF Reading
         text_content = ""
         try:
             reader = pypdf.PdfReader(tmp_path)
             for page in reader.pages:
                 try:
-                    # Try to extract text from the page
                     page_text = page.extract_text()
                     if page_text:
                         text_content += page_text + "\n"
                 except Exception:
-                    # If a page fails (bbox error), skip it and keep going
                     continue
         except Exception as e:
             return False, f"PDF Read Error: {e}"
@@ -73,8 +71,7 @@ def process_and_upload_pdf(uploaded_file):
         if not text_content:
             return False, "No readable text found in PDF (Is it a scanned image?)"
 
-        # 3. Create a Document Object
-        # We assume the whole file is one document for now to simplify metadata
+        # 3. Create Document Object
         raw_doc = Document(page_content=text_content, metadata={"source": uploaded_file.name})
 
         # 4. Split Text
@@ -87,7 +84,7 @@ def process_and_upload_pdf(uploaded_file):
             vector = embeddings.embed_query(split.page_content)
             data = {
                 "content": split.page_content,
-                "metadata": {"source": uploaded_file.name, "page": i}, # Using chunk index as page proxy
+                "metadata": {"source": uploaded_file.name, "page": i},
                 "embedding": vector
             }
             supabase.table("documents").insert(data).execute()
