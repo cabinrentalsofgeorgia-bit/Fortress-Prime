@@ -4,15 +4,16 @@ import plotly.express as px
 from supabase import create_client
 from datetime import datetime
 import time
+# --- UPDATED IMPORTS FOR NEW LANGCHAIN VERSION ---
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import tempfile
 import os
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal v6",
+    page_title="Fortress Legal v6.1",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -61,6 +62,7 @@ def process_and_upload_pdf(uploaded_file):
         docs = loader.load()
 
         # 3. Split Text into Chunks (1000 characters each)
+        # FIXED: Using the new library path
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         splits = text_splitter.split_documents(docs)
 
@@ -108,30 +110,4 @@ with tab1:
             with cols[index % len(cols)]:
                 with st.expander(f"{'⚓' if '2' in row['node_id'] else '🔥'} {row['node_id']}", expanded=True):
                     st.metric("Temp", f"{row['gpu_temp']}°C")
-                    st.metric("VRAM", f"{row['vram_used']} MB")
-                    st.write(f"Pulse: {row['last_updated'].strftime('%H:%M:%S')}")
-
-# === TAB 2: INGESTION ENGINE ===
-with tab2:
-    st.header("📂 Legal Document Ingestion")
-    st.info("Upload PDF case files. The AI will vectorize them for search.")
-    
-    uploaded_files = st.file_uploader("Drag & Drop Legal PDFs", type=["pdf"], accept_multiple_files=True)
-    
-    if uploaded_files:
-        if st.button(f"🚀 Ingest {len(uploaded_files)} File(s)"):
-            for file in uploaded_files:
-                st.write(f"Processing **{file.name}**...")
-                success, details = process_and_upload_pdf(file)
-                if success:
-                    st.success(f"✅ Successfully indexed {file.name} ({details} vector chunks)")
-                else:
-                    st.error(f"❌ Failed: {details}")
-
-# === TAB 3: ANALYSIS ===
-with tab3:
-    st.header("🧠 Intelligent Case Analysis")
-    st.info("Ingest documents in Tab 2 first!")
-    query = st.text_input("Query Case Files")
-    if st.button("Analyze"):
-        st.warning("Logic coming in Phase 3.")
+                    st.metric
