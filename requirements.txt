@@ -1,10 +1,10 @@
 supabase
 streamlit
 openai
-google-generativeai
 langchain
-langchain-openai
 langchain-community
+langchain-openai
+langchain-text-splitters
 tiktoken
 plotly
 pypdf
