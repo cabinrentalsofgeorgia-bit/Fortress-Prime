@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import datetime
+import pandas as pd
 from supabase import create_client, Client
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import SupabaseVectorStore
@@ -11,13 +12,13 @@ import google.generativeai as genai
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal | Enterprise Monitor",
+    page_title="Fortress Legal | DGX Command Center",
     layout="wide",
     initial_sidebar_state="expanded",
     page_icon="🛡️"
 )
 
-# Safe Graphviz Import
+# Safe Graphviz
 try:
     import graphviz
     HAS_GRAPHVIZ = True
@@ -32,177 +33,155 @@ except Exception as e:
     st.error(f"System Offline: {e}")
     st.stop()
 
-# --- 2. LIVE SYSTEM CHECK (THE HEARTBEAT) ---
-def check_system_pulse():
-    """Queries Supabase to see if Spark Jobs are active."""
+# --- 2. LIVE TELEMETRY FETCHER ---
+def get_hardware_stats():
+    """Fetches real-time GPU/CPU stats from Supabase."""
     try:
-        # Call the SQL function we just created
-        response = supabase.rpc("get_ingestion_status").execute()
-        data = response.data[0]
+        # Sort by last_updated to get the absolute latest heartbeat
+        response = supabase.table("system_health").select("*").execute()
+        # Convert to dictionary keyed by Node ID
+        stats = {row['node_id']: row for row in response.data}
+        return stats
+    except:
+        return {}
+
+def check_ingestion_status():
+    """Checks if documents are being added."""
+    try:
+        res = supabase.table("documents").select("created_at", count="exact").order("created_at", desc=True).limit(1).execute()
+        total = res.count if res.count else 0
+        last_time = res.data[0]['created_at'] if res.data else None
         
-        total_docs = data['total_docs']
-        last_active_str = data['last_active']
-        
-        # Calculate Logic
-        status = "OFFLINE"
-        color = "off"
-        
-        if last_active_str:
-            last_active = datetime.datetime.fromisoformat(last_active_str.replace('Z', '+00:00'))
-            now = datetime.datetime.now(datetime.timezone.utc)
-            delta = (now - last_active).total_seconds()
+        status = "IDLE"
+        if last_time:
+            last_active = datetime.datetime.fromisoformat(last_time.replace('Z', '+00:00'))
+            delta = (datetime.datetime.now(datetime.timezone.utc) - last_active).total_seconds()
+            if delta < 120: status = "INGESTING"
             
-            if delta < 120: # If data came in within last 2 mins
-                status = "ACTIVE INGESTION"
-                color = "normal" # Green
-            elif delta < 600:
-                status = "COOLING DOWN"
-                color = "off"
-            else:
-                status = "STANDBY"
-                color = "off"
-        
-        return total_docs, status, color
-    except Exception:
-        return 0, "CONNECTION ERROR", "off"
+        return total, status
+    except:
+        return 0, "OFFLINE"
 
-# Get Real-Time Stats
-real_doc_count, spark_status, status_color = check_system_pulse()
+# Fetch Data
+hw_stats = get_hardware_stats()
+doc_count, sys_status = check_ingestion_status()
 
-# --- 3. SIDEBAR: REAL TELEMETRY ---
+# --- 3. SIDEBAR: NETOPS VIEW ---
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/server.png", width=60)
     st.title("NetOps Command")
     
-    st.subheader("🟢 Cluster Telemetry")
-    
-    # DYNAMIC METRICS (These now reflect REALITY)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Cluster State", spark_status, delta="Spark 1 & 2", delta_color=status_color)
-        st.metric("Legal Vault", f"{real_doc_count:,}", delta="Total Files")
-    with col2:
-        st.metric("Spark 2 (Capt)", "ONLINE", delta="Master")
-        st.metric("Latency", "24ms", delta="Stable")
-
-    st.markdown("---")
-    
-    # AUTO-REFRESH BUTTON
-    if st.button("🔄 Refresh Monitor"):
+    # REFRESHER
+    if st.button("🔄 Refresh Telemetry"):
         st.rerun()
 
     st.markdown("---")
-    
-    # MODEL SELECTOR
-    st.subheader("🧠 Intelligence Layer")
-    valid_models = ["models/gemini-1.5-pro", "models/gemini-1.5-flash", "models/gemini-pro"]
-    selected_model_name = st.selectbox("Active Model", valid_models, index=0)
+    st.subheader("🟢 Cluster Health")
 
-# --- 4. ARCHITECTURE MAP (Visualizing the 2 Sparks) ---
+    # SPARK 1 MONITOR
+    s1 = hw_stats.get("Spark-1", {})
+    with st.expander("🔥 Spark 1 (DGX Worker)", expanded=True):
+        if s1:
+            st.caption(f"Last Heartbeat: {s1.get('last_updated', 'Unknown')}")
+            colA, colB = st.columns(2)
+            colA.metric("GPU Temp", f"{s1.get('gpu_temp',0)}°C", f"{s1.get('gpu_util',0)}% Load")
+            colB.metric("VRAM", f"{s1.get('vram_used',0)}MB", "Allocated")
+            st.progress(min(s1.get('cpu_usage', 0), 100) / 100, text=f"CPU Load: {s1.get('cpu_usage',0)}%")
+            st.progress(min(s1.get('ram_usage', 0), 100) / 100, text=f"RAM Usage: {s1.get('ram_usage',0)}%")
+        else:
+            st.warning("Signal Lost - Check Script")
+
+    # SPARK 2 MONITOR
+    s2 = hw_stats.get("Spark-2", {})
+    with st.expander("⚓ Spark 2 (DGX Captain)", expanded=True):
+        if s2:
+            st.caption(f"Last Heartbeat: {s2.get('last_updated', 'Unknown')}")
+            colA, colB = st.columns(2)
+            colA.metric("GPU Temp", f"{s2.get('gpu_temp',0)}°C", f"{s2.get('gpu_util',0)}% Load")
+            colB.metric("VRAM", f"{s2.get('vram_used',0)}MB", "Allocated")
+            st.progress(min(s2.get('cpu_usage', 0), 100) / 100, text=f"CPU Load: {s2.get('cpu_usage',0)}%")
+            st.progress(min(s2.get('ram_usage', 0), 100) / 100, text=f"RAM Usage: {s2.get('ram_usage',0)}%")
+        else:
+            st.warning("Signal Lost - Check Script")
+
+    st.markdown("---")
+    # MODEL SELECTOR
+    valid_models = ["models/gemini-1.5-pro", "models/gemini-1.5-flash", "models/gemini-pro"]
+    selected_model_name = st.selectbox("Intelligence Model", valid_models, index=0)
+
+# --- 4. ARCHITECTURE MAP ---
 def render_map():
     if not HAS_GRAPHVIZ: return None
-    
     graph = graphviz.Digraph()
     graph.attr(rankdir='LR', bgcolor='transparent')
     graph.attr('node', shape='box', style='filled', fontname="Helvetica")
     
-    # ON-PREM CLUSTER
+    # ON-PREM
     with graph.subgraph(name='cluster_prem') as c:
-        c.attr(label='🏢 On-Premise Data Center', color='red', style='dashed')
+        c.attr(label='🏢 On-Premise DGX Cluster', color='red', style='dashed')
+        c.node('NAS', 'Synology NAS\n(Data Lake)', shape='cylinder', fillcolor='lightgrey')
         
-        # The NAS
-        c.node('NAS', 'Synology NAS\n(Legal Lake)', shape='cylinder', fillcolor='lightgrey')
+        # Dynamic Coloring based on Load
+        s1_load = hw_stats.get("Spark-1", {}).get('gpu_util', 0)
+        s2_load = hw_stats.get("Spark-2", {}).get('gpu_util', 0)
         
-        # The 2 Sparks
-        with c.subgraph(name='cluster_sparks') as s:
-            s.attr(label='DGX Spark Cluster', color='black')
-            if spark_status == "ACTIVE INGESTION":
-                s.node('SPK1', 'Spark Node 1\n(PROCESSING)', fillcolor='#90EE90') # Green if active
-                s.node('SPK2', 'Spark Node 2\n(PROCESSING)', fillcolor='#90EE90')
-            else:
-                s.node('SPK1', 'Spark Node 1\n(Idle)', fillcolor='#ffcccb')
-                s.node('SPK2', 'Spark Node 2\n(Idle)', fillcolor='lightblue')
-            
-    # CLOUD LAYER
-    with graph.subgraph(name='cluster_cloud') as c:
-        c.attr(label='☁️ Fortress Cloud', color='blue')
-        c.node('VAULT', f'Supabase\n({real_doc_count} Docs)', fillcolor='#3ECF8E', fontcolor='white')
-        c.node('AI', 'OpenAI + Gemini\n(Intelligence)', fillcolor='white')
+        # Color Logic: Green if reporting (temp >= 0), Red if hot, White if missing
+        color1 = '#ffcccb' if s1_load > 80 else ('#90EE90' if "Spark-1" in hw_stats else 'white')
+        color2 = '#ffcccb' if s2_load > 80 else ('#90EE90' if "Spark-2" in hw_stats else 'white')
 
-    # CONNECTIONS
-    graph.edge('NAS', 'SPK1', label=' NFS Mount')
-    graph.edge('NAS', 'SPK2', label=' Redundant')
-    graph.edge('SPK1', 'VAULT', label=' Sync Encrypted')
-    graph.edge('VAULT', 'AI', label=' RAG')
-    
+        c.node('SPK1', f'Spark 1\n(CPU: {hw_stats.get("Spark-1", {}).get("cpu_usage", "?")}%)', fillcolor=color1)
+        c.node('SPK2', f'Spark 2\n(CPU: {hw_stats.get("Spark-2", {}).get("cpu_usage", "?")}%)', fillcolor=color2)
+
+    # CLOUD
+    with graph.subgraph(name='cluster_cloud') as c:
+        c.attr(label='☁️ Cloud', color='blue')
+        c.node('DB', f'Supabase\n({doc_count} Docs)', fillcolor='#3ECF8E')
+        c.node('AI', 'OpenAI + Gemini', fillcolor='white')
+
+    graph.edge('NAS', 'SPK1'); graph.edge('NAS', 'SPK2')
+    graph.edge('SPK1', 'DB'); graph.edge('SPK2', 'DB')
+    graph.edge('DB', 'AI')
     return graph
 
-# --- 5. MAIN INTERFACE ---
-st.title("🛡️ Fortress Legal")
-st.caption("Hybrid Infrastructure | Synology NAS <-> Cloud Bridge")
+# --- 5. MAIN TABS ---
+st.title("🛡️ Fortress Legal Command Center")
+tab1, tab2, tab3 = st.tabs(["📊 Live Infrastructure", "📝 Legal Analysis", "⚔️ Red Team"])
 
-# Tabs
-tab_infra, tab_legal, tab_red = st.tabs(["📊 Infrastructure Audit", "📝 Legal Analysis", "⚔️ Red Team"])
-
-# --- TAB 1: THE AUDIT INTERFACE ---
-with tab_infra:
-    col_dash, col_map = st.columns([1, 2])
-    
-    with col_dash:
-        st.subheader("📡 Live Job Monitor")
-        if spark_status == "ACTIVE INGESTION":
-            st.success("✅ Spark Job is currently syncing data.")
-            st.write(f"**Current Vault Size:** {real_doc_count} documents")
+with tab1:
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.subheader("📡 Ingestion Status")
+        if sys_status == "INGESTING":
+            st.success(f"⚡ Cluster is Active. Ingesting Data.")
         else:
-            st.info("ℹ️ Spark Cluster is currently idle. Waiting for NAS events.")
+            st.info("💤 Cluster is Idle.")
         
-        # Manual Override (Still useful for quick uploads)
-        st.markdown("---")
-        st.caption("Manual Override")
-        uploaded_files = st.file_uploader("Direct Upload (Bypass Spark)", accept_multiple_files=True)
-        if uploaded_files and st.button("🚀 Push to Vault"):
-             # Simple uploader logic for emergencies
-             pass 
+        st.metric("Total Documents Secured", f"{doc_count:,}")
+        
+    with col2:
+        st.subheader("🌐 Hardware Topology")
+        if HAS_GRAPHVIZ: st.graphviz_chart(render_map(), use_container_width=True)
 
-    with col_map:
-        st.subheader("🌐 Real-Time Topology")
-        if HAS_GRAPHVIZ:
-            st.graphviz_chart(render_map(), use_container_width=True)
-        else:
-            st.info("Visualization driver missing.")
-
-# --- TAB 2: LEGAL ANALYSIS (RAG) ---
-with tab_legal:
+with tab2:
     query = st.text_input("Query Case Files:")
     if st.button("Analyze"):
-        try:
-            embeddings = OpenAIEmbeddings(openai_api_key=st.secrets["OPENAI_API_KEY"])
-            vector_store = SupabaseVectorStore(
-                client=supabase, embedding=embeddings, 
-                table_name="documents", query_name="match_documents"
-            )
-            retriever = vector_store.as_retriever(search_kwargs={"k": 4})
-            llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=st.secrets["OPENAI_API_KEY"])
-            
-            rag_chain = RunnableParallel(
-                {"context": retriever, "question": RunnablePassthrough()}
-            ).assign(answer=(
-                RunnablePassthrough.assign(context=(lambda x: x["context"]))
-                | PromptTemplate.from_template("Answer based on context:\n{context}\nQ:{question}") 
-                | llm | StrOutputParser()
-            ))
-            
-            res = rag_chain.invoke(query)
-            st.write(res["answer"])
-            with st.expander("Evidence"):
-                for doc in res["context"]: st.info(doc.page_content)
-        except Exception as e: st.error(f"Error: {e}")
+        with st.spinner("Analyzing..."):
+            try:
+                embeddings = OpenAIEmbeddings(openai_api_key=st.secrets["OPENAI_API_KEY"])
+                vector_store = SupabaseVectorStore(client=supabase, embedding=embeddings, table_name="documents", query_name="match_documents")
+                retriever = vector_store.as_retriever(search_kwargs={"k": 4})
+                llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=st.secrets["OPENAI_API_KEY"])
+                rag_chain = RunnableParallel({"context": retriever, "question": RunnablePassthrough()}).assign(answer=(RunnablePassthrough.assign(context=(lambda x: x["context"])) | PromptTemplate.from_template("Answer based on context:\n{context}\nQ:{question}") | llm | StrOutputParser()))
+                res = rag_chain.invoke(query)
+                st.write(res["answer"])
+                with st.expander("Evidence"):
+                    for doc in res["context"]: st.info(doc.page_content)
+            except Exception as e: st.error(f"Error: {e}")
 
-# --- TAB 3: RED TEAM (Gemini) ---
-with tab_red:
-    attack_text = st.text_area("Clause to Attack:")
-    if st.button("Simulate Attack"):
+with tab3:
+    attack = st.text_area("Clause to Attack:")
+    if st.button("Simulate"):
         try:
             model = genai.GenerativeModel(selected_model_name)
-            st.write(model.generate_content(f"Destroy this clause: {attack_text}").text)
-        except Exception as e: st.error(f"Gemini Error: {e}")
+            st.write(model.generate_content(f"Destroy: {attack}").text)
+        except Exception as e: st.error(f"Error: {e}")
