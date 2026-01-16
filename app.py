@@ -36,10 +36,12 @@ with st.sidebar:
     documents = []
     
     if input_method == "Upload Text File":
-        uploaded_files = st.file_uploader("Upload Contracts (TXT)", accept_multiple_files=True)
+        # FIX: Restrict to .txt only to prevent Unicode Errors
+        uploaded_files = st.file_uploader("Upload Contracts (TXT only)", type=["txt"], accept_multiple_files=True)
         if uploaded_files:
             for uploaded_file in uploaded_files:
-                text = uploaded_file.read().decode("utf-8")
+                # FIX: specific decoding to ignore errors
+                text = uploaded_file.read().decode("utf-8", errors="ignore")
                 documents.append(text)
                 
     elif input_method == "Paste Text":
