@@ -4,25 +4,40 @@ import plotly.express as px
 from supabase import create_client
 from datetime import datetime
 import time
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_openai import OpenAIEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import tempfile
+import os
 
-# --- 1. CONFIGURATION & SETUP ---
+# --- 1. CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal Command v5",
+    page_title="Fortress Legal v6",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Initialize Supabase
+# Initialize Secrets
 try:
-    supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+    
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Initialize the AI Brain (Embeddings)
+    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+    
     DB_STATUS = "🟢 Online"
 except Exception as e:
     DB_STATUS = f"🔴 Offline: {e}"
+    st.error("Missing Secrets! Check SUPABASE_URL, SUPABASE_KEY, and OPENAI_API_KEY.")
+    st.stop()
 
 # --- 2. HELPER FUNCTIONS ---
 def get_system_health():
-    """Fetch live telemetry from Spark Cluster."""
+    """Fetch live telemetry."""
     try:
         response = supabase.table("system_health").select("*").order("last_updated", desc=True).limit(20).execute()
         df = pd.DataFrame(response.data)
@@ -33,108 +48,226 @@ def get_system_health():
     except:
         return pd.DataFrame()
 
-def get_live_snapshot(df):
-    """Get the single latest row for each node."""
-    if df.empty: return df
-    return df.sort_values(by="last_updated", ascending=False).drop_duplicates(subset=["node_id"], keep="first")
+def process_and_upload_pdf(uploaded_file):
+    """Reads PDF, splits it, creates vectors, and saves to Supabase."""
+    try:
+        # 1. Save to a temporary file (so PyPDF can read it)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(uploaded_file.getvalue())
+            tmp_path = tmp_file.name
 
-# --- 3. SIDEBAR ---
-with st.sidebar:
-    st.header("🛡️ Fortress Command")
-    st.markdown("---")
-    st.write(f"**Database:** {DB_STATUS}")
-    st.write(f"**Cluster:** Spark-1 & Spark-2")
-    st.markdown("---")
-    
-    st.subheader("⚙️ Active Models")
-    st.caption("• GPT-4o (Reasoning)")
-    st.caption("• Gemini 1.5 Pro (Context)")
-    st.caption("• Text-Embedding-3 (Vector)")
-    
-    st.markdown("---")
-    if st.button("🔄 Force Refresh"):
-        st.rerun()
+        # 2. Load PDF
+        loader = PyPDFLoader(tmp_path)
+        docs = loader.load()
 
-# --- 4. MAIN DASHBOARD ---
+        # 3. Split Text into Chunks (1000 characters each)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+
+        # 4. Create Vectors & Upload
+        # We loop through chunks and upload them one by one
+        progress_bar = st.progress(0, text="Vectorizing Document...")
+        
+        for i, split in enumerate(splits):
+            # Generate Vector (The "Math")
+            vector = embeddings.embed_query(split.page_content)
+            
+            # Prepare Data Payload
+            data = {
+                "content": split.page_content,
+                "metadata": {"source": uploaded_file.name, "page": split.metadata.get("page", 0)},
+                "embedding": vector
+            }
+            
+            # Save to Database
+            supabase.table("documents").insert(data).execute()
+            
+            # Update Progress
+            progress = (i + 1) / len(splits)
+            progress_bar.progress(progress, text=f"Processing chunk {i+1}/{len(splits)}")
+
+        # Cleanup
+        os.remove(tmp_path)
+        return True, len(splits)
+
+    except Exception as e:
+        return False, str(e)
+
+# --- 3. MAIN UI ---
 st.title("🛡️ Fortress Legal: Enterprise Cluster")
-
-# Create 3 Tabs now: Hardware, Vault (Upload), Analysis (Chat)
 tab1, tab2, tab3 = st.tabs(["📊 Live Telemetry", "📂 Document Vault", "🧠 Legal Analysis"])
 
-# === TAB 1: HARDWARE MONITOR ===
+# === TAB 1: HARDWARE ===
 with tab1:
+    if st.button("🔄 Refresh Signal"): st.rerun()
     raw_df = get_system_health()
-    snapshot = get_live_snapshot(raw_df)
-
-    if snapshot.empty:
-        st.warning("⚠️ Waiting for Spark Signals... (Check SSH)")
-    else:
-        # Top Level Aggregates
-        col1, col2, col3, col4 = st.columns(4)
-        avg_temp = snapshot['gpu_temp'].mean()
-        total_vram = snapshot['vram_used'].sum()
-        
-        col1.metric("Cluster Status", "Active", "Connected")
-        col2.metric("Avg GPU Temp", f"{avg_temp:.1f}°C")
-        col3.metric("Total VRAM Used", f"{total_vram} MB")
-        col4.metric("Active Nodes", len(snapshot))
-
-        st.markdown("### 🖥️ Node Status")
-        # Node Cards
+    if not raw_df.empty:
+        snapshot = raw_df.sort_values(by="last_updated", ascending=False).drop_duplicates(subset=["node_id"], keep="first")
         cols = st.columns(len(snapshot))
         for index, (i, row) in enumerate(snapshot.iterrows()):
             with cols[index % len(cols)]:
-                # Visual Logic
-                is_captain = "2" in row['node_id']
-                icon = "⚓ CAPTAIN" if is_captain else "🔥 WORKER"
-                color = "green" if row['gpu_temp'] < 80 else "red"
-                
-                with st.container(border=True):
-                    st.subheader(f"{icon}")
-                    st.write(f"**ID:** {row['node_id']}")
-                    st.write(f"**Last Pulse:** {row['last_updated'].strftime('%H:%M:%S')}")
-                    
-                    st.divider()
-                    
-                    c1, c2 = st.columns(2)
-                    c1.metric("Temp", f"{row['gpu_temp']}°C")
-                    c2.metric("VRAM", f"{row['vram_used']} MB")
-                    
-                    st.caption("GPU Load")
-                    st.progress(int(row['gpu_util']))
+                with st.expander(f"{'⚓' if '2' in row['node_id'] else '🔥'} {row['node_id']}", expanded=True):
+                    st.metric("Temp", f"{row['gpu_temp']}°C")
+                    st.metric("VRAM", f"{row['vram_used']} MB")
+                    st.write(f"Pulse: {row['last_updated'].strftime('%H:%M:%S')}")
 
-# === TAB 2: DOCUMENT VAULT (NEW!) ===
+# === TAB 2: INGESTION ENGINE ===
 with tab2:
     st.header("📂 Legal Document Ingestion")
-    st.info("Upload PDF case files here to train the AI.")
+    st.info("Upload PDF case files. The AI will vectorize them for search.")
     
     uploaded_files = st.file_uploader("Drag & Drop Legal PDFs", type=["pdf"], accept_multiple_files=True)
     
     if uploaded_files:
-        st.success(f"Prepared {len(uploaded_files)} files for ingestion.")
-        if st.button("🚀 Process & Vectorize (Start Spark Job)"):
-            st.warning("⚠️ Ingestion Pipeline not yet linked to Spark. (Coming in Phase 2)")
+        if st.button(f"🚀 Ingest {len(uploaded_files)} File(s)"):
+            for file in uploaded_files:
+                st.write(f"Processing **{file.name}**...")
+                success, details = process_and_upload_pdf(file)
+                if success:
+                    st.success(f"✅ Successfully indexed {file.name} ({details} vector chunks)")
+                else:
+                    st.error(f"❌ Failed: {details}")
 
-    st.divider()
-    st.subheader("📚 Current Knowledge Base")
-    # Placeholder for file list
-    st.write("No documents found in Vector Store.")
-
-# === TAB 3: LEGAL ANALYSIS ===
+# === TAB 3: ANALYSIS ===
 with tab3:
     st.header("🧠 Intelligent Case Analysis")
-    
-    # Chat Interface Layout
-    messages = st.container(height=400)
-    
-    # Fake history for UI demo
-    with messages:
-        st.chat_message("assistant").write("Hello. I am the Fortress AI. I have access to the secure cluster. How can I help with the case files?")
+    st.info("Ingest documents in Tab 2 first!")
+    query = st.text_input("Query Case Files")
+    if st.button("Analyze"):
+        st.warning("Logic coming in Phase 3.")import streamlit as st
+import pandas as pd
+import plotly.express as px
+from supabase import create_client
+from datetime import datetime
+import time
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_openai import OpenAIEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import tempfile
+import os
 
-    prompt = st.chat_input("Ask about the documents...")
+# --- 1. CONFIGURATION ---
+st.set_page_config(
+    page_title="Fortress Legal v6",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Initialize Secrets
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
     
-    if prompt:
-        with messages:
-            st.chat_message("user").write(prompt)
-            st.chat_message("assistant").write("⚠️ I cannot answer yet because the **Document Vault** is empty. Please upload files in Tab 2.")
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Initialize the AI Brain (Embeddings)
+    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+    
+    DB_STATUS = "🟢 Online"
+except Exception as e:
+    DB_STATUS = f"🔴 Offline: {e}"
+    st.error("Missing Secrets! Check SUPABASE_URL, SUPABASE_KEY, and OPENAI_API_KEY.")
+    st.stop()
+
+# --- 2. HELPER FUNCTIONS ---
+def get_system_health():
+    """Fetch live telemetry."""
+    try:
+        response = supabase.table("system_health").select("*").order("last_updated", desc=True).limit(20).execute()
+        df = pd.DataFrame(response.data)
+        if not df.empty:
+            df['last_updated'] = pd.to_datetime(df['last_updated'])
+            return df
+        return pd.DataFrame()
+    except:
+        return pd.DataFrame()
+
+def process_and_upload_pdf(uploaded_file):
+    """Reads PDF, splits it, creates vectors, and saves to Supabase."""
+    try:
+        # 1. Save to a temporary file (so PyPDF can read it)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(uploaded_file.getvalue())
+            tmp_path = tmp_file.name
+
+        # 2. Load PDF
+        loader = PyPDFLoader(tmp_path)
+        docs = loader.load()
+
+        # 3. Split Text into Chunks (1000 characters each)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+
+        # 4. Create Vectors & Upload
+        # We loop through chunks and upload them one by one
+        progress_bar = st.progress(0, text="Vectorizing Document...")
+        
+        for i, split in enumerate(splits):
+            # Generate Vector (The "Math")
+            vector = embeddings.embed_query(split.page_content)
             
+            # Prepare Data Payload
+            data = {
+                "content": split.page_content,
+                "metadata": {"source": uploaded_file.name, "page": split.metadata.get("page", 0)},
+                "embedding": vector
+            }
+            
+            # Save to Database
+            supabase.table("documents").insert(data).execute()
+            
+            # Update Progress
+            progress = (i + 1) / len(splits)
+            progress_bar.progress(progress, text=f"Processing chunk {i+1}/{len(splits)}")
+
+        # Cleanup
+        os.remove(tmp_path)
+        return True, len(splits)
+
+    except Exception as e:
+        return False, str(e)
+
+# --- 3. MAIN UI ---
+st.title("🛡️ Fortress Legal: Enterprise Cluster")
+tab1, tab2, tab3 = st.tabs(["📊 Live Telemetry", "📂 Document Vault", "🧠 Legal Analysis"])
+
+# === TAB 1: HARDWARE ===
+with tab1:
+    if st.button("🔄 Refresh Signal"): st.rerun()
+    raw_df = get_system_health()
+    if not raw_df.empty:
+        snapshot = raw_df.sort_values(by="last_updated", ascending=False).drop_duplicates(subset=["node_id"], keep="first")
+        cols = st.columns(len(snapshot))
+        for index, (i, row) in enumerate(snapshot.iterrows()):
+            with cols[index % len(cols)]:
+                with st.expander(f"{'⚓' if '2' in row['node_id'] else '🔥'} {row['node_id']}", expanded=True):
+                    st.metric("Temp", f"{row['gpu_temp']}°C")
+                    st.metric("VRAM", f"{row['vram_used']} MB")
+                    st.write(f"Pulse: {row['last_updated'].strftime('%H:%M:%S')}")
+
+# === TAB 2: INGESTION ENGINE ===
+with tab2:
+    st.header("📂 Legal Document Ingestion")
+    st.info("Upload PDF case files. The AI will vectorize them for search.")
+    
+    uploaded_files = st.file_uploader("Drag & Drop Legal PDFs", type=["pdf"], accept_multiple_files=True)
+    
+    if uploaded_files:
+        if st.button(f"🚀 Ingest {len(uploaded_files)} File(s)"):
+            for file in uploaded_files:
+                st.write(f"Processing **{file.name}**...")
+                success, details = process_and_upload_pdf(file)
+                if success:
+                    st.success(f"✅ Successfully indexed {file.name} ({details} vector chunks)")
+                else:
+                    st.error(f"❌ Failed: {details}")
+
+# === TAB 3: ANALYSIS ===
+with tab3:
+    st.header("🧠 Intelligent Case Analysis")
+    st.info("Ingest documents in Tab 2 first!")
+    query = st.text_input("Query Case Files")
+    if st.button("Analyze"):
+        st.warning("Logic coming in Phase 3.")
