@@ -22,13 +22,37 @@ except KeyError:
 # Connect to Supabase
 supabase: Client = create_client(supabase_url, supabase_key)
 
-# Configure Gemini (The Antagonist)
+# Configure Gemini
 genai.configure(api_key=google_api_key)
 
-# --- 2. SIDEBAR: SYNC ENGINE ---
+# --- 2. SIDEBAR: SETTINGS & SYNC ---
 with st.sidebar:
+    st.header("⚙️ Configuration")
+    
+    # --- AUTO-DETECT VALID GEMINI MODELS ---
+    try:
+        # Ask Google which models are available for this API key
+        model_list = genai.list_models()
+        # Filter for models that can generate text (content)
+        valid_models = [m.name for m in model_list if 'generateContent' in m.supported_generation_methods]
+        
+        # If the list is empty (rare), fallback to defaults
+        if not valid_models:
+            valid_models = ["models/gemini-1.5-pro", "models/gemini-pro"]
+            
+        # Let the user pick (Best for Law is usually the latest Pro)
+        st.success(f"✅ Found {len(valid_models)} Google Models")
+        selected_model_name = st.selectbox(
+            "Select Antagonist Model", 
+            valid_models, 
+            index=0  # Default to the first one found
+        )
+    except Exception as e:
+        st.error("Could not fetch Google Models. Using fallback.")
+        selected_model_name = "models/gemini-pro"
+
+    st.markdown("---")
     st.header("🗄️ Case Files")
-    st.caption("Syncs to Supabase (Cloud Vault)")
     
     input_method = st.radio("Input Method", ["Upload Text File", "Paste Text"])
     documents = []
@@ -57,7 +81,7 @@ with st.sidebar:
 
 # --- 3. MAIN INTERFACE ---
 st.title("🛡️ Fortress Legal")
-st.caption("Enterprise RAG | GPT-4o (Defense) vs Gemini 1.5 Pro (Prosecution)")
+st.caption("Enterprise RAG | GPT-4o (Defense) vs Gemini (Prosecution)")
 
 tab1, tab2 = st.tabs(["📝 Evidence-Based Analysis", "⚖️ The Antagonist"])
 
@@ -112,19 +136,19 @@ with tab1:
                             st.info(doc.page_content)
                 except Exception as e: st.error(f"Error: {e}")
 
-# --- TAB 2: PROSECUTION (Gemini 1.5 Pro) ---
+# --- TAB 2: PROSECUTION (Dynamic Gemini) ---
 with tab2:
-    st.info("Gemini 1.5 Pro (Latest) - 'Red Team' Mode")
+    st.info(f"Currently Running: **{selected_model_name}**")
     text_to_attack = st.text_area("Paste a clause to attack:", height=150)
     
     if st.button("Simulate Opposing Counsel"):
         if not text_to_attack:
             st.warning("Paste a clause first.")
         else:
-            with st.spinner("Gemini is dissecting the argument..."):
+            with st.spinner(f"Gemini ({selected_model_name}) is analyzing..."):
                 try:
-                    # FIX: Use the specific latest model name
-                    model = genai.GenerativeModel('gemini-1.5-pro-latest')
+                    # USE THE USER-SELECTED MODEL
+                    model = genai.GenerativeModel(selected_model_name)
                     
                     prompt = f"""
                     You are a ruthless opposing counsel.
@@ -138,11 +162,5 @@ with tab2:
                     st.markdown("### ⚠️ Risk Assessment")
                     st.write(response.text)
                 except Exception as e:
-                    # Fallback if 'latest' is not available in your region yet
-                    try:
-                        model = genai.GenerativeModel('gemini-pro')
-                        response = model.generate_content(prompt)
-                        st.markdown("### ⚠️ Risk Assessment (Fallback Model)")
-                        st.write(response.text)
-                    except:
-                        st.error(f"Gemini Error: {e}")
+                    st.error(f"Gemini Error: {e}")
+                    
