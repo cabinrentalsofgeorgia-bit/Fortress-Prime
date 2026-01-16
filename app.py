@@ -4,7 +4,7 @@ import plotly.express as px
 from supabase import create_client
 from datetime import datetime
 import time
-# --- UPDATED IMPORTS FOR NEW LANGCHAIN VERSION ---
+# --- IMPORTS ---
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -13,7 +13,7 @@ import os
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal v6.1",
+    page_title="Fortress Legal v7",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -26,14 +26,10 @@ try:
     OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
     
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    
-    # Initialize the AI Brain (Embeddings)
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
     
-    DB_STATUS = "🟢 Online"
 except Exception as e:
-    DB_STATUS = f"🔴 Offline: {e}"
-    st.error("Missing Secrets! Check SUPABASE_URL, SUPABASE_KEY, and OPENAI_API_KEY.")
+    st.error(f"❌ Connection Error: {e}")
     st.stop()
 
 # --- 2. HELPER FUNCTIONS ---
@@ -52,43 +48,29 @@ def get_system_health():
 def process_and_upload_pdf(uploaded_file):
     """Reads PDF, splits it, creates vectors, and saves to Supabase."""
     try:
-        # 1. Save to a temporary file (so PyPDF can read it)
+        # 1. Save Temp File
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
             tmp_path = tmp_file.name
 
-        # 2. Load PDF
+        # 2. Load & Split
         loader = PyPDFLoader(tmp_path)
         docs = loader.load()
-
-        # 3. Split Text into Chunks (1000 characters each)
-        # FIXED: Using the new library path
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         splits = text_splitter.split_documents(docs)
 
-        # 4. Create Vectors & Upload
-        # We loop through chunks and upload them one by one
+        # 3. Vectorize & Upload
         progress_bar = st.progress(0, text="Vectorizing Document...")
-        
         for i, split in enumerate(splits):
-            # Generate Vector (The "Math")
             vector = embeddings.embed_query(split.page_content)
-            
-            # Prepare Data Payload
             data = {
                 "content": split.page_content,
                 "metadata": {"source": uploaded_file.name, "page": split.metadata.get("page", 0)},
                 "embedding": vector
             }
-            
-            # Save to Database
             supabase.table("documents").insert(data).execute()
-            
-            # Update Progress
-            progress = (i + 1) / len(splits)
-            progress_bar.progress(progress, text=f"Processing chunk {i+1}/{len(splits)}")
+            progress_bar.progress((i + 1) / len(splits))
 
-        # Cleanup
         os.remove(tmp_path)
         return True, len(splits)
 
@@ -101,13 +83,55 @@ tab1, tab2, tab3 = st.tabs(["📊 Live Telemetry", "📂 Document Vault", "🧠 
 
 # === TAB 1: HARDWARE ===
 with tab1:
-    if st.button("🔄 Refresh Signal"): st.rerun()
+    col1, col2 = st.columns([1, 6])
+    with col1:
+        if st.button("🔄 Refresh"): st.rerun()
+    
     raw_df = get_system_health()
     if not raw_df.empty:
+        # Get latest status for each node
         snapshot = raw_df.sort_values(by="last_updated", ascending=False).drop_duplicates(subset=["node_id"], keep="first")
+        
+        # Display Cards
         cols = st.columns(len(snapshot))
         for index, (i, row) in enumerate(snapshot.iterrows()):
             with cols[index % len(cols)]:
-                with st.expander(f"{'⚓' if '2' in row['node_id'] else '🔥'} {row['node_id']}", expanded=True):
-                    st.metric("Temp", f"{row['gpu_temp']}°C")
-                    st.metric
+                # Create a card-like container
+                with st.container(border=True):
+                    # Header
+                    icon = "⚓" if "2" in row['node_id'] else "🔥"
+                    st.subheader(f"{icon} {row['node_id']}")
+                    
+                    # Metrics Row
+                    m1, m2 = st.columns(2)
+                    m1.metric("Temp", f"{row['gpu_temp']}°C")
+                    m2.metric("VRAM", f"{row['vram_used']} MB")
+                    
+                    # Progress Bar
+                    load = int(row['gpu_util']) if pd.notnull(row['gpu_util']) else 0
+                    st.progress(load, text=f"GPU Load: {load}%")
+                    
+                    # Footer
+                    st.caption(f"Last Pulse: {row['last_updated'].strftime('%H:%M:%S')}")
+
+# === TAB 2: INGESTION ENGINE ===
+with tab2:
+    st.header("📂 Legal Document Ingestion")
+    uploaded_files = st.file_uploader("Upload Case Files (PDF)", type=["pdf"], accept_multiple_files=True)
+    
+    if uploaded_files:
+        if st.button(f"🚀 Ingest {len(uploaded_files)} File(s)"):
+            for file in uploaded_files:
+                st.write(f"Processing **{file.name}**...")
+                success, details = process_and_upload_pdf(file)
+                if success:
+                    st.success(f"✅ Indexed {file.name} ({details} chunks)")
+                else:
+                    st.error(f"❌ Error: {details}")
+
+# === TAB 3: ANALYSIS ===
+with tab3:
+    st.header("🧠 Intelligent Case Analysis")
+    query = st.text_input("Ask a question about the uploaded files:")
+    if st.button("Analyze"):
+        st.info("Analysis Engine coming in Phase 3.")
