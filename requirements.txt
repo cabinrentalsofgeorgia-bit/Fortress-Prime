@@ -1,11 +1,8 @@
-streamlit==1.36.0
-langchain==0.2.6
-langchain-community==0.2.6
-langchain-openai==0.1.8
-langchain-google-genai==1.0.6
-psycopg2-binary
-supabase
+supabase==2.3.0
+gotrue==1.3.0
+postgrest==0.10.6
+realtime==1.0.0
+storage3==0.5.2
+streamlit
 openai
-tiktoken
 google-generativeai
-graphviz
