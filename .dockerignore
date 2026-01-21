@@ -38,3 +38,6 @@ docs/
 # Uploads and temp files
 uploads/
 *.tmp
+
+# Large data directories (permission issues)
+mnt/

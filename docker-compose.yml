@@ -65,6 +65,37 @@ services:
     privileged: false
     pid: host
 
+  # Refinery Agent - Email Processing Worker (Spark-2)
+  refinery-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.refinery-agent
+    container_name: fortress-refinery-agent
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_NAME=spark-2-refinery
+      - DB_HOST=postgres
+      - DB_NAME=fortress_db
+      - DB_USER=miner_bot
+      - DB_PASS=190AntiochCemeteryRD!!!
+      - BATCH_SIZE=20
+      - SLEEP_INTERVAL=5
+    volumes:
+      # Mount source code for live updates
+      - ./src/mining_rig_with_router.py:/app/mining_rig_with_router.py:ro
+      - ./src/data_router.py:/app/data_router.py:ro
+    networks:
+      - fortress-network
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   # PostgreSQL data is now directly mounted to Synology DS1825+ storage
   # /mnt/fortress_data/postgres is used as a bind mount in the postgres service
