@@ -1,0 +1,20 @@
+                                           Table "public.market_intel"
+      Column      |            Type             | Collation | Nullable |                 Default                  
+------------------+-----------------------------+-----------+----------+------------------------------------------
+ id               | integer                     |           | not null | nextval('market_intel_id_seq'::regclass)
+ source_file      | character varying(255)      |           |          | 
+ chunk_index      | integer                     |           |          | 
+ content          | text                        |           |          | 
+ embedding        | vector(768)                 |           |          | 
+ created_at       | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ sender           | character varying(255)      |           |          | 
+ subject_line     | text                        |           |          | 
+ sent_at          | timestamp without time zone |           |          | 
+ signal_strength  | integer                     |           |          | 
+ signal_direction | character varying(20)       |           |          | 
+ ticker           | character varying(20)       |           |          | 
+ asset_class      | character varying(50)       |           |          | 
+ broker           | text                        |           |          | 
+Indexes:
+    "market_intel_pkey" PRIMARY KEY, btree (id)
+
