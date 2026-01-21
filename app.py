@@ -1,145 +1,166 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from supabase import create_client
-from datetime import datetime
-import time
-# --- UPDATED IMPORTS ---
-import pypdf
-from langchain_core.documents import Document  # <--- FIXED LOCATION
-from langchain_openai import OpenAIEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-import tempfile
+import psycopg2
+import requests
 import os
+import tempfile
+from pdf2image import convert_from_path
+import pytesseract
+from datetime import datetime
 
-# --- 1. CONFIGURATION ---
+# --- 1. ENTERPRISE CONFIGURATION ---
 st.set_page_config(
-    page_title="Fortress Legal v7.2",
-    page_icon="🛡️",
+    page_title="Fortress Prime (Sovereign)",
+    page_icon="🦅",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Initialize Secrets
-try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-    
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-    
-except Exception as e:
-    st.error(f"❌ Connection Error: {e}")
-    st.stop()
+# The Captain (Local DB)
+DB_HOST = "localhost"
+DB_NAME = "fortress_db"
+DB_USER = "miner_bot"
+DB_PASS = "secure_password"
 
-# --- 2. HELPER FUNCTIONS ---
-def get_system_health():
-    """Fetch live telemetry."""
+# The Worker (Remote GPU)
+WORKER_IP = "192.168.0.104"
+OLLAMA_CHAT = f"http://{WORKER_IP}:11434/api/generate"
+OLLAMA_EMBED = f"http://{WORKER_IP}:11434/api/embeddings"
+CHAT_MODEL = "llama3.2"
+EMBED_MODEL = "nomic-embed-text"
+
+# --- 2. BACKEND FUNCTIONS ---
+def get_intel_stats():
+    """Check the Vault for intelligence data."""
     try:
-        response = supabase.table("system_health").select("*").order("last_updated", desc=True).limit(20).execute()
-        df = pd.DataFrame(response.data)
-        if not df.empty:
-            df['last_updated'] = pd.to_datetime(df['last_updated'])
-            return df
-        return pd.DataFrame()
+        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
+        df = pd.read_sql("SELECT id, source_file, created_at FROM market_intel", conn)
+        conn.close()
+        return df
     except:
         return pd.DataFrame()
 
-def process_and_upload_pdf(uploaded_file):
-    """Reads PDF carefully, ignores bad pages, splits, and saves."""
+def ask_worker(prompt, context=""):
+    """Send orders to the GPU Worker."""
+    full_prompt = f"System: You are a Senior Analyst. Use this context:\n{context}\n\nUser: {prompt}\n\nAnswer:"
     try:
-        # 1. Save Temp File
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            tmp_path = tmp_file.name
-
-        # 2. Robust PDF Reading
-        text_content = ""
-        try:
-            reader = pypdf.PdfReader(tmp_path)
-            for page in reader.pages:
-                try:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text_content += page_text + "\n"
-                except Exception:
-                    continue
-        except Exception as e:
-            return False, f"PDF Read Error: {e}"
-
-        if not text_content:
-            return False, "No readable text found in PDF (Is it a scanned image?)"
-
-        # 3. Create Document Object
-        raw_doc = Document(page_content=text_content, metadata={"source": uploaded_file.name})
-
-        # 4. Split Text
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        splits = text_splitter.split_documents([raw_doc])
-
-        # 5. Vectorize & Upload
-        progress_bar = st.progress(0, text="Vectorizing Document...")
-        for i, split in enumerate(splits):
-            vector = embeddings.embed_query(split.page_content)
-            data = {
-                "content": split.page_content,
-                "metadata": {"source": uploaded_file.name, "page": i},
-                "embedding": vector
-            }
-            supabase.table("documents").insert(data).execute()
-            progress_bar.progress((i + 1) / len(splits))
-
-        os.remove(tmp_path)
-        return True, len(splits)
-
+        resp = requests.post(OLLAMA_CHAT, json={"model": CHAT_MODEL, "prompt": full_prompt, "stream": False}, timeout=90)
+        return resp.json().get('response', "⚠️ Worker Silent.")
     except Exception as e:
-        return False, str(e)
+        return f"🚨 Connection Failure: {e}"
 
-# --- 3. MAIN UI ---
-st.title("🛡️ Fortress Legal: Enterprise Cluster")
-tab1, tab2, tab3 = st.tabs(["📊 Live Telemetry", "📂 Document Vault", "🧠 Legal Analysis"])
+def vectorize_text(text):
+    """Ask Worker to convert text to math."""
+    try:
+        resp = requests.post(OLLAMA_EMBED, json={"model": EMBED_MODEL, "prompt": text}, timeout=10)
+        return resp.json()['embedding']
+    except:
+        return None
 
-# === TAB 1: HARDWARE ===
+# --- 3. SIDEBAR: INGESTION ---
+with st.sidebar:
+    st.image("https://img.icons8.com/color/96/fortress.png", width=60)
+    st.header("Fortress Prime")
+    st.info(f"⚡ GPU Link: {WORKER_IP}")
+    
+    st.subheader("📥 Upload Intel")
+    uploaded_file = st.file_uploader("Drop PDF Reports", type="pdf")
+    
+    if uploaded_file and st.button("Process & Index"):
+        with st.spinner("The Captain is reading..."):
+            # Save Temp
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(uploaded_file.getbuffer())
+                tmp_path = tmp.name
+            
+            # OCR (Vision)
+            images = convert_from_path(tmp_path)
+            text = "".join([pytesseract.image_to_string(img) for img in images])
+            os.remove(tmp_path)
+            
+            # Chunk & Embed
+            chunks = [text[i:i+800] for i in range(0, len(text), 800)]
+            conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
+            cur = conn.cursor()
+            
+            progress = st.progress(0)
+            for i, chunk in enumerate(chunks):
+                if len(chunk) < 50: continue
+                vec = vectorize_text(chunk)
+                if vec:
+                    cur.execute("INSERT INTO market_intel (source_file, chunk_index, content, embedding) VALUES (%s, %s, %s, %s)",
+                                (uploaded_file.name, i, chunk, vec))
+                progress.progress((i+1)/len(chunks))
+            
+            conn.commit()
+            conn.close()
+            st.success(f"Indexed {len(chunks)} Blocks!")
+            st.rerun()
+
+# --- 4. MAIN DASHBOARD ---
+tab1, tab2, tab3 = st.tabs(["📊 Intelligence Vault", "🔎 Semantic Search", "💬 Analyst Chat"])
+
 with tab1:
-    col1, col2 = st.columns([1, 6])
-    with col1:
-        if st.button("🔄 Refresh"): st.rerun()
-    
-    raw_df = get_system_health()
-    if not raw_df.empty:
-        snapshot = raw_df.sort_values(by="last_updated", ascending=False).drop_duplicates(subset=["node_id"], keep="first")
-        cols = st.columns(len(snapshot))
-        for index, (i, row) in enumerate(snapshot.iterrows()):
-            with cols[index % len(cols)]:
-                with st.container(border=True):
-                    icon = "⚓" if "2" in row['node_id'] else "🔥"
-                    st.subheader(f"{icon} {row['node_id']}")
-                    m1, m2 = st.columns(2)
-                    m1.metric("Temp", f"{row['gpu_temp']}°C")
-                    m2.metric("VRAM", f"{row['vram_used']} MB")
-                    load = int(row['gpu_util']) if pd.notnull(row['gpu_util']) else 0
-                    st.progress(load, text=f"GPU Load: {load}%")
-                    st.caption(f"Last Pulse: {row['last_updated'].strftime('%H:%M:%S')}")
+    st.subheader("Vault Status")
+    df = get_intel_stats()
+    if not df.empty:
+        col1, col2 = st.columns(2)
+        col1.metric("Total Documents", df['source_file'].nunique())
+        col2.metric("Knowledge Blocks", len(df))
+        
+        st.dataframe(df.sort_values("created_at", ascending=False), use_container_width=True)
+    else:
+        st.warning("The Vault is empty. Upload a PDF in the sidebar.")
 
-# === TAB 2: INGESTION ENGINE ===
 with tab2:
-    st.header("📂 Legal Document Ingestion")
-    uploaded_files = st.file_uploader("Upload Case Files (PDF)", type=["pdf"], accept_multiple_files=True)
-    
-    if uploaded_files:
-        if st.button(f"🚀 Ingest {len(uploaded_files)} File(s)"):
-            for file in uploaded_files:
-                st.write(f"Processing **{file.name}**...")
-                success, details = process_and_upload_pdf(file)
-                if success:
-                    st.success(f"✅ Indexed {file.name} ({details} chunks)")
-                else:
-                    st.error(f"❌ Error: {details}")
+    st.subheader("Deep Search")
+    query = st.text_input("Search the database:", placeholder="e.g. 'Consensus on inflation'")
+    if query:
+        vec = vectorize_text(query)
+        if vec:
+            conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
+            cur = conn.cursor()
+            cur.execute("SELECT content, source_file FROM market_intel ORDER BY embedding <=> %s::vector LIMIT 4", (str(vec),))
+            results = cur.fetchall()
+            conn.close()
+            
+            for r in results:
+                with st.expander(f"📄 Source: {r[1]}"):
+                    st.write(r[0])
 
-# === TAB 3: ANALYSIS ===
 with tab3:
-    st.header("🧠 Intelligent Case Analysis")
-    query = st.text_input("Ask a question about the uploaded files:")
-    if st.button("Analyze"):
-        st.info("Analysis Engine coming in Phase 3.")
+    st.subheader("Ask Llama 3.2")
+    user_q = st.chat_input("Ask the Analyst...")
+    
+    if "history" not in st.session_state:
+        st.session_state.history = []
+
+    # Display History
+    for msg in st.session_state.history:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    if user_q:
+        # Show User Message
+        with st.chat_message("user"):
+            st.write(user_q)
+        st.session_state.history.append({"role": "user", "content": user_q})
+        
+        # RAG Retrieval
+        vec = vectorize_text(user_q)
+        context_str = ""
+        if vec:
+            conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
+            cur = conn.cursor()
+            cur.execute("SELECT content FROM market_intel ORDER BY embedding <=> %s::vector LIMIT 5", (str(vec),))
+            rows = cur.fetchall()
+            conn.close()
+            context_str = "\n".join([r[0] for r in rows])
+        
+        # Generate Answer
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                ans = ask_worker(user_q, context=context_str)
+                st.write(ans)
+        st.session_state.history.append({"role": "assistant", "content": ans})

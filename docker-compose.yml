@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Tier 2 HQ Edge
+  postgres:
+    image: postgres:15-alpine
+    container_name: fortress-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fortress_db
+      POSTGRES_USER: miner_bot
+      POSTGRES_PASSWORD: 190AntiochCemeteryRD!!!
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Persistent data volume for database - mounted to Synology DS1825+ storage
+      - /mnt/fortress_data/postgres:/var/lib/postgresql/data
+      # Optional: Mount init scripts for schema initialization
+      - ./src/init_db.py:/docker-entrypoint-initdb.d/init_db.py:ro
+    ports:
+      # Expose PostgreSQL on standard port (adjust if needed)
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U miner_bot -d fortress_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fortress-network
+
+  # Pulse Agent - Hardware Telemetry Monitor
+  pulse-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.pulse-agent
+    container_name: fortress-pulse-agent
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_NAME=spark-1
+      - DB_HOST=postgres
+      - DB_NAME=fortress_db
+      - DB_USER=miner_bot
+      - DB_PASS=190AntiochCemeteryRD!!!
+      - INTERVAL=5
+    volumes:
+      # Mount source code
+      - ./src/pulse_agent.py:/app/pulse_agent.py:ro
+      # GPU access for NVIDIA monitoring (if available)
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /dev/nvidia0:/dev/nvidia0:ro
+      - /dev/nvidiactl:/dev/nvidiactl:ro
+      - /sys/class/thermal:/sys/class/thermal:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - fortress-network
+    # Ensure it can access system hardware stats
+    privileged: false
+    pid: host
+
+volumes:
+  # PostgreSQL data is now directly mounted to Synology DS1825+ storage
+  # /mnt/fortress_data/postgres is used as a bind mount in the postgres service
+
+networks:
+  fortress-network:
+    driver: bridge
+    name: fortress-network

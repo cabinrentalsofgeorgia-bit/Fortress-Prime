@@ -1,0 +1,29 @@
+# Dockerfile for Pulse Agent - Tier 2 HQ Edge
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    nvidia-utils-535 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements if they exist
+COPY requirements.txt* ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    psycopg2-binary \
+    || pip install --no-cache-dir \
+    psycopg2-binary
+
+# Copy Pulse Agent script
+COPY src/pulse_agent.py /app/pulse_agent.py
+
+# Make sure the script is executable
+RUN chmod +x /app/pulse_agent.py
+
+# Run the Pulse Agent
+CMD ["python", "/app/pulse_agent.py"]

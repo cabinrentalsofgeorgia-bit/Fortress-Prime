@@ -1,0 +1,103 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from streamlit_option_menu import option_menu
+import psutil
+import subprocess
+import time
+
+# --- CONFIGURATION ---
+st.set_page_config(page_title="FORTRESS PRIME", layout="wide", page_icon="🏰")
+
+# --- CSS STYLING ---
+st.markdown("""
+<style>
+    .stApp { background-color: #0E1117; color: #FAFAFA; }
+    .metric-card { background-color: #262730; border: 1px solid #4F4F4F; border-radius: 10px; padding: 15px; margin-bottom: 10px; }
+    div[data-testid="stMetricValue"] { font-size: 24px; color: #00FF00; }
+</style>
+""", unsafe_allow_html=True)
+
+# --- BACKEND FUNCTIONS ---
+def get_spark1_status():
+    """Ping Spark-1 via SSH to get GPU Temp"""
+    try:
+        cmd = 'ssh -i ~/.ssh/id_fortress -o ConnectTimeout=1 -o StrictHostKeyChecking=no admin@192.168.0.104 "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"'
+        temp = subprocess.check_output(cmd, shell=True).decode().strip()
+        return "ONLINE", int(temp)
+    except:
+        return "OFFLINE", 0
+
+# --- SIDEBAR NAVIGATION ---
+with st.sidebar:
+    st.image("https://img.icons8.com/color/96/000000/fortress.png", width=60)
+    st.title("FORTRESS PRIME")
+    selected = option_menu(
+        menu_title=None,
+        options=["System Core", "War Room", "Asset Watch", "Manifesto"],
+        icons=["cpu", "activity", "camera-video", "journal-text"],
+        default_index=0,
+        styles={
+            "container": {"padding": "0!important", "background-color": "#262730"},
+            "icon": {"color": "orange", "font-size": "18px"}, 
+            "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#4F4F4F"},
+            "nav-link-selected": {"background-color": "#00FF00", "color": "black"},
+        }
+    )
+    st.markdown("---")
+    st.caption("Hybrid Infrastructure v2.0")
+
+# --- PAGE 1: SYSTEM CORE ---
+if selected == "System Core":
+    st.title("⚙️ Hardware Infrastructure Map")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    # SPARK-2 (Captain)
+    with col1:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.subheader("⚓ Spark-2 (Captain)")
+        cpu = psutil.cpu_percent()
+        ram = psutil.virtual_memory().percent
+        st.metric("Status", "ONLINE", delta="Localhost")
+        st.progress(cpu / 100, text=f"CPU Load: {cpu}%")
+        st.progress(ram / 100, text=f"RAM Usage: {ram}%")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # SPARK-1 (Worker)
+    with col2:
+        status, temp = get_spark1_status()
+        color = "green" if status == "ONLINE" else "red"
+        
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.subheader("⚒️ Spark-1 (Muscle)")
+        st.markdown(f"#### Status: :{color}[{status}]")
+        st.metric("GPU Temp", f"{temp}°C", delta="NVIDIA A100/Gaming")
+        st.caption("Connection: SSH Encrypted Link")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # SYNOLOGY (Vault)
+    with col3:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.subheader("📦 Synology (Vault)")
+        st.metric("Migration Data", "20,582 Files", delta="Safely Stored")
+        st.caption("Protocol: TCP VPN Tunnel")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# --- PAGE 2: WAR ROOM ---
+if selected == "War Room":
+    st.title("🚀 SEO & Digital War Room")
+    st.info("Gathering Intel from Antigravity Scraper...")
+    
+    # Fake Chart for Visualization
+    chart_data = pd.DataFrame({'Pages': [100, 250, 400, 522], 'Images': [5000, 10000, 15000, 20582]})
+    st.area_chart(chart_data)
+    
+    st.success("✅ SEO Migration Complete: 522 Pages Captured")
+
+# --- PAGE 3: ASSET WATCH ---
+if selected == "Asset Watch":
+    st.title("👁️ Vision & Assets")
+    st.warning("Waiting for Vision Agent on Spark-1...")
+    st.write("Target: 11,917 Images missing ALT tags.")
+

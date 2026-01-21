@@ -1,0 +1,134 @@
+import streamlit as st
+import pandas as pd
+import psycopg2
+import subprocess
+import os
+
+# --- 1. CONFIGURATION ---
+st.set_page_config(
+    page_title="Fortress Prime",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# --- 2. STYLES ---
+st.markdown("""
+    <style>
+    .stButton button {width: 100%; height: 50px; font-weight: bold;}
+    .stat-box {background-color: #1e1e1e; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #333;}
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 3. FUNCTIONS ---
+def get_conn():
+    return psycopg2.connect(
+        host="localhost",
+        database="fortress_db",
+        user="miner_bot",
+        password="190AntiochCemeteryRD!!!"
+    )
+
+def get_gpu_stats():
+    try:
+        cmd = "nvidia-smi --query-gpu=temperature.gpu,memory.used,memory.total,utilization.gpu --format=csv,noheader,nounits"
+        out = subprocess.check_output(cmd, shell=True).decode().strip().split(',')
+        return {
+            "temp": f"{out[0]}°C",
+            "vram": f"{out[1]} / {out[2]} MB",
+            "load": f"{out[3]}%",
+            "bar": float(out[1]) / float(out[2])
+        }
+    except:
+        return {"temp": "N/A", "vram": "0/0", "load": "0%", "bar": 0.0}
+
+# --- 4. NAVIGATION ---
+st.sidebar.title("🛡️ Fortress Prime")
+st.sidebar.markdown("---")
+view = st.sidebar.radio("COMMAND DECK", ["📊 Dashboard", "🗄️ Data Vault", "⚙️ System Core"])
+
+# --- VIEW: DASHBOARD ---
+if view == "📊 Dashboard":
+    st.title("🚀 Operational Dashboard")
+    c1, c2 = st.columns([2, 1])
+    
+    with c1:
+        st.subheader("📡 Recent Intel")
+        try:
+            conn = get_conn()
+            df = pd.read_sql("SELECT sent_at, subject FROM email_archive WHERE category='Market Intelligence' ORDER BY sent_at DESC LIMIT 5", conn)
+            st.dataframe(df, use_container_width=True)
+            conn.close()
+        except:
+            st.warning("Database Disconnected")
+
+    with c2:
+        st.subheader("📍 Territory Activity")
+        data = {"12755 Aska Rd": 1500, "888 Brannan St": 400, "Douglas Dr": 350}
+        st.bar_chart(pd.DataFrame(list(data.items()), columns=["Zone","Act"]).set_index("Zone"))
+
+# --- VIEW: DATA VAULT ---
+elif view == "🗄️ Data Vault":
+    st.title("🗄️ Intelligence Vault")
+    
+    c_search, c_limit = st.columns([4, 1])
+    search = c_search.text_input("🔎 Search Archives:", placeholder="Enter keyword...")
+    limit = c_limit.selectbox("Rows:", [50, 100, 500])
+
+    if search:
+        q = "SELECT sent_at, sender, subject, content FROM email_archive WHERE content ILIKE %s OR subject ILIKE %s ORDER BY sent_at DESC LIMIT %s"
+        p = (f"%{search}%", f"%{search}%", limit)
+    else:
+        q = "SELECT sent_at, sender, subject, content FROM email_archive ORDER BY sent_at DESC LIMIT %s"
+        p = (limit,)
+
+    try:
+        conn = get_conn()
+        df = pd.read_sql(q, conn, params=p)
+        st.dataframe(df, use_container_width=True, height=600)
+        conn.close()
+    except Exception as e:
+        st.error(f"Vault Error: {e}")
+
+# --- VIEW: SYSTEM CORE ---
+elif view == "⚙️ System Core":
+    st.title("⚙️ System Command")
+    
+    # HARDWARE
+    gpu = get_gpu_stats()
+    st.markdown(f"""
+        <div class='stat-box'>
+            <h3>🟢 SYSTEM ONLINE</h3>
+            <p>GPU: {gpu['temp']} | Load: {gpu['load']}</p>
+        </div>
+    """, unsafe_allow_html=True)
+    st.progress(gpu['bar'], text=f"VRAM Usage: {gpu['vram']}")
+    
+    st.divider()
+
+    # BUTTONS
+    b1, b2, b3 = st.columns(3)
+    if b1.button("👁️ RUN: Signal Hunter"):
+        subprocess.Popen(["/home/admin/miniforge3/bin/python", "/home/admin/fortress-prime/src/extract_trade_signals_v2.py"])
+        st.success("Signal Hunter Started")
+
+    if b2.button("📍 RUN: Property Mapper"):
+        subprocess.Popen(["/home/admin/miniforge3/bin/python", "/home/admin/fortress-prime/src/map_real_estate.py"])
+        st.success("Mapper Started")
+
+    if b3.button("💰 RUN: Financial Audit"):
+        try:
+            res = subprocess.check_output("/home/admin/miniforge3/bin/python /home/admin/fortress-prime/src/analyze_spend.py", shell=True).decode()
+            st.code(res)
+        except:
+            st.error("Audit Failed")
+
+    st.divider()
+    
+    # MANIFESTO
+    st.subheader("📜 Directives")
+    try:
+        with open("/home/admin/fortress-prime/PROJECT_MANIFEST.md", "r") as f:
+            st.text_area("Manifest", f.read(), height=200)
+    except:
+        st.warning("Manifest Missing")

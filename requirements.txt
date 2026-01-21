@@ -1,5 +1,6 @@
 supabase
 streamlit
+streamlit-option-menu
 openai
 langchain
 langchain-core
@@ -9,3 +10,9 @@ langchain-text-splitters
 tiktoken
 plotly
 pypdf
+psycopg2-binary
+pydantic
+python-dotenv
+requests
+sqlalchemy
+psutil
