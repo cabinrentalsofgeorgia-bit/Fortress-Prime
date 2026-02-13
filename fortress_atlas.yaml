@@ -1,0 +1,380 @@
+# =============================================================================
+# FORTRESS PRIME — Division Atlas (The Corporate Map)
+# =============================================================================
+# This file is the single source of truth for the Fortress org chart.
+# Every agent, every script, every query MUST consult this atlas to determine
+# which Sector owns the data, which schema to write to, and which model
+# profile to use.
+#
+# Routing Rule: The Titan Executive (master_router.py) reads this file at
+#               startup and uses it to dispatch queries to the correct
+#               sector agent. Cross-sector access is FORBIDDEN unless
+#               explicitly routed through the Sovereign.
+#
+# Amendment IV: In TITAN mode, all sectors share one DeepSeek-R1 context
+#               window. The atlas controls the system prompt injection
+#               so the Titan knows which "hat" to wear.
+# =============================================================================
+
+fortress_prime:
+  version: "Titan Class"
+  stakeholder: "Gary Mitchell Knight"
+  constitution: "CONSTITUTION.md"
+  requirements: "REQUIREMENTS.md"
+  cursor_rules:
+    - ".cursor/rules/000-enterprise-constitution.mdc"
+    - ".cursor/rules/001-titan-protocol.mdc"
+    - ".cursor/rules/002-sovereign-constitution.mdc"
+
+  # =========================================================================
+  # SECTOR 01: CROG — Cabin Rentals of Georgia (Property Management)
+  # =========================================================================
+  sectors:
+    - slug: "crog"
+      name: "Cabin Rentals of Georgia"
+      code: "S01"
+      persona: "The Controller"
+      model_bias: "Operational / Customer Service / Hospitality"
+      description: >
+        Revenue-generating flagship. Manages 36 rental properties across
+        Blue Ridge and Fannin County, GA. Handles guest communications,
+        maintenance dispatch, pricing optimization, and trust accounting.
+
+      # Data Sources
+      db_schema: "division_b"
+      db_tables:
+        - "division_b.escrow"
+        - "division_b.vendor_payouts"
+        - "division_b.trust_ledger"
+        - "division_b.transactions"
+        - "division_b.predictions"
+        - "division_b.chart_of_accounts"
+        - "division_b.general_ledger"
+        - "division_b.journal_entries"
+        - "division_b.account_mappings"
+        - "public.ops_properties"
+        - "public.ops_turnovers"
+        - "public.ops_tasks"
+        - "public.maintenance_log"
+        - "public.guest_leads"
+        - "public.fin_reservations"
+        - "public.fin_revenue_snapshots"
+        - "public.fin_owner_balances"
+
+      qdrant_collections:
+        - "email_embeddings"      # Filtered by division = 'REAL_ESTATE'
+
+      email_divisions:
+        - "REAL_ESTATE"
+
+      code_modules:
+        - "division_b_property/"
+        - "cabins/"
+        - "src/guest_reply_engine.py"
+        - "src/listing_doctor.py"
+
+      nas_paths:
+        - "/mnt/fortress_nas/Communications/"
+        - "/mnt/fortress_nas/Business_Prime/"
+
+      integrations:
+        - name: "Streamline VRS"
+          type: "PMS (Property Management System)"
+          bridge: "src/bridges/streamline_legacy_connect.py"
+        - name: "Plaid"
+          type: "Banking API"
+          bridge: "division_b_property/plaid_client.py"
+
+      firewall: "NEVER access division_a or hedge_fund schemas."
+
+    # =========================================================================
+    # SECTOR 02: DEV — Real Estate Development
+    # =========================================================================
+    - slug: "dev"
+      name: "Fortress Development"
+      code: "S02"
+      persona: "The Architect (CF-10)"
+      model_bias: "Technical / Engineering / Construction"
+      description: >
+        Active real estate development operations. Lot 9 construction,
+        septic engineering, surveyor coordination, permit tracking.
+        Manages the full lifecycle from land acquisition to Certificate
+        of Occupancy.
+
+      db_schema: "engineering"
+      db_tables:
+        - "engineering.projects"
+        - "engineering.drawings"
+        - "engineering.permits"
+        - "engineering.inspections"
+        - "engineering.mep_systems"
+        - "engineering.compliance_log"
+        - "engineering.change_orders"
+        - "engineering.rfis"
+        - "engineering.submittals"
+        - "engineering.punch_items"
+        - "engineering.cost_estimates"
+        - "public.properties"
+        - "public.asset_docs"
+        - "public.property_events"
+        - "public.real_estate_intel"
+
+      qdrant_collections:
+        - "email_embeddings"      # Filtered by division = 'REAL_ESTATE'
+
+      email_divisions:
+        - "REAL_ESTATE"
+
+      code_modules:
+        - "division_engineering/"
+        - "division_real_estate/"
+
+      nas_paths:
+        - "/mnt/fortress_nas/Business_Prime/"
+
+      integrations:
+        - name: "County GIS"
+          type: "Property Records"
+          bridge: null              # Manual for now
+
+      firewall: "Read-only access to division_b for property cross-reference. No write."
+
+    # =========================================================================
+    # SECTOR 03: COMP — Fortress Comptroller (Finance)
+    # =========================================================================
+    - slug: "comp"
+      name: "Fortress Comptroller"
+      code: "S03"
+      persona: "The CFO / Venture Capitalist"
+      model_bias: "Analytical / Financial / Tax Optimization"
+      description: >
+        Enterprise-wide financial oversight. Mirrors QuickBooks Online
+        into Postgres double-entry ledger. Tracks cash flow across all
+        divisions, monitors Gold/BTC positions, optimizes tax strategy.
+        Challenges every transaction.
+
+      db_schema: "division_a"
+      db_tables:
+        - "division_a.transactions"
+        - "division_a.predictions"
+        - "division_a.audit_log"
+        - "division_a.chart_of_accounts"
+        - "division_a.general_ledger"
+        - "division_a.journal_entries"
+        - "division_a.account_mappings"
+        - "hedge_fund.market_signals"
+        - "hedge_fund.watchlist"
+        - "hedge_fund.active_strategies"
+        - "hedge_fund.extraction_log"
+        - "public.market_intel"
+        - "public.revenue_ledger"
+        - "public.finance_invoices"
+        - "public.trust_balance"
+
+      qdrant_collections:
+        - "email_embeddings"      # Filtered by division = 'HEDGE_FUND'
+
+      email_divisions:
+        - "HEDGE_FUND"
+
+      code_modules:
+        - "division_a_holding/"
+        - "division_finance/"
+        - "accounting/"
+        - "src/cfo_extractor.py"
+        - "src/quant_revenue.py"
+        - "src/market_sentinel.py"
+        - "src/market_watcher.py"
+        - "src/mining_rig_trader.py"
+
+      nas_paths:
+        - "/mnt/fortress_nas/Financial_Ledger/"
+
+      integrations:
+        - name: "QuickBooks Online"
+          type: "Accounting"
+          bridge: "accounting/import_qbo_coa.py"
+        - name: "Plaid"
+          type: "Banking API"
+          bridge: "division_a_holding/plaid_client.py"
+
+      firewall: >
+        READ access to division_b (for consolidated reporting).
+        WRITE only to division_a and hedge_fund schemas.
+        Revenue from CROG and Bloom must be strictly categorized for
+        distinct tax treatment (per Constitution Section III.C).
+
+    # =========================================================================
+    # SECTOR 04: BLOOM — Verses in Bloom (Digital Retail)
+    # =========================================================================
+    - slug: "bloom"
+      name: "Verses in Bloom"
+      code: "S04"
+      persona: "The Artisan"
+      model_bias: "Creative / Market Trends / E-Commerce"
+      description: >
+        High-margin, low-friction digital retail. Watercolor greeting
+        cards and art prints sold via Etsy and Print-on-Demand. Zero
+        physical inventory liability. Future: AI-generated art via
+        "The Ocular" (Spark-03 vision pipeline).
+
+      db_schema: null               # No dedicated schema yet
+      db_tables:
+        - "public.sales_intel"
+
+      qdrant_collections: []        # Future: design_embeddings
+
+      email_divisions:
+        - "PERSONAL"                # Art-related comms currently classified here
+
+      code_modules: []              # To be built
+
+      nas_paths:
+        - "/mnt/fortress_nas/Digital_Media/"
+
+      integrations:
+        - name: "Etsy API"
+          type: "E-Commerce"
+          bridge: null              # To be built
+        - name: "Printful"
+          type: "Print-on-Demand"
+          bridge: null              # To be built
+
+      firewall: "Isolated. Revenue data flows UP to COMP only."
+
+    # =========================================================================
+    # SECTOR 05: LEGAL — Fortress JD (Legal Intelligence)
+    # =========================================================================
+    - slug: "legal"
+      name: "Fortress JD"
+      code: "S05"
+      persona: "The Counselor"
+      model_bias: "Legal / Regulatory / Contract Analysis"
+      description: >
+        Legal intelligence across all divisions. Real estate law,
+        septic regulations, zoning compliance, contract review,
+        dispute resolution. Ingests county codes and case law into
+        vector memory for RAG retrieval.
+
+      db_schema: null               # Uses public schema
+      db_tables:
+        - "public.legal_matters"
+        - "public.legal_clients"
+        - "public.legal_docket"
+        - "public.legal_intel"
+        - "public.legal_matter_notes"
+
+      qdrant_collections:
+        - "legal_library"           # 2,455 vectors of legal documents
+        - "email_embeddings"        # Filtered by division = 'LEGAL_ADMIN'
+
+      email_divisions:
+        - "LEGAL_ADMIN"
+
+      code_modules:
+        - "division_legal/"
+        - "src/legal_analyst.py"
+        - "src/legal_partner_r1.py"
+        - "src/forensic_audit.py"
+
+      nas_paths:
+        - "/mnt/fortress_nas/Corporate_Legal/"
+
+      integrations: []
+
+      firewall: >
+        READ access to ALL schemas (for contract cross-reference).
+        WRITE only to public.legal_* tables.
+        Privileged: May access any division's data for audit/compliance purposes.
+
+  # =========================================================================
+  # ROUTING RULES (for the Titan Executive)
+  # =========================================================================
+  routing:
+    # Keywords and patterns that map to sectors
+    keyword_hints:
+      crog:
+        - "cabin"
+        - "rental"
+        - "guest"
+        - "reservation"
+        - "booking"
+        - "turnover"
+        - "cleaning"
+        - "maintenance"
+        - "Streamline"
+        - "Blue Ridge"
+        - "Fannin"
+        - "property management"
+        - "owner statement"
+        - "payout"
+      dev:
+        - "lot 9"
+        - "construction"
+        - "septic"
+        - "permit"
+        - "survey"
+        - "grading"
+        - "foundation"
+        - "blueprint"
+        - "contractor"
+        - "building code"
+        - "inspection"
+        - "MEP"
+        - "RFI"
+      comp:
+        - "tax"
+        - "QuickBooks"
+        - "QBO"
+        - "revenue"
+        - "expense"
+        - "P&L"
+        - "balance sheet"
+        - "gold"
+        - "bitcoin"
+        - "BTC"
+        - "investment"
+        - "cash flow"
+        - "budget"
+        - "invoice"
+        - "ledger"
+        - "market"
+        - "hedge"
+      bloom:
+        - "Etsy"
+        - "watercolor"
+        - "card"
+        - "print"
+        - "design"
+        - "art"
+        - "Verses"
+        - "Bloom"
+        - "Printful"
+      legal:
+        - "contract"
+        - "lawsuit"
+        - "liability"
+        - "regulation"
+        - "compliance"
+        - "zoning"
+        - "easement"
+        - "deed"
+        - "title"
+        - "attorney"
+        - "clause"
+        - "dispute"
+
+    # Cross-division routing
+    cross_sector_rules:
+      - from: "any"
+        to: "legal"
+        condition: "Query mentions contracts, liability, or compliance"
+        action: "Route to LEGAL with source-sector context"
+      - from: "any"
+        to: "comp"
+        condition: "Query asks about money, revenue, or expenses"
+        action: "Route to COMP with source-sector context"
+      - from: "crog"
+        to: "dev"
+        condition: "Query about property improvements or construction on existing rentals"
+        action: "Route to DEV with CROG property reference"

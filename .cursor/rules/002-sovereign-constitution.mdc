@@ -1,0 +1,110 @@
+# SOVEREIGN CONSTITUTION ENFORCEMENT (Amendment II)
+
+## Governing Documents
+- **Constitution:** `CONSTITUTION.md` — ethical and operational boundaries.
+- **Requirements:** `REQUIREMENTS.md` — non-negotiable technical specifications.
+- **Atlas:** `fortress_atlas.yaml` — sector registry and routing rules.
+- **Config:** `config.py` — topology, blocklists, environment-driven constants.
+
+These four files form the "Sovereign Law." All code must comply.
+
+## The Prime Directive: Data Sovereignty
+
+1. **Zero-Cloud Retention:** NEVER write code that persists PII, financial records, legal documents, or guest data on third-party cloud servers. Transient cloud calls (Gemini API, Cloudflare edge) are permitted ONLY for non-sensitive, derived data.
+2. **Local-First Logic:** All LLM inference (Ollama in SWARM, DeepSeek-R1 in TITAN) runs on the local cluster. NEVER route sensitive payloads to external inference APIs.
+3. **Golden Snapshot Mandate:** Before any destructive operation (DROP TABLE, DELETE FROM, schema migration), verify a Golden Snapshot exists at `/mnt/fortress_nas/backups/GOLDEN_STATE_YYYYMMDD/`. Add a pre-flight check in the code.
+
+## Hierarchy of Authority
+
+1. **The Human (Gary)** retains absolute override. ALL autonomous actions involving financial transactions, legal filings, or public communications MUST require explicit Human approval.
+2. **The Architect (Gemini 3)** may plan, draft, and orchestrate. It CANNOT execute destructive local commands (`DROP`, `DELETE`, `rm -rf`) without Human verification.
+3. **The Sovereign (DeepSeek-R1)** is the final authority on logic, math, and contract analysis. It operates in TITAN mode only, single-shot, `--parallel 1`.
+
+## Hybrid Routing (Dual-Brain Pattern)
+
+When writing inference code, use this mode-aware pattern:
+
+```python
+import os
+from openai import OpenAI
+
+DEFCON = os.getenv("FORTRESS_DEFCON", "SWARM")
+
+if DEFCON == "TITAN":
+    client = OpenAI(base_url="http://10.10.10.2:8080/v1", api_key="not-needed")
+    model = "deepseek-r1"
+elif DEFCON == "ARCHITECT":
+    client = OpenAI(
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        api_key=os.getenv("GOOGLE_AI_API_KEY"),
+    )
+    model = "gemini-2.5-pro"
+else:
+    client = OpenAI(base_url="http://192.168.0.100/v1", api_key="not-needed")
+    model = "qwen2.5:7b"
+```
+
+**Rules:**
+- NEVER send PII or financial data to the ARCHITECT path (Gemini).
+- NEVER use the TITAN path for multi-turn chat. Single-shot deep analysis only.
+- ALWAYS default to SWARM for production operations.
+
+## Development Standards Enforcement
+
+### Strangler Fig Pattern (Mandatory)
+All new features MUST be built as independent agents that replace legacy Streamline VRS functionality:
+- New agents: Python + FastAPI + LangGraph + Pydantic.
+- Each agent owns ONE capability (pricing, availability, guest comms, etc.).
+- Feature flags in `config.py` route traffic between new agent and legacy bridge (`src/bridges/streamline_legacy_connect.py`).
+- Legacy bridge code is NEVER modified to add new features.
+- Decommission legacy only after 2-week parallel run with Human sign-off.
+
+### Pydantic Schema Enforcement
+All data crossing module boundaries MUST use Pydantic models with:
+- `Field(...)` constraints (min_length, max_length, gt, le, etc.).
+- Validators for business rules (ticker uppercase, price ceilings, no empty shells).
+- Type hints on all function signatures.
+
+### LangGraph for Multi-Agent Flows
+All new multi-step agent workflows MUST use LangGraph `StateGraph`:
+- Define a `TypedDict` state class.
+- Include an `audit_trail` field in state.
+- Terminal node MUST write to the Audit Ledger (Constitution Article III).
+
+### Self-Healing Reflection Loop
+Every failed execution MUST trigger a Post-Mortem:
+- Write to `public.system_post_mortems` (sector, severity, component, error_summary).
+- In TITAN mode, queue root cause analysis by R1.
+- In SWARM mode, propose remediation via fast inference.
+- Critical failures auto-halt and alert the Human (Kill Switch protocol).
+
+## Forbidden Patterns (Will Be Rejected)
+
+1. **DO NOT** upload raw financial, legal, or PII data to any cloud endpoint.
+2. **DO NOT** hardcode IPs — use `config.py` environment variables.
+3. **DO NOT** bypass `SENDER_BLOCKLIST` in any ingestion pipeline.
+4. **DO NOT** write to a sector's schema without consulting `fortress_atlas.yaml`.
+5. **DO NOT** use `pip install` ad-hoc — declare in `requirements.txt`.
+6. **DO NOT** run SWARM and TITAN simultaneously.
+7. **DO NOT** query `revenue_ledger.amount` — that column does not exist.
+8. **DO NOT** trust raw `finance_invoices.amount` totals — inflated by AI extraction.
+9. **DO NOT** modify `switch_defcon.sh` or `fortress_atlas.yaml` without Human approval.
+10. **DO NOT** add new features to `src/bridges/streamline_legacy_connect.py` — build new agents instead.
+
+## Edge Gateway Rules
+
+- External consumers connect via Cloudflare Worker at `api.crog-ai.com`.
+- JWT authentication is required for all ingress traffic.
+- API endpoints serve "Finished Intelligence" — NEVER raw database records.
+- The Cloud Developer receives an API Key, NOT cluster credentials.
+- All public endpoints must be rate-limited (default: 100 req/min per key).
+
+## Weekly Optimization Mandate
+
+The system MUST propose one architectural optimization per week targeting:
+- Latency reduction on the 400GbE MikroTik interconnect.
+- Throughput improvement in SWARM inference pipeline.
+- Data quality enhancement in downstream tables.
+- Cost reduction in NAS storage or compute utilization.
+
+Log proposals to `public.system_post_mortems` with `severity = 'info'` and `component = 'weekly_optimization'`.

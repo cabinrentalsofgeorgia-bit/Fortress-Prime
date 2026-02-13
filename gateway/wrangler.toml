@@ -1,0 +1,26 @@
+# Fortress Prime — Cloudflare Worker Configuration
+# Deploy: cd gateway && wrangler publish
+#
+# Environment Variables (set via Cloudflare Dashboard > Workers > Settings):
+#   JWT_SECRET           — Same HS256 secret as gateway/auth.py
+#   GARY_HW_FINGERPRINT  — SHA-256 fingerprint of Gary's hardware key
+#   TUNNEL_HOSTNAME      — Cloudflare Tunnel hostname
+
+name = "fortress-edge-gateway"
+main = "cloudflare_worker.js"
+compatibility_date = "2026-02-13"
+
+# Custom domain binding
+# routes = [
+#   { pattern = "api.crog-ai.com/*", zone_name = "crog-ai.com" }
+# ]
+
+# KV namespace for rate limiting state
+# Create with: wrangler kv:namespace create "RATE_LIMIT_KV"
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT_KV"
+# id = "<your-kv-namespace-id>"
+
+[vars]
+# Non-secret defaults (secrets go in Cloudflare Dashboard)
+TUNNEL_HOSTNAME = "fortress-tunnel.cfargotunnel.com"
