@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Your Stay — Cabin Rentals of Georgia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>">
+    <style>
+/* ═══════════════════════════════════════════════════════════════
+   GUEST PORTAL — Mobile-first, non-intrusive, self-service
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+    --bg: #0a0e14;
+    --bg-card: #131921;
+    --bg-elevated: #1a2230;
+    --bg-surface: #0f1520;
+    --border: #1e2d40;
+    --border-light: #2a3a50;
+    --text: #edf2f7;
+    --text-secondary: #8899aa;
+    --text-muted: #556677;
+    --accent: #10b981;
+    --accent-soft: rgba(16,185,129,0.12);
+    --accent-hover: #059669;
+    --warm: #d4a574;
+    --warm-soft: rgba(212,165,116,0.1);
+    --blue: #3b82f6;
+    --blue-soft: rgba(59,130,246,0.1);
+    --red: #ef4444;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.35);
+    --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+/* Loading State */
+.loading-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px;
+    transition: opacity 0.4s;
+}
+.loading-screen.fade-out { opacity: 0; pointer-events: none; }
+.loading-spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; color: var(--text-muted); }
+
+/* ── Hero ────────────────────────────────────────── */
+.hero {
+    position: relative;
+    padding: 56px 24px 36px;
+    text-align: center;
+    background: linear-gradient(165deg, #0d1520 0%, #162235 40%, #0d1520 100%);
+    overflow: hidden;
+}
+.hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: linear-gradient(to top, var(--bg), transparent);
+}
+.hero-badge {
+    display: inline-flex;
+    align-items: center; gap: 6px;
+    padding: 5px 14px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 100px;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+.hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px; font-weight: 700;
+    margin-bottom: 4px;
+}
+.hero-property {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    color: var(--warm);
+    margin-bottom: 4px;
+}
+.hero-dates {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.hero-countdown {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center; gap: 6px;
+    padding: 6px 14px;
+    background: var(--warm-soft);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--warm);
+    font-weight: 500;
+}
+
+/* ── Quick Actions Grid ─────────────────────────── */
+.quick-actions {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px;
+    margin-top: -18px;
+    position: relative; z-index: 10;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+.quick-actions::-webkit-scrollbar { display: none; }
+.qa-btn {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center; gap: 4px;
+    min-width: 72px;
+    padding: 12px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-decoration: none;
+    color: var(--text);
+}
+.qa-btn:hover, .qa-btn:active {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.12);
+}
+.qa-btn .icon { font-size: 22px; }
+.qa-btn .label {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* ── Content ────────────────────────────────────── */
+.content {
+    padding: 20px 16px 120px;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.section { margin-bottom: 24px; }
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px; font-weight: 600;
+}
+.section-more {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    border: none; background: none;
+    font-weight: 500;
+}
+
+/* ── Essential Cards ────────────────────────────── */
+.essential-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 10px;
+    transition: all var(--transition);
+}
+.essential-card:hover { border-color: var(--border-light); }
+
+.essential-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center; gap: 6px;
+}
+
+.wifi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.wifi-item {
+    padding: 10px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+}
+.wifi-item-label {
+    font-size: 10px; color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.wifi-item-value {
+    font-size: 15px; font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center; gap: 6px;
+}
+.copy-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+.wifi-item:hover .copy-hint { opacity: 1; }
+
+.code-display {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-align: center;
+    padding: 16px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.code-display:hover { background: var(--accent-soft); }
+
+.checkin-info {
+    display: grid; gap: 8px;
+}
+.checkin-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+}
+.checkin-label { font-size: 12px; color: var(--text-muted); }
+.checkin-value { font-size: 13px; font-weight: 600; }
+
+.checkout-list {
+    list-style: none;
+    display: grid; gap: 6px;
+}
+.checkout-list li {
+    display: flex;
+    align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.checkout-list li:hover { background: var(--accent-soft); }
+.checkout-list li .check {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border-light);
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center; justify-content: center;
+    font-size: 10px;
+    transition: all var(--transition);
+}
+.checkout-list li.done .check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+/* ── Guide Cards ────────────────────────────────── */
+.guide-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+.guide-scroll::-webkit-scrollbar { display: none; }
+.guide-card {
+    flex: 0 0 200px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.guide-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+.guide-card .icon { font-size: 28px; margin-bottom: 8px; }
+.guide-card .title {
+    font-size: 13px; font-weight: 600;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.guide-card .subtitle {
+    font-size: 11px; color: var(--text-muted);
+}
+
+/* ── Concierge Chat ─────────────────────────────── */
+.concierge-section {
+    background: linear-gradient(135deg, #131921, #1a2538);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+.concierge-title {
+    font-size: 15px; font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center; gap: 8px;
+}
+.concierge-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+}
+.concierge-input-wrap {
+    display: flex;
+    gap: 8px;
+}
+.concierge-input {
+    flex: 1;
+    padding: 12px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color var(--transition);
+}
+.concierge-input:focus { border-color: var(--accent); }
+.concierge-input::placeholder { color: var(--text-muted); }
+.concierge-send {
+    width: 44px; height: 44px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center; justify-content: center;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+.concierge-send:hover { background: var(--accent-hover); }
+.concierge-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.concierge-suggestions {
+    display: flex; flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+.suggestion-chip {
+    padding: 6px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.suggestion-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+/* Chat thread (appears below input when asked) */
+.chat-thread { margin-top: 14px; display: grid; gap: 10px; }
+.chat-bubble {
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 90%;
+    animation: bubbleIn 0.25s ease-out;
+    white-space: pre-wrap;
+}
+@keyframes bubbleIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.chat-bubble.guest {
+    background: var(--accent);
+    color: white;
+    justify-self: end;
+    border-bottom-right-radius: 4px;
+}
+.chat-bubble.concierge {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    justify-self: start;
+    border-bottom-left-radius: 4px;
+}
+.chat-bubble .source-tag {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    display: flex;
+    align-items: center; gap: 4px;
+}
+.chat-bubble .copyable {
+    display: inline-flex;
+    align-items: center; gap: 4px;
+    padding: 3px 8px;
+    background: var(--accent-soft);
+    border-radius: 6px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.chat-bubble .copyable:hover { background: rgba(16,185,129,0.2); }
+.feedback-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+.feedback-btn {
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.feedback-btn:hover { border-color: var(--accent); color: var(--accent); }
+.feedback-btn.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+/* ── Extras ─────────────────────────────────────── */
+.extras-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.extras-scroll::-webkit-scrollbar { display: none; }
+.extra-card {
+    flex: 0 0 160px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: all var(--transition);
+    cursor: pointer;
+}
+.extra-card:hover {
+    border-color: var(--warm);
+    transform: translateY(-2px);
+}
+.extra-icon { font-size: 28px; margin-bottom: 8px; }
+.extra-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.extra-price {
+    font-size: 18px; font-weight: 700;
+    color: var(--warm);
+}
+.extra-desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.extra-add {
+    margin-top: 10px;
+    padding: 6px 12px;
+    background: var(--warm-soft);
+    border: 1px solid rgba(212,165,116,0.3);
+    border-radius: 8px;
+    color: var(--warm);
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    width: 100%;
+}
+.extra-add:hover { background: rgba(212,165,116,0.2); }
+
+/* ── Emergency ──────────────────────────────────── */
+.emergency-bar {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center; gap: 10px;
+    margin-bottom: 20px;
+    font-size: 13px;
+}
+.emergency-bar a {
+    color: var(--red);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+/* ── Contact Bar (sticky bottom) ────────────────── */
+.contact-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+.contact-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text);
+    font-size: 13px; font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-decoration: none;
+    display: flex;
+    align-items: center; justify-content: center;
+    gap: 6px;
+}
+.contact-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+.contact-btn:hover { transform: translateY(-1px); }
+
+/* ── Guide Detail Overlay ───────────────────────── */
+.guide-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    padding: 0 0 40px;
+}
+.guide-overlay.open { transform: translateX(0); }
+.guide-overlay-header {
+    position: sticky; top: 0;
+    background: var(--bg);
+    padding: 16px;
+    display: flex;
+    align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+}
+.guide-back-btn {
+    width: 36px; height: 36px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center; justify-content: center;
+}
+.guide-overlay-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px; font-weight: 600;
+}
+.guide-overlay-body {
+    padding: 20px 16px;
+    max-width: 640px;
+    margin: 0 auto;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+.guide-overlay-body h1, .guide-overlay-body h2, .guide-overlay-body h3 {
+    color: var(--text);
+    margin: 20px 0 10px;
+    font-family: 'Playfair Display', serif;
+}
+.guide-overlay-body strong { color: var(--text); }
+.guide-overlay-body ul, .guide-overlay-body ol { padding-left: 20px; }
+.guide-overlay-body li { margin-bottom: 6px; }
+
+/* ── Toast ──────────────────────────────────────── */
+.toast {
+    position: fixed;
+    top: env(safe-area-inset-top, 12px);
+    left: 50%; transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 13px; font-weight: 600;
+    z-index: 1000;
+    animation: toastFade 2.5s forwards;
+    box-shadow: 0 4px 20px rgba(16,185,129,0.3);
+}
+@keyframes toastFade {
+    0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    12% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ── Footer ─────────────────────────────────────── */
+.footer {
+    text-align: center;
+    padding: 20px 16px 0;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.footer a { color: var(--accent); text-decoration: none; }
+
+/* ── Responsive ─────────────────────────────────── */
+@media (min-width: 600px) {
+    .hero { padding: 64px 24px 44px; }
+    .hero h1 { font-size: 36px; }
+    .content { padding: 24px 20px 120px; }
+    .quick-actions { justify-content: center; }
+    .guide-card { flex: 0 0 220px; }
+}
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div class="loading-screen" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Preparing your stay info...</div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero" id="hero">
+        <div class="hero-badge" id="hero-badge">Your Stay</div>
+        <h1 id="greeting">Welcome!</h1>
+        <div class="hero-property" id="prop-name"></div>
+        <div class="hero-dates" id="stay-dates"></div>
+        <div class="hero-countdown" id="countdown" style="display:none"></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions" id="quick-actions"></div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <!-- Emergency -->
+        <div class="emergency-bar">
+            <span>🚨</span>
+            <div>Emergency? <a href="tel:911">Call 911</a> first, then <a href="tel:+17065255482">(706) 525-5482</a></div>
+        </div>
+
+        <!-- Essentials (WiFi, Access Code, Check-in/out) -->
+        <div class="section" id="essentials-section"></div>
+
+        <!-- Smart Concierge -->
+        <div class="concierge-section" id="concierge">
+            <div class="concierge-title">
+                <span>💡</span> Ask Anything About Your Stay
+            </div>
+            <div class="concierge-subtitle" id="concierge-sub">
+                I know the specifics of your cabin — ask me how things work, what's nearby, or anything else.
+            </div>
+            <div class="concierge-input-wrap">
+                <input type="text" class="concierge-input" id="ask-input"
+                    placeholder="How do I start the fireplace?"
+                    autocomplete="off" enterkeyhint="send">
+                <button class="concierge-send" id="ask-btn" aria-label="Ask">→</button>
+            </div>
+            <div class="concierge-suggestions" id="suggestions"></div>
+            <div class="chat-thread" id="chat-thread"></div>
+        </div>
+
+        <!-- Home Guides -->
+        <div class="section" id="home-guides-section" style="display:none">
+            <div class="section-header">
+                <div class="section-title">Your Cabin Guide</div>
+            </div>
+            <div class="guide-scroll" id="home-guides"></div>
+        </div>
+
+        <!-- Area Guides -->
+        <div class="section" id="area-guides-section" style="display:none">
+            <div class="section-header">
+                <div class="section-title">Explore the Area</div>
+            </div>
+            <div class="guide-scroll" id="area-guides"></div>
+        </div>
+
+        <!-- Extras -->
+        <div class="section" id="extras-section" style="display:none">
+            <div class="section-header">
+                <div class="section-title">Enhance Your Stay</div>
+            </div>
+            <div class="extras-scroll" id="extras-grid"></div>
+        </div>
+
+        <div class="footer">
+            <p>Cabin Rentals of Georgia</p>
+            <p>Blue Ridge, GA</p>
+        </div>
+    </div>
+
+    <!-- Contact Bar -->
+    <div class="contact-bar" id="contact-bar">
+        <a class="contact-btn" id="sms-btn" href="sms:+17064711479">💬 Text Us</a>
+        <a class="contact-btn primary" id="call-btn" href="tel:+17065255482">📞 Call Us</a>
+    </div>
+
+    <!-- Guide Detail Overlay -->
+    <div class="guide-overlay" id="guide-overlay">
+        <div class="guide-overlay-header">
+            <button class="guide-back-btn" onclick="closeGuide()">←</button>
+            <div class="guide-overlay-title" id="guide-title"></div>
+        </div>
+        <div class="guide-overlay-body" id="guide-body"></div>
+    </div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   GUEST PORTAL ENGINE
+   ═══════════════════════════════════════════════════════════════ */
+
+const API = window.location.origin + '/api/portal';
+const code = window.location.pathname.split('/').filter(Boolean).pop();
+let portal = null;
+
+async function init() {
+    if (!code) {
+        showError("No reservation code found in the URL.");
+        return;
+    }
+    try {
+        const resp = await fetch(`${API}/${code}`);
+        if (!resp.ok) throw new Error(await resp.text());
+        portal = await resp.json();
+        render();
+    } catch (err) {
+        console.error(err);
+        showError("We couldn't find your reservation. Please check the link you received.");
+    }
+}
+
+function render() {
+    // Hero
+    const g = portal.guest;
+    const r = portal.reservation;
+    const p = portal.property;
+    const ctx = portal.context;
+
+    document.title = `Your Stay at ${p.name} — Cabin Rentals of Georgia`;
+
+    const greetings = {
+        far_out: `Hey ${g.first_name}!`,
+        pre_arrival: `Almost time, ${g.first_name}!`,
+        arrival_day: `Welcome, ${g.first_name}!`,
+        first_morning: `Good morning, ${g.first_name}!`,
+        mid_stay: `Enjoying your stay, ${g.first_name}?`,
+        checkout_day: `Safe travels, ${g.first_name}!`,
+        post_stay: `Thanks, ${g.first_name}!`,
+    };
+    document.getElementById('greeting').textContent = greetings[ctx.phase] || `Welcome, ${g.first_name}!`;
+    document.getElementById('prop-name').textContent = p.name;
+    document.getElementById('stay-dates').textContent =
+        `${formatDate(r.check_in)} — ${formatDate(r.check_out)} · ${r.nights} night${r.nights > 1 ? 's' : ''} · ${r.num_guests} guest${r.num_guests > 1 ? 's' : ''}`;
+
+    const badges = {
+        far_out: `${ctx.days_until_checkin} days to go`,
+        pre_arrival: `${ctx.days_until_checkin} day${ctx.days_until_checkin > 1 ? 's' : ''} until check-in`,
+        arrival_day: 'Check-in today!',
+        first_morning: 'Day 1 of your stay',
+        mid_stay: `Day ${ctx.days_into_stay} of ${r.nights}`,
+        checkout_day: 'Checkout today',
+        post_stay: 'Stay complete',
+    };
+    document.getElementById('hero-badge').textContent = badges[ctx.phase] || 'Your Stay';
+
+    if (ctx.phase !== 'post_stay' && ctx.days_until_checkin > 0) {
+        const cd = document.getElementById('countdown');
+        cd.textContent = `⏳ ${ctx.days_until_checkin} day${ctx.days_until_checkin > 1 ? 's' : ''} until your mountain getaway`;
+        cd.style.display = '';
+    } else if (ctx.phase === 'checkout_day') {
+        const cd = document.getElementById('countdown');
+        cd.textContent = `🕚 Checkout by 11:00 AM`;
+        cd.style.display = '';
+    }
+
+    // Quick Actions
+    renderQuickActions();
+
+    // Essentials
+    renderEssentials();
+
+    // Concierge
+    renderConcierge();
+
+    // Guides
+    renderGuides();
+
+    // Extras
+    renderExtras();
+
+    // Contact
+    const c = portal.contact;
+    document.getElementById('sms-btn').href = `sms:${c.sms}`;
+    document.getElementById('call-btn').href = `tel:${c.phone}`;
+
+    // Fade out loading
+    const loader = document.getElementById('loading');
+    loader.classList.add('fade-out');
+    setTimeout(() => loader.remove(), 400);
+}
+
+/* ── Quick Actions ───────────────────────── */
+function renderQuickActions() {
+    const container = document.getElementById('quick-actions');
+    const actions = portal.messaging.quick_actions || [];
+    container.innerHTML = actions.map(a => `
+        <div class="qa-btn" onclick="handleAction('${a.action}', '${a.data || ''}')">
+            <span class="icon">${a.icon}</span>
+            <span class="label">${a.label}</span>
+        </div>
+    `).join('');
+}
+
+function handleAction(action, data) {
+    switch (action) {
+        case 'show_wifi':
+            document.getElementById('essentials-section')?.scrollIntoView({ behavior: 'smooth' });
+            break;
+        case 'show_access':
+        case 'show_checkin':
+        case 'show_checkout':
+        case 'show_parking':
+        case 'show_directions':
+            document.getElementById('essentials-section')?.scrollIntoView({ behavior: 'smooth' });
+            break;
+        case 'show_restaurants':
+        case 'show_activities':
+            document.getElementById('area-guides-section')?.scrollIntoView({ behavior: 'smooth' });
+            break;
+        case 'open_chat':
+            document.getElementById('ask-input')?.focus();
+            break;
+        case 'report_issue':
+            document.getElementById('ask-input').value = "I need to report an issue: ";
+            document.getElementById('ask-input').focus();
+            break;
+        case 'leave_review':
+            askConcierge("How do I leave a review?");
+            break;
+        case 'book_again':
+            askConcierge("I'd love to book another stay!");
+            break;
+        case 'show_guide':
+            const guide = portal.guides?.home?.find(g => g.slug === data || g.category === data);
+            if (guide) openGuide(guide);
+            break;
+    }
+}
+
+/* ── Essentials ──────────────────────────── */
+function renderEssentials() {
+    const es = portal.essentials;
+    const el = document.getElementById('essentials-section');
+    let html = '';
+
+    // WiFi
+    if (es.wifi?.network) {
+        html += `
+        <div class="essential-card">
+            <div class="essential-label">📶 WiFi</div>
+            <div class="wifi-grid">
+                <div class="wifi-item" onclick="copyText('${es.wifi.network}')">
+                    <div class="wifi-item-label">Network</div>
+                    <div class="wifi-item-value">${es.wifi.network} <span class="copy-hint">tap to copy</span></div>
+                </div>
+                <div class="wifi-item" onclick="copyText('${es.wifi.password}')">
+                    <div class="wifi-item-label">Password</div>
+                    <div class="wifi-item-value">${es.wifi.password} <span class="copy-hint">tap to copy</span></div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // Access Code
+    if (es.access?.code) {
+        html += `
+        <div class="essential-card">
+            <div class="essential-label">🔑 Access Code</div>
+            <div class="code-display" onclick="copyText('${es.access.code}')" title="Tap to copy">
+                ${es.access.code}
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:var(--text-secondary);text-align:center;">
+                ${es.access.type} · ${es.access.location}<br>
+                <span style="color:var(--text-muted)">${es.access.note}</span>
+            </div>
+        </div>`;
+    }
+
+    // Check-in
+    if (es.checkin) {
+        html += `
+        <div class="essential-card">
+            <div class="essential-label">📍 Check-in Details</div>
+            <div class="checkin-info">
+                <div class="checkin-row">
+                    <span class="checkin-label">Date</span>
+                    <span class="checkin-value">${es.checkin.date}</span>
+                </div>
+                <div class="checkin-row">
+                    <span class="checkin-label">Time</span>
+                    <span class="checkin-value">${es.checkin.time}</span>
+                </div>
+                ${es.checkin.address ? `<div class="checkin-row">
+                    <span class="checkin-label">Address</span>
+                    <span class="checkin-value" style="font-size:12px;text-align:right;max-width:60%">${es.checkin.address}</span>
+                </div>` : ''}
+                <div class="checkin-row">
+                    <span class="checkin-label">Parking</span>
+                    <span class="checkin-value" style="font-size:12px;text-align:right;max-width:60%">${es.checkin.parking}</span>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // Checkout Checklist
+    if (es.checkout) {
+        html += `
+        <div class="essential-card">
+            <div class="essential-label">✅ Checkout Checklist — ${es.checkout.date} by ${es.checkout.time}</div>
+            <ul class="checkout-list" id="checkout-list">
+                ${es.checkout.checklist.map((item, i) => `
+                    <li onclick="toggleCheck(this)" data-idx="${i}">
+                        <span class="check"></span>
+                        ${item}
+                    </li>
+                `).join('')}
+            </ul>
+        </div>`;
+    }
+
+    el.innerHTML = html;
+}
+
+function toggleCheck(li) {
+    li.classList.toggle('done');
+    const check = li.querySelector('.check');
+    check.textContent = li.classList.contains('done') ? '✓' : '';
+}
+
+/* ── Concierge ───────────────────────────── */
+function renderConcierge() {
+    const m = portal.messaging;
+    document.getElementById('ask-input').placeholder = m.placeholder;
+
+    // Context-aware suggestions
+    const phase = portal.context.phase;
+    const prop = portal.property.name;
+    const suggestions = {
+        far_out: ["What should I pack?", `What's the WiFi at ${prop}?`, "Best restaurants nearby?"],
+        pre_arrival: [`How do I get to ${prop}?`, "What's the door code?", "Where do I park?"],
+        arrival_day: ["What's the WiFi password?", "How do I get in?", "Where's the nearest grocery?"],
+        first_morning: ["How does the fireplace work?", "Best breakfast spots?", "Hiking trails nearby?"],
+        mid_stay: ["Restaurant recommendations?", "Things to do today?", "How do I use the hot tub?"],
+        checkout_day: ["What's the checkout process?", "Can I get late checkout?", "Where's the trash go?"],
+        post_stay: ["I'd like to book again", "How do I leave a review?"],
+    };
+
+    const chips = suggestions[phase] || suggestions.mid_stay;
+    document.getElementById('suggestions').innerHTML = chips.map(s =>
+        `<div class="suggestion-chip" onclick="askConcierge('${s.replace(/'/g, "\\'")}')">${s}</div>`
+    ).join('');
+}
+
+// Bind input
+document.getElementById('ask-btn').addEventListener('click', () => {
+    const input = document.getElementById('ask-input');
+    if (input.value.trim()) askConcierge(input.value.trim());
+});
+document.getElementById('ask-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+        askConcierge(e.target.value.trim());
+    }
+});
+
+async function askConcierge(question) {
+    const input = document.getElementById('ask-input');
+    const thread = document.getElementById('chat-thread');
+    const btn = document.getElementById('ask-btn');
+
+    input.value = '';
+    btn.disabled = true;
+
+    // Guest bubble
+    thread.innerHTML += `<div class="chat-bubble guest">${escapeHtml(question)}</div>`;
+
+    // Typing indicator
+    const typingId = 'typing-' + Date.now();
+    thread.innerHTML += `<div class="chat-bubble concierge" id="${typingId}" style="color:var(--text-muted)">Thinking...</div>`;
+    thread.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+    try {
+        const resp = await fetch(`${API}/${code}/ask`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question }),
+        });
+        const data = await resp.json();
+
+        // Remove typing indicator
+        document.getElementById(typingId)?.remove();
+
+        // Build response bubble
+        let answerHtml = formatAnswer(data.answer || "I'm not sure about that. Let me connect you with our team.");
+
+        // Add copyable fields if any
+        if (data.copyable_fields) {
+            for (const [label, val] of Object.entries(data.copyable_fields)) {
+                answerHtml += `<br><span class="copyable" onclick="copyText('${val}')">${label}: ${val}</span>`;
+            }
+        }
+
+        // Source indicator
+        let sourceLabel = '';
+        if (data.property_specific) sourceLabel = '✓ Specific to your cabin';
+        else if (data.source === 'knowledge_base') sourceLabel = 'From our knowledge base';
+        else if (data.source === 'property_data' || data.source === 'reservation_data') sourceLabel = '✓ Your reservation details';
+
+        answerHtml += sourceLabel ? `<div class="source-tag">${sourceLabel}</div>` : '';
+
+        // Related questions
+        if (data.related_questions?.length) {
+            answerHtml += '<div class="concierge-suggestions" style="margin-top:10px">';
+            for (const rq of data.related_questions) {
+                if (rq.question) {
+                    answerHtml += `<div class="suggestion-chip" onclick="askConcierge('${rq.question.replace(/'/g, "\\'")}')">${rq.question}</div>`;
+                }
+            }
+            answerHtml += '</div>';
+        }
+
+        // Feedback buttons
+        answerHtml += `
+            <div class="feedback-row">
+                <button class="feedback-btn" onclick="submitFeedback(this, true)">👍 Helpful</button>
+                <button class="feedback-btn" onclick="submitFeedback(this, false)">👎 Not quite</button>
+            </div>`;
+
+        thread.innerHTML += `<div class="chat-bubble concierge">${answerHtml}</div>`;
+
+        // If suggest_contact, highlight contact bar
+        if (data.suggest_contact) {
+            document.getElementById('contact-bar').style.boxShadow = '0 -4px 20px rgba(16,185,129,0.2)';
+            setTimeout(() => document.getElementById('contact-bar').style.boxShadow = '', 3000);
+        }
+
+    } catch (err) {
+        document.getElementById(typingId)?.remove();
+        thread.innerHTML += `<div class="chat-bubble concierge">
+            Something went wrong. Please text or call us directly — we're here to help!
+        </div>`;
+    }
+
+    btn.disabled = false;
+    thread.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function submitFeedback(btn, helpful) {
+    btn.classList.add('selected');
+    const row = btn.parentElement;
+    row.querySelectorAll('.feedback-btn').forEach(b => { if (b !== btn) b.style.display = 'none'; });
+
+    fetch(`${API}/${code}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ helpful }),
+    }).catch(() => {});
+
+    showToast(helpful ? 'Thanks for the feedback!' : "We'll do better — feel free to text us for help.");
+}
+
+/* ── Guides ──────────────────────────────── */
+function renderGuides() {
+    const guides = portal.guides || {};
+    const icons = { wifi: '📶', rules: '📋', amenities: '🏊', restaurants: '🍽️', emergency: '🚨', activities: '🎣', fireplace: '🔥', hot_tub: '♨️', grill: '🔥', kitchen: '🍳', entertainment: '📺', outdoors: '🏔️' };
+
+    if (guides.home?.length) {
+        document.getElementById('home-guides-section').style.display = '';
+        document.getElementById('home-guides').innerHTML = guides.home.map(g => `
+            <div class="guide-card" onclick='openGuide(${JSON.stringify(g).replace(/'/g, "&#39;")})'>
+                <div class="icon">${g.icon || icons[g.category] || '📄'}</div>
+                <div class="title">${g.title}</div>
+                <div class="subtitle">${g.is_property_specific ? 'For this cabin' : g.category || ''}</div>
+            </div>
+        `).join('');
+    }
+
+    if (guides.area?.length) {
+        document.getElementById('area-guides-section').style.display = '';
+        document.getElementById('area-guides').innerHTML = guides.area.map(g => `
+            <div class="guide-card" onclick='openGuide(${JSON.stringify(g).replace(/'/g, "&#39;")})'>
+                <div class="icon">${g.icon || icons[g.category] || '🏔️'}</div>
+                <div class="title">${g.title}</div>
+                <div class="subtitle">${g.category || 'Local guide'}</div>
+            </div>
+        `).join('');
+    }
+}
+
+function openGuide(guide) {
+    document.getElementById('guide-title').textContent = guide.title;
+    document.getElementById('guide-body').innerHTML = mdToHtml(guide.content);
+    document.getElementById('guide-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Track view
+    if (guide.id) {
+        fetch(`${window.location.origin}/api/guestbook/${guide.id}/view`, { method: 'POST' }).catch(() => {});
+    }
+}
+
+function closeGuide() {
+    document.getElementById('guide-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+/* ── Extras ──────────────────────────────── */
+function renderExtras() {
+    const extras = portal.extras || [];
+    if (!extras.length) return;
+    
+    document.getElementById('extras-section').style.display = '';
+    const icons = { firewood: '🔥', late_checkout: '🕐', early_checkin: '🌅', amenity: '🎁', celebration: '🎉', experience: '📸' };
+
+    document.getElementById('extras-grid').innerHTML = extras.map(e => `
+        <div class="extra-card">
+            <div class="extra-icon">${icons[e.category] || '🎁'}</div>
+            <div class="extra-name">${e.name}</div>
+            <div class="extra-price">$${parseFloat(e.price).toFixed(0)}</div>
+            <div class="extra-desc">${e.description || ''}</div>
+            <button class="extra-add" onclick="orderExtra('${e.name}', ${e.price})">Add to Stay</button>
+        </div>
+    `).join('');
+}
+
+function orderExtra(name, price) {
+    showToast(`${name} requested ($${price})! We'll confirm shortly.`);
+}
+
+/* ── Helpers ─────────────────────────────── */
+function formatDate(str) {
+    const d = new Date(str + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function formatAnswer(text) {
+    return text
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
+function mdToHtml(md) {
+    if (!md) return '<p>Content loading...</p>';
+    return md
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^- (.*$)/gm, '<li>$1</li>')
+        .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+}
+
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard!');
+    }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        showToast('Copied!');
+    });
+}
+
+function showToast(msg) {
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2800);
+}
+
+function showError(msg) {
+    const loader = document.getElementById('loading');
+    if (loader) {
+        loader.innerHTML = `
+            <div style="font-size:48px;margin-bottom:16px">🏔️</div>
+            <div style="font-size:16px;font-weight:600;margin-bottom:8px">Hmm, we can't find that</div>
+            <div style="font-size:13px;color:var(--text-secondary);max-width:300px;text-align:center;line-height:1.6">${msg}</div>
+            <a href="tel:+17065255482" style="margin-top:20px;padding:10px 24px;background:var(--accent);color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px">Call Us</a>
+        `;
+    }
+}
+
+// Escape key to close guide
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeGuide();
+});
+
+// Init
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

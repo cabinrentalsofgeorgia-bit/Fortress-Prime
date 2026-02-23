@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Welcome — Cabin Rentals of Georgia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>">
+    <style>
+        :root {
+            --bg: #0c1017;
+            --bg-card: #151c28;
+            --bg-elevated: #1c2535;
+            --border: #223049;
+            --text: #f0f4f8;
+            --text-secondary: #8899aa;
+            --text-muted: #5a6b7d;
+            --accent: #10b981;
+            --accent-hover: #059669;
+            --warm: #d4a574;
+            --warm-light: rgba(212,165,116,0.1);
+            --radius: 16px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Hero */
+        .hero {
+            position: relative;
+            padding: 60px 20px 40px;
+            text-align: center;
+            background: linear-gradient(135deg, #0c1017 0%, #1a2738 50%, #0c1017 100%);
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 80%, rgba(16,185,129,0.06) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: var(--warm-light);
+            border: 1px solid rgba(212,165,116,0.2);
+            border-radius: 100px;
+            font-size: 11px;
+            color: var(--warm);
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: -0.01em;
+        }
+
+        .hero-property {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            color: var(--warm);
+            margin-bottom: 8px;
+        }
+
+        .hero-dates {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 0 20px;
+            margin-top: -20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .quick-action {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .quick-action:hover, .quick-action:active {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16,185,129,0.15);
+        }
+
+        .quick-action .icon {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .quick-action .label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Content */
+        .content {
+            padding: 24px 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        /* Guide Cards */
+        .guide-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .guide-card:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow);
+        }
+
+        .guide-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .guide-card-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .guide-card-title {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .guide-card-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .guide-card-arrow {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+
+        /* WiFi Card */
+        .wifi-card {
+            background: linear-gradient(135deg, #1a2738, #0c1820);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 12px;
+        }
+
+        .wifi-card h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wifi-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .wifi-row:last-child { border-bottom: none; }
+
+        .wifi-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .wifi-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .wifi-value::after {
+            content: ' 📋';
+            font-size: 12px;
+        }
+
+        /* Extras Marketplace */
+        .extras-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .extra-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .extra-card:hover {
+            border-color: var(--warm);
+            box-shadow: 0 2px 12px rgba(212,165,116,0.1);
+        }
+
+        .extra-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .extra-name {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .extra-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--warm);
+        }
+
+        .extra-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .order-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+
+        .order-btn:hover { background: var(--accent-hover); }
+
+        /* Emergency Banner */
+        .emergency-banner {
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            border: 1px solid #dc2626;
+            border-radius: var(--radius);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .emergency-banner .icon { font-size: 24px; }
+        .emergency-banner .text { font-size: 13px; }
+        .emergency-banner a {
+            color: white;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        /* Contact Bar */
+        .contact-bar {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 14px 20px;
+            display: flex;
+            gap: 10px;
+            position: sticky;
+            bottom: 0;
+        }
+
+        .contact-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .contact-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .contact-btn:hover { transform: translateY(-1px); }
+
+        /* Guide Detail View */
+        .guide-detail {
+            display: none;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .guide-detail.active {
+            display: block;
+        }
+
+        .guide-detail-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 16px;
+            border: none;
+            background: none;
+        }
+
+        .guide-detail h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            margin-bottom: 20px;
+        }
+
+        .guide-detail-content {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .guide-detail-content h1, .guide-detail-content h2, .guide-detail-content h3 {
+            color: var(--text);
+            margin: 20px 0 10px;
+            font-family: 'Playfair Display', serif;
+        }
+
+        .guide-detail-content h1 { font-size: 22px; }
+        .guide-detail-content h2 { font-size: 18px; }
+        .guide-detail-content h3 { font-size: 16px; }
+
+        .guide-detail-content ul, .guide-detail-content ol {
+            padding-left: 20px;
+        }
+
+        .guide-detail-content li {
+            margin-bottom: 6px;
+        }
+
+        .guide-detail-content strong {
+            color: var(--text);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1000;
+            animation: fadeInOut 2s forwards;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px 20px 100px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .footer a { color: var(--accent); text-decoration: none; }
+
+        /* Responsive */
+        @media (min-width: 768px) {
+            .hero h1 { font-size: 40px; }
+            .quick-actions { max-width: 500px; margin: -20px auto 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="guestbook-app">
+        <!-- Main View -->
+        <div id="main-view">
+            <div class="hero">
+                <div class="hero-badge">Welcome, Guest</div>
+                <h1 id="guest-greeting">Welcome!</h1>
+                <div class="hero-property" id="property-name">Loading...</div>
+                <div class="hero-dates" id="stay-dates"></div>
+            </div>
+
+            <div class="quick-actions">
+                <a class="quick-action" onclick="scrollToSection('wifi')">
+                    <span class="icon">📶</span>
+                    <span class="label">WiFi</span>
+                </a>
+                <a class="quick-action" onclick="scrollToSection('guides')">
+                    <span class="icon">📖</span>
+                    <span class="label">Guides</span>
+                </a>
+                <a class="quick-action" onclick="scrollToSection('extras')">
+                    <span class="icon">🛒</span>
+                    <span class="label">Extras</span>
+                </a>
+                <a class="quick-action" href="tel:+17065255482">
+                    <span class="icon">📞</span>
+                    <span class="label">Call Us</span>
+                </a>
+            </div>
+
+            <div class="content">
+                <!-- Emergency -->
+                <div class="emergency-banner">
+                    <span class="icon">🚨</span>
+                    <div class="text">
+                        Emergency? <a href="tel:911">Call 911</a> or
+                        <a href="tel:+17065255482">(706) 525-5482</a>
+                    </div>
+                </div>
+
+                <!-- WiFi -->
+                <div class="section" id="wifi">
+                    <div class="wifi-card">
+                        <h3>📶 WiFi Connection</h3>
+                        <div class="wifi-row">
+                            <span class="wifi-label">Network</span>
+                            <span class="wifi-value" id="wifi-ssid" onclick="copyToClipboard(this)">Loading...</span>
+                        </div>
+                        <div class="wifi-row">
+                            <span class="wifi-label">Password</span>
+                            <span class="wifi-value" id="wifi-password" onclick="copyToClipboard(this)">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Home Guides -->
+                <div class="section" id="guides">
+                    <div class="section-title">Your Cabin Guide</div>
+                    <div id="home-guides">
+                        <div class="guide-card">
+                            <div class="guide-card-header">
+                                <span class="guide-card-icon">⏳</span>
+                                <div>
+                                    <div class="guide-card-title">Loading guides...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Area Guides -->
+                <div class="section">
+                    <div class="section-title">Explore the Area</div>
+                    <div id="area-guides">
+                        <div class="guide-card">
+                            <div class="guide-card-header">
+                                <span class="guide-card-icon">⏳</span>
+                                <div>
+                                    <div class="guide-card-title">Loading guides...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Extras Marketplace -->
+                <div class="section" id="extras">
+                    <div class="section-title">Enhance Your Stay</div>
+                    <div class="extras-grid" id="extras-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <p>Powered by <a href="https://crog-ai.com">Fortress Guest Platform</a></p>
+                    <p>Cabin Rentals of Georgia &mdash; Blue Ridge, GA</p>
+                </div>
+            </div>
+
+            <div class="contact-bar">
+                <a class="contact-btn" href="sms:+17064711479">
+                    💬 Text Us
+                </a>
+                <a class="contact-btn primary" href="tel:+17065255482">
+                    📞 Call Us
+                </a>
+            </div>
+        </div>
+
+        <!-- Guide Detail View -->
+        <div id="guide-detail-view" class="guide-detail">
+            <button class="guide-detail-back" onclick="showMainView()">
+                ← Back to Guestbook
+            </button>
+            <h1 id="detail-title"></h1>
+            <div class="guide-detail-content" id="detail-content"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        let propertyData = null;
+        let guidesData = [];
+        let extrasData = [];
+
+        // Get property slug from URL: /guestbook/eagles-nest
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const propertySlug = pathParts[pathParts.length - 1] || 'eagles-nest';
+
+        async function init() {
+            try {
+                const [propsResp, guidesResp] = await Promise.all([
+                    fetch(`${API_BASE}/properties/`).then(r => r.json()),
+                    fetch(`${API_BASE}/guestbook/`).then(r => r.json()).catch(() => []),
+                ]);
+
+                // Find the property by slug
+                propertyData = propsResp.find(p => p.slug === propertySlug) || propsResp[0];
+
+                if (propertyData) {
+                    document.getElementById('property-name').textContent = propertyData.name;
+                    document.getElementById('wifi-ssid').textContent = propertyData.wifi_ssid || 'Ask staff';
+                    document.getElementById('wifi-password').textContent = propertyData.wifi_password || 'Ask staff';
+                    document.title = `Welcome to ${propertyData.name} — Cabin Rentals of Georgia`;
+                }
+
+                guidesData = guidesResp || [];
+                renderGuides();
+
+                // Load extras
+                try {
+                    const extrasResp = await fetch(`${API_BASE}/guestbook/extras`).then(r => r.json());
+                    extrasData = extrasResp || [];
+                } catch (e) {
+                    extrasData = getDefaultExtras();
+                }
+                renderExtras();
+
+            } catch (error) {
+                console.error('Init error:', error);
+                document.getElementById('property-name').textContent = 'Cabin Rentals of Georgia';
+                renderDefaultContent();
+            }
+        }
+
+        function renderGuides() {
+            const homeGuides = guidesData.filter(g => g.guide_type === 'home_guide');
+            const areaGuides = guidesData.filter(g => g.guide_type === 'area_guide');
+
+            document.getElementById('home-guides').innerHTML = homeGuides.length
+                ? homeGuides.map(g => guideCardHTML(g)).join('')
+                : '<div style="color:var(--text-muted);font-size:13px;">No home guides available yet.</div>';
+
+            document.getElementById('area-guides').innerHTML = areaGuides.length
+                ? areaGuides.map(g => guideCardHTML(g)).join('')
+                : '<div style="color:var(--text-muted);font-size:13px;">No area guides available yet.</div>';
+        }
+
+        function guideCardHTML(guide) {
+            const icons = { wifi: '📶', rules: '📋', amenities: '🏊', restaurants: '🍽️', emergency: '🚨', activities: '🎣' };
+            const icon = guide.icon || icons[guide.category] || '📄';
+            return `
+                <div class="guide-card" onclick="showGuide('${guide.id}')">
+                    <div class="guide-card-header">
+                        <span class="guide-card-icon">${icon}</span>
+                        <div>
+                            <div class="guide-card-title">${guide.title}</div>
+                            <div class="guide-card-subtitle">${guide.category || guide.guide_type}</div>
+                        </div>
+                        <span class="guide-card-arrow">→</span>
+                    </div>
+                </div>`;
+        }
+
+        function renderExtras() {
+            const extras = extrasData.length ? extrasData : getDefaultExtras();
+            const icons = { firewood: '🔥', late_checkout: '🕐', early_checkin: '🌅', amenity: '🎁', celebration: '🎉', experience: '📸' };
+
+            document.getElementById('extras-grid').innerHTML = extras.map(e => `
+                <div class="extra-card">
+                    <div class="extra-icon">${icons[e.category] || '🎁'}</div>
+                    <div class="extra-name">${e.name}</div>
+                    <div class="extra-price">$${parseFloat(e.price).toFixed(0)}</div>
+                    <div class="extra-desc">${e.description || ''}</div>
+                    <button class="order-btn" onclick="orderExtra('${e.name}', ${e.price})">Add to Stay</button>
+                </div>
+            `).join('');
+        }
+
+        function getDefaultExtras() {
+            return [
+                { name: 'Firewood Bundle', category: 'firewood', price: 35, description: 'Premium seasoned firewood' },
+                { name: 'Late Checkout', category: 'late_checkout', price: 75, description: 'Stay until 2 PM' },
+                { name: 'Welcome Basket', category: 'amenity', price: 65, description: 'Local treats & wine' },
+                { name: 'Early Check-in', category: 'early_checkin', price: 50, description: 'Arrive at 2 PM' },
+            ];
+        }
+
+        function renderDefaultContent() {
+            document.getElementById('home-guides').innerHTML = `
+                <div class="guide-card" onclick="showStaticGuide('House Rules', '1. Quiet hours: 10 PM - 8 AM\\n2. No smoking\\n3. Trash in bear-proof containers\\n4. Checkout at 11 AM')">
+                    <div class="guide-card-header">
+                        <span class="guide-card-icon">📋</span>
+                        <div><div class="guide-card-title">House Rules</div></div>
+                        <span class="guide-card-arrow">→</span>
+                    </div>
+                </div>
+                <div class="guide-card" onclick="showStaticGuide('Emergency Info', 'Call 911 for emergencies\\nCabin Rentals: (706) 525-5482\\nText: +1 (706) 471-1479')">
+                    <div class="guide-card-header">
+                        <span class="guide-card-icon">🚨</span>
+                        <div><div class="guide-card-title">Emergency Information</div></div>
+                        <span class="guide-card-arrow">→</span>
+                    </div>
+                </div>`;
+            document.getElementById('area-guides').innerHTML = `
+                <div class="guide-card">
+                    <div class="guide-card-header">
+                        <span class="guide-card-icon">🏔️</span>
+                        <div><div class="guide-card-title">Welcome to Blue Ridge</div><div class="guide-card-subtitle">Area guide coming soon</div></div>
+                    </div>
+                </div>`;
+            renderExtras();
+        }
+
+        function showGuide(guideId) {
+            const guide = guidesData.find(g => g.id === guideId);
+            if (!guide) return;
+
+            document.getElementById('detail-title').textContent = guide.title;
+            document.getElementById('detail-content').innerHTML = markdownToHTML(guide.content);
+
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('guide-detail-view').classList.add('active');
+            window.scrollTo(0, 0);
+
+            // Track view
+            fetch(`${API_BASE}/guestbook/${guideId}/view`, { method: 'POST' }).catch(() => {});
+        }
+
+        function showStaticGuide(title, content) {
+            document.getElementById('detail-title').textContent = title;
+            document.getElementById('detail-content').innerHTML = `<p>${content.replace(/\\n/g, '<br>')}</p>`;
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('guide-detail-view').classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function showMainView() {
+            document.getElementById('main-view').style.display = 'block';
+            document.getElementById('guide-detail-view').classList.remove('active');
+            window.scrollTo(0, 0);
+        }
+
+        function markdownToHTML(md) {
+            if (!md) return '';
+            return md
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^- (.*$)/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function copyToClipboard(el) {
+            const text = el.textContent.replace(' 📋', '');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('Copied!');
+            });
+        }
+
+        function orderExtra(name, price) {
+            showToast(`${name} added! ($${price})`);
+            // In production, this would POST to the API
+        }
+
+        function scrollToSection(id) {
+            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showToast(message) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

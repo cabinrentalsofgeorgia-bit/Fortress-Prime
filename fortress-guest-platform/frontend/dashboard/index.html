@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortress Guest Platform — Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.344.0/font/lucide.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                            <path d="M14 2L2 10v12l12 4 12-4V10L14 2z" fill="url(#brand-gradient)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+                            <path d="M14 6l-8 5v8l8 3 8-3v-8l-8-5z" fill="rgba(0,0,0,0.3)"/>
+                            <path d="M14 8l-6 4v6l6 2 6-2v-6l-6-4z" fill="url(#brand-inner)"/>
+                            <defs>
+                                <linearGradient id="brand-gradient" x1="2" y1="2" x2="26" y2="26">
+                                    <stop offset="0%" stop-color="#10b981"/>
+                                    <stop offset="100%" stop-color="#059669"/>
+                                </linearGradient>
+                                <linearGradient id="brand-inner" x1="8" y1="8" x2="20" y2="20">
+                                    <stop offset="0%" stop-color="#34d399"/>
+                                    <stop offset="100%" stop-color="#10b981"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-name">Fortress</span>
+                        <span class="brand-sub">Guest Platform</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <span class="nav-label">Operations</span>
+                    <a href="#" class="nav-item active" data-page="dashboard">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="messages">
+                        <i data-lucide="message-square"></i>
+                        <span>Messages</span>
+                        <span class="badge" id="unread-badge">0</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="guests">
+                        <i data-lucide="users"></i>
+                        <span>Guests</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="reservations">
+                        <i data-lucide="calendar-check"></i>
+                        <span>Reservations</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <span class="nav-label">Management</span>
+                    <a href="#" class="nav-item" data-page="properties">
+                        <i data-lucide="home"></i>
+                        <span>Properties</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="workorders">
+                        <i data-lucide="wrench"></i>
+                        <span>Work Orders</span>
+                        <span class="badge badge-warning" id="workorder-badge">0</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="damage-claims">
+                        <i data-lucide="alert-triangle"></i>
+                        <span>Damage Claims</span>
+                        <span class="badge badge-danger" id="damage-badge" style="background:#ef4444">0</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="guestbook">
+                        <i data-lucide="book-open"></i>
+                        <span>Guestbook</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <span class="nav-label">Intelligence</span>
+                    <a href="#" class="nav-item" data-page="analytics">
+                        <i data-lucide="bar-chart-3"></i>
+                        <span>Analytics</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="ai">
+                        <i data-lucide="brain"></i>
+                        <span>AI Engine</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="review-queue">
+                        <i data-lucide="shield-check"></i>
+                        <span>Review Queue</span>
+                        <span class="badge badge-warning" id="review-badge">0</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="automation">
+                        <i data-lucide="zap"></i>
+                        <span>Automation</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="integrations">
+                        <i data-lucide="plug"></i>
+                        <span>Integrations</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-dot status-online"></div>
+                    <span>All systems operational</span>
+                </div>
+                <div class="user-info">
+                    <div class="avatar">LK</div>
+                    <div class="user-details">
+                        <span class="user-name">Lissa Knight</span>
+                        <span class="user-role">Administrator</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="main-content">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button id="sidebar-toggle" class="icon-btn">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <div class="page-title">
+                        <h1 id="page-heading">Command Center</h1>
+                        <span class="page-subtitle" id="page-subtitle">Real-time operations overview</span>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <div class="search-box">
+                        <i data-lucide="search"></i>
+                        <input type="text" placeholder="Search guests, messages, properties..." id="global-search">
+                    </div>
+                    <button class="icon-btn" id="refresh-btn" title="Refresh data">
+                        <i data-lucide="refresh-cw"></i>
+                    </button>
+                    <button class="icon-btn" id="notifications-btn" title="Notifications">
+                        <i data-lucide="bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+                    <div class="defcon-badge" id="defcon-badge">
+                        <span class="defcon-level">DEFCON 5</span>
+                        <span class="defcon-label">Normal Ops</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Container -->
+            <div id="page-container" class="page-container">
+                <!-- Dashboard Page (default) -->
+                <div id="page-dashboard" class="page active">
+                    <!-- Quick Stats Row -->
+                    <div class="stats-grid">
+                        <div class="stat-card stat-arriving">
+                            <div class="stat-icon"><i data-lucide="plane-landing"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="stat-arriving">-</span>
+                                <span class="stat-label">Arriving Today</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-staying">
+                            <div class="stat-icon"><i data-lucide="bed"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="stat-staying">-</span>
+                                <span class="stat-label">Currently Staying</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-departing">
+                            <div class="stat-icon"><i data-lucide="plane-takeoff"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="stat-departing">-</span>
+                                <span class="stat-label">Departing Today</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-messages">
+                            <div class="stat-icon"><i data-lucide="message-circle"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="stat-messages">-</span>
+                                <span class="stat-label">Messages Today</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-ai">
+                            <div class="stat-icon"><i data-lucide="brain"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="stat-ai-responses">-</span>
+                                <span class="stat-label">AI Responses</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-workorders">
+                            <div class="stat-icon"><i data-lucide="alert-triangle"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-value" id="stat-open-workorders">-</span>
+                                <span class="stat-label">Open Work Orders</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Dashboard Grid -->
+                    <div class="dashboard-grid">
+                        <!-- Recent Messages -->
+                        <div class="card card-lg">
+                            <div class="card-header">
+                                <h3><i data-lucide="message-square"></i> Recent Messages</h3>
+                                <button class="btn btn-sm" onclick="FGP.navigateTo('messages')">View All</button>
+                            </div>
+                            <div class="card-body" id="recent-messages">
+                                <div class="loading-skeleton">Loading messages...</div>
+                            </div>
+                        </div>
+
+                        <!-- Active Reservations -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i data-lucide="calendar-check"></i> Active Reservations</h3>
+                                <button class="btn btn-sm" onclick="FGP.navigateTo('reservations')">View All</button>
+                            </div>
+                            <div class="card-body" id="active-reservations">
+                                <div class="loading-skeleton">Loading reservations...</div>
+                            </div>
+                        </div>
+
+                        <!-- Properties Overview -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i data-lucide="home"></i> Properties</h3>
+                                <button class="btn btn-sm" onclick="FGP.navigateTo('properties')">Manage</button>
+                            </div>
+                            <div class="card-body" id="properties-overview">
+                                <div class="loading-skeleton">Loading properties...</div>
+                            </div>
+                        </div>
+
+                        <!-- Work Orders -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i data-lucide="wrench"></i> Open Work Orders</h3>
+                                <button class="btn btn-sm btn-primary" onclick="FGP.createWorkOrder()">+ New</button>
+                            </div>
+                            <div class="card-body" id="open-workorders">
+                                <div class="loading-skeleton">Loading work orders...</div>
+                            </div>
+                        </div>
+
+                        <!-- AI Performance -->
+                        <div class="card card-wide">
+                            <div class="card-header">
+                                <h3><i data-lucide="brain"></i> AI Engine Status</h3>
+                                <div class="ai-status-badge online">Active</div>
+                            </div>
+                            <div class="card-body" id="ai-performance">
+                                <div class="ai-metrics">
+                                    <div class="ai-metric">
+                                        <span class="metric-label">Response Rate</span>
+                                        <span class="metric-value" id="ai-response-rate">--%</span>
+                                    </div>
+                                    <div class="ai-metric">
+                                        <span class="metric-label">Avg Confidence</span>
+                                        <span class="metric-value" id="ai-avg-confidence">--%</span>
+                                    </div>
+                                    <div class="ai-metric">
+                                        <span class="metric-label">Needs Review</span>
+                                        <span class="metric-value" id="ai-needs-review">0</span>
+                                    </div>
+                                    <div class="ai-metric">
+                                        <span class="metric-label">Automation</span>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="ai-auto-reply-toggle" checked>
+                                            <label for="ai-auto-reply-toggle"></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Page -->
+                <div id="page-messages" class="page">
+                    <div class="messages-layout">
+                        <div class="conversations-panel">
+                            <div class="panel-header">
+                                <h3>Conversations</h3>
+                                <button class="btn btn-primary btn-sm" id="new-message-btn">
+                                    <i data-lucide="plus"></i> New
+                                </button>
+                            </div>
+                            <div class="search-filter">
+                                <input type="text" placeholder="Search conversations..." id="message-search">
+                            </div>
+                            <div class="conversation-list" id="conversation-list">
+                                <div class="loading-skeleton">Loading conversations...</div>
+                            </div>
+                        </div>
+                        <div class="message-thread-panel">
+                            <div class="thread-header" id="thread-header">
+                                <div class="thread-guest-info">
+                                    <span class="thread-guest-name">Select a conversation</span>
+                                </div>
+                            </div>
+                            <div class="thread-messages" id="thread-messages">
+                                <div class="empty-state">
+                                    <i data-lucide="message-square"></i>
+                                    <p>Select a conversation to view messages</p>
+                                </div>
+                            </div>
+                            <div class="thread-compose" id="thread-compose" style="display:none">
+                                <textarea id="compose-message" placeholder="Type your message..." rows="2"></textarea>
+                                <div class="compose-actions">
+                                    <button class="btn btn-sm" id="ai-suggest-btn" title="Get AI suggestion">
+                                        <i data-lucide="sparkles"></i> AI Suggest
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" id="send-message-btn">
+                                        <i data-lucide="send"></i> Send
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="message-details-panel" id="message-details-panel">
+                            <div class="panel-header">
+                                <h3>Guest Details</h3>
+                            </div>
+                            <div class="guest-detail-content" id="guest-detail-content">
+                                <div class="empty-state">
+                                    <i data-lucide="user"></i>
+                                    <p>Select a conversation to see details</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guests Page (Enterprise Guest Management) -->
+                <div id="page-guests" class="page">
+                    <!-- Guest Analytics Strip -->
+                    <div class="guest-analytics-strip" id="guest-analytics-strip">
+                        <div class="analytics-card">
+                            <div class="analytics-value" id="ga-total">--</div>
+                            <div class="analytics-label">Total Guests</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-value" id="ga-repeat">--</div>
+                            <div class="analytics-label">Repeat Guests</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-value" id="ga-vip">--</div>
+                            <div class="analytics-label">VIP</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-value" id="ga-repeat-rate">--</div>
+                            <div class="analytics-label">Repeat Rate</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-value" id="ga-avg-ltv">--</div>
+                            <div class="analytics-label">Avg Lifetime Value</div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="analytics-value" id="ga-avg-value">--</div>
+                            <div class="analytics-label">Avg Value Score</div>
+                        </div>
+                    </div>
+
+                    <div class="page-toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="Search by name, phone, email, city..." id="guest-search">
+                            <select class="filter-select" id="guest-filter">
+                                <option value="all">All Guests</option>
+                                <option value="current">Currently Staying</option>
+                                <option value="arriving">Arriving Today</option>
+                                <option value="departing">Departing Today</option>
+                                <option value="vip">VIP Only</option>
+                                <option value="repeat">Repeat Guests</option>
+                                <option value="blacklisted">Blacklisted</option>
+                                <option value="verified">Verified</option>
+                                <option value="unverified">Unverified</option>
+                            </select>
+                            <select class="filter-select" id="guest-tier-filter">
+                                <option value="">All Tiers</option>
+                                <option value="diamond">Diamond</option>
+                                <option value="platinum">Platinum</option>
+                                <option value="gold">Gold</option>
+                                <option value="silver">Silver</option>
+                                <option value="bronze">Bronze</option>
+                            </select>
+                            <select class="filter-select" id="guest-sort">
+                                <option value="created_at">Newest First</option>
+                                <option value="lifetime_revenue">Revenue (High-Low)</option>
+                                <option value="value_score">Value Score</option>
+                                <option value="lifetime_stays">Most Stays</option>
+                                <option value="last_stay_date">Last Stay</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-right">
+                            <button class="btn btn-outline" id="batch-scores-btn" title="Recalculate all guest scores">
+                                <i data-lucide="refresh-cw"></i> Recalculate
+                            </button>
+                            <button class="btn btn-primary" id="add-guest-btn">
+                                <i data-lucide="user-plus"></i> Add Guest
+                            </button>
+                        </div>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table" id="guests-table">
+                            <thead>
+                                <tr>
+                                    <th>Guest</th>
+                                    <th>Phone</th>
+                                    <th>Tier</th>
+                                    <th>Stays</th>
+                                    <th>Revenue</th>
+                                    <th>Value</th>
+                                    <th>Risk</th>
+                                    <th>Source</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guests-tbody">
+                                <tr><td colspan="10" class="loading-skeleton">Loading guests...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reservations Page -->
+                <div id="page-reservations" class="page">
+                    <div class="page-toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="Search reservations..." id="res-search">
+                            <select class="filter-select" id="res-filter">
+                                <option value="all">All Reservations</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="checked_in">Checked In</option>
+                                <option value="checked_out">Checked Out</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="add-res-btn">
+                            <i data-lucide="calendar-plus"></i> Add Reservation
+                        </button>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table" id="reservations-table">
+                            <thead>
+                                <tr>
+                                    <th>Confirmation</th>
+                                    <th>Guest</th>
+                                    <th>Property</th>
+                                    <th>Check-In</th>
+                                    <th>Check-Out</th>
+                                    <th>Status</th>
+                                    <th>Comms</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservations-tbody">
+                                <tr><td colspan="8" class="loading-skeleton">Loading reservations...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Properties Page -->
+                <div id="page-properties" class="page">
+                    <div class="page-toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="Search properties..." id="prop-search">
+                        </div>
+                        <button class="btn btn-primary" id="add-property-btn">
+                            <i data-lucide="home"></i> Add Property
+                        </button>
+                    </div>
+                    <div class="properties-grid" id="properties-grid">
+                        <div class="loading-skeleton">Loading properties...</div>
+                    </div>
+                </div>
+
+                <!-- Work Orders Page -->
+                <div id="page-workorders" class="page">
+                    <div class="page-toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="Search work orders..." id="wo-search">
+                            <select class="filter-select" id="wo-filter">
+                                <option value="all">All</option>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                            <select class="filter-select" id="wo-priority-filter">
+                                <option value="all">All Priorities</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="add-wo-btn">
+                            <i data-lucide="plus-circle"></i> New Work Order
+                        </button>
+                    </div>
+                    <div class="workorders-board" id="workorders-board">
+                        <div class="loading-skeleton">Loading work orders...</div>
+                    </div>
+                </div>
+
+                <!-- Guestbook Page -->
+                <div id="page-guestbook" class="page">
+                    <div class="page-toolbar">
+                        <div class="toolbar-left">
+                            <select class="filter-select" id="gb-property-filter">
+                                <option value="all">All Properties</option>
+                            </select>
+                            <select class="filter-select" id="gb-type-filter">
+                                <option value="all">All Guide Types</option>
+                                <option value="home_guide">Home Guides</option>
+                                <option value="area_guide">Area Guides</option>
+                                <option value="emergency">Emergency</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="add-guide-btn">
+                            <i data-lucide="file-plus"></i> New Guide
+                        </button>
+                    </div>
+                    <div class="guides-grid" id="guides-grid">
+                        <div class="loading-skeleton">Loading guides...</div>
+                    </div>
+                </div>
+
+                <!-- Analytics Page -->
+                <div id="page-analytics" class="page">
+                    <div class="analytics-grid">
+                        <div class="card card-wide">
+                            <div class="card-header">
+                                <h3>Messaging Performance</h3>
+                                <div class="date-range-picker">
+                                    <button class="btn btn-sm active" data-range="7d">7D</button>
+                                    <button class="btn btn-sm" data-range="30d">30D</button>
+                                    <button class="btn btn-sm" data-range="90d">90D</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" id="messaging-chart">
+                                    <div class="chart-placeholder">
+                                        <div class="chart-bars">
+                                            <div class="chart-bar" style="height:40%"></div>
+                                            <div class="chart-bar" style="height:65%"></div>
+                                            <div class="chart-bar" style="height:55%"></div>
+                                            <div class="chart-bar" style="height:80%"></div>
+                                            <div class="chart-bar" style="height:70%"></div>
+                                            <div class="chart-bar" style="height:90%"></div>
+                                            <div class="chart-bar" style="height:75%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>AI Classification</h3></div>
+                            <div class="card-body" id="ai-classification-stats">
+                                <div class="donut-chart" id="intent-donut"></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Guest Satisfaction</h3></div>
+                            <div class="card-body" id="satisfaction-stats">
+                                <div class="satisfaction-score">
+                                    <span class="score-value" id="avg-rating">4.5</span>
+                                    <span class="score-stars">&#9733;&#9733;&#9733;&#9733;&#9734;</span>
+                                    <span class="score-label">Average Rating (30 days)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Engine Page -->
+                <div id="page-ai" class="page">
+                    <div class="ai-dashboard">
+                        <div class="card card-wide">
+                            <div class="card-header">
+                                <h3><i data-lucide="brain"></i> AI Engine Control Panel</h3>
+                                <div class="ai-status-badge online" id="ai-engine-status">Active</div>
+                            </div>
+                            <div class="card-body">
+                                <div class="ai-controls-grid">
+                                    <div class="control-group">
+                                        <label>Auto-Reply</label>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="ctrl-auto-reply">
+                                            <label for="ctrl-auto-reply"></label>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <label>Confidence Threshold</label>
+                                        <input type="range" id="ctrl-confidence" min="0" max="100" value="75">
+                                        <span id="ctrl-confidence-val">75%</span>
+                                    </div>
+                                    <div class="control-group">
+                                        <label>Sentiment Analysis</label>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="ctrl-sentiment" checked>
+                                            <label for="ctrl-sentiment"></label>
+                                        </div>
+                                    </div>
+                                    <div class="control-group">
+                                        <label>AI Model</label>
+                                        <select class="filter-select" id="ctrl-model">
+                                            <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+                                            <option value="gpt-4o">GPT-4o</option>
+                                            <option value="claude-3-opus">Claude 3 Opus</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Messages Needing Review</h3></div>
+                            <div class="card-body" id="ai-review-queue">
+                                <div class="empty-state">
+                                    <i data-lucide="check-circle"></i>
+                                    <p>All messages reviewed</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Knowledge Base</h3></div>
+                            <div class="card-body" id="knowledge-base-stats">
+                                <div class="kb-stat"><span class="kb-count">0</span> entries</div>
+                                <button class="btn btn-primary" id="add-knowledge-btn">
+                                    <i data-lucide="plus"></i> Add Knowledge
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Automation Page -->
+                <div id="page-automation" class="page">
+                    <div class="automation-grid">
+                        <div class="card card-wide">
+                            <div class="card-header">
+                                <h3><i data-lucide="zap"></i> Automated Workflows</h3>
+                                <button class="btn btn-primary btn-sm" id="add-workflow-btn">
+                                    <i data-lucide="plus"></i> New Workflow
+                                </button>
+                            </div>
+                            <div class="card-body" id="workflows-list">
+                                <div class="workflow-item active">
+                                    <div class="workflow-icon"><i data-lucide="message-circle"></i></div>
+                                    <div class="workflow-info">
+                                        <span class="workflow-name">Pre-Arrival Welcome</span>
+                                        <span class="workflow-desc">Send 24h before check-in</span>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" checked><label></label>
+                                    </div>
+                                </div>
+                                <div class="workflow-item active">
+                                    <div class="workflow-icon"><i data-lucide="key"></i></div>
+                                    <div class="workflow-info">
+                                        <span class="workflow-name">Access Code Delivery</span>
+                                        <span class="workflow-desc">Send 4h before check-in</span>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" checked><label></label>
+                                    </div>
+                                </div>
+                                <div class="workflow-item active">
+                                    <div class="workflow-icon"><i data-lucide="heart"></i></div>
+                                    <div class="workflow-info">
+                                        <span class="workflow-name">Mid-Stay Check-in</span>
+                                        <span class="workflow-desc">Send at day 2 of stay</span>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" checked><label></label>
+                                    </div>
+                                </div>
+                                <div class="workflow-item active">
+                                    <div class="workflow-icon"><i data-lucide="log-out"></i></div>
+                                    <div class="workflow-info">
+                                        <span class="workflow-name">Checkout Reminder</span>
+                                        <span class="workflow-desc">Send morning of checkout</span>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" checked><label></label>
+                                    </div>
+                                </div>
+                                <div class="workflow-item">
+                                    <div class="workflow-icon"><i data-lucide="star"></i></div>
+                                    <div class="workflow-info">
+                                        <span class="workflow-name">Post-Stay Review Request</span>
+                                        <span class="workflow-desc">Send 24h after checkout</span>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" checked><label></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Message Templates</h3></div>
+                            <div class="card-body" id="templates-list">
+                                <div class="loading-skeleton">Loading templates...</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><h3>Scheduled Messages</h3></div>
+                            <div class="card-body" id="scheduled-list">
+                                <div class="loading-skeleton">Loading scheduled...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Integrations Page -->
+                <div id="page-integrations" class="page">
+                    <div class="loading-skeleton">Loading integrations...</div>
+                </div>
+
+                <!-- Damage Claims Page -->
+                <div id="page-damage-claims" class="page">
+                    <div class="page-toolbar">
+                        <div class="toolbar-left">
+                            <select class="filter-select" id="dc-status-filter" onchange="loadDamageClaims()">
+                                <option value="all">All Claims</option>
+                                <option value="reported">Reported</option>
+                                <option value="draft_ready">Draft Ready</option>
+                                <option value="approved">Approved</option>
+                                <option value="sent">Sent</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="showNewClaimModal()">
+                            <i data-lucide="plus-circle"></i> File Damage Claim
+                        </button>
+                    </div>
+                    <div id="dc-stats" class="stats-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+                    <div id="dc-list" style="display:flex;flex-direction:column;gap:16px"></div>
+                </div>
+
+                <!-- Review Queue Page -->
+                <div id="page-review-queue" class="page">
+                    <div class="page-toolbar">
+                        <h2>AI Response Review Queue</h2>
+                        <div class="toolbar-actions">
+                            <select id="rq-status-filter" class="input-field" style="width:160px">
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="edited">Edited</option>
+                                <option value="all">All</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="loadReviewQueue()">Refresh</button>
+                        </div>
+                    </div>
+                    <div id="rq-stats" class="stats-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+                    <div id="rq-list" class="card-grid" style="display:flex;flex-direction:column;gap:12px"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modal-overlay" class="modal-overlay" style="display:none">
+        <div class="modal" id="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title"></h3>
+                <button class="icon-btn modal-close" onclick="FGP.closeModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
