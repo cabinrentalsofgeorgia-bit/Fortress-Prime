@@ -1,0 +1,62 @@
+# MANDATORY PREAMBLE — READ BEFORE ANY CODE CHANGE
+# Before proposing any architectural change, writing new routes, modifying
+# authentication logic, or adding API calls, you MUST read ARCHITECTURE.md.
+# If your proposed code violates the Architecture Constitution (e.g., using
+# localhost in client-side code, redirecting to /console/, bypassing the BFF
+# proxy pattern), you MUST rewrite it before proceeding.
+# A pre-commit hook enforces this: commits with BFF violations are blocked.
+
+# FORTRESS-PRIME: ENTERPRISE AI CONSTITUTION
+# You are operating in a Fortune 100 Autonomous Ecosystem environment. 
+# Read these rules before writing any code.
+
+1. THE MANDATE (FORTUNE 100 STANDARD): All generative AI features must utilize Multi-Agent Orchestration (e.g., LangGraph). No single-threaded LLM calls for complex reasoning. Agents must fact-check each other.
+2. HARDWARE AWARENESS: This system runs on a 4-node DGX Blackwell cluster (512GB unified VRAM) using NVIDIA NIM. Default all LLM routing to local ports (e.g., http://localhost:8001/v1). Do NOT send PII to external OpenAI/Anthropic APIs unless explicitly instructed.
+3. RULE 2 & 3 (THE GLASS): UI components must be Defensive (always show loading states for 100s+ AI reasoning) and Preserve State (use localStorage to prevent data loss on refresh).
+4. RULE 5 (NO SILENT FAILURES): Wrap external services, DB calls, and LLM inference in try/except blocks with graceful, pre-defined fallbacks.
+5. RULE 6 (SANITIZATION): All inbound API payloads and AI contexts must be sanitized (strip HTML, E.164 phones) before processing.
+6. RULE 7 (PRE-FLIGHT VALIDATION): Always write a terminal test script (`tools/test_*.py`) and prove the backend works before writing frontend UI code.
+
+# RULE 00X: CRITICAL IMMUTABILITY DIRECTIVE (THE "DO NOT TOUCH" LIST)
+The following core Next.js routing and configuration files are IMMUTABLE. You are strictly forbidden from deleting, moving, renaming, or refactoring these files under any circumstances unless the user provides the exact override phrase: "AUTHORIZE CORE REWRITE".
+
+Protected Files:
+
+src/app/layout.tsx
+
+src/app/page.tsx
+
+src/app/(dashboard)/layout.tsx
+
+src/app/(dashboard)/page.tsx
+
+src/app/(dashboard)/vrs/page.tsx
+
+next.config.mjs / next.config.js
+
+Pre-Build Verification:
+Before EVER running npm run build or restarting the fortress-frontend service, you MUST run an ls command to verify that src/app/(dashboard)/page.tsx exists. If it is missing, halt all operations and immediately alert the user.
+
+# RULE 00Y: STRICT BACKEND-FOR-FRONTEND (BFF) PROXYING
+You are strictly FORBIDDEN from using next.config.ts or next.config.mjs rewrites to proxy API requests to internal backend microservices (e.g., bare-metal nodes, Python backends, port 8100, port 9876).
+
+The Enterprise Standard (Mandatory):
+Whenever the Next.js frontend needs to communicate with an internal service, you MUST build an explicit Next.js Route Handler (src/app/api/[route]/route.ts).
+
+Every Route Handler MUST include:
+
+Explicit Auth Forwarding: You must extract the fortress_session cookie (or relevant auth headers) from the incoming request and explicitly inject it into the fetch call to the internal backend.
+
+Explicit Error Handling: You must check if (!response.ok) and explicitly log the exact HTTP status code and text to the server console before returning the error to the client.
+
+No Silent Failures: Never swallow a 401, 403, or 500 error from the internal backend. The client must receive the exact failure reason so it can be debugged immediately.
+
+# RULE 00Z: ARCHITECTURE CONSTITUTION COMPLIANCE
+All code changes MUST comply with ARCHITECTURE.md in the project root. Key mandates:
+
+1. Client-side code MUST use relative URLs for all API calls (e.g., /api/auth/login, NOT http://localhost:8100/api/auth/login).
+2. Next.js owns the login screen (/login). No redirects to /console/ or legacy login.html.
+3. Authentication uses a two-step flow: master console gateway JWT → FGP SSO token exchange.
+4. The AuthGuard redirects unauthenticated users to /login. Never to /console/.
+5. New BFF routes and backend services must be registered in ARCHITECTURE.md Section IV.
+6. A pre-commit hook blocks localhost violations in client-side code.
