@@ -1,53 +1,166 @@
-version: '3.8'
+# =============================================================================
+# FORTRESS PRIME — The Container Fleet (Phase 2)
+# =============================================================================
+# Full enterprise stack: API Gateway, Background Scheduler, Observability.
+#
+# Architecture:
+#   fortress-gateway     — Unified API (port 8000, all routers)
+#   fortress-scheduler   — Cron replacement (supercronic, all scheduled tasks)
+#   loki                 — Log aggregation
+#   promtail             — Log shipping (Docker -> Loki)
+#   prometheus           — Metrics collection
+#   pulse-agent          — Hardware telemetry (GPU, CPU, temp)
+#   refinery-agent       — Email processing worker
+#
+# Database:
+#   PostgreSQL runs NATIVELY on Spark 2 (Captain Node), port 5432.
+#   Containers reach it via host.docker.internal:5432.
+#
+# Network Architecture:
+#   All containers run on the 'fortress-network' bridge with DNS isolation.
+#   DB access via host.docker.internal -> host 0.0.0.0:5432 (scram-sha-256).
+#   Only published ports are exposed to the host.
+#
+# Run:
+#   docker compose up -d
+#   docker compose logs -f fortress-gateway
+#
+# Health:
+#   curl http://localhost:8000/health
+#   curl http://localhost:3100/ready        (Loki)
+#   curl http://localhost:9090/-/healthy    (Prometheus)
+#
+# Grafana (existing, port 3000):
+#   Add Loki datasource:       http://loki:3100
+#   Add Prometheus datasource:  http://prometheus:9090
+# =============================================================================
+
+name: fortress-prime
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-host-access: &host-access
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
 
 services:
-  # PostgreSQL Database for Tier 2 HQ Edge
-  postgres:
-    image: postgres:15-alpine
-    container_name: fortress-postgres
+
+  # =========================================================================
+  # API GATEWAY (Phase 1 — The Spine)
+  # =========================================================================
+
+  fortress-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fortress-prime:20260228
+    platform: linux/arm64
+    container_name: fortress-gateway
     restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_started
+    command: >
+      python3 -m uvicorn gateway.app:app
+      --host 0.0.0.0 --port 8000
+      --workers 4
+      --log-level info
+      --access-log
+    env_file: .env
     environment:
-      POSTGRES_DB: fortress_db
-      POSTGRES_USER: miner_bot
-      POSTGRES_PASSWORD: 190AntiochCemeteryRD!!!
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      # Persistent data volume for database - mounted to Synology DS1825+ storage
-      - /mnt/fortress_data/postgres:/var/lib/postgresql/data
-      # Optional: Mount init scripts for schema initialization
-      - ./src/init_db.py:/docker-entrypoint-initdb.d/init_db.py:ro
+      - DB_HOST=host.docker.internal
+      - PYTHONPATH=/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      # Expose PostgreSQL on standard port (adjust if needed)
-      - "5432:5432"
+      - "8001:8000"
+    volumes:
+      - ./static:/app/static:ro
+      - ./cabins:/app/cabins:ro
+      - ./prompts:/app/prompts:ro
+      - /mnt/fortress_nas:/mnt/fortress_nas
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U miner_bot -d fortress_db"]
-      interval: 10s
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 15s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 30s
     networks:
       - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4"
+    logging: *default-logging
 
-  # Pulse Agent - Hardware Telemetry Monitor
+  # =========================================================================
+  # SCHEDULER (replaces host crontab for application jobs)
+  # =========================================================================
+
+  fortress-scheduler:
+    image: fortress-prime:20260228
+    platform: linux/arm64
+    container_name: fortress-scheduler
+    restart: unless-stopped
+    depends_on:
+      fortress-gateway:
+        condition: service_healthy
+    command: ["supercronic", "-json", "/app/scheduler/crontab"]
+    env_file: .env
+    environment:
+      - DB_HOST=host.docker.internal
+      - PYTHONPATH=/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./scheduler/crontab:/app/scheduler/crontab:ro
+      - ./cabins:/app/cabins:ro
+      - ./prompts:/app/prompts:ro
+      - /mnt/fortress_nas:/mnt/fortress_nas
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4"
+    logging: *default-logging
+
+  # =========================================================================
+  # HARDWARE TELEMETRY (existing — Pulse Agent)
+  # =========================================================================
+
   pulse-agent:
     build:
       context: .
       dockerfile: Dockerfile.pulse-agent
+    platform: linux/arm64
     container_name: fortress-pulse-agent
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
+    env_file: .env
     environment:
-      - NODE_NAME=spark-1
-      - DB_HOST=postgres
-      - DB_NAME=fortress_db
-      - DB_USER=miner_bot
-      - DB_PASS=190AntiochCemeteryRD!!!
+      - NODE_NAME=spark-2
+      - DB_HOST=host.docker.internal
       - INTERVAL=5
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      # Mount source code
       - ./src/pulse_agent.py:/app/pulse_agent.py:ro
-      # GPU access for NVIDIA monitoring (if available)
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /dev/nvidia0:/dev/nvidia0:ro
       - /dev/nvidiactl:/dev/nvidiactl:ro
@@ -59,48 +172,392 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+        limits:
+          memory: 512M
     networks:
       - fortress-network
-    # Ensure it can access system hardware stats
-    privileged: false
     pid: host
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
 
-  # Refinery Agent - Email Processing Worker (Spark-2)
+  # =========================================================================
+  # AUTONOMOUS WATCHDOG (Pillar 1: Self-Healing + Pillar 4: Hardware Reality)
+  # =========================================================================
+
+  watchdog:
+    build:
+      context: .
+      dockerfile: Dockerfile.watchdog
+    platform: linux/arm64
+    container_name: fortress-watchdog
+    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_started
+    env_file: .env
+    environment:
+      - DB_HOST=host.docker.internal
+      - WATCHDOG_POLL_SECONDS=30
+      - WATCHDOG_UNHEALTHY_THRESHOLD=3
+      - WATCHDOG_MAX_RESTARTS=3
+      - WATCHDOG_GPU_TEMP_LIMIT=85
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
+      - /mnt/fortress_nas:/mnt/fortress_nas:ro
+      - /dev/nvidia0:/dev/nvidia0:ro
+      - /dev/nvidiactl:/dev/nvidiactl:ro
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+        limits:
+          memory: 256M
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "fortress_watchdog"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+
+  # =========================================================================
+  # EMAIL PROCESSING (existing — Refinery Agent)
+  # =========================================================================
+
   refinery-agent:
     build:
       context: .
       dockerfile: Dockerfile.refinery-agent
+    platform: linux/arm64
     container_name: fortress-refinery-agent
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
+    env_file: .env
     environment:
       - NODE_NAME=spark-2-refinery
-      - DB_HOST=postgres
-      - DB_NAME=fortress_db
-      - DB_USER=miner_bot
-      - DB_PASS=190AntiochCemeteryRD!!!
+      - DB_HOST=host.docker.internal
       - BATCH_SIZE=20
       - SLEEP_INTERVAL=5
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      # Mount source code for live updates
       - ./src/mining_rig_with_router.py:/app/mining_rig_with_router.py:ro
       - ./src/data_router.py:/app/data_router.py:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     networks:
       - fortress-network
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging: *default-logging
+
+  # =========================================================================
+  # CONTINUOUS LIQUIDITY — Payout Consumer Daemon
+  # =========================================================================
+  # Consumes trust.payout.staged events from Redpanda, executes Stripe
+  # Connect transfers to owner bank accounts. Includes circuit breaker,
+  # retry with backoff, threshold accumulation, and DLQ routing.
+
+  payout-consumer:
+    image: fortress-prime:20260228
+    platform: linux/arm64
+    container_name: fortress-payout-consumer
+    restart: unless-stopped
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    command: ["python3", "src/payout_consumer_daemon.py"]
+    env_file: .env
+    environment:
+      - KAFKA_BROKER_URL=redpanda:9092
+      - DB_HOST=host.docker.internal
+      - PYTHONPATH=/app
+      - MINIMUM_PAYOUT_AMOUNT=25.00
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "payout_consumer_daemon"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging: *default-logging
+
+  # =========================================================================
+  # OBSERVABILITY — GRAFANA (The Nerve Center)
+  # =========================================================================
+
+  grafana:
+    image: grafana/grafana-enterprise:11.5.2
+    platform: linux/arm64
+    container_name: fortress-grafana
+    restart: unless-stopped
+    user: "472:472"
+    depends_on:
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    environment:
+      - GF_SERVER_HTTP_PORT=3000
+      - GF_SERVER_ROOT_URL=https://grafana.crog-ai.com
+      - GF_SERVER_DOMAIN=grafana.crog-ai.com
+      - GF_SERVER_ENFORCE_DOMAIN=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=none
+      - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:?Set GF_ADMIN_PASSWORD in .env}
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
+      # Pass DB credentials for datasource provisioning ($__env{} expansion)
+      - DB_USER=${DB_USER:-admin}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME:-fortress_db}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent data on NAS
+      - /mnt/fortress_nas/fortress_data/grafana_data:/var/lib/grafana
+      # Provisioning configs (datasources, dashboards, alerts)
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      # Dashboard JSON files
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging: *default-logging
+
+  # =========================================================================
+  # OBSERVABILITY — LOG AGGREGATION
+  # =========================================================================
+
+  loki:
+    image: grafana/loki:3.4.2
+    platform: linux/arm64
+    container_name: fortress-loki
+    restart: unless-stopped
+    user: "10001:10001"
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - /mnt/fortress_nas/fortress_data/ai_brain/loki:/loki
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging: *default-logging
+
+  promtail:
+    image: grafana/promtail:3.4.2
+    platform: linux/arm64
+    container_name: fortress-promtail
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./observability/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /mnt/fortress_nas/fortress_data/ai_brain/logs:/var/log/fortress:ro
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging: *default-logging
+
+  # =========================================================================
+  # OBSERVABILITY — METRICS
+  # =========================================================================
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    platform: linux/arm64
+    container_name: fortress-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - fortress-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging: *default-logging
+
+  # =========================================================================
+  # VECTOR DATABASE (Qdrant — 1.2M+ vectors, persistent on host)
+  # =========================================================================
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    platform: linux/arm64
+    container_name: fortress-qdrant
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - /home/admin/fortress_qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    logging: *default-logging
+
+  # =========================================================================
+  # EVENT STREAMING — Redpanda (Enterprise Event Bus)
+  # =========================================================================
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.11
+    platform: linux/arm64
+    container_name: fortress-event-broker
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --smp 2
+      - --memory 2G
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://192.168.0.100:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://192.168.0.100:18082
+    ports:
+      - "19092:19092"
+      - "18082:18082"
+      - "9644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - fortress-network
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy.*true' || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: "2"
+    logging: *default-logging
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v2.4.6
+    platform: linux/arm64
+    container_name: fortress-event-console
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    networks:
+      - fortress-network
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging: *default-logging
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
 
 volumes:
-  # PostgreSQL data is now directly mounted to Synology DS1825+ storage
-  # /mnt/fortress_data/postgres is used as a bind mount in the postgres service
+  prometheus_data:
+    driver: local
+  redpanda_data:
+    driver: local
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
 
 networks:
   fortress-network:
     driver: bridge
-    name: fortress-network
