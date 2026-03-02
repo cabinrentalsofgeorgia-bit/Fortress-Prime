@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     stripe_publishable_key: str = Field(default="")
     stripe_webhook_secret: str = Field(default="")
     stripe_connect_webhook_secret: str = Field(default="")
+    stripe_dispute_webhook_secret: str = Field(default="")
 
     # Continuous Liquidity
     minimum_payout_amount: float = Field(default=25.00)

@@ -59,6 +59,9 @@ from backend.api import legal_counsel_dispatch as legal_counsel_dispatch_api
 from backend.api import verses as verses_api
 from backend.api import wealth as wealth_api
 from backend.api import reservation_webhooks
+from backend.api import contracts as contracts_api
+from backend.api import dispute_webhooks
+from backend.api import disputes as disputes_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -368,6 +371,9 @@ app.include_router(legal_counsel_dispatch_api.router, prefix="/api/legal", tags=
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
 app.include_router(wealth_api.router, prefix="/api/wealth", tags=["Wealth & Development"])
 app.include_router(reservation_webhooks.router, prefix="/api/webhooks", tags=["Reservation Webhooks"])
+app.include_router(dispute_webhooks.router, prefix="/api/webhooks", tags=["Dispute Webhooks"])
+app.include_router(contracts_api.router, prefix="/api/admin/contracts", tags=["Management Contracts"])
+app.include_router(disputes_api.router, prefix="/api/admin/disputes", tags=["Dispute Exception Desk"])
 
 
 # ---------------------------------------------------------------------------

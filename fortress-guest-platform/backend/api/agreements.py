@@ -27,6 +27,7 @@ from backend.services.agreement_renderer import (
 from backend.services.signing_token import generate_signing_token, validate_signing_token
 from backend.services.pdf_generator import generate_agreement_pdf
 from backend.services.email_service import send_email
+from backend.services.contract_generator import vault_signed_contract
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -612,14 +613,34 @@ async def public_sign_agreement(
         a.pdf_generated_at = datetime.utcnow()
         await db.commit()
 
+    if pdf_path and a.agreement_type == "management_contract":
+        owner_id = None
+        if prop and prop.owner_id:
+            owner_id = str(prop.owner_id)
+        if owner_id:
+            try:
+                nas_path = await vault_signed_contract(
+                    agreement_id=str(a.id),
+                    pdf_path=pdf_path,
+                    owner_id=owner_id,
+                    db=db,
+                )
+                if nas_path:
+                    logger.info("management_contract_vaulted", agreement_id=str(a.id), nas_path=nas_path)
+            except Exception as e:
+                logger.error("management_contract_vault_failed", agreement_id=str(a.id), error=str(e)[:300])
+
     if a.signer_email:
+        subject = "Your Signed Rental Agreement — Cabin Rentals of Georgia"
+        if a.agreement_type == "management_contract":
+            subject = "Your Signed Management Agreement — Cabin Rentals of Georgia"
         send_email(
             to=a.signer_email,
-            subject="Your Signed Rental Agreement — Cabin Rentals of Georgia",
+            subject=subject,
             html_body=f"""<p>Dear {a.signer_name},</p>
-<p>Thank you for signing your rental agreement for <strong>{prop.name if prop else 'your rental'}</strong>.</p>
+<p>Thank you for signing your {'management agreement' if a.agreement_type == 'management_contract' else 'rental agreement'} for <strong>{prop.name if prop else 'your rental'}</strong>.</p>
 <p>A signed copy is attached to this email for your records. If you have any questions, please don't hesitate to contact us.</p>
-<p>We look forward to hosting you!</p>
+<p>{'We look forward to a successful partnership!' if a.agreement_type == 'management_contract' else 'We look forward to hosting you!'}</p>
 <p style="color:#64748b;font-size:12px;">— Cabin Rentals of Georgia</p>""",
         )
 
@@ -627,6 +648,7 @@ async def public_sign_agreement(
                 id=agreement_id,
                 signer=a.signer_name,
                 ip=client_ip,
+                agreement_type=a.agreement_type,
                 pdf_generated=bool(pdf_path))
 
     return {

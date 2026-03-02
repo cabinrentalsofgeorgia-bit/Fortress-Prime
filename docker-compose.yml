@@ -316,6 +316,47 @@ services:
       start_period: 15s
     logging: *default-logging
 
+  # ─── IoT Consumer Daemon ──────────────────────────────────────────────
+  # Subscribes to iot.locks.state_changed, resolves device -> property ->
+  # reservation, and writes golden records to iot_event_log for the
+  # Chargeback Ironclad dispute defense engine.
+
+  iot-consumer:
+    image: fortress-prime:20260228
+    platform: linux/arm64
+    container_name: fortress-iot-consumer
+    restart: unless-stopped
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    command: ["python3", "src/iot_consumer_daemon.py"]
+    env_file: .env
+    environment:
+      - KAFKA_BROKER_URL=redpanda:9092
+      - DB_HOST=host.docker.internal
+      - PYTHONPATH=/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - fortress-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "iot_consumer_daemon"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging: *default-logging
+
   # =========================================================================
   # OBSERVABILITY — GRAFANA (The Nerve Center)
   # =========================================================================

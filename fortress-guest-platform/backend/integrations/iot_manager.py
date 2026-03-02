@@ -2,21 +2,29 @@
 IoT Device Integration Manager
 ================================
 Manages smart devices across properties:
-  - Smart locks (Yale, August, Schlage): Access code generation
+  - Smart locks (Yale, August, Schlage): Bidirectional MQTT control via Z-Wave bridge
   - Thermostats (Nest, Ecobee): Temperature management between stays
   - Noise monitors (NoiseAware, Minut): Alert on noise threshold
   - Cameras (outdoor only): Security monitoring
 
-All device state feeds into CF-01 GuardianOps for automated property monitoring.
+SmartLockAdapter communicates with physical locks through the MQTT broker
+connected to the Z-Wave JS UI hub. Status reads come from the digital_twins
+table (populated by the digital_twin_manager). Code generation pushes
+User Code CC commands over MQTT and writes audit records to iot_event_log.
 """
 
+import json
 import os
+import secrets
 import structlog
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List, Any
 from abc import ABC, abstractmethod
 
 logger = structlog.get_logger()
+
+MQTT_BROKER = os.environ.get("MQTT_BROKER_URL", "192.168.0.50")
+MQTT_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
 
 
 class DeviceAdapter(ABC):
@@ -33,36 +41,119 @@ class DeviceAdapter(ABC):
         ...
 
 
+class _MqttPool:
+    """Lazy-initialized async MQTT client pool."""
+
+    _client = None
+
+    @classmethod
+    async def get_client(cls):
+        if cls._client is None:
+            try:
+                import aiomqtt
+                cls._client = aiomqtt.Client(hostname=MQTT_BROKER, port=MQTT_PORT)
+            except ImportError:
+                logger.error("aiomqtt_not_installed")
+                return None
+            except Exception as e:
+                logger.error("mqtt_client_init_failed", error=str(e)[:200])
+                return None
+        return cls._client
+
+    @classmethod
+    async def publish(cls, topic: str, payload: dict) -> bool:
+        """Publish a message to the MQTT broker. Returns True on success."""
+        try:
+            import aiomqtt
+            async with aiomqtt.Client(hostname=MQTT_BROKER, port=MQTT_PORT) as client:
+                await client.publish(topic, json.dumps(payload).encode())
+                return True
+        except Exception as e:
+            logger.error("mqtt_publish_failed", topic=topic, error=str(e)[:200])
+            return False
+
+
 # ============================================================================
-# Smart Lock Adapter
+# Smart Lock Adapter — Live MQTT + Digital Twin backed
 # ============================================================================
 
 class SmartLockAdapter(DeviceAdapter):
     """
-    Smart lock integration for automated access code management.
-    Supports Yale, August, and Schlage smart locks.
+    Bidirectional smart lock adapter communicating via MQTT to the Z-Wave bridge.
+
+    Read path:  digital_twins table (populated by digital_twin_manager)
+    Write path: MQTT publish -> Z-Wave JS UI -> physical lock
+    Audit path: iot_event_log (golden records for dispute defense)
     """
 
     device_type = "smart_lock"
 
-    def __init__(self):
-        self.api_key = os.environ.get("SMARTLOCK_API_KEY", "")
-        self.configured = bool(self.api_key)
-
     async def get_status(self, device_id: str) -> Dict[str, Any]:
-        logger.info("smartlock_status_check", device_id=device_id)
+        """Read live status from the digital_twins table."""
+        try:
+            from backend.core.database import async_session_factory
+            from sqlalchemy import text
+
+            async with async_session_factory() as db:
+                result = await db.execute(
+                    text("""
+                        SELECT device_id, property_id, state_json, battery_level,
+                               is_online, last_event_ts, updated_at
+                        FROM iot_schema.digital_twins
+                        WHERE device_id = :did
+                        LIMIT 1
+                    """),
+                    {"did": device_id},
+                )
+                row = result.first()
+
+            if row:
+                state = row.state_json or {}
+                return {
+                    "device_id": device_id,
+                    "device_type": "smart_lock",
+                    "status": state.get("lock_state", "unknown"),
+                    "battery_level": row.battery_level or 0,
+                    "last_activity": row.last_event_ts.isoformat() if row.last_event_ts else None,
+                    "online": row.is_online if row.is_online is not None else False,
+                    "property_id": row.property_id,
+                    "raw_state": state,
+                }
+        except Exception as e:
+            logger.warning("smartlock_status_db_failed", device_id=device_id, error=str(e)[:200])
+
         return {
             "device_id": device_id,
             "device_type": "smart_lock",
-            "status": "locked",
-            "battery_level": 85,
-            "last_activity": datetime.utcnow().isoformat(),
-            "online": True,
+            "status": "unreachable",
+            "battery_level": None,
+            "last_activity": None,
+            "online": False,
+            "error": "Unable to read device state — digital twin unavailable",
         }
 
     async def send_command(self, device_id: str, command: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        logger.info("smartlock_command", device_id=device_id, command=command)
-        return {"device_id": device_id, "command": command, "status": "executed", "params": params}
+        """Route lock/unlock commands to the physical lock via MQTT."""
+        zwave_node = await self._resolve_zwave_node(device_id)
+        if not zwave_node:
+            logger.warning("smartlock_no_zwave_node", device_id=device_id)
+            return {"device_id": device_id, "command": command, "status": "failed", "error": "No Z-Wave node mapping"}
+
+        mqtt_topic = f"zwave/{zwave_node}/set"
+        mqtt_payload = {"command": command, **params}
+
+        if command in ("lock", "unlock"):
+            mqtt_payload["value"] = 255 if command == "lock" else 0
+
+        success = await _MqttPool.publish(mqtt_topic, mqtt_payload)
+
+        status = "dispatched" if success else "mqtt_unreachable"
+        logger.info("smartlock_command", device_id=device_id, command=command, status=status)
+
+        if success:
+            await self._write_event_log(device_id, command, params.get("user_code"))
+
+        return {"device_id": device_id, "command": command, "status": status, "params": params}
 
     async def generate_access_code(
         self,
@@ -71,14 +162,38 @@ class SmartLockAdapter(DeviceAdapter):
         check_in: datetime,
         check_out: datetime,
     ) -> Dict[str, Any]:
-        """Generate a time-limited access code for a guest stay."""
-        import random
-        code = str(random.randint(1000, 9999))
+        """
+        Generate a unique access code and push it to the physical lock.
+        Uses Z-Wave User Code CC to program a slot on the Yale Assure.
+        """
+        code = self._generate_unique_code()
+
+        zwave_node = await self._resolve_zwave_node(device_id)
+        if zwave_node:
+            mqtt_topic = f"zwave/{zwave_node}/set"
+            mqtt_payload = {
+                "command": "set_user_code",
+                "userCode": code,
+                "userIdStatus": 1,
+                "validFrom": check_in.isoformat(),
+                "validUntil": check_out.isoformat(),
+            }
+            success = await _MqttPool.publish(mqtt_topic, mqtt_payload)
+            dispatch_status = "pushed_to_lock" if success else "mqtt_unreachable"
+        else:
+            dispatch_status = "no_zwave_mapping"
+
+        await self._write_event_log(device_id, "code_set", code, {
+            "guest_name": guest_name,
+            "valid_from": check_in.isoformat(),
+            "valid_until": check_out.isoformat(),
+        })
 
         logger.info(
             "access_code_generated",
             device_id=device_id,
             guest=guest_name,
+            dispatch=dispatch_status,
             valid_from=check_in.isoformat(),
             valid_until=check_out.isoformat(),
         )
@@ -90,12 +205,96 @@ class SmartLockAdapter(DeviceAdapter):
             "valid_from": check_in.isoformat(),
             "valid_until": check_out.isoformat(),
             "status": "active",
+            "dispatch": dispatch_status,
         }
 
     async def revoke_access_code(self, device_id: str, code: str) -> Dict[str, Any]:
-        """Revoke a guest access code after checkout."""
-        logger.info("access_code_revoked", device_id=device_id, code=code)
-        return {"device_id": device_id, "code": code, "status": "revoked"}
+        """Clear the guest code slot on the physical lock."""
+        zwave_node = await self._resolve_zwave_node(device_id)
+        if zwave_node:
+            mqtt_topic = f"zwave/{zwave_node}/set"
+            mqtt_payload = {
+                "command": "clear_user_code",
+                "userCode": code,
+                "userIdStatus": 0,
+            }
+            success = await _MqttPool.publish(mqtt_topic, mqtt_payload)
+            dispatch_status = "cleared_on_lock" if success else "mqtt_unreachable"
+        else:
+            dispatch_status = "no_zwave_mapping"
+
+        await self._write_event_log(device_id, "code_revoked", code)
+
+        logger.info("access_code_revoked", device_id=device_id, dispatch=dispatch_status)
+        return {"device_id": device_id, "code": code, "status": "revoked", "dispatch": dispatch_status}
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _generate_unique_code() -> str:
+        """Generate a 6-digit code using cryptographic randomness."""
+        return str(secrets.randbelow(900000) + 100000)
+
+    @staticmethod
+    async def _resolve_zwave_node(device_id: str) -> Optional[str]:
+        """Look up the Z-Wave node ID from iot_device_map."""
+        try:
+            from backend.core.database import async_session_factory
+            from sqlalchemy import text
+
+            async with async_session_factory() as db:
+                result = await db.execute(
+                    text("SELECT zwave_node_id FROM iot_device_map WHERE device_id = :did AND is_active = TRUE LIMIT 1"),
+                    {"did": device_id},
+                )
+                row = result.first()
+                return row.zwave_node_id if row else None
+        except Exception as e:
+            logger.warning("zwave_node_lookup_failed", device_id=device_id, error=str(e)[:200])
+            return None
+
+    @staticmethod
+    async def _write_event_log(device_id: str, event_type: str, user_code: str = None, extra_meta: dict = None):
+        """Write an audit record to iot_event_log."""
+        try:
+            from backend.core.database import async_session_factory
+            from sqlalchemy import text
+
+            async with async_session_factory() as db:
+                result = await db.execute(
+                    text("SELECT property_id FROM iot_device_map WHERE device_id = :did LIMIT 1"),
+                    {"did": device_id},
+                )
+                row = result.first()
+                property_id = str(row.property_id) if row else None
+
+                if not property_id:
+                    return
+
+                metadata = {"source": "smart_lock_adapter"}
+                if extra_meta:
+                    metadata.update(extra_meta)
+
+                await db.execute(
+                    text("""
+                        INSERT INTO iot_event_log
+                            (device_id, property_id, event_type, user_code, timestamp, metadata)
+                        VALUES (:did, :pid::uuid, :etype, :code, :ts, :meta::jsonb)
+                    """),
+                    {
+                        "did": device_id,
+                        "pid": property_id,
+                        "etype": event_type,
+                        "code": user_code,
+                        "ts": datetime.now(timezone.utc).isoformat(),
+                        "meta": json.dumps(metadata),
+                    },
+                )
+                await db.commit()
+        except Exception as e:
+            logger.warning("iot_event_log_write_failed", device_id=device_id, error=str(e)[:200])
 
 
 # ============================================================================
