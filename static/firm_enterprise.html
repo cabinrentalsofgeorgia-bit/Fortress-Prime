@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortress JD | Enterprise</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2235;
+            --bg-sidebar: #0f1629;
+            --border: #1e293b;
+            --border-hover: #334155;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-glow: rgba(59, 130, 246, 0.12);
+            --green: #22c55e;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --purple: #a78bfa;
+            --cyan: #22d3ee;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 1.5rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .logo { font-size: 1.35rem; font-weight: 800; color: white; letter-spacing: -0.02em; }
+        .logo span { color: var(--accent); }
+        .logo-sub { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 0.15rem; }
+        .sidebar-nav { flex: 1; overflow-y: auto; padding: 0.75rem 0; }
+        .nav-section { padding: 0 1rem; margin-bottom: 0.25rem; margin-top: 1.25rem; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        .nav-item {
+            display: flex; align-items: center; gap: 0.65rem;
+            padding: 0.6rem 1.25rem; font-size: 0.85rem; color: var(--text-secondary);
+            text-decoration: none; border-left: 3px solid transparent; cursor: pointer;
+            transition: all 0.12s;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+        .nav-item.active { background: rgba(59,130,246,0.08); color: white; border-left-color: var(--accent); }
+        .nav-item i { width: 18px; text-align: center; font-size: 0.8rem; }
+        .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); }
+        .btn-new-matter {
+            width: 100%; padding: 0.65rem; border: none; border-radius: 8px;
+            background: var(--accent); color: white; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; transition: background 0.15s;
+        }
+        .btn-new-matter:hover { background: var(--accent-hover); }
+
+        /* --- Main Content --- */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .topbar {
+            height: 56px; padding: 0 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--bg-secondary);
+        }
+        .topbar-left { display: flex; align-items: center; gap: 0.75rem; }
+        .topbar-left h2 { font-size: 1.1rem; font-weight: 700; color: white; }
+        .status-chip {
+            font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.6rem;
+            border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .status-green { background: rgba(34,197,94,0.12); color: var(--green); }
+        .status-red { background: rgba(239,68,68,0.12); color: var(--red); }
+        .topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+        .user-name { font-size: 0.85rem; font-weight: 600; color: white; }
+        .user-role { font-size: 0.65rem; color: var(--text-muted); }
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--accent); display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 0.75rem; color: white;
+        }
+
+        /* --- Content --- */
+        .content { flex: 1; overflow-y: auto; padding: 2rem; }
+
+        /* Stat Cards */
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1.25rem;
+        }
+        .stat-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+        .stat-value { font-size: 1.75rem; font-weight: 800; color: white; margin-top: 0.25rem; }
+        .stat-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+        }
+        .stat-icon.blue { background: rgba(59,130,246,0.12); color: var(--accent); }
+        .stat-icon.purple { background: rgba(167,139,250,0.12); color: var(--purple); }
+        .stat-icon.green { background: rgba(34,197,94,0.12); color: var(--green); }
+        .stat-icon.amber { background: rgba(245,158,11,0.12); color: var(--amber); }
+
+        /* Section Headers */
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem;
+        }
+        .section-title { font-size: 1rem; font-weight: 700; color: white; }
+
+        /* Matter Cards */
+        .matter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1rem; }
+        .matter-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1.25rem; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .matter-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+        .matter-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+        .practice-badge {
+            font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.6rem;
+            border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .badge-litigation { background: rgba(59,130,246,0.12); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); }
+        .badge-transactional { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+        .badge-ip { background: rgba(167,139,250,0.12); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
+        .badge-compliance { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+        .badge-default { background: rgba(148,163,184,0.1); color: var(--text-secondary); border: 1px solid rgba(148,163,184,0.2); }
+        .priority-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .priority-Critical { background: var(--red); box-shadow: 0 0 6px var(--red); }
+        .priority-High { background: var(--amber); }
+        .priority-Normal { background: var(--green); }
+        .priority-Low { background: var(--text-muted); }
+        .matter-title { font-size: 1rem; font-weight: 700; color: white; margin-bottom: 0.35rem; }
+        .matter-desc {
+            font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .matter-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);
+        }
+        .matter-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: var(--text-muted); }
+        .matter-meta i { margin-right: 0.25rem; }
+        .war-room-btn {
+            font-size: 0.8rem; color: var(--accent); background: none; border: none;
+            cursor: pointer; font-weight: 600; transition: color 0.15s;
+        }
+        .war-room-btn:hover { color: white; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: none; align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 12px; width: 520px; max-height: 90vh; overflow-y: auto;
+            padding: 1.5rem;
+        }
+        .modal h3 { font-size: 1.1rem; font-weight: 700; color: white; margin-bottom: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.3rem; font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 0.6rem 0.75rem; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);
+            font-size: 0.85rem; outline: none; font-family: inherit;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
+        .btn {
+            padding: 0.55rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
+            border: none; cursor: pointer; transition: all 0.15s;
+        }
+        .btn-cancel { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-cancel:hover { color: var(--text-primary); border-color: var(--border-hover); }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Watchtower Briefing */
+        .watchtower {
+            background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, var(--bg-secondary) 40%);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--red);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .watchtower::before {
+            content: '';
+            position: absolute; top: 0; right: 0; width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(239,68,68,0.04) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .watchtower.nominal {
+            border-left-color: var(--green);
+            background: linear-gradient(135deg, rgba(34,197,94,0.04) 0%, var(--bg-secondary) 40%);
+        }
+        .wt-header {
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;
+        }
+        .wt-title {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.12em; color: var(--red); display: flex; align-items: center; gap: 0.5rem;
+        }
+        .wt-title .pulse {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+            animation: pulse-glow 2s infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+            50% { box-shadow: 0 0 8px 4px rgba(239,68,68,0.2); }
+        }
+        .wt-date { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
+        .wt-summary {
+            font-size: 1rem; color: var(--text-primary); line-height: 1.7;
+            margin-bottom: 1rem; font-style: italic;
+        }
+        .wt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .wt-section { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; }
+        .wt-section-title {
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; margin-bottom: 0.75rem;
+        }
+        .wt-section-title.red { color: var(--red); }
+        .wt-section-title.amber { color: var(--amber); }
+        .wt-section-title.blue { color: var(--accent); }
+        .wt-section-title.green { color: var(--green); }
+        .wt-list { list-style: none; padding: 0; margin: 0; }
+        .wt-list li {
+            padding: 0.35rem 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;
+            display: flex; align-items: flex-start; gap: 0.5rem;
+        }
+        .wt-list li i { margin-top: 0.15rem; flex-shrink: 0; font-size: 0.7rem; }
+        .wt-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .wt-action-btn {
+            padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
+            border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .wt-action-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+        .wt-action-btn.primary { background: var(--red); border-color: var(--red); color: white; }
+        .wt-action-btn.primary:hover { background: #dc2626; }
+        .wt-full-text {
+            display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);
+            font-size: 0.8rem; color: var(--text-secondary); line-height: 1.8; white-space: pre-wrap;
+        }
+        .wt-full-text.open { display: block; }
+
+        /* Alert stat card variant */
+        .stat-card.alert { border-color: rgba(239,68,68,0.3); }
+        .stat-card.alert .stat-value { color: var(--red); }
+        .stat-card.warning { border-color: rgba(245,158,11,0.3); }
+        .stat-card.warning .stat-value { color: var(--amber); }
+
+        /* Rate Board Signals */
+        .signal { display:inline-block; font-size:0.65rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em; }
+        .signal-STRONG_BUY { background:rgba(34,197,94,0.18); color:#4ade80; border:1px solid rgba(34,197,94,0.3); }
+        .signal-BUY { background:rgba(34,197,94,0.10); color:var(--green); border:1px solid rgba(34,197,94,0.2); }
+        .signal-HOLD { background:rgba(245,158,11,0.10); color:var(--amber); border:1px solid rgba(245,158,11,0.2); }
+        .signal-SELL { background:rgba(239,68,68,0.10); color:#f87171; border:1px solid rgba(239,68,68,0.2); }
+        .signal-STRONG_SELL { background:rgba(239,68,68,0.18); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+        .rate-card {
+            background:var(--bg-secondary); border:1px solid var(--border); border-radius:10px;
+            padding:1rem 1.25rem; transition:border-color 0.15s;
+        }
+        .rate-card:hover { border-color:var(--accent); }
+        .rate-card .prop-name { font-size:0.9rem; font-weight:700; color:white; margin-bottom:0.15rem; }
+        .rate-card .prop-meta { font-size:0.7rem; color:var(--text-muted); }
+        .rate-card .rate-row { display:flex; align-items:baseline; gap:0.75rem; margin-top:0.6rem; }
+        .rate-card .rate-big { font-size:1.4rem; font-weight:800; }
+        .rate-card .rate-base { font-size:0.8rem; color:var(--text-muted); text-decoration:line-through; }
+        .rate-card .rate-delta { font-size:0.75rem; font-weight:600; }
+        .rate-delta.up { color:var(--green); }
+        .rate-delta.down { color:var(--red); }
+        .rate-delta.flat { color:var(--text-muted); }
+        .rate-spark { display:flex; align-items:flex-end; gap:1px; height:24px; margin-top:0.5rem; }
+        .rate-spark .bar { width:100%; min-width:3px; border-radius:1px 1px 0 0; transition:height 0.3s; }
+
+        /* Loading */
+        .skeleton { background: linear-gradient(90deg, var(--bg-card) 25%, var(--border) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .empty-state {
+            text-align: center; padding: 3rem; color: var(--text-muted);
+            border: 1px dashed var(--border); border-radius: 10px;
+        }
+        .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+
+        @media (max-width: 1400px) {
+            .stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
+            .wt-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 900px) {
+            .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            .matter-grid { grid-template-columns: 1fr; }
+            .sidebar { width: 220px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">FORTRESS <span>JD</span></div>
+            <div class="logo-sub">Enterprise Legal OS</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Command</div>
+            <a class="nav-item active" data-view="dashboard">
+                <i class="fas fa-eye"></i> Command Center
+            </a>
+            <a class="nav-item" data-view="matters">
+                <i class="fas fa-folder-open"></i> Active Matters
+                <span id="matterCount" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></span>
+            </a>
+            <a class="nav-item" href="/search-ui">
+                <i class="fas fa-book"></i> Precedent Library
+            </a>
+
+            <div class="nav-section">Intelligence</div>
+            <a class="nav-item" href="/market-intel">
+                <i class="fas fa-satellite-dish"></i> Market Intel
+            </a>
+
+            <div class="nav-section">Foundry</div>
+            <a class="nav-item" data-view="rateboard">
+                <i class="fas fa-tags"></i> Rate Board
+            </a>
+            <a class="nav-item" data-view="simulator">
+                <i class="fas fa-chart-area"></i> Simulator
+            </a>
+            <a class="nav-item" data-view="terminal">
+                <i class="fas fa-terminal"></i> The Terminal
+            </a>
+
+            <div class="nav-section">System</div>
+            <a class="nav-item" href="/docs" target="_blank">
+                <i class="fas fa-cog"></i> API Console
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn-new-matter" onclick="openNewMatterModal()">
+                <i class="fas fa-plus" style="margin-right:0.4rem;"></i> New Matter
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <h2 id="pageTitle">Dashboard</h2>
+                <span class="status-chip status-green" id="statusChip">
+                    <i class="fas fa-circle" style="font-size:0.4rem;margin-right:0.3rem;vertical-align:middle;"></i>
+                    OPERATIONAL
+                </span>
+            </div>
+            <div class="topbar-right">
+                <div style="text-align:right;">
+                    <div class="user-name">Gary M. Knight</div>
+                    <div class="user-role">Managing Partner</div>
+                </div>
+                <div class="avatar">GK</div>
+            </div>
+        </header>
+
+        <div class="content" id="mainContent">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- New Matter Modal -->
+    <div class="modal-overlay" id="newMatterModal">
+        <div class="modal">
+            <h3><i class="fas fa-folder-plus" style="color:var(--accent);margin-right:0.5rem;"></i>Open New Matter</h3>
+            <form id="newMatterForm" onsubmit="createMatter(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Matter ID</label>
+                        <input type="text" name="matter_id" placeholder="26-003-ABC" required pattern="[\w\-]+" title="Letters, numbers, hyphens only">
+                    </div>
+                    <div class="form-group">
+                        <label>Client</label>
+                        <select name="client_id" id="clientSelect" required></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Matter Title</label>
+                    <input type="text" name="title" placeholder="Blue Ridge Property Dispute" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Practice Area</label>
+                        <select name="practice_area">
+                            <option value="Litigation">Litigation</option>
+                            <option value="Transactional">Transactional</option>
+                            <option value="IP">IP / Trademark</option>
+                            <option value="Compliance">Compliance / Regulatory</option>
+                            <option value="Real Estate">Real Estate</option>
+                            <option value="Employment">Employment</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select name="priority">
+                            <option value="Normal">Normal</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" placeholder="Brief description of the matter..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Opposing Counsel</label>
+                        <input type="text" name="opposing_counsel" placeholder="Firm / Attorney name">
+                    </div>
+                    <div class="form-group">
+                        <label>Jurisdiction</label>
+                        <input type="text" name="jurisdiction" placeholder="GA Northern District">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="createBtn">Open Matter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+const API = '';
+let dashboardData = null;
+
+// ─── Navigation ─────────────────────────────────
+document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+    item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        const view = item.dataset.view;
+        const titles = {'dashboard':'Command Center','matters':'Active Matters','rateboard':'Rate Board','simulator':'Revenue Simulator','terminal':'The Terminal'};
+        document.getElementById('pageTitle').textContent = titles[view] || view;
+        loadView(view);
+    });
+});
+
+async function loadView(view) {
+    if (view === 'dashboard') await loadDashboard();
+    else if (view === 'matters') await loadMatters();
+    else if (view === 'rateboard') await loadRateBoard();
+    else if (view === 'simulator') await loadSimulator();
+    else if (view === 'terminal') await loadTerminal();
+}
+
+// ─── Dashboard ──────────────────────────────────
+let briefingData = null;
+
+async function loadDashboard() {
+    const el = document.getElementById('mainContent');
+    el.innerHTML = '<div style="padding:2rem;text-align:center;"><div class="skeleton" style="height:160px;width:100%;margin-bottom:1rem;"></div><div class="skeleton" style="height:120px;width:100%;margin-bottom:1rem;"></div><div class="skeleton" style="height:300px;width:100%;"></div></div>';
+
+    try {
+        // Fetch dashboard stats and briefing in parallel
+        const [dashRes, briefRes] = await Promise.all([
+            fetch(`${API}/api/dashboard`),
+            fetch(`${API}/api/briefing/latest`),
+        ]);
+        dashboardData = await dashRes.json();
+        briefingData = await briefRes.json();
+        renderDashboard(dashboardData, briefingData);
+    } catch (e) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>Failed to load dashboard: ${esc(e.message)}</div>`;
+    }
+}
+
+function renderWatchtower(b) {
+    if (!b || !b.available) {
+        return `
+        <div class="watchtower nominal">
+            <div class="wt-header">
+                <div class="wt-title"><span class="pulse" style="background:var(--green);"></span> WATCHTOWER</div>
+            </div>
+            <div class="wt-summary">No briefing available. The Watchtower will report at 06:00.</div>
+        </div>`;
+    }
+
+    const hasThreats = (b.silent_count > 0) || (b.unassigned_tasks > 0) || b.threats.length > 0;
+    const nominalClass = hasThreats ? '' : 'nominal';
+    const titleColor = hasThreats ? 'var(--red)' : 'var(--green)';
+    const defcon = b.silent_count >= 5 ? 'DEFCON 3' : b.silent_count >= 2 ? 'DEFCON 4' : 'NOMINAL';
+
+    // Silent properties list
+    const silentHtml = b.silent_properties.length > 0
+        ? b.silent_properties.map(p =>
+            `<li><i class="fas fa-exclamation-triangle" style="color:var(--red);"></i>
+             <span><strong style="color:white;">${esc(p.name)}</strong>
+             ${p.bedrooms ? `(${p.bedrooms}BR)` : ''} — $0 revenue</span></li>`
+          ).join('')
+        : '<li><i class="fas fa-check-circle" style="color:var(--green);"></i> All properties generating revenue</li>';
+
+    // Questions
+    const questionsHtml = b.questions.length > 0
+        ? b.questions.map(q =>
+            `<li><i class="fas fa-question-circle" style="color:var(--amber);"></i> <span>${esc(q)}</span></li>`
+          ).join('')
+        : '<li>No interrogation pending.</li>';
+
+    // Actions
+    const actionsHtml = b.actions.length > 0
+        ? b.actions.map(a =>
+            `<li><i class="fas fa-bolt" style="color:var(--cyan);"></i> <span>${esc(a)}</span></li>`
+          ).join('')
+        : '';
+
+    return `
+    <div class="watchtower ${nominalClass}">
+        <div class="wt-header">
+            <div class="wt-title" style="color:${titleColor};">
+                <span class="pulse" style="background:${titleColor};"></span>
+                MORNING INTERROGATION — ${defcon}
+            </div>
+            <div class="wt-date">REPORT ${esc(b.date)}</div>
+        </div>
+
+        <div class="wt-summary">${esc(b.summary)}</div>
+
+        <div class="wt-grid">
+            <div class="wt-section">
+                <div class="wt-section-title red"><i class="fas fa-ghost" style="margin-right:0.4rem;"></i>Silent Properties ($0 Revenue)</div>
+                <ul class="wt-list">${silentHtml}</ul>
+            </div>
+            <div class="wt-section">
+                <div class="wt-section-title amber"><i class="fas fa-crosshairs" style="margin-right:0.4rem;"></i>Strategic Interrogation</div>
+                <ul class="wt-list">${questionsHtml}</ul>
+            </div>
+        </div>
+
+        ${actionsHtml ? `
+        <div class="wt-section" style="margin-bottom:1rem;">
+            <div class="wt-section-title blue"><i class="fas fa-bolt" style="margin-right:0.4rem;"></i>Recommended Actions (This Week)</div>
+            <ul class="wt-list">${actionsHtml}</ul>
+        </div>
+        ` : ''}
+
+        ${b.pricing_intel && b.pricing_intel.available ? (() => {
+            const pi = b.pricing_intel;
+            const uplift = pi.uplift_potential;
+            const upliftColor = uplift >= 0 ? 'var(--green)' : 'var(--red)';
+            const buyHtml = pi.buy_properties.length > 0
+                ? pi.buy_properties.map(p =>
+                    '<li><i class="fas fa-arrow-up" style="color:var(--green);"></i>' +
+                    '<span><strong style="color:white;">' + esc(p.name) + '</strong> — base $' + p.base + ', recommended $' + p.avg + '/night (' + p.signal + ')</span></li>'
+                ).join('')
+                : '<li><i class="fas fa-check-circle" style="color:var(--green);"></i> No underpriced properties</li>';
+            const sellHtml = pi.sell_properties.length > 0
+                ? pi.sell_properties.map(p =>
+                    '<li><i class="fas fa-arrow-down" style="color:var(--red);"></i>' +
+                    '<span><strong style="color:white;">' + esc(p.name) + '</strong> — base $' + p.base + ', recommended $' + p.avg + '/night (' + p.signal + ')</span></li>'
+                ).join('')
+                : '<li><i class="fas fa-check-circle" style="color:var(--green);"></i> No overpriced properties</li>';
+            return '<div class="wt-grid" style="margin-bottom:1rem;">' +
+                '<div class="wt-section">' +
+                    '<div class="wt-section-title green"><i class="fas fa-arrow-trend-up" style="margin-right:0.4rem;"></i>Underpriced — Raise Rates (BUY/STRONG_BUY)</div>' +
+                    '<ul class="wt-list">' + buyHtml + '</ul>' +
+                '</div>' +
+                '<div class="wt-section">' +
+                    '<div class="wt-section-title red"><i class="fas fa-arrow-trend-down" style="margin-right:0.4rem;"></i>Overpriced — Consider Discounts (SELL/STRONG_SELL)</div>' +
+                    '<ul class="wt-list">' + sellHtml + '</ul>' +
+                '</div>' +
+            '</div>' +
+            '<div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:var(--accent);">' +
+                '<i class="fas fa-chart-line" style="margin-right:0.4rem;"></i>' +
+                '<strong>Revenue Uplift Potential:</strong> Accepting all QuantRevenue recommendations could ' +
+                (uplift >= 0 ? 'add' : 'adjust by') +
+                ' <strong style="color:' + upliftColor + ';">' + (uplift >= 0 ? '+' : '') + '$' + Math.abs(uplift).toLocaleString() + '</strong>' +
+                ' over the forecast period (vs. base rates).' +
+            '</div>';
+        })() : ''}
+
+        <div class="wt-actions">
+            <button class="wt-action-btn primary" onclick="toggleFullBriefing()">
+                <i class="fas fa-file-alt" style="margin-right:0.3rem;"></i>Full Interrogation
+            </button>
+            <button class="wt-action-btn" onclick="window.location.href='/war-room/26-001-HIG'">
+                <i class="fas fa-gavel" style="margin-right:0.3rem;"></i>Higginbotham War Room
+            </button>
+            <button class="wt-action-btn" onclick="window.location.href='/search-ui'">
+                <i class="fas fa-search" style="margin-right:0.3rem;"></i>Precedent Library
+            </button>
+        </div>
+
+        <div class="wt-full-text" id="fullBriefingText">${esc(b.full_text)}</div>
+    </div>`;
+}
+
+function toggleFullBriefing() {
+    const el = document.getElementById('fullBriefingText');
+    if (el) el.classList.toggle('open');
+}
+
+function renderDashboard(d, b) {
+    const el = document.getElementById('mainContent');
+    document.getElementById('matterCount').textContent = d.open_matters || '';
+
+    const mattersHtml = d.recent_matters.length > 0
+        ? d.recent_matters.map(m => renderMatterCard(m)).join('')
+        : `<div class="empty-state"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><p>No matters yet. Click <strong>New Matter</strong> to open your first case.</p></div>`;
+
+    const rev = d.shadow_revenue || 0;
+    const revStr = rev >= 1000 ? '$' + (rev/1000).toFixed(1) + 'K' : '$' + rev.toFixed(0);
+
+    const silentCount = b ? (b.silent_count || 0) : 0;
+    const openTasks = b ? (b.open_tasks || 0) : 0;
+    const unassignedTasks = b ? (b.unassigned_tasks || 0) : 0;
+    const silentAlert = silentCount > 0 ? 'alert' : '';
+    const taskAlert = unassignedTasks > 10 ? 'warning' : '';
+
+    el.innerHTML = `
+        ${renderWatchtower(b)}
+
+        <div class="stat-grid" style="grid-template-columns:repeat(6,1fr);">
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <div><div class="stat-label">Shadow Revenue</div><div class="stat-value">${revStr}</div></div>
+                    <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
+                </div>
+                <div style="margin-top:0.5rem;font-size:0.65rem;color:var(--text-muted);">${d.shadow_nights || 0} nights / ${d.shadow_bookings || 0} bookings</div>
+            </div>
+            <div class="stat-card ${silentAlert}">
+                <div class="stat-card-top">
+                    <div><div class="stat-label">Silent Assets</div><div class="stat-value">${silentCount}</div></div>
+                    <div class="stat-icon" style="background:rgba(239,68,68,0.12);color:var(--red);"><i class="fas fa-ghost"></i></div>
+                </div>
+                <div style="margin-top:0.5rem;font-size:0.65rem;color:var(--text-muted);">$0 revenue</div>
+            </div>
+            <div class="stat-card ${taskAlert}">
+                <div class="stat-card-top">
+                    <div><div class="stat-label">Unassigned Tasks</div><div class="stat-value">${unassignedTasks}</div></div>
+                    <div class="stat-icon" style="background:rgba(245,158,11,0.12);color:var(--amber);"><i class="fas fa-clipboard-list"></i></div>
+                </div>
+                <div style="margin-top:0.5rem;font-size:0.65rem;color:var(--text-muted);">of ${openTasks} open</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <div><div class="stat-label">Open Matters</div><div class="stat-value">${d.open_matters}</div></div>
+                    <div class="stat-icon blue"><i class="fas fa-briefcase"></i></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <div><div class="stat-label">Precedent Vectors</div><div class="stat-value">${(d.precedent_vectors || 0).toLocaleString()}</div></div>
+                    <div class="stat-icon purple"><i class="fas fa-brain"></i></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-top">
+                    <div><div class="stat-label">Active Clients</div><div class="stat-value">${d.active_clients}</div></div>
+                    <div class="stat-icon amber"><i class="fas fa-users"></i></div>
+                </div>
+            </div>
+        </div>
+
+        ${d.pricing_summary ? `
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;gap:1.5rem;align-items:center;">
+                <div style="font-size:0.65rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;">
+                    <i class="fas fa-tags" style="margin-right:0.3rem;"></i>QuantRevenue
+                </div>
+                <div>
+                    <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">7d Delta</div>
+                    <div style="font-size:1rem;font-weight:700;color:${d.pricing_summary.delta_7d >= 0 ? 'var(--green)' : 'var(--red)'};">
+                        ${d.pricing_summary.delta_7d >= 0 ? '+' : ''}$${Math.abs(d.pricing_summary.delta_7d).toLocaleString()}
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Properties</div>
+                    <div style="font-size:1rem;font-weight:700;color:white;">${d.pricing_summary.properties_priced}</div>
+                </div>
+                <div style="display:flex;gap:0.3rem;">
+                    ${d.pricing_summary.signal_counts.STRONG_BUY > 0 ? '<span class="signal signal-STRONG_BUY">' + d.pricing_summary.signal_counts.STRONG_BUY + ' SB</span>' : ''}
+                    ${d.pricing_summary.signal_counts.BUY > 0 ? '<span class="signal signal-BUY">' + d.pricing_summary.signal_counts.BUY + ' Buy</span>' : ''}
+                    ${d.pricing_summary.signal_counts.HOLD > 0 ? '<span class="signal signal-HOLD">' + d.pricing_summary.signal_counts.HOLD + ' Hold</span>' : ''}
+                    ${d.pricing_summary.signal_counts.SELL > 0 ? '<span class="signal signal-SELL">' + d.pricing_summary.signal_counts.SELL + ' Sell</span>' : ''}
+                    ${d.pricing_summary.signal_counts.STRONG_SELL > 0 ? '<span class="signal signal-STRONG_SELL">' + d.pricing_summary.signal_counts.STRONG_SELL + ' SS</span>' : ''}
+                </div>
+            </div>
+            <a class="nav-item" data-view="rateboard" onclick="document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));this.classList.add('active');document.getElementById('pageTitle').textContent='Rate Board';loadRateBoard();"
+                style="font-size:0.75rem;font-weight:600;color:var(--accent);cursor:pointer;border:none;padding:0.3rem 0.6rem;text-decoration:none;">
+                View Rate Board <i class="fas fa-arrow-right" style="margin-left:0.25rem;font-size:0.65rem;"></i>
+            </a>
+        </div>
+        ` : ''}
+
+        ${(d.top_performers && d.top_performers.length > 0) ? `
+        <div class="section-header" style="margin-top:0.5rem;">
+            <div class="section-title" style="font-size:0.85rem;">Top Revenue Generators (Shadow Ledger)</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.6rem;margin-bottom:1.5rem;">
+            ${d.top_performers.map((p, i) => `
+                <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:0.75rem;">
+                    <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.2rem;">#${i+1}</div>
+                    <div style="font-size:0.85rem;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--green);margin-top:0.25rem;">$${p.revenue.toLocaleString()}</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);">${p.nights} nights booked</div>
+                </div>
+            `).join('')}
+        </div>
+        ` : ''}
+
+        <div class="section-header">
+            <div class="section-title">Recent Matters</div>
+        </div>
+        <div class="matter-grid">${mattersHtml}</div>
+    `;
+}
+
+// ─── Matters List ───────────────────────────────
+async function loadMatters() {
+    const el = document.getElementById('mainContent');
+    el.innerHTML = '<div style="padding:2rem;"><div class="skeleton" style="height:180px;width:100%;margin-bottom:1rem;"></div><div class="skeleton" style="height:180px;width:100%;"></div></div>';
+
+    try {
+        const r = await fetch(`${API}/api/matters`);
+        const d = await r.json();
+        const mattersHtml = d.matters.length > 0
+            ? d.matters.map(m => renderMatterCard(m)).join('')
+            : `<div class="empty-state"><div class="empty-icon"><i class="fas fa-briefcase"></i></div><p>No matters yet.</p></div>`;
+
+        el.innerHTML = `
+            <div class="section-header">
+                <div class="section-title">All Matters (${d.matters.length})</div>
+            </div>
+            <div class="matter-grid">${mattersHtml}</div>
+        `;
+    } catch (e) {
+        el.innerHTML = `<div class="empty-state">Failed to load matters: ${esc(e.message)}</div>`;
+    }
+}
+
+// ─── Matter Card Renderer ───────────────────────
+function renderMatterCard(m) {
+    const area = m.practice_area || 'General';
+    const badgeClass = {
+        'Litigation': 'badge-litigation',
+        'Transactional': 'badge-transactional',
+        'IP': 'badge-ip',
+        'Compliance': 'badge-compliance',
+    }[area] || 'badge-default';
+
+    const priority = m.priority || 'Normal';
+    const updated = m.updated_at ? timeAgo(m.updated_at) : '';
+
+    return `
+        <div class="matter-card" onclick="window.location.href='/war-room/${esc(m.matter_id)}'">
+            <div class="matter-top">
+                <span class="practice-badge ${badgeClass}">${esc(area)}</span>
+                <div style="display:flex;align-items:center;gap:0.4rem;">
+                    <span class="priority-dot priority-${priority}" title="${priority} priority"></span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);">${esc(m.matter_id)}</span>
+                </div>
+            </div>
+            <div class="matter-title">${esc(m.title)}</div>
+            <div class="matter-desc">${esc(m.description || 'No description.')}</div>
+            <div class="matter-footer">
+                <div class="matter-meta">
+                    <span><i class="fas fa-sticky-note"></i>${m.note_count || 0} notes</span>
+                    <span><i class="fas fa-file"></i>${m.doc_count || 0} docs</span>
+                    ${updated ? `<span><i class="fas fa-clock"></i>${updated}</span>` : ''}
+                </div>
+                <button class="war-room-btn" onclick="event.stopPropagation();window.location.href='/war-room/${esc(m.matter_id)}'">
+                    War Room <i class="fas fa-arrow-right" style="margin-left:0.25rem;font-size:0.7rem;"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// ─── New Matter Modal ───────────────────────────
+async function openNewMatterModal() {
+    // Load clients for dropdown
+    try {
+        const r = await fetch(`${API}/api/clients`);
+        const d = await r.json();
+        const sel = document.getElementById('clientSelect');
+        sel.innerHTML = d.clients.map(c =>
+            `<option value="${c.client_id}">${esc(c.name)}</option>`
+        ).join('');
+    } catch (e) {
+        console.error('Failed to load clients:', e);
+    }
+    document.getElementById('newMatterModal').classList.add('open');
+}
+
+function closeModal() {
+    document.getElementById('newMatterModal').classList.remove('open');
+}
+
+async function createMatter(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('createBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    const body = {
+        matter_id: form.matter_id.value.trim(),
+        client_id: parseInt(form.client_id.value),
+        title: form.title.value.trim(),
+        practice_area: form.practice_area.value,
+        priority: form.priority.value,
+        description: form.description.value.trim() || null,
+        opposing_counsel: form.opposing_counsel.value.trim() || null,
+        jurisdiction: form.jurisdiction.value.trim() || null,
+    };
+
+    try {
+        const r = await fetch(`${API}/api/matters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+            const err = await r.json();
+            throw new Error(err.detail || 'Failed to create matter');
+        }
+        closeModal();
+        form.reset();
+        loadDashboard();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Open Matter';
+    }
+}
+
+// Close modal on overlay click
+document.getElementById('newMatterModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// ─── Utilities ──────────────────────────────────
+function esc(s) {
+    if (s == null) return '';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+}
+
+function timeAgo(dateStr) {
+    const now = new Date();
+    const then = new Date(dateStr);
+    const diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return then.toLocaleDateString();
+}
+
+// ─── Rate Board (QuantRevenue CF-02) ────────────
+let rateBoardDays = 7;
+
+async function loadRateBoard() {
+    const el = document.getElementById('mainContent');
+    el.innerHTML = '<div style="padding:2rem;text-align:center;"><div class="skeleton" style="height:100px;width:100%;margin-bottom:1rem;"></div><div class="skeleton" style="height:400px;width:100%;"></div></div>';
+
+    try {
+        const r = await fetch(API + '/api/rates?days=' + rateBoardDays);
+        const d = await r.json();
+
+        if (d.status === 'no_data') {
+            el.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-tags"></i></div>
+                <p>No rate cards generated yet.</p>
+                <button onclick="triggerPricingRun()" class="btn btn-primary" style="margin-top:1rem;">
+                    <i class="fas fa-play" style="margin-right:0.4rem;"></i>Run QuantRevenue Engine
+                </button>
+            </div>`;
+            return;
+        }
+
+        const ps = d.portfolio_summary;
+        const delta = ps.delta;
+        const deltaSign = delta >= 0 ? '+' : '';
+        const deltaColor = delta >= 0 ? 'var(--green)' : 'var(--red)';
+
+        // Portfolio summary bar
+        let summaryHtml = `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;">
+            <div style="display:flex;gap:2rem;align-items:center;">
+                <div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Engine Run</div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.1rem;">${esc(d.last_run)}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">Base Revenue (${rateBoardDays}d)</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:white;margin-top:0.1rem;">$${ps.base_revenue.toLocaleString()}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">Optimized Revenue</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:white;margin-top:0.1rem;">$${ps.optimized_revenue.toLocaleString()}</div>
+                </div>
+                <div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">Delta</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:${deltaColor};margin-top:0.1rem;">${deltaSign}$${Math.abs(delta).toLocaleString()}</div>
+                </div>
+                <div style="display:flex;gap:0.4rem;">
+                    ${ps.strong_buys > 0 ? `<span class="signal signal-STRONG_BUY">${ps.strong_buys} Strong Buy</span>` : ''}
+                    ${ps.buys > 0 ? `<span class="signal signal-BUY">${ps.buys} Buy</span>` : ''}
+                    ${ps.holds > 0 ? `<span class="signal signal-HOLD">${ps.holds} Hold</span>` : ''}
+                    ${ps.sells > 0 ? `<span class="signal signal-SELL">${ps.sells} Sell</span>` : ''}
+                    ${ps.strong_sells > 0 ? `<span class="signal signal-STRONG_SELL">${ps.strong_sells} Strong Sell</span>` : ''}
+                </div>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <button onclick="acceptAllRates()" title="Accept all QuantRevenue recommendations"
+                    style="padding:0.4rem 0.8rem;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:6px;color:var(--green);font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;"
+                    onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.12)'">
+                    <i class="fas fa-check-double" style="margin-right:0.3rem;"></i>Accept All
+                </button>
+                <select id="rbDays" onchange="rateBoardDays=+this.value;loadRateBoard();"
+                    style="padding:0.4rem 0.6rem;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:0.8rem;">
+                    <option value="7" ${rateBoardDays===7?'selected':''}>7 Days</option>
+                    <option value="14" ${rateBoardDays===14?'selected':''}>14 Days</option>
+                    <option value="30" ${rateBoardDays===30?'selected':''}>30 Days</option>
+                </select>
+                <button onclick="triggerPricingRun()" title="Re-run pricing engine"
+                    style="padding:0.4rem 0.8rem;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);font-size:0.8rem;cursor:pointer;">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>`;
+
+        // Property rate cards grid
+        let cardsHtml = d.properties.map(p => {
+            const avg = p.avg_recommended;
+            const base = p.base_rate;
+            const pctDelta = base > 0 ? ((avg - base) / base * 100).toFixed(1) : 0;
+            const deltaClass = pctDelta > 0 ? 'up' : pctDelta < 0 ? 'down' : 'flat';
+            const deltaPrefix = pctDelta > 0 ? '+' : '';
+            const sig = p.dominant_signal;
+
+            // Mini sparkline of daily rates
+            const rates = p.daily_rates || [];
+            const minR = Math.min(...rates.map(r => r.rate));
+            const maxR = Math.max(...rates.map(r => r.rate));
+            const range = maxR - minR || 1;
+            const sparkBars = rates.map(r => {
+                const h = Math.max(3, ((r.rate - minR) / range) * 22);
+                const sigColor = r.signal === 'STRONG_BUY' || r.signal === 'BUY' ? 'var(--green)'
+                    : r.signal === 'HOLD' ? 'var(--amber)' : 'var(--red)';
+                return `<div class="bar" style="height:${h}px;background:${sigColor};flex:1;" title="${r.date} ${r.dow}: $${r.rate} (${r.signal})"></div>`;
+            }).join('');
+
+            // Upcoming events
+            const events = rates.filter(r => r.event).map(r => `${r.dow.substr(0,3)}: ${r.event}`);
+            const evtHtml = events.length > 0
+                ? `<div style="margin-top:0.5rem;font-size:0.65rem;color:var(--cyan);"><i class="fas fa-calendar-star" style="margin-right:0.3rem;"></i>${esc(events[0])}</div>`
+                : '';
+
+            const rateColor = sig === 'STRONG_BUY' || sig === 'BUY' ? 'var(--green)'
+                : sig === 'HOLD' ? 'var(--amber)' : 'var(--red)';
+
+            const propDisplayName = p.property_id.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+
+            return `
+            <div class="rate-card">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <div class="prop-name">${esc(propDisplayName)}</div>
+                        <div class="prop-meta">${p.tier} tier  |  base $${base}/night</div>
+                    </div>
+                    <span class="signal signal-${sig}">${sig.replace('_',' ')}</span>
+                </div>
+                <div class="rate-row">
+                    <div class="rate-big" style="color:${rateColor};">$${Math.round(avg)}</div>
+                    <div class="rate-base">$${base}</div>
+                    <div class="rate-delta ${deltaClass}">${deltaPrefix}${pctDelta}%</div>
+                </div>
+                <div class="rate-spark">${sparkBars}</div>
+                ${evtHtml}
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem;padding-top:0.5rem;border-top:1px solid var(--border);">
+                    <div style="font-size:0.7rem;color:var(--text-muted);">
+                        $${p.min_rate} — $${p.max_rate} range
+                    </div>
+                    <div style="font-size:0.7rem;font-weight:600;color:${pctDelta >= 0 ? 'var(--green)' : 'var(--red)'};">
+                        ${deltaPrefix}$${Math.abs(p.period_delta).toLocaleString()} / ${rateBoardDays}d
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.4rem;margin-top:0.5rem;">
+                    <button onclick="event.stopPropagation();acceptRate('${esc(p.property_id)}', ${Math.round(avg)}, '${esc(propDisplayName)}')"
+                        style="flex:1;padding:0.35rem 0.5rem;font-size:0.7rem;font-weight:600;border-radius:5px;cursor:pointer;
+                        border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.08);color:var(--green);transition:all 0.15s;"
+                        onmouseover="this.style.background='rgba(34,197,94,0.18)'" onmouseout="this.style.background='rgba(34,197,94,0.08)'">
+                        <i class="fas fa-check" style="margin-right:0.25rem;"></i>Accept $${Math.round(avg)}
+                    </button>
+                    <button onclick="event.stopPropagation();overrideRate('${esc(p.property_id)}', '${esc(propDisplayName)}')"
+                        style="padding:0.35rem 0.5rem;font-size:0.7rem;font-weight:600;border-radius:5px;cursor:pointer;
+                        border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);transition:all 0.15s;"
+                        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text-primary)'"
+                        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                        <i class="fas fa-edit" style="margin-right:0.25rem;"></i>Override
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+
+        el.innerHTML = summaryHtml + `
+        <div class="section-header">
+            <div class="section-title">Rate Cards — ${rateBoardDays}-Day Forward</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">QuantRevenue v2.0 | Run: ${esc(d.run_id)}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem;">${cardsHtml}</div>`;
+
+    } catch (e) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>Failed to load rate board: ${esc(e.message)}</div>`;
+    }
+}
+
+async function triggerPricingRun() {
+    const el = document.getElementById('mainContent');
+    const origHtml = el.innerHTML;
+    el.innerHTML = '<div style="padding:3rem;text-align:center;"><div class="skeleton" style="height:60px;width:100%;margin-bottom:1rem;"></div><div style="font-size:0.9rem;color:var(--text-secondary);margin-top:1rem;"><i class="fas fa-cog fa-spin" style="margin-right:0.5rem;"></i>Running QuantRevenue Engine...</div></div>';
+    try {
+        const r = await fetch(API + '/api/rates/run', {method: 'POST'});
+        const d = await r.json();
+        if (d.status === 'success') {
+            await loadRateBoard();
+        } else {
+            throw new Error(d.detail || 'Engine run failed');
+        }
+    } catch (e) {
+        el.innerHTML = origHtml;
+        alert('Pricing run failed: ' + e.message);
+    }
+}
+
+async function acceptRate(propertyId, rate, displayName) {
+    if (!confirm(`Accept QuantRevenue recommendation?\n\nSet ${displayName} target rate to $${rate}/night?`)) return;
+    const cmd = `Set target price for ${displayName} to $${rate}`;
+    try {
+        const r = await fetch(API + '/api/intercom', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({command: cmd}),
+        });
+        const d = await r.json();
+        if (d.status === 'ok') {
+            alert(`Rate override set: ${displayName} → $${rate}/night`);
+            loadRateBoard();
+        } else {
+            alert('Failed: ' + (d.message || d.detail || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Error sending override: ' + e.message);
+    }
+}
+
+async function overrideRate(propertyId, displayName) {
+    const rate = prompt(`Enter custom nightly rate for ${displayName}:`, '');
+    if (!rate || isNaN(parseInt(rate))) return;
+    const numRate = parseInt(rate);
+    const cmd = `Set target price for ${displayName} to $${numRate}`;
+    try {
+        const r = await fetch(API + '/api/intercom', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({command: cmd}),
+        });
+        const d = await r.json();
+        if (d.status === 'ok') {
+            alert(`Manual override set: ${displayName} → $${numRate}/night`);
+            loadRateBoard();
+        } else {
+            alert('Failed: ' + (d.message || d.detail || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Error sending override: ' + e.message);
+    }
+}
+
+async function acceptAllRates() {
+    if (!confirm('Accept ALL QuantRevenue rate recommendations?\n\nThis will set target prices for every property to the engine\'s recommended average rate.')) return;
+    try {
+        const r = await fetch(API + '/api/rates?days=' + rateBoardDays);
+        const d = await r.json();
+        if (!d.properties || d.properties.length === 0) {
+            alert('No rate data available.');
+            return;
+        }
+        let succeeded = 0;
+        let failed = 0;
+        for (const p of d.properties) {
+            const avg = Math.round(p.avg_recommended);
+            const name = p.property_id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const cmd = `Set target price for ${name} to $${avg}`;
+            try {
+                const ir = await fetch(API + '/api/intercom', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({command: cmd}),
+                });
+                const id = await ir.json();
+                if (id.status === 'ok') succeeded++;
+                else failed++;
+            } catch { failed++; }
+        }
+        alert(`Rate overrides applied.\n\nSucceeded: ${succeeded}\nFailed: ${failed}`);
+        loadRateBoard();
+    } catch (e) {
+        alert('Failed to accept all rates: ' + e.message);
+    }
+}
+
+// ─── Simulator ──────────────────────────────────
+async function loadSimulator() {
+    const el = document.getElementById('mainContent');
+    el.innerHTML = `
+    <div style="margin-bottom:1.5rem;">
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:1.5rem;">
+            <h3 style="font-size:1rem;font-weight:700;color:white;margin-bottom:1rem;">
+                <i class="fas fa-sliders-h" style="color:var(--accent);margin-right:0.5rem;"></i>Monte Carlo Parameters
+            </h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;">
+                <div>
+                    <label style="font-size:0.75rem;color:var(--text-secondary);display:block;margin-bottom:0.3rem;">
+                        Occupancy Rate: <strong id="occLabel" style="color:white;">65%</strong>
+                    </label>
+                    <input type="range" id="simOccupancy" min="10" max="100" value="65" step="5"
+                        style="width:100%;accent-color:var(--accent);" oninput="updateSimLabel()">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;color:var(--text-secondary);display:block;margin-bottom:0.3rem;">
+                        ADR Adjustment: <strong id="adrLabel" style="color:white;">0%</strong>
+                    </label>
+                    <input type="range" id="simADR" min="-30" max="50" value="0" step="5"
+                        style="width:100%;accent-color:var(--accent);" oninput="updateSimLabel()">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;color:var(--text-secondary);display:block;margin-bottom:0.3rem;">
+                        Forecast Days: <strong id="daysLabel" style="color:white;">30</strong>
+                    </label>
+                    <input type="range" id="simDays" min="7" max="90" value="30" step="7"
+                        style="width:100%;accent-color:var(--accent);" oninput="updateSimLabel()">
+                </div>
+            </div>
+            <button onclick="runSimulation()" style="margin-top:1rem;padding:0.6rem 1.5rem;background:var(--accent);
+                color:white;border:none;border-radius:6px;font-weight:600;font-size:0.85rem;cursor:pointer;">
+                <i class="fas fa-play" style="margin-right:0.4rem;"></i>Run Simulation
+            </button>
+        </div>
+    </div>
+    <div id="simResults" style="color:var(--text-muted);font-size:0.85rem;">Adjust sliders and click Run Simulation.</div>
+    `;
+}
+
+function updateSimLabel() {
+    document.getElementById('occLabel').textContent = document.getElementById('simOccupancy').value + '%';
+    document.getElementById('adrLabel').textContent = (document.getElementById('simADR').value >= 0 ? '+' : '') + document.getElementById('simADR').value + '%';
+    document.getElementById('daysLabel').textContent = document.getElementById('simDays').value;
+}
+
+async function runSimulation() {
+    const occ = document.getElementById('simOccupancy').value;
+    const adr = document.getElementById('simADR').value;
+    const days = document.getElementById('simDays').value;
+    const el = document.getElementById('simResults');
+    el.innerHTML = '<div style="text-align:center;padding:2rem;"><div class="skeleton" style="height:200px;"></div></div>';
+
+    try {
+        const r = await fetch(`${API}/api/simulate?occupancy_pct=${occ}&adr_adjustment=${adr}&days=${days}`);
+        const d = await r.json();
+        const f = d.forecast;
+        const canHit50k = f.total_with_silent >= 50000;
+
+        let propRows = d.properties.map((p, i) => `
+            <tr style="background:${i%2===0 ? 'var(--bg-secondary)' : 'var(--bg-primary)'};">
+                <td style="padding:6px 10px;font-size:0.8rem;color:var(--text-primary);">${esc(p.property)}</td>
+                <td style="padding:6px 10px;font-size:0.8rem;color:var(--text-secondary);text-align:center;">$${p.rate}</td>
+                <td style="padding:6px 10px;font-size:0.8rem;color:var(--text-secondary);text-align:center;">${p.nights}</td>
+                <td style="padding:6px 10px;font-size:0.8rem;color:var(--green);text-align:right;font-weight:600;">$${p.gross.toLocaleString()}</td>
+                <td style="padding:6px 10px;font-size:0.8rem;color:var(--accent);text-align:right;">$${p.mgmt_fee.toLocaleString()}</td>
+                <td style="padding:6px 10px;font-size:0.8rem;color:var(--text-secondary);text-align:right;">$${p.owner_payout.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        el.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;margin-bottom:1.5rem;">
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;">
+                <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">Gross Rent</div>
+                <div style="font-size:1.5rem;font-weight:800;color:var(--green);margin-top:0.25rem;">$${f.gross_rent.toLocaleString()}</div>
+            </div>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;">
+                <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">Total Revenue</div>
+                <div style="font-size:1.5rem;font-weight:800;color:white;margin-top:0.25rem;">$${f.total_revenue.toLocaleString()}</div>
+            </div>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;">
+                <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">CROG Fees</div>
+                <div style="font-size:1.5rem;font-weight:800;color:var(--accent);margin-top:0.25rem;">$${f.crog_fees.toLocaleString()}</div>
+            </div>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;">
+                <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">Booked Nights</div>
+                <div style="font-size:1.5rem;font-weight:800;color:white;margin-top:0.25rem;">${f.total_nights}</div>
+            </div>
+            <div style="background:var(--bg-secondary);border:1px solid ${canHit50k ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'};border-radius:8px;padding:1rem;text-align:center;">
+                <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;">+Silent Potential</div>
+                <div style="font-size:1.5rem;font-weight:800;color:${canHit50k ? 'var(--green)' : 'var(--amber)'};margin-top:0.25rem;">$${f.total_with_silent.toLocaleString()}</div>
+                <div style="font-size:0.6rem;color:var(--text-muted);margin-top:0.2rem;">${d.silent_count} silent properties</div>
+            </div>
+        </div>
+
+        ${f.silent_potential > 0 ? `
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:1rem;margin-bottom:1.5rem;font-size:0.85rem;color:var(--amber);">
+            <i class="fas fa-lightbulb" style="margin-right:0.4rem;"></i>
+            <strong>Untapped Revenue:</strong> Reactivating ${d.silent_count} silent properties at ${occ}% occupancy could add
+            <strong>$${f.silent_potential.toLocaleString()}</strong> in ${days} days.
+            ${canHit50k ? '<span style="color:var(--green);font-weight:700;"> $50K target ACHIEVABLE.</span>' : '<span style="color:var(--red);"> Still below $50K target.</span>'}
+        </div>
+        ` : ''}
+
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <th style="padding:8px 10px;font-size:0.7rem;color:var(--text-muted);text-align:left;text-transform:uppercase;">Property</th>
+                        <th style="padding:8px 10px;font-size:0.7rem;color:var(--text-muted);text-align:center;text-transform:uppercase;">ADR</th>
+                        <th style="padding:8px 10px;font-size:0.7rem;color:var(--text-muted);text-align:center;text-transform:uppercase;">Nights</th>
+                        <th style="padding:8px 10px;font-size:0.7rem;color:var(--text-muted);text-align:right;text-transform:uppercase;">Gross</th>
+                        <th style="padding:8px 10px;font-size:0.7rem;color:var(--text-muted);text-align:right;text-transform:uppercase;">CROG Fee</th>
+                        <th style="padding:8px 10px;font-size:0.7rem;color:var(--text-muted);text-align:right;text-transform:uppercase;">Owner</th>
+                    </tr>
+                </thead>
+                <tbody>${propRows}</tbody>
+            </table>
+        </div>
+        `;
+    } catch (e) {
+        el.innerHTML = `<div class="empty-state">Simulation failed: ${esc(e.message)}</div>`;
+    }
+}
+
+// ─── Terminal (The Intercom) ────────────────────
+async function loadTerminal() {
+    const el = document.getElementById('mainContent');
+    el.innerHTML = `
+    <div style="max-width:800px;">
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem;">
+            <h3 style="font-size:1rem;font-weight:700;color:white;margin-bottom:0.5rem;">
+                <i class="fas fa-satellite-dish" style="color:var(--accent);margin-right:0.5rem;"></i>The Intercom
+            </h3>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1rem;">
+                Issue natural language orders. R1 parses your intent and updates the system.<br>
+                <span style="color:var(--text-muted);">Example: "Restoration Luxury is under renovation until April 1st"</span>
+            </p>
+            <div style="display:flex;gap:0.5rem;">
+                <input type="text" id="terminalInput" placeholder="Enter command..."
+                    style="flex:1;padding:0.65rem 1rem;background:var(--bg-card);border:1px solid var(--border);
+                    border-radius:6px;color:var(--text-primary);font-size:0.9rem;font-family:'Courier New',monospace;outline:none;"
+                    onkeydown="if(event.key==='Enter')sendCommand()">
+                <button onclick="sendCommand()" id="terminalBtn"
+                    style="padding:0.65rem 1.25rem;background:var(--accent);color:white;border:none;
+                    border-radius:6px;font-weight:600;font-size:0.85rem;cursor:pointer;white-space:nowrap;">
+                    <i class="fas fa-paper-plane" style="margin-right:0.3rem;"></i>Execute
+                </button>
+            </div>
+        </div>
+
+        <div id="terminalLog" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+
+        <div style="margin-top:1.5rem;">
+            <h4 style="font-size:0.85rem;font-weight:600;color:white;margin-bottom:0.75rem;">Active Overrides</h4>
+            <div id="overridesList" style="font-size:0.8rem;color:var(--text-muted);">Loading...</div>
+        </div>
+    </div>
+    `;
+    loadOverrides();
+}
+
+async function sendCommand() {
+    const input = document.getElementById('terminalInput');
+    const btn = document.getElementById('terminalBtn');
+    const cmd = input.value.trim();
+    if (!cmd) return;
+
+    input.value = '';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+    // Show the command
+    const log = document.getElementById('terminalLog');
+    log.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:1rem;">
+            <div style="font-size:0.7rem;color:var(--accent);font-weight:600;margin-bottom:0.3rem;">COMMANDER</div>
+            <div style="font-size:0.9rem;color:var(--text-primary);font-family:'Courier New',monospace;">${esc(cmd)}</div>
+        </div>
+        <div style="text-align:center;padding:0.5rem;">
+            <div class="skeleton" style="height:60px;width:100%;"></div>
+        </div>
+    ` + log.innerHTML;
+
+    try {
+        const r = await fetch(API + '/api/intercom', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({command: cmd}),
+        });
+        const d = await r.json();
+
+        const isOk = d.status === 'ok';
+        const icon = isOk ? 'check-circle' : 'exclamation-triangle';
+        const color = isOk ? 'var(--green)' : 'var(--red)';
+        const message = d.confirmation || d.message || JSON.stringify(d);
+
+        // Replace the skeleton with the response
+        const entries = log.children;
+        if (entries.length > 1) entries[1].remove();
+        const resp = document.createElement('div');
+        resp.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:1rem;border-left:3px solid ' + color;
+        resp.innerHTML = `
+            <div style="font-size:0.7rem;color:${color};font-weight:600;margin-bottom:0.3rem;">
+                <i class="fas fa-${icon}" style="margin-right:0.3rem;"></i>SYSTEM RESPONSE
+            </div>
+            <div style="font-size:0.85rem;color:var(--text-primary);line-height:1.6;">${esc(message)}</div>
+        `;
+        log.insertBefore(resp, entries[1]);
+
+        if (isOk) loadOverrides();
+    } catch (e) {
+        const entries = log.children;
+        if (entries.length > 1) entries[1].remove();
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:0.3rem;"></i>Execute';
+}
+
+async function loadOverrides() {
+    const el = document.getElementById('overridesList');
+    if (!el) return;
+    try {
+        const r = await fetch(API + '/api/overrides');
+        const d = await r.json();
+        if (d.overrides.length === 0) {
+            el.innerHTML = '<div style="color:var(--text-muted);font-style:italic;">No active overrides. All properties are being monitored.</div>';
+            return;
+        }
+        el.innerHTML = d.overrides.map(o => `
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:0.75rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:0.85rem;font-weight:600;color:white;">${esc(o.property_name || o.entity_id)}</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">${esc(o.reason)} — ${o.effective_until ? 'until ' + new Date(o.effective_until).toLocaleDateString() : 'permanent'}</div>
+                </div>
+                <button onclick="revokeOverride(${o.id})" style="padding:0.3rem 0.6rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:var(--red);font-size:0.7rem;font-weight:600;cursor:pointer;">
+                    Revoke
+                </button>
+            </div>
+        `).join('');
+    } catch (e) {
+        el.innerHTML = 'Failed to load overrides.';
+    }
+}
+
+async function revokeOverride(id) {
+    if (!confirm('Revoke this override? The property will appear in alerts again.')) return;
+    try {
+        await fetch(API + '/api/overrides/' + id, {method: 'DELETE'});
+        loadOverrides();
+    } catch (e) { alert('Failed to revoke.'); }
+}
+
+// ─── Health Check ───────────────────────────────
+async function checkHealth() {
+    try {
+        const r = await fetch(`${API}/health`);
+        const d = await r.json();
+        const chip = document.getElementById('statusChip');
+        if (d.status === 'OPERATIONAL') {
+            chip.className = 'status-chip status-green';
+            chip.innerHTML = '<i class="fas fa-circle" style="font-size:0.4rem;margin-right:0.3rem;vertical-align:middle;"></i>OPERATIONAL';
+        } else {
+            chip.className = 'status-chip status-red';
+            chip.innerHTML = '<i class="fas fa-circle" style="font-size:0.4rem;margin-right:0.3rem;vertical-align:middle;"></i>DEGRADED';
+        }
+    } catch {
+        const chip = document.getElementById('statusChip');
+        chip.className = 'status-chip status-red';
+        chip.innerHTML = '<i class="fas fa-circle" style="font-size:0.4rem;margin-right:0.3rem;vertical-align:middle;"></i>OFFLINE';
+    }
+}
+
+// ─── Init ───────────────────────────────────────
+loadDashboard();
+checkHealth();
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>

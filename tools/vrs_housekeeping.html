@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Housekeeping</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+a{color:#4ade80;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Top Nav (Fortress Standard) ── */
+.fn-bar{display:flex;align-items:center;gap:6px;padding:6px 16px;background:#0a0a0a;border-bottom:1px solid #111;
+  font-size:12px;overflow-x:auto;white-space:nowrap;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.fn-cc{color:#4ade80;font-weight:800;font-size:13px;letter-spacing:-.3px;padding:4px 10px;
+  border-radius:6px;background:rgba(74,222,128,.08)}
+.fn-cc:hover{background:rgba(74,222,128,.15);text-decoration:none}
+.fn-group{position:relative}.fn-group-btn{display:flex;align-items:center;gap:4px;padding:4px 10px;
+  border-radius:6px;cursor:pointer;color:#888;font-size:11px;font-weight:600;transition:all .15s}
+.fn-group-btn:hover{color:#fff;background:#111}
+.fn-caret{font-size:8px;transition:transform .2s}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;background:#111;
+  border:1px solid #222;border-radius:10px;padding:6px 0;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:200}
+.fn-group.open .fn-dropdown{display:block}
+.fn-group.open .fn-caret{transform:rotate(180deg)}
+.fn-dd-item{display:block;padding:8px 16px;font-size:12px;color:#aaa;white-space:nowrap}
+.fn-dd-item:hover{background:#1a1a1a;color:#fff;text-decoration:none}
+.fn-dd-active{color:#4ade80!important;font-weight:700}
+.fn-g-green .fn-group-btn{color:#4ade80}
+.fn-g-green.fn-g-active .fn-group-btn{background:rgba(74,222,128,.1)}
+.fn-g-blue .fn-group-btn{color:#60a5fa}
+.fn-clock{color:#555;margin-left:auto;font-variant-numeric:tabular-nums}
+.fn-user{position:relative;cursor:pointer}
+.fn-user-btn{padding:4px 10px;border-radius:6px;color:#888;font-size:11px}
+.fn-user-btn:hover{background:#111;color:#fff}
+.fn-user .fn-dropdown{right:0;left:auto}
+
+/* ── Page Layout ── */
+.page-hdr{padding:20px 28px 12px;display:flex;align-items:center;justify-content:space-between}
+.page-hdr h1{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px;font-size:12px;color:#666}
+.container{padding:0 24px 40px}
+
+/* ── Summary Cards ── */
+.summary-row{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.summary-card{flex:1;min-width:150px;background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px}
+.summary-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#666;margin-bottom:4px}
+.summary-value{font-size:28px;font-weight:800}
+.summary-value.green{color:#4ade80}
+.summary-value.red{color:#f87171}
+.summary-value.amber{color:#fbbf24}
+.summary-value.blue{color:#60a5fa}
+
+/* ── Filter Bar ── */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.filter-select{padding:7px 12px;background:#111;border:1px solid #222;border-radius:8px;color:#fff;font-size:12px}
+
+/* ── Table ── */
+.table-wrap{background:#111;border:1px solid #1a1a1a;border-radius:14px;overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:#0a0a0a}
+th{padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#666;border-bottom:1px solid #1a1a1a;font-weight:700}
+td{padding:12px 14px;border-bottom:1px solid #0d0d0d}
+tr:hover{background:rgba(74,222,128,.03)}
+.empty-state{padding:40px;text-align:center;color:#555;font-size:13px}
+
+/* ── Status Badges ── */
+.st-dirty{background:rgba(248,113,113,.12);color:#f87171;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
+.st-clean{background:rgba(74,222,128,.12);color:#4ade80;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
+.st-progress{background:rgba(251,191,36,.12);color:#fbbf24;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
+
+/* ── Buttons ── */
+.btn-clean{padding:6px 14px;background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3);
+  border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-clean:hover{background:rgba(74,222,128,.25)}
+.btn-clean:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:10px;font-size:13px;
+  font-weight:600;opacity:0;transform:translateY(10px);transition:all .3s;z-index:9999;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-ok{background:#065f46;color:#6ee7b7;border:1px solid #047857}
+.toast-err{background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b}
+</style>
+</head>
+<body>
+
+<!-- NAV BAR -->
+<div class="fn-bar" id="fn-bar">
+  <a href="/" class="fn-cc">Command Center</a>
+  <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">&#128202; VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">&#127968; Properties</a><a class="fn-dd-item" href="/vrs/reservations">&#128197; Reservations</a><a class="fn-dd-item" href="/vrs/guests">&#128100; Guests</a><a class="fn-dd-item" href="/vrs/work-orders">&#128295; Work Orders</a><a class="fn-dd-item fn-dd-active" href="/vrs/housekeeping">&#128703; Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">&#128221; Contracts</a><a class="fn-dd-item" href="/vrs/analytics">&#128200; Analytics</a><a class="fn-dd-item" href="/vrs/payments">&#128179; Payments</a><a class="fn-dd-item" href="/vrs/utilities">&#9889; Utilities</a><a class="fn-dd-item" href="/vrs/channels">&#128225; Channels</a><a class="fn-dd-item" href="/vrs/owners">&#128084; Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">&#127760; Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">&#127968; IoT & Smart Home</a><div style="border-top:1px solid #222;margin:4px 0"></div><a class="fn-dd-item" href="/guest-agent">&#129302; Guest Agent</a></div></div>
+  <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span>&#128231;</span> Email Intake</a><a href="/intelligence" class="fn-dd-item"><span>&#9813;</span> Intelligence</a><a href="/docs-center" class="fn-dd-item"><span>&#128196;</span> Documents</a><a href="/legal" class="fn-dd-item"><span>&#9878;</span> Legal Cases</a></div></div>
+  <span class="fn-clock" id="fnClock"></span>
+  <div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">User</span> &#9660;</div><div class="fn-dropdown"><a class="fn-dd-item" onclick="logout()">Logout</a></div></div>
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1><span>CROG-VRS</span> &mdash; Housekeeping Command Panel</h1>
+  <div class="hdr-right">
+    <input type="date" id="dateFilter" style="padding:6px 10px;background:#111;border:1px solid #222;border-radius:8px;color:#fff;font-size:12px" onchange="loadTurnovers()">
+    <span id="lastUpdated" style="color:#444"></span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="summary-label">Total Checkouts</div>
+      <div class="summary-value blue" id="totalCheckouts">-</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Dirty / Needs Attention</div>
+      <div class="summary-value red" id="dirtyCount">-</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Clean / Ready</div>
+      <div class="summary-value green" id="cleanCount">-</div>
+    </div>
+  </div>
+
+  <!-- TURNOVERS TABLE -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+          <thead>
+          <tr>
+            <th>Property</th>
+            <th>Guest</th>
+            <th>Conf#</th>
+            <th>Check-out</th>
+            <th>Status</th>
+            <th>Assigned To</th>
+            <th>Est. Time</th>
+            <th>AI Agent</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="9"><div class="empty-state">Loading turnovers...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Nav ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+/* ── Auth ── */
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── Toast ── */
+function showToast(msg,ok){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(ok?'toast-ok':'toast-err')+' show';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){t.classList.remove('show')},3500);
+}
+
+/* ── Helpers ── */
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fmtDate(d){
+  if(!d) return '—';
+  var dt=new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+/* ── Data ── */
+var turnoversData=[];
+
+async function loadTurnovers(){
+  var dateInput=document.getElementById('dateFilter');
+  var url='/api/vrs/housekeeping/dirty-turnovers';
+  if(dateInput.value) url+='?target_date='+dateInput.value;
+
+  try{
+    var r=await fetch(url,{credentials:'include'});
+    if(!r.ok){
+      document.getElementById('tableBody').innerHTML='<tr><td colspan="9"><div class="empty-state">Failed to load (HTTP '+r.status+')</div></td></tr>';
+      return;
+    }
+    var data=await r.json();
+    turnoversData=data.turnovers||[];
+
+    document.getElementById('totalCheckouts').textContent=data.total_checkouts||0;
+    document.getElementById('dirtyCount').textContent=data.dirty_count||0;
+    document.getElementById('cleanCount').textContent=data.clean_count||0;
+    document.getElementById('lastUpdated').textContent='Updated '+new Date().toLocaleTimeString();
+
+    renderTable();
+  }catch(e){
+    console.error('Load error:',e);
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="9"><div class="empty-state">Network error</div></td></tr>';
+  }
+}
+
+function renderTable(){
+  var body=document.getElementById('tableBody');
+  if(!turnoversData.length){
+    body.innerHTML='<tr><td colspan="9"><div class="empty-state">No checkouts for this date</div></td></tr>';
+    return;
+  }
+
+  var dirty=turnoversData.filter(function(t){return t.needs_attention});
+  var clean=turnoversData.filter(function(t){return !t.needs_attention});
+  var sorted=dirty.concat(clean);
+
+  var html='';
+  sorted.forEach(function(t){
+    var stClass=t.clean_status==='clean'?'st-clean':t.clean_status==='cleaning_in_progress'?'st-progress':'st-dirty';
+    var stLabel=t.clean_status==='clean'?'Clean':t.clean_status==='cleaning_in_progress'?'In Progress':'Dirty';
+    var est=t.estimated_minutes;
+    var estStr=est?(Math.floor(est/60)>0?Math.floor(est/60)+'h '+est%60+'m':est+'min'):'—';
+
+    html+='<tr>';
+    html+='<td style="font-weight:700">'+esc(t.property_name)+'</td>';
+    html+='<td>'+esc(t.guest_name)+'</td>';
+    html+='<td style="font-family:monospace;font-size:12px;color:#888">'+esc(t.confirmation_code||'—')+'</td>';
+    html+='<td>'+fmtDate(t.check_out_date)+'</td>';
+    html+='<td><span class="'+stClass+'">'+stLabel+'</span></td>';
+    html+='<td>'+(t.assigned_to?esc(t.assigned_to):'<span style="color:#555">Unassigned</span>')+'</td>';
+    html+='<td style="font-variant-numeric:tabular-nums;color:#60a5fa">'+estStr+'</td>';
+
+    // AI Agent column
+    html+='<td>';
+    if(t.clean_status!=='clean'&&!t.dispatched_by){
+      html+='<button class="btn-clean" style="background:rgba(96,165,250,.15);color:#60a5fa;border-color:rgba(96,165,250,.3)" '
+        +'onclick="aiDispatch(\''+t.reservation_id+'\',this)">&#9889; AI Dispatch</button>';
+    }else if(t.dispatched_by==='ai_agent'){
+      html+='<span style="color:#60a5fa;font-size:11px">&#9889; AI Assigned</span>';
+    }else{
+      html+='<span style="color:#555;font-size:10px">—</span>';
+    }
+    html+='</td>';
+
+    // Action column
+    html+='<td>';
+    if(t.clean_status!=='clean'){
+      html+='<button class="btn-clean" onclick="markClean(\''+t.property_id+'\',this)">&#10003; Mark Clean</button>';
+    }else{
+      html+='<span style="color:#4ade80;font-size:11px">&#10003; Ready</span>';
+    }
+    html+='</td>';
+    html+='</tr>';
+  });
+  body.innerHTML=html;
+}
+
+async function markClean(propertyId,btn){
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  try{
+    var r=await fetch('/api/vrs/housekeeping/mark-clean/'+propertyId,{method:'POST',credentials:'include'});
+    if(r.ok){
+      showToast('Property marked as clean',true);
+      await loadTurnovers();
+    }else{
+      var d=await r.json().catch(function(){return{}});
+      showToast(d.detail||d.error||'Failed to mark clean',false);
+      btn.disabled=false;
+      btn.textContent='✓ Mark Clean';
+    }
+  }catch(e){
+    showToast('Network error: '+e.message,false);
+    btn.disabled=false;
+    btn.textContent='✓ Mark Clean';
+  }
+}
+
+async function aiDispatch(reservationId,btn){
+  btn.disabled=true;
+  btn.textContent='Dispatching...';
+  try{
+    var r=await fetch('/api/vrs/housekeeping/dispatch/'+reservationId,{method:'POST',credentials:'include'});
+    if(r.ok){
+      var d=await r.json();
+      var msg='AI dispatched: '+esc(d.assigned_to||'(no default cleaner)')
+        +' — Est. '+(d.estimated_minutes||'?')+'min'
+        +' ('+esc(d.cleaning_type||'turnover')+')';
+      showToast(msg,true);
+      await loadTurnovers();
+    }else{
+      var d=await r.json().catch(function(){return{}});
+      showToast(d.detail||d.error||'Dispatch failed',false);
+      btn.disabled=false;
+      btn.textContent='⚡ AI Dispatch';
+    }
+  }catch(e){
+    showToast('Network error: '+e.message,false);
+    btn.disabled=false;
+    btn.textContent='⚡ AI Dispatch';
+  }
+}
+
+/* ── Init ── */
+loadUser();
+document.getElementById('dateFilter').valueAsDate=new Date();
+loadTurnovers();
+setInterval(loadTurnovers,60000);
+</script>
+</body>
+</html>

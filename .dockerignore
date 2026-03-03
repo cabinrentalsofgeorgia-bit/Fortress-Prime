@@ -1,43 +1,56 @@
-# Git
+# =============================================================================
+# FORTRESS PRIME — Docker Build Exclusions
+# =============================================================================
+
+# Version control
 .git
 .gitignore
 
-# Python
+# Python caches
 __pycache__
 *.pyc
 *.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info
-dist
-build
+.mypy_cache
+.pytest_cache
 
-# Docker
-docker-compose.yml
-Dockerfile*
+# IDE / editor
+.cursor
+.vscode
+*.swp
+*.swo
+*~
 
-# Logs
+# Virtual environments
+venv
+.venv
+env
+
+# Large data files (mounted at runtime, not baked in)
+*.pdf
+*.csv
+*.sqlite3
+*.db
+
+# NAS data (mounted at runtime)
+mnt/
+
+# Logs (mounted at runtime)
 logs/
 *.log
 
-# Backups
-backup-*/
+# Docker files (don't nest)
+Dockerfile*
+docker-compose*.yml
 
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
+# Misc
+cleanup_log.txt
+full_folder_manifest.txt
+nas_file_structure.txt
+site_content_map.csv
+cluster_specs.txt
+*.json.bak
+.env.bak
+.env.pre_renew_*
 
-# Documentation
-docs/
-*.md
-
-# Uploads and temp files
-uploads/
-*.tmp
-
-# Large data directories (permission issues)
-mnt/
+# Node (if any)
+node_modules

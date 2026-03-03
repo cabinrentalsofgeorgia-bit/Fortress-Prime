@@ -1,0 +1,751 @@
+{
+  "pdfs_scanned": 18,
+  "pdfs_with_revenue": 8,
+  "reservations_matched": 17,
+  "reservations_with_variance": 17,
+  "total_pdf_commission": 19452.4,
+  "total_iron_dome_commission": 23276.759999999995,
+  "total_over_allocation": 3824.36,
+  "statements": [
+    {
+      "file": "2026-01_980130_24238941.pdf",
+      "property": "Chase Mountain Dreams",
+      "unit_id": "980130",
+      "period": "01/01/2026 - 01/31/2026",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 250.0,
+        "ending_balance": -250.0,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2026-01_441334_24238937.pdf",
+      "property": "High Hopes",
+      "unit_id": "441334",
+      "period": "01/01/2026 - 01/31/2026",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 604.0,
+        "ending_balance": 1164.36,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2026-01_1001528_24238932.pdf",
+      "property": "Skyfall",
+      "unit_id": "1001528",
+      "period": "01/01/2026 - 01/31/2026",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 853.47,
+        "ending_balance": -853.47,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2026-01_382651_24238933.pdf",
+      "property": "Above the Timberline",
+      "unit_id": "382651",
+      "period": "01/01/2026 - 01/31/2026",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 312.5,
+        "ending_balance": -312.5,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2026-01_419022_24238938.pdf",
+      "property": "Blue Ridge Lake Sanctuary",
+      "unit_id": "419022",
+      "period": "01/01/2026 - 01/31/2026",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 250.0,
+        "ending_balance": 2122.53,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2025-04_70220_21935175.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "04/01/2025 - 04/30/2025",
+      "summary": {
+        "gross_revenue": 1252.8,
+        "mgmt_commission": 438.48,
+        "owner_charges": 1020.0,
+        "ending_balance": 2195.15,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 2,
+      "revenue_reservations": 1,
+      "reservation_details": [
+        {
+          "conf_code": "52736",
+          "pdf_gross_rent": 1252.8,
+          "pdf_mgmt_comm": 438.48,
+          "pdf_net_amount": 814.32,
+          "iron_dome_comm": 646.26,
+          "db_total_amount": 2071.09,
+          "db_base_price": 1252.8,
+          "db_additional_party": 0.0,
+          "computed_sl_gross_rent": 1252.8,
+          "gross_rent_match": true,
+          "variance": 207.78
+        }
+      ]
+    },
+    {
+      "file": "2025-05_70220_22214981.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "05/01/2025 - 05/31/2025",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 810.5,
+        "ending_balance": -3005.65,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 1,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2025-06_70220_22214994.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "06/01/2025 - 06/30/2025",
+      "summary": {
+        "gross_revenue": 16183.0,
+        "mgmt_commission": 5664.05,
+        "owner_charges": 1083.4,
+        "ending_balance": 8625.05,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 5,
+      "revenue_reservations": 5,
+      "reservation_details": [
+        {
+          "conf_code": "52228",
+          "pdf_gross_rent": 4798.0,
+          "pdf_mgmt_comm": 1679.3,
+          "pdf_net_amount": 3118.7,
+          "iron_dome_comm": 1933.53,
+          "db_total_amount": 6190.37,
+          "db_base_price": 3923.0,
+          "db_additional_party": 875.0,
+          "computed_sl_gross_rent": 4798.0,
+          "gross_rent_match": true,
+          "variance": 254.23
+        },
+        {
+          "conf_code": "52553",
+          "pdf_gross_rent": 4194.0,
+          "pdf_mgmt_comm": 1467.9,
+          "pdf_net_amount": 2726.1,
+          "iron_dome_comm": 1714.5,
+          "db_total_amount": 5495.67,
+          "db_base_price": 3594.0,
+          "db_additional_party": 600.0,
+          "computed_sl_gross_rent": 4194.0,
+          "gross_rent_match": true,
+          "variance": 246.6
+        },
+        {
+          "conf_code": "52787",
+          "pdf_gross_rent": 2397.0,
+          "pdf_mgmt_comm": 838.95,
+          "pdf_net_amount": 1558.05,
+          "iron_dome_comm": 1033.66,
+          "db_total_amount": 3313.68,
+          "db_base_price": 1797.0,
+          "db_additional_party": 600.0,
+          "computed_sl_gross_rent": 2397.0,
+          "gross_rent_match": true,
+          "variance": 194.71
+        },
+        {
+          "conf_code": "52751",
+          "pdf_gross_rent": 2547.0,
+          "pdf_mgmt_comm": 891.45,
+          "pdf_net_amount": 1655.55,
+          "iron_dome_comm": 1107.86,
+          "db_total_amount": 3551.68,
+          "db_base_price": 1797.0,
+          "db_additional_party": 750.0,
+          "computed_sl_gross_rent": 2547.0,
+          "gross_rent_match": true,
+          "variance": 216.41
+        },
+        {
+          "conf_code": "53290",
+          "pdf_gross_rent": 2247.0,
+          "pdf_mgmt_comm": 786.45,
+          "pdf_net_amount": 1460.55,
+          "iron_dome_comm": 959.46,
+          "db_total_amount": 3075.68,
+          "db_base_price": 1797.0,
+          "db_additional_party": 450.0,
+          "computed_sl_gross_rent": 2247.0,
+          "gross_rent_match": true,
+          "variance": 173.01
+        }
+      ]
+    },
+    {
+      "file": "2025-07_70220_22697023.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "07/01/2025 - 07/31/2025",
+      "summary": {
+        "gross_revenue": 4000.0,
+        "mgmt_commission": 1400.0,
+        "owner_charges": 238.18,
+        "ending_balance": 2361.82,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 1,
+      "revenue_reservations": 1,
+      "reservation_details": [
+        {
+          "conf_code": "53325",
+          "pdf_gross_rent": 4000.0,
+          "pdf_mgmt_comm": 1400.0,
+          "pdf_net_amount": 2600.0,
+          "iron_dome_comm": 1648.68,
+          "db_total_amount": 5285.75,
+          "db_base_price": 3000.0,
+          "db_additional_party": 1000.0,
+          "computed_sl_gross_rent": 4000.0,
+          "gross_rent_match": true,
+          "variance": 248.68
+        }
+      ]
+    },
+    {
+      "file": "2025-08_70220_22930808.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "08/01/2025 - 08/31/2025",
+      "summary": {
+        "gross_revenue": 1722.0,
+        "mgmt_commission": 602.7,
+        "owner_charges": 518.5,
+        "ending_balance": 600.8,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 2,
+      "revenue_reservations": 1,
+      "reservation_details": [
+        {
+          "conf_code": "53459",
+          "pdf_gross_rent": 1722.0,
+          "pdf_mgmt_comm": 602.7,
+          "pdf_net_amount": 1119.3,
+          "iron_dome_comm": 787.85,
+          "db_total_amount": 2533.36,
+          "db_base_price": 1647.0,
+          "db_additional_party": 75.0,
+          "computed_sl_gross_rent": 1722.0,
+          "gross_rent_match": true,
+          "variance": 185.15
+        }
+      ]
+    },
+    {
+      "file": "2025-09_70220_23154530.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "09/01/2025 - 09/30/2025",
+      "summary": {
+        "gross_revenue": 3452.5,
+        "mgmt_commission": 1208.37,
+        "owner_charges": 396.5,
+        "ending_balance": 1785.13,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 3,
+      "revenue_reservations": 2,
+      "reservation_details": [
+        {
+          "conf_code": "53277",
+          "pdf_gross_rent": 1450.0,
+          "pdf_mgmt_comm": 507.5,
+          "pdf_net_amount": 942.5,
+          "iron_dome_comm": 689.48,
+          "db_total_amount": 2210.31,
+          "db_base_price": 1150.0,
+          "db_additional_party": 300.0,
+          "computed_sl_gross_rent": 1450.0,
+          "gross_rent_match": true,
+          "variance": 181.98
+        },
+        {
+          "conf_code": "53424",
+          "pdf_gross_rent": 2002.5,
+          "pdf_mgmt_comm": 700.87,
+          "pdf_net_amount": 1301.63,
+          "iron_dome_comm": 933.31,
+          "db_total_amount": 2991.79,
+          "db_base_price": 1552.5,
+          "db_additional_party": 450.0,
+          "computed_sl_gross_rent": 2002.5,
+          "gross_rent_match": true,
+          "variance": 232.44
+        }
+      ]
+    },
+    {
+      "file": "2025-10_70220_23416304.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "10/01/2025 - 10/31/2025",
+      "summary": {
+        "gross_revenue": 4125.0,
+        "mgmt_commission": 1443.75,
+        "owner_charges": 586.57,
+        "ending_balance": 2094.68,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 3,
+      "revenue_reservations": 2,
+      "reservation_details": [
+        {
+          "conf_code": "53385",
+          "pdf_gross_rent": 2175.0,
+          "pdf_mgmt_comm": 761.25,
+          "pdf_net_amount": 1413.75,
+          "iron_dome_comm": 979.13,
+          "db_total_amount": 3138.75,
+          "db_base_price": 1725.0,
+          "db_additional_party": 450.0,
+          "computed_sl_gross_rent": 2175.0,
+          "gross_rent_match": true,
+          "variance": 217.88
+        },
+        {
+          "conf_code": "53468",
+          "pdf_gross_rent": 1950.0,
+          "pdf_mgmt_comm": 682.5,
+          "pdf_net_amount": 1267.5,
+          "iron_dome_comm": 909.13,
+          "db_total_amount": 2906.25,
+          "db_base_price": 1725.0,
+          "db_additional_party": 225.0,
+          "computed_sl_gross_rent": 1950.0,
+          "gross_rent_match": true,
+          "variance": 226.63
+        }
+      ]
+    },
+    {
+      "file": "2025-11_70220_23668854.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "11/01/2025 - 11/30/2025",
+      "summary": {
+        "gross_revenue": 12168.01,
+        "mgmt_commission": 4258.8,
+        "owner_charges": 3391.37,
+        "ending_balance": 4517.84,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 4,
+      "revenue_reservations": 3,
+      "reservation_details": [
+        {
+          "conf_code": "52964",
+          "pdf_gross_rent": 2800.0,
+          "pdf_mgmt_comm": 980.0,
+          "pdf_net_amount": 1820.0,
+          "iron_dome_comm": 1166.38,
+          "db_total_amount": 3738.75,
+          "db_base_price": 2300.0,
+          "db_additional_party": 500.0,
+          "computed_sl_gross_rent": 2800.0,
+          "gross_rent_match": true,
+          "variance": 186.38
+        },
+        {
+          "conf_code": "53440",
+          "pdf_gross_rent": 1610.0,
+          "pdf_mgmt_comm": 563.5,
+          "pdf_net_amount": 1046.5,
+          "iron_dome_comm": 780.89,
+          "db_total_amount": 2495.65,
+          "db_base_price": 1460.0,
+          "db_additional_party": 150.0,
+          "computed_sl_gross_rent": 1610.0,
+          "gross_rent_match": true,
+          "variance": 217.39
+        },
+        {
+          "conf_code": "53472",
+          "pdf_gross_rent": 7758.01,
+          "pdf_mgmt_comm": 2715.3,
+          "pdf_net_amount": 5042.71,
+          "iron_dome_comm": 2883.28,
+          "db_total_amount": 9296.54,
+          "db_base_price": 7458.01,
+          "db_additional_party": 300.0,
+          "computed_sl_gross_rent": 7758.01,
+          "gross_rent_match": true,
+          "variance": 167.98
+        }
+      ]
+    },
+    {
+      "file": "2025-12_70220_23918873.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "12/01/2025 - 12/31/2025",
+      "summary": {
+        "gross_revenue": 12675.0,
+        "mgmt_commission": 4436.25,
+        "owner_charges": 206.11,
+        "ending_balance": 8032.64,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 2,
+      "revenue_reservations": 2,
+      "reservation_details": [
+        {
+          "conf_code": "53451",
+          "pdf_gross_rent": 6425.0,
+          "pdf_mgmt_comm": 2248.75,
+          "pdf_net_amount": 4176.25,
+          "iron_dome_comm": 2655.28,
+          "db_total_amount": 8499.75,
+          "db_base_price": 5500.0,
+          "db_additional_party": 875.0,
+          "computed_sl_gross_rent": 6375.0,
+          "gross_rent_match": false,
+          "variance": 406.53
+        },
+        {
+          "conf_code": "53135",
+          "pdf_gross_rent": 6250.0,
+          "pdf_mgmt_comm": 2187.5,
+          "pdf_net_amount": 4062.5,
+          "iron_dome_comm": 2448.08,
+          "db_total_amount": 7849.25,
+          "db_base_price": 5500.0,
+          "db_additional_party": 750.0,
+          "computed_sl_gross_rent": 6250.0,
+          "gross_rent_match": true,
+          "variance": 260.58
+        }
+      ]
+    },
+    {
+      "file": "2026-01_70220_24238940.pdf",
+      "property": "Riverview Lodge",
+      "unit_id": "70220",
+      "period": "01/01/2026 - 01/31/2026",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 1096.34,
+        "ending_balance": 6936.3,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 2,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2025-11_1012373_23668856.pdf",
+      "property": "Restoration Luxury",
+      "unit_id": "1012373",
+      "period": "11/01/2025 - 11/30/2025",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 0.0,
+        "ending_balance": 0.0,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2025-12_1012373_23918875.pdf",
+      "property": "Restoration Luxury",
+      "unit_id": "1012373",
+      "period": "12/01/2025 - 12/31/2025",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 0.0,
+        "ending_balance": 0.0,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    },
+    {
+      "file": "2026-01_1012373_24238942.pdf",
+      "property": "Restoration Luxury",
+      "unit_id": "1012373",
+      "period": "01/01/2026 - 01/31/2026",
+      "summary": {
+        "gross_revenue": 0.0,
+        "mgmt_commission": 0.0,
+        "owner_charges": 0.0,
+        "ending_balance": 0.0,
+        "opening_balance": 0.0
+      },
+      "reservation_count": 0,
+      "revenue_reservations": 0,
+      "reservation_details": []
+    }
+  ],
+  "variances": [
+    {
+      "conf_code": "52736",
+      "pdf_gross_rent": 1252.8,
+      "pdf_mgmt_comm": 438.48,
+      "pdf_net_amount": 814.32,
+      "iron_dome_comm": 646.26,
+      "db_total_amount": 2071.09,
+      "db_base_price": 1252.8,
+      "db_additional_party": 0.0,
+      "computed_sl_gross_rent": 1252.8,
+      "gross_rent_match": true,
+      "variance": 207.78
+    },
+    {
+      "conf_code": "52228",
+      "pdf_gross_rent": 4798.0,
+      "pdf_mgmt_comm": 1679.3,
+      "pdf_net_amount": 3118.7,
+      "iron_dome_comm": 1933.53,
+      "db_total_amount": 6190.37,
+      "db_base_price": 3923.0,
+      "db_additional_party": 875.0,
+      "computed_sl_gross_rent": 4798.0,
+      "gross_rent_match": true,
+      "variance": 254.23
+    },
+    {
+      "conf_code": "52553",
+      "pdf_gross_rent": 4194.0,
+      "pdf_mgmt_comm": 1467.9,
+      "pdf_net_amount": 2726.1,
+      "iron_dome_comm": 1714.5,
+      "db_total_amount": 5495.67,
+      "db_base_price": 3594.0,
+      "db_additional_party": 600.0,
+      "computed_sl_gross_rent": 4194.0,
+      "gross_rent_match": true,
+      "variance": 246.6
+    },
+    {
+      "conf_code": "52787",
+      "pdf_gross_rent": 2397.0,
+      "pdf_mgmt_comm": 838.95,
+      "pdf_net_amount": 1558.05,
+      "iron_dome_comm": 1033.66,
+      "db_total_amount": 3313.68,
+      "db_base_price": 1797.0,
+      "db_additional_party": 600.0,
+      "computed_sl_gross_rent": 2397.0,
+      "gross_rent_match": true,
+      "variance": 194.71
+    },
+    {
+      "conf_code": "52751",
+      "pdf_gross_rent": 2547.0,
+      "pdf_mgmt_comm": 891.45,
+      "pdf_net_amount": 1655.55,
+      "iron_dome_comm": 1107.86,
+      "db_total_amount": 3551.68,
+      "db_base_price": 1797.0,
+      "db_additional_party": 750.0,
+      "computed_sl_gross_rent": 2547.0,
+      "gross_rent_match": true,
+      "variance": 216.41
+    },
+    {
+      "conf_code": "53290",
+      "pdf_gross_rent": 2247.0,
+      "pdf_mgmt_comm": 786.45,
+      "pdf_net_amount": 1460.55,
+      "iron_dome_comm": 959.46,
+      "db_total_amount": 3075.68,
+      "db_base_price": 1797.0,
+      "db_additional_party": 450.0,
+      "computed_sl_gross_rent": 2247.0,
+      "gross_rent_match": true,
+      "variance": 173.01
+    },
+    {
+      "conf_code": "53325",
+      "pdf_gross_rent": 4000.0,
+      "pdf_mgmt_comm": 1400.0,
+      "pdf_net_amount": 2600.0,
+      "iron_dome_comm": 1648.68,
+      "db_total_amount": 5285.75,
+      "db_base_price": 3000.0,
+      "db_additional_party": 1000.0,
+      "computed_sl_gross_rent": 4000.0,
+      "gross_rent_match": true,
+      "variance": 248.68
+    },
+    {
+      "conf_code": "53459",
+      "pdf_gross_rent": 1722.0,
+      "pdf_mgmt_comm": 602.7,
+      "pdf_net_amount": 1119.3,
+      "iron_dome_comm": 787.85,
+      "db_total_amount": 2533.36,
+      "db_base_price": 1647.0,
+      "db_additional_party": 75.0,
+      "computed_sl_gross_rent": 1722.0,
+      "gross_rent_match": true,
+      "variance": 185.15
+    },
+    {
+      "conf_code": "53277",
+      "pdf_gross_rent": 1450.0,
+      "pdf_mgmt_comm": 507.5,
+      "pdf_net_amount": 942.5,
+      "iron_dome_comm": 689.48,
+      "db_total_amount": 2210.31,
+      "db_base_price": 1150.0,
+      "db_additional_party": 300.0,
+      "computed_sl_gross_rent": 1450.0,
+      "gross_rent_match": true,
+      "variance": 181.98
+    },
+    {
+      "conf_code": "53424",
+      "pdf_gross_rent": 2002.5,
+      "pdf_mgmt_comm": 700.87,
+      "pdf_net_amount": 1301.63,
+      "iron_dome_comm": 933.31,
+      "db_total_amount": 2991.79,
+      "db_base_price": 1552.5,
+      "db_additional_party": 450.0,
+      "computed_sl_gross_rent": 2002.5,
+      "gross_rent_match": true,
+      "variance": 232.44
+    },
+    {
+      "conf_code": "53385",
+      "pdf_gross_rent": 2175.0,
+      "pdf_mgmt_comm": 761.25,
+      "pdf_net_amount": 1413.75,
+      "iron_dome_comm": 979.13,
+      "db_total_amount": 3138.75,
+      "db_base_price": 1725.0,
+      "db_additional_party": 450.0,
+      "computed_sl_gross_rent": 2175.0,
+      "gross_rent_match": true,
+      "variance": 217.88
+    },
+    {
+      "conf_code": "53468",
+      "pdf_gross_rent": 1950.0,
+      "pdf_mgmt_comm": 682.5,
+      "pdf_net_amount": 1267.5,
+      "iron_dome_comm": 909.13,
+      "db_total_amount": 2906.25,
+      "db_base_price": 1725.0,
+      "db_additional_party": 225.0,
+      "computed_sl_gross_rent": 1950.0,
+      "gross_rent_match": true,
+      "variance": 226.63
+    },
+    {
+      "conf_code": "52964",
+      "pdf_gross_rent": 2800.0,
+      "pdf_mgmt_comm": 980.0,
+      "pdf_net_amount": 1820.0,
+      "iron_dome_comm": 1166.38,
+      "db_total_amount": 3738.75,
+      "db_base_price": 2300.0,
+      "db_additional_party": 500.0,
+      "computed_sl_gross_rent": 2800.0,
+      "gross_rent_match": true,
+      "variance": 186.38
+    },
+    {
+      "conf_code": "53440",
+      "pdf_gross_rent": 1610.0,
+      "pdf_mgmt_comm": 563.5,
+      "pdf_net_amount": 1046.5,
+      "iron_dome_comm": 780.89,
+      "db_total_amount": 2495.65,
+      "db_base_price": 1460.0,
+      "db_additional_party": 150.0,
+      "computed_sl_gross_rent": 1610.0,
+      "gross_rent_match": true,
+      "variance": 217.39
+    },
+    {
+      "conf_code": "53472",
+      "pdf_gross_rent": 7758.01,
+      "pdf_mgmt_comm": 2715.3,
+      "pdf_net_amount": 5042.71,
+      "iron_dome_comm": 2883.28,
+      "db_total_amount": 9296.54,
+      "db_base_price": 7458.01,
+      "db_additional_party": 300.0,
+      "computed_sl_gross_rent": 7758.01,
+      "gross_rent_match": true,
+      "variance": 167.98
+    },
+    {
+      "conf_code": "53451",
+      "pdf_gross_rent": 6425.0,
+      "pdf_mgmt_comm": 2248.75,
+      "pdf_net_amount": 4176.25,
+      "iron_dome_comm": 2655.28,
+      "db_total_amount": 8499.75,
+      "db_base_price": 5500.0,
+      "db_additional_party": 875.0,
+      "computed_sl_gross_rent": 6375.0,
+      "gross_rent_match": false,
+      "variance": 406.53
+    },
+    {
+      "conf_code": "53135",
+      "pdf_gross_rent": 6250.0,
+      "pdf_mgmt_comm": 2187.5,
+      "pdf_net_amount": 4062.5,
+      "iron_dome_comm": 2448.08,
+      "db_total_amount": 7849.25,
+      "db_base_price": 5500.0,
+      "db_additional_party": 750.0,
+      "computed_sl_gross_rent": 6250.0,
+      "gross_rent_match": true,
+      "variance": 260.58
+    }
+  ]
+}

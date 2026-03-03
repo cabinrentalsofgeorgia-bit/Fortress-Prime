@@ -7,7 +7,13 @@ import os
 st.set_page_config(layout="wide")
 st.title("Fortress Prime")
 
-def get_conn(): return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password="190AntiochCemeteryRD!!!")
+def get_conn():
+    return psycopg2.connect(
+        host=os.getenv("DB_HOST", "localhost"),
+        database=os.getenv("DB_NAME", "fortress_db"),
+        user=os.getenv("DB_USER", "miner_bot"),
+        password=os.getenv("DB_PASSWORD", os.getenv("DB_PASS", "")),
+    )
 
 t1, t2, t3 = st.tabs(["Signals", "System", "Audit"])
 

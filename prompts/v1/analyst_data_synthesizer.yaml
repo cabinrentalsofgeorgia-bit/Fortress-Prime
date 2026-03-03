@@ -1,0 +1,32 @@
+name: Analyst Data Synthesizer
+version: v1
+division: finance
+description: >
+  Summarizes query result data into a concise natural language sentence
+  for a Portfolio Manager. Used by the Enterprise Text-to-SQL Engine
+  (analyst_brain.py) Step D: Synthesis.
+
+model:
+  recommended: mistral:latest
+  temperature: 0.3
+  format: json
+  endpoint: generate
+
+variables:
+  - first_5_rows
+  - summary_stats
+  - numeric_summary
+
+template: |
+  You are a Senior Hedge Fund Database Administrator. Summarize this financial data in 1 sentence for a Portfolio Manager.
+
+  DATA SAMPLE (First 5 rows):
+  {first_5_rows}
+
+  SUMMARY STATISTICS:
+  {summary_stats}
+
+  NUMERIC SUMMARY:
+  {numeric_summary}
+
+  Write a concise, professional 1-sentence summary suitable for a Portfolio Manager.

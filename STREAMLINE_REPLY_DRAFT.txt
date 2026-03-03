@@ -1,0 +1,51 @@
+=====================================================================
+REPLY TO STREAMLINE SUPPORT — Send from gary@garyknight.com
+=====================================================================
+
+Hi,
+
+Thank you for the quick response — that's great news on GetReservations
+with return_full:true, and yes, we would absolutely like the Owner's
+Unit Balance method enabled.
+
+To answer your question about what other financial data we're looking
+for — here's our complete list. We're building an internal operations
+and trust accounting system, so the more financial detail we can pull
+via API the better:
+
+1. RESERVATIONS (confirmed available — thank you)
+   - GetReservations with return_full:true — perfect, this is our #1 need
+
+2. OWNER FINANCIALS (the trust accounting data)
+   - Owner's Unit Balance (you mentioned you can provide this — yes please)
+   - Owner Statements / Owner Reports — monthly or periodic payout reports
+     per owner per unit, showing gross revenue, management fees, expenses,
+     and net payout
+   - Owner Payout History / Transactions — individual payout line items
+     (cleaning fees, maintenance charges, commissions, tax withholdings, etc.)
+
+3. GUEST DATA
+   - GetGuestList — we need this for our guest communication platform
+     (currently returns E0014)
+
+4. HOUSEKEEPING
+   - GetHousekeepingTasks — for turnover scheduling and cleaning coordination
+     (currently returns E0014)
+
+5. FINANCIAL TRANSACTIONS (if available)
+   - Invoice/charge history per reservation (damage deposits, extra fees,
+     cleaning fees, tax collection breakdown)
+   - Payment history per reservation (guest payments, refunds, chargebacks)
+   - Management fee calculation details per reservation
+
+If any of these aren't available via API, just let us know which ones
+are and we'll work with what's there. The reservation data with
+return_full:true plus the Owner's Unit Balance will already be a huge
+step forward.
+
+Thanks again for the help.
+
+Best,
+Gary M. Knight
+Cabin Rentals of Georgia
+Company ID: 796

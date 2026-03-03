@@ -21,7 +21,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_USER = os.getenv("DB_USER", "analyst_reader")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "6652201a")
+DB_PASSWORD = os.getenv("DB_PASSWORD", os.getenv("DB_PASS", ""))
 
 try:
     conn = psycopg2.connect(

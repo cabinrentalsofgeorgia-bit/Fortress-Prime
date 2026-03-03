@@ -1,0 +1,2312 @@
+OFFICIAL CODE OF GEORGIA ANNOTATED
+Georgia Code Title 13 - Contracts
+============================================================
+
+
+
+============================================================
+
+Chapter 1 - General Provisions
+
+============================================================
+
+
+§ 13-1-1.
+§ 13-1-1 - Contract Defined -- Generally
+
+A contract is an agreement between two or more parties for the doing or not doing of some specified thing.
+Section: 13-1-1
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-2.
+§ 13-1-2 - Contract Defined -- Executed and Executory Contracts
+
+(a) An executed contract is one in which all the parties thereto have performed all the obligations which they have originally assumed.
+(b) An executory contract is one in which something remains to be done by one or more parties.
+Section:
+13-1-1
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-3.
+§ 13-1-3 - Contract Defined -- Contract of Record
+
+A contract of record is one which has been declared and adjudicated by a court having jurisdiction or which is entered of record in obedience to or in carrying out the judgment of a court.
+Section:
+Previous
+13-1-1
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-4.
+§ 13-1-4 - Contract Defined -- Specialty Contract
+
+A specialty is a contract under seal and is considered by the law as entered into with more solemnity, and consequently of higher dignity, than ordinary, simple contracts.
+Section:
+Previous
+13-1-1
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-5.
+§ 13-1-5 - Contract Defined -- Simple Contract
+
+(a) All other contracts than those specified in Code Sections 13-1-2 through 13-1-4 are termed simple contracts.
+(b) Simple contracts may either be in writing or rest only in words as remembered by witnesses.
+Section:
+Previous
+13-1-1
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-7.
+§ 13-1-7 - Contract Defined -- Absolute and Conditional Contracts
+
+(a) A contract may be absolute or conditional. In an absolute contract, every covenant is independent and the breach of one does not relieve the obligation of another. In a conditional contract, the covenants are dependent upon each other and the breach of one is a release of the binding force of all dependent covenants.
+(b) The classification of every contract must depend upon a rational interpretation of the intention of the parties.
+Section:
+Previous
+13-1-1
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-8.
+§ 13-1-8 - Contract Defined -- Entire and Severable Contracts
+
+(a) A contract may be either entire or severable. In an entire contract, the whole contract stands or falls together. In a severable contract, the failure of a distinct part does not void the remainder.
+(b) The character of the contract in such case is determined by the intention of the parties.
+Section:
+Previous
+13-1-1
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-9.
+§ 13-1-9 - Apportionment of Entire Contracts
+
+In some cases even an entire contract is apportionable, as where the price to be paid is not fixed, or is by the contract itself apportioned according to time; so, if the failure of one party to perform is caused by the act of the other, the contract may still be apportioned.
+Section:
+Previous
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-12.
+§ 13-1-12 - Requirement of Proof of Endorsement or Assignment of Bill, Bond, or Note in Action by Endorsee
+
+When an action is brought by an endorsee, an endorsement or assignment of any bill, bond, or note need not be proved unless denied under oath.
+Section:
+Previous
+13-1-2
+13-1-3
+13-1-4
+13-1-5
+13-1-6
+13-1-7
+13-1-8
+13-1-9
+13-1-10
+13-1-11
+13-1-12
+13-1-13
+13-1-14
+13-1-15
+Next
+Last modified: October 14, 2016
+
+§ 13-1-14.
+§ 13-1-14 - Collection of Closing Fees for Contracts for the Advance of Money or the Extension of Credit; Refund of Closing Fees in Certain Instances; Limited Application
+
+(a) In addition to any other charges permitted for the advance of money or for the extension of credit, a lender or seller may collect a closing fee at the time of making a loan or extending credit in order to defray the costs of investigation and verification of a borrower's or purchaser's credit reports and references. Such closing fee may be for an amount up to 4 percent of the face amount of the loan or credit extension or total amount of the sales contract but shall not be more than $50.00. Such closing fee may be paid from the proceeds of the amount borrowed or added to the principal amount of the loan or credit extension.
+(b) When any loan or sales contract upon which a closing fee has been charged is prepaid in full by any means within 90 days of the date of the loan or sales contract, the lender or seller shall refund or credit the borrower or purchaser with a pro rata portion of the closing fee; provided, however, that in such event, the lender or seller may retain an amount of not more than $25.00 from the collected closing fee.
+
+§ 13-1-15.
+§ 13-1-15 - Convenience Fee; When Appropriate
+
+(a) As used in this Code section, the term:
+(1) "Actual cost" means the amount paid by a third party for the processing of a payment made by electronic means. If a lender or merchant is a subsidiary of an entity that processes payments made by electronic means, the parent entity shall be considered a third party.
+(2) "Payment by electronic means" means the remittance of an amount owed through the use of a credit card, debit card, electronic funds transfer, electronic check, or other electronic method.
+(b) In addition to any other charges, interest, and fees permitted by law and subject to the terms and conditions of the debit card or credit card acceptance agreement, a lender or merchant may collect a nonrefundable convenience fee from any person electing to utilize an option of payment by electronic means. Such convenience fee shall be in an amount that represents the actual cost to a lender or merchant; provided, however, that in lieu of the actual cost, a lender or merchant may collect a convenience fee which does not exceed the average of the actual cost incurred for a specific type of payment made by electronic means for which such lender or merchant imposes a convenience fee.
+(c) No convenience fee shall be charged unless a lender or merchant also provides a direct payment option by check, cash, or money order in which no convenience fee is imposed.
+(d) Any lender or merchant imposing a convenience fee as provided for in this Code section shall provide clear disclosure of such fee prior to imposition. Such notice shall include the dollar amount of such fee, a statement that such fee is nonrefundable, and a statement that such fee is charged for payment by electronic means.
+
+
+============================================================
+
+Chapter 2 - Construction
+
+============================================================
+
+
+§ 13-2-1.
+§ 13-2-1 - Construction of Contracts by Courts Generally; Findings of Fact by Juries
+
+The construction of a contract is a question of law for the court. Where any matter of fact is involved, the jury should find the fact.
+Section: 13-2-1
+13-2-2
+13-2-3
+13-2-4
+Next
+Last modified: October 14, 2016
+
+§ 13-2-2.
+§ 13-2-2 - Rules for Interpretation of Contracts Generally
+
+The following rules, among others, shall be used in arriving at the true interpretation of contracts:
+(1) Parol evidence is inadmissible to add to, take from, or vary a written contract. All the attendant and surrounding circumstances may be proved and, if there is an ambiguity, latent or patent, it may be explained; so, if only a part of a contract is reduced to writing (such as a note given in pursuance of a contract) and it is manifest that the writing was not intended to speak the whole contract, then parol evidence is admissible;
+(2) Words generally bear their usual and common signification; but technical words, words of art, or words used in a particular trade or business will be construed, generally, to be used in reference to this peculiar meaning. The local usage or understanding of a word may be proved in order to arrive at the meaning intended by the parties;
+(3) The custom of any business or trade shall be binding only when it is of such universal practice as to justify the conclusion that it became, by implication, a part of the contract, except in regard to those transactions covered by Title 11;
+(4) The construction which will uphold a contract in whole and in every part is to be preferred, and the whole contract should be looked to in arriving at the construction of any part;
+(5) If the construction is doubtful, that which goes most strongly against the party executing the instrument or undertaking the obligation is generally to be preferred;
+(6) The rules of grammatical construction usually govern, but to effectuate the intention they may be disregarded; sentences and words may be transposed, and conjunctions substituted for each other. In extreme cases of ambiguity, where the instrument as it stands is without meaning, words may be supplied;
+(7) When a contract is partly printed and partly written, the latter part is entitled to most consideration;
+(8) Estates and grants by implication are not favored; and
+(9) Time is not generally of the essence of a contract; but, by express stipulation or reasonable construction, it may become so.
+Section:
+13-2-1
+13-2-2
+13-2-3
+13-2-4
+Next
+Last modified: October 14, 2016
+
+§ 13-2-3.
+§ 13-2-3 - Ascertainment and Enforcement of Intention of Parties Generally
+
+The cardinal rule of construction is to ascertain the intention of the parties. If that intention is clear and it contravenes no rule of law and sufficient words are used to arrive at the intention, it shall be enforced irrespective of all technical or arbitrary rules of construction.
+Section:
+Previous
+13-2-1
+13-2-2
+13-2-3
+13-2-4
+Next
+Last modified: October 14, 2016
+
+§ 13-2-4.
+§ 13-2-4 - Ascertainment of Intention of Parties Where Meaning Placed on Contract by One Party Known to Other
+
+The intention of the parties may differ among themselves. In such case, the meaning placed on the contract by one party and known to be thus understood by the other party at the time shall be held as the true meaning.
+Section:
+Previous
+13-2-1
+13-2-2
+13-2-3
+13-2-4
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 3 - Elements and Formation Generally
+
+============================================================
+
+
+§ 13-3-2.
+§ 13-3-2 - Contract Incomplete Without Assent of Parties to Terms Thereof; Withdrawal of Bid or Proposition by Party
+
+The consent of the parties being essential to a contract, until each has assented to all the terms, there is no binding contract; until assented to, each party may withdraw his bid or proposition.
+Section:
+13-3-1
+13-3-2
+13-3-3
+13-3-4
+13-3-5
+Next
+Last modified: October 14, 2016
+
+§ 13-3-20.
+§ 13-3-20 - Minors -- Contracts for Property or Valuable Consideration; Contracts for Necessaries
+
+(a) Generally the contract of a minor is voidable. If in a contractual transaction a minor receives property or other valuable consideration and, after arrival at the age of 18, retains possession of such property or continues to enjoy the benefit of such other valuable consideration, the minor shall have thereby ratified or affirmed the contract and it shall be binding on him or her. Such contractual transaction shall also be binding upon any minor who becomes emancipated by operation of law or pursuant to Article 10 of Chapter 11 of Title 15.
+(b) The contract of a minor for necessaries shall be binding on the minor as if the minor were 18 years of age except that the party furnishing them to the minor shall prove that the parent or guardian of such minor had failed or refused to supply sufficient necessaries for the minor, that the minor was emancipated by operation of law, or the minor was emancipated pursuant to Article 10 of Chapter 11 of Title 15.
+Section: 13-3-20
+13-3-21
+13-3-22
+13-3-23
+13-3-24
+13-3-25
+Next
+Last modified: October 14, 2016
+
+§ 13-3-23.
+§ 13-3-23 - Minors -- Contracts, Promissory Notes, Written Obligation, or Other Evidence, for Loans From Trust Funds for Educational Purposes
+
+Any contract, promissory note, written obligation, or other evidence of indebtedness made and executed by a minor for a loan from any trust fund for educational purposes to any educational institution shall be as valid and binding as if said minor were sui juris at the time of making such contract or other obligation and otherwise capacitated to contract.
+Section:
+Previous
+13-3-20
+13-3-21
+13-3-22
+13-3-23
+13-3-24
+13-3-25
+Next
+Last modified: October 14, 2016
+
+§ 13-3-24.
+§ 13-3-24 - Insane, Mentally Ill, Intellectually Disabled, or Mentally Incompetent Persons
+
+(a) The contract of an insane, a mentally ill, an intellectually disabled, or a mentally incompetent person who has never been adjudicated to be insane, mentally ill, intellectually disabled, or mentally incompetent to the extent that he is incapable of managing his estate as prescribed by this Code is not absolutely void but only voidable, except that a contract made by such person during a lucid interval is valid without ratification.
+(b) After the fact that a person is insane, mentally ill, intellectually disabled, or mentally incompetent to the extent that he is incapable of managing his estate has been established by a court of competent jurisdiction in this state and the affairs of such person are vested in a guardian, the power of such person to contract, even though restored to sanity, shall be entirely gone; any contracts made by such person shall be absolutely void until the guardianship is dissolved. One may recover for necessaries furnished an insane person, a mentally ill person, an intellectually disabled person, or a mentally incompetent person upon the same proof as if furnished to minors.
+Section:
+Previous
+13-3-20
+13-3-21
+13-3-22
+13-3-23
+13-3-24
+13-3-25
+Next
+Last modified: October 14, 2016
+
+§ 13-3-25.
+§ 13-3-25 - Intoxicated Persons
+
+A contract made by an intoxicated person is not void, though the intoxication is brought about by the other party, but is merely voidable at the election of the intoxicated person and may be ratified by him expressly or by conduct inconsistent with its rescission.
+Section:
+Previous
+13-3-20
+13-3-21
+13-3-22
+13-3-23
+13-3-24
+13-3-25
+Last modified: October 14, 2016
+
+§ 13-3-40.
+§ 13-3-40 - Necessity for Consideration; Presumption of Consideration
+
+(a) A consideration is essential to a contract which the law will enforce. An executory contract without such consideration is called nudum pactum or a naked promise.
+(b) In some cases a consideration is presumed, and an averment to the contrary will not be received.
+Section: 13-3-40
+13-3-41
+13-3-42
+13-3-43
+13-3-44
+13-3-45
+13-3-46
+13-3-47
+Next
+Last modified: October 14, 2016
+
+§ 13-3-42.
+§ 13-3-42 - Acts Which Constitute Consideration; Effect of Consideration Given or Received by Persons Other Than Promisor or Promisee
+
+(a) To constitute consideration, a performance or a return promise must be bargained for by the parties to a contract.
+(b) A performance or return promise is bargained for if it is sought by the promisor in exchange for his promise and is given by the promisee in exchange for that promise.
+(c) The performance may consist of:
+(1) An act other than a promise;
+(2) A forbearance; or
+(3) The creation, modification, or destruction of a legal relation.
+(d) The performance or return promise may be given to the promisor or to some other person. If there is a valid consideration for a promise, it does not matter from whom it moves and it may be given by the promisee or by some other person; the promisee may sustain his action, though a stranger to the consideration.
+(e) In mutual subscriptions for a common object, the promise of the others is a good consideration for the promise of each.
+Section:
+Previous
+13-3-40
+13-3-41
+13-3-42
+13-3-43
+13-3-44
+13-3-45
+13-3-46
+13-3-47
+Next
+Last modified: October 14, 2016
+
+§ 13-3-44.
+§ 13-3-44 - Effect of Promise Which is Reasonably Expected to Induce Action or Forbearance by Promisee or Third Person; Requirement As to Proof of Reliance in Cases of Charitable Subscriptions or Marriage Settlements
+
+(a) A promise which the promisor should reasonably expect to induce action or forbearance on the part of the promisee or a third person and which does induce such action or forbearance is binding if injustice can be avoided only by enforcement of the promise. The remedy granted for breach may be limited as justice requires.
+(b) A charitable subscription or a marriage settlement is binding under subsection (a) of this Code section without proof that the promise induced action or forbearance.
+Section:
+Previous
+13-3-40
+13-3-41
+13-3-42
+13-3-43
+13-3-44
+13-3-45
+13-3-46
+13-3-47
+Next
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 4 - Modification, Extinguishment, and Renewal
+
+============================================================
+
+
+§ 13-4-2.
+§ 13-4-2 - Alteration of Written Contract -- Determination of Materiality of Alteration; Determination of Fact of Alteration
+
+The materiality of an alteration is a question of law for the court; the fact of an alteration is a question for the jury.
+Section:
+13-4-1
+13-4-2
+13-4-3
+13-4-4
+13-4-5
+Next
+Last modified: October 14, 2016
+
+§ 13-4-5.
+§ 13-4-5 - Effect of Execution of Second Contract Upon Same Matter; Novation
+
+A simple contract regarding the same matter and based on no new consideration does not destroy another simple contract between the same parties; but, if new parties are introduced so as to change the person to whom the obligation is due, the original contract is at an end.
+Section:
+Previous
+13-4-1
+13-4-2
+13-4-3
+13-4-4
+13-4-5
+Last modified: October 14, 2016
+
+§ 13-4-24.
+§ 13-4-24 - Requirements for and Effect of Tender Generally
+
+A tender properly made may be equivalent to performance. The tender must be certain and unconditional, except for a receipt in full or delivery of the obligation, and may be made by an agent and to an agent authorized to receive. The tender must be in full payment of the specific debt, and not in part, and may be made at any time before trial. If tender is rejected on grounds unrelated to informality, informality cannot afterward be raised in objection to the tender.
+Section:
+Previous
+13-4-20
+13-4-21
+13-4-22
+13-4-23
+13-4-24
+13-4-25
+13-4-26
+Next
+Last modified: October 14, 2016
+
+§ 13-4-25.
+§ 13-4-25 - Tender of Chattels
+
+A valid tender of chattels transfers the title thereto to the person bound to receive; and the possession of the promisor, if he retains possession from that time, is for the benefit of the owner but without liability to account for profits or for more than ordinary prudence in preservation and protection of the chattels.
+Section:
+Previous
+13-4-20
+13-4-21
+13-4-22
+13-4-23
+13-4-24
+13-4-25
+13-4-26
+Next
+Last modified: October 14, 2016
+
+§ 13-4-42.
+§ 13-4-42 - Appropriation of Payments
+
+When a payment is made by a debtor to a creditor holding several demands against him, the debtor shall have the right to direct the claim to which it shall be appropriated. If the debtor fails to do so, the creditor shall have the right to appropriate the payment at his election. If neither party exercises the privilege, the law shall direct the application in such manner as shall be reasonable and equitable, both as to the parties and third persons, provided that, as a general rule, the oldest lien and the oldest item in an account shall be paid first, the presumption of law being that such is the intention of the parties.
+Section:
+Previous
+13-4-40
+13-4-41
+13-4-42
+13-4-43
+Next
+Last modified: October 14, 2016
+
+§ 13-4-43.
+§ 13-4-43 - Provision Requiring One Party to Reimburse Other for Federal Manufacturer's Excise Tax; Right of Reimbursing Party Relating to Timing of Payments.
+
+(a) When a contract calls for one party to reimburse the other party for the federal manufacturer's excise tax levied by Part III of Subchapter A of Chapter 32 of the United States Internal Revenue Code, whether as a separate item or as part of the price, there shall exist for the party making the reimbursement a contractual right relating to the timing of that payment which can be invoked at the option of such party as provided in subsection (b) of this Code section.
+(b) The party making the reimbursement shall not be required to tender payment for such taxes more than one business day prior to the time that the other party is required to remit such taxes to the United States Internal Revenue Service.
+(c) Should a party choose to exercise the option provided in subsections (a) and (b) of this Code section, the other party may demand security for the payment of the taxes in proportion to the amount such taxes represent compared to the security demanded on the contract as a whole. Such party, however, may not change the other payment terms of the contract without a valid business reason other than to exercise the option as provided in subsections (a) and (b) of this Code section except to require the payment of such taxes under such option to be made by electronic transfer of funds.
+(d) The party exercising the option set out in subsections (a) and (b) of this Code section shall notify the other party in writing of the intent to exercise such payment option and the effective date of the exercise which shall be no earlier than 30 days after the notice of intent is received or the beginning of the next federal tax quarter, whichever is later.
+(e) This Code section shall apply to all contracts now in effect which have no expiration date and are continuing contracts and to all other contracts entered into or renewed after July 1, 1993. Any contract in force and effect on July 1, 1993, which, by its own terms will terminate on a date subsequent thereto, shall be governed by the law as it existed prior to July 1, 1993.
+(f) The option set out in subsections (a) and (b) of this Code section shall not be construed to impair the obligations arising under any contract executed prior to July 1, 1993. Should the option set out in subsections (a) and (b) of this Code section be exercised, it shall not relieve such party of the obligation to make the reimbursement as provided for in the contract but shall affect only the timing of when that reimbursement must be tendered.
+Section:
+Previous
+13-4-40
+13-4-41
+13-4-42
+13-4-43
+Last modified: October 14, 2016
+
+§ 13-4-60.
+§ 13-4-60 - Rescission for Fraud
+
+A contract may be rescinded at the instance of the party defrauded; but, in order to rescind, the defrauded party must promptly, upon discovery of the fraud, restore or offer to restore to the other party whatever he has received by virtue of the contract if it is of any value.
+Section: 13-4-60
+13-4-61
+13-4-62
+Next
+Last modified: October 14, 2016
+
+§ 13-4-61.
+§ 13-4-61 - Rights of Vendor As to Reclamation of Goods Where Contract Rescinded for Fraud
+
+Except as otherwise provided in Title 11, the "Uniform Commercial Code," where a contract of sale is rescinded for fraud, the rights of the vendor reclaiming the goods are superior to those of one who has acquired the goods or a lien thereon in consideration of an antecedent debt.
+Section:
+13-4-60
+13-4-61
+13-4-62
+Next
+Last modified: October 14, 2016
+
+§ 13-4-62.
+§ 13-4-62 - Rescission for Nonperformance
+
+A party may rescind a contract without the consent of the opposite party on the ground of nonperformance by that party but only when both parties can be restored to the condition in which they were before the contract was made.
+Section:
+Previous
+13-4-60
+13-4-61
+13-4-62
+Last modified: October 14, 2016
+
+§ 13-4-80.
+§ 13-4-80 - Release of Another Bound Jointly or Primarily or Acceptance of Higher Security for Same Debt
+
+A release may result by operation of law. When a creditor releases another who is bound jointly with or primarily to a debtor or accepts from a debtor a higher security for the same debt, not intended to be collateral thereto, a release results by operation of law.
+Section: 13-4-80
+13-4-81
+13-4-82
+Next
+Last modified: October 14, 2016
+
+§ 13-4-81.
+§ 13-4-81 - Covenant Not to Sue; Bond to Indemnify Debtor Against Debt
+
+A covenant never to sue is equivalent to a release as is a bond to indemnify a debtor against his own debt.
+Section:
+13-4-80
+13-4-81
+13-4-82
+Next
+Last modified: October 14, 2016
+
+§ 13-4-103.
+§ 13-4-103 - Acceptance of Less Than Amount of Debt
+
+(a) Except as otherwise provided in this Code section, an agreement by a creditor to receive less than the amount of his debt cannot be pleaded as an accord and satisfaction unless it is actually executed by the payment of the money, the giving of additional security, the substitution of another debtor, or some other new consideration.
+(b) Acceptance by a creditor of a check, draft, or money order marked "payment in full" or with language of equivalent condition, in an amount less than the total indebtedness, shall not constitute an accord and satisfaction unless:
+(1) A bona fide dispute or controversy exists as to the amount due; or
+(2) Such payment is made pursuant to an independent agreement between the creditor and debtor that such payment shall satisfy the debt.
+Section:
+Previous
+13-4-100
+13-4-101
+13-4-102
+13-4-103
+13-4-104
+Next
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 5 - Defenses
+
+============================================================
+
+
+§ 13-5-1.
+§ 13-5-1 - Pleading of Facts Indicating Contract Not Obligatory Generally
+
+Any fact going to show that a contract was not obligatory, though executed, may be pleaded as a defense.
+Section: 13-5-1
+13-5-2
+13-5-3
+13-5-4
+13-5-5
+13-5-6
+13-5-7
+13-5-8
+13-5-9
+13-5-10
+13-5-11
+Next
+Last modified: October 14, 2016
+
+§ 13-5-2.
+§ 13-5-2 - Incapacity Generally
+
+A person may plead his own incapacity to contract.
+Section:
+13-5-1
+13-5-2
+13-5-3
+13-5-4
+13-5-5
+13-5-6
+13-5-7
+13-5-8
+13-5-9
+13-5-10
+13-5-11
+Next
+Last modified: October 14, 2016
+
+§ 13-5-3.
+§ 13-5-3 - Exemption From Contractual Liability of Minor
+
+The exemption of a minor from contractual liability is a personal privilege. The party contracting with a minor may not plead it unless he was ignorant of the fact at the time of the contract nor may third persons avail themselves of it as a defense.
+Section:
+Previous
+13-5-1
+13-5-2
+13-5-3
+13-5-4
+13-5-5
+13-5-6
+13-5-7
+13-5-8
+13-5-9
+13-5-10
+13-5-11
+Next
+Last modified: October 14, 2016
+
+§ 13-5-7.
+§ 13-5-7 - Rescission or Release
+
+A rescission of a contract by consent or a release by the other contracting party shall be a complete defense.
+Section:
+Previous
+13-5-1
+13-5-2
+13-5-3
+13-5-4
+13-5-5
+13-5-6
+13-5-7
+13-5-8
+13-5-9
+13-5-10
+13-5-11
+Next
+Last modified: October 14, 2016
+
+§ 13-5-8.
+§ 13-5-8 - Noncompliance With Condition, Failure of Consideration, or Other Act As Defense
+
+A condition, precedent or subsequent, not complied with, insufficiency or failure of consideration, or any act of the opposite party, by which the obligation of the contract has ceased, may be pleaded as a defense.
+Section:
+Previous
+13-5-1
+13-5-2
+13-5-3
+13-5-4
+13-5-5
+13-5-6
+13-5-7
+13-5-8
+13-5-9
+13-5-10
+13-5-11
+Next
+Last modified: October 14, 2016
+
+§ 13-5-11.
+§ 13-5-11 - Part Performance
+
+In a severable contract or one admitting of apportionment, a part performance may be a defense pro tanto.
+Section:
+Previous
+13-5-1
+13-5-2
+13-5-3
+13-5-4
+13-5-5
+13-5-6
+13-5-7
+13-5-8
+13-5-9
+13-5-10
+13-5-11
+Last modified: October 14, 2016
+
+§ 13-5-31.
+§ 13-5-31 - Agreements Enforceable Without Writing
+
+The provisions of Code Section 13-5-30 do not extend to the following cases:
+(1) When the contract has been fully executed;
+(2) Where there has been performance on one side, accepted by the other in accordance with the contract;
+(3) Where there has been such part performance of the contract as would render it a fraud of the party refusing to comply if the court did not compel a performance.
+Section:
+13-5-30
+13-5-31
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 6 - Damages and Costs Generally
+
+============================================================
+
+
+§ 13-6-3.
+§ 13-6-3 - Measure of Damages -- Breach of Bond
+
+(a) Provisions in bonds stipulating the damages to be paid in the event of breach shall be deemed penalties and shall not be enforceable unless the amount stipulated is reasonably related to the amount of the loss resulting from the breach and the damages resulting from the breach are uncertain in nature or amount or are difficult of ascertainment.
+(b) Where provisions in bonds stipulating damages to be paid in the event of breach do not comply with the requirements prescribed in subsection (a) of this Code section, only actual damages shall be recoverable in the event of a breach.
+Section:
+Previous
+13-6-1
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Next
+Last modified: October 14, 2016
+
+§ 13-6-4.
+§ 13-6-4 - Determination of Damages Generally
+
+The question of damages being one for the jury, a reviewing court should not interfere unless the damages are either so small or so excessive as to justify the inference of gross mistake or undue bias.
+Section:
+Previous
+13-6-1
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Next
+Last modified: October 14, 2016
+
+§ 13-6-6.
+§ 13-6-6 - Damages and Expenses Recoverable -- Nominal Damages
+
+In every case of breach of contract the injured party has a right to damages, but if there has been no actual damage, the injured party may recover nominal damages sufficient to cover the costs of bringing the action.
+Section:
+Previous
+13-6-1
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Next
+Last modified: October 14, 2016
+
+§ 13-6-9.
+§ 13-6-9 - Damages and Expenses Recoverable -- Expenses Necessary for Compliance With Contract
+
+Any necessary expense which one of two contracting parties incurs in complying with the contract may be recovered as damages.
+Section:
+Previous
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Next
+Last modified: October 14, 2016
+
+§ 13-6-10.
+§ 13-6-10 - Damages and Expenses Recoverable -- Exemplary Damages
+
+Unless otherwise provided by law, exemplary damages shall never be allowed in cases arising on contracts.
+Section:
+Previous
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Next
+Last modified: October 14, 2016
+
+§ 13-6-11.
+§ 13-6-11 - Recovery of Expenses of Litigation Generally
+
+The expenses of litigation generally shall not be allowed as a part of the damages; but where the plaintiff has specially pleaded and has made prayer therefor and where the defendant has acted in bad faith, has been stubbornly litigious, or has caused the plaintiff unnecessary trouble and expense, the jury may allow them.
+Section:
+Previous
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Next
+Last modified: October 14, 2016
+
+§ 13-6-13.
+§ 13-6-13 - Recovery of Interest Upon Damages
+
+In all cases where an amount ascertained would be the damages at the time of the breach, it may be increased by the addition of legal interest from that time until the recovery.
+Section:
+Previous
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Next
+Last modified: October 14, 2016
+
+§ 13-6-15.
+§ 13-6-15 - Damages for Writing Bad Checks
+
+(a) Notwithstanding any criminal sanctions which may apply, any person who makes, utters, draws, or delivers any check, draft, or order upon any bank, depository, person, firm, or corporation for the payment of money, which drawee refuses to honor the instrument for lack of funds or credit in the account from which to pay the instrument or because the maker has no account with the drawee, and who fails to pay the same amount in cash to the payee named in the instrument within ten days after a written demand therefor, as provided in subsection (c) of this Code section, has been delivered to the maker by certified mail, or statutory overnight delivery shall be liable to the payee, in addition to the amount owing upon such check, draft, or order, for damages of double the amount so owing, but in no case more than $500.00, and any court costs incurred by the payee in taking the action. In addition to delivery of notice as provided for herein, notice may be given by first-class mail to the address printed on the check given by the maker at the time of issuance or, in the case of a draft or order, to the last known address. If the question of sufficiency of notice becomes an issue, when notice is by first-class mail, the sender of the purported notice shall give an affidavit, under oath, that notice was made as provided for herein and there shall be a rebuttable presumption that proper notice was given.
+(b) The payee may charge the maker of the check, draft, or order a service charge not to exceed $30.00 or 5 percent of the face amount of the instrument, whichever is greater, plus the amount of any fees charged to the holder of the instrument by a bank or financial institution as a result of the instrument not being honored, when making written demand for payment.
+(c) Before any recovery under subsection (a) of this Code section may be claimed, a written demand in substantially the form which follows shall be sent by certified mail, statutory overnight delivery, or first-class mail supported by an affidavit of service to the address printed or written on the check given by the maker at the time of issuance of the check or, in the case of a draft or order, to the last known address, the notice to be deemed conclusive ten days following the date the affidavit is executed, to the maker of the instrument at the address shown on the instrument: "You are hereby notified that a check or instrument numbered , issued by you on (date), drawn upon (name of bank), and payable to , has been dishonored. Pursuant to Georgia law, you have ten days from receipt of this notice to tender payment of the full amount of the check or instrument plus a service charge of $30.00 or 5 percent of the face amount of the check or instrument, whichever is greater, plus the amount of any fees charged to the holder of the instrument by a bank or financial institution as a result of the instrument not being honored, the total amount due being $ . Unless this amount is paid in full within the ten-day period, the holder of the check or instrument may file a civil suit against you for two times the amount of the check or instrument, but in no case more than $500.00, in addition to the payment of the check or instrument plus any court costs incurred by the payee in taking the action."
+(d) For purposes of this Code section, the holder of the dishonored check, draft, or order shall file the action in the county where the defendant resides.
+(e) It shall be an affirmative defense, in addition to other defenses, to an action under this Code section if it is found that:
+(1) Full satisfaction of the amount of the check or instrument plus the applicable service charge and any fees charged to the holder of the instrument by a bank or financial institution as a result of the instrument not being honored was made prior to the commencement of the action;
+(2) The bank or depository erred in dishonoring the check or instrument; or
+(3) The acceptor of the check or instrument knew at the time of acceptance that there were insufficient funds on deposit in the bank or depository with which to cause the check or instrument to be honored.
+(f) In an action under this Code section, the court or jury may, however, waive all or part of the double damages upon finding that the defendant's failure to satisfy the dishonored check or instrument was due to the defendant receiving a dishonored check or instrument written to the defendant by another party.
+(g) Subsequent to the commencement of the civil action under this Code section, but prior to the hearing, the defendant may tender to the plaintiff as satisfaction of the claim an amount of money equal to the sum of the amount of the dishonored check, service charges on the check, any fees charged to the holder of the instrument by a bank or financial institution as a result of the instrument not being honored, and any court costs incurred by the plaintiff in taking the action.
+(h) In an action under this Code section, if the court or jury determines that the failure of the defendant to satisfy the dishonored check was due to economic hardship, the court or jury has the discretion to waive all or part of the double damages. However, if the court or jury waives all or part of the double damages, the court or jury shall render judgment against the defendant in the amount of the dishonored check plus service charges on the check plus any fees charged to the holder of the instrument by a bank or financial institution as a result of the instrument not being honored and any court costs incurred by the plaintiff in taking the action.
+Section:
+Previous
+13-6-2
+13-6-3
+13-6-4
+13-6-5
+13-6-6
+13-6-7
+13-6-8
+13-6-9
+13-6-10
+13-6-11
+13-6-12
+13-6-13
+13-6-14
+13-6-15
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 7 - Setoff and Recoupment
+
+============================================================
+
+
+§ 13-7-7.
+§ 13-7-7 - Allowance of Setoff Against Original Payee in Action by Holder or Transferee of Negotiable Instrument Received Under Dishonor
+
+When suit is brought by a holder or transferee on a negotiable instrument received under dishonor, no setoff shall be allowed against the original payee except such as is in some way connected with the debt sued on or the transaction from which it sprang.
+Section:
+Previous
+13-7-1
+13-7-2
+13-7-3
+13-7-4
+13-7-5
+13-7-6
+13-7-7
+13-7-8
+13-7-9
+13-7-10
+13-7-11
+13-7-12
+13-7-13
+13-7-14
+Next
+Last modified: October 14, 2016
+
+§ 13-7-8.
+§ 13-7-8 - Allowance of Setoff of Debt of Testator or Intestate Against Representative of Estate
+
+A debt of a testator or intestate is not a proper setoff against a debt contracted with the representative of the estate unless both were contracted during the lifetime of the decedent.
+Section:
+Previous
+13-7-1
+13-7-2
+13-7-3
+13-7-4
+13-7-5
+13-7-6
+13-7-7
+13-7-8
+13-7-9
+13-7-10
+13-7-11
+13-7-12
+13-7-13
+13-7-14
+Next
+Last modified: October 14, 2016
+
+§ 13-7-9.
+§ 13-7-9 - Allowance of Setoff of Distributive Share in Estate Against Judgment Against Legatee or Owner of Share
+
+A legatee or owner of a distributive share in an estate may set off such share against a judgment against him unless special reason exists requiring the collection of the judgment.
+Section:
+Previous
+13-7-1
+13-7-2
+13-7-3
+13-7-4
+13-7-5
+13-7-6
+13-7-7
+13-7-8
+13-7-9
+13-7-10
+13-7-11
+13-7-12
+13-7-13
+13-7-14
+Next
+Last modified: October 14, 2016
+
+§ 13-7-10.
+§ 13-7-10 - Allowance of Setoff of Value of Improvements Against Claim for Mesne Profits
+
+The value of improvements made by one bona fide in possession under a claim of right may be set off against a claim for mesne profits.
+Section:
+Previous
+13-7-1
+13-7-2
+13-7-3
+13-7-4
+13-7-5
+13-7-6
+13-7-7
+13-7-8
+13-7-9
+13-7-10
+13-7-11
+13-7-12
+13-7-13
+13-7-14
+Next
+Last modified: October 14, 2016
+
+§ 13-7-14.
+§ 13-7-14 - Effect of Conflict Between This Chapter and Chapter 11 of Title 9
+
+In the event of a conflict between this chapter and Chapter 11 of Title 9, the latter shall control to the extent of the conflict.Title NoteChapter Note
+Section:
+Previous
+13-7-1
+13-7-2
+13-7-3
+13-7-4
+13-7-5
+13-7-6
+13-7-7
+13-7-8
+13-7-9
+13-7-10
+13-7-11
+13-7-12
+13-7-13
+13-7-14
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 8 - Illegal and Void Contracts Generally
+
+============================================================
+
+
+§ 13-8-1.
+§ 13-8-1 - Contracts to Do Immoral or Illegal Things
+
+A contract to do an immoral or illegal thing is void. If the contract is severable, however, the part of the contract which is legal will not be invalidated by the part of the contract which is illegal.
+Section: 13-8-1
+13-8-2
+13-8-2.1
+13-8-3
+13-8-4
+Next
+Last modified: October 14, 2016
+
+§ 13-8-2.
+§ 13-8-2 - Contracts Contravening Public Policy Generally
+
+(a) A contract that is against the policy of the law cannot be enforced. Contracts deemed contrary to public policy include but are not limited to:
+(1) Contracts tending to corrupt legislation or the judiciary;
+(2) Contracts in general restraint of trade, as distinguished from contracts which restrict certain competitive activities, as provided in Article 4 of this chapter;
+(3) Contracts to evade or oppose the revenue laws of another country;
+(4) Wagering contracts; or
+(5) Contracts of maintenance or champerty.
+
+§ 13-8-3.
+§ 13-8-3 - Gambling Contracts
+
+(a) Gambling contracts are void; and all evidences of debt, except negotiable instruments in the hands of holders in due course or encumbrances or liens on property, executed upon a gambling consideration, are void in the hands of any person.
+(b) Money paid or property delivered upon a gambling consideration may be recovered from the winner by the loser by institution of an action for the same within six months after the loss and, after the expiration of that time, by institution of an action by any person, at any time within four years, for the joint use of himself and the educational fund of the county.
+Section:
+Previous
+13-8-1
+13-8-2
+13-8-2.1
+13-8-3
+13-8-4
+Next
+Last modified: October 14, 2016
+
+§ 13-8-4.
+§ 13-8-4 - Liability of Stakeholder of Money Risked on Wager
+
+A stakeholder of money risked on a wager shall be obligated to repay the money to the party depositing it, upon demand, before it is actually paid to the winner; but if he pays the money to the winner bona fide, and without notice of the depositor's intention to retract, he shall not be liable for such payment.
+Section:
+Previous
+13-8-1
+13-8-2
+13-8-2.1
+13-8-3
+13-8-4
+Last modified: October 14, 2016
+
+§ 13-8-11.
+§ 13-8-11 - Legislative Findings
+
+The General Assembly finds that the distribution of equipment primarily designed for or used in agriculture in the State of Georgia vitally affects the general economy of the state and the public interest and public welfare and, in the exercise of its police power, it is necessary to regulate equipment primarily designed for or used in agriculture and related equipment manufacturers, distributors, dealers, and their representatives doing business in Georgia in order to prevent frauds, unfair business practices, unfair methods of competition, impositions, and other abuses upon its citizens.
+Section: 13-8-11
+13-8-12
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+Next
+Last modified: October 14, 2016
+
+§ 13-8-13.
+, Title 13, Chapter 8, § 13-8-13 - Persons Subject to Provisions of Article
+
+Any person who engages directly or indirectly in purposeful contacts within this state in connection with the offering or advertising for sale of new equipment and parts shall be subject to the provisions of this article and shall be subject to the jurisdiction of the courts of this state upon service of process in accordance with the provisions of the laws of the State of Georgia.
+Section:
+Previous
+13-8-11
+13-8-12
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+Next
+Last modified: October 14, 2016
+
+§ 13-8-15.
+§ 13-8-15 - Unfair Methods of Competition and Unfair or Deceptive Acts or Practices
+
+(a) It shall be deemed a violation of Code Section 13-8-14 for any manufacturer, factory branch, factory representative, distributor, or wholesaler, distributor branch, distributor representative, or dealer to engage in any action which is arbitrary, in bad faith, or unconscionable and which causes damage in terms of law or equity to any of the parties or to the public.
+(b) It shall be deemed a violation of Code Section 13-8-14 for a manufacturer, a distributor, a wholesaler, a distributor branch or division, a factory branch or division, or a wholesale branch or division, or officer, agent, or other representative thereof, to coerce, or attempt to coerce, any dealer:
+(1) To order or accept delivery of any unit of equipment, parts or accessories therefor, or any other commodity or commodities which such dealer has not voluntarily ordered; or
+(2) To order or accept delivery of any equipment with special features, accessories, or equipment not included in the base list price of such equipment as publicly advertised by the manufacturer thereof.
+(c) It shall be deemed a violation of Code Section 13-8-14 for a manufacturer, a distributor, a wholesaler, a distributor branch or division, a factory branch or division, or a wholesale branch or division, or officer, agent, or other representative thereof:
+(1) To refuse to deliver in reasonable quantities and within a reasonable time after receipt of dealer's order to any dealer having a franchise or contractual agreement for the retail sale of new equipment sold or distributed by such manufacturer, distributor branch or division, factory branch or division, or wholesale branch or division any item of equipment covered by such franchise or contract specifically advertised or represented by such manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division to be available for immediate delivery; provided, however, that the failure to deliver any such unit of equipment shall not be considered a violation of this article if such failure is due to prudent and reasonable restriction on extension of credit by the franchisor to the dealer, an act of God, work stoppage or delay due to a strike or labor difficulty, a bona fide shortage of materials, freight embargo, or other cause over which the manufacturer, distributor, or wholesaler, or any agent thereof, shall have no control;
+(2) To coerce, or attempt to coerce, any dealer to enter into any agreement, whether written or oral, supplementary to an existing franchise with such manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division, or officer, agent, or other representative thereof; or to do any other act prejudicial to such dealer by threatening to cancel any franchise or any contractual agreement existing between such manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division, and such dealer; provided, however, that notice in good faith to any dealer of such dealer's violation of any terms or provisions of such franchise or contractual agreement shall not constitute a violation of this article if such notice is in writing mailed by registered or certified mail or statutory overnight delivery to such dealer at his or her current business address; (3)(A) To terminate the franchise or selling agreement of any such dealer without due cause, as defined in subparagraph (C) of this paragraph. The termination of a franchise or selling agreement, without due cause, shall constitute an unfair termination, regardless of the specified time period of such franchise or selling agreement. Except where the grounds for such termination fall within division (iii) of subparagraph (C) of this paragraph, such manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division, or officer, agent, or other representative thereof, shall notify a dealer in writing of the termination of the franchise or selling agreement of such dealer at least 90 days before the effective date thereof, stating the specific grounds for such termination; and in no event shall the contractual term of any such franchise or selling agreement expire, without the written consent of the dealer involved, prior to the expiration of at least 90 days following such written notice. During the 90 day period, either party may, in appropriate circumstances, petition a court to modify such 90 day stay or to extend it pending a final determination of such proceedings on the merits. The court shall have authority to grant preliminary and final injunctive relief. Should the dealer cure the claimed deficiency within the 90 day period, then the franchise or selling agreement shall not be terminated.
+(B) Before termination of the franchise or selling agreement because of the dealer's failure to meet reasonable marketing criteria or market penetration, the manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division, or officer, agent, or other representative thereof, shall provide written notice of such intention at least one year in advance. After such notice, the manufacturer or other entity issuing the notice shall make good faith efforts to work with the dealer to gain the desired market share including, without limitation, reasonably making available to the dealer an adequate inventory of new equipment and parts and competitive marketing programs. The manufacturer or other entity, at the end of the one-year notice period, may terminate or elect not to renew the agreement only upon further written notice specifying the reasons for determining that the dealer failed to meet reasonable criteria or market penetration. Such written notice must specify that termination is effective 90 days from the date of the notice. Either party may petition the court pursuant to subparagraph (A) of this paragraph for the relief specified therein. Should the dealer cure the claimed deficiency within the 90 day period, then the franchise or selling agreement shall not be terminated.
+(C) As used in this paragraph, tests for determining what constitutes due cause for a manufacturer or distributor to terminate a franchise agreement shall include whether the dealer:
+(i) Has transferred an ownership interest in the dealership without the manufacturer's or distributor's consent;
+(ii) Has made a material misrepresentation in applying for or acting under the franchise agreement;
+(iii) Has filed a voluntary petition in bankruptcy or has had an involuntary petition in bankruptcy filed against the dealer which has not been discharged within 30 days after the filing, is in default under the provisions of a security agreement in effect with the manufacturer or distributor, or is in receivership;
+(iv) Has engaged in an unfair business practice;
+(v) Has inadequately represented the manufacturer's or distributor's products with respect to sales, service, or warranty work;
+(vi) Has engaged in conduct which is injurious or detrimental to the public welfare;
+(vii) Has inadequate sales and service facilities and personnel;
+(viii) Has failed to comply with an applicable licensing law;
+(ix) Has been convicted of a crime, the effect of which would be detrimental to the manufacturer, distributor, or dealership;
+(x) Has failed to operate in the normal course of business for seven consecutive business days;
+(xi) Has relocated the dealer's place of business without the manufacturer's or distributor's consent; or
+(xii) Has failed to comply with the terms of the dealership or franchise agreement;
+(4) To resort to or use any false or misleading advertisement in connection with its business as such manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division, or officer, agent, or other representative thereof;
+(5) To offer to sell or to sell any new unit of equipment, or parts or accessories therefor, to any other dealer at a lower actual price therefor than the actual price offered to any other dealer for the same model equipment identically equipped; or to utilize any device including, but not limited to, sales promotion plans or programs which result in such lesser actual price; provided, however, that the provisions of this paragraph shall not apply to sales to a dealer for resale to any unit of the United States government, the state, or any of its political subdivisions; and provided, further, that the provisions of this paragraph shall not apply so long as a manufacturer, distributor, or wholesaler, or any agent thereof, sells or offers to sell such new equipment, parts, or accessories to all their franchised dealers at an equal price;
+(6) To discriminate willfully, either directly or indirectly, in price, programs, or terms of sale offered to franchisees, where the effect of such discrimination may be to lessen competition substantially or to give to one holder of a franchise any business or competitive advantage not offered to all holders of the same or similar franchise;
+(7) To prevent or attempt to prevent, by contract or otherwise, any dealer from changing the capital structure of his or her dealership or the means by or through which he or she finances the operation of his or her dealership, provided such dealer at all times meets any reasonable capital standards agreed to between the dealership and the manufacturer, distributor, or wholesaler and provided such change by the dealer does not result in a change in the executive management of the dealership;
+(8) To prevent or attempt to prevent, by contract or otherwise, any dealer or any officer, partner, or stockholder of any dealer from selling or transferring any part of the interest of any of them to any other person or persons or party or parties; provided, however, that no dealer, officer, partner, or stockholder shall have the right to sell, transfer, or assign the franchise or power of management or control thereunder without the consent of the manufacturer, distributor, or wholesaler, except that such consent shall not be unreasonably withheld;
+(8.1) To prevent a dealer from having an investment in or holding a dealership contract for the sale of competing product lines or makes of equipment, or to require a dealer to provide separate facilities for competing product lines or makes of equipment;
+(8.2) To impose, directly or indirectly, unreasonable restrictions on the dealer relative to transfer, sale, renewal, termination, location, or site control;
+(9) To obtain money, goods, services, anything of value, or any other benefit from any other person with whom the dealer does business or employs on account of or in relation to the transactions between the dealer, the franchisor, and such other person; or
+(10) To require a dealer to assent to a release, assignment, notation, waiver, or estoppel which would relieve any person from liability imposed by this article.
+(d) It shall be deemed a violation of Code Section 13-8-14 for a dealer:
+(1) To require a retail purchaser of a new unit of equipment, as a condition of sale and delivery thereof, also to purchase special features, appliances, equipment, parts, or accessories not desired or requested by the purchaser; provided, however, that this prohibition shall not apply to special features, appliances, equipment, parts, or accessories which are already installed when the unit of equipment is received by the dealer from the manufacturer, distributor, or wholesaler thereof;
+(2) To represent and sell as new and unused any unit of equipment which has been used and operated for demonstration or other purposes without stating to the purchaser the approximate amount of use the unit of equipment has experienced; or
+(3) To resort to or use any false or misleading advertisement in connection with his or her business as such dealer.
+Section:
+Previous
+13-8-11
+13-8-12
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+Next
+Last modified: October 14, 2016
+
+§ 13-8-15.1.
+§ 13-8-15.1 - Notice to Competitors Within Market Area
+
+Any manufacturer, distributor, or wholesaler which intends to establish a new dealership or to relocate a current dealership for a particular product line or make of equipment within the relevant market area of an existing dealership of the same product line or make of equipment shall give written 90 day notice of such intent by certified mail or statutory overnight delivery, return receipt requested, to such existing dealership. The notice shall include:
+(1) The specific location of the additional or relocated dealership;
+(2) The date on or after which the additional or relocated dealership will commence operation at the new location;
+(3) The identity of all existing dealerships in whose relevant market area the new or relocated dealership is to be located; and
+(4) The names and addresses of the dealer and principals in the new or relocated dealership.
+Section:
+Previous
+13-8-11
+13-8-12
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+Next
+Last modified: October 14, 2016
+
+§ 13-8-15.2.
+§ 13-8-15.2 - Use of Dealership by Manufacturers, Distributors, and Wholesalers
+
+(a) A manufacturer, distributor, or wholesaler may sell or lease new equipment for use within this state. If the equipment is prepared for delivery or serviced by a dealer, the manufacturer, distributor, or wholesaler shall reasonably compensate the dealer for the preparation and delivery of the new equipment and pay to the dealer a reasonable commission on the sale or lease of the new equipment which shall be not less than 8 percent of the sale price of the equipment. The manufacturer, distributor, or wholesaler, if practicable, shall utilize the dealer in the relevant market area described in subsection (b) of this Code section for preparation and delivery. This compensation must be paid or credited in the same manner as provided in Code Section 13-8-17. This subsection shall not be applicable to any liquidation or sale of equipment which has been ordered by any court.
+(b) For purposes of this Code section, equipment is considered to be used primarily within a dealer's relevant market area if the new equipment is located or housed at a user's facility located within that relevant market area.
+Section:
+Previous
+13-8-11
+13-8-12
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+Next
+Last modified: October 14, 2016
+
+§ 13-8-16.
+§ 13-8-16 - Predelivery and Preparation Obligations; Repair Parts Availability; Return of Surplus Parts Inventory
+
+(a) Every manufacturer shall specify and every dealer shall provide and fulfill reasonable predelivery and preparation obligations for its equipment prior to delivery of same to retail purchasers.
+(b) Every manufacturer shall provide for repair parts availability throughout the reasonable useful life of any equipment sold.
+(c) Every manufacturer or distributor shall provide to each of its dealers, on an annual basis, an opportunity to return a portion of such dealer's surplus parts inventory for credit. The surplus parts return procedure shall be administered as follows:
+(1) The manufacturer or distributor may specify and thereupon notify its dealers of a time period of at least 60 days' duration, during which time dealers may submit their surplus parts lists and return their surplus parts to the manufacturer or distributor;
+(2) If a manufacturer or distributor has not notified a dealer of a specific time period for returning surplus parts within the preceding 12 months, then it shall authorize and allow the dealer's surplus parts return request within 30 days after receipt of such request from such dealer;
+(3) Pursuant to the provisions of this subsection, a manufacturer or distributor must allow surplus parts return authority on a dollar value of parts equal to 8 percent of the total dollar value of parts purchased by the dealer from the manufacturer or distributor during the 12 month period immediately preceding the notification to such dealer by the manufacturer or distributor of the surplus parts return program, or the month such dealer's return request is made, whichever is applicable; provided, however, that such dealer may, at his or her option, elect to return a dollar value of his or her surplus parts less than 8 percent of the total dollar value of parts purchased by such dealer from the manufacturer or distributor during the preceding 12 month period as provided in this subsection;
+(4) No obsolete or superseded part may be returned, but any part listed in the manufacturer's, wholesaler's, or distributor's current parts price list at the date of notification to the dealer by the manufacturer or distributor of the surplus parts return program, or the date of a dealer's parts return request, whichever is applicable, shall be eligible for return and credit as specified in this subsection; provided, however, that returned parts must be in new and unused condition and must have been purchased from the manufacturer, wholesaler, or distributor to whom they are returned;
+(5) The minimum lawful credit to be allowed for returned parts shall be 85 percent of the wholesale cost thereof as listed in the manufacturer's, wholesaler's, or distributor's current parts price list at the date of the notification to the dealer by the manufacturer, wholesaler, or distributor of the surplus parts return program, or the date of a dealer's parts return request, whichever is applicable;
+(6) Applicable credit pursuant to this subsection must be issued to the dealer within 30 days after receipt of his or her returned parts by the manufacturer or distributor; or
+(7) Packing and return freight expense incurred in any return of surplus parts pursuant to the terms of this Code section shall be borne by the dealer.
+Section:
+Previous
+13-8-11
+13-8-12
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+Next
+Last modified: October 14, 2016
+
+§ 13-8-17.
+§ 13-8-17 - Warranty Agreements; Disapproval of Claims Under Warranty Agreements; Special Handling of Claims; Calculation of Compensation to Dealer for Warranty Work; Amounts Owed to a Dealer; Audit of Warranty Claims
+
+(a) Every manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division shall provide a fair and reasonable warranty agreement on any new unit of equipment which it sells and shall fairly compensate each of its dealers for labor and parts used in fulfilling such warranty agreement. All claims for payment under such warranty agreements made by dealers under this subsection for such labor and parts shall be paid within 30 days following their approval. All such claims shall be either approved or disapproved within 30 days after their receipt; and, when any such claim is disapproved, the dealer who submits it shall be notified in writing of its disapproval within such period; and each such notice shall state the specific grounds upon which the disapproval is based. Any special handling of claims required of the dealer by the manufacturer, distributor, wholesaler, distributor branch or division, factory branch or division, or wholesale branch or division, and not uniformly required of all dealers of that make, may be enforced only after 30 days' notice in writing to the dealer and upon good and sufficient reason.
+(b) The minimum lawful basis for compensating said dealer for warranty work as provided for in this subsection shall be calculated for labor in accordance with the reasonable and customary amount of time required to complete such work, expressed in hours and fractions of hours multiplied by the dealer's established hourly retail labor rate. Prior to filing a claim for reimbursement for warranty work, the dealer must notify the applicable manufacturer, wholesaler, or distributor of his or her hourly retail labor rate. The minimum lawful basis for compensation to the dealer for parts used in fulfilling said warranty work shall be at the dealer's costs thereof, including all freight and handling charges applicable thereto, plus 15 percent of said sum to reimburse the dealer's reasonable costs of doing business and providing such warranty service on the manufacturer's behalf.
+(c) It shall be unlawful to deny, delay payment for, or restrict a claim by a dealer for warranty service or parts, incentives, hold-backs, or other amounts owed to a dealer unless the denial, delay, or restriction is the direct result of a material defect in the claim that affects its validity.
+(d) A manufacturer, distributor, or wholesaler may audit warranty claims submitted by its dealers only for a period of up to one year following payment of such claims and may charge back to its dealers only those amounts based upon paid claims shown by audit to be invalid; provided, however, that this limitation shall not apply in any case of fraudulent claims.
+Section:
+Previous
+13-8-12
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+13-8-23
+Next
+Last modified: October 14, 2016
+
+§ 13-8-17.1.
+§ 13-8-17.1 - Time for Audits of Dealerships
+
+Any audit of a dealer by or on behalf of a manufacturer, distributor, or wholesaler for sales incentives, service incentives, rebates, or other forms of incentive compensation shall be completed not later than six months after the date of the termination of such incentive compensation program; provided, however, that this limitation shall not apply in any case of fraudulent claims.
+Section:
+Previous
+13-8-13
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+13-8-23
+13-8-24
+Next
+Last modified: October 14, 2016
+
+§ 13-8-18.
+, Title 13, Chapter 8, § 13-8-18 - Agreements to Which Article Applies
+
+The provisions of this article shall apply to all written or oral agreements between a manufacturer, wholesaler, or distributor with a dealer including, but not limited to, the franchise offering, the franchise agreement, sales of goods, services and advertising, leases or mortgages of real or personal property, promises to pay, security interests, pledges, insurance contracts, advertising contracts, construction or installation contracts, servicing contracts, and all other such agreements in which the manufacturer, wholesaler, or distributor has any direct or indirect interest.
+Section:
+Previous
+13-8-14
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+13-8-23
+13-8-24
+13-8-25
+Next
+Last modified: October 14, 2016
+
+§ 13-8-19.
+§ 13-8-19 - Failure to Renew, Termination Of, or Restriction on Transfer of Franchise Without Due Cause
+
+It shall be unlawful for the manufacturer, wholesaler, distributor, or franchisor, without due cause, to fail to renew on terms then equally available to all its dealers, to terminate a franchise, or to restrict the transfer of a franchise unless the franchisee shall receive fair and reasonable compensation for the inventory of the business. As used in this Code section, "due cause" shall be construed in accordance with the definition of same as contained in subparagraph (c)(3)(C) of Code Section 13-8-15.
+Section:
+Previous
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+13-8-23
+13-8-24
+13-8-25
+Next
+Last modified: October 14, 2016
+
+§ 13-8-21.
+, Title 13, Chapter 8, § 13-8-21 - Contracts and Agreements in Violation of Article Deemed Void
+
+Any contract or franchise agreement or part thereof or practice thereunder in violation of any provision of this article shall be deemed against public policy and shall be void and unenforceable.
+Section:
+Previous
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+13-8-23
+13-8-24
+13-8-25
+Next
+Last modified: October 14, 2016
+
+§ 13-8-22.
+§ 13-8-22 - Repurchase of Inventory Upon Termination of Franchise; Payment for Inventory Repurchased; Title to Repurchased Inventory; Exempt Inventory Items; Civil Liability for Failure to Repurchase Inventory
+
+(a) Whenever any dealer enters into a franchise agreement with a manufacturer, distributor, or wholesaler wherein the dealer agrees to maintain an inventory of equipment or repair parts and the franchise is subsequently terminated, the manufacturer, distributor, or wholesaler shall repurchase the inventory as provided in this article. The dealer may keep the inventory if he or she desires. If the dealer has any outstanding debts to the manufacturer, distributor, or wholesaler, then the repurchase amount may be credited to the dealer's account.
+(b) The manufacturer, distributor, or wholesaler shall repurchase that inventory previously purchased from it and held by the dealer on the date of termination of the contract. The manufacturer, distributor, or wholesaler shall pay 100 percent of the actual dealer cost, including freight, of all new, unsold, undamaged, and complete units of equipment which are resalable and 100 percent of the current wholesale price of all new, unused, undamaged repair parts and accessories which are listed in the manufacturer's current parts price list. The manufacturer, distributor, or wholesaler shall pay the dealer 5 percent of the current wholesale price on all new, unused, and undamaged repair parts returned to cover the cost of handling, packing, and loading. The manufacturer, distributor, or wholesaler shall have the option of performing the handling, packing, and loading in lieu of paying the 5 percent sum imposed by this subsection for these services.
+(c) Upon payment within a reasonable time of the repurchase amount to the dealer, the title and right of possession to the repurchased inventory shall transfer to the manufacturer, distributor, or wholesaler, as the case may be.
+(d) The provisions of this article shall not require the repurchase from a dealer of:
+(1) Any single repair part which is priced as a set of two or more items;
+(2) Any repair part which, because of its condition, is not resalable as a new part without repackaging or reconditioning;
+(3) Any inventory for which the dealer is unable to furnish evidence, reasonably satisfactory to the manufacturer, distributor, or wholesaler, of good title, free and clear of all claims, liens, and encumbrances;
+(4) Any inventory which the dealer desires to keep, provided the dealer has a contractual right to do so;
+(5) Any unit of equipment which is not in new, unused, undamaged, complete condition;
+(6) Any repair parts which are not in new, unused, undamaged condition;
+(7) Any inventory which was ordered by the dealer on or after the date of receipt of the notification of termination of the franchise; or
+(8) Any inventory which was acquired by the dealer from any source other than the manufacturer, distributor, or wholesaler.
+
+§ 13-8-23.
+§ 13-8-23 - Repurchase of Inventory Upon Death or Incapacity of Dealer or Majority Stockholder of Corporate Dealer
+
+In the event of the death or incapacity of the dealer or the majority stockholder of a corporation operating as a dealer, the manufacturer, distributor, or wholesaler shall, at the option of the heirs at law, if the dealer died intestate, or the devisees or transferees under the terms of the deceased dealer's last will and testament, if said dealer died testate, repurchase the inventory from said heirs or devisees as aforesaid as if the manufacturer, distributor, or wholesaler had terminated the contract, and the inventory repurchase provisions of Code Section 13-8-22 are made expressly applicable hereto. The heirs or devisees as aforesaid shall have one year from the date of the death of the retailer or majority stockholder to exercise their option under this article; provided, however, that nothing in this article shall require the repurchase of inventory if the heirs or devisees as aforesaid and the manufacturer, distributor, or wholesaler enter into a new franchise agreement to operate the retail dealership.
+Section:
+Previous
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+13-8-23
+13-8-24
+13-8-25
+Next
+Last modified: October 14, 2016
+
+§ 13-8-25.
+, Title 13, Chapter 8, § 13-8-25 - Applicability of Article to Existing Contracts Without Expiration Dates and to Contracts Entered or Renewed on or After July 1, 2002
+
+The provisions of this article shall apply to all contracts now in effect which have no expiration date and are a continuing contract and all other contracts entered into or renewed on or after July 1, 2002. Any contract in force and effect prior to July 1, 2002, which by its own terms will terminate on a date subsequent thereto shall be governed by the law as it existed prior to July 1, 2002.
+Section:
+Previous
+13-8-15
+13-8-15.1
+13-8-15.2
+13-8-16
+13-8-17
+13-8-17.1
+13-8-18
+13-8-19
+13-8-20
+13-8-21
+13-8-22
+13-8-23
+13-8-24
+13-8-25
+Last modified: October 14, 2016
+
+§ 13-8-31.
+§ 13-8-31 - Legislative Findings
+
+The General Assembly finds that the distribution of farm equipment in the State of Georgia vitally affects the general economy of the state and the public interest and public welfare and, in the exercise of its police power, it is necessary to regulate farm equipment manufacturers, distributors, dealers, and their representatives doing business in Georgia in order to prevent frauds, unfair business practices, unfair methods of competition, impositions, and other abuses upon its citizens.
+Section: 13-8-31
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-33.
+, Title 13, Chapter 8, § 13-8-33 - Persons Subject to Provisions of Article
+
+Any person who engages directly or indirectly in purposeful contacts within this state in connection with the offering or advertising for sale of farm machinery or implements and parts shall be subject to the provisions of this article and shall be subject to the jurisdiction of the courts of this state upon service of process in accordance with the provisions of the laws of the State of Georgia.
+Section:
+Previous
+13-8-31
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-35.
+§ 13-8-35 - Unfair Methods of Competition and Unfair or Deceptive Acts or Practices
+
+(a) It shall be deemed a violation of Code Section 13-8-34 for any manufacturer, factory branch, factory representative, or wholesaler to engage in any action which is arbitrary, in bad faith, or unconscionable and which causes damage in terms of law or equity to any of the parties or to the public.
+(b) It shall be deemed a violation of Code Section 13-8-34 for a manufacturer, a factory branch or division, or officer, agent, or other representative thereof, to coerce, or attempt to coerce, any wholesaler:
+(1) To order or accept delivery of any unit of farm equipment or implements or parts or accessories therefor, or any other commodity or commodities which such wholesaler has not voluntarily ordered; or
+(2) To order or accept delivery of any farm equipment or implements with special features, accessories, or equipment not included in the base list price of such farm equipment or implements as publicly advertised by the manufacturer thereof.
+(c) It shall be deemed a violation of Code Section 13-8-34 for a manufacturer, a factory branch or division, or officer, agent, or other representative thereof:
+(1) To refuse to deliver in reasonable quantities and within a reasonable time after receipt of wholesaler's order to any wholesaler having a franchise or contractual agreement for the sale of farm equipment or implements sold by such manufacturer or factory branch or division any item of farm equipment covered by such franchise or contract specifically advertised or represented by such manufacturer or factory branch or division to be available for immediate delivery; provided, however, the failure to deliver any such unit of farm equipment or implements shall not be considered a violation of this article if such failure is due to prudent and reasonable restriction on extension of credit by the franchisor to the wholesaler, an act of God, work stoppage or delay due to a strike or labor difficulty, a bona fide shortage of materials, freight embargo, or other cause over which the manufacturer or any agent thereof shall have no control;
+(2) To coerce or attempt to coerce any wholesaler to enter into any agreement, whether written or oral, supplementary to an existing franchise with such manufacturer, factory branch or division, or officer, agent, or other representative thereof; or to do any other act prejudicial to such wholesaler by threatening to cancel any franchise or any contractual agreement existing between such manufacturer or factory branch or division, and such wholesaler; provided, however, that notice in good faith to any wholesaler of such wholesaler's violation of any terms or provisions of such franchise or contractual agreement shall not constitute a violation of this article if such notice is in writing mailed by registered or certified mail or statutory overnight delivery to such wholesaler at his current business address; (3)(A) To terminate or cancel the franchise or selling agreement of any such wholesaler without due cause, as defined in subparagraph (B) of this paragraph. The nonrenewal of a franchise or selling agreement, without due cause, shall constitute an unfair termination or cancellation, regardless of the specified time period of such franchise or selling agreement. Except where the grounds for such termination or cancellation fall within division (iii) of subparagraph (B) of this paragraph, such manufacturer or factory branch or division, or officer, agent, or other representative thereof shall notify a wholesaler in writing of the termination or cancellation of the franchise or selling agreement of such wholesaler at least 60 days before the effective date thereof, stating the specific grounds for such termination or cancellation; and in no event shall the contractual term of any such franchise or selling agreement expire without the written consent of the wholesaler involved prior to the expiration of at least 60 days following such written notice. During the 60 day period, either party may, in appropriate circumstances, petition a court to modify such 60 day stay or to extend it pending a final determination of such proceedings on the merits. The court shall have authority to grant preliminary and final injunctive relief.
+(B) As used in this paragraph, tests for determining what constitutes due cause for a manufacturer to terminate, cancel, or refuse to renew a franchise agreement shall include whether the wholesaler:
+(i) Has transferred an ownership interest in the business without the manufacturer's consent;
+(ii) Has made a material misrepresentation in applying for or acting under the franchise agreement;
+(iii) Has filed a voluntary petition in bankruptcy or has had an involuntary petition in bankruptcy filed against the wholesaler which has not been discharged within 30 days after the filing, is in default under the provisions of a security agreement in effect with the manufacturer, or is in receivership;
+(iv) Has engaged in an unfair business practice;
+(v) Has inadequately represented the manufacturer's products with respect to sales, service, or warranty work;
+(vi) Has engaged in conduct which is injurious or detrimental to the public welfare;
+(vii) Has inadequate sales and service facilities and personnel;
+(viii) Has failed to comply with an applicable licensing law;
+(ix) Has been convicted of a crime, the effect of which would be detrimental to the manufacturer or wholesale business;
+(x) Has failed to operate in the normal course of business for seven consecutive business days;
+(xi) Has relocated the wholesaler's place of business without the manufacturer's consent; or
+(xii) Has failed to comply with the terms of the franchise agreement;
+(4) To resort to or use any false or misleading advertisement in connection with his business as such manufacturer, or factory branch or division, or officer, agent, or other representative thereof;
+(5) To offer to sell any unit of farm equipment or implements or parts or accessories therefor to any other wholesaler at a lower actual price therefor than the actual price offered to any other wholesaler for farm equipment or implement identically equipped; or to utilize any device including, but not limited to, sales promotion plans or programs which result in such lesser actual price; provided, however, the provisions of this paragraph shall not apply to sales to a wholesaler for resale to any unit of the United States government, the state, or any of its political subdivisions; and provided, further, that the provisions of this paragraph shall not apply so long as a manufacturer sells or offers to sell such new farm equipment or implement, parts, or accessories to all their franchised wholesalers at an equal price;
+(6) To discriminate willfully, either directly or indirectly, in price, programs, or terms of sale offered to franchisees, where the effect of such discrimination may be to lessen competition substantially or to give to one holder of a franchise any business or competitive advantage not offered to all holders of the same or similar franchise;
+(7) To prevent or attempt to prevent, by contract or otherwise, any wholesaler from changing the capital structure of his business or the means by or through which he finances the operation of his business, provided the wholesaler at all times meets any reasonable capital standards agreed to between the wholesaler and the manufacturer and provided such change by the wholesaler does not result in a change in the executive management of the wholesaler;
+(8) To prevent or attempt to prevent, by contract or otherwise, any wholesaler or any officer, partner, or stockholder of any wholesaler from selling or transferring any part of the interest of any of them to any other person or persons or party or parties; provided, however, that no wholesaler, officer, partner, or stockholder shall have the right to sell, transfer, or assign the franchise or power of management or control thereunder without the consent of the manufacturer, except that such consent shall not be unreasonably withheld;
+(9) To obtain money, goods, services, anything of value, or any other benefit from any other person with whom the wholesaler does business or employs on account of or in relation to the transactions between the wholesaler, the franchisor, and such other person; or
+(10) To require a wholesaler to assent to a release, assignment, notation, waiver, or estoppel which would relieve any person from liability imposed by this article.
+(d) It shall be deemed a violation of Code Section 13-8-34 for a wholesaler:
+(1) To require a purchaser of any unit of farm equipment or implement, as a condition of sale and delivery thereof, also to purchase special features, appliances, equipment, parts, or accessories not desired or requested by the purchaser; provided, however, that this prohibition shall not apply to special features, appliances, equipment, parts, or accessories which are already installed when a unit of farm equipment or implement is received by the wholesaler from the manufacturer thereof;
+(2) To represent and sell as new and unused any unit of farm equipment or implement which has been used and operated for demonstration or other purposes without stating to the purchaser the approximate amount of use the unit of farm machinery or implement has experienced; or
+(3) To resort to or use any false or misleading advertisement in connection with his business as such wholesaler.
+Section:
+Previous
+13-8-31
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-36.
+§ 13-8-36 - Predelivery and Preparation Obligations; Repair Parts Availability; Return of Surplus Parts Inventory
+
+(a) Every manufacturer shall specify and every wholesaler shall provide and fulfill reasonable predelivery and preparation obligations for its farm equipment or implements prior to delivery of same to purchasers.
+(b) Every manufacturer shall provide for repair parts availability throughout the reasonable useful life of any farm equipment or implement sold.
+(c) Every manufacturer shall provide to his wholesalers, on an annual basis, an opportunity to return a portion of his surplus parts inventory for credit. The surplus parts return procedure shall be administered as follows:
+(1) The manufacturer may specify and thereupon notify his wholesalers of a time period of at least 60 days' duration, during which time wholesalers may submit their surplus parts list and return their surplus parts to the manufacturer;
+(2) If a manufacturer has not notified a wholesaler of a specific time period for returning surplus parts within the preceding 12 months, then he shall authorize and allow the wholesaler's surplus parts return request within 30 days after receipt of such request from the wholesaler;
+(3) Pursuant to the provisions of this subsection, a manufacturer must allow surplus parts return authority on a dollar value of parts equal to 10 percent of the total dollar value of purchases by the wholesaler from the manufacturer during the 12 month period immediately preceding the notification to the wholesaler by the manufacturer of the surplus parts return program, or the month the wholesaler's return request is made, whichever is applicable; provided, however, that the wholesaler may, at his option, elect to return a dollar value of his surplus parts less than 10 percent of the total dollar value of purchases by the wholesaler from the manufacturer during the preceding 12 month period as provided in this subsection;
+(4) No obsolete or superseded part may be returned, but any part listed in the manufacturer's current parts price list at the date of notification to the wholesaler by the manufacturer of the surplus parts return program, or the date of a wholesaler's parts return request, whichever is applicable, shall be eligible for return and credit as specified in this subsection; provided, however, that returned parts must be in new and unused condition and must have been purchased from the manufacturer to whom they are returned;
+(5) The minimum lawful credit to be allowed for returned parts shall be 85 percent of the wholesale cost thereof as listed in the manufacturer's current parts price list at the date of the notification to the wholesaler by the manufacturer of the surplus parts return program, or the date of a wholesaler's parts return request, whichever is applicable;
+(6) Applicable credit pursuant to this subsection must be issued to the wholesaler within 30 days after receipt of his returned parts by the manufacturer; and
+(7) Packing and return freight expense incurred in any return of surplus parts pursuant to the terms of this Code section shall be borne by the wholesaler.
+Section:
+Previous
+13-8-31
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-38.
+, Title 13, Chapter 8, § 13-8-38 - Agreements to Which Article Shall Apply
+
+The provisions of this article shall apply to all written or oral agreements between a manufacturer with a wholesaler including, but not limited to, the franchise offering, the franchise agreement, sales of goods, services and advertising, leases or mortgages of real or personal property, promises to pay, security interests, pledges, insurance contracts, advertising contracts, construction or installation contracts, servicing contracts, and all other such agreements in which the manufacturer has any direct or indirect interest.
+Section:
+Previous
+13-8-31
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-39.
+§ 13-8-39 - Failure to Renew, Termination Of, or Restriction on Transfer of Franchise Without Due Cause
+
+It shall be unlawful for the manufacturer or franchisor, without due cause, to fail to renew on terms then equally available to all its wholesalers, to terminate a franchise, or to restrict the transfer of a franchise unless the franchisee shall receive fair and reasonable compensation for the inventory of the business. As used in this Code section, "due cause" shall be construed in accordance with the definition of same as contained in subparagraph (c)(3)(B) of Code Section 13-8-35.
+Section:
+Previous
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-41.
+, Title 13, Chapter 8, § 13-8-41 - Contracts and Agreements in Violation of Article As Void
+
+Any contract or franchise agreement or part thereof or practice thereunder in violation of any provision of this article shall be deemed against public policy and shall be void and unenforceable.
+Section:
+Previous
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-42.
+§ 13-8-42 - Repurchase of Inventory Upon Termination of Franchise; Payment for Inventory Repurchased; Title to Repurchased Inventory; Exempt Inventory Items; Civil Liability for Failure to Repurchase Inventory
+
+(a) Whenever any wholesaler enters into a franchise agreement with a manufacturer wherein the wholesaler agrees to maintain an inventory of farm equipment or implements or repair parts and the franchise is subsequently terminated, the manufacturer shall repurchase the inventory as provided in this article. The wholesaler may keep the inventory if he desires. If the wholesaler has any outstanding debts to the manufacturer, then the repurchase amount may be credited to the wholesaler's account.
+(b) The manufacturer shall repurchase that inventory previously purchased from him and held by the wholesaler on the date of termination of the contract. The manufacturer shall pay 100 percent of the actual wholesaler's cost, including freight, of all new, unsold, undamaged, and complete units of farm equipment or implements which are resalable, all demonstrator units of farm equipment or implements, and 100 percent of the current wholesale price of all new, unused, undamaged repair parts and accessories which are listed in the manufacturer's current parts price list. The manufacturer shall pay the wholesaler 5 percent of the current wholesale price on all new, unused, and undamaged repair parts returned to cover the cost of handling, packing, and loading.
+(c) Upon payment within a reasonable time of the repurchase amount to the wholesaler, the title and right of possession to the repurchased inventory shall transfer to the manufacturer.
+(d) The provisions of this article shall not require the repurchase from a wholesaler of:
+(1) Any repair part which has a limited storage life or is otherwise subject to deterioration;
+(2) Any single repair part which is priced as a set of two or more items;
+(3) Any repair part which, because of its condition, is not resalable as a new part without repackaging or reconditioning;
+(4) Any inventory for which the wholesaler is unable to furnish evidence, reasonably satisfactory to the manufacturer, of good title, free and clear of all claims, liens, and encumbrances;
+(5) Any inventory which the wholesaler desires to keep, provided the wholesaler has a contractual right to do so;
+(6) Any unit of farm equipment or implement which is not in new, unused, undamaged, complete condition, except units that have been used by the wholesaler as demonstrators;
+(7) Any repair parts which are not in new, unused, undamaged condition;
+(8) Any inventory which was ordered by the wholesaler on or after the date of receipt of the notification of termination of the franchise; or
+(9) Any inventory which was acquired by the wholesaler from any source other than the manufacturer.
+
+§ 13-8-43.
+§ 13-8-43 - Repurchase of Inventory Upon Death or Incapacity of Dealer or Majority Stockholder of Corporate Dealer
+
+In the event of the death or incapacity of the wholesaler or the majority stockholder of a corporation operating as a wholesaler, the manufacturer shall, at the option of the heirs at law if the wholesaler died intestate, or the devisees or transferees under the terms of the deceased wholesaler's last will and testament if said wholesaler died testate, repurchase the inventory from said heirs or devisees as aforesaid as if the manufacturer had terminated the contract, and the inventory repurchase provisions of Code Section 13-8-42 are made expressly applicable hereto. The heirs or devisees as aforesaid shall have one year from the date of the death of the wholesaler or majority stockholder to exercise their option under this article; provided, however, that nothing in this article shall require the repurchase of inventory if the heirs or devisees as aforesaid and the manufacturer enter into a new franchise agreement to operate the wholesale business.
+Section:
+Previous
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Next
+Last modified: October 14, 2016
+
+§ 13-8-45.
+, Title 13, Chapter 8, § 13-8-45 - Applicability of Article to Existing Contracts Without Expiration Dates and to Contracts Entered or Renewed After November 1, 1982
+
+The provisions of this article shall apply to all contracts now in effect which have no expiration date and are a continuing contract and all other contracts entered into or renewed after November 1, 1982. Any contract in force and effect on November 1, 1982, which by its own terms will terminate on a date subsequent thereto shall be governed by the law as it existed prior to this article.
+Section:
+Previous
+13-8-32
+13-8-33
+13-8-34
+13-8-35
+13-8-36
+13-8-37
+13-8-38
+13-8-39
+13-8-40
+13-8-41
+13-8-42
+13-8-43
+13-8-44
+13-8-45
+Last modified: October 14, 2016
+
+§ 13-8-50.
+§ 13-8-50 - Legislative Findings
+
+The General Assembly finds that reasonable restrictive covenants contained in employment and commercial contracts serve the legitimate purpose of protecting legitimate business interests and creating an environment that is favorable to attracting commercial enterprises to Georgia and keeping existing businesses within the state. Further, the General Assembly desires to provide statutory guidance so that all parties to such agreements may be certain of the validity and enforceability of such provisions and may know their rights and duties according to such provisions.
+Section: 13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+§ 13-8-52.
+§ 13-8-52 - Application
+
+(a) The provisions of this article shall be applicable only to contracts and agreements between or among:
+(1) Employers and employees;
+(2) Distributors and manufacturers;
+(3) Lessors and lessees;
+(4) Partnerships and partners;
+(5) Franchisors and franchisees;
+(6) Sellers and purchasers of a business or commercial enterprise; and
+(7) Two or more employers.
+(b) The provisions of this article shall not apply to any contract or agreement not described in subsection (a) of this Code section.
+Section:
+Previous
+13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+§ 13-8-53.
+§ 13-8-53 - Enforcement of Covenants; Writing Requirement; Determining Competitive Status; Effect of Failure to Comply; Time and Geographic Limitations
+
+(a) Notwithstanding any other provision of this chapter, enforcement of contracts that restrict competition during the term of a restrictive covenant, so long as such restrictions are reasonable in time, geographic area, and scope of prohibited activities, shall be permitted. However, enforcement of contracts that restrict competition after the term of employment, as distinguished from a customer nonsolicitation provision, as described in subsection (b) of this Code section, or a nondisclosure of confidential information provision, as described in subsection (e) of this Code section, shall not be permitted against any employee who does not, in the course of his or her employment:
+(1) Customarily and regularly solicit for the employer customers or prospective customers;
+(2) Customarily and regularly engage in making sales or obtaining orders or contracts for products or services to be performed by others;
+(3) Perform the following duties:
+(A) Have a primary duty of managing the enterprise in which the employee is employed or of a customarily recognized department or subdivision thereof;
+(B) Customarily and regularly direct the work of two or more other employees; and
+(C) Have the authority to hire or fire other employees or have particular weight given to suggestions and recommendations as to the hiring, firing, advancement, promotion, or any other change of status of other employees; or
+(4) Perform the duties of a key employee or of a professional.
+(b) Notwithstanding any other provision of this chapter, an employee may agree in writing for the benefit of an employer to refrain, for a stated period of time following termination, from soliciting, or attempting to solicit, directly or by assisting others, any business from any of such employer's customers, including actively seeking prospective customers, with whom the employee had material contact during his or her employment for purposes of providing products or services that are competitive with those provided by the employer's business. No express reference to geographic area or the types of products or services considered to be competitive shall be required in order for the restraint to be enforceable. Any reference to a prohibition against "soliciting or attempting to solicit business from customers" or similar language shall be adequate for such purpose and narrowly construed to apply only to: (1) such of the employer's customers, including actively sought prospective customers, with whom the employee had material contact; and (2) products or services that are competitive with those provided by the employer's business.
+(c) (1) Activities, products, or services that are competitive with the activities, products, or services of an employer shall include activities, products, or services that are the same as or similar to the activities, products, or services of the employer. Whenever a description of activities, products, or services, or geographic areas, is required by this Code section, any description that provides fair notice of the maximum reasonable scope of the restraint shall satisfy such requirement, even if the description is generalized or could possibly be stated more narrowly to exclude extraneous matters. In case of a post-employment covenant entered into prior to termination, any good faith estimate of the activities, products, or services, or geographic areas, that may be applicable at the time of termination shall also satisfy such requirement, even if such estimate is capable of including or ultimately proves to include extraneous activities, products, or services, or geographic areas. The post-employment covenant shall be construed ultimately to cover only so much of such estimate as relates to the activities actually conducted, the products or services actually offered, or the geographic areas actually involved within a reasonable period of time prior to termination.
+(2) Activities, products, or services shall be considered sufficiently described if a reference to the activities, products, or services is provided and qualified by the phrase "of the type conducted, authorized, offered, or provided within two years prior to termination" or similar language containing the same or a lesser time period. The phrase "the territory where the employee is working at the time of termination" or similar language shall be considered sufficient as a description of geographic areas if the person or entity bound by the restraint can reasonably determine the maximum reasonable scope of the restraint at the time of termination.
+(d) Any restrictive covenant not in compliance with the provisions of this article is unlawful and is void and unenforceable; provided, however, that a court may modify a covenant that is otherwise void and unenforceable so long as the modification does not render the covenant more restrictive with regard to the employee than as originally drafted by the parties.
+(e) Nothing in this article shall be construed to limit the period of time for which a party may agree to maintain information as confidential or as a trade secret, or to limit the geographic area within which such information must be kept confidential or as a trade secret, for so long as the information or material remains confidential or a trade secret, as applicable.
+Section:
+Previous
+13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+§ 13-8-54.
+§ 13-8-54 - Judicial Construction of Covenants
+
+(a) A court shall construe a restrictive covenant to comport with the reasonable intent and expectations of the parties to the covenant and in favor of providing reasonable protection to all legitimate business interests established by the person seeking enforcement.
+(b) In any action concerning enforcement of a restrictive covenant, a court shall not enforce a restrictive covenant unless it is in compliance with the provisions of Code Section 13-8-53; provided, however, that if a court finds that a contractually specified restraint does not comply with the provisions of Code Section 13-8-53, then the court may modify the restraint provision and grant only the relief reasonably necessary to protect such interest or interests and to achieve the original intent of the contracting parties to the extent possible.
+Section:
+Previous
+13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+§ 13-8-55.
+§ 13-8-55 - Requirements of Person Seeking Enforcement of Covenants
+
+The person seeking enforcement of a restrictive covenant shall plead and prove the existence of one or more legitimate business interests justifying the restrictive covenant. If a person seeking enforcement of the restrictive covenant establishes by prima-facie evidence that the restraint is in compliance with the provisions of Code Section 13-8-53, then any person opposing enforcement has the burden of establishing that the contractually specified restraint does not comply with such requirements or that such covenant is unreasonable.
+Section:
+Previous
+13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+§ 13-8-56.
+§ 13-8-56 - Reasonableness Determinations Restricting Competition; Presumptions
+
+In determining the reasonableness of a restrictive covenant that limits or restricts competition during or after the term of an employment or business relationship, the court shall make the following presumptions:
+(1) During the term of the relationship, a time period equal to or measured by duration of the parties' business or commercial relationship is reasonable, provided that the reasonableness of a time period after a term of employment shall be as provided for in Code Section 13-8-57;
+(2) A geographic territory which includes the areas in which the employer does business at any time during the parties' relationship, even if not known at the time of entry into the restrictive covenant, is reasonable provided that:
+(A) The total distance encompassed by the provisions of the covenant also is reasonable;
+(B) The agreement contains a list of particular competitors as prohibited employers for a limited period of time after the term of employment or a business or commercial relationship; or
+(C) Both subparagraphs (A) and (B) of this paragraph;
+(3) The scope of competition restricted is measured by the business of the employer or other person or entity in whose favor the restrictive covenant is given; provided, however, that a court shall not refuse to enforce the provisions of a restrictive covenant because the person seeking enforcement establishes evidence that a restrictive covenant has been violated but has not proven that the covenant has been violated as to the entire scope of the prohibited activities of the person seeking enforcement or as to the entire geographic area of the covenant; and
+(4) Any restriction that operates during the term of an employment relationship, agency relationship, independent contractor relationship, partnership, franchise, distributorship, license, ownership of a stake in a business entity, or other ongoing business relationship shall not be considered unreasonable because it lacks any specific limitation upon scope of activity, duration, or geographic area so long as it promotes or protects the purpose or subject matter of the agreement or relationship or deters any potential conflict of interest.
+Section:
+Previous
+13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+§ 13-8-57.
+§ 13-8-57 - Reasonableness Determinations Restricting Time; Presumptions
+
+(a) In determining the reasonableness in time of a restrictive covenant sought to be enforced after a term of employment, a court shall apply the rebuttable presumptions provided in this Code section.
+(b) In the case of a restrictive covenant sought to be enforced against a former employee and not associated with the sale or ownership of all or a material part of:
+(1) The assets of a business, professional practice, or other commercial enterprise;
+(2) The shares of a corporation;
+(3) A partnership interest;
+(4) A limited liability company membership; or
+(5) An equity interest or profit participation, of any other type, in a business, professional practice, or other commercial enterprise,
+a court shall presume to be reasonable in time any restraint two years or less in duration and shall presume to be unreasonable in time any restraint more than two years in duration, measured from the date of the termination of the business relationship.
+(c) In the case of a restrictive covenant sought to be enforced against a current or former distributor, dealer, franchisee, lessee of real or personal property, or licensee of a trademark, trade dress, or service mark and not associated with the sale of all or a part of:
+(1) The assets of a business, professional practice, or other commercial enterprise;
+(2) The shares of a corporation;
+(3) A partnership interest;
+(4) A limited liability company membership; or
+(5) An equity interest or profit participation, of any other type, in a business, professional practice, or other commercial enterprise,
+a court shall presume to be reasonable in time any restraint three years or less in duration and shall presume to be unreasonable in time any restraint more than three years in duration, measured from the date of termination of the business relationship.
+(d) In the case of a restrictive covenant sought to be enforced against the owner or seller of all or a material part of:
+(1) The assets of a business, professional practice, or other commercial enterprise;
+(2) The shares of a corporation;
+(3) A partnership interest;
+(4) A limited liability company membership; or
+(5) An equity interest or profit participation, of any other type, in a business, professional practice, or other commercial enterprise,
+a court shall presume to be reasonable in time any restraint the longer of five years or less in duration or equal to the period of time during which payments are being made to the owner or seller as a result of any sale referred to in this subsection and shall presume to be unreasonable in time any restraint more than the longer of five years in duration or the period of time during which payments are being made to the owner or seller as a result of any sale referred to in this subsection, measured from the date of termination or disposition of such interest.
+Section:
+Previous
+13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+§ 13-8-58.
+§ 13-8-58 - Enforcement by Third Parties
+
+(a) A court shall not refuse to enforce a restrictive covenant on the ground that the person seeking enforcement is a third-party beneficiary of such contract or is an assignee or successor to a party to such contract.
+(b) In determining the enforceability of a restrictive covenant, it is not a defense that the person seeking enforcement no longer continues in business in the scope of the prohibited activities that is the subject of the action to enforce the restrictive covenant if such discontinuance of business is the result of a violation of the restriction.
+(c) A court shall enforce a restrictive covenant by any appropriate and effective remedy available at law or equity, including, but not limited to, temporary and permanent injunctions.
+(d) In determining the reasonableness of a restrictive covenant between an employer and an employee, as such term is defined in subparagraphs (A) through (C) of paragraph (5) of Code Section 13-8-51, a court may consider the economic hardship imposed upon an employee by enforcement of the covenant; provided, however, that this subsection shall not apply to contracts or agreements between or among those persons or entities listed in paragraphs (2) through (7) of subsection (a) of Code Section 13-8-52.
+Section:
+Previous
+13-8-50
+13-8-51
+13-8-52
+13-8-53
+13-8-54
+13-8-55
+13-8-56
+13-8-57
+13-8-58
+13-8-59
+Next
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 9 - Contracts for Future Delivery of Cotton, Grain, Etc.
+
+============================================================
+
+
+§ 13-9-2.
+§ 13-9-2 - Requirements for Valid and Enforceable Contracts of Sale for Future Delivery of Cotton, Grain, Stocks, and Other Items, Generally; Future Delivery Contracts Where Actual Delivery of Commodities Bought or Sold Not Contemplated Declared Unlawful
+
+(a) All contracts of sale for future delivery of cotton, grain, stocks, or other commodities (1) made in accordance with the rules of any board of trade, exchange, or similar institution, (2) actually executed on the floor of such board of trade, exchange, or similar institution and performed or discharged according to the rules thereof, and (3) placed with or through a regular member in good standing of a cotton exchange, grain exchange, board of trade, or similar institution organized under the laws of this state or any other state shall be valid and enforceable in the courts according to their terms, provided that contracts of sale for future delivery of cotton, in order to be valid and enforceable as provided in this Code section, must not only conform to the requirements of clauses (1), (2), and (3) of this subsection, but must also be made subject to the United States Cotton Futures Act, approved August 11, 1916, and any amendments thereto; provided, further, that if this clause should for any reason be held inoperative, then contracts for future delivery of cotton shall be valid and enforceable if they conform to the requirements of clauses (1), (2), and (3) of this subsection.
+(b) All contracts as defined in Code Section 13-9-1, where it is not contemplated by a party to the contract that there shall be an actual delivery of the commodities sold or bought, shall be unlawful.
+Section:
+13-9-1
+13-9-2
+13-9-3
+13-9-4
+13-9-5
+13-9-6
+13-9-7
+Next
+Last modified: October 14, 2016
+
+§ 13-9-3.
+§ 13-9-3 - Contracts of Sale for Future Delivery of Cotton, Grain, Stocks, or Other Commodities, Absent Bona Fide Intention of Parties As to Delivery, Execution of Contract Upon Floor of Exchange Declared Null and Void; Penalty for Entering Into or Assisting Entering Into Such Contracts
+
+(a) Any contract of sale for future delivery of cotton, grain, stocks, or other commodities shall be null and void and unenforceable in any court by any party thereto where it is not the bona fide intention of a party to the contract that the cotton, grain, stocks, or other commodities mentioned therein are to be delivered, but that the contract be settled according to or upon the basis of the public market quotations or prices made on any board of trade, exchange, or other similar institution, without any actual bona fide execution and the carrying out of such contract upon the floor of such exchange, board of trade, or similar institution, in accordance with the rules thereof.
+(b) Any person, either as agent or principal, who enters into or assists in making a contract of sale for the future delivery of cotton, grain, stocks, or other commodities of the nature provided for in subsection (a) of this Code section shall be guilty of a felony and, upon conviction, shall be imprisoned for a period not exceeding two years.
+Section:
+Previous
+13-9-1
+13-9-2
+13-9-3
+13-9-4
+13-9-5
+13-9-6
+13-9-7
+Next
+Last modified: October 14, 2016
+
+§ 13-9-6.
+§ 13-9-6 - Maintenance or Operation of Bucket Shop
+
+(a) As used in this Code section, the term "bucket shop" means any place of business in which contracts of the nature provided for in Code Section 13-9-3 are made.
+(b) The maintenance or operation of a bucket shop is prohibited.
+(c) Any person, either as agent or principal, who maintains or operates a bucket shop shall be guilty of a felony and, upon conviction, shall be imprisoned for a period not exceeding two years.
+Section:
+Previous
+13-9-1
+13-9-2
+13-9-3
+13-9-4
+13-9-5
+13-9-6
+13-9-7
+Next
+Last modified: October 14, 2016
+
+§ 13-9-7.
+§ 13-9-7 - Effect of Conflict Between Provisions of Chapter and Uniform Commercial Code
+
+In the event of a conflict between this chapter and Title 11, the "Uniform Commercial Code," the Uniform Commercial Code shall control.Title NoteChapter Note
+Section:
+Previous
+13-9-1
+13-9-2
+13-9-3
+13-9-4
+13-9-5
+13-9-6
+13-9-7
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 10 - Contracts for Public Works
+
+============================================================
+
+
+§ 13-10-80.
+§ 13-10-80 - Definitions; Contract Requirements; Application; Effect of Greater Benefits Contracted For; Evidence of Indebtedness Paid
+
+(a) As used in this Code section, the term:
+(1) "Contractor" means a person having a direct contract with the owner.
+(2) "Lower tier subcontractor" means a person other than a contractor having a direct contract with a subcontractor.
+(3) "Owner" means the state, any county, municipal corporation, authority, board of education, or other public board, public body, department, agency, instrumentality, or political subdivision of the state.
+(4) "Owner's authorized contract representative" means the architect or engineer in charge of the project for the owner or such other contract representative or officer as designated in the contract documents as the party representing the owner's interest regarding administration and oversight of the project.
+(5) "Subcontractor" means a person other than an owner having a direct contract with the contractor.
+(b) In any public works construction contract entered into on or after July 1, 2001, with an owner, as defined in paragraph (3) of subsection (a) of this Code section, such contract shall provide for the following:
+(1) After work has commenced at the construction site, progress payments to be made on some periodic basis, and at least monthly, based on the value of work completed as may be provided in the contract documents plus the value of materials and equipment suitably stored, insured, and protected at the construction site and at the owner's discretion such materials and equipment suitably stored, insured, and protected off site at a location approved by the owner's authorized contract representative when allowed by the contract documents, less retainage; and (2)(A) Retainage to a maximum of 10 percent of each progress payment; provided, however, when 50 percent of the contract value including change orders and other additions to the contract value provided for by the contract documents is due and the manner of completion of the contract work and its progress are reasonably satisfactory to the owner's authorized contract representative, the owner shall withhold no more retainage. At the discretion of the owner and with the approval of the contractor, the retainage of each subcontractor may be released separately as the subcontractor completes his or her work.
+(B) If, after discontinuing the retention, the owner's authorized contract representative determines that the work is unsatisfactory or has fallen behind schedule, retention may be resumed at the previous level. If retention is resumed by an owner, the contractor and subcontractors shall be entitled to resume withholding retainage accordingly.
+(C) At substantial completion of the work or such other standard of completion as may be provided in the contract documents and as the owner's authorized contract representative determines the work to be reasonably satisfactory, the owner shall, within 30 days after invoice and other appropriate documentation as may be required by the contract documents are provided, pay the retainage to the contractor. If at that time there are any remaining incomplete minor items, an amount equal to 200 percent of the value of each item as determined by the owner's authorized contract representative shall be withheld until such item or items are completed. The reduced retainage shall be shared by the contractor and subcontractors as their interests may appear.
+(D) The contractor shall, within ten days from the contractor's receipt of retainage from the owner, pass through payments to subcontractors and shall reduce each subcontractor's retainage in the same manner as the contractors retainage is reduced by the owner; provided, however, that the value of each subcontractor's work complete and in place equals 50 percent of his or her subcontract value, including approved change orders and other additions to the subcontract value, provided, further, that the work of the subcontractor is proceeding satisfactorily and the subcontractor has provided or provides such satisfactory reasonable assurances of continued performance and financial responsibility to complete his or her work including any warranty work as the contractor in his or her reasonable discretion may require, including, but not limited to, a payment and performance bond.
+(E) The subcontractor shall, within ten days from the subcontractor's receipt of retainage from the contractor, pass through payments to lower tier subcontractors and shall reduce each lower tier subcontractor's retainage in the same manner as the subcontractors retainage is reduced by the contractor; provided, however, that the value of each lower tier subcontractor's work complete and in place equals 50 percent of his or her subcontract value, including approved change orders and other additions to the subcontract value; provided, further, that the work of the lower tier subcontractor is proceeding satisfactorily and the lower tier subcontractor has provided or provides such satisfactory reasonable assurances of continued performance and financial responsibility to complete his or her work including any warranty work as the subcontractor in his or her reasonable discretion may require, including, but not limited to, a payment and performance bond.
+(c) This Code section shall not apply to:
+(1) Any contracts let by the Department of Transportation of this state for the construction, improvement, or maintenance of roads or highways in this state or purposes incidental thereto; or
+(2) Any contracts whose value or duration at the time of the award does not exceed $150,000.00 or 45 days in duration.
+(d) Contract and subcontract provisions inconsistent with the benefits extended to contractors, subcontractors, and lower tier subcontractors by this Code section shall be unenforceable; provided, however, that nothing in this Code section shall render unenforceable any contract or subcontract provisions allowing greater benefits to be extended to such contractors, subcontractors, or lower tier subcontractors, the provisions and benefits of this Code section being minimal only.
+(e) Nothing shall preclude a payor under this Code section, prior to making a payment, from requiring the payee to submit satisfactory evidence that all payrolls, material bills, and other indebtedness connected with the work have been paid.
+Section: 13-10-80
+13-10-81
+13-10-82
+13-10-83
+Next
+Last modified: October 14, 2016
+
+§ 13-10-81.
+§ 13-10-81 - Authorization and Procedure for Retention of Contractual Payments by State or Political Subdivisions; Procedure for Final Payment
+
+(a) Any department, agency, or instrumentality of the state or any political subdivision of the state is authorized to insert in the specifications of all contracts relating to the installation, extension, improvement, maintenance, or repair of any water or sewer facility a clause providing for the retention of amounts not exceeding 10 percent of the gross value of the completed work as may be provided for in the contract; provided, however, that no amounts shall be retained on estimates or progress payments submitted after 50 percent of the work on the project has been completed if in the opinion of the department, agency, or instrumentality of the state or any political subdivision thereof such work is satisfactory and has been completed on schedule. This will not affect the retained amounts on the first 50 percent of the work on the project which may continue to be held to ensure satisfactory completion of the project. If, after discontinuing the retention, the department, agency, or instrumentality of the state or any political subdivision thereof determines that the work is unsatisfactory or has fallen behind schedule, retention may be resumed at the previous level. Retainage shall be invested at the current market rate and any interest earned on the retained amount by such department, agency, or instrumentality of the state or any political subdivision of the state shall be paid to the contractor when the project has been completed within the time limits specified and for the price specified in the contract, or in any amendments or change orders approved in accord with the terms of the contract, as certified pursuant to subsection (b) of this Code section.
+(b) Final payment of the retained amounts to the contractor under the contract to which the retained amounts relate shall be made after certification by the engineer in charge of the project covered by the contract that the work has been satisfactorily completed and is accepted in accordance with the contract, plans, and specifications. Payment to the contractor of interest earned on the retained amounts shall be made after certification by the engineer in charge of the project covered by the contract that the work has been completed within the time specified and within the price specified in the contract.
+(c) At substantial completion of the work and as the governmental entity's authorized contract representative determines the work to be reasonably satisfactory, the governmental entity shall within 30 days after invoice and other appropriate documentation as may be required by the contract documents are provided pay the retainage to the contractor. If at that time there are any remaining incomplete minor items, an amount equal to 200 percent of the value of each item as determined by the governmental entity's authorized contract representative shall be withheld until such item or items are completed.
+Section:
+13-10-80
+13-10-81
+13-10-82
+13-10-83
+Next
+Last modified: October 14, 2016
+
+§ 13-10-82.
+§ 13-10-82 - Authorization and Procedure for Creation and Maintenance of Escrow Accounts by State or Political Subdivisions
+
+(a) In lieu of the retained amounts provided for in Code Section 13-10-81, any department, agency, or instrumentality of the state or any political subdivision of the state is authorized to insert a clause in the specifications of all contracts provided for in Code Section 13-10-81, providing for an alternate procedure for the maintenance of an escrow account in an amount at least equal to the amount authorized to be retained by the contract.
+(b) Any such escrow agreement entered into pursuant to this Code section must contain as a minimum the following provisions:
+(1) Only state or national banks chartered within the State of Georgia may serve as an escrow agent;
+(2) The escrow agent must limit the investment of funds of the contractor held in escrow in lieu of retained amounts provided for in Code Section 13-10-81 to negotiable certificates of deposits issued by any state or national bank in the State of Georgia (including, but not limited to, certificates of deposit issued by the bank acting as escrow agent) registered in the name of the escrow agent as such under escrow agreement with the contractor;
+(3) As interest on certificates of deposit held in escrow becomes due, it shall be collected by the escrow agent and paid to the contractor;
+(4) The escrow agent shall promptly acknowledge to the appropriate fiscal officer the amount and value of the escrow account held by the escrow agent, and any additions to the escrow account shall be reported immediately. Withdrawals from the escrow account shall only be made subject to the written approval of the fiscal officer of the department, agency, or instrumentality of the state or any political subdivision entering into the contract;
+(5) Upon default or overpayment of any contract subject to the procedure provided for in this Code section and upon the written demand of the fiscal officer provided for in paragraph (4) of this subsection, the escrow agent shall within ten days deliver a certified check to the appropriate fiscal officer in the amount of the escrow account balance relating to the contract in default;
+(6) The escrow account may be terminated upon completion and acceptance of the contract as provided for in Code Section 13-10-81;
+(7) All fees and expenses of the escrow agent shall be paid by the contractor to the escrow agent and, if not paid, shall constitute a lien on the interest accruing to the escrow account and shall be paid therefrom;
+(8) The escrow account shall constitute a specific pledge to the state or any political subdivision and the contractor shall not, except to his or her surety, otherwise assign, pledge, discount, sell, or transfer his or her interest in said escrow account, the funds of which shall not be subject to levy, garnishment, attachment, or any other process whatsoever; and
+(9) The form of the escrow agreement and provisions thereof in compliance with this Code section, as well as such other provisions as the appropriate fiscal officer shall from time to time prescribe, shall be subject to written approval of the fiscal officer. The approval of the escrow agreement by the appropriate fiscal officer shall authorize the escrow agent to accept appointment in such capacity.
+(c) The department, agency, or instrumentality of the state or political subdivision of this state shall not be liable to the contractor or his or her surety for the failure of the escrow agent to perform under the escrow agreement or for the failure of any bank to honor certificates of deposit issued by it which are held in the escrow account.
+Section:
+Previous
+13-10-80
+13-10-81
+13-10-82
+13-10-83
+Next
+Last modified: October 14, 2016
+
+§ 13-10-91.
+§ 13-10-91 - Verification of New Employee Eligibility; Applicability; Rules and Regulations
+
+(a) Every public employer, including, but not limited to, every municipality and county, shall register and participate in the federal work authorization program to verify employment eligibility of all newly hired employees. Upon federal authorization, a public employer shall permanently post the employer's federally issued user identification number and date of authorization, as established by the agreement for authorization, on the employer's website; provided, however, that if a local public employer does not maintain a website, then the local government shall submit such information to the Carl Vinson Institute of Government of the University of Georgia to be posted by the institute on the website created for local government audit and budget reporting. The Carl Vinson Institute of Government of the University of Georgia shall maintain the information submitted and provide instructions and submission guidelines for local governments. State departments, agencies, or instrumentalities may satisfy the requirement of this Code section by posting information required by this Code section on one website maintained and operated by the state.
+(b) (1) A public employer shall not enter into a contract for the physical performance of services unless the contractor registers and participates in the federal work authorization program. Before a bid for any such service is considered by a public employer, the bid shall include a signed, notarized affidavit from the contractor attesting to the following:
+(A) The affiant has registered with, is authorized to use, and uses the federal work authorization program;
+(B) The user identification number and date of authorization for the affiant;
+(C) The affiant will continue to use the federal work authorization program throughout the contract period; and
+(D) The affiant will contract for the physical performance of services in satisfaction of such contract only with subcontractors who present an affidavit to the contractor with the same information required by subparagraphs (A), (B), and (C) of this paragraph.
+An affidavit required by this subsection shall be considered an open public record once a public employer has entered into a contract for physical performance of services; provided, however, that any information protected from public disclosure by federal law or by Article 4 of Chapter 18 of Title 50 shall be redacted. Affidavits shall be maintained by the public employer for five years from the date of receipt.
+(2) A contractor shall not enter into any contract with a public employer for the physical performance of services unless the contractor registers and participates in the federal work authorization program.
+(3) A subcontractor shall not enter into any contract with a contractor unless such subcontractor registers and participates in the federal work authorization program. A subcontractor shall submit, at the time of such contract, an affidavit to the contractor in the same manner and with the same information required in paragraph (1) of this subsection. It shall be the duty of any subcontractor receiving an affidavit from a sub-subcontractor to forward notice to the contractor of the receipt, within five business days of receipt, of such affidavit. It shall be the duty of a subcontractor receiving notice of receipt of an affidavit from any sub-subcontractor that has contracted with a sub-subcontractor to forward, within five business days of receipt, a copy of such notice to the contractor.
+(4) A sub-subcontractor shall not enter into any contract with a subcontractor or sub-subcontractor unless such sub-subcontractor registers and participates in the federal work authorization program. A sub-subcontractor shall submit, at the time of such contract, an affidavit to the subcontractor or sub-subcontractor with whom such sub-subcontractor has privity of contract, in the same manner and with the same information required in paragraph (1) of this subsection. It shall be the duty of any sub-subcontractor to forward notice of receipt of any affidavit from a sub-subcontractor to the subcontractor or sub-subcontractor with whom such receiving sub-subcontractor has privity of contract.
+
+
+============================================================
+
+Chapter 11 - Prompt Payment
+
+============================================================
+
+
+§ 13-11-4.
+§ 13-11-4 - Time Limits for Payments to Contractors and Subcontractors
+
+(a) When a contractor has performed in accordance with the provisions of a contract, the owner shall pay the contractor within 15 days of receipt by the owner or the owner's representative of any payment request based upon work completed or service provided under the contract.
+(b) When a subcontractor has performed in accordance with the provisions of its subcontract and the subcontract conditions precedent to payment have been satisfied, the contractor shall pay to that subcontractor and each subcontractor shall pay to its subcontractor, within ten days of receipt by the contractor or subcontractor of each periodic or final payment, the full amount received for such subcontractor's work and materials based on work completed or service provided under the subcontract, provided that the subcontractor has provided or provides such satisfactory reasonable assurances of continued performance and financial responsibility to complete his or her work as the contractor in his or her reasonable discretion may require, including but not limited to a payment and performance bond.
+Section:
+Previous
+13-11-1
+13-11-2
+13-11-3
+13-11-4
+13-11-5
+13-11-6
+13-11-7
+13-11-8
+13-11-9
+13-11-10
+13-11-11
+Next
+Last modified: October 14, 2016
+
+§ 13-11-5.
+§ 13-11-5 - Grounds for Withholding Payments
+
+(a) Nothing in this chapter shall prevent the owner from withholding payment to its contractor because of the following: unsatisfactory job progress; defective construction which has not been remedied; disputed work; third-party claims filed or reasonable evidence that a claim will be filed; failure of the contractor or its subcontractor to make timely payments for labor, equipment, and materials; damage caused by the contractor to the owner, other contractors, or subcontractors; or reasonable evidence that the contract cannot be completed for the unpaid balance of the contract sum. In addition to the other bases for withholding set forth in this subsection, the owner may withhold a reasonable amount for retainage, provided that the retainage withheld by the owner shall not exceed the retainage percentage set forth in the contract between the contractor and the owner.
+(b) Nothing in this chapter shall prevent the contractor or a subcontractor from withholding payment to a subcontractor for: unsatisfactory job progress; defective construction which has not been remedied; disputed work; third-party claims filed or reasonable evidence that a claim will be filed; failure of the subcontractor to make timely payments for labor, equipment, and materials; damage caused by the subcontractor to the owner, the contractor, or contractors or subcontractors; or reasonable evidence that the subcontract cannot be completed for the unpaid balance of the subcontract sum. In addition to the other bases for withholding set forth in this subsection, the contractor or the subcontractor, as the case may be, may withhold a reasonable amount for retainage, provided that the retainage withheld shall not exceed the percentage retained from the contractor by the owner on account of the subcontractor's work.
+Section:
+Previous
+13-11-1
+13-11-2
+13-11-3
+13-11-4
+13-11-5
+13-11-6
+13-11-7
+13-11-8
+13-11-9
+13-11-10
+13-11-11
+Next
+Last modified: October 14, 2016
+
+§ 13-11-6.
+§ 13-11-6 - Conditions Authorizing Payments to Subcontractors
+
+The contractor shall, within ten days from the contractor's receipt of retainage from the owner, pass through payments to subcontractors and shall reduce each subcontractor's retainage in the same manner as the contractor's retainage is reduced by the owner, provided that the value of the subcontractor's work complete and in place equals 50 percent of his or her subcontract value, including approved change orders and other additions to the subcontract value and, provided, further, that the work of the subcontractor is proceeding satisfactorily and, provided, further, that the subcontractor has provided or provides such satisfactory reasonable assurances of continued performance and financial responsibility to complete his or her work as the contractor in his or her reasonable discretion may require, including but not limited to a payment and performance bond.
+Section:
+Previous
+13-11-1
+13-11-2
+13-11-3
+13-11-4
+13-11-5
+13-11-6
+13-11-7
+13-11-8
+13-11-9
+13-11-10
+13-11-11
+Next
+Last modified: October 14, 2016
+
+§ 13-11-7.
+§ 13-11-7 - Interest on Late Payments
+
+(a) Except as provided in Code Section 13-11-5, if a periodic or final payment to a contractor is delayed by more than 15 days or if a periodic or final payment to a subcontractor is delayed more than ten days after receipt of periodic or final payment by the contractor or subcontractor, the owner, contractor, or subcontractor, as the case may be, shall pay his or her contractor or subcontractor interest, beginning on the day following the due date, at the rate of 1 percent per month or a pro rata fraction thereof on the unpaid balance as may be due. However, no interest is due unless the person being charged interest has been notified of the provision of this Code section at the time the request for payment is made. Acceptance of progress payments or final payment shall release all claims for interest on said payments.
+(b) Nothing in this chapter shall prohibit owners, contractors, and subcontractors from agreeing by contract to rates of interest, payment periods, and contract and subcontract terms different from those stipulated in this Code section, and in this event, these contractual provisions shall control. In case of a willful breach of the contract provisions as to the time of payment, the interest rate specified in this Code section shall apply.
+Section:
+Previous
+13-11-1
+13-11-2
+13-11-3
+13-11-4
+13-11-5
+13-11-6
+13-11-7
+13-11-8
+13-11-9
+13-11-10
+13-11-11
+Next
+Last modified: October 14, 2016
+
+§ 13-11-10.
+§ 13-11-10 - Improvements Excepted From Chapter
+
+The provisions of this chapter do not apply to improvements to real property intended for residential purposes which consist of 12 or fewer residential units.
+Section:
+Previous
+13-11-1
+13-11-2
+13-11-3
+13-11-4
+13-11-5
+13-11-6
+13-11-7
+13-11-8
+13-11-9
+13-11-10
+13-11-11
+Next
+Last modified: October 14, 2016
+
+§ 13-11-11.
+§ 13-11-11 - Applicability of Chapter
+
+The provisions of this chapter do not apply to contracts or subcontracts entered into prior to January 1, 1995.
+Section:
+Previous
+13-11-1
+13-11-2
+13-11-3
+13-11-4
+13-11-5
+13-11-6
+13-11-7
+13-11-8
+13-11-9
+13-11-10
+13-11-11
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 12 - Automatic Renewal Provisions
+
+============================================================
+
+
+§ 13-12-2.
+§ 13-12-2 - Disclosure to Consumer of Automatic Renewal Provision in Contract or Contract Offer
+
+Any seller that sells, leases, or offers to sell or lease any service to a consumer pursuant to a service contract that has an automatic renewal provision shall disclose the automatic renewal provision clearly and conspicuously in the contract or contract offer.
+Section:
+13-12-1
+13-12-2
+13-12-3
+13-12-4
+13-12-5
+Next
+Last modified: October 14, 2016
+
+§ 13-12-3.
+§ 13-12-3 - Notice to Consumer Prior to Automatic Renewal of a Service Contract
+
+Any seller that sells, leases, or offers to sell or lease any service to a consumer pursuant to a service contract for a specified period of 12 months or more and that automatically renews for a specified period of more than one month, unless the consumer cancels the contract, shall provide the consumer with written or electronic notification of the automatic renewal provision. Notification shall be provided to the consumer no less than 30 days or no more than 60 days before the cancellation deadline pursuant to the automatic renewal provision. Such notification shall disclose clearly and conspicuously:
+(1) That unless the consumer cancels the contract, the contract will automatically renew; and
+(2) The methods by which the consumer may obtain details of the automatic renewal provision and cancellation procedure, including contacting the seller at a specified telephone number or address, referring to the contract, or any other method.
+Section:
+Previous
+13-12-1
+13-12-2
+13-12-3
+13-12-4
+13-12-5
+Next
+Last modified: October 14, 2016
+
+§ 13-12-5.
+§ 13-12-5 - Violation of Chapter
+
+A violation of this chapter renders the automatic renewal provision of a contract void and unenforceable.
+Section:
+Previous
+13-12-1
+13-12-2
+13-12-3
+13-12-4
+13-12-5
+Last modified: October 14, 2016

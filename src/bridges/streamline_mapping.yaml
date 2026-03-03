@@ -1,0 +1,234 @@
+# =============================================================================
+# STREAMLINE VRS → FORTRESS AUDIT LEDGER — Column Mapping Configuration
+# =============================================================================
+# This file maps Streamline's export column headers to Fortress GAAP accounts.
+#
+# HOW TO USE:
+#   1. Export a report from Streamline VRS (Nightly Audit, Owner Statement, etc.)
+#   2. Run: python3 src/bridges/streamline_ingest.py --detect <your_file.csv>
+#   3. The bridge will auto-match columns using this config
+#   4. Unmapped columns are flagged for manual review
+#
+# MAPPING RULES:
+#   Each entry under "column_maps" defines:
+#     - streamline_column: The header name in the CSV (case-insensitive, fuzzy-matched)
+#     - debit_account:     GAAP account code to DEBIT
+#     - credit_account:    GAAP account code to CREDIT
+#     - transaction_type:  Category for the journal entry
+#     - sign:              "positive" = amount as-is, "negative" = flip sign (for fees/deductions)
+#
+# IMPORTANT: Streamline exports are SINGLE-ENTRY (they show one side only).
+#   This bridge reconstructs the DOUBLE-ENTRY by inferring the other side.
+# =============================================================================
+
+version: "1.0"
+source_system: "streamline_vrs"
+description: "Streamline VRS Nightly Audit / Owner Statement export mapping"
+
+# ---------------------------------------------------------------------------
+# Reservation Identification (non-financial, used for reference_id/property)
+# ---------------------------------------------------------------------------
+identity_columns:
+  reservation_id:
+    aliases: ["Reservation ID", "Res ID", "Reservation #", "Res #", "ResID", "Confirmation", "Conf #"]
+  property_name:
+    aliases: ["Property", "Property Name", "Unit", "Unit Name", "Cabin", "Cabin Name", "Listing"]
+  guest_name:
+    aliases: ["Guest", "Guest Name", "Name", "Renter", "Renter Name"]
+  checkin_date:
+    aliases: ["Check-in", "Check-In", "Checkin", "Check In", "Arrival", "Arrival Date", "Start Date"]
+  checkout_date:
+    aliases: ["Check-out", "Check-Out", "Checkout", "Check Out", "Departure", "Departure Date", "End Date"]
+  booking_date:
+    aliases: ["Booking Date", "Booked On", "Created", "Created Date", "Date Booked"]
+  channel:
+    aliases: ["Channel", "Source", "Booking Source", "OTA", "Platform", "Origin"]
+  status:
+    aliases: ["Status", "Reservation Status", "State", "Booking Status"]
+
+# ---------------------------------------------------------------------------
+# Financial Column Mappings (Streamline → GAAP Double-Entry)
+# ---------------------------------------------------------------------------
+# PATTERN: Guest pays → Cash (DR) / Revenue or Liability (CR)
+#          Company pays out → Expense (DR) / Cash (CR)
+# ---------------------------------------------------------------------------
+column_maps:
+
+  # === REVENUE: Guest charges ===
+
+  - streamline_column: "Total Rent"
+    aliases: ["Rent", "Rental Amount", "Base Rent", "Nightly Rate Total", "Accommodation", "Lodging", "Room Charge"]
+    debit_account: "1000"    # Cash - Operating
+    credit_account: "4000"   # Rental Revenue
+    transaction_type: "booking"
+    sign: "positive"
+    description_template: "Rental revenue — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Cleaning Fee"
+    aliases: ["Clean Fee", "Cleaning", "Housekeeping", "Housekeeping Fee", "Turnover Fee"]
+    debit_account: "1000"    # Cash - Operating
+    credit_account: "4010"   # Cleaning Fee Revenue
+    transaction_type: "cleaning_fee"
+    sign: "positive"
+    description_template: "Cleaning fee — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Pet Fee"
+    aliases: ["Pet Charge", "Pet Deposit", "Animal Fee"]
+    debit_account: "1000"    # Cash - Operating
+    credit_account: "4020"   # Pet Fee Revenue
+    transaction_type: "booking"
+    sign: "positive"
+    description_template: "Pet fee — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Other Fees"
+    aliases: ["Additional Fees", "Extra Charges", "Misc Fees", "Resort Fee", "Service Fee", "Amenity Fee"]
+    debit_account: "1000"    # Cash - Operating
+    credit_account: "4200"   # Other Income
+    transaction_type: "booking"
+    sign: "positive"
+    description_template: "Other fees — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Late Fee"
+    aliases: ["Late Checkout Fee", "Late Payment Fee"]
+    debit_account: "1000"    # Cash - Operating
+    credit_account: "4030"   # Late Fee Revenue
+    transaction_type: "booking"
+    sign: "positive"
+    description_template: "Late fee — {property_name} — Res #{reservation_id}"
+
+  # === LIABILITIES: Tax collected (owed to government) ===
+
+  - streamline_column: "Tax"
+    aliases: ["Tax Collected", "Sales Tax", "Occupancy Tax", "Lodging Tax", "Total Tax",
+              "State Tax", "County Tax", "Hotel Tax", "TOT", "Transient Tax"]
+    debit_account: "1000"    # Cash - Operating
+    credit_account: "2200"   # Sales Tax Payable
+    transaction_type: "booking"
+    sign: "positive"
+    description_template: "Tax collected — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "County Tax"
+    aliases: ["Local Tax", "Municipal Tax"]
+    debit_account: "1000"    # Cash - Operating
+    credit_account: "2210"   # Occupancy Tax Payable
+    transaction_type: "booking"
+    sign: "positive"
+    description_template: "County/occupancy tax — {property_name} — Res #{reservation_id}"
+
+  # === LIABILITIES: Security deposits (held in trust) ===
+
+  - streamline_column: "Security Deposit"
+    aliases: ["Damage Deposit", "Refundable Deposit", "Damage Waiver"]
+    debit_account: "1020"    # Cash - Security Deposits
+    credit_account: "2010"   # Security Deposit Liability
+    transaction_type: "security_deposit"
+    sign: "positive"
+    description_template: "Security deposit held — {property_name} — Res #{reservation_id}"
+
+  # === EXPENSES: Costs deducted from owner payout ===
+
+  - streamline_column: "Management Fee"
+    aliases: ["Mgmt Fee", "Management Commission", "Commission", "PM Fee",
+              "Property Management Fee", "Manager Fee", "Manager Commission"]
+    debit_account: "5100"    # Commission Expense
+    credit_account: "4100"   # Management Fee Revenue
+    transaction_type: "invoice"
+    sign: "positive"
+    description_template: "Management commission — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Cleaning Cost"
+    aliases: ["Cleaning Expense", "Housekeeper Pay", "Cleaner Cost", "Turnover Cost"]
+    debit_account: "5000"    # Cleaning Expense
+    credit_account: "1000"   # Cash - Operating
+    transaction_type: "invoice"
+    sign: "positive"
+    description_template: "Cleaning expense — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Maintenance"
+    aliases: ["Repairs", "Maintenance Cost", "Repair Cost", "Fix", "Handyman"]
+    debit_account: "5010"    # Maintenance & Repairs
+    credit_account: "1000"   # Cash - Operating
+    transaction_type: "invoice"
+    sign: "positive"
+    description_template: "Maintenance/repair — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Channel Fee"
+    aliases: ["OTA Fee", "OTA Commission", "Booking Fee", "VRBO Fee", "Airbnb Fee",
+              "Stripe Fee", "Processing Fee", "CC Fee", "Credit Card Fee", "Merchant Fee"]
+    debit_account: "5100"    # Commission Expense
+    credit_account: "1000"   # Cash - Operating
+    transaction_type: "invoice"
+    sign: "positive"
+    description_template: "Channel/processing fee — {property_name} — Res #{reservation_id}"
+
+  - streamline_column: "Insurance"
+    aliases: ["Insurance Fee", "Damage Protection", "Travel Insurance"]
+    debit_account: "5040"    # Insurance
+    credit_account: "1000"   # Cash - Operating
+    transaction_type: "invoice"
+    sign: "positive"
+    description_template: "Insurance — {property_name} — Res #{reservation_id}"
+
+  # === OWNER PAYOUTS: Distribution to property owners ===
+
+  - streamline_column: "Owner Payout"
+    aliases: ["Owner Payment", "Net to Owner", "Owner Distribution", "Net Owner",
+              "Owner Net", "Payout", "Owner Proceeds", "Amount Due Owner"]
+    debit_account: "2000"    # Trust Liability - Owners (reduce what we owe)
+    credit_account: "1010"   # Cash - Trust (pay from trust account)
+    transaction_type: "owner_draw"
+    sign: "positive"
+    description_template: "Owner payout — {property_name} — Res #{reservation_id}"
+
+  # === TOTAL CHARGES (for reconciliation, not double-posted) ===
+
+  - streamline_column: "Total Charges"
+    aliases: ["Total", "Grand Total", "Total Amount", "Gross Revenue", "Total Revenue",
+              "Total Booking", "Gross Booking"]
+    reconciliation_only: true
+    description: "Used for reconciliation — not posted as a separate entry"
+
+  - streamline_column: "Total Payments"
+    aliases: ["Payments", "Amount Paid", "Paid", "Payment Total"]
+    reconciliation_only: true
+    description: "Used for reconciliation — not posted as a separate entry"
+
+  - streamline_column: "Balance"
+    aliases: ["Amount Due", "Balance Due", "Outstanding", "Remaining"]
+    reconciliation_only: true
+    description: "Used for reconciliation — not posted as a separate entry"
+
+  - streamline_column: "Refund"
+    aliases: ["Refund Amount", "Credit", "Adjustment"]
+    debit_account: "4000"    # Rental Revenue (reverse)
+    credit_account: "1000"   # Cash - Operating (return to guest)
+    transaction_type: "adjustment"
+    sign: "positive"
+    description_template: "Refund — {property_name} — Res #{reservation_id}"
+
+# ---------------------------------------------------------------------------
+# Property Name Normalization
+# ---------------------------------------------------------------------------
+# Maps messy Streamline property names to canonical Fortress cabin IDs.
+# ---------------------------------------------------------------------------
+property_aliases:
+  "above_the_pines":     ["Above The Pines", "Above the Pines", "ATP"]
+  "aska_adventure":      ["Aska Adventure Lodge", "Aska Adventure", "Aska Lodge"]
+  "aska_escape":         ["Aska Escape", "Aska Escape Cabin"]
+  "aska_outpost":        ["Aska Adventure Outpost", "Aska Outpost"]
+  "bears_den":           ["Bears Den", "Bear's Den", "Bears Den Cabin"]
+  "bella_vista":         ["Bella Vista Lodge", "Bella Vista", "BVL"]
+  "buckhorn_lodge":      ["Buckhorn Lodge", "Buckhorn"]
+  "casa_bella":          ["Casa Bella", "Casa Bella Cabin"]
+  "crooked_creek":       ["Crooked Creek Cabin", "Crooked Creek"]
+  "deja_view":           ["Deja View", "Deja View Cabin", "Déjà View"]
+  "fallen_timber":       ["Fallen Timber", "Fallen Timber Cabin"]
+  "five_peaks":          ["Five Peaks Cabin", "Five Peaks", "5 Peaks"]
+  "majestic_lake":       ["Majestic Lake", "Majestic Lake Cabin"]
+  "melancholy_moose":    ["Melancholy Moose Lodge", "Melancholy Moose", "Moose Lodge", "Mel Moose"]
+  "morningstar_vista":   ["Morningstar Vista", "Morningstar", "Morning Star"]
+  "rivers_edge":         ["Rivers Edge", "River's Edge", "Rivers Edge Cabin"]
+  "riverview_lodge":     ["RiverView Lodge", "Riverview Lodge", "Riverview", "River View"]
+  "rolling_river":       ["Rolling River Cabin", "Rolling River"]  # SOLD 2025-05-30
+  "royal_mountain":      ["Royal Mountain Lodge", "Royal Mountain"]
+  "solitude":            ["Solitude", "Solitude Cabin"]

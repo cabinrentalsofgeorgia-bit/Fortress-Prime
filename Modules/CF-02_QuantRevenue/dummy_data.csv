@@ -1,0 +1,21 @@
+date,weather_condition,temperature_f,wind_mph,event_name,event_weight,event_distance_miles,expected_attendance,competitor_direction,competitor_rate_change_24h,avg_competitor_rate,competitor_sample_size,competitor_rate_change_7d
+2026-02-14,snow,30,8,Valentines Weekend,7,10,3000,rising,12.0,260.0,6,20.0
+2026-03-15,rain,55,15,none,0,0,0,falling,-10.0,230.0,5,-18.0
+2026-04-10,sunny,68,6,Wildflower Festival,6,15,5000,rising,8.0,270.0,7,15.0
+2026-05-23,partly_cloudy,74,10,Memorial Day Weekend,8,5,12000,rising,25.0,300.0,8,40.0
+2026-06-20,sunny,82,5,Blue Ridge Blues Festival,8,12,8000,rising,15.0,290.0,7,25.0
+2026-07-04,extreme_heat,95,3,4th of July Celebration,10,8,20000,rising,35.0,340.0,10,55.0
+2026-08-15,thunderstorm,78,25,none,0,0,0,falling,-15.0,275.0,6,-25.0
+2026-09-05,clear,72,8,Labor Day Weekend,7,10,6000,rising,10.0,285.0,7,18.0
+2026-10-10,sunny,58,5,Fall Foliage Peak,9,0,25000,rising,45.0,360.0,12,70.0
+2026-10-17,rain,52,12,Blue Ridge Arts Festival,7,8,6000,stable,0.0,340.0,9,20.0
+2026-11-26,cloudy,42,10,Thanksgiving Week,9,5,15000,rising,30.0,320.0,8,50.0
+2026-12-24,snow,28,6,Christmas Week,10,8,15000,rising,40.0,350.0,10,65.0
+2026-12-31,light_snow,25,8,New Years Eve,9,10,10000,rising,35.0,345.0,9,55.0
+2026-01-15,cloudy,35,18,none,0,0,0,falling,-20.0,200.0,5,-30.0
+2026-02-10,overcast,38,14,none,0,0,0,stable,-5.0,210.0,4,-8.0
+2026-06-15,partly_cloudy,78,10,Aska Adventure Race,5,5,2000,rising,8.0,280.0,6,12.0
+2026-07-18,clear,85,4,Scenic Railway Festival,6,12,4000,stable,2.0,295.0,7,5.0
+2026-09-20,sunny,65,7,Apple Picking Season,5,25,3000,stable,0.0,270.0,6,8.0
+2026-10-31,fog,48,3,Halloween in Blue Ridge,6,10,5000,rising,15.0,330.0,8,30.0
+2026-11-15,light_rain,45,12,none,1,0,0,falling,-8.0,260.0,5,-15.0

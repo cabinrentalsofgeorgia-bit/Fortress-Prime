@@ -1,0 +1,463 @@
+{
+  "extracted_at": "2026-02-17T12:17:37.158182",
+  "categories": [
+    "Your Stay",
+    "Your Stay",
+    "Your Stay",
+    "About Our Home",
+    "About Our Home",
+    "About Our Home",
+    "Check-out Procedures",
+    "Check-out Procedures",
+    "Check-out Procedures",
+    "Rental Rules",
+    "Rental Rules",
+    "Rental Rules",
+    "Emergency Info",
+    "Emergency Info",
+    "Emergency Info"
+  ],
+  "count": 70,
+  "items": [
+    {
+      "title": "Welcome",
+      "content": "Welcome [FirstName]! We hope you have a memorable Blue Ridge experience.\nTo help you enjoy a seamless getaway, we’ve packed this guide with everything you need to know about the property and our rental guidelines.\nDon't forget to check out our Area Guide as well! It’s full of our favorite local recommendations to help you make the most of your time in Blue Ridge.\nWe are here if you need us! Call or text us at 706-525-5482.",
+      "links": [
+        "tel: 706-525-5482"
+      ],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Property Photo",
+      "content": "",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Address",
+      "content": "[PropertyId] is located at: [PropertyAddress].",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Directions",
+      "content": "",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Check-In",
+      "content": "Check-in is at 3:30 pm. We ask that you respect this time frame which allows our cleaners to have the house ready for you. Unless you have an approved early check-in, your Door Code will be texted to you at 3:15, along with the WiFi Password.",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Request Early Check-In",
+      "content": "An early check-in may be available! Our early check-in service is $50 per hour (excluding tax + processing) up to 2 hours prior to 3:30pm. Send a request below and we will let you know if we can accommodate your early arrival.\n[EarlyCheckIn]",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Request Late Check-Out",
+      "content": "We may be able to offer you a late checkout. This service is $50 per hour (excluding tax + processing) up to 2 hours after 10am. Click the button below to send us the request, and we will let you know if we can accommodate it!\n[LateCheckOut]",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Door Code",
+      "content": "Unless you have an approved early check-in, the door code will be texted to you on day of arrival at 3:15 pm, along with the WiFi password.",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Parking",
+      "content": "There is parking for 4-5 cars\nParking on the right of way of any road or street overnight is prohibited.",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "WiFi",
+      "content": "Your Wifi Password: [WifiSecurityKey]\nThe WiFi information will also be texted to you along with the Door Code so that you have both very handy! If you have any problems, please text us.",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Not Pet Friendly",
+      "content": "This home does not allow pets due to the homeowners' request.",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Pet Information",
+      "content": "Pet Friendly\nAll pets must be approved by management. Because a home is deemed pet friendly does not mean that pets are allowed without prior approval and appropriate fees. Some of our homes have certain pet restrictions according to breed, age, etc.\nUnfortunately we hate to do this, but if a pet is discovered the pet fees, pet deposit, and pet cleaning fee will be doubled.\nIf your pet has been approved, please follow the rules regarding your pet.\nPet Information.pdf",
+      "links": [
+        "https://public.ruebarue.com/welcome_guide/attachments/CA558EDB-EE9E-465A-AFF9-4A363A634A0E.pdf"
+      ],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Grocery Stores",
+      "content": "Know where the Grocery Stores are before heading to your cabin ~ for liquor stores, stop in Ellijay. Blue Ridge grocery stores carry beer and wine only.\nWalmart - as you come into Blue Ridge, at the big intersection (McDonalds), turn LEFT. At next light turn LEFT. Walmart is to the RIGHT.\nIngles - as you come into Blue Ridge, stay on Hwy 515. At the Orvin Lance Connecter intersection where you see CVS and South Bank to your right and Taco Bell on your left, you will turn LEFT. Past the Taco Bell, turn RIGHT into Ingles parking lot.\nFood Lion - Turn RIGHT at the Conoco gas station. At the three-way stop sign, turn LEFT and then LEFT again into Food Lion parking lot.",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Rebook Direct and Save",
+      "content": "We love our repeat guests and can't wait for your return! Use your Loyalty Reward Points to save! Must be applied at time of booking to a new reservation made over the phone.",
+      "links": [],
+      "category": "Your Stay"
+    },
+    {
+      "title": "Welcome",
+      "content": "Welcome [FirstName]! We hope you have a memorable Blue Ridge experience.\nTo help you enjoy a seamless getaway, we’ve packed this guide with everything you need to know about the property and our rental guidelines.\nDon't forget to check out our Area Guide as well! It’s full of our favorite local recommendations to help you make the most of your time in Blue Ridge.\nWe are here if you need us! Call or text us at 706-525-5482.",
+      "links": [
+        "tel: 706-525-5482"
+      ],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Property Photo",
+      "content": "",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Address",
+      "content": "[PropertyId] is located at: [PropertyAddress].",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Directions",
+      "content": "",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Check-In",
+      "content": "Check-in is at 3:30 pm. We ask that you respect this time frame which allows our cleaners to have the house ready for you. Unless you have an approved early check-in, your Door Code will be texted to you at 3:15, along with the WiFi Password.",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Request Early Check-In",
+      "content": "An early check-in may be available! Our early check-in service is $50 per hour (excluding tax + processing) up to 2 hours prior to 3:30pm. Send a request below and we will let you know if we can accommodate your early arrival.\n[EarlyCheckIn]",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Request Late Check-Out",
+      "content": "We may be able to offer you a late checkout. This service is $50 per hour (excluding tax + processing) up to 2 hours after 10am. Click the button below to send us the request, and we will let you know if we can accommodate it!\n[LateCheckOut]",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Door Code",
+      "content": "Unless you have an approved early check-in, the door code will be texted to you on day of arrival at 3:15 pm, along with the WiFi password.",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Parking",
+      "content": "There is parking for 4-5 cars\nParking on the right of way of any road or street overnight is prohibited.",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "WiFi",
+      "content": "Your Wifi Password: [WifiSecurityKey]\nThe WiFi information will also be texted to you along with the Door Code so that you have both very handy! If you have any problems, please text us.",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Not Pet Friendly",
+      "content": "This home does not allow pets due to the homeowners' request.",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Pet Information",
+      "content": "Pet Friendly\nAll pets must be approved by management. Because a home is deemed pet friendly does not mean that pets are allowed without prior approval and appropriate fees. Some of our homes have certain pet restrictions according to breed, age, etc.\nUnfortunately we hate to do this, but if a pet is discovered the pet fees, pet deposit, and pet cleaning fee will be doubled.\nIf your pet has been approved, please follow the rules regarding your pet.\nPet Information.pdf",
+      "links": [
+        "https://public.ruebarue.com/welcome_guide/attachments/CA558EDB-EE9E-465A-AFF9-4A363A634A0E.pdf"
+      ],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Grocery Stores",
+      "content": "Know where the Grocery Stores are before heading to your cabin ~ for liquor stores, stop in Ellijay. Blue Ridge grocery stores carry beer and wine only.\nWalmart - as you come into Blue Ridge, at the big intersection (McDonalds), turn LEFT. At next light turn LEFT. Walmart is to the RIGHT.\nIngles - as you come into Blue Ridge, stay on Hwy 515. At the Orvin Lance Connecter intersection where you see CVS and South Bank to your right and Taco Bell on your left, you will turn LEFT. Past the Taco Bell, turn RIGHT into Ingles parking lot.\nFood Lion - Turn RIGHT at the Conoco gas station. At the three-way stop sign, turn LEFT and then LEFT again into Food Lion parking lot.",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Rebook Direct and Save",
+      "content": "We love our repeat guests and can't wait for your return! Use your Loyalty Reward Points to save! Must be applied at time of booking to a new reservation made over the phone.",
+      "links": [],
+      "category": "About Our Home"
+    },
+    {
+      "title": "Welcome",
+      "content": "Welcome [FirstName]! We hope you have a memorable Blue Ridge experience.\nTo help you enjoy a seamless getaway, we’ve packed this guide with everything you need to know about the property and our rental guidelines.\nDon't forget to check out our Area Guide as well! It’s full of our favorite local recommendations to help you make the most of your time in Blue Ridge.\nWe are here if you need us! Call or text us at 706-525-5482.",
+      "links": [
+        "tel: 706-525-5482"
+      ],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Property Photo",
+      "content": "",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Address",
+      "content": "[PropertyId] is located at: [PropertyAddress].",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Directions",
+      "content": "",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Check-In",
+      "content": "Check-in is at 3:30 pm. We ask that you respect this time frame which allows our cleaners to have the house ready for you. Unless you have an approved early check-in, your Door Code will be texted to you at 3:15, along with the WiFi Password.",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Request Early Check-In",
+      "content": "An early check-in may be available! Our early check-in service is $50 per hour (excluding tax + processing) up to 2 hours prior to 3:30pm. Send a request below and we will let you know if we can accommodate your early arrival.\n[EarlyCheckIn]",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Request Late Check-Out",
+      "content": "We may be able to offer you a late checkout. This service is $50 per hour (excluding tax + processing) up to 2 hours after 10am. Click the button below to send us the request, and we will let you know if we can accommodate it!\n[LateCheckOut]",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Door Code",
+      "content": "Unless you have an approved early check-in, the door code will be texted to you on day of arrival at 3:15 pm, along with the WiFi password.",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Parking",
+      "content": "There is parking for 4-5 cars\nParking on the right of way of any road or street overnight is prohibited.",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "WiFi",
+      "content": "Your Wifi Password: [WifiSecurityKey]\nThe WiFi information will also be texted to you along with the Door Code so that you have both very handy! If you have any problems, please text us.",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Not Pet Friendly",
+      "content": "This home does not allow pets due to the homeowners' request.",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Pet Information",
+      "content": "Pet Friendly\nAll pets must be approved by management. Because a home is deemed pet friendly does not mean that pets are allowed without prior approval and appropriate fees. Some of our homes have certain pet restrictions according to breed, age, etc.\nUnfortunately we hate to do this, but if a pet is discovered the pet fees, pet deposit, and pet cleaning fee will be doubled.\nIf your pet has been approved, please follow the rules regarding your pet.\nPet Information.pdf",
+      "links": [
+        "https://public.ruebarue.com/welcome_guide/attachments/CA558EDB-EE9E-465A-AFF9-4A363A634A0E.pdf"
+      ],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Grocery Stores",
+      "content": "Know where the Grocery Stores are before heading to your cabin ~ for liquor stores, stop in Ellijay. Blue Ridge grocery stores carry beer and wine only.\nWalmart - as you come into Blue Ridge, at the big intersection (McDonalds), turn LEFT. At next light turn LEFT. Walmart is to the RIGHT.\nIngles - as you come into Blue Ridge, stay on Hwy 515. At the Orvin Lance Connecter intersection where you see CVS and South Bank to your right and Taco Bell on your left, you will turn LEFT. Past the Taco Bell, turn RIGHT into Ingles parking lot.\nFood Lion - Turn RIGHT at the Conoco gas station. At the three-way stop sign, turn LEFT and then LEFT again into Food Lion parking lot.",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Rebook Direct and Save",
+      "content": "We love our repeat guests and can't wait for your return! Use your Loyalty Reward Points to save! Must be applied at time of booking to a new reservation made over the phone.",
+      "links": [],
+      "category": "Check-out Procedures"
+    },
+    {
+      "title": "Welcome",
+      "content": "Welcome [FirstName]! We hope you have a memorable Blue Ridge experience.\nTo help you enjoy a seamless getaway, we’ve packed this guide with everything you need to know about the property and our rental guidelines.\nDon't forget to check out our Area Guide as well! It’s full of our favorite local recommendations to help you make the most of your time in Blue Ridge.\nWe are here if you need us! Call or text us at 706-525-5482.",
+      "links": [
+        "tel: 706-525-5482"
+      ],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Property Photo",
+      "content": "",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Address",
+      "content": "[PropertyId] is located at: [PropertyAddress].",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Directions",
+      "content": "",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Check-In",
+      "content": "Check-in is at 3:30 pm. We ask that you respect this time frame which allows our cleaners to have the house ready for you. Unless you have an approved early check-in, your Door Code will be texted to you at 3:15, along with the WiFi Password.",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Request Early Check-In",
+      "content": "An early check-in may be available! Our early check-in service is $50 per hour (excluding tax + processing) up to 2 hours prior to 3:30pm. Send a request below and we will let you know if we can accommodate your early arrival.\n[EarlyCheckIn]",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Request Late Check-Out",
+      "content": "We may be able to offer you a late checkout. This service is $50 per hour (excluding tax + processing) up to 2 hours after 10am. Click the button below to send us the request, and we will let you know if we can accommodate it!\n[LateCheckOut]",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Door Code",
+      "content": "Unless you have an approved early check-in, the door code will be texted to you on day of arrival at 3:15 pm, along with the WiFi password.",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Parking",
+      "content": "There is parking for 4-5 cars\nParking on the right of way of any road or street overnight is prohibited.",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "WiFi",
+      "content": "Your Wifi Password: [WifiSecurityKey]\nThe WiFi information will also be texted to you along with the Door Code so that you have both very handy! If you have any problems, please text us.",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Not Pet Friendly",
+      "content": "This home does not allow pets due to the homeowners' request.",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Pet Information",
+      "content": "Pet Friendly\nAll pets must be approved by management. Because a home is deemed pet friendly does not mean that pets are allowed without prior approval and appropriate fees. Some of our homes have certain pet restrictions according to breed, age, etc.\nUnfortunately we hate to do this, but if a pet is discovered the pet fees, pet deposit, and pet cleaning fee will be doubled.\nIf your pet has been approved, please follow the rules regarding your pet.\nPet Information.pdf",
+      "links": [
+        "https://public.ruebarue.com/welcome_guide/attachments/CA558EDB-EE9E-465A-AFF9-4A363A634A0E.pdf"
+      ],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Grocery Stores",
+      "content": "Know where the Grocery Stores are before heading to your cabin ~ for liquor stores, stop in Ellijay. Blue Ridge grocery stores carry beer and wine only.\nWalmart - as you come into Blue Ridge, at the big intersection (McDonalds), turn LEFT. At next light turn LEFT. Walmart is to the RIGHT.\nIngles - as you come into Blue Ridge, stay on Hwy 515. At the Orvin Lance Connecter intersection where you see CVS and South Bank to your right and Taco Bell on your left, you will turn LEFT. Past the Taco Bell, turn RIGHT into Ingles parking lot.\nFood Lion - Turn RIGHT at the Conoco gas station. At the three-way stop sign, turn LEFT and then LEFT again into Food Lion parking lot.",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Rebook Direct and Save",
+      "content": "We love our repeat guests and can't wait for your return! Use your Loyalty Reward Points to save! Must be applied at time of booking to a new reservation made over the phone.",
+      "links": [],
+      "category": "Rental Rules"
+    },
+    {
+      "title": "Welcome",
+      "content": "Welcome [FirstName]! We hope you have a memorable Blue Ridge experience.\nTo help you enjoy a seamless getaway, we’ve packed this guide with everything you need to know about the property and our rental guidelines.\nDon't forget to check out our Area Guide as well! It’s full of our favorite local recommendations to help you make the most of your time in Blue Ridge.\nWe are here if you need us! Call or text us at 706-525-5482.",
+      "links": [
+        "tel: 706-525-5482"
+      ],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Property Photo",
+      "content": "",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Address",
+      "content": "[PropertyId] is located at: [PropertyAddress].",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Directions",
+      "content": "",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Check-In",
+      "content": "Check-in is at 3:30 pm. We ask that you respect this time frame which allows our cleaners to have the house ready for you. Unless you have an approved early check-in, your Door Code will be texted to you at 3:15, along with the WiFi Password.",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Request Early Check-In",
+      "content": "An early check-in may be available! Our early check-in service is $50 per hour (excluding tax + processing) up to 2 hours prior to 3:30pm. Send a request below and we will let you know if we can accommodate your early arrival.\n[EarlyCheckIn]",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Request Late Check-Out",
+      "content": "We may be able to offer you a late checkout. This service is $50 per hour (excluding tax + processing) up to 2 hours after 10am. Click the button below to send us the request, and we will let you know if we can accommodate it!\n[LateCheckOut]",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Door Code",
+      "content": "Unless you have an approved early check-in, the door code will be texted to you on day of arrival at 3:15 pm, along with the WiFi password.",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Parking",
+      "content": "There is parking for 4-5 cars\nParking on the right of way of any road or street overnight is prohibited.",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "WiFi",
+      "content": "Your Wifi Password: [WifiSecurityKey]\nThe WiFi information will also be texted to you along with the Door Code so that you have both very handy! If you have any problems, please text us.",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Not Pet Friendly",
+      "content": "This home does not allow pets due to the homeowners' request.",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Pet Information",
+      "content": "Pet Friendly\nAll pets must be approved by management. Because a home is deemed pet friendly does not mean that pets are allowed without prior approval and appropriate fees. Some of our homes have certain pet restrictions according to breed, age, etc.\nUnfortunately we hate to do this, but if a pet is discovered the pet fees, pet deposit, and pet cleaning fee will be doubled.\nIf your pet has been approved, please follow the rules regarding your pet.\nPet Information.pdf",
+      "links": [
+        "https://public.ruebarue.com/welcome_guide/attachments/CA558EDB-EE9E-465A-AFF9-4A363A634A0E.pdf"
+      ],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Grocery Stores",
+      "content": "Know where the Grocery Stores are before heading to your cabin ~ for liquor stores, stop in Ellijay. Blue Ridge grocery stores carry beer and wine only.\nWalmart - as you come into Blue Ridge, at the big intersection (McDonalds), turn LEFT. At next light turn LEFT. Walmart is to the RIGHT.\nIngles - as you come into Blue Ridge, stay on Hwy 515. At the Orvin Lance Connecter intersection where you see CVS and South Bank to your right and Taco Bell on your left, you will turn LEFT. Past the Taco Bell, turn RIGHT into Ingles parking lot.\nFood Lion - Turn RIGHT at the Conoco gas station. At the three-way stop sign, turn LEFT and then LEFT again into Food Lion parking lot.",
+      "links": [],
+      "category": "Emergency Info"
+    },
+    {
+      "title": "Rebook Direct and Save",
+      "content": "We love our repeat guests and can't wait for your return! Use your Loyalty Reward Points to save! Must be applied at time of booking to a new reservation made over the phone.",
+      "links": [],
+      "category": "Emergency Info"
+    }
+  ]
+}

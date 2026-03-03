@@ -1,0 +1,32 @@
+name: Ledger Financial Vision OCR
+version: v1
+division: finance
+description: >
+  Sends scanned document images to LLaVA Vision for Sovereign OCR
+  classification. Used by Division Finance (Ledger) Phase 3.
+  Returns structured JSON from visual document inspection.
+
+model:
+  recommended: llava:v1.6
+  temperature: 0.1
+  num_predict: 500
+  endpoint: generate
+  requires_images: true
+
+variables: []
+
+template: |
+  You are a financial document analyzer performing OCR.
+  Look at this document image carefully and extract the following into a JSON object.
+  Return ONLY valid JSON — no markdown, no explanation.
+
+  {{
+      "doc_type": "Tax_Return|Receipt|Invoice|Bank_Statement|Statement|Tax_Form_1099|Tax_Form_K1|Tax_Form_W2|Deed|Contract|Lease|Check|Other",
+      "category": "Rental_Income|Operating_Expense|Tax_Filing|Property|Legal|Financial|Personal",
+      "vendor": "company or vendor name if visible, else null",
+      "client_name": "person or guest name if visible, else null",
+      "amount": total dollar amount as number if visible, else null,
+      "date": "YYYY-MM-DD if visible, else null",
+      "tax_year": "YYYY if determinable, else null",
+      "summary": "one sentence describing what this document is"
+  }}

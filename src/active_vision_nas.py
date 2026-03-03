@@ -8,7 +8,7 @@ import sys
 DB_HOST = "192.168.0.100"
 DB_NAME = "fortress_db"
 DB_USER = "miner_bot"
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 IMAGE_DIR = "/mnt/fortress_ai/raw_images"
 
 def get_db():

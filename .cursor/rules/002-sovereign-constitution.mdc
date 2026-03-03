@@ -1,53 +1,109 @@
+---
+description: Canonical governance framework, ownership matrix, and policy change workflow
+alwaysApply: true
+---
+
 # SOVEREIGN CONSTITUTION ENFORCEMENT (Amendment II)
 
-## Governing Documents
-- **Constitution:** `CONSTITUTION.md` — ethical and operational boundaries.
-- **Requirements:** `REQUIREMENTS.md` — non-negotiable technical specifications.
-- **Atlas:** `fortress_atlas.yaml` — sector registry and routing rules.
-- **Config:** `config.py` — topology, blocklists, environment-driven constants.
+## Governing Documents (The Sovereign Law)
 
-These four files form the "Sovereign Law." All code must comply.
+| Document | Path | Scope |
+|----------|------|-------|
+| **Constitution** | `CONSTITUTION.md` | Ethical and operational boundaries |
+| **Requirements** | `REQUIREMENTS.md` | Non-negotiable technical specifications |
+| **Atlas** | `fortress_atlas.yaml` | Sector registry and routing rules (6 sectors) |
+| **Config** | `config.py` | Topology, blocklists, environment-driven constants |
+
+### Amendments (Cursor Rules — All Binding)
+
+| # | Rule | Scope |
+|---|------|-------|
+| 000 | Enterprise Constitution | Cluster state, OODA loop, divisions, Taylor Standard |
+| 001 | Titan Protocol | NIM mandate, DEFCON modes, Council of Intelligence |
+| 002 | Sovereign Constitution | Data sovereignty, hierarchy, forbidden patterns |
+| 003 | Legal Command Center | Multi-case CRM, evidence preservation, deadlines |
+| 004 | Quality Gate | End-to-end verification before declaring complete |
+| 005 | Fortress Guest Platform | Sync engine (9 phases), API registry, schema governance |
+| 006 | Security & Compliance | RBAC, secrets management, PII, audit trail, incident response |
+| 007 | Financial Data Governance | Trust accounting, owner reconciliation, tax compliance |
+| 008 | API & Integration Standards | Versioning, error codes, rate limiting, contracts |
+| 009 | Testing & Deployment | Coverage mandates, CI gates, deployment protocol |
+| 010 | NVIDIA DGX/NIM Operations | DGX Spark lifecycle, NIM version pinning, SLOs |
+| 011 | Autonomous Swarm Directive | Self-healing, agentic behavior, recursive learning |
+| 012 | Agentic Copilot Principle | Human-in-the-loop draft queue, zero-touch governance |
+| 013 | Glass Discoverability Mandate | Command Center nav integration, orphan-route prevention |
+| 014 | VRS Directory Enforcement | CROG-VRS path boundaries, file naming, module isolation |
+
+All code must comply with the Sovereign Law AND all Amendments.
+
+## Canonical Ownership Matrix (Single Source Governance)
+
+Each policy domain has exactly one canonical owner rule. Other rules must reference owner sections instead of duplicating policy text.
+
+| Domain | Canonical Owner | Reference Rule |
+|---|---|---|
+| Infrastructure, DEFCON, runtime, NIM | Titan Protocol | `001-titan-protocol.mdc` |
+| Legal command center operations | Legal Command Center | `003-legal-command-center.mdc` |
+| Security/compliance controls | Security & Compliance | `006-security-compliance.mdc` |
+| Financial governance and trust accounting | Financial Data Governance | `007-financial-data-governance.mdc` |
+| API contracts and error schema | API Integration Standards | `008-api-integration-standards.mdc` |
+| Testing/deployment gates | Testing & Deployment | `009-testing-deployment.mdc` |
+| DGX Spark + NIM lifecycle operations | DGX/NIM Operations | `010-nvidia-dgx-nim-operations.mdc` |
+| Autonomous swarm, self-healing, agentic | Autonomous Swarm Directive | `011-autonomous-swarm-directive.mdc` |
+| Agentic copilot queue, human-in-the-loop | Agentic Copilot Principle | `012-agentic-copilot-principle.mdc` |
+| Glass discoverability, Command Center navigation | Glass Discoverability Mandate | `013-glass-discoverability.mdc` |
+| CROG-VRS architecture, directory boundaries | VRS Directory Enforcement | `014-vrs-directory-enforcement.mdc` |
+
+## Policy Change Workflow (Drift Prevention)
+
+1. Identify the canonical owner rule before editing policy text.
+2. Update owner rule first; do not patch duplicate copies in non-owner rules.
+3. Update non-owner rules to reference the owner section if needed.
+4. Run rule consistency checks (`bin/check_cursor_rules.py` or `bin/governance_gate.sh`) for frontmatter, banned terms, and duplicate policy fingerprints.
+5. Record verification evidence and impacted systems before declaring complete.
+
+## Anti-Duplication Rule
+
+1. Normative policy text may exist in one rule only (canonical owner).
+2. Repeated tables (DEFCON, forbidden patterns, legal deadlines, security controls) are prohibited unless explicitly marked as a non-normative summary.
+3. Contradictions between owner and non-owner rules are treated as governance defects and fixed before release.
 
 ## The Prime Directive: Data Sovereignty
 
-1. **Zero-Cloud Retention:** NEVER write code that persists PII, financial records, legal documents, or guest data on third-party cloud servers. Transient cloud calls (Gemini API, Cloudflare edge) are permitted ONLY for non-sensitive, derived data.
-2. **Local-First Logic:** All LLM inference (Ollama in SWARM, DeepSeek-R1 in TITAN) runs on the local cluster. NEVER route sensitive payloads to external inference APIs.
+1. **Zero-Cloud Retention:** NEVER write code that persists PII, financial records, legal documents, or guest data on third-party cloud servers. Transient cloud calls (Gemini, Anthropic, xAI, OpenAI, Cloudflare edge) are permitted ONLY for non-sensitive, derived data and strategic directives.
+2. **Local-First Logic:** All LLM inference runs on the local cluster via NVIDIA NIM containers. NEVER route sensitive payloads to external inference APIs. See `001-titan-protocol.mdc` for the NIM-only mandate.
 3. **Golden Snapshot Mandate:** Before any destructive operation (DROP TABLE, DELETE FROM, schema migration), verify a Golden Snapshot exists at `/mnt/fortress_nas/backups/GOLDEN_STATE_YYYYMMDD/`. Add a pre-flight check in the code.
 
 ## Hierarchy of Authority
 
 1. **The Human (Gary)** retains absolute override. ALL autonomous actions involving financial transactions, legal filings, or public communications MUST require explicit Human approval.
-2. **The Architect (Gemini 3)** may plan, draft, and orchestrate. It CANNOT execute destructive local commands (`DROP`, `DELETE`, `rm -rf`) without Human verification.
+2. **The Architect / CMO (Master Architect Layer: Gemini, Anthropic, xAI, OpenAI)** may plan, draft, and orchestrate. It CANNOT execute destructive local commands (`DROP`, `DELETE`, `rm -rf`) without Human verification.
 3. **The Sovereign (DeepSeek-R1)** is the final authority on logic, math, and contract analysis. It operates in TITAN mode only, single-shot, `--parallel 1`.
 
-## Hybrid Routing (Dual-Brain Pattern)
+## Tri-Mode Routing (NIM-First Pattern)
 
-When writing inference code, use this mode-aware pattern:
+When writing inference code, ALWAYS use `config.py`:
 
 ```python
-import os
-from openai import OpenAI
+from config import get_inference_client
 
-DEFCON = os.getenv("FORTRESS_DEFCON", "SWARM")
+# Automatically routes to the active DEFCON mode
+client, model = get_inference_client()
 
-if DEFCON == "TITAN":
-    client = OpenAI(base_url="http://10.10.10.2:8080/v1", api_key="not-needed")
-    model = "deepseek-r1"
-elif DEFCON == "ARCHITECT":
-    client = OpenAI(
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-        api_key=os.getenv("GOOGLE_AI_API_KEY"),
-    )
-    model = "gemini-2.5-pro"
-else:
-    client = OpenAI(base_url="http://192.168.0.100/v1", api_key="not-needed")
-    model = "qwen2.5:7b"
+# Or explicitly target a mode:
+client, model = get_inference_client("HYDRA")     # R1-70B NIM (deep + fast)
+client, model = get_inference_client("TITAN")     # R1-671B (deepest, single-shot)
+client, model = get_inference_client("ARCHITECT") # Gemini 2.5 Pro (planning only)
+client, model = get_inference_client("SWARM")     # Production (fast throughput)
 ```
 
 **Rules:**
-- NEVER send PII or financial data to the ARCHITECT path (Gemini).
+- NEVER send PII, proprietary legal material, or financial data to the ARCHITECT path (Gemini/Anthropic/xAI/OpenAI).
 - NEVER use the TITAN path for multi-turn chat. Single-shot deep analysis only.
 - ALWAYS default to SWARM for production operations.
+- HYDRA is for batch deep reasoning (legal, forensic, contract) with high throughput.
+- See `001-titan-protocol.mdc` for the full NIM-only infrastructure mandate.
+- Outbound calls from the NUC orchestrator to Master Architect APIs are allowed for directive retrieval only.
 
 ## Development Standards Enforcement
 
@@ -85,11 +141,110 @@ Every failed execution MUST trigger a Post-Mortem:
 3. **DO NOT** bypass `SENDER_BLOCKLIST` in any ingestion pipeline.
 4. **DO NOT** write to a sector's schema without consulting `fortress_atlas.yaml`.
 5. **DO NOT** use `pip install` ad-hoc — declare in `requirements.txt`.
-6. **DO NOT** run SWARM and TITAN simultaneously.
+6. **DO NOT** run SWARM, HYDRA, or TITAN simultaneously — they compete for GPU memory.
 7. **DO NOT** query `revenue_ledger.amount` — that column does not exist.
 8. **DO NOT** trust raw `finance_invoices.amount` totals — inflated by AI extraction.
 9. **DO NOT** modify `switch_defcon.sh` or `fortress_atlas.yaml` without Human approval.
 10. **DO NOT** add new features to `src/bridges/streamline_legacy_connect.py` — build new agents instead.
+
+## CROG-VRS — Vacation Rental Software (Sovereign Law)
+
+CROG-VRS is the enterprise vacation rental management platform for Cabin Rentals of
+Georgia, LLC. It is the Strangler Fig replacement for Streamline VRS. All rules below
+are binding.
+
+### Single Point of Entry
+
+1. **"VRS Full Dashboard"** is the ONLY entry point to the VRS from the CROG Command
+   Center navigation. There is NO separate "VRS Hub" or alternative dashboard link.
+2. The VRS Full Dashboard link MUST point to `/vrs`. NEVER redirect to a raw IP:port
+   (e.g., `http://192.168.0.100:3001`). All VRS pages are served through the Command
+   Center (`tools/master_console.py`) so they route correctly through nginx and
+   Cloudflare.
+3. **DO NOT** create duplicate navigation entries that go to the same destination.
+   One feature = one link = one path.
+
+### Navigation Structure (Canonical)
+
+The CROG-VRS dropdown in the Command Center nav bar MUST contain exactly these items
+in this order. Any change requires Human approval.
+
+```
+CROG-VRS (dropdown)
+├── VRS Full Dashboard    →  /vrs
+├── Properties            →  /vrs/properties
+├── Reservations          →  /vrs/reservations
+├── Guests                →  /vrs/guests
+├── Work Orders           →  /vrs/work-orders
+├── Contracts             →  /vrs/contracts
+├── Analytics             →  /vrs/analytics
+├── Payments              →  /vrs/payments
+├── Utilities             →  /vrs/utilities
+├── Channels              →  /vrs/channels
+├── Owners                →  /vrs/owners
+├── Direct Booking        →  /vrs/direct-booking
+├── IoT & Smart Home      →  /vrs/iot
+├── ─── (separator) ───
+└── Guest Agent           →  /guest-agent
+```
+
+This structure is replicated identically across ALL 22 HTML pages in `tools/`.
+When adding a new VRS module, update the nav in EVERY page — not just the new one.
+
+### UI Architecture Rules
+
+1. **Command Center is the shell.** All VRS pages are standalone HTML files in
+   `tools/` served by `master_console.py`. They are NOT React/Next.js pages.
+2. **No external port exposure.** VRS pages MUST NOT redirect users to `localhost:3001`,
+   `192.168.0.100:3001`, or any bare port. All traffic flows through the Command
+   Center (port 9800) which is proxied by nginx (port 80/443).
+3. **API proxy pattern.** VRS pages call `/api/vrs/*` endpoints on the Command Center.
+   The Command Center proxies these to the VRS backend on port 8100. NEVER call
+   `localhost:8100` directly from browser JavaScript.
+4. **Every clickable element must navigate.** KPI cards, stat cards, list items, and
+   table rows MUST be interactive. No display-only data cards — if a user sees a
+   number, clicking it should take them to the relevant detail.
+5. **Consistent dark theme.** Background `#000`, card `#111`, border `#1a1a1a`,
+   primary accent `#4ade80` (green), secondary `#4fd1c5` (teal), text `#fff`/`#888`.
+6. **Self-contained pages.** Each HTML file includes ALL its CSS and JS inline —
+   no external stylesheets, no npm bundles, no build step. This guarantees every
+   page loads independently without a build pipeline.
+
+### VRS Data Sovereignty
+
+1. Guest PII (name, email, phone, address) is **RESTRICTED** classification.
+   NEVER send to cloud endpoints. Stored only in local Postgres.
+2. Payment data (Stripe tokens, card details) is **SOVEREIGN** classification.
+   Handled exclusively via Stripe SDK with PCI-compliant tokenization. Raw card
+   numbers NEVER touch our database.
+3. Utility account credentials (provider logins/passwords) are encrypted at rest
+   using Fernet symmetric encryption. Decryption requires authenticated API call.
+4. Rental agreements and e-signatures are **SOVEREIGN**. Stored locally with
+   HMAC-SHA256 verification. PDF generation via WeasyPrint (local, no cloud).
+5. Streamline API tokens are stored in `.env`, accessed via `config.py` — never
+   hardcoded.
+
+### VRS Feature Completeness Rule
+
+Before declaring any VRS feature "done":
+1. The feature MUST have a working page in the Command Center (`tools/*.html`).
+2. The page MUST be reachable from the CROG-VRS dropdown nav.
+3. The API proxy route MUST exist in `master_console.py` (`/api/vrs/*`).
+4. The backend endpoint MUST return real data (not mock/stub).
+5. Every link and button on the page MUST navigate somewhere or perform an action.
+6. Test by actually clicking every element in the browser — not just `curl`.
+
+### Forbidden VRS Patterns
+
+11. **DO NOT** create separate login pages for the VRS. Authentication is handled
+    by the Command Center session cookie (`fortress_session`). SSO only.
+12. **DO NOT** serve VRS pages from the Next.js frontend through the Command Center
+    nav. The Command Center pages (`tools/*.html`) are the production UI.
+13. **DO NOT** add a nav item without creating the corresponding route AND page.
+14. **DO NOT** create non-clickable data cards. Every displayed metric must link
+    to its detail view.
+15. **DO NOT** hardcode `192.168.0.100` or any IP in HTML templates. Use relative
+    paths (`/vrs/properties`) for all internal navigation.
 
 ## Edge Gateway Rules
 
@@ -108,3 +263,13 @@ The system MUST propose one architectural optimization per week targeting:
 - Cost reduction in NAS storage or compute utilization.
 
 Log proposals to `public.system_post_mortems` with `severity = 'info'` and `component = 'weekly_optimization'`.
+
+## Amendment VI — Quality Gate (Mandatory E2E Verification)
+
+See `004-quality-gate.mdc` for the full protocol. The core mandate:
+
+1. **No change is declared done until verified in a browser.** The AI must load the page, confirm no errors, and test the specific change before telling the user it works.
+2. **Database schema changes must be confirmed via SQL query**, not assumed.
+3. **Server restarts are mandatory** after backend code changes — stale processes cause phantom bugs.
+4. **Adjacent features must be spot-checked** — CSS and nav changes affect every page, not just the one being edited.
+5. **If the user reports the same class of bug twice, the verification process failed** — fix the process, not just the bug.

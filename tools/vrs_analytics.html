@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Analytics</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:32px 24px}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Reservation Summary (5-col) ── */
+.res-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:36px}
+.res-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:18px;text-align:center;transition:border-color .15s}
+.res-card:hover{border-color:#333}
+.res-val{font-size:24px;font-weight:700;margin-bottom:4px}
+.res-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Panels ── */
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;margin-bottom:24px;overflow:hidden}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-teal{background:rgba(79,209,197,.12);color:#4fd1c5}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+
+/* ── Two-Column ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+
+/* ── Data Table ── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead th{text-align:left;font-size:10px;font-weight:700;color:#555;
+  text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;border-bottom:1px solid #222}
+.data-table thead th.right{text-align:right}
+.data-table tbody tr{border-bottom:1px solid #1a1a1a;transition:background .12s}
+.data-table tbody tr:hover{background:rgba(255,255,255,.02)}
+.data-table tbody td{padding:10px 12px;font-size:13px;color:#ccc}
+.data-table tbody td.right{text-align:right;font-family:'SF Mono',Consolas,monospace;font-size:12px}
+.data-table tbody td.prop-name{font-weight:600;color:#fff}
+.data-table tbody td .mini-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-left:6px}
+
+/* ── Bar Charts (CSS-only) ── */
+.bar-chart{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:flex;align-items:center;gap:12px}
+.bar-label{width:100px;font-size:12px;color:#888;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:22px;background:#1a1a1a;border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease;min-width:2px;position:relative}
+.bar-fill.green{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.bar-fill.teal{background:linear-gradient(90deg,#14b8a6,#4fd1c5)}
+.bar-fill.blue{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.bar-fill.amber{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.bar-fill.red{background:linear-gradient(90deg,#ef4444,#f87171)}
+.bar-fill.purple{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.bar-value{width:70px;font-size:12px;font-weight:600;color:#ccc;text-align:right;flex-shrink:0;
+  font-family:'SF Mono',Consolas,monospace}
+
+/* ── Utility Grid ── */
+.util-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.util-card{background:#1a1a1a;border-radius:10px;padding:16px;text-align:center;transition:background .15s}
+.util-card:hover{background:#222}
+.util-icon{font-size:24px;margin-bottom:6px}
+.util-val{font-size:20px;font-weight:700;color:#4fd1c5;margin-bottom:2px}
+.util-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.util-sub{font-size:10px;color:#555;margin-top:4px}
+
+/* ── Loading / Empty ── */
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+.loading-pulse{animation:loadPulse 1.2s ease infinite}
+@keyframes loadPulse{0%,100%{opacity:.4}50%{opacity:1}}
+.data-unavail{color:#555;font-style:italic;font-size:12px;text-align:center;padding:20px}
+
+/* ── Last Updated ── */
+.last-updated{text-align:right;font-size:10px;color:#444;margin-bottom:20px}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .res-summary{grid-template-columns:repeat(3,1fr)}
+  .two-col{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .res-summary{grid-template-columns:1fr 1fr}
+  .bar-label{width:60px;font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">🧹 Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item fn-dd-active" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>&#128200; <span>CROG-VRS</span> &mdash; Analytics</h1>
+  <div class="hdr-right">
+    <span class="hdr-badge" id="dataBadge">Loading...</span>
+    <span style="font-size:11px;color:#555">Cabin Rentals of Georgia, LLC</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="last-updated">Last refreshed: <span id="lastUpdated" class="loading-pulse">loading...</span></div>
+
+  <!-- ═══ REVENUE KPIs ═══ -->
+  <div class="section-head">Revenue &amp; Performance</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val green" id="kTotalRev">—</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-sub" id="kRevSub">All reservations</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val teal" id="kAvgRate">—</div>
+      <div class="kpi-label">Avg Nightly Rate</div>
+      <div class="kpi-sub">Across portfolio</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val blue" id="kRevPerProp">—</div>
+      <div class="kpi-label">Revenue / Property</div>
+      <div class="kpi-sub">Average yield</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val amber" id="kOccupancy">—</div>
+      <div class="kpi-label">Occupancy Rate</div>
+      <div class="kpi-sub" id="kOccSub">Portfolio average</div>
+    </div>
+  </div>
+
+  <!-- ═══ RESERVATION SUMMARY ═══ -->
+  <div class="section-head">Reservation Summary</div>
+  <div class="res-summary">
+    <div class="res-card"><div class="res-val green" id="rTotal">—</div><div class="res-label">Total Bookings</div></div>
+    <div class="res-card"><div class="res-val teal" id="rActive">—</div><div class="res-label">Active / In-Stay</div></div>
+    <div class="res-card"><div class="res-val blue" id="rUpcoming">—</div><div class="res-label">Upcoming</div></div>
+    <div class="res-card"><div class="res-val purple" id="rCompleted">—</div><div class="res-label">Checked Out</div></div>
+    <div class="res-card"><div class="res-val red" id="rCancelled">—</div><div class="res-label">Cancelled</div></div>
+  </div>
+
+  <!-- ═══ PROPERTY PERFORMANCE + CHANNEL MIX ═══ -->
+  <div class="two-col">
+
+    <!-- Property Performance Table -->
+    <div class="panel">
+      <div class="panel-title">Property Performance <span class="badge badge-green" id="propCountBadge">0</span></div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="propTable">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th class="right">Bookings</th>
+              <th class="right">Revenue</th>
+              <th class="right">Avg Rate</th>
+              <th class="right">Occ %</th>
+            </tr>
+          </thead>
+          <tbody id="propTableBody">
+            <tr><td colspan="5" class="empty-state loading-pulse">Loading property data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Channel Mix -->
+    <div class="panel">
+      <div class="panel-title">Channel Mix <span class="badge badge-teal">Booking Sources</span></div>
+      <div id="channelChart" class="bar-chart">
+        <div class="empty-state loading-pulse">Loading channel data...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ UTILITY COSTS ═══ -->
+  <div class="section-head">Utility Cost Summary</div>
+  <div class="panel" style="margin-bottom:36px">
+    <div class="panel-title">Portfolio Utilities <span class="badge badge-amber">Monthly Averages</span></div>
+    <div id="utilSection">
+      <div class="empty-state loading-pulse">Loading utility data...</div>
+    </div>
+  </div>
+
+  <!-- ═══ REVENUE BY PROPERTY BAR CHART ═══ -->
+  <div class="section-head">Revenue by Property</div>
+  <div class="panel" style="margin-bottom:36px">
+    <div class="panel-title">Revenue Distribution <span class="badge badge-green">All Time</span></div>
+    <div id="revChart" class="bar-chart">
+      <div class="empty-state loading-pulse">Loading revenue chart...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ── Nav ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── Helpers ── */
+function fmtCurrency(n){
+  if(n==null||isNaN(n))return '—';
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+function fmtPct(n){
+  if(n==null||isNaN(n))return '—';
+  return Number(n).toFixed(1)+'%';
+}
+function safeFetch(url){
+  return fetch(url,{credentials:'include'}).then(function(r){
+    if(!r.ok)throw new Error(r.status);
+    return r.json();
+  }).catch(function(){return null});
+}
+
+/* ── Bar Chart Renderer ── */
+function renderBarChart(containerId,items,colorClass){
+  var el=document.getElementById(containerId);
+  if(!items||items.length===0){
+    el.innerHTML='<div class="data-unavail">Data unavailable</div>';
+    return;
+  }
+  var max=Math.max.apply(null,items.map(function(i){return i.value||0}));
+  if(max===0)max=1;
+  el.innerHTML=items.map(function(item){
+    var pct=Math.max((item.value/max)*100,1);
+    var color=item.color||colorClass||'green';
+    return '<div class="bar-row">'+
+      '<div class="bar-label" title="'+item.label+'">'+item.label+'</div>'+
+      '<div class="bar-track"><div class="bar-fill '+color+'" style="width:'+pct+'%"></div></div>'+
+      '<div class="bar-value">'+item.display+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ── Main Data Load ── */
+async function loadAnalytics(){
+  var badge=document.getElementById('dataBadge');
+  badge.textContent='LOADING';
+  badge.style.color='#fbbf24';
+  badge.style.background='rgba(251,191,36,.12)';
+
+  var results=await Promise.all([
+    safeFetch('/api/vrs/analytics/dashboard'),
+    safeFetch('/api/vrs/properties'),
+    safeFetch('/api/vrs/reservations?limit=200'),
+    safeFetch('/api/vrs/utilities/analytics/portfolio/summary')
+  ]);
+
+  var analytics=results[0];
+  var properties=results[1];
+  var reservations=results[2];
+  var utilities=results[3];
+
+  var propList=Array.isArray(properties)?properties:[];
+  var resList=Array.isArray(reservations)?reservations:[];
+  var propCount=propList.length;
+
+  /* ── Revenue KPIs ── */
+  var totalRevenue=0;
+  var totalNights=0;
+  var totalRate=0;
+  var rateCount=0;
+
+  if(analytics&&analytics.total_revenue!=null){
+    totalRevenue=analytics.total_revenue;
+  }else{
+    resList.forEach(function(r){
+      var amt=r.total_price||r.total||r.base_rate||0;
+      if(typeof amt==='number')totalRevenue+=amt;
+    });
+  }
+
+  if(analytics&&analytics.avg_nightly_rate!=null){
+    totalRate=analytics.avg_nightly_rate;
+    rateCount=1;
+  }else{
+    resList.forEach(function(r){
+      var rate=r.avg_nightly_rate||r.nightly_rate||r.base_rate||0;
+      var nights=r.nights||1;
+      if(rate>0){totalRate+=rate;rateCount++}
+      totalNights+=nights;
+    });
+  }
+
+  var avgRate=rateCount>0?totalRate/rateCount:0;
+  var revPerProp=propCount>0?totalRevenue/propCount:0;
+  var occupancy=analytics&&analytics.occupancy_rate!=null?analytics.occupancy_rate:null;
+
+  document.getElementById('kTotalRev').textContent=fmtCurrency(totalRevenue);
+  document.getElementById('kRevSub').textContent=resList.length+' reservations';
+  document.getElementById('kAvgRate').textContent=fmtCurrency(avgRate);
+  document.getElementById('kRevPerProp').textContent=fmtCurrency(revPerProp);
+
+  if(occupancy!=null){
+    document.getElementById('kOccupancy').textContent=fmtPct(occupancy);
+    document.getElementById('kOccSub').textContent=propCount+' properties';
+  }else{
+    document.getElementById('kOccupancy').textContent='—';
+    document.getElementById('kOccSub').textContent='No occupancy data';
+  }
+
+  /* ── Reservation Summary ── */
+  var today=new Date().toISOString().slice(0,10);
+  var counts={total:resList.length,active:0,upcoming:0,completed:0,cancelled:0};
+
+  resList.forEach(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled'){counts.cancelled++;return}
+    var cin=r.check_in_date||'';
+    var cout=r.check_out_date||'';
+    if(st==='checked_out'||st==='completed'||(cout&&cout<today&&st!=='cancelled')){counts.completed++}
+    else if(cin<=today&&cout>=today){counts.active++}
+    else if(cin>today){counts.upcoming++}
+    else{counts.completed++}
+  });
+
+  document.getElementById('rTotal').textContent=counts.total;
+  document.getElementById('rActive').textContent=counts.active;
+  document.getElementById('rUpcoming').textContent=counts.upcoming;
+  document.getElementById('rCompleted').textContent=counts.completed;
+  document.getElementById('rCancelled').textContent=counts.cancelled;
+
+  /* ── Property Performance Table ── */
+  var propPerf={};
+  propList.forEach(function(p){
+    var name=p.name||p.property_name||'Unknown';
+    var id=p.id||name;
+    propPerf[id]={name:name,bookings:0,revenue:0,rates:[],nights:0};
+  });
+
+  resList.forEach(function(r){
+    var pid=r.property_id||r.property_name||'';
+    var pname=r.property_name||pid;
+    if(!propPerf[pid])propPerf[pid]={name:pname,bookings:0,revenue:0,rates:[],nights:0};
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return;
+    propPerf[pid].bookings++;
+    var amt=r.total_price||r.total||r.base_rate||0;
+    if(typeof amt==='number')propPerf[pid].revenue+=amt;
+    var rate=r.avg_nightly_rate||r.nightly_rate||0;
+    if(rate>0)propPerf[pid].rates.push(rate);
+    propPerf[pid].nights+=(r.nights||1);
+  });
+
+  var perfArr=Object.values(propPerf).sort(function(a,b){return b.revenue-a.revenue});
+  var tbody=document.getElementById('propTableBody');
+  document.getElementById('propCountBadge').textContent=perfArr.length+' properties';
+
+  if(perfArr.length===0){
+    tbody.innerHTML='<tr><td colspan="5" class="data-unavail">No property data available</td></tr>';
+  }else{
+    var maxRev=Math.max.apply(null,perfArr.map(function(p){return p.revenue}));
+    if(maxRev===0)maxRev=1;
+    tbody.innerHTML=perfArr.map(function(p){
+      var avgR=p.rates.length>0?p.rates.reduce(function(a,b){return a+b},0)/p.rates.length:0;
+      var barW=Math.max((p.revenue/maxRev)*100,2);
+      var occPct=p.nights>0?(p.nights/365*100):0;
+      return '<tr>'+
+        '<td class="prop-name">'+p.name+'</td>'+
+        '<td class="right">'+p.bookings+'</td>'+
+        '<td class="right">'+fmtCurrency(p.revenue)+'<span class="mini-bar" style="width:'+barW+'px;background:#4ade80"></span></td>'+
+        '<td class="right">'+(avgR>0?fmtCurrency(avgR):'—')+'</td>'+
+        '<td class="right">'+(occPct>0?fmtPct(occPct):'—')+'</td>'+
+      '</tr>';
+    }).join('');
+  }
+
+  /* ── Channel Mix ── */
+  var channels={};
+  resList.forEach(function(r){
+    var src=r.source||r.channel||r.booking_source||'Direct';
+    src=src.charAt(0).toUpperCase()+src.slice(1);
+    channels[src]=(channels[src]||0)+1;
+  });
+
+  var channelArr=Object.keys(channels).map(function(k){return{label:k,value:channels[k],display:channels[k]+' bookings'}});
+  channelArr.sort(function(a,b){return b.value-a.value});
+
+  var channelColors=['green','teal','blue','amber','purple','red'];
+  channelArr.forEach(function(c,i){c.color=channelColors[i%channelColors.length]});
+
+  if(channelArr.length>0){
+    renderBarChart('channelChart',channelArr);
+  }else{
+    document.getElementById('channelChart').innerHTML='<div class="data-unavail">No channel data available</div>';
+  }
+
+  /* ── Revenue by Property Chart ── */
+  var revItems=perfArr.slice(0,12).map(function(p,i){
+    return{label:p.name.length>18?p.name.substring(0,16)+'…':p.name,value:p.revenue,display:fmtCurrency(p.revenue),color:channelColors[i%channelColors.length]};
+  });
+  if(revItems.length>0){
+    renderBarChart('revChart',revItems);
+  }else{
+    document.getElementById('revChart').innerHTML='<div class="data-unavail">No revenue data available</div>';
+  }
+
+  /* ── Utility Costs ── */
+  var utilEl=document.getElementById('utilSection');
+  if(utilities&&typeof utilities==='object'&&Object.keys(utilities).length>0){
+    var cats=utilities.categories||utilities;
+    var utilHTML='<div class="util-grid">';
+    var icons={'electric':'&#9889;','electricity':'&#9889;','power':'&#9889;',
+      'water':'&#128167;','gas':'&#128293;','propane':'&#128293;',
+      'internet':'&#128225;','wifi':'&#128225;','trash':'&#128465;',
+      'sewer':'&#127760;','cable':'&#128250;','total':'&#128176;'};
+
+    if(utilities.total_monthly!=null||utilities.total!=null){
+      utilHTML+='<div class="util-card"><div class="util-icon">&#128176;</div>'+
+        '<div class="util-val">'+fmtCurrency(utilities.total_monthly||utilities.total)+'</div>'+
+        '<div class="util-label">Total Monthly</div>'+
+        '<div class="util-sub">All properties</div></div>';
+    }
+
+    if(cats&&typeof cats==='object'){
+      var catKeys=Array.isArray(cats)?[]:Object.keys(cats);
+      catKeys.forEach(function(key){
+        var val=cats[key];
+        var amt=typeof val==='object'?(val.monthly||val.total||val.avg||0):val;
+        var icon=icons[key.toLowerCase()]||'&#128178;';
+        utilHTML+='<div class="util-card"><div class="util-icon">'+icon+'</div>'+
+          '<div class="util-val">'+fmtCurrency(amt)+'</div>'+
+          '<div class="util-label">'+key.replace(/_/g,' ')+'</div>'+
+          '<div class="util-sub">Monthly avg</div></div>';
+      });
+    }
+
+    utilHTML+='</div>';
+    utilEl.innerHTML=utilHTML;
+  }else{
+    utilEl.innerHTML='<div class="data-unavail">Utility data unavailable &mdash; connect utility accounts to enable tracking</div>';
+  }
+
+  /* ── Finish ── */
+  badge.textContent='LIVE';
+  badge.style.color='#4ade80';
+  badge.style.background='rgba(74,222,128,.12)';
+  document.getElementById('lastUpdated').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('lastUpdated').classList.remove('loading-pulse');
+}
+
+loadUser();
+loadAnalytics();
+setInterval(loadAnalytics,60000);
+</script>
+</body>
+</html>

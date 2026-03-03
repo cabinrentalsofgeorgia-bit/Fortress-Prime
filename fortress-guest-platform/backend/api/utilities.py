@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.encryption import get_fernet, encrypt as _shared_encrypt, decrypt as _shared_decrypt
 from backend.core.security import get_current_user, require_manager_or_admin
 from backend.models.property_utility import PropertyUtility, UtilityReading, SERVICE_TYPES
 from backend.models.staff import StaffUser
@@ -24,30 +25,18 @@ from backend.models.staff import StaffUser
 logger = structlog.get_logger()
 router = APIRouter()
 
-_fernet_key: Optional[Fernet] = None
-
 
 def _get_fernet() -> Fernet:
-    global _fernet_key
-    if _fernet_key is None:
-        raw = settings.secret_key.encode()[:32].ljust(32, b"\0")
-        _fernet_key = Fernet(base64.urlsafe_b64encode(raw))
-    return _fernet_key
+    return get_fernet(settings.secret_key)
 
 
 def _encrypt(plaintext: str) -> str:
-    if not plaintext:
-        return ""
-    return _get_fernet().encrypt(plaintext.encode()).decode()
+    return _shared_encrypt(plaintext, settings.secret_key)
 
 
 def _decrypt(ciphertext: str) -> str:
-    if not ciphertext:
-        return ""
-    try:
-        return _get_fernet().decrypt(ciphertext.encode()).decode()
-    except Exception:
-        return "********"
+    result = _shared_decrypt(ciphertext, settings.secret_key)
+    return result if result else "********"
 
 
 class UtilityCreate(BaseModel):

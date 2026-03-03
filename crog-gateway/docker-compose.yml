@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  crog-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crog-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENABLE_AI_REPLIES=${ENABLE_AI_REPLIES:-false}
+      - SHADOW_MODE=${SHADOW_MODE:-false}
+      - AI_INTENT_FILTER=${AI_INTENT_FILTER:-}
+      - RUEBARUE_API_URL=${RUEBARUE_API_URL}
+      - RUEBARUE_API_KEY=${RUEBARUE_API_KEY}
+      - RUEBARUE_PHONE_NUMBER=${RUEBARUE_PHONE_NUMBER}
+      - STREAMLINE_API_URL=${STREAMLINE_API_URL}
+      - STREAMLINE_API_KEY=${STREAMLINE_API_KEY}
+      - STREAMLINE_PROPERTY_ID=${STREAMLINE_PROPERTY_ID}
+      - CROG_AI_URL=${CROG_AI_URL:-http://localhost:8000}
+      - CROG_AI_API_KEY=${CROG_AI_API_KEY}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - crog-network
+
+networks:
+  crog-network:
+    driver: bridge

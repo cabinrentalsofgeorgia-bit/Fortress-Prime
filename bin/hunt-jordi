@@ -1,0 +1,70 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════
+# Jordi Visser Intelligence Hunter - Autonomous Background Monitor
+# ═══════════════════════════════════════════════════════════════════════════
+# Usage:
+#   ./bin/hunt-jordi                    # Run once
+#   nohup ./bin/hunt-jordi &            # Run in background (continuous)
+#   ./bin/hunt-jordi --once             # Single hunt, no loop
+# ═══════════════════════════════════════════════════════════════════════════
+
+set -e
+
+WORKSPACE="/home/admin/Fortress-Prime"
+LOG_FILE="/var/log/jordi_hunt.log"
+INTERVAL_HOURS=6
+
+# Ensure log file is writable
+sudo touch "$LOG_FILE" 2>/dev/null || LOG_FILE="$WORKSPACE/jordi_hunt.log"
+sudo chmod 666 "$LOG_FILE" 2>/dev/null || true
+
+cd "$WORKSPACE"
+
+# Check if running in --once mode
+ONCE_MODE=false
+if [[ "$1" == "--once" ]]; then
+    ONCE_MODE=true
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Main Hunt Function
+# ═══════════════════════════════════════════════════════════════════════════
+
+run_hunt() {
+    echo "" | tee -a "$LOG_FILE"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$LOG_FILE"
+    echo "🎯 Hunt started: $(date)" | tee -a "$LOG_FILE"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$LOG_FILE"
+    
+    python3 src/jordi_intelligence_hunter.py 2>&1 | tee -a "$LOG_FILE"
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$LOG_FILE"
+    echo "✅ Hunt complete: $(date)" | tee -a "$LOG_FILE"
+    
+    if [[ "$ONCE_MODE" == false ]]; then
+        echo "⏰ Next run in ${INTERVAL_HOURS} hours" | tee -a "$LOG_FILE"
+    fi
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$LOG_FILE"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Start Monitoring
+# ═══════════════════════════════════════════════════════════════════════════
+
+if [[ "$ONCE_MODE" == true ]]; then
+    echo "🎯 Running single hunt..." | tee -a "$LOG_FILE"
+    run_hunt
+    exit 0
+fi
+
+# Continuous monitoring mode
+echo "🎯 Starting Jordi Intelligence Hunter (every ${INTERVAL_HOURS}h)" | tee -a "$LOG_FILE"
+echo "   Log: $LOG_FILE" | tee -a "$LOG_FILE"
+echo "   PID: $$" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+while true; do
+    run_hunt
+    sleep $((INTERVAL_HOURS * 3600))
+done

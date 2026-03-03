@@ -1,0 +1,111 @@
+---
+description: Canonical financial governance and trust accounting controls
+alwaysApply: true
+---
+
+# FINANCIAL DATA GOVERNANCE — Trust Accounting & Owner Transparency (Amendment IX)
+
+**Effective Date:** 2026-02-20
+**Classification:** Fiduciary Obligation — LEGALLY BINDING
+
+## I. PURPOSE
+
+Cabin Rentals of Georgia operates as a property management company holding funds in trust for property owners. This creates fiduciary obligations under Georgia law (O.C.G.A. § 43-40-20). Financial data governance is not an engineering preference — it is a legal requirement.
+
+**Violation of these rules may constitute breach of fiduciary duty.**
+
+## II. TRUST ACCOUNTING PRINCIPLES
+
+### A. Segregation of Funds
+
+| Fund Type | Description | Storage |
+|-----------|------------|---------|
+| **Owner Funds** | Revenue due to property owners (rental income minus management fees) | `trust_balance.owner_funds` |
+| **Operating Funds** | CROG management fees, commissions, marketing | `trust_balance.operating_funds` |
+| **Escrow Funds** | Security deposits, tax withholdings held in trust | `trust_balance.escrow_funds` |
+| **Security Deposits** | Guest damage deposits awaiting resolution | `trust_balance.security_deps` |
+
+**Rules:**
+1. **Operating funds MUST NEVER be commingled with owner funds.** The `trust_balance` table enforces this separation at the data level.
+2. **Every financial transaction MUST be attributed** to exactly one fund type.
+3. **Owner payouts MUST reconcile** against the `owner_statements` table before disbursement.
+
+### B. The Reconciliation Mandate
+
+1. **Daily:** Streamline owner balances (`GetUnitOwnerBalance`) are synced to `properties.owner_balance` and `trust_balance`. If the delta between local and Streamline exceeds $100, an alert fires.
+2. **Monthly:** `GetMonthEndStatement` is pulled for every owner. The statement data is compared against local reservation totals. Discrepancies > 1% are flagged for manual review.
+3. **Quarterly:** Full trust account audit. Sum of all `trust_balance.owner_funds` must equal the trust bank account balance (within float tolerance of $1.00).
+
+## III. FINANCIAL DATA FLOW
+
+### A. Revenue Path
+
+```
+Guest Books → Streamline Reservation → sync_all Phase 2 → reservations table
+    ↓
+GetReservationPrice → sync_all Phase 6 → streamline_financial_detail (JSONB)
+    ↓                                    → cleaning_fee, tax_amount, etc.
+    ↓
+GetUnitOwnerBalance → sync_all Phase 7 → trust_balance.owner_funds
+    ↓
+GetMonthEndStatement → /api/owner/statement → owner_statements table
+```
+
+### B. Financial Column Authority
+
+| Column | Source of Truth | Update Frequency |
+|--------|----------------|-----------------|
+| `reservations.total_amount` | Streamline `GetReservationPrice` | Per-sync (5 min) |
+| `reservations.cleaning_fee` | Extracted from `required_fees[]` | Per-enrichment |
+| `reservations.damage_waiver_fee` | Extracted from `required_fees[]` | Per-enrichment |
+| `reservations.tax_amount` | Streamline `taxes` field | Per-enrichment |
+| `properties.owner_balance` | Streamline `GetUnitOwnerBalance` | Per-sync |
+| `trust_balance.owner_funds` | Streamline `GetUnitOwnerBalance` | Per-sync |
+| `owner_statements.*` | Streamline `GetMonthEndStatement` or local calc | Monthly |
+
+### C. Financial Data Rules
+
+1. **Financial amounts use `DECIMAL(12,2)`**, never `FLOAT`. Floating-point arithmetic causes rounding errors in currency calculations.
+2. **All financial mutations are logged.** Changing `total_amount`, `owner_funds`, or any `trust_balance` column generates an audit event.
+3. **Financial data is never deleted.** Corrections are additive: create a reversal entry, not a DELETE.
+4. **Currency is always USD.** The `reservations.currency` column defaults to `"USD"`. Multi-currency is not supported and MUST NOT be introduced without a full accounting review.
+5. **Negative balances are valid.** An owner can owe the management company (e.g., maintenance costs exceeding rental income). The system MUST NOT reject negative `owner_funds`.
+
+## IV. OWNER TRANSPARENCY
+
+### A. What Owners See
+
+The Owner Portal (`/api/owner/`) provides property owners with:
+- Dashboard metrics (revenue MTD/YTD, occupancy, open work orders)
+- Reservation calendar with guest names and amounts
+- Work order status
+- Financial statements (gross → fees → net payout)
+- Trust balance (their funds held by CROG)
+
+### B. Owner Data Rules
+
+1. **Owners see only their own properties.** The `owner_id` on properties controls visibility. An owner query MUST filter by `owner_id` — never return cross-owner data.
+2. **Owner balance is displayed as-is from Streamline.** We do not adjust, round, or editorialize the balance. If Streamline says $-64,822.71, that's what the owner sees.
+3. **Management fee calculations are transparent.** The statement shows gross revenue, itemized deductions (management fee percentage, cleaning, maintenance), and net payout.
+4. **Statements are immutable once generated.** A generated `owner_statement` row is never modified. Corrections create a new statement with a reference to the original.
+
+## V. DAMAGE CLAIM FINANCIAL CONTROLS
+
+1. **Damage claims with `estimated_cost > $500`** require operator approval before the legal draft is sent.
+2. **Security deposit deductions** MUST reference the specific damage claim ID and be reflected in both `trust_balance.security_deps` and the guest's reservation record.
+3. **Refunds** go through the standard payout process — never direct database manipulation.
+
+## VI. TAX COMPLIANCE
+
+1. **Tax amounts are tracked per-reservation** in `reservations.tax_amount`, sourced from Streamline's `GetReservationPrice`.
+2. **Georgia TOT (Transient Occupancy Tax)** and county-level taxes are broken down in `streamline_financial_detail` JSONB for audit purposes.
+3. **1099 reporting data** (annual gross payouts per owner) is derivable from `owner_statements` — this data MUST be retained for 7 years.
+4. **Tax-exempt reservations** are flagged in `price_breakdown.tax_exempt`. These MUST be manually verified annually.
+
+## VII. FORBIDDEN FINANCIAL PATTERNS
+
+1. **DO NOT** modify `trust_balance` directly via SQL without an audit trail. All changes go through the sync engine or logged API endpoints.
+2. **DO NOT** calculate management fees in application code with hardcoded percentages. Fee structures belong in the `rate_card` JSONB on properties.
+3. **DO NOT** expose raw financial data to external APIs. Owner balances, trust accounts, and revenue figures are T3 (CONFIDENTIAL).
+4. **DO NOT** allow guest-facing endpoints to return financial data beyond their own reservation's `total_amount` and `balance_due`.
+5. **DO NOT** round financial amounts until the final display layer. All intermediate calculations use full `DECIMAL` precision.

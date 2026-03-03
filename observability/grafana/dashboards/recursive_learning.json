@@ -1,0 +1,241 @@
+{
+  "id": null,
+  "uid": "fortress-recursive-learning",
+  "title": "Fortress Prime \u2014 Recursive Learning Engine",
+  "tags": [
+    "fortress",
+    "recursive",
+    "learning",
+    "ai"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Judge Verdicts \u2014 Pass/Fail Over Time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('hour', created_at) AS time, COUNT(*) FILTER (WHERE passed = true) AS passed, COUNT(*) FILTER (WHERE passed = false) AS failed FROM learning_judgments WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "passed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "Judge Verdicts by Agent",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT agent_id, COUNT(*) FILTER (WHERE passed = true) AS passed, COUNT(*) FILTER (WHERE passed = false) AS failed FROM learning_judgments WHERE $__timeFilter(created_at) GROUP BY agent_id ORDER BY failed DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Model Telemetry \u2014 Latency p50/p95",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('hour', created_at) AS time, model_name, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY latency_ms) AS p50_ms, PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95_ms FROM model_telemetry WHERE $__timeFilter(created_at) GROUP BY 1, 2 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Model Error Rate by Operation",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT operation, COUNT(*) AS total, COUNT(*) FILTER (WHERE success = false) AS errors, ROUND(100.0 * COUNT(*) FILTER (WHERE success = false) / NULLIF(COUNT(*), 0), 1) AS error_rate_pct FROM model_telemetry WHERE $__timeFilter(created_at) GROUP BY operation ORDER BY error_rate_pct DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "RAG Query Quality \u2014 Relevance Score Trend",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('hour', created_at) AS time, AVG(relevance_score) AS avg_relevance, AVG(response_quality) AS avg_rating FROM rag_query_feedback WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "RAG Queries \u2014 Rated vs Unrated",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) FILTER (WHERE response_quality IS NOT NULL) AS rated, COUNT(*) FILTER (WHERE response_quality IS NULL) AS unrated FROM rag_query_feedback WHERE $__timeFilter(created_at)",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "RAG Reranker Impact",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 16
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT AVG(CASE WHEN reranker_used THEN response_quality END) AS with_reranker, AVG(CASE WHEN NOT reranker_used THEN response_quality END) AS without_reranker FROM rag_query_feedback WHERE response_quality IS NOT NULL AND $__timeFilter(created_at)",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Prompt Optimizations Timeline",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('day', created_at) AS time, agent_id, method, COUNT(*) AS optimizations FROM learning_optimizations WHERE $__timeFilter(created_at) GROUP BY 1, 2, 3 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "A/B Tests \u2014 Active",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT t.test_name, t.agent_id, t.metric_name, t.status, t.winner, COUNT(o.id) AS observations, AVG(CASE WHEN o.variant = 'a' THEN o.metric_value END) AS avg_variant_a, AVG(CASE WHEN o.variant = 'b' THEN o.metric_value END) AS avg_variant_b FROM ab_tests t LEFT JOIN ab_test_observations o ON o.test_id = t.id GROUP BY t.id, t.test_name, t.agent_id, t.metric_name, t.status, t.winner ORDER BY t.created_at DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Token Usage by Model (24h)",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT model_name, SUM(COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)) AS total_tokens FROM model_telemetry WHERE $__timeFilter(created_at) GROUP BY model_name ORDER BY total_tokens DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

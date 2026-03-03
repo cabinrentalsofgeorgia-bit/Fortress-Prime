@@ -1,0 +1,28 @@
+# CROG MailPlus Ingestion System — systemd unit
+# Pulls from info@, gary@, taylor.knight@ (etc.) into email_archive for VRS intelligence.
+#
+# Install:
+#   sudo cp deploy/crog-mailplus-ingestion.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now crog-mailplus-ingestion
+#
+# Configure MAILPLUS_ACCOUNTS and MAILPLUS_PASSWORD_* in .env or vault; ensure
+# the service has access to PROJECT_ROOT/.env (or set EnvironmentFile= below).
+
+[Unit]
+Description=CROG MailPlus Ingestion (info@, gary@, taylor.knight@ -> email_archive)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+EnvironmentFile=-/home/admin/Fortress-Prime/.env
+ExecStart=/usr/bin/python3 -m src.crog_mailplus_ingestion --interval 3600
+Restart=on-failure
+RestartSec=300
+
+[Install]
+WantedBy=multi-user.target

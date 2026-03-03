@@ -127,7 +127,7 @@ def _get_db_connection():
     host = os.getenv("FORTRESS_DB_HOST", "localhost")
     db = os.getenv("FORTRESS_DB_NAME", "fortress_db")
     user = os.getenv("FORTRESS_DB_USER", "miner_bot")
-    password = os.getenv("FORTRESS_DB_PASS", "190AntiochCemeteryRD!!!")
+    password = os.getenv("FORTRESS_DB_PASS", os.getenv("DB_PASS", ""))
     return psycopg2.connect(host=host, database=db, user=user, password=password)
 
 

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortress Legal Command Center</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+
+    <!-- ═══ Sidebar ═══ -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <h1>FORTRESS LEGAL</h1>
+            <div class="subtitle">Command Center</div>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Overview</div>
+            <div class="nav-item active" data-page="dashboard">
+                <span>Dashboard</span>
+            </div>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Records</div>
+            <div class="nav-item" data-page="matters">
+                <span>Matters</span>
+                <span class="badge" id="nav-badge-matters"></span>
+            </div>
+            <div class="nav-item" data-page="attorneys">
+                <span>Attorneys</span>
+                <span class="badge" id="nav-badge-attorneys"></span>
+            </div>
+            <div class="nav-item" data-page="meetings">
+                <span>Meetings</span>
+            </div>
+            <div class="nav-item" data-page="timeline">
+                <span>Timeline</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══ Main Content ═══ -->
+    <main class="main-content">
+        <div id="toast-container" class="toast-container"></div>
+
+        <!-- ─── Dashboard Page ─── -->
+        <div id="page-dashboard" class="page active">
+            <div class="top-bar">
+                <h2 class="page-title">Legal Command Center</h2>
+                <div class="top-actions">
+                    <input type="text" id="global-search" class="search-input" placeholder="Search matters, attorneys...">
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Total Matters</div>
+                    <div class="value blue" id="stat-total-matters">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Open / Active</div>
+                    <div class="value green" id="stat-open-matters">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Critical Priority</div>
+                    <div class="value red" id="stat-critical">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Active Attorneys</div>
+                    <div class="value purple" id="stat-attorneys">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Upcoming Meetings</div>
+                    <div class="value yellow" id="stat-upcoming">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Follow-ups Due</div>
+                    <div class="value red" id="stat-followups">0</div>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                        <h3 style="margin:0">Recent Matters</h3>
+                        <button class="btn btn-sm btn-primary" onclick="App.showAddMatter()">+ New Matter</button>
+                    </div>
+                    <div class="table-container" style="border:none">
+                        <table>
+                            <thead><tr>
+                                <th>Title</th><th>Status</th><th>Priority</th><th>Attorney</th><th>Updated</th>
+                            </tr></thead>
+                            <tbody id="recent-matters-tbody">
+                                <tr><td colspan="5" class="table-empty">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                        <h3 style="margin:0">Upcoming Meetings</h3>
+                        <button class="btn btn-sm btn-primary" onclick="App.showAddMeeting()">+ Log Meeting</button>
+                    </div>
+                    <div class="table-container" style="border:none">
+                        <table>
+                            <thead><tr>
+                                <th>Title</th><th>Date</th><th>Attorney</th><th>Type</th>
+                            </tr></thead>
+                            <tbody id="upcoming-meetings-tbody">
+                                <tr><td colspan="4" class="table-empty">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── Matters Page ─── -->
+        <div id="page-matters" class="page">
+            <div class="top-bar">
+                <h2 class="page-title">Matters</h2>
+                <div class="top-actions">
+                    <button class="btn btn-primary" onclick="App.showAddMatter()">+ New Matter</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>Title</th><th>Ref</th><th>Category</th><th>Status</th><th>Priority</th><th>Attorney</th><th>Updated</th>
+                    </tr></thead>
+                    <tbody id="matters-tbody">
+                        <tr><td colspan="7" class="table-empty">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── Matter Detail Page ─── -->
+        <div id="page-matter-detail" class="page">
+            <div class="detail-header">
+                <div>
+                    <button class="btn btn-sm btn-ghost" onclick="App.backToMatters()" style="margin-bottom:8px">&larr; Back to Matters</button>
+                    <div class="detail-title" id="md-title"></div>
+                    <div class="detail-subtitle" id="md-ref"></div>
+                </div>
+                <div class="top-actions">
+                    <button class="btn btn-sm" onclick="App.editMatter(App.currentMatterId)">Edit Matter</button>
+                    <button class="btn btn-sm btn-primary" onclick="App.showAddMeeting(App.currentMatterId)">+ Log Meeting</button>
+                    <button class="btn btn-sm" onclick="App.showAddTimelineEntry(App.currentMatterId)">+ Add Note</button>
+                </div>
+            </div>
+
+            <div class="stats-grid" style="grid-template-columns: repeat(6, 1fr)">
+                <div class="stat-card"><div class="label">Status</div><div id="md-status"></div></div>
+                <div class="stat-card"><div class="label">Priority</div><div id="md-priority"></div></div>
+                <div class="stat-card"><div class="label">Category</div><div class="value" style="font-size:16px" id="md-category"></div></div>
+                <div class="stat-card"><div class="label">Attorney</div><div class="value" style="font-size:14px" id="md-attorney"></div></div>
+                <div class="stat-card"><div class="label">Opposing Party</div><div class="value" style="font-size:14px" id="md-opposing"></div></div>
+                <div class="stat-card"><div class="label">Amount at Stake</div><div class="value" style="font-size:16px" id="md-amount"></div></div>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h3>Description</h3>
+                    <div style="white-space:pre-wrap;color:var(--text-secondary);font-size:13px" id="md-description"></div>
+                    <div style="margin-top:16px">
+                        <div class="detail-field"><div class="label">Next Action</div><div class="value" id="md-next-action"></div></div>
+                        <div class="detail-field"><div class="label">Next Action Date</div><div class="value" id="md-next-date"></div></div>
+                        <div class="detail-field"><div class="label">Outcome</div><div class="value" id="md-outcome"></div></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>Documents</h3>
+                    <div id="md-documents"></div>
+                </div>
+            </div>
+
+            <div class="detail-section" style="margin-bottom:24px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h3 style="margin:0">Meetings</h3>
+                    <button class="btn btn-sm btn-primary" onclick="App.showAddMeeting(App.currentMatterId)">+ Log Meeting</button>
+                </div>
+                <div id="md-meetings" class="timeline-list"></div>
+            </div>
+
+            <div class="detail-section">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h3 style="margin:0">Timeline / Notes</h3>
+                    <button class="btn btn-sm btn-primary" onclick="App.showAddTimelineEntry(App.currentMatterId)">+ Add Entry</button>
+                </div>
+                <div id="md-timeline" class="timeline-list"></div>
+            </div>
+        </div>
+
+        <!-- ─── Attorneys Page ─── -->
+        <div id="page-attorneys" class="page">
+            <div class="top-bar">
+                <h2 class="page-title">Attorneys</h2>
+                <div class="top-actions">
+                    <button class="btn btn-primary" onclick="App.showAddAttorney()">+ Add Attorney</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>Name</th><th>Firm</th><th>Specialty</th><th>Contact</th><th>Rate</th><th>Status</th><th></th>
+                    </tr></thead>
+                    <tbody id="attorneys-tbody">
+                        <tr><td colspan="7" class="table-empty">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── Meetings Page ─── -->
+        <div id="page-meetings" class="page">
+            <div class="top-bar">
+                <h2 class="page-title">Meetings</h2>
+                <div class="top-actions">
+                    <button class="btn btn-primary" onclick="App.showAddMeeting()">+ Log Meeting</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>Title</th><th>Date</th><th>Type</th><th>Attorney</th><th>Matter</th><th>Duration</th><th></th>
+                    </tr></thead>
+                    <tbody id="meetings-tbody">
+                        <tr><td colspan="7" class="table-empty">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── Timeline Page ─── -->
+        <div id="page-timeline" class="page">
+            <div class="top-bar">
+                <h2 class="page-title">Timeline</h2>
+                <div class="top-actions">
+                    <button class="btn btn-primary" onclick="App.showAddTimelineEntry()">+ Add Entry</button>
+                </div>
+            </div>
+            <div class="detail-section">
+                <div id="timeline-list" class="timeline-list">Loading...</div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- MODALS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- Attorney Modal -->
+<div id="attorney-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="attorney-modal-title">Add Attorney</h2>
+            <button class="modal-close" onclick="App.closeModal('attorney-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="atty-form" onsubmit="event.preventDefault(); App.saveAttorney()">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">First Name *</label>
+                        <input class="form-input" id="atty-first-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Last Name *</label>
+                        <input class="form-input" id="atty-last-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Firm Name</label>
+                        <input class="form-input" id="atty-firm">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Specialty</label>
+                        <select class="form-select" id="atty-specialty">
+                            <option value="">Select...</option>
+                            <option value="litigation">Litigation</option>
+                            <option value="tax">Tax</option>
+                            <option value="real_estate">Real Estate</option>
+                            <option value="corporate">Corporate</option>
+                            <option value="employment">Employment</option>
+                            <option value="IP">Intellectual Property</option>
+                            <option value="estate">Estate Planning</option>
+                            <option value="criminal">Criminal</option>
+                            <option value="family">Family</option>
+                            <option value="general">General Practice</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input class="form-input" id="atty-email" type="email">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input class="form-input" id="atty-phone">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bar Number</label>
+                        <input class="form-input" id="atty-bar-number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bar State</label>
+                        <input class="form-input" id="atty-bar-state" placeholder="GA" maxlength="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hourly Rate ($)</label>
+                        <input class="form-input" id="atty-hourly-rate" type="number" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Retainer Amount ($)</label>
+                        <input class="form-input" id="atty-retainer" type="number" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Retainer Status</label>
+                        <select class="form-select" id="atty-retainer-status">
+                            <option value="none">None</option>
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="expired">Expired</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Engagement Date</label>
+                        <input class="form-input" id="atty-engagement-date" type="date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="atty-status">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="terminated">Terminated</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-textarea" id="atty-notes" rows="3"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="App.closeModal('attorney-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="App.saveAttorney()">Save Attorney</button>
+        </div>
+    </div>
+</div>
+
+<!-- Matter Modal -->
+<div id="matter-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="matter-modal-title">New Matter</h2>
+            <button class="modal-close" onclick="App.closeModal('matter-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="matter-form" onsubmit="event.preventDefault(); App.saveMatter()">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">Title *</label>
+                        <input class="form-input" id="mtr-title" required placeholder="e.g., ERC Fee Dispute — BizHeadLaw">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reference Code</label>
+                        <input class="form-input" id="mtr-ref" placeholder="BHL-ERC-2023-001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category *</label>
+                        <select class="form-select" id="mtr-category" required>
+                            <option value="litigation">Litigation</option>
+                            <option value="contract">Contract</option>
+                            <option value="tax">Tax</option>
+                            <option value="property">Property</option>
+                            <option value="employment">Employment</option>
+                            <option value="corporate">Corporate</option>
+                            <option value="compliance">Compliance</option>
+                            <option value="estate">Estate</option>
+                            <option value="IP">Intellectual Property</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="mtr-status">
+                            <option value="open">Open</option>
+                            <option value="active">Active</option>
+                            <option value="monitoring">Monitoring</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Priority</label>
+                        <select class="form-select" id="mtr-priority">
+                            <option value="low">Low</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attorney</label>
+                        <select class="form-select attorney-select" id="mtr-attorney">
+                            <option value="">— None —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Opposing Party</label>
+                        <input class="form-input" id="mtr-opposing">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Opposing Counsel</label>
+                        <input class="form-input" id="mtr-opposing-counsel">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount at Stake ($)</label>
+                        <input class="form-input" id="mtr-amount" type="number" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Next Action</label>
+                        <input class="form-input" id="mtr-next-action" placeholder="e.g., File response by...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Next Action Date</label>
+                        <input class="form-input" id="mtr-next-date" type="date">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-textarea" id="mtr-description" rows="4"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="App.closeModal('matter-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="App.saveMatter()">Save Matter</button>
+        </div>
+    </div>
+</div>
+
+<!-- Meeting Modal -->
+<div id="meeting-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="meeting-modal-title">Log Meeting</h2>
+            <button class="modal-close" onclick="App.closeModal('meeting-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="meeting-form" onsubmit="event.preventDefault(); App.saveMeeting()">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">Title *</label>
+                        <input class="form-input" id="mtg-title" required placeholder="e.g., Initial Consultation with John Smith">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Meeting Type</label>
+                        <select class="form-select" id="mtg-type">
+                            <option value="in_person">In Person</option>
+                            <option value="phone">Phone Call</option>
+                            <option value="video">Video Call</option>
+                            <option value="email_exchange">Email Exchange</option>
+                            <option value="court_appearance">Court Appearance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date & Time *</label>
+                        <input class="form-input" id="mtg-date" type="datetime-local" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Duration (minutes)</label>
+                        <input class="form-input" id="mtg-duration" type="number" placeholder="60">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <input class="form-input" id="mtg-location" placeholder="Office, Zoom, etc.">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Attorney</label>
+                        <select class="form-select attorney-select" id="mtg-attorney">
+                            <option value="">— None —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Related Matter</label>
+                        <select class="form-select matter-select" id="mtg-matter">
+                            <option value="">— None —</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Attendees</label>
+                        <input class="form-input" id="mtg-attendees" placeholder="Names of all attendees">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Summary — What was discussed</label>
+                        <textarea class="form-textarea" id="mtg-summary" rows="4" placeholder="Detailed notes about the discussion..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Action Items</label>
+                        <textarea class="form-textarea" id="mtg-action-items" rows="3" placeholder="Next steps and follow-ups..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Key Decisions</label>
+                        <textarea class="form-textarea" id="mtg-decisions" rows="2" placeholder="Decisions made during meeting..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cost ($)</label>
+                        <input class="form-input" id="mtg-cost" type="number" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Follow-up Date</label>
+                        <input class="form-input" id="mtg-followup-date" type="date">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Follow-up Notes</label>
+                        <textarea class="form-textarea" id="mtg-followup-notes" rows="2"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="App.closeModal('meeting-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="App.saveMeeting()">Save Meeting</button>
+        </div>
+    </div>
+</div>
+
+<!-- Timeline Entry Modal -->
+<div id="timeline-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Add Timeline Entry</h2>
+            <button class="modal-close" onclick="App.closeModal('timeline-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="tl-form" onsubmit="event.preventDefault(); App.saveTimelineEntry()">
+                <input type="hidden" id="tl-matter-id">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Entry Type</label>
+                        <select class="form-select" id="tl-type">
+                            <option value="note">Note</option>
+                            <option value="action">Action Taken</option>
+                            <option value="decision">Decision</option>
+                            <option value="filing">Filing</option>
+                            <option value="correspondence">Correspondence</option>
+                            <option value="research">Research</option>
+                            <option value="payment">Payment</option>
+                            <option value="milestone">Milestone</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Importance</label>
+                        <select class="form-select" id="tl-importance">
+                            <option value="low">Low</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Title *</label>
+                        <input class="form-input" id="tl-title" required placeholder="e.g., Hired tax attorney, Filed motion, etc.">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Details</label>
+                        <textarea class="form-textarea" id="tl-body" rows="5" placeholder="Full details of what happened, what was discussed, decisions made..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Related Attorney</label>
+                        <select class="form-select attorney-select" id="tl-attorney">
+                            <option value="">— None —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Document Reference</label>
+                        <input class="form-input" id="tl-doc-ref" placeholder="File path or URL">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="App.closeModal('timeline-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="App.saveTimelineEntry()">Save Entry</button>
+        </div>
+    </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

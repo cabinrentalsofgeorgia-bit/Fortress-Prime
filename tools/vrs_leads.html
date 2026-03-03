@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Lead Engine</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;background:#111;border:1px solid #222;border-radius:0 0 10px 10px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;background:#111;border:1px solid #222;border-radius:0 0 10px 10px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px);flex-shrink:0}
+.page-hdr h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.page-hdr h1 .icon{font-size:20px}
+.count-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;
+  background:rgba(74,222,128,.12);color:#4ade80;letter-spacing:.02em}
+
+/* ── Three-Pane Layout ── */
+.pane-container{display:flex;flex:1;overflow:hidden}
+
+/* Left: Lead Inbox */
+.pane-inbox{width:320px;min-width:280px;border-right:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0}
+.inbox-toolbar{padding:12px;border-bottom:1px solid #1a1a1a;display:flex;flex-direction:column;gap:8px}
+.inbox-search{width:100%;background:#111;border:1px solid #222;border-radius:8px;padding:8px 12px;
+  color:#fff;font-size:12px;outline:none;transition:border-color .15s}
+.inbox-search:focus{border-color:#4ade80}
+.inbox-search::placeholder{color:#555}
+.inbox-filters{display:flex;gap:4px;flex-wrap:wrap}
+.inbox-pill{padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;cursor:pointer;
+  background:#111;border:1px solid #222;color:#888;transition:all .15s;text-transform:capitalize;user-select:none}
+.inbox-pill:hover{border-color:#444;color:#ccc}
+.inbox-pill.active{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.3);color:#4ade80}
+.inbox-list{flex:1;overflow-y:auto}
+.lead-card{padding:14px 16px;border-bottom:1px solid #111;cursor:pointer;transition:background .12s}
+.lead-card:hover{background:rgba(255,255,255,.03)}
+.lead-card.selected{background:rgba(74,222,128,.06);border-left:3px solid #4ade80}
+.lead-name{font-size:13px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;justify-content:space-between}
+.lead-msg{font-size:11px;color:#888;line-height:1.4;max-height:32px;overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.lead-meta{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px;color:#555}
+.lead-status{padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.st-new{background:rgba(74,222,128,.12);color:#4ade80}
+.st-active{background:rgba(96,165,250,.12);color:#60a5fa}
+.st-cold{background:rgba(251,191,36,.12);color:#fbbf24}
+.st-dead{background:rgba(248,113,113,.12);color:#f87171}
+.st-converted{background:rgba(167,139,250,.12);color:#a78bfa}
+.lead-score{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:700}
+.inbox-empty{text-align:center;padding:40px 20px;color:#555;font-size:12px}
+
+/* Center: Quote Builder */
+.pane-builder{flex:1;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid #1a1a1a;min-width:0}
+.builder-empty{display:flex;align-items:center;justify-content:center;flex:1;color:#555;font-size:14px;text-align:center;padding:40px}
+.builder-content{padding:20px;display:flex;flex-direction:column;gap:20px}
+.section-title{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;
+  margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1a1a1a}
+.guest-msg-box{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:16px;
+  font-size:13px;line-height:1.6;color:#ccc;font-style:italic}
+.guest-info{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.guest-info-item{font-size:12px;color:#888}
+.guest-info-item strong{color:#fff}
+
+/* Property selector */
+.prop-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.prop-check{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:12px;cursor:pointer;
+  transition:all .15s;display:flex;align-items:flex-start;gap:10px}
+.prop-check:hover{border-color:#333}
+.prop-check.checked{border-color:#4ade80;background:rgba(74,222,128,.04)}
+.prop-check input[type=checkbox]{accent-color:#4ade80;margin-top:2px;flex-shrink:0}
+.prop-check-info{flex:1;min-width:0}
+.prop-check-name{font-size:12px;font-weight:700;margin-bottom:2px}
+.prop-check-detail{font-size:10px;color:#888}
+
+/* Date picker row */
+.date-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.date-field{display:flex;flex-direction:column;gap:4px}
+.date-field label{font-size:10px;color:#555;text-transform:uppercase;font-weight:600;letter-spacing:.04em}
+.date-field input{background:#111;border:1px solid #222;border-radius:8px;padding:8px 12px;
+  color:#fff;font-size:13px;outline:none;transition:border-color .15s;color-scheme:dark}
+.date-field input:focus{border-color:#4ade80}
+.btn-calc{background:#4ade80;color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:12px;
+  font-weight:700;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.btn-calc:hover{background:#22c55e;transform:translateY(-1px)}
+.btn-calc:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* Pricing results */
+.pricing-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:16px}
+.pricing-card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.pricing-card-name{font-size:14px;font-weight:700}
+.pricing-card-total{font-size:18px;font-weight:800;color:#4ade80}
+.pricing-rows{display:grid;grid-template-columns:1fr auto;gap:4px 16px;font-size:12px}
+.pricing-label{color:#888}
+.pricing-val{text-align:right;font-weight:600;font-family:'SF Mono',Consolas,monospace}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+
+/* Right: AI Copilot */
+.pane-copilot{width:420px;min-width:340px;display:flex;flex-direction:column;flex-shrink:0}
+.copilot-empty{display:flex;align-items:center;justify-content:center;flex:1;color:#555;font-size:13px;text-align:center;padding:40px}
+.copilot-content{display:flex;flex-direction:column;flex:1;padding:20px;gap:16px;overflow-y:auto}
+.copilot-model{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace;display:flex;align-items:center;gap:6px}
+.copilot-model .dot{width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block}
+.btn-generate{background:linear-gradient(135deg,#4ade80,#22d3ee);color:#000;border:none;border-radius:10px;
+  padding:14px 24px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;
+  text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-generate:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(74,222,128,.25)}
+.btn-generate:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.loading-state{display:flex;flex-direction:column;align-items:center;gap:12px;padding:30px;text-align:center}
+.loading-spinner{width:40px;height:40px;border:3px solid #222;border-top-color:#4ade80;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:12px;color:#4ade80;font-weight:600}
+.loading-sub{font-size:11px;color:#555}
+.loading-timer{font-size:20px;font-weight:800;color:#4ade80;font-family:'SF Mono',Consolas,monospace}
+.email-area{flex:1;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:16px;
+  color:#ccc;font-size:13px;line-height:1.7;resize:vertical;min-height:300px;outline:none;
+  font-family:system-ui,-apple-system,sans-serif;transition:border-color .15s}
+.email-area:focus{border-color:#4ade80}
+.copilot-actions{display:flex;gap:10px;flex-shrink:0}
+.btn-approve{flex:1;background:#4ade80;color:#000;border:none;border-radius:8px;padding:12px;
+  font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.04em}
+.btn-approve:hover{background:#22c55e}
+.btn-approve:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{flex:1;background:#222;color:#fff;border:1px solid #333;border-radius:8px;padding:12px;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{background:#333;border-color:#444}
+.saved-indicator{font-size:10px;color:#555;text-align:right;font-style:italic;min-height:14px}
+
+@media(max-width:1100px){
+  .pane-container{flex-direction:column}
+  .pane-inbox{width:100%;max-height:250px;border-right:none;border-bottom:1px solid #1a1a1a}
+  .pane-builder{border-right:none;border-bottom:1px solid #1a1a1a}
+  .pane-copilot{width:100%;min-height:400px}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .date-row{flex-direction:column}
+  .prop-select-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">&#128202; VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">&#127968; Properties</a><a class="fn-dd-item" href="/vrs/reservations">&#128197; Reservations</a><a class="fn-dd-item" href="/vrs/guests">&#128100; Guests</a><a class="fn-dd-item" href="/vrs/work-orders">&#128295; Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">&#129529; Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">&#128221; Contracts</a><a class="fn-dd-item" href="/vrs/analytics">&#128200; Analytics</a><a class="fn-dd-item" href="/vrs/payments">&#128179; Payments</a><a class="fn-dd-item" href="/vrs/utilities">&#9889; Utilities</a><a class="fn-dd-item" href="/vrs/channels">&#128225; Channels</a><a class="fn-dd-item" href="/vrs/owners">&#128084; Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">&#127760; Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">&#127968; IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item fn-dd-active" href="/vrs/leads">&#9889; Lead Engine</a><a class="fn-dd-item" href="/guest-agent">&#129302; Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1><span class="icon">&#9889;</span> Lead Engine <span class="count-badge" id="leadCount">&#8212;</span></h1>
+  <div style="font-size:11px;color:#555">Agentic Sales &middot; HYDRA 70B</div>
+</div>
+
+<!-- THREE-PANE LAYOUT -->
+<div class="pane-container">
+
+  <!-- LEFT: Lead Inbox -->
+  <div class="pane-inbox">
+    <div class="inbox-toolbar">
+      <input type="text" class="inbox-search" id="inboxSearch" placeholder="Search leads..." autocomplete="off">
+      <div class="inbox-filters" id="inboxFilters">
+        <div class="inbox-pill active" data-status="all">All</div>
+        <div class="inbox-pill" data-status="new">New</div>
+        <div class="inbox-pill" data-status="active">Active</div>
+        <div class="inbox-pill" data-status="cold">Cold</div>
+        <div class="inbox-pill" data-status="converted">Won</div>
+      </div>
+    </div>
+    <div class="inbox-list" id="inboxList">
+      <div class="inbox-empty">Loading leads...</div>
+    </div>
+  </div>
+
+  <!-- CENTER: Quote Builder -->
+  <div class="pane-builder" id="paneBuilder">
+    <div class="builder-empty" id="builderEmpty">
+      <div>
+        <div style="font-size:32px;opacity:.3;margin-bottom:12px">&#9889;</div>
+        <div>Select a lead from the inbox to begin quoting</div>
+      </div>
+    </div>
+    <div class="builder-content" id="builderContent" style="display:none">
+      <!-- Guest Info -->
+      <div>
+        <div class="section-title">Guest Inquiry</div>
+        <div class="guest-info" id="guestInfo"></div>
+        <div class="guest-msg-box" id="guestMsg"></div>
+      </div>
+      <!-- Property Selector -->
+      <div>
+        <div class="section-title">Select Properties</div>
+        <div class="prop-select-grid" id="propSelectGrid">
+          <div style="color:#555;font-size:12px">Loading properties...</div>
+        </div>
+      </div>
+      <!-- Date + Calculate -->
+      <div>
+        <div class="section-title">Stay Dates & Pricing</div>
+        <div class="date-row">
+          <div class="date-field">
+            <label>Check In</label>
+            <input type="date" id="checkIn">
+          </div>
+          <div class="date-field">
+            <label>Check Out</label>
+            <input type="date" id="checkOut">
+          </div>
+          <button class="btn-calc" id="btnCalc" onclick="calculatePricing()">Calculate Pricing</button>
+        </div>
+      </div>
+      <!-- Pricing Results -->
+      <div id="pricingSection" style="display:none">
+        <div class="section-title">Itemized Pricing</div>
+        <div class="pricing-grid" id="pricingGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: AI Copilot -->
+  <div class="pane-copilot" id="paneCopilot">
+    <div class="copilot-empty" id="copilotEmpty">
+      <div>
+        <div style="font-size:32px;opacity:.3;margin-bottom:12px">&#129302;</div>
+        <div>HYDRA 70B AI Copilot</div>
+        <div style="color:#555;font-size:11px;margin-top:6px">Select a lead and calculate pricing to activate</div>
+      </div>
+    </div>
+    <div class="copilot-content" id="copilotContent" style="display:none">
+      <div class="copilot-model"><span class="dot"></span> deepseek-r1:70b &middot; HYDRA DEFCON 3</div>
+      <button class="btn-generate" id="btnGenerate" onclick="generatePitch()" disabled>
+        &#10024; Generate Agentic Pitch
+      </button>
+      <div id="loadingState" style="display:none">
+        <div class="loading-state">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">HYDRA 70B is analyzing amenities and drafting response...</div>
+          <div class="loading-timer" id="loadingTimer">0:00</div>
+          <div class="loading-sub">Estimated time: ~2 minutes</div>
+        </div>
+      </div>
+      <textarea class="email-area" id="emailDraft" style="display:none" placeholder="AI-generated email will appear here..."></textarea>
+      <div class="saved-indicator" id="savedIndicator"></div>
+      <div class="copilot-actions" id="copilotActions" style="display:none">
+        <button class="btn-secondary" onclick="copyDraft()">Copy to Clipboard</button>
+        <button class="btn-approve" id="btnApprove" onclick="approveSend()">Approve & Send</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var allLeads = [];
+var allProperties = [];
+var selectedLead = null;
+var lastQuoteResult = null;
+var activeFilter = 'all';
+var loadingInterval = null;
+
+/* ── Nav ── */
+function toggleGroup(name) {
+  var all = document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g) {
+    if (g.dataset.group === name) g.classList.toggle('open');
+    else g.classList.remove('open');
+  });
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.fn-group') && !e.target.closest('.fn-user')) {
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g) { g.classList.remove('open'); });
+  }
+});
+
+/* ── Clock ── */
+setInterval(function() {
+  document.getElementById('fnClock').textContent =
+    new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}, 1000);
+
+/* ── Auth ── */
+async function loadUser() {
+  try {
+    var r = await fetch('/api/verify', { credentials: 'include' });
+    if (r.ok) { var d = await r.json(); document.getElementById('navUser').textContent = d.username || 'User'; }
+    else { window.location.href = '/login'; }
+  } catch(e) { window.location.href = '/login'; }
+}
+function logout() { fetch('/api/logout', { method: 'POST', credentials: 'include' }).then(function() { window.location.href = '/login'; }); }
+
+/* ── Helpers ── */
+function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmt$(n) {
+  var num = parseFloat(n);
+  if (isNaN(num)) return '$0.00';
+  return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function statusClass(s) {
+  var map = { 'new': 'st-new', 'active': 'st-active', 'cold': 'st-cold', 'dead': 'st-dead', 'converted': 'st-converted' };
+  return map[s] || 'st-new';
+}
+
+/* ── Load Leads ── */
+async function loadLeads() {
+  try {
+    var params = new URLSearchParams({ per_page: '200', sort_by: 'created_at', order: 'desc' });
+    var r = await fetch('/api/vrs/leads-inbox?' + params.toString(), { credentials: 'include' });
+    if (!r.ok) throw new Error('API ' + r.status);
+    var data = await r.json();
+    allLeads = data.data || [];
+    document.getElementById('leadCount').textContent = data.total || allLeads.length;
+    renderInbox();
+  } catch(e) {
+    document.getElementById('inboxList').innerHTML = '<div class="inbox-empty">Failed to load leads</div>';
+  }
+}
+
+function renderInbox() {
+  var q = (document.getElementById('inboxSearch').value || '').toLowerCase().trim();
+  var list = document.getElementById('inboxList');
+  var filtered = allLeads.filter(function(l) {
+    if (activeFilter !== 'all' && l.status !== activeFilter) return false;
+    if (q) {
+      var hay = ((l.guest_name || '') + ' ' + (l.email || '') + ' ' + (l.guest_message || '')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="inbox-empty">' + (allLeads.length === 0 ? 'No leads yet' : 'No leads match filter') + '</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(function(l) {
+    var sel = selectedLead && selectedLead.id === l.id ? ' selected' : '';
+    return '<div class="lead-card' + sel + '" onclick="selectLead(\'' + esc(l.id) + '\')">'
+      + '<div class="lead-name"><span>' + esc(l.guest_name || 'Unknown') + '</span>'
+      + '<span class="lead-status ' + statusClass(l.status) + '">' + esc(l.status || 'new') + '</span></div>'
+      + '<div class="lead-msg">' + esc(l.guest_message || 'No message') + '</div>'
+      + '<div class="lead-meta">'
+      + (l.ai_score != null ? '<span class="lead-score">&#9733; ' + l.ai_score + '</span>' : '')
+      + '<span>' + fmtDate(l.created_at) + '</span>'
+      + (l.quote_count > 0 ? '<span>' + l.quote_count + ' quote' + (l.quote_count > 1 ? 's' : '') + '</span>' : '')
+      + '</div></div>';
+  }).join('');
+}
+
+/* ── Select a Lead ── */
+function selectLead(id) {
+  selectedLead = allLeads.find(function(l) { return l.id === id; });
+  if (!selectedLead) return;
+  renderInbox();
+  showBuilder();
+  showCopilotReady();
+  restoreDraft();
+}
+
+function showBuilder() {
+  document.getElementById('builderEmpty').style.display = 'none';
+  document.getElementById('builderContent').style.display = 'flex';
+  document.getElementById('pricingSection').style.display = 'none';
+
+  var info = document.getElementById('guestInfo');
+  info.innerHTML = '<div class="guest-info-item"><strong>' + esc(selectedLead.guest_name || 'Unknown') + '</strong></div>'
+    + (selectedLead.email ? '<div class="guest-info-item">' + esc(selectedLead.email) + '</div>' : '')
+    + (selectedLead.phone ? '<div class="guest-info-item">' + esc(selectedLead.phone) + '</div>' : '');
+
+  document.getElementById('guestMsg').textContent = selectedLead.guest_message || 'No message provided';
+
+  renderPropertySelector();
+}
+
+/* ── Load Properties for selector ── */
+async function loadProperties() {
+  try {
+    var r = await fetch('/api/vrs/properties', { credentials: 'include' });
+    if (!r.ok) throw new Error('API error');
+    allProperties = await r.json();
+    if (!Array.isArray(allProperties)) allProperties = [];
+  } catch(e) {
+    allProperties = [];
+  }
+}
+
+function renderPropertySelector() {
+  var grid = document.getElementById('propSelectGrid');
+  if (allProperties.length === 0) {
+    grid.innerHTML = '<div style="color:#555;font-size:12px">No properties available</div>';
+    return;
+  }
+  grid.innerHTML = allProperties.filter(function(p) { return p.is_active !== false; }).map(function(p) {
+    return '<label class="prop-check" data-pid="' + esc(p.id) + '">'
+      + '<input type="checkbox" value="' + esc(p.id) + '" onchange="onPropToggle(this)">'
+      + '<div class="prop-check-info">'
+      + '<div class="prop-check-name">' + esc(p.name) + '</div>'
+      + '<div class="prop-check-detail">' + (p.bedrooms || '?') + ' BR &middot; ' + (p.max_guests || '?') + ' guests</div>'
+      + '</div></label>';
+  }).join('');
+}
+
+function onPropToggle(cb) {
+  var card = cb.closest('.prop-check');
+  if (cb.checked) card.classList.add('checked');
+  else card.classList.remove('checked');
+}
+
+function getSelectedPropertyIds() {
+  var ids = [];
+  document.querySelectorAll('#propSelectGrid input[type=checkbox]:checked').forEach(function(cb) {
+    ids.push(cb.value);
+  });
+  return ids;
+}
+
+/* ── Calculate Pricing ── */
+async function calculatePricing() {
+  var propIds = getSelectedPropertyIds();
+  var checkIn = document.getElementById('checkIn').value;
+  var checkOut = document.getElementById('checkOut').value;
+
+  if (propIds.length === 0) { alert('Select at least one property'); return; }
+  if (!checkIn || !checkOut) { alert('Select check-in and check-out dates'); return; }
+  if (checkOut <= checkIn) { alert('Check-out must be after check-in'); return; }
+  if (!selectedLead) { alert('Select a lead first'); return; }
+
+  var btn = document.getElementById('btnCalc');
+  btn.disabled = true;
+  btn.textContent = 'Calculating...';
+
+  try {
+    var r = await fetch('/api/vrs/leads/' + selectedLead.id + '/quotes/build', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        property_ids: propIds,
+        check_in_date: checkIn,
+        check_out_date: checkOut
+      })
+    });
+    if (!r.ok) {
+      var err = await r.text();
+      throw new Error('API ' + r.status + ': ' + err.slice(0, 200));
+    }
+    lastQuoteResult = await r.json();
+    renderPricing();
+    showCopilotActive();
+  } catch(e) {
+    alert('Pricing failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Calculate Pricing';
+  }
+}
+
+function renderPricing() {
+  if (!lastQuoteResult || !lastQuoteResult.options) return;
+  document.getElementById('pricingSection').style.display = 'block';
+  var grid = document.getElementById('pricingGrid');
+  grid.innerHTML = lastQuoteResult.options.map(function(opt) {
+    return '<div class="pricing-card">'
+      + '<div class="pricing-card-hdr">'
+      + '<div class="pricing-card-name">' + esc(opt.property_name) + ' <span style="color:#555;font-size:11px">(' + opt.bedrooms + 'BR)</span></div>'
+      + '<div class="pricing-card-total">' + fmt$(opt.total_price) + '</div>'
+      + '</div>'
+      + '<div class="pricing-rows">'
+      + '<div class="pricing-label">' + opt.nights + ' nights &times; nightly rate</div><div class="pricing-val">' + fmt$(opt.base_rent) + '</div>'
+      + '<div class="pricing-label">Cleaning & Fees</div><div class="pricing-val">' + fmt$(opt.fees) + '</div>'
+      + '<div class="pricing-label">Taxes</div><div class="pricing-val">' + fmt$(opt.taxes) + '</div>'
+      + '</div></div>';
+  }).join('');
+
+  if (lastQuoteResult.ai_drafted_email_body) {
+    document.getElementById('emailDraft').value = lastQuoteResult.ai_drafted_email_body;
+    document.getElementById('emailDraft').style.display = 'block';
+    document.getElementById('copilotActions').style.display = 'flex';
+    document.getElementById('btnGenerate').disabled = true;
+    saveDraftLocal();
+  }
+}
+
+/* ── AI Copilot ── */
+function showCopilotReady() {
+  document.getElementById('copilotEmpty').style.display = 'none';
+  document.getElementById('copilotContent').style.display = 'flex';
+  document.getElementById('btnGenerate').disabled = true;
+  document.getElementById('emailDraft').style.display = 'none';
+  document.getElementById('copilotActions').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'none';
+}
+
+function showCopilotActive() {
+  document.getElementById('btnGenerate').disabled = false;
+}
+
+async function generatePitch() {
+  if (!selectedLead || !lastQuoteResult) return;
+
+  var btn = document.getElementById('btnGenerate');
+  btn.disabled = true;
+  document.getElementById('emailDraft').style.display = 'none';
+  document.getElementById('copilotActions').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'block';
+
+  var startTime = Date.now();
+  loadingInterval = setInterval(function() {
+    var elapsed = Math.floor((Date.now() - startTime) / 1000);
+    var mins = Math.floor(elapsed / 60);
+    var secs = elapsed % 60;
+    document.getElementById('loadingTimer').textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }, 1000);
+
+  try {
+    var propIds = getSelectedPropertyIds();
+    var checkIn = document.getElementById('checkIn').value;
+    var checkOut = document.getElementById('checkOut').value;
+
+    var r = await fetch('/api/vrs/leads/' + selectedLead.id + '/quotes/build', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        property_ids: propIds,
+        check_in_date: checkIn,
+        check_out_date: checkOut
+      })
+    });
+
+    if (!r.ok) throw new Error('API ' + r.status);
+    lastQuoteResult = await r.json();
+
+    if (lastQuoteResult.ai_drafted_email_body) {
+      document.getElementById('emailDraft').value = lastQuoteResult.ai_drafted_email_body;
+      saveDraftLocal();
+    } else {
+      document.getElementById('emailDraft').value = '(AI draft not available — model may have timed out. Edit manually or retry.)';
+    }
+
+    renderPricing();
+    document.getElementById('emailDraft').style.display = 'block';
+    document.getElementById('copilotActions').style.display = 'flex';
+    document.getElementById('loadingState').style.display = 'none';
+
+    var modelEl = document.querySelector('.copilot-model');
+    if (lastQuoteResult.ai_draft_model) {
+      modelEl.innerHTML = '<span class="dot"></span> ' + esc(lastQuoteResult.ai_draft_model) + ' &middot; HYDRA DEFCON 3';
+    }
+
+  } catch(e) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('emailDraft').style.display = 'block';
+    document.getElementById('emailDraft').value = 'Error generating AI draft: ' + e.message + '\n\nYou can write the email manually here.';
+    document.getElementById('copilotActions').style.display = 'flex';
+  } finally {
+    clearInterval(loadingInterval);
+    btn.disabled = false;
+  }
+}
+
+/* ── localStorage Draft Persistence (Rule 3) ── */
+function getDraftKey() {
+  return selectedLead ? 'lead_draft_' + selectedLead.id : null;
+}
+
+function saveDraftLocal() {
+  var key = getDraftKey();
+  if (!key) return;
+  var val = document.getElementById('emailDraft').value;
+  localStorage.setItem(key, val);
+  localStorage.setItem(key + '_ts', new Date().toISOString());
+  document.getElementById('savedIndicator').textContent = 'Draft auto-saved ' + new Date().toLocaleTimeString();
+}
+
+function restoreDraft() {
+  var key = getDraftKey();
+  if (!key) return;
+  var saved = localStorage.getItem(key);
+  if (saved) {
+    document.getElementById('emailDraft').value = saved;
+    document.getElementById('emailDraft').style.display = 'block';
+    document.getElementById('copilotActions').style.display = 'flex';
+    var ts = localStorage.getItem(key + '_ts');
+    document.getElementById('savedIndicator').textContent = ts ? 'Draft restored from ' + new Date(ts).toLocaleString() : 'Draft restored';
+  }
+}
+
+document.getElementById('emailDraft').addEventListener('input', function() {
+  saveDraftLocal();
+});
+
+/* ── Actions ── */
+function copyDraft() {
+  var ta = document.getElementById('emailDraft');
+  navigator.clipboard.writeText(ta.value).then(function() {
+    var btn = document.querySelector('.btn-secondary');
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy to Clipboard'; }, 1500);
+  });
+}
+
+function approveSend() {
+  alert('Approve & Send is coming in Phase 6 (Email Bridge integration).\n\nFor now, use "Copy to Clipboard" and paste into your email client.');
+}
+
+/* ── Inbox Filters ── */
+document.getElementById('inboxFilters').addEventListener('click', function(e) {
+  var pill = e.target.closest('.inbox-pill');
+  if (!pill) return;
+  document.querySelectorAll('.inbox-pill').forEach(function(p) { p.classList.remove('active'); });
+  pill.classList.add('active');
+  activeFilter = pill.dataset.status;
+  renderInbox();
+});
+
+document.getElementById('inboxSearch').addEventListener('input', renderInbox);
+
+/* ── Init ── */
+async function init() {
+  loadUser();
+  await loadProperties();
+  await loadLeads();
+
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 30);
+  var dayAfter = new Date(tomorrow);
+  dayAfter.setDate(dayAfter.getDate() + 4);
+  document.getElementById('checkIn').value = tomorrow.toISOString().slice(0, 10);
+  document.getElementById('checkOut').value = dayAfter.toISOString().slice(0, 10);
+}
+
+init();
+setInterval(loadLeads, 30000);
+</script>
+</body>
+</html>

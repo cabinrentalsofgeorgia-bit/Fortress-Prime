@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "fortress-prime-sovereign": {
+      "command": "python3",
+      "args": [
+        "/home/admin/Fortress-Prime/src/sovereign_mcp_server.py"
+      ],
+      "env": {
+        "QDRANT_HOST": "localhost",
+        "QDRANT_PORT": "6333",
+        "QDRANT_API_KEY": "ba9bea29e2db1d31025171ffb33d74f151987bdb2fa6760beaa54ab28c23ff5d",
+        "EMBED_URL": "http://localhost:11434/api/embeddings",
+        "PG_HOST": "localhost",
+        "PG_DB": "fortress_db",
+        "PG_USER": "miner_bot",
+        "PG_PASSWORD": ""
+      }
+    },
+    "cursor-ide-browser": {
+      "command": "/home/admin/.nvm/versions/node/v20.20.0/bin/npx",
+      "args": [
+        "-y",
+        "@browsermcp/mcp@latest"
+      ]
+    }
+  }
+}

@@ -26,7 +26,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
 ADMIN_USER = os.getenv("ADMIN_DB_USER", "miner_bot")
-ADMIN_PASS = os.getenv("ADMIN_DB_PASS", "190AntiochCemeteryRD!!!")
+ADMIN_PASS = os.getenv("ADMIN_DB_PASS", os.getenv("DB_PASS", ""))
 
 # SQLAlchemy Setup
 DATABASE_URL = f"postgresql://{ADMIN_USER}:{ADMIN_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

@@ -1,0 +1,29 @@
+# DEPRECATED — 2026-02-22
+# This Dockerfile is archived. The swarm_worker service has been decommissioned.
+# Its function is now handled by fortress-refinery-agent (Dockerfile.refinery-agent).
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir \
+    redis \
+    psycopg2-binary \
+    requests \
+    python-dotenv \
+    qdrant-client
+
+COPY config.py /app/config.py
+COPY src/worker_swarm.py /app/src/worker_swarm.py
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD python3 -c "import os, redis; r=redis.Redis(host='fortress_redis', password=os.getenv('REDIS_PASSWORD','')); r.ping()" || exit 1
+
+CMD ["python3", "/app/src/worker_swarm.py"]

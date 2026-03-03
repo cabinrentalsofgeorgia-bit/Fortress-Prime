@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+"""
+═══════════════════════════════════════════════════════════════════════════════
+FORTRESS PRIME — SOVEREIGN CLI
+═══════════════════════════════════════════════════════════════════════════════
+Command-line interface for the Sovereign Context Protocol.
+
+This is the CLI counterpart to the Cursor MCP integration. Use this when
+working in the terminal with yltra/ultra or other CLI tools.
+
+USAGE:
+    # Interactive mode
+    sovereign
+
+    # Direct queries
+    sovereign legal "easement rights"
+    sovereign jordi "Bitcoin outlook"
+    sovereign oracle "Toccoa Heights"
+    sovereign email "vendor invoices" --division REAL_ESTATE
+
+    # System commands
+    sovereign status
+    sovereign collections
+    sovereign stats
+
+    # Persona prompt (Godhead)
+    sovereign prompt jordi
+    sovereign prompt legal
+
+Author: Fortress Prime Architect
+Version: 1.0.0
+═══════════════════════════════════════════════════════════════════════════════
+"""
+
+import sys
+import json
+import argparse
+from pathlib import Path
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from src import sovereign_mcp_server as mcp
+
+
+def pretty_print(data):
+    """Pretty print JSON data with colors."""
+    try:
+        if isinstance(data, str):
+            data = json.loads(data)
+        print(json.dumps(data, indent=2))
+    except Exception:
+        print(data)
+
+
+def interactive_mode():
+    """Interactive query mode."""
+    print("=" * 70)
+    print("  FORTRESS PRIME — SOVEREIGN CONTEXT PROTOCOL")
+    print("  Interactive Mode")
+    print("=" * 70)
+    print()
+    print("  Commands:")
+    print("    legal <query>        - Search legal documents")
+    print("    jordi <query>        - Search Jordi Visser knowledge")
+    print("    oracle <query>       - Search Oracle (224K vectors)")
+    print("    email <query>        - Search email intelligence")
+    print("    collections          - List all vector collections")
+    print("    stats                - System statistics")
+    print("    status <persona>     - Check persona status (jordi, legal, etc.)")
+    print("    prompt <persona>     - Show persona Godhead prompt")
+    print("    quit                 - Exit")
+    print()
+
+    while True:
+        try:
+            user_input = input("  sovereign> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n\n  Goodbye.")
+            break
+
+        if not user_input:
+            continue
+
+        parts = user_input.split(maxsplit=1)
+        cmd = parts[0].lower()
+
+        if cmd in ("quit", "exit", "q"):
+            print("  Goodbye.")
+            break
+
+        elif cmd == "legal":
+            if len(parts) < 2:
+                print("  Usage: legal <query>")
+                continue
+            query = parts[1]
+            result = mcp.search_fortress_legal(query, top_k=5)
+            pretty_print(result)
+
+        elif cmd == "jordi":
+            if len(parts) < 2:
+                print("  Usage: jordi <query>")
+                continue
+            query = parts[1]
+            result = mcp.search_jordi_knowledge(query, top_k=5)
+            pretty_print(result)
+
+        elif cmd == "oracle":
+            if len(parts) < 2:
+                print("  Usage: oracle <query>")
+                continue
+            query = parts[1]
+            result = mcp.search_oracle(query, max_results=10)
+            pretty_print(result)
+
+        elif cmd == "email":
+            if len(parts) < 2:
+                print("  Usage: email <query> [--division DIVISION]")
+                continue
+            query = parts[1]
+            result = mcp.search_email_intel(query, top_k=5)
+            pretty_print(result)
+
+        elif cmd == "collections":
+            result = mcp.list_collections()
+            pretty_print(result)
+
+        elif cmd == "stats":
+            result = mcp.get_fortress_stats()
+            pretty_print(result)
+
+        elif cmd == "status":
+            if len(parts) < 2:
+                print("  Usage: status <persona>")
+                print("  Available: jordi, legal, crog, comp")
+                continue
+            persona = parts[1].lower()
+            if persona == "jordi":
+                result = mcp.get_jordi_status()
+                pretty_print(result)
+            else:
+                print(f"  Status check for '{persona}' not yet implemented")
+
+        elif cmd == "prompt":
+            if len(parts) < 2:
+                print("  Usage: prompt <persona>")
+                print("  Available: jordi, legal, crog, comp")
+                continue
+            persona = parts[1].lower()
+            if persona == "jordi":
+                print("\n" + mcp.get_jordi_prompt())
+            elif persona == "legal":
+                print("\n" + mcp.get_legal_prompt())
+            elif persona == "crog":
+                print("\n" + mcp.get_crog_prompt())
+            elif persona == "comp":
+                print("\n" + mcp.get_comp_prompt())
+            else:
+                print(f"  Unknown persona: {persona}")
+            print()
+
+        else:
+            print(f"  Unknown command: {cmd}")
+            print("  Type 'quit' to exit or try: legal, jordi, oracle, email, collections, stats")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Sovereign Context Protocol CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  sovereign                                # Interactive mode
+  sovereign legal "easement rights"        # Search legal docs
+  sovereign jordi "Bitcoin outlook"        # Search Jordi knowledge
+  sovereign oracle "survey"                # Search Oracle
+  sovereign email "invoices" -d REAL_ESTATE  # Search emails
+  sovereign stats                          # System stats
+  sovereign collections                    # List collections
+  sovereign prompt jordi                   # Show Jordi Godhead prompt
+        """,
+    )
+
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
+
+    # Legal search
+    legal_parser = subparsers.add_parser("legal", help="Search legal documents")
+    legal_parser.add_argument("query", help="Search query")
+    legal_parser.add_argument("--top-k", type=int, default=5, help="Number of results")
+    legal_parser.add_argument("--category", help="Filter by category")
+
+    # Jordi search
+    jordi_parser = subparsers.add_parser("jordi", help="Search Jordi Visser knowledge")
+    jordi_parser.add_argument("query", help="Search query")
+    jordi_parser.add_argument("--top-k", type=int, default=5, help="Number of results")
+
+    # Oracle search
+    oracle_parser = subparsers.add_parser("oracle", help="Search Oracle (224K vectors)")
+    oracle_parser.add_argument("query", help="Search query")
+    oracle_parser.add_argument("--max-results", type=int, default=10, help="Max results")
+
+    # Email search
+    email_parser = subparsers.add_parser("email", help="Search email intelligence")
+    email_parser.add_argument("query", help="Search query")
+    email_parser.add_argument("-d", "--division", help="Filter by division")
+    email_parser.add_argument("--top-k", type=int, default=5, help="Number of results")
+
+    # Collections
+    subparsers.add_parser("collections", help="List all vector collections")
+
+    # Stats
+    subparsers.add_parser("stats", help="System statistics")
+
+    # Status
+    status_parser = subparsers.add_parser("status", help="Check persona status")
+    status_parser.add_argument("persona", help="Persona name (jordi, legal, crog, comp)")
+
+    # Prompt
+    prompt_parser = subparsers.add_parser("prompt", help="Show persona Godhead prompt")
+    prompt_parser.add_argument("persona", help="Persona name (jordi, legal, crog, comp)")
+
+    args = parser.parse_args()
+
+    # If no command, enter interactive mode
+    if not args.command:
+        interactive_mode()
+        return
+
+    # Execute command
+    if args.command == "legal":
+        result = mcp.search_fortress_legal(
+            args.query,
+            top_k=args.top_k,
+            category=args.category,
+        )
+        pretty_print(result)
+
+    elif args.command == "jordi":
+        result = mcp.search_jordi_knowledge(args.query, top_k=args.top_k)
+        pretty_print(result)
+
+    elif args.command == "oracle":
+        result = mcp.search_oracle(args.query, max_results=args.max_results)
+        pretty_print(result)
+
+    elif args.command == "email":
+        result = mcp.search_email_intel(
+            args.query,
+            division=args.division,
+            top_k=args.top_k,
+        )
+        pretty_print(result)
+
+    elif args.command == "collections":
+        result = mcp.list_collections()
+        pretty_print(result)
+
+    elif args.command == "stats":
+        result = mcp.get_fortress_stats()
+        pretty_print(result)
+
+    elif args.command == "status":
+        if args.persona.lower() == "jordi":
+            result = mcp.get_jordi_status()
+            pretty_print(result)
+        else:
+            print(f"Status check for '{args.persona}' not yet implemented")
+
+    elif args.command == "prompt":
+        persona = args.persona.lower()
+        if persona == "jordi":
+            print(mcp.get_jordi_prompt())
+        elif persona == "legal":
+            print(mcp.get_legal_prompt())
+        elif persona == "crog":
+            print(mcp.get_crog_prompt())
+        elif persona == "comp":
+            print(mcp.get_comp_prompt())
+        else:
+            print(f"Unknown persona: {args.persona}")
+
+
+if __name__ == "__main__":
+    main()

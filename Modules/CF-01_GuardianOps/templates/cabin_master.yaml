@@ -1,0 +1,131 @@
+# =============================================================================
+# CABIN MASTER TEMPLATE — Operational DNA
+# =============================================================================
+# This extends the guest-facing cabins/*.yaml with the OPERATIONAL data
+# that the Groundskeeper Agent needs to schedule, maintain, and inspect.
+#
+# Usage: Copy this file to cabins/ops/<cabin_name>_ops.yaml
+#        e.g. cabins/ops/rolling_river_ops.yaml
+# =============================================================================
+
+id: "CABIN-001"                          # Internal ID (maps to ops_properties.property_id)
+name: "Blue Ridge Sanctuary"
+streamline_id: ""                        # Streamline VRS property ID
+type: "Luxury Log Cabin"
+
+# OPERATIONAL SLA (Service Level Agreement)
+operations:
+  turnover_time_min: 240                 # 4 hours minimum to clean
+  housekeeping_crew_size: 2              # Needs 2 people
+  inspection_checklist: "luxury_tier_1"  # Which CF-01 checklist to use
+  trash_pickup: "Tuesday"
+  linen_provider: "Mountain Fresh Linens"
+  consumables_checklist:                 # Restock every turnover
+    - coffee_pods
+    - dish_soap
+    - paper_towels
+    - trash_bags
+    - toilet_paper
+    - shampoo_conditioner
+
+# SYSTEMS (The Hardware — what breaks, what needs service)
+systems:
+  hvac:
+    count: 2
+    units:
+      - zone: "Main Floor"
+        filter_size: "20x20x1"
+        type: "Central"
+        thermostat: "Nest"
+      - zone: "Lower Level"
+        filter_size: "16x25x1"
+        type: "Mini-split"
+        thermostat: "Remote Control"
+    filter_change_interval_days: 90
+    last_service: "2025-11-01"
+    next_service: "2026-02-01"
+  water:
+    shutoff_valve_location: "Basement Utility Room, Red Handle"
+    hot_water_heater: "Tankless, Rinnai"
+    hot_tub:
+      gallons: 450
+      chemical: "Bromine"
+      drain_interval_days: 90
+      last_drain: "2025-12-15"
+      cover_type: "Spa Cover, Brown"
+  fireplace:
+    type: "Gas"
+    pilot_light_location: "Left side panel"
+    last_inspection: "2025-10-01"
+  wifi:
+    provider: "Starlink"
+    router_location: "Living Room Cabinet"
+    router_model: "Starlink Gen 2"
+    reboot_procedure: "Unplug strip, wait 30s"
+    network_name: ""
+    password_location: "Welcome card on kitchen counter"
+  generator:
+    has_generator: false
+    type: ""
+    fuel: ""
+    last_test: ""
+
+# ACCESS (How do we get in?)
+access:
+  lockbox_type: "Electronic Keypad"
+  lockbox_location: "Front door"
+  master_code: ""                        # ENCRYPTED — pulled from vault at runtime
+  gate_code: ""
+  key_location: ""
+  emergency_entry: "Locksmith: Mountain Lock & Key (706) 555-0199"
+
+# VENDOR CONTACTS (Who fixes it?)
+vendors:
+  plumbing:
+    name: "Blue Ridge Pipes Inc."
+    phone: ""
+    response_sla: "Same day"
+  hvac:
+    name: "Mountain Air"
+    phone: ""
+    response_sla: "Same day"
+  internet:
+    name: "TDS Telecom"
+    phone: ""
+    response_sla: "24 hours"
+  pest_control:
+    name: ""
+    phone: ""
+    schedule: "Monthly"
+  electrician:
+    name: ""
+    phone: ""
+  locksmith:
+    name: "Mountain Lock & Key"
+    phone: "(706) 555-0199"
+  hot_tub:
+    name: ""
+    phone: ""
+    schedule: "Quarterly drain + service"
+
+# SEASONAL PROTOCOLS (What changes by season?)
+seasonal:
+  winter:
+    - "Set heat to 55F when vacant"
+    - "Check pipe insulation"
+    - "Salt driveway after snow"
+    - "Verify fireplace pilot light monthly"
+  summer:
+    - "Set AC to 78F when vacant"
+    - "Check for wasp nests weekly"
+    - "Hot tub chemical check 2x/week"
+    - "Mow lawn bi-weekly"
+  fall:
+    - "Clean gutters"
+    - "HVAC filter change"
+    - "Check chimney cap"
+  spring:
+    - "Pressure wash decks"
+    - "Inspect roof for winter damage"
+    - "Test all smoke/CO detectors"
+    - "Deep clean hot tub + drain"

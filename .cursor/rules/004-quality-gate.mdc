@@ -1,0 +1,89 @@
+---
+description: Mandatory end-to-end verification before any change is declared done
+alwaysApply: true
+---
+
+# QUALITY GATE — End-to-End Verification Protocol (Amendment VI)
+
+**Effective Date:** 2026-02-20
+**Classification:** Non-Negotiable Engineering Standard
+
+## The Prime Rule
+
+**NO CHANGE IS DONE UNTIL IT IS VERIFIED WORKING IN THE BROWSER.**
+
+Do not tell the user "try refreshing" or "it should work now." Verify it yourself first.
+
+## Before Declaring Any Fix or Feature Complete
+
+### 1. Restart the Affected Service
+
+If you modified a Python backend (`master_console.py`, any FastAPI server), you MUST:
+- Kill the running process
+- Restart it
+- Confirm it starts without import errors or crashes
+- Wait for the "Uvicorn running" (or equivalent) log line
+
+### 2. Verify the Database Schema
+
+If you added new columns, tables, or constraints:
+- Run a direct SQL query to confirm the schema change exists
+- Test an INSERT or SELECT against the new schema element
+- If the migration failed, fix it before proceeding — do NOT wrap it in try/except and call it done
+
+### 3. Load the Page in a Browser
+
+Use the browser MCP to:
+- Navigate to the affected page
+- Confirm the page loads without JS console errors
+- Confirm the layout is not broken (no horizontal overflow, no elements cut off)
+- Confirm all data loads (no "Failed to load" messages)
+
+### 4. Test the Specific Change
+
+If you modified a button, form, or action:
+- Click/submit it in the browser
+- Verify the API call succeeds (check network response)
+- Verify the UI updates correctly after the action
+- Verify the page still works after the action (reload and confirm)
+
+### 5. Test Adjacent Features
+
+Changes often break neighboring functionality. After your primary verification:
+- Click the nav bar links — do they still navigate correctly?
+- Switch between tabs — do they still render?
+- If you touched CSS, check that the page doesn't overflow horizontally
+
+### 6. Verify HTML Structure
+
+After modifying ANY HTML file in `tools/`:
+- Run a div-balance check: count opening `<div>` vs closing `</div>` tags
+- The count MUST be equal. An unclosed `<div>` (especially `fn-bar`) will make the entire page render inside a flex container, pushing content to the right
+- Run this check on ALL 22 HTML files, not just the one you edited — batch scripts can introduce structural bugs
+
+```python
+# Mandatory check after ANY HTML edit:
+import re, os
+for fname in sorted(os.listdir('tools')):
+    if not fname.endswith('.html'): continue
+    with open(f'tools/{fname}') as f:
+        content = f.read()
+    if 'fn-bar' not in content: continue
+    opens = len(re.findall(r'<div[\s>]', content))
+    closes = content.count('</div>')
+    assert opens == closes, f"{fname}: {opens} opens vs {closes} closes"
+```
+
+## Forbidden Patterns
+
+1. **DO NOT** tell the user to "try refreshing" without first verifying yourself
+2. **DO NOT** add try/except around broken queries as a substitute for fixing the schema
+3. **DO NOT** declare CSS "fixed" without loading the page to see it
+4. **DO NOT** modify HTML/CSS for one page without checking that the nav bar is consistent across all pages
+5. **DO NOT** skip the server restart — stale code causes ghost bugs that waste the user's time
+6. **DO NOT** assume a database migration worked — query it to confirm
+7. **DO NOT** edit HTML without checking div balance afterward — an unclosed nav div will break the entire page layout
+
+## The Accountability Standard
+
+If the user reports the same class of bug twice (layout broken, "failed to load", nav links dead), that is a process failure. The fix is not just patching the bug — it is fixing the verification step that should have caught it.

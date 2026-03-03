@@ -8,7 +8,7 @@ import re
 # --- CONFIGURATION ---
 # Note: The path handles the brackets and spaces
 TARGET_DIR = "/mnt/fortress_mail/@local/1026/1026/Maildir/.[Gmail].All Mail/cur"
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 
 def get_db_connection():
     return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password=DB_PASS)

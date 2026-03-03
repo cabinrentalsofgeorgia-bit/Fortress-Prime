@@ -1,0 +1,54 @@
+# =============================================================================
+# CABIN TEMPLATE — Copy this file and fill in for each new property
+# =============================================================================
+# Filename should be: cabin_name_lowercase.yaml (e.g., five_peaks.yaml)
+# Each section maps to a topic_classifier topic tag.
+
+name: "Cabin Name Here"
+status: active    # active | inactive | seasonal
+bedrooms: 0
+bathrooms: 0
+max_guests: 0
+pet_friendly: false
+
+general_summary: |
+  One paragraph overview of the cabin. Location, key features, distance to town.
+
+ev_charging: |
+  EV charging details, or "No EV charging available at this property."
+
+pets: |
+  Pet policy. Fees, restrictions, what's provided.
+
+hot_tub: |
+  Hot tub details. Size, temperature, controls, rules.
+
+internet: |
+  WiFi network name, password location, speed, streaming setup.
+
+checkin: |
+  Check-in time, access method (keypad/lockbox), directions, GPS address.
+
+checkout: |
+  Check-out time, departure checklist, late checkout policy.
+
+hvac: |
+  Heating and cooling: thermostat type, fireplace, emergency contacts.
+
+kitchen: |
+  Kitchen equipment, grill, coffee setup, nearest grocery store.
+
+parking: |
+  Number of spaces, driveway type, 4WD requirements, trailer/RV capacity.
+
+activities: |
+  Nearby activities, distances, recommendations.
+
+accessibility: |
+  Levels, stairs, wheelchair access, grab bars, walk-in showers.
+
+policies: |
+  House rules, quiet hours, smoking, cancellation, security deposit, max age.
+
+amenities: |
+  Full bullet-point list of all amenities.

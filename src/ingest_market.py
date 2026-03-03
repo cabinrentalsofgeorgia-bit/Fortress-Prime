@@ -7,7 +7,7 @@ import re
 
 # --- CONFIGURATION ---
 TARGET_DIR = "/mnt/fortress_mail/@local/1026/1026/Maildir/.MARKET_INTELLIGENCE/cur"
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 
 def get_db_connection():
     return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password=DB_PASS)

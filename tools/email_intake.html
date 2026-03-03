@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Intake — CROG Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid #1a1a1a;flex-shrink:0;gap:12px;flex-wrap:wrap}
+.page-hdr h1{font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.page-hdr h1 .icon{font-size:24px}
+.hdr-stats{display:flex;gap:8px;flex-wrap:wrap}
+.hdr-stat{text-align:center;padding:5px 10px;border-radius:8px;background:#111;border:1px solid #1a1a1a;min-width:0}
+.hdr-stat .num{font-size:16px;font-weight:700;font-family:'SF Mono',Consolas,monospace}
+.hdr-stat .lbl{font-size:8px;color:#666;text-transform:uppercase;letter-spacing:.04em;margin-top:1px;white-space:nowrap}
+.hdr-stat.p0 .num{color:#f87171}
+.hdr-stat.p1 .num{color:#fbbf24}
+.hdr-stat.p2 .num{color:#60a5fa}
+.hdr-stat.p3 .num{color:#888}
+
+/* ── Tabs ── */
+.tab-bar{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid #222;background:#050505;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab-bar::-webkit-scrollbar{height:0;display:none}
+.tab{padding:10px 14px;color:#666;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-size:12px;font-weight:500;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:#aaa}
+.tab.active{color:#fff;border-bottom-color:#60a5fa}
+.tab .badge{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(96,165,250,.15);color:#60a5fa}
+
+/* ── Main Content ── */
+.content{flex:1;overflow-y:auto;padding:16px 24px 40px}
+
+/* ── Filter Bar ── */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar select,.filter-bar input{background:#111;border:1px solid #222;color:#fff;padding:7px 12px;border-radius:8px;font-size:12px;font-family:inherit}
+.filter-bar select:focus,.filter-bar input:focus{outline:none;border-color:#60a5fa}
+.filter-bar .spacer{flex:1}
+.btn{padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.btn-primary{background:#60a5fa;color:#000}.btn-primary:hover{background:#3b82f6}
+.btn-success{background:#4ade80;color:#000}.btn-success:hover{background:#22c55e}
+.btn-danger{background:#f87171;color:#000}.btn-danger:hover{background:#ef4444}
+.btn-muted{background:#222;color:#888}.btn-muted:hover{background:#333;color:#fff}
+.btn-sm{padding:4px 10px;font-size:11px;border-radius:6px}
+
+/* ── Cards / Items ── */
+.item-list{display:flex;flex-direction:column;gap:8px}
+.item-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:14px 18px;transition:border-color .15s}
+.item-card:hover{border-color:#333}
+.item-card.p0{border-left:3px solid #f87171}
+.item-card.p1{border-left:3px solid #fbbf24}
+.item-card.p2{border-left:3px solid #60a5fa}
+.item-card.p3{border-left:3px solid #444}
+.item-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px}
+.item-priority{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.item-priority.p0{background:rgba(248,113,113,.15);color:#f87171}
+.item-priority.p1{background:rgba(251,191,36,.15);color:#fbbf24}
+.item-priority.p2{background:rgba(96,165,250,.15);color:#60a5fa}
+.item-priority.p3{background:rgba(136,136,136,.15);color:#888}
+.item-sender{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-time{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace;white-space:nowrap}
+.item-subject{font-size:13px;color:#ccc;margin-bottom:6px;line-height:1.4}
+.item-trigger{font-size:11px;color:#888;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.item-trigger .trigger-type{background:#1a1a1a;padding:2px 8px;border-radius:4px;font-size:10px;color:#aaa;font-family:'SF Mono',Consolas,monospace}
+.item-body{font-size:12px;color:#666;line-height:1.5;max-height:80px;overflow:hidden;margin-bottom:10px;background:#0a0a0a;padding:10px 12px;border-radius:8px;border:1px solid #1a1a1a;transition:color .15s,background .15s,border-color .15s;cursor:text}
+.item-body:hover{color:#fff;background:#111;border-color:#333}
+.item-body.expanded{max-height:none}
+.item-body.expanded:hover{color:#fff}
+.item-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-top:8px;border-top:1px solid #1a1a1a}
+.division-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em}
+.div-REAL_ESTATE{background:rgba(74,222,128,.12);color:#4ade80}
+.div-HEDGE_FUND{background:rgba(96,165,250,.12);color:#60a5fa}
+.div-LEGAL_ADMIN{background:rgba(248,113,113,.12);color:#f87171}
+.div-FINANCE{background:rgba(251,191,36,.12);color:#fbbf24}
+.div-PERSONAL{background:rgba(168,85,247,.12);color:#a78bfa}
+.div-JUNK{background:rgba(136,136,136,.12);color:#888}
+.div-SALES_OPP{background:rgba(52,211,153,.15);color:#34d399}
+.div-CABIN_VRS{background:rgba(251,146,60,.15);color:#fb923c}
+.div-UNKNOWN{background:rgba(136,136,136,.12);color:#555}
+.div-INSURANCE{background:rgba(56,189,248,.12);color:#38bdf8}
+.div-COMPLIANCE{background:rgba(244,63,94,.12);color:#f43f5e}
+.div-VENDOR_OPS{background:rgba(132,204,22,.12);color:#84cc16}
+.div-MAINTENANCE{background:rgba(234,179,8,.12);color:#eab308}
+.div-TAX{background:rgba(139,92,246,.12);color:#8b5cf6}
+.div-HR_ADMIN{background:rgba(236,72,153,.12);color:#ec4899}
+
+/* ── SLA Badges ── */
+.sla-breach{animation:slaPulse 1.5s ease infinite;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(248,113,113,.15);color:#f87171}
+.sla-ok{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:rgba(74,222,128,.08);color:#4ade80}
+@keyframes slaPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.snoozed-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(96,165,250,.12);color:#60a5fa}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:#111;border:1px solid #333;border-radius:14px;padding:24px;width:480px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal h2{font-size:16px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal .form-group{margin-bottom:14px}
+.modal .form-group label{display:block;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.modal .form-group select,.modal .form-group input,.modal .form-group textarea{width:100%;background:#0a0a0a;border:1px solid #222;color:#fff;padding:9px 12px;border-radius:8px;font-size:12px;font-family:inherit}
+.modal .form-group textarea{min-height:70px;resize:vertical}
+.modal .form-group select:focus,.modal .form-group input:focus,.modal .form-group textarea:focus{outline:none;border-color:#60a5fa}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid #222}
+
+/* ── Health Indicator ── */
+.health-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.health-dot.green{background:#4ade80;box-shadow:0 0 6px #4ade80}
+.health-dot.amber{background:#fbbf24;box-shadow:0 0 6px #fbbf24}
+.health-dot.red{background:#f87171;box-shadow:0 0 6px #f87171}
+
+/* ── Reclassify Dropdown ── */
+.reclass-dropdown{display:inline-flex;align-items:center;gap:4px}
+.reclass-dropdown select{background:#1a1a1a;border:1px solid #333;color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;font-family:inherit}
+
+/* ── Star Rating ── */
+.grade-row{display:flex;gap:4px;align-items:center;margin-top:8px;padding:8px 0;border-top:1px solid #1a1a1a}
+.grade-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-right:8px}
+.star{font-size:20px;cursor:pointer;color:#333;transition:color .15s;background:none;border:none;padding:2px}
+.star:hover,.star.active{color:#fbbf24}
+.star.graded{color:#fbbf24;cursor:default}
+.grade-badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:700;margin-left:8px}
+.grade-badge.high{background:rgba(74,222,128,.15);color:#4ade80}
+.grade-badge.mid{background:rgba(251,191,36,.15);color:#fbbf24}
+.grade-badge.low{background:rgba(248,113,113,.15);color:#f87171}
+.conf-badge{font-size:10px;padding:2px 7px;border-radius:6px;font-family:'SF Mono',Consolas,monospace;margin-left:auto}
+
+/* ── Quarantine Panel ── */
+.q-card{background:#111;border:1px solid #1a1a1a;border-left:3px solid #fbbf24;border-radius:10px;padding:14px 18px;transition:border-color .15s}
+.q-card:hover{border-color:#333}
+.q-reason{font-size:11px;color:#fbbf24;margin-bottom:6px}
+
+/* ── Rules Panel ── */
+.rule-table{width:100%;border-collapse:collapse;font-size:12px}
+.rule-table th{text-align:left;padding:8px 10px;border-bottom:1px solid #222;color:#666;font-size:10px;text-transform:uppercase;letter-spacing:.06em;position:sticky;top:0;background:#000}
+.rule-table td{padding:8px 10px;border-bottom:1px solid #111;color:#ccc;vertical-align:top}
+.rule-table tr:hover td{background:#0a0a0a}
+.rule-table .hits{font-family:'SF Mono',Consolas,monospace;color:#4ade80}
+.rule-active{color:#4ade80}.rule-inactive{color:#f87171}
+
+/* ── Stats Grid ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:16px;text-align:center}
+.stat-card .val{font-size:28px;font-weight:700;font-family:'SF Mono',Consolas,monospace}
+.stat-card .label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.stat-card.green .val{color:#4ade80}
+.stat-card.amber .val{color:#fbbf24}
+.stat-card.red .val{color:#f87171}
+.stat-card.blue .val{color:#60a5fa}
+
+/* ── Division Bar Chart ── */
+.div-chart{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.div-row{display:flex;align-items:center;gap:10px}
+.div-row .name{width:100px;font-size:11px;text-align:right;color:#888}
+.div-row .bar-bg{flex:1;height:22px;background:#111;border-radius:4px;overflow:hidden;position:relative}
+.div-row .bar-fill{height:100%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:600;color:#000}
+.div-row .count{width:60px;font-size:11px;font-family:'SF Mono',Consolas,monospace;color:#888;text-align:right}
+
+/* ── Add Rule Form ── */
+.add-form{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:16px;margin-bottom:16px}
+.add-form h3{font-size:13px;margin-bottom:12px;color:#888}
+.form-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.form-row input,.form-row select,.form-row textarea{background:#0a0a0a;border:1px solid #222;color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;font-family:inherit;flex:1;min-width:120px}
+.form-row textarea{min-height:60px;resize:vertical}
+
+/* ── Toast ── */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px}
+.toast{padding:10px 18px;border-radius:8px;font-size:12px;font-weight:500;animation:slideUp .3s ease;max-width:400px}
+.toast.success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
+.toast.error{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3)}
+.toast.info{background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3)}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Expand Toggle ── */
+.expand-btn{font-size:10px;color:#555;cursor:pointer;background:none;border:none;padding:2px 6px}
+.expand-btn:hover{color:#60a5fa}
+
+/* ── Loading ── */
+.loading{text-align:center;padding:40px;color:#444;font-size:13px}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid #333;border-top-color:#60a5fa;border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Drag & Drop Tabs ── */
+.edit-toggle{position:fixed;bottom:24px;right:24px;z-index:9998;padding:10px 20px;
+  border-radius:12px;border:1px solid #333;background:rgba(17,17,17,.95);color:#888;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);
+  display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.edit-toggle:hover{border-color:#60a5fa;color:#60a5fa}
+.edit-toggle.active{border-color:#4ade80;color:#4ade80;background:rgba(74,222,128,.08)}
+.edit-toggle .ico{font-size:16px}
+
+body.edit-mode .tab-bar .tab{cursor:grab;user-select:none;-webkit-user-select:none}
+body.edit-mode .tab-bar .tab{animation:twobble .3s ease-in-out infinite alternate}
+body.edit-mode .tab-bar .tab:nth-child(2n){animation-delay:.06s;animation-direction:alternate-reverse}
+body.edit-mode .tab-bar .tab:nth-child(3n){animation-delay:.12s}
+@keyframes twobble{0%{transform:rotate(-1deg)}100%{transform:rotate(1deg)}}
+
+body.edit-mode .hdr-stat{cursor:grab;user-select:none;animation:swobble .28s ease-in-out infinite alternate}
+body.edit-mode .hdr-stat:nth-child(2n){animation-delay:.05s;animation-direction:alternate-reverse}
+@keyframes swobble{0%{transform:rotate(-0.8deg) scale(1.01)}100%{transform:rotate(0.8deg) scale(1.01)}}
+
+.tab.drag-over-tab{border-bottom:2px dashed #60a5fa !important;background:rgba(96,165,250,.08) !important}
+.tab.dragging-tab{opacity:.3}
+.hdr-stat.drag-over-tab{outline:2px dashed #60a5fa;outline-offset:2px}
+.hdr-stat.dragging-tab{opacity:.3}
+.edit-hint{position:fixed;bottom:70px;right:24px;z-index:9998;padding:8px 14px;
+  border-radius:8px;background:rgba(96,165,250,.12);color:#60a5fa;font-size:11px;
+  font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;border:1px solid rgba(96,165,250,.2)}
+body.edit-mode .edit-hint{opacity:1}
+
+/* ── Responsive ── */
+@media(max-width:1200px){.hdr-stats{gap:6px}.hdr-stat{padding:4px 8px}.hdr-stat .num{font-size:14px}.tab{padding:9px 10px;font-size:11px}}
+@media(max-width:768px){.fn-groups{display:none}.page-hdr{flex-direction:column;gap:10px;align-items:flex-start}.hdr-stats{flex-wrap:wrap;gap:6px}.filter-bar{flex-direction:column}.tab-bar{padding:0 12px}}
+</style>
+</head>
+<body>
+
+<!-- ── Fortress Unified Nav ── -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue fn-g-active" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item fn-dd-active"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- ── Page Header ── -->
+<div class="page-hdr">
+  <h1><span class="icon">&#128231;</span> Email Intake Command</h1>
+  <div class="hdr-stats" data-grid="intake-stats">
+    <div class="hdr-stat p0" data-tab-id="sp0"><div class="num" id="statP0">-</div><div class="lbl">P0 Critical</div></div>
+    <div class="hdr-stat p1" data-tab-id="sp1"><div class="num" id="statP1">-</div><div class="lbl">P1 High</div></div>
+    <div class="hdr-stat p2" data-tab-id="sp2"><div class="num" id="statP2">-</div><div class="lbl">P2 Medium</div></div>
+    <div class="hdr-stat p3" data-tab-id="sp3"><div class="num" id="statP3">-</div><div class="lbl">P3 Low</div></div>
+    <div class="hdr-stat" data-tab-id="sp-sla" style="border:1px solid #f87171"><div class="num" id="statSLA" style="color:#f87171">-</div><div class="lbl">SLA Breaches</div></div>
+    <div class="hdr-stat" data-tab-id="sp-snz"><div class="num" id="statSnoozed" style="color:#60a5fa">-</div><div class="lbl">Snoozed</div></div>
+    <div class="hdr-stat" data-tab-id="sp-dlq"><div class="num" id="statDLQ" style="color:#fbbf24">-</div><div class="lbl">Dead Letter</div></div>
+  </div>
+</div>
+
+<!-- ── Tabs ── -->
+<div class="tab-bar" id="tabBar" data-grid="intake-tabs">
+  <div class="tab active" data-tab="escalation" data-tab-id="t-esc" onclick="if(!eiEditMode)switchTab('escalation')">
+    Escalation Queue <span class="badge" id="badgeEsc">-</span>
+  </div>
+  <div class="tab" data-tab="quarantine" data-tab-id="t-quar" onclick="if(!eiEditMode)switchTab('quarantine')">
+    Quarantine <span class="badge" id="badgeQuar">-</span>
+  </div>
+  <div class="tab" data-tab="overview" data-tab-id="t-over" onclick="if(!eiEditMode)switchTab('overview')">
+    Overview &amp; Analytics
+  </div>
+  <div class="tab" data-tab="rules" data-tab-id="t-rules" onclick="if(!eiEditMode)switchTab('rules')">
+    Rules Engine
+  </div>
+  <div class="tab" data-tab="learning" data-tab-id="t-learn" onclick="if(!eiEditMode)switchTab('learning')">
+    Learning Log
+  </div>
+  <div class="tab" data-tab="health" data-tab-id="t-health" onclick="if(!eiEditMode)switchTab('health')">
+    System Health
+  </div>
+  <div class="tab" data-tab="dlq" data-tab-id="t-dlq" onclick="if(!eiEditMode)switchTab('dlq')">
+    Dead Letter <span class="badge" id="badgeDLQ">-</span>
+  </div>
+</div>
+
+<!-- ── Content ── -->
+<div class="content" id="mainContent">
+  <div class="loading"><span class="spinner"></span> Loading email intake data...</div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<!-- Edit Mode Toggle -->
+<button class="edit-toggle" id="editToggle" onclick="toggleEditMode()">
+  <span class="ico">&#9776;</span> Customize Layout
+</button>
+<div class="edit-hint">Drag tabs &amp; stats to reorder &bull; Click &ldquo;Done&rdquo; to save</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  STATE                                                                     */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+const API = '/api/email-intake';
+let currentTab = 'escalation';
+let escalationData = null;
+let quarantineData = null;
+let overviewData = null;
+let rulesData = null;
+let learningData = null;
+let healthData = null;
+let dlqData = null;
+let metaData = null;
+
+let escFilter = {priority: 'all', status: 'pending', search: '', division: 'all'};
+let escPage = 0;
+const PAGE_SIZE = 50;
+
+var SLA_HOURS = {P0: 1, P1: 4, P2: 24, P3: 72};
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  UTILITIES                                                                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+function toast(msg, type) {
+  var c = document.getElementById('toasts');
+  var t = document.createElement('div');
+  t.className = 'toast ' + (type || 'info');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 4000);
+}
+
+function apiGet(url, cb) {
+  fetch(url, {credentials:'include'}).then(function(r){
+    if (r.status === 401) { window.location = '/login'; return; }
+    return r.json().then(function(d){ cb(null, d, r.status); });
+  }).catch(function(e){ cb(e.message); });
+}
+
+function apiPost(url, body, cb) {
+  fetch(url, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+  .then(function(r){
+    if (r.status === 401) { window.location = '/login'; return; }
+    return r.json().then(function(d){ cb(null, d, r.status); });
+  }).catch(function(e){ cb(e.message); });
+}
+
+function fmtDate(s) {
+  if (!s) return '-';
+  var d = new Date(s);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
+         d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+function truncate(s, n) { return s && s.length > n ? s.substring(0, n) + '...' : (s || ''); }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  TAB SWITCHING                                                             */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab === tab); });
+  render();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  DATA LOADING                                                              */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+function loadDashboard() {
+  apiGet(API + '/dashboard', function(err, data) {
+    if (err) { toast('Failed to load dashboard: ' + err, 'error'); return; }
+    overviewData = data;
+    updateHeaderStats(data);
+    if (currentTab === 'overview') render();
+  });
+}
+
+function loadEscalation() {
+  var params = '?status=' + escFilter.status + '&priority=' + escFilter.priority +
+               '&division=' + escFilter.division + '&search=' + encodeURIComponent(escFilter.search) +
+               '&offset=' + (escPage * PAGE_SIZE) + '&limit=' + PAGE_SIZE;
+  apiGet(API + '/escalation' + params, function(err, data) {
+    if (err) { toast('Failed to load escalation: ' + err, 'error'); return; }
+    escalationData = data;
+    document.getElementById('badgeEsc').textContent = data.total || 0;
+    if (currentTab === 'escalation') render();
+  });
+}
+
+function loadQuarantine() {
+  apiGet(API + '/quarantine?limit=100', function(err, data) {
+    if (err) { toast('Failed to load quarantine: ' + err, 'error'); return; }
+    quarantineData = data;
+    document.getElementById('badgeQuar').textContent = data.total || 0;
+    if (currentTab === 'quarantine') render();
+  });
+}
+
+function loadRules() {
+  apiGet(API + '/rules', function(err, data) {
+    if (err) { toast('Failed to load rules: ' + err, 'error'); return; }
+    rulesData = data;
+    if (currentTab === 'rules') render();
+  });
+}
+
+function loadLearning() {
+  apiGet(API + '/learning', function(err, data) {
+    if (err) { toast('Failed to load learning: ' + err, 'error'); return; }
+    learningData = data;
+    if (currentTab === 'learning') render();
+  });
+}
+
+function loadMetadata() {
+  apiGet(API + '/metadata', function(err, data) {
+    if (err) return;
+    metaData = data;
+    if (data.sla_hours) SLA_HOURS = data.sla_hours;
+  });
+}
+
+function loadHealth() {
+  apiGet(API + '/health', function(err, data) {
+    if (err) { toast('Failed to load health: ' + err, 'error'); return; }
+    healthData = data;
+    var dlqTotal = 0;
+    if (data.dlq) Object.values(data.dlq).forEach(function(v) { dlqTotal += v; });
+    var el = document.getElementById('statDLQ');
+    if (el) el.textContent = dlqTotal;
+    var snzEl = document.getElementById('statSnoozed');
+    if (snzEl) snzEl.textContent = (data.snoozed_active || 0);
+    if (currentTab === 'health') render();
+  });
+}
+
+function loadDLQ() {
+  apiGet(API + '/dlq?limit=100', function(err, data) {
+    if (err) { toast('Failed to load DLQ: ' + err, 'error'); return; }
+    dlqData = data;
+    var total = 0;
+    if (data.counts) Object.values(data.counts).forEach(function(v) { total += v; });
+    document.getElementById('badgeDLQ').textContent = total;
+    if (currentTab === 'dlq') render();
+  });
+}
+
+function updateHeaderStats(data) {
+  if (!data || !data.escalation || !data.escalation.stats) return;
+  var counts = {P0:0, P1:0, P2:0, P3:0};
+  data.escalation.stats.forEach(function(r) {
+    if (r.status === 'pending') counts[r.priority] = (counts[r.priority] || 0) + r.cnt;
+  });
+  document.getElementById('statP0').textContent = counts.P0.toLocaleString();
+  document.getElementById('statP1').textContent = counts.P1.toLocaleString();
+  document.getElementById('statP2').textContent = counts.P2.toLocaleString();
+  document.getElementById('statP3').textContent = counts.P3.toLocaleString();
+
+  var slaBreach = 0;
+  if (data.sla_breaches) Object.values(data.sla_breaches).forEach(function(v) { slaBreach += v; });
+  var slaEl = document.getElementById('statSLA');
+  if (slaEl) { slaEl.textContent = slaBreach; slaEl.style.color = slaBreach > 0 ? '#f87171' : '#4ade80'; }
+
+  var snzEl = document.getElementById('statSnoozed');
+  if (snzEl) snzEl.textContent = data.snoozed_count || 0;
+}
+
+function loadAll() {
+  loadMetadata();
+  loadDashboard();
+  loadEscalation();
+  loadQuarantine();
+  loadRules();
+  loadLearning();
+  loadHealth();
+  loadDLQ();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  RENDER                                                                    */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+function render() {
+  var c = document.getElementById('mainContent');
+  switch (currentTab) {
+    case 'escalation': renderEscalation(c); break;
+    case 'quarantine': renderQuarantine(c); break;
+    case 'overview': renderOverview(c); break;
+    case 'rules': renderRules(c); break;
+    case 'learning': renderLearning(c); break;
+    case 'health': renderHealth(c); break;
+    case 'dlq': renderDLQ(c); break;
+  }
+}
+
+/* ── Escalation Queue ── */
+function renderEscalation(c) {
+  if (!escalationData) { c.innerHTML = '<div class="loading"><span class="spinner"></span> Loading...</div>'; return; }
+  var items = escalationData.items || [];
+  var total = escalationData.total || 0;
+
+  var html = '<div class="filter-bar">' +
+    '<select id="fPriority" onchange="escFilter.priority=this.value;escPage=0;loadEscalation()">' +
+    '<option value="all"'+(escFilter.priority==='all'?' selected':'')+'>All Priorities</option>' +
+    '<option value="P0"'+(escFilter.priority==='P0'?' selected':'')+'>P0 Critical</option>' +
+    '<option value="P1"'+(escFilter.priority==='P1'?' selected':'')+'>P1 High</option>' +
+    '<option value="P2"'+(escFilter.priority==='P2'?' selected':'')+'>P2 Medium</option>' +
+    '<option value="P3"'+(escFilter.priority==='P3'?' selected':'')+'>P3 Low</option>' +
+    '</select>' +
+    '<select id="fStatus" onchange="escFilter.status=this.value;escPage=0;loadEscalation()">' +
+    '<option value="pending"'+(escFilter.status==='pending'?' selected':'')+'>Pending</option>' +
+    '<option value="seen"'+(escFilter.status==='seen'?' selected':'')+'>Seen</option>' +
+    '<option value="actioned"'+(escFilter.status==='actioned'?' selected':'')+'>Actioned</option>' +
+    '<option value="dismissed"'+(escFilter.status==='dismissed'?' selected':'')+'>Dismissed</option>' +
+    '<option value="all"'+(escFilter.status==='all'?' selected':'')+'>All Statuses</option>' +
+    '</select>' +
+    '<select id="fDivision" onchange="escFilter.division=this.value;escPage=0;loadEscalation()">' +
+    '<option value="all">All Divisions</option>' +
+    '<option value="CABIN_VRS">Cabin Rental / VRS</option>' +
+    '<option value="SALES_OPP">Sales Opportunity</option>' +
+    '<option value="REAL_ESTATE">Real Estate</option>' +
+    '<option value="HEDGE_FUND">Hedge Fund</option>' +
+    '<option value="LEGAL_ADMIN">Legal Admin</option>' +
+    '<option value="FINANCE">Finance</option>' +
+    '<option value="INSURANCE">Insurance</option>' +
+    '<option value="COMPLIANCE">Compliance</option>' +
+    '<option value="VENDOR_OPS">Vendor Ops</option>' +
+    '<option value="MAINTENANCE">Maintenance</option>' +
+    '<option value="TAX">Tax</option>' +
+    '<option value="HR_ADMIN">HR Admin</option>' +
+    '<option value="PERSONAL">Personal</option>' +
+    '<option value="JUNK">Junk</option>' +
+    '</select>' +
+    '<input type="text" placeholder="Search sender, subject..." value="'+esc(escFilter.search)+'" ' +
+    'onkeyup="if(event.key===\'Enter\'){escFilter.search=this.value;escPage=0;loadEscalation()}" id="fSearch">' +
+    '<div class="spacer"></div>' +
+    '<span style="color:#555;font-size:11px">' + total.toLocaleString() + ' items</span>' +
+    '<button class="btn btn-muted btn-sm" onclick="bulkAction(\'dismissed\')">Bulk Dismiss Filtered</button>' +
+    '</div>';
+
+  if (items.length === 0) {
+    html += '<div style="text-align:center;padding:60px;color:#444"><p style="font-size:40px;margin-bottom:10px">&#9745;</p><p>No items match your filters</p></div>';
+  } else {
+    html += '<div class="item-list">';
+    items.forEach(function(item) {
+      var p = item.priority || 'P3';
+      var grade = item.review_grade || 0;
+      var stars = '';
+      for (var s = 1; s <= 5; s++) {
+        var cls = grade >= s ? 'star active' : 'star';
+        if (grade > 0) cls += ' graded';
+        stars += '<button class="' + cls + '" onclick="gradeItem(' + item.id + ',' + s + ')">' +
+                 (grade >= s ? '\u2605' : '\u2606') + '</button>';
+      }
+      var gradeBadge = '';
+      if (grade > 0) {
+        var gc = grade >= 4 ? 'high' : (grade >= 3 ? 'mid' : 'low');
+        gradeBadge = '<span class="grade-badge ' + gc + '">' + grade + '/5</span>';
+      }
+      var conf = item.division_confidence || 0;
+      var confColor = conf >= 70 ? '#4ade80' : conf >= 40 ? '#fbbf24' : '#f87171';
+
+      // SLA calculation
+      var slaHtml = '';
+      if (item.status === 'pending' && item.created_at) {
+        var ageMs = Date.now() - new Date(item.created_at).getTime();
+        var ageHours = ageMs / 3600000;
+        var slaLimit = SLA_HOURS[p] || 72;
+        if (ageHours > slaLimit) {
+          slaHtml = '<span class="sla-breach">SLA BREACH ' + Math.round(ageHours - slaLimit) + 'h over</span>';
+        } else {
+          var remaining = Math.round(slaLimit - ageHours);
+          slaHtml = '<span class="sla-ok">' + remaining + 'h left</span>';
+        }
+      }
+      if (item.status === 'snoozed') {
+        slaHtml = '<span class="snoozed-badge">SNOOZED</span>';
+      }
+
+      var reclassOpts = '<option value="">Reclassify...</option>' +
+        '<option value="CABIN_VRS">Cabin Rental / VRS</option>' +
+        '<option value="SALES_OPP">Sales Opportunity</option>' +
+        '<option value="REAL_ESTATE">Real Estate</option>' +
+        '<option value="HEDGE_FUND">Hedge Fund</option>' +
+        '<option value="LEGAL_ADMIN">Legal Admin</option>' +
+        '<option value="FINANCE">Finance</option>' +
+        '<option value="INSURANCE">Insurance</option>' +
+        '<option value="COMPLIANCE">Compliance</option>' +
+        '<option value="VENDOR_OPS">Vendor Ops</option>' +
+        '<option value="MAINTENANCE">Maintenance</option>' +
+        '<option value="TAX">Tax</option>' +
+        '<option value="HR_ADMIN">HR Admin</option>' +
+        '<option value="PERSONAL">Personal</option>' +
+        '<option value="JUNK">Junk</option>';
+
+      html += '<div class="item-card ' + p + '" id="card-' + item.id + '">' +
+        '<div class="item-top">' +
+          '<span class="item-priority ' + p + '">' + p + '</span>' +
+          slaHtml +
+          '<span class="item-sender">' + esc(item.sender) + '</span>' +
+          '<span class="item-time">' + fmtDate(item.created_at) + '</span>' +
+        '</div>' +
+        '<div class="item-subject">' + esc(item.subject) + '</div>' +
+        '<div class="item-trigger">' +
+          '<span class="trigger-type">' + esc(item.trigger_type) + '</span> ' +
+          esc(truncate(item.trigger_detail, 80)) +
+        '</div>' +
+        '<div class="item-body" id="body-' + item.id + '">' + esc(truncate(item.body_preview, 500)) + '</div>' +
+        '<button class="expand-btn" onclick="toggleBody(' + item.id + ')">expand / collapse</button>' +
+        '<div class="item-actions">' +
+          '<span class="division-badge div-' + (item.division||'UNKNOWN') + '">' + (item.division||'UNKNOWN') + '</span>' +
+          '<span class="conf-badge" style="color:' + confColor + '">' + conf + '% conf</span>' +
+          '<div class="reclass-dropdown">' +
+            '<select onchange="reclassify(' + item.id + ',' + item.email_id + ',this.value)">' +
+            reclassOpts +
+            '</select>' +
+          '</div>' +
+          '<div class="spacer"></div>' +
+          (item.status === 'pending' ?
+            '<button class="btn btn-primary btn-sm" onclick="markSeen(' + item.id + ')">Mark Seen</button>' +
+            '<button class="btn btn-success btn-sm" onclick="openActionModal(' + item.id + ')">Action Taken</button>' +
+            '<button class="btn btn-danger btn-sm" onclick="openDismissModal(' + item.id + ')">Dismiss</button>' +
+            '<button class="btn btn-muted btn-sm" onclick="openSnoozeModal(' + item.id + ')">Snooze</button>'
+          : '<span style="color:#555;font-size:11px">' + esc(item.status) + (item.seen_by ? ' by ' + esc(item.seen_by) : '') + '</span>') +
+        '</div>' +
+        '<div class="grade-row">' +
+          '<span class="grade-label">Classification Quality:</span>' + stars + gradeBadge +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+
+    // Pagination
+    var pages = Math.ceil(total / PAGE_SIZE);
+    if (pages > 1) {
+      html += '<div style="display:flex;gap:6px;justify-content:center;margin-top:16px">';
+      if (escPage > 0) html += '<button class="btn btn-muted btn-sm" onclick="escPage--;loadEscalation()">&#8592; Prev</button>';
+      html += '<span style="color:#555;font-size:11px;line-height:28px">Page ' + (escPage+1) + ' of ' + pages + '</span>';
+      if (escPage < pages - 1) html += '<button class="btn btn-muted btn-sm" onclick="escPage++;loadEscalation()">Next &#8594;</button>';
+      html += '</div>';
+    }
+  }
+
+  c.innerHTML = html;
+}
+
+/* ── Quarantine ── */
+function renderQuarantine(c) {
+  if (!quarantineData) { c.innerHTML = '<div class="loading"><span class="spinner"></span> Loading...</div>'; return; }
+  var items = quarantineData.items || [];
+
+  var html = '<div style="margin-bottom:16px"><span style="color:#888;font-size:13px">Emails blocked by the GateKeeper — review and release or permanently delete.</span></div>';
+
+  if (items.length === 0) {
+    html += '<div style="text-align:center;padding:60px;color:#444"><p style="font-size:40px;margin-bottom:10px">&#128274;</p><p>Quarantine is clear</p></div>';
+  } else {
+    html += '<div class="item-list">';
+    items.forEach(function(item) {
+      html += '<div class="q-card" id="qcard-' + item.id + '">' +
+        '<div class="item-top">' +
+          '<span class="item-sender">' + esc(item.sender) + '</span>' +
+          '<span class="item-time">' + fmtDate(item.created_at) + '</span>' +
+        '</div>' +
+        '<div class="item-subject">' + esc(item.subject) + '</div>' +
+        '<div class="q-reason">Blocked: ' + esc(item.rule_reason || item.rule_type || 'Unknown rule') + '</div>' +
+        '<div class="item-body">' + esc(truncate(item.content_preview, 300)) + '</div>' +
+        '<div class="item-actions" style="margin-top:10px">' +
+          '<button class="btn btn-success btn-sm" onclick="releaseQuarantine(' + item.id + ')">Release &amp; Ingest</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="deleteQuarantine(' + item.id + ')">Permanently Delete</button>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  c.innerHTML = html;
+}
+
+/* ── Overview ── */
+function renderOverview(c) {
+  if (!overviewData) { c.innerHTML = '<div class="loading"><span class="spinner"></span> Loading...</div>'; return; }
+  var data = overviewData;
+
+  // Stats cards
+  var totalEmails = 0;
+  var divs = data.division_distribution || [];
+  divs.forEach(function(d) { totalEmails += d.cnt; });
+  var pendingEsc = 0;
+  (data.escalation.stats || []).forEach(function(s) { if (s.status === 'pending') pendingEsc += s.cnt; });
+  var quarCount = 0;
+  (data.quarantine.by_status || []).forEach(function(s) { if (s.status === 'quarantined') quarCount += s.cnt; });
+
+  var html = '<div class="stats-grid">' +
+    '<div class="stat-card blue"><div class="val">' + totalEmails.toLocaleString() + '</div><div class="label">Total Emails</div></div>' +
+    '<div class="stat-card amber"><div class="val">' + pendingEsc.toLocaleString() + '</div><div class="label">Pending Escalation</div></div>' +
+    '<div class="stat-card red"><div class="val">' + quarCount.toLocaleString() + '</div><div class="label">Quarantined</div></div>' +
+    '<div class="stat-card green"><div class="val">' + (data.routing_rules || []).length + '</div><div class="label">Active Routing Rules</div></div>' +
+  '</div>';
+
+  // Division distribution bar chart
+  html += '<h3 style="font-size:14px;margin-bottom:12px;color:#888">Email Archive by Division</h3>';
+  html += '<div class="div-chart">';
+  var maxCnt = 0;
+  divs.forEach(function(d) { if (d.cnt > maxCnt) maxCnt = d.cnt; });
+  var colors = {CABIN_VRS:'#fb923c',SALES_OPP:'#34d399',REAL_ESTATE:'#4ade80',HEDGE_FUND:'#60a5fa',PERSONAL:'#a78bfa',JUNK:'#666',FINANCE:'#fbbf24',LEGAL_ADMIN:'#f87171',UNKNOWN:'#444',INSURANCE:'#38bdf8',COMPLIANCE:'#f43f5e',VENDOR_OPS:'#84cc16',MAINTENANCE:'#eab308',TAX:'#8b5cf6',HR_ADMIN:'#ec4899'};
+  divs.forEach(function(d) {
+    var pct = maxCnt > 0 ? (d.cnt / maxCnt * 100) : 0;
+    var conf = d.avg_confidence ? Math.round(d.avg_confidence) : 0;
+    var color = colors[d.division] || '#555';
+    html += '<div class="div-row">' +
+      '<span class="name">' + d.division + '</span>' +
+      '<div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%;background:' + color + '">' +
+        (pct > 15 ? d.cnt.toLocaleString() : '') +
+      '</div></div>' +
+      '<span class="count">' + d.cnt.toLocaleString() + ' <span style="color:#555;font-size:9px">(' + conf + '%)</span></span>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  // Classification rule health
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Classification Rules by Division</h3>';
+  html += '<div class="stats-grid">';
+  (data.classification_rules || []).forEach(function(r) {
+    var color = colors[r.division] || '#888';
+    html += '<div class="stat-card"><div class="val" style="color:' + color + '">' + r.rule_count + '</div>' +
+      '<div class="label">' + r.division + ' rules (' + (r.total_hits||0).toLocaleString() + ' hits)</div></div>';
+  });
+  html += '</div>';
+
+  // Top routing rules
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Most Active Routing Rules</h3>';
+  html += '<table class="rule-table"><thead><tr><th>Type</th><th>Pattern</th><th>Action</th><th>Reason</th><th>Hits</th></tr></thead><tbody>';
+  (data.routing_rules || []).slice(0, 15).forEach(function(r) {
+    html += '<tr><td>' + esc(r.rule_type) + '</td><td style="font-family:monospace;font-size:11px">' + esc(truncate(r.pattern,40)) +
+      '</td><td>' + esc(r.action) + '</td><td style="color:#888">' + esc(truncate(r.reason,40)) +
+      '</td><td class="hits">' + (r.hit_count||0).toLocaleString() + '</td></tr>';
+  });
+  html += '</tbody></table>';
+
+  c.innerHTML = html;
+}
+
+/* ── Rules Engine ── */
+function renderRules(c) {
+  if (!rulesData) { c.innerHTML = '<div class="loading"><span class="spinner"></span> Loading...</div>'; return; }
+
+  var html = '';
+
+  // Add Routing Rule Form
+  html += '<div class="add-form"><h3>&#10133; Add Routing Rule</h3>' +
+    '<div class="form-row">' +
+    '<select id="newRuleType"><option value="sender_block">sender_block</option><option value="subject_block">subject_block</option>' +
+    '<option value="content_block">content_block</option><option value="domain_trust">domain_trust</option>' +
+    '<option value="sender_vip">sender_vip</option><option value="domain_block">domain_block</option></select>' +
+    '<input id="newRulePattern" placeholder="Pattern (e.g. %spam%)">' +
+    '<select id="newRuleAction"><option value="REJECT">REJECT</option><option value="QUARANTINE">QUARANTINE</option>' +
+    '<option value="ALLOW">ALLOW</option><option value="ESCALATE">ESCALATE</option><option value="PRIORITY">PRIORITY</option></select>' +
+    '<input id="newRuleReason" placeholder="Reason">' +
+    '<button class="btn btn-primary btn-sm" onclick="addRoutingRule()">Add Rule</button>' +
+    '</div></div>';
+
+  // Add Classification Rule Form
+  html += '<div class="add-form"><h3>&#10133; Add Classification Rule</h3>' +
+    '<div class="form-row">' +
+    '<select id="newClassDiv"><option value="CABIN_VRS">CABIN_VRS</option><option value="SALES_OPP">SALES_OPP</option><option value="REAL_ESTATE">REAL_ESTATE</option><option value="HEDGE_FUND">HEDGE_FUND</option>' +
+    '<option value="LEGAL_ADMIN">LEGAL_ADMIN</option><option value="FINANCE">FINANCE</option>' +
+    '<option value="INSURANCE">INSURANCE</option><option value="COMPLIANCE">COMPLIANCE</option>' +
+    '<option value="VENDOR_OPS">VENDOR_OPS</option><option value="MAINTENANCE">MAINTENANCE</option>' +
+    '<option value="TAX">TAX</option><option value="HR_ADMIN">HR_ADMIN</option>' +
+    '<option value="PERSONAL">PERSONAL</option><option value="JUNK">JUNK</option></select>' +
+    '<select id="newClassField"><option value="sender">sender</option><option value="subject">subject</option>' +
+    '<option value="body">body</option><option value="any">any</option></select>' +
+    '<input id="newClassPattern" placeholder="Pattern">' +
+    '<input id="newClassWeight" type="number" value="20" min="1" max="100" style="max-width:70px" placeholder="Weight">' +
+    '<input id="newClassNotes" placeholder="Notes">' +
+    '<button class="btn btn-primary btn-sm" onclick="addClassRule()">Add Rule</button>' +
+    '</div></div>';
+
+  // Add Escalation Rule Form
+  html += '<div class="add-form"><h3>&#10133; Add Escalation Rule</h3>' +
+    '<div class="form-row">' +
+    '<input id="newEscName" placeholder="Rule name">' +
+    '<select id="newEscTrigger"><option value="content_flag">content_flag</option><option value="vip_sender">vip_sender</option>' +
+    '<option value="high_value">high_value</option><option value="failed_classification">failed_classification</option></select>' +
+    '<select id="newEscField"><option value="subject">subject</option><option value="body">body</option>' +
+    '<option value="sender">sender</option><option value="any">any</option></select>' +
+    '<input id="newEscPattern" placeholder="Pattern">' +
+    '<select id="newEscPriority"><option value="P0">P0</option><option value="P1">P1</option>' +
+    '<option value="P2">P2</option><option value="P3">P3</option></select>' +
+    '<button class="btn btn-primary btn-sm" onclick="addEscRule()">Add Rule</button>' +
+    '</div></div>';
+
+  // Existing Routing Rules
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Routing Rules (' + (rulesData.routing_rules||[]).length + ')</h3>';
+  html += '<table class="rule-table"><thead><tr><th>ID</th><th>Type</th><th>Pattern</th><th>Action</th><th>Division</th><th>Reason</th><th>Hits</th><th>Active</th><th></th></tr></thead><tbody>';
+  (rulesData.routing_rules || []).forEach(function(r) {
+    html += '<tr><td>#' + r.id + '</td><td>' + esc(r.rule_type) + '</td>' +
+      '<td style="font-family:monospace;font-size:11px">' + esc(truncate(r.pattern,35)) + '</td>' +
+      '<td>' + esc(r.action) + '</td><td>' + (r.division||'-') + '</td>' +
+      '<td style="color:#888">' + esc(truncate(r.reason,30)) + '</td>' +
+      '<td class="hits">' + (r.hit_count||0) + '</td>' +
+      '<td class="' + (r.is_active ? 'rule-active' : 'rule-inactive') + '">' + (r.is_active ? 'Yes' : 'No') + '</td>' +
+      '<td><button class="btn btn-muted btn-sm" onclick="toggleRule(\'routing\',' + r.id + ',' + !r.is_active + ')">Toggle</button></td></tr>';
+  });
+  html += '</tbody></table>';
+
+  // Classification Rules
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Classification Rules (' + (rulesData.classification_rules||[]).length + ')</h3>';
+  html += '<table class="rule-table"><thead><tr><th>ID</th><th>Division</th><th>Field</th><th>Pattern</th><th>Weight</th><th>Hits</th><th>Active</th><th></th></tr></thead><tbody>';
+  (rulesData.classification_rules || []).forEach(function(r) {
+    html += '<tr><td>#' + r.id + '</td>' +
+      '<td><span class="division-badge div-' + r.division + '">' + r.division + '</span></td>' +
+      '<td>' + esc(r.match_field) + '</td>' +
+      '<td style="font-family:monospace;font-size:11px">' + esc(truncate(r.pattern,35)) + '</td>' +
+      '<td>' + r.weight + '</td>' +
+      '<td class="hits">' + (r.hit_count||0) + '</td>' +
+      '<td class="' + (r.is_active ? 'rule-active' : 'rule-inactive') + '">' + (r.is_active ? 'Yes' : 'No') + '</td>' +
+      '<td><button class="btn btn-muted btn-sm" onclick="toggleRule(\'classification\',' + r.id + ',' + !r.is_active + ')">Toggle</button></td></tr>';
+  });
+  html += '</tbody></table>';
+
+  // Escalation Rules
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Escalation Rules (' + (rulesData.escalation_rules||[]).length + ')</h3>';
+  html += '<table class="rule-table"><thead><tr><th>ID</th><th>Name</th><th>Trigger</th><th>Field</th><th>Pattern</th><th>Priority</th><th>Active</th><th></th></tr></thead><tbody>';
+  (rulesData.escalation_rules || []).forEach(function(r) {
+    html += '<tr><td>#' + r.id + '</td><td>' + esc(r.rule_name) + '</td>' +
+      '<td>' + esc(r.trigger_type) + '</td><td>' + esc(r.match_field) + '</td>' +
+      '<td style="font-family:monospace;font-size:11px">' + esc(truncate(r.pattern,35)) + '</td>' +
+      '<td><span class="item-priority ' + r.priority + '">' + r.priority + '</span></td>' +
+      '<td class="' + (r.is_active ? 'rule-active' : 'rule-inactive') + '">' + (r.is_active ? 'Yes' : 'No') + '</td>' +
+      '<td><button class="btn btn-muted btn-sm" onclick="toggleRule(\'escalation\',' + r.id + ',' + !r.is_active + ')">Toggle</button></td></tr>';
+  });
+  html += '</tbody></table>';
+
+  c.innerHTML = html;
+}
+
+/* ── Learning ── */
+function renderLearning(c) {
+  if (!learningData) { c.innerHTML = '<div class="loading"><span class="spinner"></span> Loading...</div>'; return; }
+  var data = learningData;
+
+  var html = '<div class="stats-grid">' +
+    '<div class="stat-card green"><div class="val">' + (data.total_reviewed||0).toLocaleString() + '</div><div class="label">Total Reviewed</div></div>' +
+    '<div class="stat-card blue"><div class="val">' + (data.total_reclassified||0).toLocaleString() + '</div><div class="label">Reclassified by Human</div></div>' +
+    '<div class="stat-card amber"><div class="val">' + (data.avg_grade||'-') + '</div><div class="label">Avg Quality Grade</div></div>' +
+    '<div class="stat-card"><div class="val">' + (data.total_dismissed||0).toLocaleString() + '</div><div class="label">Dismissed</div></div>' +
+  '</div>';
+
+  // Recent activity
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Recent Review Activity</h3>';
+  html += '<div class="item-list">';
+  (data.recent || []).forEach(function(item) {
+    html += '<div class="item-card">' +
+      '<div class="item-top">' +
+        '<span class="item-sender">' + esc(item.actor) + '</span>' +
+        '<span style="font-size:11px;color:#888;margin-left:8px">' + esc(item.action_type) + '</span>' +
+        '<div class="spacer"></div>' +
+        '<span class="item-time">' + fmtDate(item.created_at) + '</span>' +
+      '</div>' +
+      '<div class="item-subject">' + esc(item.subject) + '</div>' +
+      (item.old_division && item.new_division ? '<div style="font-size:11px;color:#888">' +
+        '<span class="division-badge div-' + item.old_division + '">' + item.old_division + '</span>' +
+        ' &#8594; <span class="division-badge div-' + item.new_division + '">' + item.new_division + '</span>' +
+      '</div>' : '') +
+    '</div>';
+  });
+  html += '</div>';
+
+  // Grade distribution
+  if (data.grade_distribution && data.grade_distribution.length > 0) {
+    html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Grade Distribution</h3>';
+    html += '<div class="stats-grid">';
+    data.grade_distribution.forEach(function(g) {
+      var starStr = '';
+      for (var i = 0; i < g.grade; i++) starStr += '\u2605';
+      html += '<div class="stat-card"><div class="val" style="color:#fbbf24">' + g.count + '</div><div class="label">' + starStr + ' (' + g.grade + '/5)</div></div>';
+    });
+    html += '</div>';
+  }
+
+  c.innerHTML = html;
+}
+
+/* ── System Health ── */
+function renderHealth(c) {
+  if (!healthData) { c.innerHTML = '<div class="loading"><span class="spinner"></span> Loading health...</div>'; loadHealth(); return; }
+  var d = healthData;
+  var dlqPending = (d.dlq && d.dlq.pending) || 0;
+  var dlqDead = (d.dlq && d.dlq.dead) || 0;
+  var dlqRecovered = (d.dlq && d.dlq.recovered) || 0;
+  var errHour = d.errors_last_hour || 0;
+  var ingestHour = d.ingested_last_hour || 0;
+
+  var pipelineHealth = errHour === 0 ? 'green' : errHour < 5 ? 'amber' : 'red';
+  var dlqHealth = dlqDead === 0 && dlqPending < 5 ? 'green' : dlqPending < 20 ? 'amber' : 'red';
+
+  var html = '<div style="margin-bottom:16px;display:flex;gap:12px;align-items:center">' +
+    '<span class="health-dot ' + pipelineHealth + '"></span><span style="font-size:13px;color:#ccc">Pipeline</span>' +
+    '<span class="health-dot ' + dlqHealth + '"></span><span style="font-size:13px;color:#ccc">Dead Letter Queue</span>' +
+    '<div class="spacer"></div>' +
+    '<button class="btn btn-primary btn-sm" onclick="wakeSnoozed()">Wake Snoozed Items</button>' +
+    '<button class="btn btn-muted btn-sm" onclick="triggerReprocess()">Trigger Reprocess</button>' +
+    '</div>';
+
+  html += '<div class="stats-grid">' +
+    '<div class="stat-card green"><div class="val">' + ingestHour + '</div><div class="label">Ingested (Last Hour)</div></div>' +
+    '<div class="stat-card ' + (errHour > 0 ? 'red' : 'green') + '"><div class="val">' + errHour + '</div><div class="label">Errors (Last Hour)</div></div>' +
+    '<div class="stat-card blue"><div class="val">' + (d.snoozed_active||0) + '</div><div class="label">Snoozed Active</div></div>' +
+    '<div class="stat-card amber"><div class="val">' + (d.snoozed_expired||0) + '</div><div class="label">Snooze Expired</div></div>' +
+    '</div>';
+
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">Dead Letter Queue</h3>' +
+    '<div class="stats-grid">' +
+    '<div class="stat-card amber"><div class="val">' + dlqPending + '</div><div class="label">DLQ Pending</div></div>' +
+    '<div class="stat-card red"><div class="val">' + dlqDead + '</div><div class="label">DLQ Dead</div></div>' +
+    '<div class="stat-card green"><div class="val">' + dlqRecovered + '</div><div class="label">DLQ Recovered</div></div>' +
+    '<div class="stat-card"><div class="val">' + ((d.dlq && d.dlq.retrying)||0) + '</div><div class="label">DLQ Retrying</div></div>' +
+    '</div>';
+
+  html += '<h3 style="font-size:14px;margin:20px 0 12px;color:#888">SLA Status by Priority</h3>' +
+    '<div class="stats-grid">';
+  var escP = d.escalation_pending || {};
+  ['P0','P1','P2','P3'].forEach(function(p) {
+    var total = escP[p] || 0;
+    var limit = SLA_HOURS[p] || 72;
+    html += '<div class="stat-card"><div class="val" style="color:' +
+      (p === 'P0' ? '#f87171' : p === 'P1' ? '#fbbf24' : p === 'P2' ? '#60a5fa' : '#888') +
+      '">' + total + '</div><div class="label">' + p + ' pending (SLA: ' + limit + 'h)</div></div>';
+  });
+  html += '</div>';
+
+  c.innerHTML = html;
+}
+
+/* ── Dead Letter Queue ── */
+function renderDLQ(c) {
+  if (!dlqData) { c.innerHTML = '<div class="loading"><span class="spinner"></span> Loading DLQ...</div>'; loadDLQ(); return; }
+  var items = dlqData.items || [];
+  var counts = dlqData.counts || {};
+
+  var html = '<div style="margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+    '<span style="color:#888;font-size:13px">Failed emails that could not be processed — review, retry, or discard.</span>' +
+    '<div class="spacer"></div>';
+  ['pending','retrying','dead','recovered','manual_review','discarded'].forEach(function(s) {
+    if (counts[s]) html += '<span style="font-size:11px;color:#888;background:#1a1a1a;padding:3px 8px;border-radius:6px">' + s + ': ' + counts[s] + '</span>';
+  });
+  html += '</div>';
+
+  if (items.length === 0) {
+    html += '<div style="text-align:center;padding:60px;color:#444"><p style="font-size:40px;margin-bottom:10px">&#9989;</p><p>Dead letter queue is clear</p></div>';
+  } else {
+    html += '<div class="item-list">';
+    items.forEach(function(item) {
+      var statusColor = item.status === 'dead' ? '#f87171' : item.status === 'recovered' ? '#4ade80' : '#fbbf24';
+      html += '<div class="item-card" style="border-left:3px solid ' + statusColor + '">' +
+        '<div class="item-top">' +
+          '<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.05);color:' + statusColor + '">' + esc(item.status) + '</span>' +
+          '<span class="item-sender">' + esc(item.sender || 'Unknown') + '</span>' +
+          '<span style="font-size:10px;color:#555;font-family:monospace">retry ' + item.retry_count + '/' + item.max_retries + '</span>' +
+          '<span class="item-time">' + fmtDate(item.created_at) + '</span>' +
+        '</div>' +
+        '<div class="item-subject">' + esc(item.subject || 'No subject') + '</div>' +
+        '<div style="font-size:11px;color:#f87171;margin:6px 0;background:#1a0a0a;padding:8px 10px;border-radius:6px;font-family:monospace">' +
+          esc(truncate(item.error_message, 200)) + '</div>' +
+        '<div class="item-actions">' +
+          (item.status === 'dead' || item.status === 'manual_review' ?
+            '<button class="btn btn-primary btn-sm" onclick="dlqRetry(' + item.id + ')">Retry Now</button>' +
+            '<button class="btn btn-danger btn-sm" onclick="dlqDiscard(' + item.id + ')">Discard</button>'
+          : '<span style="color:#555;font-size:11px">' + esc(item.status) + '</span>') +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  c.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  ACTIONS                                                                   */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+function markSeen(id) {
+  apiPost(API + '/escalation/' + id + '/action', {status:'seen'}, function(err, data, status) {
+    if (err || status !== 200) { toast('Failed: ' + (err || data.detail), 'error'); return; }
+    toast('Marked #' + id + ' as seen', 'success');
+    loadEscalation();
+    loadDashboard();
+  });
+}
+
+function markActioned(id) {
+  var note = prompt('Action note (optional):') || '';
+  apiPost(API + '/escalation/' + id + '/action', {status:'actioned', action_type:'other', note:note}, function(err, data, status) {
+    if (err || status !== 200) { toast('Failed: ' + (err || data.detail), 'error'); return; }
+    toast('Marked #' + id + ' as actioned', 'success');
+    loadEscalation();
+    loadDashboard();
+  });
+}
+
+/* ── Dismiss Modal ── */
+var _dismissId = null;
+function openDismissModal(id) {
+  _dismissId = id;
+  var html = '<div class="modal-overlay" id="dismissOverlay" onclick="if(event.target===this)closeDismissModal()">' +
+    '<div class="modal">' +
+    '<h2>&#10060; Dismiss Escalation #' + id + '</h2>' +
+    '<div class="form-group"><label>Why are you dismissing this?</label>' +
+    '<select id="dismissReason">' +
+    '<option value="classification_correct">Classification is correct — no action needed</option>' +
+    '<option value="already_handled">Already handled outside system</option>' +
+    '<option value="not_relevant">Not relevant to any division</option>' +
+    '<option value="duplicate">Duplicate of another escalation</option>' +
+    '<option value="informational_only">Informational only — no action required</option>' +
+    '<option value="wrong_escalation">Should not have been escalated (rule too broad)</option>' +
+    '</select></div>' +
+    '<div class="form-group"><label>Additional notes (optional)</label>' +
+    '<textarea id="dismissNote" placeholder="Any context for this decision..."></textarea></div>' +
+    '<div class="modal-actions">' +
+    '<button class="btn btn-muted" onclick="closeDismissModal()">Cancel</button>' +
+    '<button class="btn btn-danger" onclick="submitDismiss()">Confirm Dismiss</button>' +
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function closeDismissModal() {
+  var el = document.getElementById('dismissOverlay');
+  if (el) el.remove();
+  _dismissId = null;
+}
+function submitDismiss() {
+  if (!_dismissId) return;
+  var reason = document.getElementById('dismissReason').value;
+  var note = document.getElementById('dismissNote').value;
+  apiPost(API + '/escalation/' + _dismissId + '/action',
+    {status:'dismissed', dismiss_reason: reason, note: note},
+    function(err, data, status) {
+      closeDismissModal();
+      if (err || status !== 200) { toast('Dismiss failed: ' + (err || data.detail), 'error'); return; }
+      toast('Dismissed #' + _dismissId + ' — ' + reason, 'info');
+      loadEscalation(); loadDashboard();
+    });
+}
+
+/* ── Action Modal ── */
+var _actionId = null;
+function openActionModal(id) {
+  _actionId = id;
+  var html = '<div class="modal-overlay" id="actionOverlay" onclick="if(event.target===this)closeActionModal()">' +
+    '<div class="modal">' +
+    '<h2>&#9989; Action Taken on #' + id + '</h2>' +
+    '<div class="form-group"><label>What action did you take?</label>' +
+    '<select id="actionType">' +
+    '<option value="replied">Replied to sender</option>' +
+    '<option value="forwarded">Forwarded to responsible party</option>' +
+    '<option value="created_task">Created a task / work order</option>' +
+    '<option value="filed">Filed in appropriate division</option>' +
+    '<option value="scheduled_meeting">Scheduled a meeting / call</option>' +
+    '<option value="delegated">Delegated to team member</option>' +
+    '<option value="escalated_external">Escalated to external counsel / advisor</option>' +
+    '<option value="archived">Reviewed and archived</option>' +
+    '<option value="other">Other (see notes)</option>' +
+    '</select></div>' +
+    '<div class="form-group"><label>Delegated to (optional)</label>' +
+    '<input id="actionDelegate" placeholder="Name or team..."></div>' +
+    '<div class="form-group"><label>Follow-up date (optional)</label>' +
+    '<input id="actionFollowUp" type="date"></div>' +
+    '<div class="form-group"><label>Notes</label>' +
+    '<textarea id="actionNote" placeholder="Details of the action taken..."></textarea></div>' +
+    '<div class="modal-actions">' +
+    '<button class="btn btn-muted" onclick="closeActionModal()">Cancel</button>' +
+    '<button class="btn btn-success" onclick="submitAction()">Confirm Action</button>' +
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function closeActionModal() {
+  var el = document.getElementById('actionOverlay');
+  if (el) el.remove();
+  _actionId = null;
+}
+function submitAction() {
+  if (!_actionId) return;
+  var payload = {
+    status: 'actioned',
+    action_type: document.getElementById('actionType').value,
+    delegate_to: document.getElementById('actionDelegate').value,
+    follow_up_date: document.getElementById('actionFollowUp').value || null,
+    note: document.getElementById('actionNote').value
+  };
+  apiPost(API + '/escalation/' + _actionId + '/action', payload,
+    function(err, data, status) {
+      closeActionModal();
+      if (err || status !== 200) { toast('Action failed: ' + (err || data.detail), 'error'); return; }
+      toast('Action recorded on #' + _actionId, 'success');
+      loadEscalation(); loadDashboard();
+    });
+}
+
+/* ── Snooze Modal ── */
+var _snoozeId = null;
+function openSnoozeModal(id) {
+  _snoozeId = id;
+  var html = '<div class="modal-overlay" id="snoozeOverlay" onclick="if(event.target===this)closeSnoozeModal()">' +
+    '<div class="modal">' +
+    '<h2>&#128164; Snooze Escalation #' + id + '</h2>' +
+    '<div class="form-group"><label>Snooze for how long?</label>' +
+    '<select id="snoozeHours">' +
+    '<option value="1">1 hour</option>' +
+    '<option value="4">4 hours</option>' +
+    '<option value="8">8 hours (tomorrow morning)</option>' +
+    '<option value="24" selected>24 hours</option>' +
+    '<option value="48">48 hours</option>' +
+    '<option value="72">72 hours</option>' +
+    '<option value="168">1 week</option>' +
+    '</select></div>' +
+    '<div class="form-group"><label>Reminder note (optional)</label>' +
+    '<textarea id="snoozeNote" placeholder="Why are you deferring this?"></textarea></div>' +
+    '<div class="modal-actions">' +
+    '<button class="btn btn-muted" onclick="closeSnoozeModal()">Cancel</button>' +
+    '<button class="btn btn-primary" onclick="submitSnooze()">Snooze</button>' +
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function closeSnoozeModal() {
+  var el = document.getElementById('snoozeOverlay');
+  if (el) el.remove();
+  _snoozeId = null;
+}
+function submitSnooze() {
+  if (!_snoozeId) return;
+  var hours = parseInt(document.getElementById('snoozeHours').value) || 24;
+  var note = document.getElementById('snoozeNote').value;
+  apiPost(API + '/escalation/' + _snoozeId + '/action',
+    {status:'snoozed', snooze_hours: hours, note: note},
+    function(err, data, status) {
+      closeSnoozeModal();
+      if (err || status !== 200) { toast('Snooze failed: ' + (err || data.detail), 'error'); return; }
+      toast('Snoozed #' + _snoozeId + ' for ' + hours + 'h', 'info');
+      loadEscalation(); loadDashboard(); loadHealth();
+    });
+}
+
+function reclassify(escId, emailId, newDivision) {
+  if (!newDivision) return;
+  apiPost(API + '/escalation/' + escId + '/reclassify', {email_id: emailId, new_division: newDivision}, function(err, data, status) {
+    if (err || status !== 200) { toast('Reclassify failed: ' + (err || data.detail), 'error'); return; }
+    var rulesMsg = data.rules_created ? ' — ' + data.rules_created + ' new rule(s) auto-created' : '';
+    toast('Reclassified to ' + newDivision + rulesMsg + ' — system is learning', 'success');
+    loadEscalation();
+    loadDashboard();
+  });
+}
+
+function gradeItem(escId, grade) {
+  apiPost(API + '/escalation/' + escId + '/grade', {grade: grade}, function(err, data, status) {
+    if (err || status !== 200) { toast('Grade failed: ' + (err || data.detail), 'error'); return; }
+    toast('Rated #' + escId + ': ' + grade + '/5 stars', 'success');
+    loadEscalation();
+  });
+}
+
+function bulkAction(action) {
+  if (!confirm('This will ' + action + ' all ' + (escalationData ? escalationData.total : 0) + ' items matching your current filters. Continue?')) return;
+  apiPost(API + '/escalation/bulk', {action: action, filters: escFilter}, function(err, data, status) {
+    if (err || status !== 200) { toast('Bulk action failed: ' + (err || data.detail), 'error'); return; }
+    toast('Bulk ' + action + ': ' + (data.affected || 0) + ' items updated', 'success');
+    loadEscalation();
+    loadDashboard();
+  });
+}
+
+function releaseQuarantine(id) {
+  apiPost(API + '/quarantine/' + id + '/release', {}, function(err, data, status) {
+    if (err || status !== 200) { toast('Release failed: ' + (err || data.detail), 'error'); return; }
+    toast('Released from quarantine — now in archive', 'success');
+    loadQuarantine();
+    loadDashboard();
+  });
+}
+
+function deleteQuarantine(id) {
+  if (!confirm('Permanently delete this quarantined email?')) return;
+  apiPost(API + '/quarantine/' + id + '/delete', {}, function(err, data, status) {
+    if (err || status !== 200) { toast('Delete failed: ' + (err || data.detail), 'error'); return; }
+    toast('Permanently deleted', 'info');
+    loadQuarantine();
+    loadDashboard();
+  });
+}
+
+function toggleBody(id) {
+  var el = document.getElementById('body-' + id);
+  if (el) el.classList.toggle('expanded');
+}
+
+/* ── DLQ Actions ── */
+function dlqRetry(id) {
+  apiPost(API + '/dlq/' + id + '/retry', {}, function(err, data, status) {
+    if (err || status !== 200) { toast('Retry failed: ' + (err || data.detail), 'error'); return; }
+    toast('DLQ #' + id + ' queued for retry', 'success');
+    loadDLQ(); loadHealth();
+  });
+}
+function dlqDiscard(id) {
+  if (!confirm('Permanently discard this dead-letter item?')) return;
+  apiPost(API + '/dlq/' + id + '/discard', {}, function(err, data, status) {
+    if (err || status !== 200) { toast('Discard failed: ' + (err || data.detail), 'error'); return; }
+    toast('DLQ #' + id + ' discarded', 'info');
+    loadDLQ(); loadHealth();
+  });
+}
+
+/* ── Health Actions ── */
+function wakeSnoozed() {
+  apiPost(API + '/wake-snoozed', {}, function(err, data, status) {
+    if (err || status !== 200) { toast('Wake failed: ' + (err || data.detail), 'error'); return; }
+    toast('Woke ' + (data.count || 0) + ' snoozed items', 'success');
+    loadEscalation(); loadHealth(); loadDashboard();
+  });
+}
+function triggerReprocess() {
+  apiPost(API + '/reprocess', {}, function(err, data, status) {
+    if (err || status !== 200) { toast('Reprocess failed: ' + (err || data.detail), 'error'); return; }
+    toast(data.message || 'Reprocess triggered', 'info');
+  });
+}
+
+/* ── Rule Management ── */
+
+function addRoutingRule() {
+  var body = {
+    rule_type: document.getElementById('newRuleType').value,
+    pattern: document.getElementById('newRulePattern').value,
+    action: document.getElementById('newRuleAction').value,
+    reason: document.getElementById('newRuleReason').value,
+  };
+  if (!body.pattern) { toast('Pattern required', 'error'); return; }
+  apiPost(API + '/rules/routing', body, function(err, data, status) {
+    if (err || status !== 200) { toast('Failed: ' + (err || data.detail), 'error'); return; }
+    toast('Routing rule added', 'success');
+    document.getElementById('newRulePattern').value = '';
+    document.getElementById('newRuleReason').value = '';
+    loadRules();
+  });
+}
+
+function addClassRule() {
+  var body = {
+    division: document.getElementById('newClassDiv').value,
+    match_field: document.getElementById('newClassField').value,
+    pattern: document.getElementById('newClassPattern').value,
+    weight: parseInt(document.getElementById('newClassWeight').value) || 20,
+    notes: document.getElementById('newClassNotes').value,
+  };
+  if (!body.pattern) { toast('Pattern required', 'error'); return; }
+  apiPost(API + '/rules/classification', body, function(err, data, status) {
+    if (err || status !== 200) { toast('Failed: ' + (err || data.detail), 'error'); return; }
+    toast('Classification rule added', 'success');
+    document.getElementById('newClassPattern').value = '';
+    document.getElementById('newClassNotes').value = '';
+    loadRules();
+  });
+}
+
+function addEscRule() {
+  var body = {
+    rule_name: document.getElementById('newEscName').value,
+    trigger_type: document.getElementById('newEscTrigger').value,
+    match_field: document.getElementById('newEscField').value,
+    pattern: document.getElementById('newEscPattern').value,
+    priority: document.getElementById('newEscPriority').value,
+  };
+  if (!body.rule_name || !body.pattern) { toast('Name and pattern required', 'error'); return; }
+  apiPost(API + '/rules/escalation', body, function(err, data, status) {
+    if (err || status !== 200) { toast('Failed: ' + (err || data.detail), 'error'); return; }
+    toast('Escalation rule added', 'success');
+    document.getElementById('newEscName').value = '';
+    document.getElementById('newEscPattern').value = '';
+    loadRules();
+  });
+}
+
+function toggleRule(type, id, newState) {
+  apiPost(API + '/rules/' + type + '/' + id + '/toggle', {is_active: newState}, function(err, data, status) {
+    if (err || status !== 200) { toast('Toggle failed: ' + (err || data.detail), 'error'); return; }
+    toast('Rule #' + id + ' ' + (newState ? 'activated' : 'deactivated'), 'success');
+    loadRules();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  INIT                                                                      */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+setInterval(function(){
+  var el = document.getElementById('fnClock');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+function logout(){window.location.href='/login';}
+
+loadAll();
+setInterval(function(){ loadDashboard(); loadHealth(); }, 60000);
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/*  DRAG & DROP — iPhone-style tab/stat reordering                       */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+var eiEditMode = false;
+var eiDragSrc = null;
+var eiDragGrid = null;
+var EI_STORAGE = 'fortress_email_intake_layout';
+
+function toggleEditMode() {
+  eiEditMode = !eiEditMode;
+  document.body.classList.toggle('edit-mode', eiEditMode);
+  var btn = document.getElementById('editToggle');
+  btn.classList.toggle('active', eiEditMode);
+  btn.innerHTML = eiEditMode
+    ? '<span class="ico">&#10003;</span> Done — Save Layout'
+    : '<span class="ico">&#9776;</span> Customize Layout';
+
+  if (eiEditMode) enableEiDrag(); else { disableEiDrag(); saveEiLayout(); }
+}
+
+function enableEiDrag() {
+  document.querySelectorAll('[data-tab-id]').forEach(function(el) {
+    el.setAttribute('draggable', 'true');
+    el.addEventListener('dragstart', eiDragStart);
+    el.addEventListener('dragover', eiDragOver);
+    el.addEventListener('dragenter', eiDragEnter);
+    el.addEventListener('dragleave', eiDragLeave);
+    el.addEventListener('drop', eiDrop);
+    el.addEventListener('dragend', eiDragEnd);
+    el.addEventListener('touchstart', eiTouchStart, {passive:false});
+    el.addEventListener('touchmove', eiTouchMove, {passive:false});
+    el.addEventListener('touchend', eiTouchEnd);
+  });
+}
+
+function disableEiDrag() {
+  document.querySelectorAll('[data-tab-id]').forEach(function(el) {
+    el.setAttribute('draggable', 'false');
+    el.removeEventListener('dragstart', eiDragStart);
+    el.removeEventListener('dragover', eiDragOver);
+    el.removeEventListener('dragenter', eiDragEnter);
+    el.removeEventListener('dragleave', eiDragLeave);
+    el.removeEventListener('drop', eiDrop);
+    el.removeEventListener('dragend', eiDragEnd);
+    el.removeEventListener('touchstart', eiTouchStart);
+    el.removeEventListener('touchmove', eiTouchMove);
+    el.removeEventListener('touchend', eiTouchEnd);
+    el.classList.remove('dragging-tab', 'drag-over-tab');
+  });
+}
+
+function eiDragStart(e) {
+  if (!eiEditMode) return;
+  eiDragSrc = this;
+  eiDragGrid = this.parentElement;
+  this.classList.add('dragging-tab');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.dataset.tabId);
+}
+function eiDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+function eiDragEnter(e) {
+  e.preventDefault();
+  if (this !== eiDragSrc && this.parentElement === eiDragGrid) this.classList.add('drag-over-tab');
+}
+function eiDragLeave() { this.classList.remove('drag-over-tab'); }
+function eiDrop(e) {
+  e.preventDefault(); e.stopPropagation();
+  this.classList.remove('drag-over-tab');
+  if (!eiDragSrc || eiDragSrc === this || this.parentElement !== eiDragGrid) return;
+  var parent = eiDragGrid;
+  var kids = Array.from(parent.children).filter(function(c){return c.dataset.tabId;});
+  var si = kids.indexOf(eiDragSrc), di = kids.indexOf(this);
+  if (si < di) parent.insertBefore(eiDragSrc, this.nextSibling);
+  else parent.insertBefore(eiDragSrc, this);
+}
+function eiDragEnd() {
+  this.classList.remove('dragging-tab');
+  document.querySelectorAll('.drag-over-tab').forEach(function(el){el.classList.remove('drag-over-tab');});
+  eiDragSrc = null; eiDragGrid = null;
+}
+
+/* Touch */
+var eiTouchEl = null, eiTouchGhost = null;
+function eiTouchStart(e) {
+  if (!eiEditMode) return;
+  eiTouchEl = this; eiDragGrid = this.parentElement;
+  var t = e.touches[0];
+  this._tt = setTimeout(function(){
+    eiTouchEl.classList.add('dragging-tab');
+    eiTouchGhost = eiTouchEl.cloneNode(true);
+    eiTouchGhost.style.cssText = 'position:fixed;pointer-events:none;z-index:10001;opacity:.85;transform:rotate(2deg) scale(1.08);box-shadow:0 10px 40px rgba(0,0,0,.5);';
+    eiTouchGhost.style.width = eiTouchEl.offsetWidth + 'px';
+    eiTouchGhost.style.left = (t.clientX - eiTouchEl.offsetWidth/2) + 'px';
+    eiTouchGhost.style.top = (t.clientY - 20) + 'px';
+    document.body.appendChild(eiTouchGhost);
+  }, 150);
+}
+function eiTouchMove(e) {
+  if (!eiTouchEl || !eiEditMode) return;
+  e.preventDefault();
+  var t = e.touches[0];
+  if (eiTouchGhost) {
+    eiTouchGhost.style.left = (t.clientX - eiTouchEl.offsetWidth/2) + 'px';
+    eiTouchGhost.style.top = (t.clientY - 20) + 'px';
+  }
+  if (eiTouchGhost) eiTouchGhost.style.display = 'none';
+  var tgt = document.elementFromPoint(t.clientX, t.clientY);
+  if (eiTouchGhost) eiTouchGhost.style.display = '';
+  document.querySelectorAll('.drag-over-tab').forEach(function(el){el.classList.remove('drag-over-tab');});
+  while (tgt && !tgt.dataset.tabId) tgt = tgt.parentElement;
+  if (tgt && tgt !== eiTouchEl && tgt.parentElement === eiDragGrid) tgt.classList.add('drag-over-tab');
+}
+function eiTouchEnd() {
+  clearTimeout(this._tt);
+  if (!eiTouchEl) return;
+  var over = document.querySelector('.drag-over-tab');
+  if (over && over !== eiTouchEl && over.parentElement === eiDragGrid) {
+    var kids = Array.from(eiDragGrid.children).filter(function(c){return c.dataset.tabId;});
+    var si = kids.indexOf(eiTouchEl), di = kids.indexOf(over);
+    if (si < di) eiDragGrid.insertBefore(eiTouchEl, over.nextSibling);
+    else eiDragGrid.insertBefore(eiTouchEl, over);
+  }
+  eiTouchEl.classList.remove('dragging-tab');
+  document.querySelectorAll('.drag-over-tab').forEach(function(el){el.classList.remove('drag-over-tab');});
+  if (eiTouchGhost) { eiTouchGhost.remove(); eiTouchGhost = null; }
+  eiTouchEl = null; eiDragGrid = null;
+}
+
+/* Persist */
+function saveEiLayout() {
+  var layout = {};
+  document.querySelectorAll('[data-grid]').forEach(function(g) {
+    var key = g.dataset.grid;
+    layout[key] = [];
+    g.querySelectorAll('[data-tab-id]').forEach(function(el) { layout[key].push(el.dataset.tabId); });
+  });
+  try { localStorage.setItem(EI_STORAGE, JSON.stringify(layout)); } catch(e) {}
+}
+
+function restoreEiLayout() {
+  try {
+    var saved = localStorage.getItem(EI_STORAGE);
+    if (!saved) return;
+    var layout = JSON.parse(saved);
+    Object.keys(layout).forEach(function(gk) {
+      var grid = document.querySelector('[data-grid="' + gk + '"]');
+      if (!grid) return;
+      var map = {};
+      grid.querySelectorAll('[data-tab-id]').forEach(function(el){ map[el.dataset.tabId] = el; });
+      layout[gk].forEach(function(tid) { if (map[tid]) grid.appendChild(map[tid]); });
+    });
+  } catch(e) {}
+}
+
+restoreEiLayout();
+</script>
+</body>
+</html>

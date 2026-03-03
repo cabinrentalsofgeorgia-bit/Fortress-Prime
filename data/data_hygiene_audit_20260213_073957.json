@@ -1,0 +1,17 @@
+{
+  "started_at": "2026-02-13T07:39:57.096677",
+  "phases": {
+    "4": {
+      "remine_candidates_by_category": 30490,
+      "remine_candidates_by_division": 46581,
+      "emails_reset": 50088
+    }
+  },
+  "summary": {
+    "elapsed_seconds": 15.27,
+    "dry_run": false,
+    "final_email_archive_count": 56880,
+    "final_mined_count": 6763,
+    "completed_at": "2026-02-13T07:40:12.490988"
+  }
+}

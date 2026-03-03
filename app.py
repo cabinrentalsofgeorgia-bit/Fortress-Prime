@@ -2,12 +2,22 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import psycopg2
-import requests
 import os
 import tempfile
 from pdf2image import convert_from_path
 import pytesseract
 from datetime import datetime
+
+from prompts.loader import load_prompt
+
+# --- Centralized Cluster Config ---
+from config import (
+    CAPTAIN_MODEL,
+    MUSCLE_NODE, MUSCLE_VISION_MODEL, MUSCLE_GENERATE_URL,
+    MUSCLE_EMBED_MODEL, MUSCLE_IP, WORKER_IP,
+    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD,
+    muscle_see, muscle_embed, captain_think,
+)
 
 # --- 1. ENTERPRISE CONFIGURATION ---
 st.set_page_config(
@@ -17,18 +27,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# The Captain (Local DB)
-DB_HOST = "localhost"
-DB_NAME = "fortress_db"
-DB_USER = "miner_bot"
-DB_PASS = "secure_password"
-
-# The Worker (Remote GPU)
-WORKER_IP = "192.168.0.104"
-OLLAMA_CHAT = f"http://{WORKER_IP}:11434/api/generate"
-OLLAMA_EMBED = f"http://{WORKER_IP}:11434/api/embeddings"
-CHAT_MODEL = "llama3.2"
-EMBED_MODEL = "nomic-embed-text"
+# Cluster endpoints (derived from config.py)
+DB_PASS = DB_PASSWORD
+CHAT_MODEL = CAPTAIN_MODEL             # DeepSeek-R1
+EMBED_MODEL = MUSCLE_EMBED_MODEL       # nomic-embed-text on Spark 1
 
 # --- 2. BACKEND FUNCTIONS ---
 def get_intel_stats():
@@ -43,19 +45,19 @@ def get_intel_stats():
 
 def ask_worker(prompt, context=""):
     """Send orders to the GPU Worker."""
-    full_prompt = f"System: You are a Senior Analyst. Use this context:\n{context}\n\nUser: {prompt}\n\nAnswer:"
+    system_role = load_prompt("captain_senior_analyst").render()
+    full_prompt = f"System: {system_role} Use this context:\n{context}\n\nUser: {prompt}\n\nAnswer:"
     try:
-        resp = requests.post(OLLAMA_CHAT, json={"model": CHAT_MODEL, "prompt": full_prompt, "stream": False}, timeout=90)
-        return resp.json().get('response', "⚠️ Worker Silent.")
+        response = captain_think(prompt=full_prompt, system_role="", temperature=0.3)
+        return response or "⚠️ Worker Silent."
     except Exception as e:
         return f"🚨 Connection Failure: {e}"
 
 def vectorize_text(text):
     """Ask Worker to convert text to math."""
     try:
-        resp = requests.post(OLLAMA_EMBED, json={"model": EMBED_MODEL, "prompt": text}, timeout=10)
-        return resp.json()['embedding']
-    except:
+        return muscle_embed(text)
+    except Exception:
         return None
 
 # --- 3. SIDEBAR: INGESTION ---
@@ -98,8 +100,24 @@ with st.sidebar:
             st.success(f"Indexed {len(chunks)} Blocks!")
             st.rerun()
 
-# --- 4. MAIN DASHBOARD ---
-tab1, tab2, tab3 = st.tabs(["📊 Intelligence Vault", "🔎 Semantic Search", "💬 Analyst Chat"])
+# --- 4. FINANCIALS (Live CFO Audit CSV) ---
+CFO_CSV_PATH = "/mnt/fortress_nas/fortress_data/ai_brain/logs/cfo_extractor/financial_audit.csv"
+
+def get_financial_audit_df():
+    """Load live CFO extraction CSV; return (df, has_errors)."""
+    if not os.path.isfile(CFO_CSV_PATH):
+        return pd.DataFrame(), False
+    try:
+        df = pd.read_csv(CFO_CSV_PATH, encoding="utf-8", on_bad_lines="skip")
+        if df.empty:
+            return df, False
+        has_errors = "error" in df.columns and df["error"].fillna("").astype(str).str.len().gt(0).any()
+        return df, has_errors
+    except Exception:
+        return pd.DataFrame(), False
+
+# --- 5. MAIN DASHBOARD ---
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Intelligence Vault", "🔎 Semantic Search", "💬 Analyst Chat", "💰 Financials"])
 
 with tab1:
     st.subheader("Vault Status")
@@ -130,7 +148,7 @@ with tab2:
                     st.write(r[0])
 
 with tab3:
-    st.subheader("Ask Llama 3.2")
+    st.subheader("Ask Fortress Analyst")
     user_q = st.chat_input("Ask the Analyst...")
     
     if "history" not in st.session_state:
@@ -164,3 +182,47 @@ with tab3:
                 ans = ask_worker(user_q, context=context_str)
                 st.write(ans)
         st.session_state.history.append({"role": "assistant", "content": ans})
+
+with tab4:
+    st.subheader("💰 Burn Rate by Category (Live CFO Audit)")
+    df_fin, has_errors = get_financial_audit_df()
+    if df_fin.empty:
+        st.info("No financial audit data yet. CFO batch writes to the CSV as it processes files.")
+        st.caption(f"Path: {CFO_CSV_PATH}")
+    else:
+        # Success vs error counts
+        error_col = "error" if "error" in df_fin.columns else None
+        if error_col:
+            ok = df_fin[df_fin[error_col].fillna("").astype(str).str.len() == 0]
+            err_count = len(df_fin) - len(ok)
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Rows Processed", len(df_fin))
+            col2.metric("Extracted OK", len(ok))
+            col3.metric("Errors / Timeouts", err_count)
+            plot_df = ok.copy()
+        else:
+            plot_df = df_fin.copy()
+            st.metric("Rows Processed", len(df_fin))
+
+        # Burn rate by category (only rows with numeric total_amount)
+        if "total_amount" in plot_df.columns and "category" in plot_df.columns:
+            plot_df["total_amount"] = pd.to_numeric(plot_df["total_amount"], errors="coerce")
+            by_cat = plot_df.dropna(subset=["total_amount"]).groupby("category", as_index=False)["total_amount"].sum()
+            if not by_cat.empty:
+                fig = px.bar(by_cat, x="category", y="total_amount", title="Spend by Category",
+                             labels={"total_amount": "Total Amount", "category": "Category"})
+                fig.update_layout(xaxis_tickangle=-45)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("No amounts extracted yet (or all timeouts).")
+        else:
+            st.caption("CSV does not have total_amount/category yet.")
+
+        st.subheader("Recent Rows")
+        # Show last N rows; hide long error text in display
+        display_cols = [c for c in ["filename", "processed_at", "date", "vendor", "total_amount", "category", "tax_deductible", "summary", "error"] if c in df_fin.columns]
+        show = df_fin[display_cols].tail(50)
+        if "error" in show.columns:
+            show["error"] = show["error"].fillna("").astype(str).str[:80]
+        st.dataframe(show, use_container_width=True)
+        st.caption(f"Live path: {CFO_CSV_PATH}")

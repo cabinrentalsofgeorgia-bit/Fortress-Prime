@@ -20,7 +20,7 @@ load_dotenv()
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_USER = os.getenv("ADMIN_DB_USER") or os.getenv("DB_USER", "miner_bot")
-DB_PASS = os.getenv("ADMIN_DB_PASS") or os.getenv("DB_PASS", "190AntiochCemeteryRD!!!")
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 
 # Inference Engine: Spark-1 (Ollama)
 WORKER_IP = "192.168.0.104"

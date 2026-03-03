@@ -1,0 +1,82 @@
+{
+  "_doc": "Vendor-to-property mapping for expense journaling. Keys are lowercase normalized vendor names (email prefix stripped). property_ids are Streamline unit_ids. Vendors with empty property_ids route to operating expense. Update as vendor assignments become known.",
+  "_property_roster": {
+    "Above the Timberline": "382651",
+    "Aska Escape Lodge": "235641",
+    "Blue Ridge Lake Sanctuary": "419022",
+    "Chase Mountain Dreams": "980130",
+    "Cherokee Sunrise on Noontootla Creek": "306758",
+    "Cohutta Sunset": "70206",
+    "Creekside Green": "756771",
+    "Fallen Timber Lodge": "70209",
+    "High Hopes": "441334",
+    "Restoration Luxury": "1012373",
+    "Riverview Lodge": "70220",
+    "Serendipity on Noontootla Creek": "70222",
+    "Skyfall": "1001528",
+    "The Rivers Edge": "70224"
+  },
+  "mappings": {
+    "goldfix": {
+      "property_ids": ["70209"],
+      "note": "General handyman - primarily Fallen Timber Lodge maintenance"
+    },
+    "\"faircloth, jimmy\"": {
+      "property_ids": [],
+      "note": "Contractor - multiple properties, no single assignment"
+    },
+    "michael chumbley": {
+      "property_ids": [],
+      "note": "Contractor - cross-property"
+    },
+    "lane bishop": {
+      "property_ids": [],
+      "note": "Land surveyor - development projects"
+    },
+    "chad harrison": {
+      "property_ids": [],
+      "note": "Pool/patio service - cross-property"
+    },
+    "jared herum": {
+      "property_ids": [],
+      "note": "Contractor - cross-property"
+    },
+    "john strickland": {
+      "property_ids": [],
+      "note": "General contractor"
+    },
+    "brandt bickford": {
+      "property_ids": [],
+      "note": "Contractor"
+    },
+    "mike collins": {
+      "property_ids": [],
+      "note": "Best Garbage Service - all properties"
+    },
+    "\"north georgia spas inc.\"": {
+      "property_ids": [],
+      "note": "Hot tub maintenance - cross-property"
+    },
+    "deep south carpet cleaners": {
+      "property_ids": [],
+      "note": "Carpet cleaning - cross-property"
+    },
+    "\"supplyhouse.com\"": {
+      "property_ids": [],
+      "note": "Plumbing/HVAC supplies - operational"
+    },
+    "nefer lopez": {
+      "property_ids": [],
+      "note": "Housekeeping contractor"
+    },
+    "bobby merritt": {
+      "property_ids": [],
+      "note": "Contractor"
+    },
+    "ben espy": {
+      "property_ids": [],
+      "note": "Contractor - multiple projects"
+    }
+  },
+  "default_journal_type": "operating"
+}

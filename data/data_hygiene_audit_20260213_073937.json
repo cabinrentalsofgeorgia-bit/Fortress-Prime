@@ -1,0 +1,18 @@
+{
+  "started_at": "2026-02-13T07:39:37.896481",
+  "phases": {
+    "2b": {
+      "sales_intel_empty_shells": 0,
+      "guest_leads_empty_shells": 0,
+      "market_intel_empty_shells": 745,
+      "total_empty_shells_deleted": 745
+    }
+  },
+  "summary": {
+    "elapsed_seconds": 0.19,
+    "dry_run": false,
+    "final_email_archive_count": 62862,
+    "final_mined_count": 62828,
+    "completed_at": "2026-02-13T07:39:38.135134"
+  }
+}

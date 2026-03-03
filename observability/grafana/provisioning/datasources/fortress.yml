@@ -1,0 +1,49 @@
+# =============================================================================
+# GRAFANA DATASOURCE PROVISIONING — Fortress Prime
+# =============================================================================
+apiVersion: 1
+
+datasources:
+  # --- PostgreSQL (Business Data) ---
+  - name: Fortress PostgreSQL
+    type: grafana-postgresql-datasource
+    uid: fortress-pg
+    access: proxy
+    url: host.docker.internal:5432
+    user: $__env{DB_USER}
+    isDefault: true
+    jsonData:
+      database: $__env{DB_NAME}
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 5
+      connMaxLifetime: 14400
+      postgresVersion: 1600
+      timescaledb: false
+    secureJsonData:
+      password: $__env{DB_PASS}
+    editable: true
+
+  # --- Loki (Log Aggregation) ---
+  - name: Fortress Loki
+    type: loki
+    uid: fortress-loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+    editable: true
+
+  # --- Prometheus (Metrics) ---
+  - name: Fortress Prometheus
+    type: prometheus
+    uid: fortress-prom
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+    editable: true

@@ -7,9 +7,11 @@ Automatically extracts structured data from content when new records arrive.
 import os
 import json
 import re
+import hashlib
 import requests
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
+from functools import lru_cache
 from dotenv import load_dotenv
 
 try:
@@ -28,7 +30,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
 ADMIN_USER = os.getenv("ADMIN_DB_USER", "miner_bot")
-ADMIN_PASS = os.getenv("ADMIN_DB_PASS", "190AntiochCemeteryRD!!!")
+ADMIN_PASS = os.getenv("ADMIN_DB_PASS", os.getenv("DB_PASS", ""))
 
 # Spark-1 (Ollama) Configuration
 WORKER_IP = "192.168.0.104"
@@ -98,54 +100,57 @@ class LegalIntel(Base):
     enriched_at = Column(DateTime, nullable=True)  # Track when enrichment completed
 
 
+_session = requests.Session()
+
+
+@lru_cache(maxsize=1024)
+def _cached_llm_call(prompt_hash: str, prompt: str) -> Optional[Dict[str, Any]]:
+    """Cached LLM execution returning parsed dict. TCP connection reused via Session."""
+    response = _session.post(
+        OLLAMA_API,
+        json={
+            "model": MODEL,
+            "prompt": prompt,
+            "format": "json",
+            "stream": False
+        },
+        timeout=API_TIMEOUT
+    )
+
+    if response.status_code != 200:
+        print(f"   ❌ LLM API error: {response.status_code}")
+        return None
+
+    response_data = response.json()
+    response_text = response_data.get("response", "").strip()
+
+    if not response_text:
+        return None
+
+    if response_text.startswith('```json'):
+        response_text = response_text[7:]
+    if response_text.startswith('```'):
+        response_text = response_text[3:]
+    if response_text.endswith('```'):
+        response_text = response_text[:-3]
+    response_text = response_text.strip()
+
+    try:
+        data = json.loads(response_text)
+        return data
+    except json.JSONDecodeError as e:
+        print(f"   ⚠️  JSON parsing error: {e}")
+        return None
+
+
 def call_llm(prompt: str) -> Optional[Dict[str, Any]]:
     """
     Call Spark-1 Ollama LLM API with structured JSON output.
-    
-    Args:
-        prompt: Prompt to send to LLM
-        
-    Returns:
-        Parsed JSON response or None on error
+    Uses TCP connection pooling and prompt-level caching.
     """
+    p_hash = hashlib.md5(prompt.encode('utf-8')).hexdigest()
     try:
-        response = requests.post(
-            OLLAMA_API,
-            json={
-                "model": MODEL,
-                "prompt": prompt,
-                "format": "json",
-                "stream": False
-            },
-            timeout=API_TIMEOUT
-        )
-        
-        if response.status_code != 200:
-            print(f"   ❌ LLM API error: {response.status_code}")
-            return None
-        
-        response_data = response.json()
-        response_text = response_data.get("response", "").strip()
-        
-        if not response_text:
-            return None
-        
-        # Clean JSON response (remove markdown if present)
-        if response_text.startswith('```json'):
-            response_text = response_text[7:]
-        if response_text.startswith('```'):
-            response_text = response_text[3:]
-        if response_text.endswith('```'):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-        
-        # Parse JSON
-        try:
-            data = json.loads(response_text)
-            return data
-        except json.JSONDecodeError as e:
-            print(f"   ⚠️  JSON parsing error: {e}")
-            return None
+        return _cached_llm_call(p_hash, prompt)
             
     except requests.exceptions.Timeout:
         print(f"   ❌ LLM API timeout after {API_TIMEOUT} seconds")

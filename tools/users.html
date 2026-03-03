@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Management — CROG Command Center</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 30px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+}
+
+.header h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header p {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.nav {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: #e0e0e0;
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-label {
+  color: #9ca3af;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.table-container {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 30px;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  padding: 15px;
+  color: #9ca3af;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+
+td {
+  padding: 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-admin {
+  background: #3b82f6;
+  color: white;
+}
+
+.badge-operator {
+  background: #10b981;
+  color: white;
+}
+
+.badge-viewer {
+  background: #6b7280;
+  color: white;
+}
+
+.badge-active {
+  background: #10b981;
+  color: white;
+}
+
+.badge-inactive {
+  background: #ef4444;
+  color: white;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: #1a1f3a;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+}
+
+.modal-content h2 {
+  margin-bottom: 24px;
+  font-size: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+}
+
+/* Web UI toggle switch */
+.toggle{position:relative;display:inline-block;width:44px;height:24px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#333;
+  border-radius:24px;transition:.2s}
+.toggle .slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;
+  bottom:3px;background:#666;border-radius:50%;transition:.2s}
+.toggle input:checked+.slider{background:rgba(16,185,129,.3)}
+.toggle input:checked+.slider::before{transform:translateX(20px);background:#10b981}
+.webui-label{font-size:11px;margin-left:6px;vertical-align:middle;color:#888}
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+</style>
+</head>
+<body>
+
+<!-- FORTRESS UNIFIED NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item fn-dd-active"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>User Management</h1>
+    <p>CROG Command Center — Cabin Rentals of Georgia</p>
+    <div class="nav">
+      <button class="btn btn-primary" onclick="openAddUserModal()">+ Add User</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-value" id="totalUsers">0</div>
+      <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="activeUsers">0</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="adminUsers">0</div>
+      <div class="stat-label">Admins</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="webuiUsers">0</div>
+      <div class="stat-label">Web UI Access</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="vrsUsers">0</div>
+      <div class="stat-label">VRS Access</div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div id="loading" class="loading">Loading users...</div>
+    <div id="userTableWrapper" style="display:none;">
+      <table id="userTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Web UI</th>
+            <th>VRS</th>
+            <th>Last Login</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal">
+  <div class="modal-content">
+    <h2>Add New User</h2>
+    <form id="addUserForm">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="newUsername" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="newEmail" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="newPassword" required>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="newRole">
+          <option value="viewer">Viewer</option>
+          <option value="operator">Operator</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div id="addUserError" style="display:none;" class="error"></div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create User</button>
+        <button type="button" class="btn btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change Role Modal -->
+<div id="roleModal" class="modal">
+  <div class="modal-content">
+    <h2>Change User Role</h2>
+    <p style="margin-bottom: 20px; color: #9ca3af;">User: <span id="roleUsername" style="color: white;"></span></p>
+    <div class="form-group">
+      <label>New Role</label>
+      <select id="roleSelect">
+        <option value="viewer">Viewer</option>
+        <option value="operator">Operator</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div id="roleError" style="display:none;" class="error"></div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="submitRoleChange()">Update Role</button>
+      <button class="btn btn-secondary" onclick="closeRoleModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPwModal" class="modal">
+  <div class="modal-content">
+    <h2>Reset User Password</h2>
+    <p style="margin-bottom: 20px; color: #9ca3af;">User: <span id="resetPwUsername" style="color: white; font-weight: 700;"></span></p>
+    <div class="form-group">
+      <label>New Password</label>
+      <input type="password" id="resetPwInput" placeholder="Minimum 8 characters" minlength="8" required>
+    </div>
+    <div class="form-group">
+      <label>Confirm Password</label>
+      <input type="password" id="resetPwConfirm" placeholder="Re-enter new password" minlength="8" required>
+    </div>
+    <div id="resetPwError" style="display:none;" class="error"></div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="submitResetPassword()">Reset Password</button>
+      <button class="btn btn-secondary" onclick="closeResetPasswordModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Clock
+setInterval(()=>{document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login')}
+
+let users = [];
+let selectedUserId = null;
+let resetPwUserId = null;
+
+// Load users on page load
+document.addEventListener('DOMContentLoaded', loadUsers);
+
+async function loadUsers() {
+  try {
+    const response = await fetch('/api/admin/users');
+    if (!response.ok) {
+      throw new Error('Failed to load users');
+    }
+    
+    const data = await response.json();
+    // API returns array directly, not wrapped in object
+    users = Array.isArray(data) ? data : (data.users || []);
+    
+    renderUsers();
+    updateStats();
+    
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('userTableWrapper').style.display = 'block';
+  } catch (error) {
+    document.getElementById('loading').innerHTML = 
+      `<div class="error">Failed to load users: ${error.message}</div>`;
+  }
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('userTableBody');
+  tbody.innerHTML = '';
+  
+  users.forEach(user => {
+    const row = document.createElement('tr');
+    
+    const roleClass = `badge-${user.role}`;
+    const statusClass = user.is_active ? 'badge-active' : 'badge-inactive';
+    const statusText = user.is_active ? 'Active' : 'Inactive';
+    const lastLogin = user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never';
+    const webuiChecked = user.web_ui_access ? 'checked' : '';
+    const vrsChecked = user.vrs_access ? 'checked' : '';
+    
+    row.innerHTML = `
+      <td>${user.id}</td>
+      <td><strong>${user.username}</strong></td>
+      <td>${user.email || 'N/A'}</td>
+      <td><span class="badge ${roleClass}">${user.role}</span></td>
+      <td><span class="badge ${statusClass}">${statusText}</span></td>
+      <td>
+        <label class="toggle" title="Toggle Web UI access">
+          <input type="checkbox" ${webuiChecked} onchange="toggleWebUI(${user.id}, this.checked)">
+          <span class="slider"></span>
+        </label>
+        <span class="webui-label">${user.web_ui_access ? 'On' : 'Off'}</span>
+      </td>
+      <td>
+        <label class="toggle" title="Toggle VRS Dashboard access">
+          <input type="checkbox" ${vrsChecked} onchange="toggleVRS(${user.id}, this.checked)">
+          <span class="slider"></span>
+        </label>
+        <span class="webui-label">${user.vrs_access ? 'On' : 'Off'}</span>
+      </td>
+      <td>${lastLogin}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-warning btn-sm" onclick="openRoleModal(${user.id}, '${user.username}', '${user.role}')">
+            Change Role
+          </button>
+          <button class="btn ${user.is_active ? 'btn-danger' : 'btn-success'} btn-sm" 
+                  onclick="toggleStatus(${user.id}, ${user.is_active})">
+            ${user.is_active ? 'Deactivate' : 'Activate'}
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openResetPasswordModal(${user.id}, '${user.username}')">
+            Reset PW
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id}, '${user.username}')">
+            Delete
+          </button>
+        </div>
+      </td>
+    `;
+    
+    tbody.appendChild(row);
+  });
+}
+
+function updateStats() {
+  document.getElementById('totalUsers').textContent = users.length;
+  document.getElementById('activeUsers').textContent = users.filter(u => u.is_active).length;
+  document.getElementById('adminUsers').textContent = users.filter(u => u.role === 'admin').length;
+  document.getElementById('webuiUsers').textContent = users.filter(u => u.web_ui_access).length;
+  document.getElementById('vrsUsers').textContent = users.filter(u => u.vrs_access).length;
+}
+
+// Add User Modal
+function openAddUserModal() {
+  document.getElementById('addUserModal').classList.add('active');
+  document.getElementById('addUserForm').reset();
+  document.getElementById('addUserError').style.display = 'none';
+}
+
+function closeAddUserModal() {
+  document.getElementById('addUserModal').classList.remove('active');
+}
+
+document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const username = document.getElementById('newUsername').value;
+  const email = document.getElementById('newEmail').value;
+  const password = document.getElementById('newPassword').value;
+  const role = document.getElementById('newRole').value;
+  
+  try {
+    const response = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, role })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create user');
+    }
+    
+    closeAddUserModal();
+    await loadUsers();
+  } catch (error) {
+    const errorDiv = document.getElementById('addUserError');
+    errorDiv.textContent = error.message;
+    errorDiv.style.display = 'block';
+  }
+});
+
+// Change Role Modal
+function openRoleModal(userId, username, currentRole) {
+  selectedUserId = userId;
+  document.getElementById('roleUsername').textContent = username;
+  document.getElementById('roleSelect').value = currentRole;
+  document.getElementById('roleModal').classList.add('active');
+  document.getElementById('roleError').style.display = 'none';
+}
+
+function closeRoleModal() {
+  document.getElementById('roleModal').classList.remove('active');
+  selectedUserId = null;
+}
+
+async function submitRoleChange() {
+  const newRole = document.getElementById('roleSelect').value;
+  
+  try {
+    const response = await fetch(`/api/admin/users/${selectedUserId}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update role');
+    }
+    
+    closeRoleModal();
+    await loadUsers();
+  } catch (error) {
+    const errorDiv = document.getElementById('roleError');
+    errorDiv.textContent = error.message;
+    errorDiv.style.display = 'block';
+  }
+}
+
+// Toggle Status
+async function toggleStatus(userId, currentStatus) {
+  const action = currentStatus ? 'deactivate' : 'activate';
+  if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+  
+  try {
+    const response = await fetch(`/api/admin/users/${userId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !currentStatus })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update status');
+    }
+    
+    await loadUsers();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+// Delete User
+async function deleteUser(userId, username) {
+  if (!confirm(`PERMANENTLY DELETE user "${username}"? This cannot be undone!`)) return;
+  
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete user');
+    }
+    
+    await loadUsers();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+// Toggle Web UI Access
+async function toggleWebUI(userId, enabled) {
+  try {
+    const response = await fetch(`/api/admin/users/${userId}/webui-access`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ web_ui_access: enabled })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update Web UI access');
+    }
+    
+    await loadUsers();
+  } catch (error) {
+    alert('Error: ' + error.message);
+    await loadUsers();
+  }
+}
+
+// Toggle VRS Dashboard Access
+async function toggleVRS(userId, enabled) {
+  try {
+    const response = await fetch(`/api/admin/users/${userId}/vrs-access`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vrs_access: enabled })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update VRS access');
+    }
+    
+    await loadUsers();
+  } catch (error) {
+    alert('Error: ' + error.message);
+    await loadUsers();
+  }
+}
+
+// Reset Password Modal
+function openResetPasswordModal(userId, username) {
+  resetPwUserId = userId;
+  document.getElementById('resetPwUsername').textContent = username;
+  document.getElementById('resetPwInput').value = '';
+  document.getElementById('resetPwConfirm').value = '';
+  document.getElementById('resetPwError').style.display = 'none';
+  document.getElementById('resetPwModal').classList.add('active');
+}
+
+function closeResetPasswordModal() {
+  document.getElementById('resetPwModal').classList.remove('active');
+  resetPwUserId = null;
+}
+
+async function submitResetPassword() {
+  const pw = document.getElementById('resetPwInput').value;
+  const confirm = document.getElementById('resetPwConfirm').value;
+  const errorDiv = document.getElementById('resetPwError');
+
+  if (pw.length < 8) {
+    errorDiv.textContent = 'Password must be at least 8 characters.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  if (pw !== confirm) {
+    errorDiv.textContent = 'Passwords do not match.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/admin/users/${resetPwUserId}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_password: pw })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to reset password');
+    }
+
+    const result = await response.json();
+    closeResetPasswordModal();
+    alert(`Password for "${result.username}" has been reset successfully.`);
+  } catch (error) {
+    errorDiv.textContent = error.message;
+    errorDiv.style.display = 'block';
+  }
+}
+
+// Close modals on escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeAddUserModal();
+    closeRoleModal();
+    closeResetPasswordModal();
+  }
+});
+
+// Close modals when clicking outside
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeAddUserModal();
+      closeRoleModal();
+      closeResetPasswordModal();
+    }
+  });
+});
+</script>
+
+</body>
+</html>

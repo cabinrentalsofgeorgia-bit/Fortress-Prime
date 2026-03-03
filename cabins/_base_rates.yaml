@@ -1,0 +1,157 @@
+# =============================================================================
+# CROG BASE RATE REGISTRY — Single Source of Truth for QuantRevenue (CF-02)
+# =============================================================================
+# This file defines the base nightly rate and pricing guardrails for every
+# managed property.  The QuantRevenue engine reads this at runtime.
+#
+# Fields:
+#   base_rate      - Default mid-season nightly rate ($)
+#   tier           - premium | standard | economy  (affects seasonal amplitude)
+#   floor_pct      - Minimum rate as % of base (e.g. 0.60 = never below 60%)
+#   ceiling_pct    - Maximum rate as % of base (e.g. 2.00 = never above 200%)
+#   cleaning_fee   - Flat per-stay cleaning fee ($)
+#   min_nights     - Minimum stay (default 2)
+#   notes          - Human notes about pricing rationale
+#
+# To override a rate temporarily, use the Intercom:
+#   "Set target price for <property> to $X"
+# That writes to ops_overrides and QuantRevenue respects it.
+# =============================================================================
+
+defaults:
+  floor_pct: 0.60
+  ceiling_pct: 2.00
+  cleaning_fee: 150
+  min_nights: 2
+  tax_rate: 0.13        # GA state + Fannin County lodging tax
+  mgmt_fee_pct: 0.25    # CROG management fee
+
+properties:
+
+  # ── 2-Bedroom ──────────────────────────────────────────────────────────
+  cherokee_sunrise_on_noontootla_creek:
+    display_name: Cherokee Sunrise on Noontootla Creek
+    bedrooms: 2
+    base_rate: 175
+    tier: standard
+    cleaning_fee: 125
+    notes: "Rate override active ($175 target). Creek-front, intimate cabin."
+
+  creekside_green:
+    display_name: Creekside Green
+    bedrooms: 2
+    base_rate: 175
+    tier: standard
+    cleaning_fee: 125
+    notes: "2BR creek-side cabin. Quiet setting."
+
+  # ── 3-Bedroom ──────────────────────────────────────────────────────────
+  rolling_river:
+    display_name: Rolling River
+    bedrooms: 3
+    base_rate: 275
+    tier: premium
+    cleaning_fee: 150
+    status: sold
+    sold_date: "2025-05-30"
+    notes: "SOLD 2025-05-30. Former flagship 3BR. Hot tub, EV charger, Starlink, mountain views."
+
+  aska_escape_lodge:
+    display_name: Aska Escape Lodge
+    bedrooms: 3
+    base_rate: 225
+    tier: standard
+    cleaning_fee: 150
+    notes: "Solid 3BR in the Aska Adventure corridor."
+
+  blue_ridge_lake_sanctuary:
+    display_name: Blue Ridge Lake Sanctuary
+    bedrooms: 3
+    base_rate: 250
+    tier: premium
+    cleaning_fee: 150
+    notes: "Lake proximity commands premium over standard 3BR."
+
+  cohutta_sunset:
+    display_name: Cohutta Sunset
+    bedrooms: 3
+    base_rate: 225
+    tier: standard
+    cleaning_fee: 150
+    notes: "Reliable performer. Strong turnover cadence."
+
+  # ── 4-Bedroom ──────────────────────────────────────────────────────────
+  above_the_timberline:
+    display_name: Above the Timberline
+    bedrooms: 4
+    base_rate: 325
+    tier: premium
+    cleaning_fee: 175
+    notes: "Elevated location, mountain-top views. Premium 4BR."
+
+  chase_mountain_dreams:
+    display_name: Chase Mountain Dreams
+    bedrooms: 4
+    base_rate: 300
+    tier: standard
+    cleaning_fee: 175
+    notes: "Standard 4BR, sleeps 10."
+
+  high_hopes:
+    display_name: High Hopes
+    bedrooms: 4
+    base_rate: 300
+    tier: standard
+    cleaning_fee: 175
+    notes: "Solid 4BR performer."
+
+  skyfall:
+    display_name: Skyfall
+    bedrooms: 4
+    base_rate: 325
+    tier: premium
+    cleaning_fee: 175
+    notes: "Premium finishes, strong brand name."
+
+  # ── 5-Bedroom ──────────────────────────────────────────────────────────
+  fallen_timber_lodge:
+    display_name: Fallen Timber Lodge
+    bedrooms: 5
+    base_rate: 400
+    tier: premium
+    cleaning_fee: 200
+    notes: "Top revenue generator. 5BR flagship."
+
+  restoration_luxury:
+    display_name: Restoration Luxury
+    bedrooms: 5
+    base_rate: 425
+    tier: premium
+    cleaning_fee: 200
+    notes: "Under renovation until April 2026. Luxury finishes justify premium."
+
+  riverview_lodge:
+    display_name: Riverview Lodge
+    bedrooms: 5
+    base_rate: 375
+    tier: standard
+    cleaning_fee: 200
+    notes: "River-adjacent 5BR. Strong bookings."
+
+  serendipity_on_noontootla_creek:
+    display_name: Serendipity on Noontootla Creek
+    bedrooms: 5
+    base_rate: 375
+    tier: standard
+    cleaning_fee: 200
+    notes: "Creek-front 5BR. Good positioning."
+
+  # ── 7-Bedroom ──────────────────────────────────────────────────────────
+  the_rivers_edge:
+    display_name: The Rivers Edge
+    bedrooms: 7
+    base_rate: 550
+    tier: premium
+    cleaning_fee: 250
+    min_nights: 3
+    notes: "Flagship estate. 7BR, sleeps 14. Corporate retreat target. Premium justified."

@@ -1,3 +1,15 @@
+# SOVEREIGN SYSTEMS ARCHITECT — ROLE & CONSTRAINTS
+# Effective: 2026-02-28
+#
+# 1. Assume the role of Lead Sovereign Systems Architect.
+# 2. Always read CONSTITUTION.md and REQUIREMENTS.md before generating architecture.
+# 3. Do not suggest cloud-based alternatives (e.g., AWS, GCP) for storage or compute.
+# 4. Utilize the local 32GB RAM for extensive workspace indexing and file mapping,
+#    but strictly format all execution scripts, Docker files, and Spark jobs to run
+#    on the remote DGX cluster.
+# 5. Write lean, Pythonic, enterprise-grade code. Include robust error handling and
+#    localized fallback logic for all network APIs.
+
 # MANDATORY PREAMBLE — READ BEFORE ANY CODE CHANGE
 # Before proposing any architectural change, writing new routes, modifying
 # authentication logic, or adding API calls, you MUST read ARCHITECTURE.md.
@@ -60,3 +72,94 @@ All code changes MUST comply with ARCHITECTURE.md in the project root. Key manda
 4. The AuthGuard redirects unauthenticated users to /login. Never to /console/.
 5. New BFF routes and backend services must be registered in ARCHITECTURE.md Section IV.
 6. A pre-commit hook blocks localhost violations in client-side code.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PHASE 5.11 — GLOBAL RULES ENFORCEMENT (Permanent Behavioral Patch)
+# Effective Date: 2026-02-27
+# Classification: NON-NEGOTIABLE — Violation = Architectural Failure
+# ═══════════════════════════════════════════════════════════════════════════
+
+# RULE 100: THE BFF PROXY PATTERN IS ABSOLUTE
+#
+# NEVER hardcode localhost, 127.0.0.1, or any absolute URL in client-side
+# Next.js code (any file under src/app/ or src/components/ that runs in
+# the browser). ALL API calls from the frontend MUST use relative paths
+# (e.g., /api/payments, NOT http://localhost:8100/api/payments).
+#
+# When creating a NEW backend API endpoint that the frontend will consume:
+#   1. Create the FastAPI route in fortress-guest-platform/backend/api/
+#   2. Create a BFF proxy route at src/app/api/<domain>/[...path]/route.ts
+#   3. Add the path prefix to the BFF_PREFIXES array in src/lib/api.ts
+#   4. Verify the BFF proxy returns the correct HTTP status via curl on
+#      port 3001 (NOT port 8100) before declaring the work complete
+#
+# If any of these four steps is skipped, the feature is NOT done.
+# The browser NEVER talks to port 8100 directly. Period.
+
+# RULE 101: ZERO-CRASH REACT STRICTNESS
+#
+# Every React component that accesses API data MUST be crash-proof:
+#   - ALWAYS use optional chaining: data?.items?.length (never data.items.length)
+#   - ALWAYS use nullish coalescing: data?.count ?? 0 (never assume values exist)
+#   - ALWAYS add early returns: if (!data || !Array.isArray(data)) return null;
+#   - ALWAYS guard .map(), .filter(), .reduce() calls with an Array.isArray() check
+#     or optional chaining before invoking them
+#   - ALWAYS wrap child components that receive API-sourced props in conditional
+#     renders: {data.services && <ServicesGrid services={data.services} />}
+#
+# A white-screen crash from "Cannot read properties of undefined" is a
+# P0 incident. The component must degrade gracefully, never explode.
+
+# RULE 102: VERIFY BEFORE DEPLOYING — THE COMPLETE CIRCUIT
+#
+# Writing backend code is NOT the finish line. The complete circuit is:
+#   1. Backend endpoint written and registered in main.py
+#   2. BFF proxy route created in src/app/api/
+#   3. BFF prefix registered in src/lib/api.ts
+#   4. Frontend page/component created
+#   5. curl verification on port 3001 confirms non-404 status codes
+#   6. If Next.js is running in production mode (next start), rebuild
+#      with next build and restart — source edits do NOT take effect
+#      without a rebuild
+#
+# Do NOT tell the user "it should work now" until steps 1-6 are verified.
+# Do NOT declare a feature complete with only the backend written.
+
+# RULE 104: NEVER OVERWRITE WITHOUT READING
+#
+# Before writing, editing, or overwriting ANY existing file, you MUST
+# read the current contents of that file first using the Read tool.
+# This is NON-NEGOTIABLE. Blind writes cause regressions:
+#   - Navigation links disappear
+#   - Existing features are silently deleted
+#   - Working code is replaced with partial rewrites
+#
+# The sequence is always: READ → understand → EDIT (surgical StrReplace).
+# Prefer StrReplace over Write for existing files. Write is only for NEW files.
+# If you use the Write tool on an existing file, you MUST have read it in
+# the same conversation turn and you MUST preserve all existing content
+# that is not explicitly being changed.
+#
+# Violating this rule is a P0 regression incident.
+
+# RULE 103: NEVER BYPASS COMPILED STATE
+#
+# When modifying Python backend files in fortress-guest-platform/backend/:
+#   1. Run: find backend -type d -name "__pycache__" -exec rm -rf {} +
+#   2. Run: find backend -name "*.pyc" -delete
+#   3. Kill the running process: fuser -k -9 8100/tcp
+#   4. Wait 3 seconds for connections to drain
+#   5. Restart: nohup python3 -m uvicorn backend.main:app --host 0.0.0.0
+#      --port 8100 --log-level info > /tmp/fgp_restart.log 2>&1 &
+#   6. Wait for startup, then verify: curl -s http://localhost:8100/health
+#
+# Stale .pyc files cause phantom bugs where new code appears to not work.
+# ALWAYS purge bytecode cache before restarting after Python source changes.
+#
+# When modifying Next.js frontend files and the server runs in production
+# mode (next start, not next dev):
+#   1. Verify protected file exists: ls src/app/(dashboard)/page.tsx
+#   2. Run: npx next build
+#   3. Kill old server: fuser -k 3001/tcp
+#   4. Restart: nohup npx next start -p 3001 > /tmp/nextjs_restart.log 2>&1 &
+#   5. Verify: curl -s -o /dev/null -w "%{http_code}" http://localhost:3001

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fortress Field Link</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #111827; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        .btn-action:active { transform: scale(0.96); opacity: 0.85; }
+        .btn-action { transition: all 0.15s ease; }
+        .card-enter { animation: slideUp 0.25s ease-out; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        /* Pull-to-refresh hint */
+        .refresh-hint { transition: opacity 0.3s; }
+    </style>
+</head>
+<body class="p-0 m-0 min-h-screen">
+
+    <!-- ============================================================ -->
+    <!-- LOGIN SCREEN                                                  -->
+    <!-- ============================================================ -->
+    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen px-6">
+        <div class="mb-2 text-5xl">&#x1F6E1;</div>
+        <h1 class="text-2xl font-bold mb-1 text-blue-400">Fortress Field Ops</h1>
+        <p class="text-gray-500 text-sm mb-8">Division 3 &mdash; Operations</p>
+
+        <input type="number" inputmode="numeric" id="crew-id"
+               placeholder="Crew ID"
+               class="mb-4 p-4 text-center text-xl bg-gray-800 rounded-xl text-white border border-gray-700 w-64 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <button onclick="login()" id="login-btn"
+                class="w-64 bg-blue-600 hover:bg-blue-500 p-4 rounded-xl font-bold text-lg btn-action">
+            Connect
+        </button>
+        <p id="login-error" class="text-red-400 text-sm mt-4 hidden"></p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- DASHBOARD SCREEN                                              -->
+    <!-- ============================================================ -->
+    <div id="dashboard-screen" class="hidden">
+        <!-- Header -->
+        <div class="sticky top-0 z-10 bg-gray-900/95 backdrop-blur border-b border-gray-800 px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold" id="crew-name">Field Ops</h2>
+                    <p class="text-xs text-gray-500" id="crew-role"></p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="refreshTasks()" class="text-gray-400 hover:text-white p-2" title="Refresh">
+                        <svg id="refresh-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
+                    <button onclick="logout()" class="text-gray-500 hover:text-red-400 text-xs font-medium">Exit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-3 gap-2 px-4 py-3 border-b border-gray-800">
+            <div class="bg-gray-800/50 rounded-lg p-2 text-center">
+                <div class="text-xs text-gray-500">My Tasks</div>
+                <div class="text-xl font-bold text-blue-400" id="stat-my">0</div>
+            </div>
+            <div class="bg-gray-800/50 rounded-lg p-2 text-center">
+                <div class="text-xs text-gray-500">Open</div>
+                <div class="text-xl font-bold text-yellow-400" id="stat-open">0</div>
+            </div>
+            <div class="bg-gray-800/50 rounded-lg p-2 text-center">
+                <div class="text-xs text-gray-500">Urgent</div>
+                <div class="text-xl font-bold text-red-400" id="stat-urgent">0</div>
+            </div>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="flex border-b border-gray-800 px-4">
+            <button onclick="switchTab('mine')" id="tab-mine"
+                    class="flex-1 py-3 text-sm font-medium text-center border-b-2 border-blue-500 text-blue-400">
+                My Tasks
+            </button>
+            <button onclick="switchTab('open')" id="tab-open"
+                    class="flex-1 py-3 text-sm font-medium text-center border-b-2 border-transparent text-gray-500">
+                Open Queue
+            </button>
+        </div>
+
+        <!-- Task List -->
+        <div id="task-list" class="px-4 py-3 space-y-3 pb-24">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Connection Status -->
+        <div class="fixed bottom-0 left-0 right-0 bg-gray-900/95 border-t border-gray-800 px-4 py-2 flex justify-between items-center text-xs text-gray-500">
+            <div class="flex items-center gap-1.5">
+                <span id="conn-dot" class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></span>
+                <span id="conn-status">Connected</span>
+            </div>
+            <span id="last-sync">--</span>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- LOGIC                                                         -->
+    <!-- ============================================================ -->
+    <script>
+        // API base — empty string = same origin (works behind Cloudflare tunnel)
+        const API = "";
+        let currentCrewId = null;
+        let currentTab = "mine";
+        let allTasks = [];
+
+        // ── LOGIN ─────────────────────────────────────────────
+        async function login() {
+            const idInput = document.getElementById("crew-id");
+            const errEl = document.getElementById("login-error");
+            const btn = document.getElementById("login-btn");
+            const id = idInput.value.trim();
+
+            if (!id) { showError("Enter your Crew ID"); return; }
+
+            btn.textContent = "Connecting...";
+            btn.disabled = true;
+            errEl.classList.add("hidden");
+
+            try {
+                // Validate crew member exists
+                const res = await fetch(`${API}/ops/crew`);
+                if (!res.ok) throw new Error("Cannot reach Ops Engine");
+                const crew = await res.json();
+                const member = crew.find(c => c.id === parseInt(id));
+
+                if (!member) {
+                    showError(`Crew ID ${id} not found. Contact your manager.`);
+                    btn.textContent = "Connect";
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Store session
+                currentCrewId = member.id;
+                localStorage.setItem("crew_id", member.id);
+                localStorage.setItem("crew_name", member.name);
+                localStorage.setItem("crew_role", member.role);
+
+                // Switch to dashboard
+                document.getElementById("crew-name").textContent = member.name;
+                document.getElementById("crew-role").textContent =
+                    `${member.role} — ${member.current_location || "Unassigned"}`;
+                document.getElementById("login-screen").classList.add("hidden");
+                document.getElementById("dashboard-screen").classList.remove("hidden");
+
+                await refreshTasks();
+            } catch (e) {
+                showError(`Connection failed: ${e.message}`);
+                btn.textContent = "Connect";
+                btn.disabled = false;
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById("login-error");
+            el.textContent = msg;
+            el.classList.remove("hidden");
+        }
+
+        function logout() {
+            localStorage.clear();
+            currentCrewId = null;
+            location.reload();
+        }
+
+        // ── TASK LOADING ──────────────────────────────────────
+        async function refreshTasks() {
+            const icon = document.getElementById("refresh-icon");
+            icon.classList.add("animate-spin");
+
+            try {
+                // Fetch all active tasks (the API sorts by priority + deadline)
+                const res = await fetch(`${API}/ops/tasks`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                allTasks = await res.json();
+
+                // Update stats
+                const myTasks = allTasks.filter(t =>
+                    t.assigned_to === currentCrewId &&
+                    ["OPEN", "ASSIGNED", "IN_PROGRESS"].includes(t.status)
+                );
+                const openTasks = allTasks.filter(t => t.status === "OPEN");
+                const urgentTasks = allTasks.filter(t =>
+                    t.priority === "URGENT" &&
+                    ["OPEN", "ASSIGNED", "IN_PROGRESS"].includes(t.status)
+                );
+
+                document.getElementById("stat-my").textContent = myTasks.length;
+                document.getElementById("stat-open").textContent = openTasks.length;
+                document.getElementById("stat-urgent").textContent = urgentTasks.length;
+
+                renderTasks();
+                updateSyncTime();
+                setConnectionStatus(true);
+            } catch (e) {
+                setConnectionStatus(false);
+                document.getElementById("task-list").innerHTML =
+                    `<div class="text-center py-12 text-red-400">${e.message}<br>
+                     <button onclick="refreshTasks()" class="mt-4 text-blue-400 underline">Retry</button></div>`;
+            } finally {
+                icon.classList.remove("animate-spin");
+            }
+        }
+
+        function renderTasks() {
+            const container = document.getElementById("task-list");
+            let tasks;
+
+            if (currentTab === "mine") {
+                tasks = allTasks.filter(t =>
+                    t.assigned_to === currentCrewId &&
+                    t.status !== "DONE"
+                );
+            } else {
+                // Open queue: unassigned tasks anyone can claim
+                tasks = allTasks.filter(t =>
+                    t.status === "OPEN" && !t.assigned_to
+                );
+            }
+
+            if (tasks.length === 0) {
+                const msg = currentTab === "mine"
+                    ? "No tasks assigned to you. Check the Open Queue."
+                    : "No unassigned tasks. All work is claimed.";
+                container.innerHTML = `<div class="text-center py-16 text-gray-500">${msg}</div>`;
+                return;
+            }
+
+            container.innerHTML = "";
+            tasks.forEach((task, i) => {
+                const card = document.createElement("div");
+                card.className = `card-enter bg-gray-800 rounded-xl border-l-4 ${borderColor(task.priority)} shadow-lg overflow-hidden`;
+                card.style.animationDelay = `${i * 0.05}s`;
+
+                const deadlineStr = task.deadline
+                    ? new Date(task.deadline).toLocaleString("en-US", {
+                        month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+                      })
+                    : "No deadline";
+
+                const statusBadge = task.status === "IN_PROGRESS"
+                    ? `<span class="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">In Progress</span>`
+                    : task.status === "ASSIGNED"
+                    ? `<span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">Assigned</span>`
+                    : "";
+
+                card.innerHTML = `
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-base">${esc(task.internal_name || "Unknown")}</h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs uppercase tracking-wider ${typeColor(task.type)} font-semibold">${esc(task.type)}</span>
+                                    ${statusBadge}
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold ${prioTextColor(task.priority)} bg-gray-700/50 px-2 py-1 rounded">${esc(task.priority)}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-1">${esc(task.description || "")}</p>
+                        <p class="text-xs text-gray-600">Due: ${deadlineStr}</p>
+                    </div>
+                    <div class="flex border-t border-gray-700/50" id="actions-${task.id}">
+                        ${renderActions(task)}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderActions(task) {
+            // Different buttons based on current state and tab
+            if (currentTab === "open" && !task.assigned_to) {
+                return `<button onclick="claimTask(${task.id})"
+                    class="flex-1 py-3 text-sm font-semibold text-blue-400 hover:bg-gray-700/50 btn-action">
+                    Claim This Task</button>`;
+            }
+
+            if (task.status === "ASSIGNED" || task.status === "OPEN") {
+                return `
+                    <button onclick="updateTask(${task.id}, 'IN_PROGRESS')"
+                        class="flex-1 py-3 text-sm font-semibold text-yellow-400 hover:bg-gray-700/50 btn-action border-r border-gray-700/50">
+                        Start Work</button>
+                    <button onclick="updateTask(${task.id}, 'BLOCKED')"
+                        class="flex-1 py-3 text-sm font-semibold text-red-400 hover:bg-gray-700/50 btn-action">
+                        Blocked</button>`;
+            }
+
+            if (task.status === "IN_PROGRESS") {
+                // VISION GATE: Inspection and Cleaning tasks require photo proof
+                const needsVision = ["INSPECTION", "CLEANING"].includes(task.type);
+                if (needsVision) {
+                    return `
+                        <label class="flex-1 py-3 text-sm font-semibold text-green-400 hover:bg-green-900/30 btn-action border-r border-gray-700/50 text-center cursor-pointer flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+                            Photo Verify
+                            <input type="file" accept="image/*" capture="environment" class="hidden"
+                                   onchange="submitInspection(${task.id}, '${esc(task.type === 'INSPECTION' ? 'living_room' : 'kitchen')}', this)">
+                        </label>
+                        <button onclick="updateTask(${task.id}, 'BLOCKED')"
+                            class="flex-1 py-3 text-sm font-semibold text-red-400 hover:bg-gray-700/50 btn-action">
+                            Blocked</button>`;
+                }
+                return `
+                    <button onclick="updateTask(${task.id}, 'DONE')"
+                        class="flex-1 py-3 text-sm font-semibold text-green-400 hover:bg-green-900/30 btn-action border-r border-gray-700/50">
+                        Mark Complete</button>
+                    <button onclick="updateTask(${task.id}, 'BLOCKED')"
+                        class="flex-1 py-3 text-sm font-semibold text-red-400 hover:bg-gray-700/50 btn-action">
+                        Blocked</button>`;
+            }
+
+            if (task.status === "BLOCKED") {
+                return `<button onclick="updateTask(${task.id}, 'IN_PROGRESS')"
+                    class="flex-1 py-3 text-sm font-semibold text-yellow-400 hover:bg-gray-700/50 btn-action">
+                    Resume Work</button>`;
+            }
+
+            return "";
+        }
+
+        // ── VISION GATE ───────────────────────────────────────
+        async function submitInspection(taskId, roomType, inputEl) {
+            const file = inputEl.files[0];
+            if (!file) return;
+
+            // Show uploading state on the card
+            const actionsDiv = document.getElementById(`actions-${taskId}`);
+            if (actionsDiv) {
+                actionsDiv.innerHTML = `
+                    <div class="flex-1 py-3 text-sm text-center text-gray-400 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        AI Analyzing Photo...
+                    </div>`;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("room_type", roomType);
+
+            try {
+                const res = await fetch(`${API}/ops/tasks/${taskId}/inspect`, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.detail || `Inspection failed (HTTP ${res.status})`);
+                    await refreshTasks();
+                    return;
+                }
+
+                const result = await res.json();
+
+                if (result.gate_passed) {
+                    // SUCCESS — show score and refresh
+                    showVisionResult(true, result);
+                } else {
+                    // FAILED — show remediation
+                    showVisionResult(false, result);
+                }
+
+                await refreshTasks();
+
+            } catch (e) {
+                alert(`Network error: ${e.message}`);
+                await refreshTasks();
+            }
+        }
+
+        function showVisionResult(passed, result) {
+            const color = passed ? "bg-green-900/90" : "bg-red-900/90";
+            const icon = passed ? "&#10004;" : "&#10006;";
+            const title = passed
+                ? `PASSED (${result.score}/100)`
+                : `FAILED (${result.score}/${result.pass_threshold})`;
+
+            // Build issues list for failures
+            let issueHtml = "";
+            if (!passed && result.issues && result.issues.length > 0) {
+                issueHtml = `<ul class="text-left text-sm mt-3 space-y-1">` +
+                    result.issues.map(i => `<li class="text-red-300">- ${esc(i)}</li>`).join("") +
+                    `</ul>`;
+            }
+
+            // Create overlay
+            const overlay = document.createElement("div");
+            overlay.className = `fixed inset-0 ${color} z-50 flex flex-col items-center justify-center p-6 text-center`;
+            overlay.innerHTML = `
+                <div class="text-6xl mb-4">${icon}</div>
+                <h2 class="text-2xl font-bold mb-2">${title}</h2>
+                <p class="text-gray-300 mb-2">${esc(result.cabin || "")} &mdash; ${esc(result.room_type || "")}</p>
+                ${passed
+                    ? `<p class="text-green-300">Task completed. Ready for guests.</p>`
+                    : `<p class="text-red-300 font-semibold">Fix the issues below and re-submit.</p>${issueHtml}`
+                }
+                <p class="text-xs text-gray-500 mt-4">AI analysis: ${(result.inference_time_s || 0).toFixed(1)}s</p>
+                <button onclick="this.parentElement.remove()"
+                    class="mt-6 px-8 py-3 bg-gray-700 rounded-xl font-semibold btn-action">
+                    ${passed ? "Continue" : "Fix & Retry"}
+                </button>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        // ── TASK ACTIONS ──────────────────────────────────────
+        async function claimTask(taskId) {
+            if (!confirm("Claim this task?")) return;
+            await apiPatch(`/ops/tasks/${taskId}`, {
+                assigned_to: currentCrewId,
+                status: "ASSIGNED"
+            });
+        }
+
+        async function updateTask(taskId, status) {
+            const labels = {
+                "IN_PROGRESS": "start working on",
+                "DONE": "mark as complete",
+                "BLOCKED": "flag as blocked"
+            };
+            if (!confirm(`${labels[status] || status} this task?`)) return;
+            await apiPatch(`/ops/tasks/${taskId}`, { status });
+        }
+
+        async function apiPatch(url, body) {
+            const el = document.getElementById("task-list");
+            try {
+                const res = await fetch(`${API}${url}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.detail || `Update failed (HTTP ${res.status})`);
+                    return;
+                }
+                // Refresh the task list to show updated state
+                await refreshTasks();
+            } catch (e) {
+                alert(`Network error: ${e.message}`);
+            }
+        }
+
+        // ── TAB SWITCHING ─────────────────────────────────────
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById("tab-mine").className =
+                `flex-1 py-3 text-sm font-medium text-center border-b-2 ${
+                    tab === "mine" ? "border-blue-500 text-blue-400" : "border-transparent text-gray-500"
+                }`;
+            document.getElementById("tab-open").className =
+                `flex-1 py-3 text-sm font-medium text-center border-b-2 ${
+                    tab === "open" ? "border-blue-500 text-blue-400" : "border-transparent text-gray-500"
+                }`;
+            renderTasks();
+        }
+
+        // ── HELPERS ───────────────────────────────────────────
+        function borderColor(p) {
+            switch (p) {
+                case "EMERGENCY": return "border-red-600";
+                case "URGENT":    return "border-red-500";
+                case "NORMAL":    return "border-blue-500";
+                case "LOW":       return "border-gray-600";
+                default:          return "border-gray-600";
+            }
+        }
+        function prioTextColor(p) {
+            switch (p) {
+                case "EMERGENCY": return "text-red-500";
+                case "URGENT":    return "text-red-400";
+                case "NORMAL":    return "text-blue-400";
+                case "LOW":       return "text-gray-400";
+                default:          return "text-gray-400";
+            }
+        }
+        function typeColor(t) {
+            switch (t) {
+                case "CLEANING":   return "text-cyan-400";
+                case "INSPECTION": return "text-purple-400";
+                case "REPAIR":     return "text-orange-400";
+                case "HOT_TUB":    return "text-emerald-400";
+                default:           return "text-gray-400";
+            }
+        }
+        function esc(str) {
+            const d = document.createElement("div");
+            d.textContent = str || "";
+            return d.innerHTML;
+        }
+        function setConnectionStatus(ok) {
+            document.getElementById("conn-dot").className =
+                `w-2 h-2 rounded-full ${ok ? "bg-green-500 pulse-dot" : "bg-red-500"}`;
+            document.getElementById("conn-status").textContent =
+                ok ? "Connected" : "Disconnected";
+        }
+        function updateSyncTime() {
+            document.getElementById("last-sync").textContent =
+                "Synced " + new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        }
+
+        // ── AUTO-REFRESH (every 30s) ─────────────────────────
+        setInterval(() => {
+            if (currentCrewId) refreshTasks();
+        }, 30000);
+
+        // ── AUTO-LOGIN FROM CACHE ─────────────────────────────
+        (function() {
+            const savedId = localStorage.getItem("crew_id");
+            if (savedId) {
+                document.getElementById("crew-id").value = savedId;
+                login();
+            }
+        })();
+    </script>
+</body>
+</html>

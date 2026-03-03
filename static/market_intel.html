@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Intelligence | Fortress JD</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0e17; --bg-secondary: #111827; --bg-card: #1a2235;
+            --bg-sidebar: #0f1629; --border: #1e293b; --border-hover: #334155;
+            --text-primary: #e2e8f0; --text-secondary: #94a3b8; --text-muted: #64748b;
+            --accent: #3b82f6; --accent-hover: #2563eb; --green: #22c55e;
+            --amber: #f59e0b; --red: #ef4444; --purple: #a78bfa; --cyan: #22d3ee;
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 250px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 1.25rem; border-bottom: 1px solid var(--border); }
+        .logo { font-size: 1.2rem; font-weight: 800; color: white; } .logo span { color: var(--cyan); }
+        .logo-sub { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.1rem; }
+        .sidebar-nav { flex: 1; overflow-y: auto; padding: 0.5rem 0; }
+        .nav-section { padding: 0 1rem; margin: 1rem 0 0.2rem; font-size: 0.6rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+        .nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 1.15rem; font-size: 0.82rem; color: var(--text-secondary); text-decoration: none; border-left: 3px solid transparent; cursor: pointer; transition: all 0.12s; }
+        .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+        .nav-item.active { background: rgba(34,211,238,0.08); color: white; border-left-color: var(--cyan); }
+        .nav-item i { width: 16px; text-align: center; font-size: 0.78rem; }
+        .nav-badge { margin-left: auto; font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 8px; font-weight: 700; }
+        .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+        .badge-amber { background: rgba(245,158,11,0.15); color: var(--amber); }
+        .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+
+        .sidebar-footer { padding: 0.75rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.4rem; }
+        .sidebar-btn { width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text-secondary); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+        .sidebar-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+        .sidebar-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+        .sidebar-btn.primary:hover { background: var(--accent-hover); }
+
+        /* Main */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .topbar { height: 50px; padding: 0 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary); flex-shrink: 0; }
+        .topbar-left { display: flex; align-items: center; gap: 0.75rem; }
+        .topbar h2 { font-size: 0.95rem; font-weight: 700; }
+        .pipeline-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.68rem; font-weight: 700; }
+        .chip-live { background: rgba(34,197,94,0.12); color: var(--green); }
+        .chip-stale { background: rgba(239,68,68,0.12); color: var(--red); }
+        .topbar-right { display: flex; align-items: center; gap: 0.5rem; }
+        .topbar-stat { font-size: 0.7rem; color: var(--text-muted); }
+        .topbar-stat strong { color: var(--text-primary); }
+
+        .content { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; }
+
+        /* Stat Cards */
+        .stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.6rem; margin-bottom: 1.25rem; }
+        .stat-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; transition: border-color 0.15s; }
+        .stat-card:hover { border-color: var(--border-hover); }
+        .stat-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .stat-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+        .stat-value { font-size: 1.4rem; font-weight: 800; margin-top: 0.1rem; }
+        .stat-sub { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.15rem; }
+        .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+
+        /* Sections */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .section-title { font-size: 0.8rem; font-weight: 700; color: var(--text-primary); }
+        .section-controls { display: flex; gap: 0.4rem; align-items: center; }
+
+        /* Panels */
+        .panel { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .panel-header { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .panel-title { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 0.4rem; }
+        .panel-body { max-height: 450px; overflow-y: auto; }
+
+        /* Table */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { padding: 0.5rem 0.75rem; font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; text-align: left; font-weight: 700; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-secondary); z-index: 1; }
+        .data-table td { padding: 0.5rem 0.75rem; font-size: 0.8rem; border-bottom: 1px solid rgba(30,41,59,0.4); }
+        .data-table tr { transition: background 0.08s; cursor: pointer; }
+        .data-table tr:hover { background: rgba(255,255,255,0.02); }
+
+        /* Ticker chips */
+        .ticker { font-weight: 700; font-size: 0.75rem; padding: 0.12rem 0.4rem; border-radius: 3px; font-family: 'SF Mono','Fira Code',monospace; }
+        .ticker-buy { background: rgba(34,197,94,0.15); color: var(--green); }
+        .ticker-sell { background: rgba(239,68,68,0.15); color: var(--red); }
+        .ticker-neutral { background: rgba(100,116,139,0.15); color: var(--text-secondary); }
+        .direction { font-weight: 700; font-size: 0.75rem; }
+        .dir-up { color: var(--green); } .dir-down { color: var(--red); } .dir-hold { color: var(--text-muted); }
+
+        /* Source bars */
+        .source-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 1rem; border-bottom: 1px solid rgba(30,41,59,0.3); font-size: 0.78rem; }
+        .source-row:last-child { border-bottom: none; }
+        .source-name { min-width: 110px; color: var(--text-secondary); cursor: pointer; }
+        .source-name:hover { color: var(--text-primary); text-decoration: underline; }
+        .source-bar-track { flex: 1; height: 5px; background: rgba(255,255,255,0.04); border-radius: 3px; }
+        .source-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+        .source-count { font-weight: 700; font-size: 0.78rem; min-width: 35px; text-align: right; }
+
+        /* Volume chart */
+        .volume-chart { display: flex; align-items: flex-end; gap: 2px; height: 100px; padding: 0.75rem 1rem 0.5rem; }
+        .vol-bar { flex: 1; border-radius: 2px 2px 0 0; min-width: 6px; transition: all 0.3s; cursor: crosshair; position: relative; }
+        .vol-bar:hover { opacity: 1 !important; }
+        .vol-label { font-size: 0.55rem; color: var(--text-muted); text-align: center; padding: 0.15rem 0; }
+
+        /* Search */
+        .search-bar { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+        .search-input { flex: 1; padding: 0.55rem 0.85rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.85rem; outline: none; }
+        .search-input:focus { border-color: var(--accent); }
+        .search-input::placeholder { color: var(--text-muted); }
+        select.filter-select { padding: 0.55rem 0.6rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 0.8rem; cursor: pointer; }
+        .btn { padding: 0.55rem 1rem; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 0.3rem; }
+        .btn-primary { background: var(--accent); color: white; } .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--text-primary); }
+        .btn-danger { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+        .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.72rem; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Pagination */
+        .pagination { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted); }
+        .pagination button { padding: 0.3rem 0.6rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; color: var(--text-secondary); font-size: 0.75rem; cursor: pointer; }
+        .pagination button:hover:not(:disabled) { border-color: var(--accent); color: var(--text-primary); }
+        .pagination button:disabled { opacity: 0.3; cursor: default; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; }
+        .modal-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 0.95rem; font-weight: 700; }
+        .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; padding: 0.3rem; } .modal-close:hover { color: var(--text-primary); }
+        .modal-body { padding: 1.25rem; }
+        .email-meta { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 1rem; font-size: 0.8rem; margin-bottom: 1rem; }
+        .email-meta dt { color: var(--text-muted); font-weight: 600; }
+        .email-meta dd { color: var(--text-secondary); }
+        .email-content { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.65; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; }
+
+        /* Console output */
+        .console { background: #000; border-radius: 6px; padding: 0.75rem; font-family: 'SF Mono','Fira Code','Courier New',monospace; font-size: 0.72rem; color: #4ade80; max-height: 250px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5; }
+
+        /* Skeleton */
+        .skeleton { background: linear-gradient(90deg, var(--bg-card) 25%, rgba(255,255,255,0.04) 50%, var(--bg-card) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+
+        @media (max-width: 1200px) {
+            .stat-grid { grid-template-columns: repeat(3, 1fr); }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo"><i class="fas fa-satellite-dish" style="color:var(--cyan);font-size:1rem;margin-right:0.3rem;"></i>Market <span>Intel</span></div>
+            <div class="logo-sub">CF-02 QuantRevenue Division</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Operations</div>
+            <a class="nav-item active" data-view="command">
+                <i class="fas fa-eye"></i> Command Center
+            </a>
+            <a class="nav-item" data-view="search">
+                <i class="fas fa-search"></i> Archive Search
+            </a>
+            <a class="nav-item" data-view="triangles">
+                <i class="fas fa-bolt"></i> Trade Triangles
+                <span class="nav-badge badge-amber" id="ttNav">--</span>
+            </a>
+            <a class="nav-item" data-view="signals">
+                <i class="fas fa-crosshairs"></i> Extracted Signals
+                <span class="nav-badge badge-green" id="sigNav">--</span>
+            </a>
+
+            <div class="nav-section">Pipeline</div>
+            <a class="nav-item" data-view="pipeline">
+                <i class="fas fa-cog"></i> Pipeline Control
+            </a>
+            <a class="nav-item" data-view="sources">
+                <i class="fas fa-rss"></i> Source Monitor
+            </a>
+
+            <div class="nav-section">Navigate</div>
+            <a class="nav-item" href="/">
+                <i class="fas fa-arrow-left"></i> Fortress JD
+            </a>
+            <a class="nav-item" href="/docs" target="_blank">
+                <i class="fas fa-book"></i> API Docs
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="sidebar-btn primary" onclick="triggerIngest()" id="ingestBtn">
+                <i class="fas fa-download"></i> Pull Emails Now
+            </button>
+            <button class="sidebar-btn" onclick="exportData('emails', 30)">
+                <i class="fas fa-file-export"></i> Export 30d Archive
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <h2 id="pageTitle">Command Center</h2>
+                <span class="pipeline-chip" id="pipelineChip">
+                    <i class="fas fa-circle" style="font-size:0.35rem;"></i> Loading
+                </span>
+            </div>
+            <div class="topbar-right">
+                <span class="topbar-stat">Archive: <strong id="topTotal">--</strong></span>
+                <span class="topbar-stat">24h: <strong id="top24h">--</strong></span>
+                <span class="topbar-stat" id="topRefresh" style="font-size:0.65rem;color:var(--text-muted);cursor:pointer;" onclick="init()" title="Refresh">
+                    <i class="fas fa-sync-alt"></i>
+                </span>
+            </div>
+        </header>
+
+        <div class="content" id="mainContent">
+            <div style="padding:3rem;text-align:center;"><div class="skeleton" style="height:200px;"></div></div>
+        </div>
+    </div>
+
+    <!-- Email Reader Modal -->
+    <div class="modal-overlay" id="emailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle"><i class="fas fa-envelope-open" style="color:var(--accent);margin-right:0.4rem;"></i>Email Reader</h3>
+                <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modalBody">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Console Modal -->
+    <div class="modal-overlay" id="consoleModal">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header">
+                <h3 id="consoleTitle"><i class="fas fa-terminal" style="color:var(--green);margin-right:0.4rem;"></i>Pipeline Console</h3>
+                <button class="modal-close" onclick="document.getElementById('consoleModal').classList.remove('open')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="console" id="consoleOutput">Waiting for output...</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const API = '';
+let D = null; // dashboard data cache
+let currentView = 'command';
+let searchState = { q: '', source: '', days: 7, page: 1 };
+let signalState = { ticker: '', action: '', days: 30, page: 1 };
+
+const sourceColors = {
+    'MarketClub':'#f59e0b','Seeking Alpha':'#22c55e','GoldFix':'#eab308',
+    'Carnivore Trading':'#ef4444','MarketMaestro':'#a78bfa','Analyst Ratings':'#3b82f6',
+    'IBD':'#06b6d4','Coinbits':'#f97316','All Star Charts':'#10b981','Stock Market TV':'#8b5cf6',
+    'Substack':'#ec4899','Epoch Times':'#64748b','Other':'#334155'
+};
+
+// ─── Utilities ───
+function esc(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+function fmt(n) { return n != null ? n.toLocaleString() : '--'; }
+function timeAgo(ds) {
+    if (!ds) return '--';
+    const diff = Math.floor((Date.now() - new Date(ds).getTime()) / 1000);
+    if (diff < 60) return 'just now'; if (diff < 3600) return Math.floor(diff/60)+'m ago';
+    if (diff < 86400) return Math.floor(diff/3600)+'h ago';
+    return Math.floor(diff/86400)+'d ago';
+}
+function dateShort(ds) { if (!ds) return ''; return new Date(ds).toLocaleDateString('en-US', {month:'short',day:'numeric'}); }
+function timeShort(ds) { if (!ds) return ''; return new Date(ds).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}); }
+function dateTimeFull(ds) { if (!ds) return ''; const d = new Date(ds); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}); }
+function senderName(s) { if (!s) return ''; const m = s.match(/^"?([^"<]+)/); return m ? m[1].trim() : s; }
+function parseTicker(subj) { const m = subj.match(/(?:NYSE_|NASDAQ_|AMEX_|CRYPTO_)(\w+)/); return m ? m[1] : ''; }
+function parseDir(subj) {
+    if (/Green|Weekly Trade Triangle.*\+|new buy/i.test(subj)) return {d:'BUY',cls:'ticker-buy',icon:'▲',dcls:'dir-up'};
+    if (/Red|new sell/i.test(subj)) return {d:'SELL',cls:'ticker-sell',icon:'▼',dcls:'dir-down'};
+    return {d:'—',cls:'ticker-neutral',icon:'●',dcls:'dir-hold'};
+}
+function parseScore(subj) { const m = subj.match(/Score of\s*([+-]?\d+)/i) || subj.match(/of\s*([+-]?\d+)/); return m ? m[1] : ''; }
+
+// ─── Navigation ───
+document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+    item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        currentView = item.dataset.view;
+        const titles = {command:'Command Center',search:'Archive Search',triangles:'Trade Triangles',signals:'Extracted Signals',pipeline:'Pipeline Control',sources:'Source Monitor'};
+        document.getElementById('pageTitle').textContent = titles[currentView] || currentView;
+        renderView();
+    });
+});
+
+function renderView() {
+    if (!D) return;
+    const el = document.getElementById('mainContent');
+    if (currentView === 'command') renderCommand(el);
+    else if (currentView === 'search') renderSearch(el);
+    else if (currentView === 'triangles') renderTriangles(el);
+    else if (currentView === 'signals') renderSignals(el);
+    else if (currentView === 'pipeline') renderPipeline(el);
+    else if (currentView === 'sources') renderSources(el);
+}
+
+// ─── Init ───
+async function init() {
+    try {
+        const r = await fetch(API + '/api/market-intel/dashboard');
+        D = await r.json();
+        updateChrome();
+        renderView();
+    } catch(e) {
+        document.getElementById('mainContent').innerHTML = `<div style="padding:3rem;text-align:center;color:var(--red);"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:1rem;display:block;"></i>Failed to load Market Intelligence: ${esc(e.message)}</div>`;
+    }
+}
+
+function updateChrome() {
+    const s = D.stats, p = D.pipeline;
+    document.getElementById('topTotal').textContent = fmt(s.total_archive);
+    document.getElementById('top24h').textContent = fmt(s.last_24h);
+    document.getElementById('ttNav').textContent = D.trade_triangles.length;
+    document.getElementById('sigNav').textContent = D.signals.length;
+    const chip = document.getElementById('pipelineChip');
+    if (p.stale) { chip.className = 'pipeline-chip chip-stale'; chip.innerHTML = '<i class="fas fa-circle" style="font-size:0.35rem;"></i> STALE ' + p.hours_since_last + 'h'; }
+    else { chip.className = 'pipeline-chip chip-live'; chip.innerHTML = '<i class="fas fa-circle" style="font-size:0.35rem;"></i> LIVE'; }
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: Command Center
+// ═══════════════════════════════════════════════════════════
+function renderCommand(el) {
+    const s = D.stats, p = D.pipeline;
+    const staleColor = p.stale ? 'var(--red)' : 'var(--green)';
+
+    // Stat cards
+    let html = `<div class="stat-grid">
+        <div class="stat-card"><div class="stat-card-top"><div><div class="stat-label">Total Archive</div><div class="stat-value" style="color:var(--accent);">${fmt(s.total_archive)}</div></div><div class="stat-icon" style="background:rgba(59,130,246,0.12);color:var(--accent);"><i class="fas fa-database"></i></div></div><div class="stat-sub">IMAP: ${fmt(s.from_imap)} | Maildir: ${fmt(s.from_maildir)}</div></div>
+        <div class="stat-card"><div class="stat-card-top"><div><div class="stat-label">Last 24 Hours</div><div class="stat-value" style="color:var(--green);">${fmt(s.last_24h)}</div></div><div class="stat-icon" style="background:rgba(34,197,94,0.12);color:var(--green);"><i class="fas fa-envelope"></i></div></div><div class="stat-sub">emails ingested</div></div>
+        <div class="stat-card"><div class="stat-card-top"><div><div class="stat-label">Last 7 Days</div><div class="stat-value" style="color:var(--cyan);">${fmt(s.last_7d)}</div></div><div class="stat-icon" style="background:rgba(34,211,238,0.12);color:var(--cyan);"><i class="fas fa-chart-line"></i></div></div><div class="stat-sub">emails ingested</div></div>
+        <div class="stat-card"><div class="stat-card-top"><div><div class="stat-label">Trade Triangles</div><div class="stat-value" style="color:var(--amber);">${D.trade_triangles.length}</div></div><div class="stat-icon" style="background:rgba(245,158,11,0.12);color:var(--amber);"><i class="fas fa-bolt"></i></div></div><div class="stat-sub">7-day signals</div></div>
+        <div class="stat-card"><div class="stat-card-top"><div><div class="stat-label">Unmined Queue</div><div class="stat-value" style="color:var(--purple);">${fmt(s.unmined)}</div></div><div class="stat-icon" style="background:rgba(167,139,250,0.12);color:var(--purple);"><i class="fas fa-pickaxe"></i></div></div><div class="stat-sub">${fmt(s.mined)} processed</div></div>
+        <div class="stat-card"><div class="stat-card-top"><div><div class="stat-label">Pipeline Age</div><div class="stat-value" style="color:${staleColor};">${p.hours_since_last != null ? p.hours_since_last+'h' : '--'}</div></div><div class="stat-icon" style="background:rgba(34,197,94,0.12);color:${staleColor};"><i class="fas fa-heartbeat"></i></div></div><div class="stat-sub">${p.latest_email ? timeAgo(p.latest_email) : '--'}</div></div>
+    </div>`;
+
+    // Volume chart + Sources
+    html += `<div class="grid-2">
+        <div class="panel"><div class="panel-header"><span class="panel-title"><i class="fas fa-chart-bar" style="color:var(--accent);"></i> Daily Email Volume (30d)</span></div>
+            <div class="volume-chart" id="volChart"></div>
+            <div style="display:flex;padding:0 1rem 0.5rem;" id="volLabels"></div>
+        </div>
+        <div class="panel"><div class="panel-header"><span class="panel-title"><i class="fas fa-rss" style="color:var(--green);"></i> Sources (7d)</span><span style="font-size:0.65rem;color:var(--text-muted);">${D.sources_7d.reduce((a,b)=>a+b.count,0)} total</span></div>
+            <div class="panel-body" id="sourcePanel"></div>
+        </div>
+    </div>`;
+
+    // Trade Triangles table + Top Senders
+    html += `<div class="grid-2">
+        <div class="panel"><div class="panel-header"><span class="panel-title"><i class="fas fa-bolt" style="color:var(--amber);"></i> Recent Trade Triangles</span><button class="btn btn-sm btn-secondary" onclick="document.querySelector('[data-view=triangles]').click()">View All <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></button></div>
+            <div class="panel-body"><table class="data-table"><thead><tr><th>Time</th><th>Ticker</th><th>Dir</th><th>Subject</th><th>Score</th></tr></thead><tbody id="ttTable"></tbody></table></div>
+        </div>
+        <div class="panel"><div class="panel-header"><span class="panel-title"><i class="fas fa-users" style="color:var(--purple);"></i> Top Senders (7d)</span></div>
+            <div class="panel-body" id="sendersPanel"></div>
+        </div>
+    </div>`;
+
+    el.innerHTML = html;
+
+    // Render volume chart
+    const vc = document.getElementById('volChart');
+    const vl = document.getElementById('volLabels');
+    const maxV = Math.max(...D.volume_daily.map(v => v.count), 1);
+    vc.innerHTML = D.volume_daily.map((v,i) => {
+        const pct = Math.max((v.count / maxV) * 100, 3);
+        const isToday = v.day === new Date().toISOString().split('T')[0];
+        const opacity = isToday ? 1 : 0.55;
+        return `<div class="vol-bar" style="height:${pct}%;background:var(--accent);opacity:${opacity};" title="${v.day}: ${v.count} emails" onclick="searchByDate('${v.day}')"></div>`;
+    }).join('');
+    // Labels (show every 5th day)
+    vl.innerHTML = D.volume_daily.map((v,i) => {
+        const show = i % 5 === 0 || i === D.volume_daily.length - 1;
+        return `<div style="flex:1;text-align:center;"><div class="vol-label">${show ? dateShort(v.day) : ''}</div></div>`;
+    }).join('');
+
+    // Render sources
+    const sp = document.getElementById('sourcePanel');
+    const maxS = Math.max(...D.sources_7d.map(s => s.count), 1);
+    sp.innerHTML = D.sources_7d.map(s => {
+        const pct = (s.count / maxS) * 100;
+        const c = sourceColors[s.source] || '#64748b';
+        return `<div class="source-row"><span class="source-name" onclick="searchBySource('${esc(s.source)}')">${esc(s.source)}</span><div class="source-bar-track"><div class="source-bar-fill" style="width:${pct}%;background:${c};"></div></div><span class="source-count">${s.count}</span></div>`;
+    }).join('');
+
+    // Render TT table (first 10)
+    const ttb = document.getElementById('ttTable');
+    ttb.innerHTML = D.trade_triangles.slice(0, 10).map(tt => {
+        const ticker = parseTicker(tt.subject);
+        const d = parseDir(tt.subject);
+        const score = parseScore(tt.subject);
+        return `<tr onclick="openEmail(${tt.id})"><td style="color:var(--text-muted);font-size:0.72rem;white-space:nowrap;">${timeAgo(tt.sent_at)}</td><td><span class="ticker ${d.cls}">${ticker||'???'}</span></td><td><span class="direction ${d.dcls}">${d.icon} ${d.d}</span></td><td style="color:var(--text-secondary);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tt.subject.replace(/^.*?Trade Triangle Alert\s*-?\s*/i,''))}</td><td style="font-weight:700;color:${d.d==='BUY'?'var(--green)':d.d==='SELL'?'var(--red)':'var(--text-muted)'};">${score}</td></tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No Trade Triangles in 7 days</td></tr>';
+
+    // Top senders
+    const sndr = document.getElementById('sendersPanel');
+    sndr.innerHTML = D.top_senders.map((s, i) => {
+        const pct = (s.count / D.top_senders[0].count) * 100;
+        return `<div class="source-row"><span style="min-width:20px;font-size:0.65rem;color:var(--text-muted);">${i+1}</span><span class="source-name" onclick="searchBySender('${esc(s.sender)}')" style="flex:1;font-size:0.75rem;">${esc(senderName(s.sender))}</span><div class="source-bar-track"><div class="source-bar-fill" style="width:${pct}%;background:var(--purple);"></div></div><span class="source-count">${s.count}</span></div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: Archive Search
+// ═══════════════════════════════════════════════════════════
+function renderSearch(el) {
+    el.innerHTML = `
+        <div class="search-bar">
+            <input class="search-input" id="searchQ" placeholder="Search emails... (e.g. gold, AAPL, dividend)" value="${esc(searchState.q)}" onkeydown="if(event.key==='Enter')doSearch()">
+            <select class="filter-select" id="searchSource" onchange="doSearch()">
+                <option value="">All Sources</option>
+                ${Object.keys(sourceColors).filter(k=>k!=='Other').map(k=>`<option value="${k}" ${searchState.source===k?'selected':''}>${k}</option>`).join('')}
+            </select>
+            <select class="filter-select" id="searchDays" onchange="doSearch()">
+                <option value="3" ${searchState.days===3?'selected':''}>3 Days</option>
+                <option value="7" ${searchState.days===7?'selected':''}>7 Days</option>
+                <option value="30" ${searchState.days===30?'selected':''}>30 Days</option>
+                <option value="90" ${searchState.days===90?'selected':''}>90 Days</option>
+                <option value="365" ${searchState.days===365?'selected':''}>All Time</option>
+            </select>
+            <button class="btn btn-primary" onclick="doSearch()"><i class="fas fa-search"></i> Search</button>
+        </div>
+        <div class="panel"><div class="panel-body"><table class="data-table"><thead><tr><th style="width:45px;"></th><th>Sender</th><th>Subject</th><th>Date</th><th>Status</th></tr></thead><tbody id="searchResults"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Enter a search term or select a source to begin.</td></tr></tbody></table></div>
+        <div class="pagination" id="searchPagination" style="display:none;"></div>
+        </div>
+    `;
+    if (searchState.q || searchState.source) doSearch();
+}
+
+async function doSearch() {
+    searchState.q = document.getElementById('searchQ')?.value || '';
+    searchState.source = document.getElementById('searchSource')?.value || '';
+    searchState.days = parseInt(document.getElementById('searchDays')?.value || 7);
+    const tbody = document.getElementById('searchResults');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;"><div class="skeleton" style="height:20px;width:200px;margin:0 auto;"></div></td></tr>';
+
+    const params = new URLSearchParams({q: searchState.q, source: searchState.source, days: searchState.days, page: searchState.page, limit: 50});
+    try {
+        const r = await fetch(API + '/api/market-intel/search?' + params);
+        const d = await r.json();
+        if (d.emails.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">No results found.</td></tr>';
+            document.getElementById('searchPagination').style.display = 'none';
+            return;
+        }
+        tbody.innerHTML = d.emails.map((e, i) => `
+            <tr onclick="openEmail(${e.id})">
+                <td style="color:var(--text-muted);font-size:0.7rem;">${(searchState.page-1)*50+i+1}</td>
+                <td style="font-weight:600;color:var(--purple);font-size:0.78rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(senderName(e.sender))}</td>
+                <td style="max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><span style="color:var(--text-primary);">${esc(e.subject)}</span><br><span style="font-size:0.7rem;color:var(--text-muted);">${esc((e.preview||'').substring(0,120))}</span></td>
+                <td style="white-space:nowrap;font-size:0.75rem;color:var(--text-muted);">${dateTimeFull(e.sent_at)}</td>
+                <td><span style="font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:6px;font-weight:600;${e.is_mined?'background:rgba(34,197,94,0.12);color:var(--green);':'background:rgba(245,158,11,0.12);color:var(--amber);'}">${e.is_mined?'Mined':'Pending'}</span></td>
+            </tr>`).join('');
+
+        // Pagination
+        const pg = document.getElementById('searchPagination');
+        pg.style.display = 'flex';
+        pg.innerHTML = `
+            <span>${fmt(d.total)} results</span>
+            <span style="flex:1;"></span>
+            <button ${d.page<=1?'disabled':''} onclick="searchState.page=${d.page-1};doSearch()"><i class="fas fa-chevron-left"></i></button>
+            <span>Page ${d.page} of ${d.pages}</span>
+            <button ${d.page>=d.pages?'disabled':''} onclick="searchState.page=${d.page+1};doSearch()"><i class="fas fa-chevron-right"></i></button>
+        `;
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red);padding:1rem;">Search failed: ${esc(e.message)}</td></tr>`; }
+}
+
+function searchBySource(source) {
+    searchState.source = source; searchState.q = ''; searchState.page = 1;
+    document.querySelector('[data-view=search]').click();
+}
+function searchBySender(sender) {
+    searchState.source = ''; searchState.q = senderName(sender); searchState.page = 1;
+    document.querySelector('[data-view=search]').click();
+}
+function searchByDate(day) {
+    searchState.q = day; searchState.source = ''; searchState.days = 3; searchState.page = 1;
+    document.querySelector('[data-view=search]').click();
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: Trade Triangles
+// ═══════════════════════════════════════════════════════════
+function renderTriangles(el) {
+    const tts = D.trade_triangles;
+    // Group by ticker
+    const byTicker = {};
+    tts.forEach(tt => {
+        const t = parseTicker(tt.subject) || 'UNKNOWN';
+        if (!byTicker[t]) byTicker[t] = [];
+        byTicker[t].push(tt);
+    });
+
+    let html = `<div class="section-header"><div class="section-title">${tts.length} Trade Triangle Alerts (7 Days)</div>
+        <button class="btn btn-sm btn-secondary" onclick="exportData('emails',7)"><i class="fas fa-download"></i> Export</button></div>`;
+
+    // Summary cards for tickers
+    const tickers = Object.entries(byTicker).sort((a,b) => b[1].length - a[1].length);
+    html += `<div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">`;
+    tickers.forEach(([ticker, signals]) => {
+        const latest = parseDir(signals[0].subject);
+        html += `<div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:0.6rem 1rem;min-width:120px;cursor:pointer;" onclick="searchState.q='${ticker}';searchState.source='MarketClub';searchState.days=30;searchState.page=1;document.querySelector('[data-view=search]').click();">
+            <div style="display:flex;align-items:center;gap:0.4rem;"><span class="ticker ${latest.cls}">${ticker}</span><span class="direction ${latest.dcls}">${latest.icon}</span></div>
+            <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.2rem;">${signals.length} signals</div>
+        </div>`;
+    });
+    html += `</div>`;
+
+    // Full table
+    html += `<div class="panel"><div class="panel-body"><table class="data-table"><thead><tr><th>Time</th><th>Ticker</th><th>Direction</th><th>Subject</th><th>Score</th></tr></thead><tbody>`;
+    html += tts.map(tt => {
+        const ticker = parseTicker(tt.subject);
+        const d = parseDir(tt.subject);
+        const score = parseScore(tt.subject);
+        return `<tr onclick="openEmail(${tt.id})"><td style="color:var(--text-muted);font-size:0.72rem;white-space:nowrap;">${dateTimeFull(tt.sent_at)}</td><td><span class="ticker ${d.cls}">${ticker||'???'}</span></td><td><span class="direction ${d.dcls}">${d.icon} ${d.d}</span></td><td style="color:var(--text-secondary);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tt.subject)}</td><td style="font-weight:700;color:${d.d==='BUY'?'var(--green)':d.d==='SELL'?'var(--red)':'var(--text-muted)'};">${score}</td></tr>`;
+    }).join('');
+    html += `</tbody></table></div></div>`;
+    el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: Extracted Signals
+// ═══════════════════════════════════════════════════════════
+function renderSignals(el) {
+    let html = `<div class="search-bar">
+        <input class="search-input" id="sigTicker" placeholder="Filter by ticker..." value="${esc(signalState.ticker)}" onkeydown="if(event.key==='Enter')doSignalSearch()">
+        <select class="filter-select" id="sigAction" onchange="doSignalSearch()">
+            <option value="">All Actions</option>
+            <option value="BUY" ${signalState.action==='BUY'?'selected':''}>BUY</option>
+            <option value="SELL" ${signalState.action==='SELL'?'selected':''}>SELL</option>
+            <option value="DIVIDEND" ${signalState.action==='DIVIDEND'?'selected':''}>DIVIDEND</option>
+            <option value="HOLD" ${signalState.action==='HOLD'?'selected':''}>HOLD</option>
+        </select>
+        <select class="filter-select" id="sigDays" onchange="doSignalSearch()">
+            <option value="7" ${signalState.days===7?'selected':''}>7 Days</option>
+            <option value="30" ${signalState.days===30?'selected':''}>30 Days</option>
+            <option value="90" ${signalState.days===90?'selected':''}>90 Days</option>
+            <option value="365" ${signalState.days===365?'selected':''}>All</option>
+        </select>
+        <button class="btn btn-primary" onclick="doSignalSearch()"><i class="fas fa-search"></i></button>
+        <button class="btn btn-secondary" onclick="exportData('signals',parseInt(document.getElementById('sigDays').value))"><i class="fas fa-download"></i> Export</button>
+    </div>`;
+
+    if (D.signals.length === 0) {
+        html += `<div class="panel" style="padding:3rem;text-align:center;">
+            <div style="font-size:2rem;margin-bottom:0.75rem;"><i class="fas fa-pickaxe" style="color:var(--purple);"></i></div>
+            <div style="font-size:0.95rem;font-weight:600;color:var(--text-primary);margin-bottom:0.5rem;">Mining Rig Has Not Extracted Signals Yet</div>
+            <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;">Run the Mining Rig to process queued emails and extract BUY/SELL signals, tickers, and prices.</div>
+            <button class="btn btn-primary" onclick="triggerMine(50)"><i class="fas fa-play"></i> Run Mining Rig (50 batch)</button>
+        </div>`;
+    } else {
+        html += `<div class="panel"><div class="panel-body"><table class="data-table"><thead><tr><th>Time</th><th>Ticker</th><th>Action</th><th>Price</th><th>Confidence</th><th>Source</th></tr></thead><tbody id="sigTable">`;
+        html += D.signals.map(s => {
+            const isBuy = s.action === 'BUY' || s.action === 'DIVIDEND';
+            const cls = isBuy ? 'ticker-buy' : 'ticker-sell';
+            const dcls = isBuy ? 'dir-up' : 'dir-down';
+            const icon = isBuy ? '▲' : '▼';
+            return `<tr ${s.source_email_id ? 'onclick="openEmail('+s.source_email_id+')"' : ''}><td style="color:var(--text-muted);font-size:0.72rem;">${timeAgo(s.created_at)}</td><td><span class="ticker ${cls}">${esc(s.ticker)}</span></td><td><span class="direction ${dcls}">${icon} ${esc(s.action)}</span></td><td style="font-family:monospace;">${s.price ? '$'+parseFloat(s.price).toFixed(2) : '--'}</td><td>${s.confidence_score ? (parseFloat(s.confidence_score)*100).toFixed(0)+'%' : '--'}</td><td style="font-size:0.72rem;color:var(--text-muted);">${esc(s.source||'')}</td></tr>`;
+        }).join('');
+        html += `</tbody></table></div></div>`;
+    }
+    el.innerHTML = html;
+}
+
+async function doSignalSearch() {
+    signalState.ticker = document.getElementById('sigTicker')?.value || '';
+    signalState.action = document.getElementById('sigAction')?.value || '';
+    signalState.days = parseInt(document.getElementById('sigDays')?.value || 30);
+    const params = new URLSearchParams({ticker:signalState.ticker,action:signalState.action,days:signalState.days,page:signalState.page,limit:50});
+    try {
+        const r = await fetch(API+'/api/market-intel/signals?'+params);
+        const d = await r.json();
+        const tbody = document.getElementById('sigTable');
+        if (!tbody) return;
+        if (d.signals.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">No signals match your filters.</td></tr>'; return; }
+        tbody.innerHTML = d.signals.map(s => {
+            const isBuy = s.action==='BUY'||s.action==='DIVIDEND';
+            return `<tr ${s.source_email_id?'onclick="openEmail('+s.source_email_id+')"':''}><td style="color:var(--text-muted);font-size:0.72rem;">${timeAgo(s.created_at)}</td><td><span class="ticker ${isBuy?'ticker-buy':'ticker-sell'}">${esc(s.ticker)}</span></td><td><span class="direction ${isBuy?'dir-up':'dir-down'}">${isBuy?'▲':'▼'} ${esc(s.action)}</span></td><td style="font-family:monospace;">${s.price?'$'+parseFloat(s.price).toFixed(2):'--'}</td><td>${s.confidence_score?(parseFloat(s.confidence_score)*100).toFixed(0)+'%':'--'}</td><td style="font-size:0.72rem;color:var(--text-muted);">${esc(s.email_subject||s.source||'')}</td></tr>`;
+        }).join('');
+    } catch(e) { console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: Pipeline Control
+// ═══════════════════════════════════════════════════════════
+function renderPipeline(el) {
+    const s = D.stats, p = D.pipeline;
+    const staleClass = p.stale ? 'badge-red' : 'badge-green';
+    const staleText = p.stale ? 'STALE' : 'HEALTHY';
+
+    el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+        <!-- IMAP Ingester -->
+        <div class="panel">
+            <div class="panel-header"><span class="panel-title"><i class="fas fa-download" style="color:var(--accent);"></i> IMAP Email Ingester</span><span class="nav-badge ${staleClass}">${staleText}</span></div>
+            <div style="padding:1rem;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Source</div><div style="font-size:0.85rem;font-weight:600;margin-top:0.1rem;">gary@garyknight.com</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Protocol</div><div style="font-size:0.85rem;font-weight:600;margin-top:0.1rem;">IMAP/SSL</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Last Email</div><div style="font-size:0.85rem;margin-top:0.1rem;">${p.latest_email ? dateTimeFull(p.latest_email) : '--'}</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">IMAP Emails</div><div style="font-size:0.85rem;font-weight:600;margin-top:0.1rem;">${fmt(s.from_imap)}</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Maildir Emails</div><div style="font-size:0.85rem;font-weight:600;margin-top:0.1rem;">${fmt(s.from_maildir)}</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Schedule</div><div style="font-size:0.85rem;margin-top:0.1rem;">Every 2h (5am-9pm)</div></div>
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-primary" onclick="triggerIngest()" id="pipeIngestBtn"><i class="fas fa-play"></i> Run IMAP Ingest Now</button>
+                    <button class="btn btn-secondary" onclick="triggerIngest3d()"><i class="fas fa-history"></i> Pull Last 3 Days</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mining Rig -->
+        <div class="panel">
+            <div class="panel-header"><span class="panel-title"><i class="fas fa-microchip" style="color:var(--purple);"></i> Mining Rig (AI Signal Extractor)</span><span class="nav-badge ${s.unmined > 0 ? 'badge-amber' : 'badge-green'}">${s.unmined > 0 ? s.unmined + ' QUEUED' : 'CLEAR'}</span></div>
+            <div style="padding:1rem;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Model</div><div style="font-size:0.85rem;font-weight:600;margin-top:0.1rem;">Mistral (Spark-1 GPU)</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Total Mined</div><div style="font-size:0.85rem;font-weight:600;margin-top:0.1rem;">${fmt(s.mined)}</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Signals Extracted</div><div style="font-size:0.85rem;font-weight:600;margin-top:0.1rem;">${D.signals.length}</div></div>
+                    <div><div style="font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;">Schedule</div><div style="font-size:0.85rem;margin-top:0.1rem;">Every 2h +15min</div></div>
+                </div>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="triggerMine(25)" id="mineBtn25"><i class="fas fa-play"></i> Mine 25</button>
+                    <button class="btn btn-secondary" onclick="triggerMine(50)"><i class="fas fa-bolt"></i> Mine 50</button>
+                    <button class="btn btn-secondary" onclick="triggerMine(100)"><i class="fas fa-rocket"></i> Mine 100</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive breakdown -->
+    <div class="panel">
+        <div class="panel-header"><span class="panel-title"><i class="fas fa-database" style="color:var(--cyan);"></i> Archive Health</span></div>
+        <div style="padding:1rem;">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.75rem;">
+                <div style="flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;background:var(--green);width:${s.total_archive > 0 ? (s.mined/s.total_archive*100) : 0}%;border-radius:4px;"></div>
+                </div>
+                <span style="font-size:0.75rem;color:var(--text-secondary);">${s.total_archive > 0 ? (s.mined/s.total_archive*100).toFixed(1) : 0}% mined</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;">
+                <div style="background:var(--bg-card);border-radius:6px;padding:0.75rem;text-align:center;">
+                    <div style="font-size:1.2rem;font-weight:800;color:var(--accent);">${fmt(s.total_archive)}</div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.15rem;">TOTAL EMAILS</div>
+                </div>
+                <div style="background:var(--bg-card);border-radius:6px;padding:0.75rem;text-align:center;">
+                    <div style="font-size:1.2rem;font-weight:800;color:var(--green);">${fmt(s.mined)}</div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.15rem;">MINED</div>
+                </div>
+                <div style="background:var(--bg-card);border-radius:6px;padding:0.75rem;text-align:center;">
+                    <div style="font-size:1.2rem;font-weight:800;color:var(--amber);">${fmt(s.unmined)}</div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.15rem;">UNMINED QUEUE</div>
+                </div>
+                <div style="background:var(--bg-card);border-radius:6px;padding:0.75rem;text-align:center;">
+                    <div style="font-size:1.2rem;font-weight:800;color:var(--cyan);">${fmt(s.from_imap)}</div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.15rem;">FROM IMAP</div>
+                </div>
+            </div>
+            <div style="margin-top:1rem;display:flex;gap:0.5rem;">
+                <button class="btn btn-secondary" onclick="exportData('emails',30)"><i class="fas fa-download"></i> Export 30d Emails</button>
+                <button class="btn btn-secondary" onclick="exportData('signals',30)"><i class="fas fa-download"></i> Export 30d Signals</button>
+                <button class="btn btn-secondary" onclick="exportData('emails',365)"><i class="fas fa-download"></i> Export Full Archive</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEW: Sources
+// ═══════════════════════════════════════════════════════════
+function renderSources(el) {
+    const total = D.sources_7d.reduce((a,b) => a + b.count, 0);
+    let html = `<div class="section-header"><div class="section-title">Source Activity — ${total} emails in 7 days from ${D.sources_7d.length} sources</div></div>`;
+
+    // Source cards
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0.75rem;margin-bottom:1.5rem;">`;
+    D.sources_7d.forEach(s => {
+        const c = sourceColors[s.source] || '#64748b';
+        const pct = total > 0 ? (s.count / total * 100).toFixed(1) : 0;
+        html += `<div class="panel" style="cursor:pointer;" onclick="searchBySource('${esc(s.source)}')">
+            <div style="padding:1rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                    <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary);">${esc(s.source)}</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:${c};">${s.count}</div>
+                </div>
+                <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;">
+                    <div style="height:100%;background:${c};width:${pct}%;border-radius:2px;"></div>
+                </div>
+                <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.3rem;">${pct}% of volume</div>
+            </div>
+        </div>`;
+    });
+    html += `</div>`;
+
+    // Top senders detail table
+    html += `<div class="panel"><div class="panel-header"><span class="panel-title"><i class="fas fa-users" style="color:var(--purple);"></i> Top Individual Senders (7d)</span></div>
+        <div class="panel-body"><table class="data-table"><thead><tr><th>#</th><th>Sender</th><th>Count</th><th></th></tr></thead><tbody>`;
+    html += D.top_senders.map((s, i) => `
+        <tr><td style="color:var(--text-muted);">${i+1}</td><td style="font-size:0.8rem;">${esc(s.sender)}</td><td style="font-weight:700;">${s.count}</td>
+        <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();searchBySender('${esc(s.sender)}')">View <i class="fas fa-arrow-right" style="font-size:0.6rem;"></i></button></td></tr>
+    `).join('');
+    html += `</tbody></table></div></div>`;
+
+    el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS: Email Reader
+// ═══════════════════════════════════════════════════════════
+async function openEmail(id) {
+    const modal = document.getElementById('emailModal');
+    const body = document.getElementById('modalBody');
+    modal.classList.add('open');
+    body.innerHTML = '<div style="text-align:center;padding:2rem;"><div class="skeleton" style="height:200px;"></div></div>';
+    try {
+        const r = await fetch(API + '/api/market-intel/email/' + id);
+        const d = await r.json();
+        const e = d.email;
+        body.innerHTML = `
+            <dl class="email-meta">
+                <dt>From</dt><dd style="color:var(--purple);font-weight:600;">${esc(e.sender)}</dd>
+                <dt>Subject</dt><dd style="color:var(--text-primary);font-weight:600;">${esc(e.subject)}</dd>
+                <dt>Date</dt><dd>${dateTimeFull(e.sent_at)}</dd>
+                <dt>Status</dt><dd><span style="padding:0.15rem 0.5rem;border-radius:6px;font-size:0.72rem;font-weight:600;${e.is_mined?'background:rgba(34,197,94,0.12);color:var(--green);':'background:rgba(245,158,11,0.12);color:var(--amber);'}">${e.is_mined?'Mined':'Pending'}</span></dd>
+                <dt>ID</dt><dd style="font-family:monospace;font-size:0.75rem;">#${e.id}</dd>
+            </dl>
+            ${d.signals.length > 0 ? `
+                <div style="margin-bottom:1rem;padding:0.75rem;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;">
+                    <div style="font-size:0.7rem;font-weight:700;color:var(--green);margin-bottom:0.4rem;"><i class="fas fa-crosshairs" style="margin-right:0.3rem;"></i>EXTRACTED SIGNALS</div>
+                    ${d.signals.map(s => `<div style="font-size:0.82rem;color:var(--text-primary);"><span class="ticker ${s.action==='BUY'?'ticker-buy':'ticker-sell'}">${esc(s.ticker||s.symbol)}</span> <strong>${esc(s.action)}</strong> ${s.price ? '@ $'+parseFloat(s.price).toFixed(2) : ''}</div>`).join('')}
+                </div>
+            ` : ''}
+            <div class="email-content">${esc(e.content || 'No content available.')}</div>
+        `;
+        document.getElementById('modalTitle').innerHTML = `<i class="fas fa-envelope-open" style="color:var(--accent);margin-right:0.4rem;"></i>${esc(e.subject).substring(0,60)}`;
+    } catch(e) { body.innerHTML = `<div style="color:var(--red);">Failed to load email: ${esc(e.message)}</div>`; }
+}
+
+function closeModal() { document.getElementById('emailModal').classList.remove('open'); }
+document.getElementById('emailModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.getElementById('consoleModal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+
+// ═══════════════════════════════════════════════════════════
+// ACTIONS: Pipeline Triggers
+// ═══════════════════════════════════════════════════════════
+async function triggerIngest() {
+    const btn = document.getElementById('ingestBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ingesting...'; }
+    showConsole('IMAP Ingest', 'Starting IMAP ingest cycle...\n');
+    try {
+        const r = await fetch(API + '/api/market-intel/ingest', {method:'POST'});
+        const d = await r.json();
+        appendConsole(d.output_lines.join('\n') + '\n\nExit code: ' + d.exit_code + '\nStatus: ' + d.status);
+        if (d.status === 'ok') init(); // refresh dashboard
+    } catch(e) { appendConsole('ERROR: ' + e.message); }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Pull Emails Now'; }
+}
+
+function triggerIngest3d() { triggerIngest(); }
+
+async function triggerMine(batch) {
+    showConsole('Mining Rig', `Starting Mining Rig (batch=${batch})...\nThis may take a few minutes on the GPU.\n`);
+    try {
+        const r = await fetch(API + '/api/market-intel/mine?batch=' + batch, {method:'POST'});
+        const d = await r.json();
+        appendConsole(d.output_lines.join('\n') + '\n\nExit code: ' + d.exit_code + '\nStatus: ' + d.status);
+        if (d.status === 'ok') init();
+    } catch(e) { appendConsole('ERROR: ' + e.message); }
+}
+
+function showConsole(title, text) {
+    document.getElementById('consoleTitle').innerHTML = `<i class="fas fa-terminal" style="color:var(--green);margin-right:0.4rem;"></i>${esc(title)}`;
+    document.getElementById('consoleOutput').textContent = text;
+    document.getElementById('consoleModal').classList.add('open');
+}
+function appendConsole(text) {
+    const el = document.getElementById('consoleOutput');
+    el.textContent += text;
+    el.scrollTop = el.scrollHeight;
+}
+
+async function exportData(type, days) {
+    window.open(API + `/api/market-intel/export?type=${type}&days=${days}`, '_blank');
+}
+
+// ─── Keyboard Shortcuts ───
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); document.getElementById('consoleModal').classList.remove('open'); }
+    if (e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
+        e.preventDefault();
+        document.querySelector('[data-view=search]').click();
+        setTimeout(() => document.getElementById('searchQ')?.focus(), 100);
+    }
+});
+
+// ─── Init ───
+init();
+setInterval(init, 300000); // refresh every 5 min
+</script>
+</body>
+</html>

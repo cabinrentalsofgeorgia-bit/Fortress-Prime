@@ -1,0 +1,79 @@
+{
+  "started_at": "2026-02-13T07:39:41.938597",
+  "phases": {
+    "2c": {
+      "market_intel_hallucinated_price": 6230,
+      "hallucinated_price_samples": [
+        {
+          "id": 19788,
+          "ticker": null,
+          "price": "225025.0000",
+          "action": "SELL"
+        },
+        {
+          "id": 20858,
+          "ticker": "AND",
+          "price": "225025.0000",
+          "action": null
+        },
+        {
+          "id": 20859,
+          "ticker": null,
+          "price": "225025.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 20861,
+          "ticker": "ZH",
+          "price": "225025.0000",
+          "action": null
+        },
+        {
+          "id": 17587,
+          "ticker": "FTX",
+          "price": "184176.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 18024,
+          "ticker": "PM",
+          "price": "304000.0000",
+          "action": "SELL"
+        },
+        {
+          "id": 20962,
+          "ticker": "SMR",
+          "price": "466649.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 17589,
+          "ticker": "SPXU",
+          "price": "970000.0000",
+          "action": null
+        },
+        {
+          "id": 17590,
+          "ticker": "BAND",
+          "price": "680000.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 17591,
+          "ticker": "JOE",
+          "price": "6132267.0000",
+          "action": "BUY"
+        }
+      ],
+      "hedge_fund_market_signals_bad_ticker": 7,
+      "total_hallucinated_deleted": 6237
+    }
+  },
+  "summary": {
+    "elapsed_seconds": 0.31,
+    "dry_run": false,
+    "final_email_archive_count": 62862,
+    "final_mined_count": 62828,
+    "completed_at": "2026-02-13T07:39:42.295171"
+  }
+}

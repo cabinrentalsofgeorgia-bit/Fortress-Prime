@@ -1,0 +1,439 @@
+---
+description: Canonical infrastructure and NVIDIA NIM runtime policy for DGX Spark operations
+alwaysApply: true
+---
+
+# TITAN PROTOCOL — Infrastructure & Inference Rules (Amendment IV-B)
+
+## MANDATORY TECHNOLOGY: NVIDIA NIM
+
+- **RUNTIME:** All inference MUST run via NVIDIA NIM containers (`nvcr.io/nim/...`).
+- **FORBIDDEN:** Do not suggest `llama.cpp`, `ollama`, `vllm`, or `gguf` files for inference workloads. These are legacy runtimes superseded by NIM.
+- **REGISTRY:** Always pull from `nvcr.io`. Authenticate via `docker login nvcr.io` with `$oauthtoken` and `NGC_API_KEY`.
+- **ORCHESTRATION:** Production DGX deployments use Docker bridge networking with explicit port mapping (`ports: ["8000:8000"]`) as the approved baseline. Host networking is deprecated for the standard cluster path and may only be used in explicitly approved exception runbooks.
+- **CACHE:** Model weights cache at `/mnt/fortress_nas/nim_cache`. Download once, serve from all nodes via NAS mount.
+
+## HYBRID CONTROL PLANE AUTHORIZATION
+
+- **MASTER ARCHITECT LAYER (AUTHORIZED):** External APIs (Gemini, Anthropic Opus, xAI, OpenAI) are approved for strategic planning, orchestration direction, and code-generation guidance.
+- **ONE-WAY BOUNDARY:** External directives flow down to local execution. Sensitive, proprietary, or un-anonymized legal/financial/PII data must not flow up to external APIs.
+- **LOCAL EXECUTION MANDATE:** All production execution and sensitive inference remain on local NVIDIA NIM infrastructure.
+- **NETWORK EGRESS EXEMPTION:** NUC orchestrator outbound calls to approved Master Architect endpoints are explicitly permitted under governance.
+
+## ARCHITECTURE STANDARD: THE TRI-MODE DEFCON
+
+| Mode | DEFCON | Engine | Container Image | Throughput | Use Case |
+|---|---|---|---|---|---|
+| **SWARM** | 5 (Production) | NVIDIA NIM (qwen2.5:7b) x4 | `nvcr.io/nim/...` | ~5,000 tasks/min | Daily ops, email processing, vectorization |
+| **HYDRA** | 3 (Assault) | NVIDIA NIM (R1-70B) x4 parallel | `nvcr.io/nim/deepseek-ai/deepseek-r1-distill-llama-70b` | ~160 tok/s aggregate | Legal analysis, contract review, multi-query deep reasoning |
+| **TITAN** | 1 (Strategic) | DeepSeek-R1-671B (Multi-Node NIM or RPC fallback) | NIM preferred; llama.cpp RPC permitted ONLY for 671B | 2-5 tok/s | One-shot forensic audit, supreme court-level analysis |
+
+### HYDRA Rules (DEFCON 3)
+1. Each Spark node runs ONE independent NIM instance with explicit bridge-mode port mapping (`8000:8000`) and NVIDIA runtime enabled.
+2. Nginx LB distributes across all 4 heads on port 8000.
+3. VRAM budget: ~40GB model + ~40GB KV cache + ~48GB headroom per node.
+4. No inter-node tensor parallelism — each head is self-contained.
+5. NAS cache (`/mnt/fortress_nas/nim_cache`) shared across all nodes.
+
+### TITAN Rules (DEFCON 1)
+1. 671B model requires all 4 nodes pooled (460GB RAM).
+2. Prefer NIM multi-node deployment via Kubernetes/Helm when available.
+3. llama.cpp RPC is permitted ONLY as fallback for the 671B model (no NIM exists yet).
+4. `--parallel 1` mandatory. One query at a time.
+5. Verify Golden Snapshot before any TITAN experiment.
+
+### SWARM Rules (DEFCON 5)
+1. Production default. All nodes serve via Nginx LB on port 80.
+2. NIM containers with lightweight models (qwen2.5:7b or equivalent).
+3. Embedding model (nomic-embed-text) must remain available for RAG pipelines.
+
+## Cluster Hardware (DGX Spark Fleet)
+
+| Node | Swarm Hostname | Role | Management IP | Fabric IP (RoCEv2) | GPU |
+|---|---|---|---|---|---|
+| Spark-01 (Captain) | `spark-node-2` | Swarm Leader, Postgres, Qdrant, Nginx LB | 192.168.0.100 | 10.10.10.2 | GB10 Blackwell |
+| Spark-02 (Muscle) | `spark-node-1` | Swarm Worker | 192.168.0.104 | 10.10.10.1 | GB10 Blackwell |
+| Spark-03 (Ocular) | `spark-3` | Swarm Worker | 192.168.0.105 | 10.10.10.3 | GB10 Blackwell |
+| Spark-04 (Sovereign) | `spark-4` | Swarm Worker | 192.168.0.106 | 10.10.10.4 | GB10 Blackwell |
+
+### Networking
+* **Management LAN:** 192.168.0.x/24 (1G Ethernet) — SSH, Docker Swarm, web dashboards.
+* **Fabric-A (Primary):** 10.10.10.x/24 (200 Gb/sec RoCEv2 NDR, MTU 9000) — Multi-node NIM, RPC, NCCL.
+* **Fabric-B (Captain↔Muscle):** 192.168.2.x/24 (200G NDR, MTU 9000) — Direct link.
+
+## Forbidden Actions
+
+1. **DO NOT suggest `ollama run`, `ollama pull`, or `ollama serve`** as solutions. Ollama is a legacy runtime. Use NVIDIA NIM.
+2. **DO NOT suggest `llama.cpp`, `llama-server`, or `.gguf` files** for inference. NIM handles quantization/optimization via TensorRT-LLM.
+3. **DO NOT suggest `vllm`** unless explicitly authorized by Human for benchmarking.
+4. **DO NOT rely on undocumented networking mode changes** for inference. Baseline policy is Docker bridge mode with explicit port mapping; host networking requires explicit approval and documented rollback.
+5. **DO NOT hardcode management LAN IPs (192.168.0.x)** for model inference or RPC traffic. Use fabric subnet (10.10.10.x) for compute-path communication.
+6. **DO NOT use `pip install` ad-hoc.** All packages in `requirements.txt` with rationale.
+7. **DO NOT run SWARM and TITAN simultaneously.** They compete for the same 128GB unified memory per node.
+8. **DO NOT run SWARM and HYDRA simultaneously.** HYDRA requires full GPU allocation.
+9. **DO NOT query `revenue_ledger.amount`** — column does not exist. Use `public.v_financial_summary` or `public.v_comp_dashboard`.
+10. **DO NOT trust raw `finance_invoices.amount`** — inflated by AI email extraction. Filter by vendor category.
+11. **DO NOT send sensitive, proprietary, or un-anonymized legal/financial/PII payloads** to external Master Architect APIs.
+
+## Required Coding Patterns
+
+### GPU Health Check (Before Any Inference)
+```python
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+from pynvml import (nvmlInit, nvmlShutdown, nvmlDeviceGetHandleByIndex,
+    nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU)
+nvmlInit()
+handle = nvmlDeviceGetHandleByIndex(0)
+gpu_temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
+if gpu_temp > 85:
+    raise RuntimeError(f"GPU thermal limit: {gpu_temp}C")
+nvmlShutdown()
+```
+
+### Inference Client (Mode-Aware, NIM-First)
+```python
+from config import get_inference_client, FORTRESS_DEFCON
+
+# Automatically routes to the correct NIM based on DEFCON mode
+client, model = get_inference_client()
+
+# Or explicitly:
+client, model = get_inference_client("HYDRA")   # R1-70B NIM
+client, model = get_inference_client("TITAN")   # R1-671B
+client, model = get_inference_client("ARCHITECT")  # Gemini 2.5 Pro
+```
+
+### NIM Health Check Pattern
+```python
+import requests
+
+def check_nim_health(host: str, port: int = 8000) -> bool:
+    try:
+        r = requests.get(f"http://{host}:{port}/v1/models", timeout=5)
+        return r.status_code == 200
+    except:
+        return False
+```
+
+### Database References
+* **Schema source of truth:** Golden Snapshot at `/mnt/fortress_nas/backups/GOLDEN_STATE_YYYYMMDD/`
+* **Primary DB:** `fortress_db` on Postgres (Captain, port 5432)
+* **Vector memory:** Qdrant (Captain, port 6333) — collections: `email_embeddings`, `legal_library`
+
+### Config-Driven Topology
+All node IPs, ports, model assignments, and NIM images MUST be defined in `config.py` or environment variables.
+
+## File Conventions
+
+| Path | Purpose |
+|---|---|
+| `fortress_atlas.yaml` | Division Registry — the corporate map. |
+| `switch_defcon.sh` | Mode toggle (SWARM ↔ HYDRA ↔ TITAN). Single entry point. |
+| `mission_control.yaml` | Docker Compose for Open WebUI (Mission Control). |
+| `nginx/wolfpack_ai.conf` | **ACTIVE** Nginx LB config — dual SWARM+HYDRA upstreams. |
+| `nginx/wolfpack_swarm.conf` | Reference: Nginx LB for SWARM-only mode. |
+| `nginx/wolfpack_hydra.conf` | Reference: Nginx LB for HYDRA-only mode (NIM). |
+| `gateway/claude_proxy.py` | Anthropic ↔ OpenAI translation proxy (port 5100). |
+| `tools/owui_architect_toolkit.py` | Open WebUI Tool — all 7 workspace models use this. |
+| `tools/fortress_sentinel.py` | Continuous indexing daemon (Qdrant knowledge base). |
+| `tools/total_recall_turbo.py` | Bulk ingestion script (4-GPU parallel). |
+| `tools/master_console.py` | **COMMAND CENTER** (:9800) — THE single entry point for all operations. See Constitution Amendment V. |
+| `tools/fortress_nav.py` | Unified Navigation Bar component — injected into all dashboards. |
+| `tools/dashboard.html` | Command Center frontend — links to all services, live status. |
+| `tools/bare_metal_dashboard.py` | System Health dashboard (:9876) — real-time cluster monitoring. |
+| `tools/batch_classifier.py` | Recursive Batch Classifier (:9877) — RAG-augmented concurrent AI classification with pgvector + Redis. |
+| `src/email_bridge.py` | Email Bridge service — IMAP polling, watchdog matching, auto-ingestion. |
+| `tools/classification_janitor.py` | Self-Healing Watchdog — nightly cron (2 AM) using Hydra R1-70B for deep review + auto-correction. |
+| `tools/kyc_watchdog.py` | Legal Watchdog — cron (every 2h) scans all active cases from `legal.case_watchdog` + hardcoded terms. |
+| `tools/legal_case_manager.py` | Multi-case Legal API (:9878) — CRUD for cases, actions, evidence, watchdog terms. |
+| `tools/vendor_reclassify.py` | Legacy sequential vendor reclassification script. |
+| `.cursor/rules/003-legal-command-center.mdc` | Legal Command Center rules — case management protocol, escalation, evidence preservation. |
+| `config.py` | Topology, endpoints, blocklists, feature flags. |
+| `src/titan_executive.py` | Master Router — dispatches to sector agents. |
+| `titan_engine/` | llama.cpp build with RPC (TITAN fallback only). |
+
+---
+
+## AMENDMENT V — MISSION CONTROL & THE COUNCIL OF INTELLIGENCE
+
+**Effective Date:** 2026-02-15
+**Classification:** Command & Control Infrastructure
+
+### A. MISSION CONTROL (Open WebUI 0.8.1)
+
+The unified command interface for the entire AI fleet, running at `http://192.168.0.100:8080`.
+
+| Component | Detail |
+|---|---|
+| Container | `fortress_mission_control` (ghcr.io/open-webui/open-webui:main) |
+| Network | `network_mode: host` (talks to NIM, Qdrant, Postgres, and local gateways) |
+| Compose | `mission_control.yaml` |
+| Auth | `admin@fortress.local` / Enterprise lockdown (no signup) |
+| Volumes | `open-webui-data` (persistent), `/fortress` (project RO), `/nas` (NAS RO) |
+
+### B. THE COUNCIL OF INTELLIGENCE (7 Workspace Models)
+
+All workspace models are configured with:
+- **`function_calling: "native"`** — Forces Open WebUI to send proper `tools` definitions in API payloads (not prompt injection).
+- **`toolIds: ["fortress_architect"]`** — Binds the Fortress Architect Toolkit to every model.
+- **`base_model_id`** — Maps to the underlying provider model.
+
+| Workspace Model | Base Model | Provider | Role |
+|---|---|---|---|
+| `fortress-architect-pro` | `models/gemini-2.5-pro` | Google Gemini | Senior Architect — planning, orchestration |
+| `fortress-architect-flash` | `models/gemini-2.5-flash` | Google Gemini | Fast Architect — quick analysis |
+| `fortress-cfo-opus` | `claude-opus-4-6` | Anthropic Claude | CFO — financial forensics, auditing |
+| `fortress-cfo-sonnet` | `claude-sonnet-4-5-20250929` | Anthropic Claude | CFO — lighter financial tasks |
+| `fortress-claude-opus` | `claude-opus-4-6` | Anthropic Claude | General deep reasoning |
+| `fortress-grok-4` | `grok-4-0709` | xAI Grok | Strategic intelligence |
+| `fortress-grok-fast` | `grok-4-fast-reasoning` | xAI Grok | Fast reasoning |
+
+**CRITICAL:** When creating or updating workspace models, you MUST set:
+1. `params.function_calling = "native"` — Without this, tools are prompt-injected and hallucinated.
+2. `meta.toolIds = ["fortress_architect"]` — Without this, no tools are available.
+3. `base_model_id` — Without this, the model won't route to the correct backend.
+
+### C. CLAUDE PROXY (`gateway/claude_proxy.py`)
+
+Translates OpenAI-compatible API requests (from Open WebUI) to Anthropic's native API format.
+
+| Detail | Value |
+|---|---|
+| Port | 5100 (localhost) |
+| Auto-start | `@reboot` crontab entry |
+| Translation | Auth headers, message format, tool definitions, streaming SSE |
+
+**Parallel Tool Call Protocol:** Claude frequently calls multiple tools simultaneously. The proxy:
+1. Assigns each tool call a unique, incrementing `index` (0, 1, 2...).
+2. Emits an initial chunk per tool call with `name` + empty `arguments`.
+3. Streams argument JSON deltas with the correct `index`.
+4. This prevents Open WebUI from concatenating arguments into `{json1}{json2}{json3}`.
+
+**DO NOT** modify the streaming tool call index logic without understanding this protocol. Incorrect indices cause Open WebUI to concatenate all parallel tool arguments into one unparsable blob.
+
+### D. NGINX WOLFPACK LB (Dual-Route Architecture)
+
+The active config is `nginx/wolfpack_ai.conf`, served by the `wolfpack-lb` container on port 80.
+
+| Route | Upstream | Timeout | Purpose |
+|---|---|---|---|
+| `/` (default) | SWARM NIM pool (:8000) | 300s | SWARM — fast optimized inference |
+| `/hydra/` | HYDRA NIM pool (Muscle, Ocular, Sovereign) | 600s | HYDRA — deep reasoning |
+| `/api/embeddings` | Embedding-ready nodes | 60s | nomic-embed-text for RAG |
+| `/nim/` | Captain :8010 | 600s | NIM Brain (when available) |
+| `/health` | Static | — | Health check |
+
+**Hydra Route Rules:**
+- Captain is EXCLUDED from the Hydra upstream (its VRAM is reserved for SWARM + embeddings).
+- The `/hydra/` prefix is stripped before forwarding to the HYDRA NIM endpoint.
+- The `query_hydra` tool valve points to `http://192.168.0.100/hydra/v1`.
+
+### E. FORTRESS ARCHITECT TOOLKIT (`tools/owui_architect_toolkit.py`)
+
+The single Open WebUI Tool registered for all 7 workspace models. Provides:
+
+| Tool | Purpose |
+|---|---|
+| `query_database` | Read-only SQL against Postgres `fortress_db` |
+| `search_vectors` | Semantic search across Qdrant collections |
+| `list_files` | Directory listing (project + NAS) |
+| `read_file` | File content reading |
+| `run_command` | Shell command execution (30s timeout) |
+| `query_hydra` | R1-70B deep reasoning via dedicated nginx route |
+
+**Valve Defaults:**
+- `hydra_endpoint`: `http://192.168.0.100/hydra/v1`
+- `hydra_model`: `deepseek-r1:70b`
+- `qdrant_url`: `http://localhost:6333`
+- `embed_url`: `http://localhost:11434/api/embeddings`
+- `project_root`: `/fortress`
+- `nas_root`: `/nas`
+- `command_timeout`: 30
+
+### F. CONTINUOUS INDEXING (Fortress Sentinel)
+
+| Detail | Value |
+|---|---|
+| Script | `tools/fortress_sentinel.py` |
+| Auto-start | `@reboot` crontab entry |
+| Scan interval | 120 seconds |
+| State file | `~/.fortress_sentinel_state.json` |
+| Log | `/tmp/fortress_sentinel.log` |
+| Embedding nodes | All 4 GPU nodes (parallel) |
+| Watch dirs | 7 NAS directories + project directory |
+
+The Sentinel detects new and modified files, chunks them, embeds via 4-GPU parallel pipeline, and upserts into Qdrant `fortress_knowledge`. There is NO fixed target vector count — the collection grows as new files appear.
+
+### G. KNOWLEDGE BASE (Qdrant Collections)
+
+| Collection | Vectors | Purpose |
+|---|---|---|
+| `fortress_knowledge` | 1,273,368 | ALL NAS docs, PDFs, code, configs — the master brain |
+| `email_embeddings` | 56,635 | Classified email archive (57K emails) |
+| `legal_library` | 15,596 | Legal documents and contracts |
+
+### H. ENTERPRISE DASHBOARDS (The GUI Layer)
+
+All dashboards share the same design language: Inter font, true black background (#000),
+frosted glass nav, Apple-dark aesthetic. All accessible via `crog-ai.com` (Cloudflare Tunnel → Nginx → port 80).
+
+| Service | Port | Script | Purpose |
+|---|---|---|---|
+| **Master Console** | 9800 | `tools/master_console.py` | Central portal — links to all GUIs with live status via SSE |
+| **System Health** | 9876 | `tools/bare_metal_dashboard.py` | Real-time bare metal monitoring (CPU, RAM, GPU, Disk, Thermals, Processes) across 4 nodes |
+| **Batch Classifier** | 9877 | `tools/batch_classifier.py` | Enterprise AI classification engine with 20 concurrent workers, Redis queue, and CFO review UI |
+| **Mission Control** | 8080 | Docker (Open WebUI) | AI Council Interface |
+| **Grafana** | 3000 | Docker | Observability dashboards |
+| **Prometheus** | 9090 | Docker | Metrics & alerting |
+| **Qdrant** | 6333 | Docker | Vector database dashboard |
+| **API Gateway** | 8000 | Docker (FastAPI) | Unified API & sector dashboards |
+| **Portainer** | 8888 | Docker Swarm | Container management |
+
+**External Access:** `crog-ai.com` → Cloudflare Tunnel → Nginx (`wolfpack_ai.conf`) → Master Console (:9800).
+The Master Console shows live online/offline status for all services and links to each GUI.
+
+**Batch Classifier Architecture:**
+- **Layer 1 (GUI):** FastAPI dashboard with prompt editor, CSV upload, live SSE table, flagged vendor review with inline overrides, job history, CSV export
+- **Layer 2 (Queue):** Redis job tracking with persistence (DB 1, prefix `fortress:batch:`)
+- **Layer 3 (Compute):** `asyncio.Semaphore(20)` — 20 concurrent LLM requests via `aiohttp` across 4 GPU nodes through Nginx LB
+- **API Endpoints:** `/api/sweep`, `/api/upload`, `/api/stream/{job_id}`, `/api/job/{job_id}`, `/api/jobs`, `/api/db-summary`, `/api/flagged`, `/api/export`, `/api/reclassify/{id}`
+
+### I. SCHEDULED OPERATIONS (Crontab)
+
+24+ scheduled tasks including:
+- **Every 2h** — KYC Watchdog (`tools/kyc_watchdog.py`) — scans for Plan Administrator emails (Case 23-11161-JKS)
+- **2:00 AM** — Classification Janitor (self-healing: scans UNKNOWN + low-confidence, re-classifies via Hydra R1-70B, creates golden rules)
+- **3:00 AM** — Cluster lockdown backup, code backup, Chroma mirror
+- **5:00 AM** — Property sync, groundskeeper, quant revenue
+- **6:00 AM** — Market watcher, market sentinel, watchtower briefing, ops heartbeat
+- **Every 2h (5AM-9PM)** — IMAP email ingestion, mining rig batch processing
+- **Weekly (Sunday)** — Data hygiene, vector GC, Postgres VACUUM ANALYZE
+- **@reboot** — Claude proxy, Fortress Sentinel, Master Console, System Health, Batch Classifier, fortress services
+
+### J. VENDOR CLASSIFICATION (Recursive Brain Architecture)
+
+**The system is circular, not linear:**
+`Input → LLM → Output → Human Correction → Golden Rule → Better Input → ...`
+
+| Detail | Value |
+|---|---|
+| Table | `finance.vendor_classifications` (817 rows) |
+| Knowledge Base | `finance.classification_rules` (pgvector, 768-dim nomic-embed-text) |
+| Classification Rate | 99.6%+ (814/817 classified, self-improving) |
+| Taxonomy | 18 categories (CHECK constraint enforced, includes LITIGATION_RECOVERY) |
+| AI Classifier | `tools/batch_classifier.py` — RAG-augmented concurrent engine |
+| Self-Healing | `tools/classification_janitor.py` — nightly cron (2 AM, Hydra R1-70B) |
+
+**Classification Sources:**
+| `classified_by` | Description |
+|---|---|
+| `FLOOR-SWEEP-20260215` | Pattern-matched 59 obvious vendors |
+| `SWEEP-QWEN-20260215` | qwen2.5:7b sequential classification (579 vendors) |
+| `SWARM-{job_id}` | 20-worker async classification via batch_classifier |
+| `CFO-MANUAL` | Human override via `/api/reclassify/{id}` — triggers golden rule creation |
+| `CFO-BULK` | Bulk human override via `/api/bulk-apply` |
+| `CFO-LITIGATION` | Litigation-specific golden rules for class action evidence |
+| `JANITOR-AUTO` | Nightly self-healing auto-correction (≥95% confidence) |
+| `SEED-INITIAL` | Initial golden rules seeded at system bootstrap |
+
+**Recursive Learning (Active Learning via RAG):**
+1. Human corrects a vendor in the Batch Classifier UI
+2. The `/api/reclassify` endpoint updates the DB AND creates a **Golden Rule** in `classification_rules`
+3. The Golden Rule is embedded via nomic-embed-text (768-dim) and stored with pgvector HNSW index
+4. On the next classification run, `classify_one()` retrieves semantically similar rules and injects them as "LEARNED PRECEDENTS" into the LLM system prompt
+5. The LLM now applies the human's business logic without fine-tuning
+
+**Self-Healing Janitor (Nightly):**
+1. Scans for: UNKNOWN vendors + low-confidence (< 65%) classifications
+2. Retrieves RAG precedents from the knowledge base
+3. Sends to Hydra (R1-70B) with Chain-of-Thought reasoning
+4. Auto-corrects at ≥95% confidence → creates new golden rule
+5. Flags at < 95% confidence → appears in Flagged Review tab for morning CFO review
+
+**Flagged Review:** <70% confidence → appears in Flagged Review tab with inline override dropdown
+
+**API Endpoints (Batch Classifier :9877):**
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/sweep` | POST | Classify all UNKNOWN vendors with RAG |
+| `/api/upload` | POST | Upload CSV for classification |
+| `/api/stream/{job_id}` | GET | SSE real-time progress |
+| `/api/job/{job_id}` | GET | Job status + last 50 results |
+| `/api/jobs` | GET | List all jobs |
+| `/api/db-summary` | GET | Classification distribution |
+| `/api/flagged` | GET | Low-confidence vendors |
+| `/api/export` | GET | CSV download |
+| `/api/reclassify/{id}` | POST | Manual override + golden rule creation |
+| `/api/rules` | GET | List all golden rules |
+| `/api/rules/add` | POST | Manually add a golden rule |
+| `/api/rules/{id}` | DELETE | Remove a golden rule |
+| `/api/similar/{id}` | GET | Semantic similarity search |
+| `/api/bulk-apply` | POST | Cluster-based bulk tagging |
+| `/api/legal-hold` | GET | Litigation targets, email counts, invoice totals, golden rules |
+| `/api/legal-hold/emails/{id}` | GET | Broad email evidence drilldown for a litigation vendor |
+| `/api/legal-hold/scan` | GET | Keyword scan of 57K+ email archive for litigation evidence |
+| `/api/legal-hold/export` | GET | CSV export of all litigation-related emails (metadata) |
+| `/api/legal-hold/export-full` | GET | Full evidence package (with email content) for court submission |
+| `/api/legal-hold/forensic-report` | GET | SHA-256 hashed forensic evidence report (JSON) — non-receipt proof |
+| `/api/legal-hold/forensic-report/download` | GET | Downloadable .TXT forensic report for legal filing |
+| `/api/legal-hold/draft-letter` | GET | Pre-drafted letter to Plan Administrator requesting KYC re-issuance |
+| `/api/legal-hold/watchdog-status` | GET | Live KYC email watchdog status (monitors 9 critical senders) |
+
+### K. LEGAL COMMAND CENTER (Case 23-11161-JKS)
+
+**Active Litigation: Prime Core Technologies d/b/a Prime Trust Bankruptcy**
+
+| Detail | Value |
+|---|---|
+| Case Number | 23-11161-JKS (USBC District of Delaware) |
+| Key Filings | D.I. 1085, D.I. 1086 |
+| Petition Date | August 14, 2023 |
+| Payout Basis | USD value as of petition date (pro-rata) |
+| Plan Administrator | Don Detweiler, Womble Bond Dickinson LLP (don.detweiler@wbd-us.com) |
+| Fiduciary Agent | Province Fiduciary Services |
+| KYC Window | 150 days from distribution notice |
+| KYC Email Status | **NOT RECEIVED** (forensic evidence on file, SHA-256 hashed) |
+| Legacy Wallet (98f ETH) | Absorbed into bankruptcy — no separate action needed |
+| Platform | Coinbits (custodied via Prime Trust) |
+| Docket Agent | Stretto (cases.stretto.com/primetrust) |
+| Claims Agent | Kroll (cases.ra.kroll.com/primetrustwinddown) |
+| **CRITICAL DATE** | **March 12, 2026 — Hearing on Omnibus Objections (Judge Stickles)** |
+
+**Escalation Protocol:**
+1. **Plan A (Email):** Formal request letter → don.detweiler@wbd-us.com (immediate)
+2. **Plan B (Certified Mail):** Same letter via USPS Certified Mail with Return Receipt → WBD, 1313 N. Market St #1200, Wilmington DE 19801
+3. **Plan C (Nuclear):** If no response within 5 business days → File Pro Se Motion for Leave to File Late Claim (Fed. R. Bankr. P. 3003(c)(3), Pioneer v. Brunswick). Cost: $0.
+
+**Infrastructure:**
+
+| Component | Description |
+|---|---|
+| Forensic Report Engine | Exhaustive search of 57K+ emails across sender/subject/content. SHA-256 integrity hash. |
+| KYC Watchdog | Cron (every 2h) + API endpoint. Monitors 11 critical senders, 7 body phrases. |
+| Draft Letter Generator | Pre-drafted formal letter to Plan Administrator, auto-populated with forensic stats. |
+| Pro Se Motion Generator | Full court motion text citing Pioneer v. Brunswick excusable neglect, pre-populated with evidence. |
+| Certified Mail Print Package | Combined print-ready document: Cover Sheet + Letter + Report + Mailing Checklist. |
+| Evidence Package Export | Full CSV export of all litigation emails with content. Court-ready. |
+| Action Item Tracker | 4-phase UI checklist: Immediate → Due Diligence → Tracking → Nuclear Option. |
+| Countdown Timer | Live days-remaining counter to March 12, 2026 hearing date. |
+
+**KYC Watchdog Monitored Senders:**
+`primetrustwinddown`, `stretto-services`, `cases-cr.stretto`, `terraforminfo`, `ra.kroll`, `detweiler`, `wbd-us.com`, `plan.administrator`, `primetrust`, `province`, `womble`
+
+**Golden Rules (Litigation):** 27+ rules covering Coinbits, Prime Trust, Kroll, Stretto, Province Fiduciary, Womble Bond Dickinson, Plan Administrator, Case 23-11161-JKS, Bar Date, Claimant ID, KYC distribution, Atomic Wallet, and class action terms.
+
+**Critical Fact:** Email #46437 (Aug 25, 2025, from paula@coinbits.app) is the ONLY email referencing Case 23-11161-JKS in the entire 57,236-email archive. It confirms the KYC process exists but the distribution email was never sent/received.
+
+### L. MULTI-CASE LEGAL ARCHITECTURE
+
+**Schema:** `legal.*` (PostgreSQL) — `legal.cases`, `legal.case_actions`, `legal.case_watchdog`, `legal.case_evidence`
+
+**Rules File:** `.cursor/rules/003-legal-command-center.mdc` — MUST be consulted before adding any new legal case.
+
+**Standard Operating Procedure:**
+1. Register case → 2. Add watchdog terms → 3. Inject golden rules → 4. Run forensic scan → 5. Generate documents → 6. Execute escalation protocol (Email → Certified Mail → Pro Se Motion)
+
+**NAS:** `/mnt/fortress_nas/sectors/legal/{case_slug}/` — evidence, correspondence, certified mail receipts, court filings.
+
+**API:** `tools/legal_case_manager.py` (:9878) — GET `/api/cases`, POST `/api/cases`, GET `/api/cases/{slug}`, POST `/api/cases/{slug}/actions`, POST `/api/cases/{slug}/watchdog`, POST `/api/cases/{slug}/evidence`, GET `/api/cases/{slug}/forensic-scan`, GET `/api/watchdog/scan-all`

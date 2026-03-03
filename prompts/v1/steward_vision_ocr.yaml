@@ -1,0 +1,34 @@
+name: Steward Real Estate Vision OCR
+version: v1
+division: real_estate
+description: >
+  Sends scanned property document images to LLaVA Vision for Sovereign OCR.
+  Used by Division Real Estate (Steward) Phase 3.
+  Reads deeds, plats, and surveys the way a county clerk would.
+
+model:
+  recommended: llava:v1.6
+  temperature: 0.1
+  num_predict: 600
+  endpoint: generate
+  requires_images: true
+
+variables: []
+
+template: |
+  You are a real estate document analyzer performing OCR.
+  Look at this document image carefully and extract the following into a JSON object.
+  Return ONLY valid JSON — no markdown, no explanation.
+
+  {{
+      "doc_type": "Warranty_Deed|Security_Deed|Quitclaim_Deed|Legal_Deed|Survey_Plat|Survey|Legal_Easement|Mortgage|Tax_Assessment|Lien|Closing_Statement|Appraisal|Other",
+      "property_name": "property or subdivision name if visible, else null",
+      "grantor": "person or entity transferring rights if visible, else null",
+      "grantee": "person or entity receiving rights if visible, else null",
+      "parcel_id": "tax parcel or lot number if visible, else null",
+      "book_page": "deed book and page reference if visible, else null",
+      "recording_date": "YYYY-MM-DD if visible, else null",
+      "county": "county name if visible, else null",
+      "acres": number of acres if visible, else null,
+      "summary": "one sentence describing what this document is"
+  }}

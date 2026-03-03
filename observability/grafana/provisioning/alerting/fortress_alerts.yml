@@ -1,0 +1,435 @@
+# =============================================================================
+# GRAFANA ALERTING — Fortress Prime
+# =============================================================================
+# Critical alerts for service health, API errors, and infrastructure.
+# Notifications go to the "fortress-default" contact point (email).
+# =============================================================================
+
+apiVersion: 1
+
+# --- Contact Points ---
+contactPoints:
+  - orgId: 1
+    name: fortress-default
+    receivers:
+      - uid: fortress-email
+        type: email
+        settings:
+          addresses: gary@garyknight.com
+          singleEmail: true
+        disableResolveMessage: false
+
+# --- Notification Policies ---
+policies:
+  - orgId: 1
+    receiver: fortress-default
+    group_by:
+      - grafana_folder
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+
+# --- Alert Rules ---
+groups:
+  - orgId: 1
+    name: Fortress Prime — Critical Alerts
+    folder: Fortress Prime
+    interval: 1m
+    rules:
+
+      # =============================================
+      # GATEWAY HEALTH
+      # =============================================
+
+      - uid: alert-gateway-error-rate
+        title: "Gateway Error Rate > 5%"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-loki
+            model:
+              expr: >
+                sum(rate({service="fortress-gateway"} | json | status >= 400 [5m]))
+                /
+                sum(rate({service="fortress-gateway"} | json [5m]))
+                * 100
+              queryType: range
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "API Gateway error rate exceeded 5% over the last 5 minutes"
+          description: "Current error rate: {{ $value }}%. Check /v1/ops and /v1/finance endpoints."
+        labels:
+          severity: critical
+          division: infrastructure
+
+      - uid: alert-gateway-latency
+        title: "Gateway P95 Latency > 2000ms"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-loki
+            model:
+              expr: >
+                quantile_over_time(0.95,
+                  {service="fortress-gateway"}
+                  | json
+                  | unwrap duration_ms [5m]
+                ) by ()
+              queryType: range
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [2000]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "API Gateway P95 latency exceeded 2 seconds"
+        labels:
+          severity: warning
+          division: infrastructure
+
+      # =============================================
+      # INFRASTRUCTURE HEALTH
+      # =============================================
+
+      - uid: alert-gpu-temp
+        title: "GPU Temperature > 85°C"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-pg
+            model:
+              rawSql: >
+                SELECT timestamp AS time, gpu_temp AS value
+                FROM pulse_agent
+                WHERE node_name LIKE '%spark-2%'
+                ORDER BY timestamp DESC
+                LIMIT 1
+              format: time_series
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [85]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "Captain Node GPU temperature is critically high ({{ $value }}°C)"
+          description: "Check Ollama workload and GPU fan speed."
+        labels:
+          severity: critical
+          division: infrastructure
+
+      - uid: alert-disk-usage
+        title: "Disk Usage > 90%"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-pg
+            model:
+              rawSql: >
+                SELECT timestamp AS time, disk_usage_percent AS value
+                FROM pulse_agent
+                WHERE node_name LIKE '%spark-2%'
+                ORDER BY timestamp DESC
+                LIMIT 1
+              format: time_series
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [90]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: "Captain Node disk usage exceeds 90% ({{ $value }}%)"
+          description: "Run log rotation or clean NAS backups."
+        labels:
+          severity: warning
+          division: infrastructure
+
+      # =============================================
+      # GUEST PLATFORM HEALTH
+      # =============================================
+
+      - uid: alert-gp-error-rate
+        title: "Guest Platform Error Rate > 5%"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-prometheus
+            model:
+              expr: >
+                sum(rate(http_requests_total{job="guest-platform",status=~"5.."}[5m]))
+                /
+                sum(rate(http_requests_total{job="guest-platform"}[5m]))
+                * 100
+              queryType: range
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "Guest Platform error rate exceeded 5% over the last 5 minutes"
+          description: "Current error rate: {{ $value }}%. Check /health/deep and application logs."
+        labels:
+          severity: critical
+          division: operations
+
+      - uid: alert-gp-health-down
+        title: "Guest Platform Health Check Failed"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-prometheus
+            model:
+              expr: up{job="guest-platform"}
+              queryType: range
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "Guest Platform is DOWN — Prometheus cannot reach /metrics"
+          description: "Check if the Guest Platform service on port 8100 is running."
+        labels:
+          severity: critical
+          division: operations
+
+      - uid: alert-gp-latency
+        title: "Guest Platform P95 Latency > 3s"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-prometheus
+            model:
+              expr: >
+                histogram_quantile(0.95,
+                  sum(rate(http_request_duration_seconds_bucket{job="guest-platform"}[5m])) by (le)
+                )
+              queryType: range
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [3]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "Guest Platform P95 response latency exceeded 3 seconds"
+          description: "Investigate slow endpoints via /health/deep and Grafana Guest Platform dashboard."
+        labels:
+          severity: warning
+          division: operations
+
+      # =============================================
+      # OPERATIONS HEALTH
+      # =============================================
+
+      - uid: alert-overdue-turnovers
+        title: "Overdue Turnovers (> 4 hours)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-pg
+            model:
+              rawSql: >
+                SELECT NOW() AS time,
+                       COUNT(*)::float AS value
+                FROM ops_turnovers
+                WHERE status = 'PENDING'
+                  AND checkout_time < NOW() - INTERVAL '4 hours'
+              format: time_series
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 0s
+        annotations:
+          summary: "{{ $value }} turnovers are overdue (pending > 4 hours past checkout)"
+          description: "Check the Ops Command Center for stuck turnovers."
+        labels:
+          severity: warning
+          division: operations
+
+      # =============================================
+      # FINANCIAL HEALTH
+      # =============================================
+
+      - uid: alert-unresolved-anomalies
+        title: "Unresolved Financial Anomalies"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: fortress-pg
+            model:
+              rawSql: >
+                SELECT NOW() AS time,
+                       COUNT(*)::float AS value
+                FROM anomaly_flags
+                WHERE reviewed_at IS NULL
+                  AND severity IN ('HIGH', 'CRITICAL')
+              format: time_series
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+                  operator:
+                    type: and
+                  reducer:
+                    type: last
+              expression: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 0s
+        annotations:
+          summary: "{{ $value }} high/critical financial anomalies need review"
+        labels:
+          severity: critical
+          division: finance

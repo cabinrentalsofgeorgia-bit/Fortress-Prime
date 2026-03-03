@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — IoT & Smart Home</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:32px 24px}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Panels ── */
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;margin-bottom:24px;overflow:hidden}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-teal{background:rgba(79,209,197,.12);color:#4fd1c5}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+.badge-blue{background:rgba(96,165,250,.12);color:#60a5fa}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-red{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Two-Column ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+
+/* ── Data Table ── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead th{text-align:left;font-size:10px;font-weight:700;color:#555;
+  text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;border-bottom:1px solid #222}
+.data-table thead th.right{text-align:right}
+.data-table tbody tr{border-bottom:1px solid #1a1a1a;transition:background .12s}
+.data-table tbody tr:hover{background:rgba(255,255,255,.02)}
+.data-table tbody td{padding:10px 12px;font-size:13px;color:#ccc}
+.data-table tbody td.right{text-align:right;font-family:'SF Mono',Consolas,monospace;font-size:12px}
+.data-table tbody td.mono{font-family:'SF Mono',Consolas,monospace;font-size:12px}
+
+/* ── Status dot ── */
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.status-dot.online{background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,.5);animation:fn-pulse 2s ease infinite}
+.status-dot.offline{background:#555}
+.status-dot.alert{background:#fbbf24;box-shadow:0 0 6px rgba(251,191,36,.5);animation:fn-pulse 1.5s ease infinite}
+
+/* ── Property Selector ── */
+.prop-selector{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.prop-selector label{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em}
+.prop-selector select{background:#111;border:1px solid #222;border-radius:8px;padding:8px 14px;
+  color:#fff;font-size:13px;font-family:inherit;cursor:pointer;min-width:260px;outline:none;
+  transition:border-color .15s}
+.prop-selector select:hover{border-color:#333}
+.prop-selector select:focus{border-color:#4ade80}
+
+/* ── Device Grid ── */
+.device-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:36px}
+.device-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  transition:border-color .15s;position:relative}
+.device-card:hover{border-color:#333}
+.device-card-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.device-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0}
+.device-icon.lock{background:rgba(96,165,250,.12);color:#60a5fa}
+.device-icon.thermo{background:rgba(251,191,36,.12);color:#fbbf24}
+.device-icon.noise{background:rgba(167,139,250,.12);color:#a78bfa}
+.device-icon.camera{background:rgba(79,209,197,.12);color:#4fd1c5}
+.device-name{font-size:13px;font-weight:700;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.device-type-tag{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600;
+  background:rgba(255,255,255,.06);color:#666;text-transform:uppercase;letter-spacing:.03em}
+.device-stats{display:flex;flex-direction:column;gap:8px}
+.device-stat{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.device-stat-label{color:#666}
+.device-stat-val{color:#ccc;font-family:'SF Mono',Consolas,monospace;font-size:11px}
+.device-stat-val.green{color:#4ade80}
+.device-stat-val.red{color:#f87171}
+.device-stat-val.amber{color:#fbbf24}
+.device-stat-val.blue{color:#60a5fa}
+.device-battery{display:flex;align-items:center;gap:6px}
+.battery-bar{width:40px;height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden}
+.battery-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.battery-fill.high{background:#4ade80}
+.battery-fill.mid{background:#fbbf24}
+.battery-fill.low{background:#f87171}
+.device-status-stripe{position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.device-status-stripe.online{background:#4ade80}
+.device-status-stripe.offline{background:#555}
+.device-status-stripe.alert{background:#fbbf24}
+.device-actions{margin-top:12px;padding-top:10px;border-top:1px solid #1a1a1a;display:flex;gap:8px}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;
+  font-size:11px;font-weight:600;border:none;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn-green{background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+.btn-green:hover{background:rgba(74,222,128,.2)}
+.btn-blue{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.2)}
+.btn-blue:hover{background:rgba(96,165,250,.2)}
+.btn-amber{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+.btn-amber:hover{background:rgba(251,191,36,.2)}
+.btn-red{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.2)}
+.btn-red:hover{background:rgba(248,113,113,.2)}
+.btn-ghost{background:transparent;color:#888;border:1px solid #222}
+.btn-ghost:hover{color:#fff;border-color:#333}
+.btn-sm{padding:5px 10px;font-size:10px}
+
+/* ── Access Code Table ── */
+.code-display{font-family:'SF Mono',Consolas,monospace;font-size:14px;font-weight:700;
+  color:#4ade80;letter-spacing:.15em;background:rgba(74,222,128,.06);padding:4px 10px;
+  border-radius:6px;display:inline-block}
+
+/* ── Alert Log ── */
+.alert-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #1a1a1a}
+.alert-row:last-child{border-bottom:none}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:2px}
+.alert-content{flex:1}
+.alert-msg{font-size:12px;color:#ccc}
+.alert-meta{font-size:10px;color:#555;margin-top:3px;display:flex;gap:10px}
+.alert-level{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px}
+.alert-level.critical{background:rgba(248,113,113,.12);color:#f87171}
+.alert-level.warning{background:rgba(251,191,36,.12);color:#fbbf24}
+.alert-level.info{background:rgba(96,165,250,.12);color:#60a5fa}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px);z-index:99998;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#111;border:1px solid #222;border-radius:14px;width:500px;max-width:90vw;
+  max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal-hdr{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-hdr h2{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;color:#666;font-size:20px;cursor:pointer;padding:4px;transition:color .15s}
+.modal-close:hover{color:#fff}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:12px 24px 20px;display:flex;justify-content:flex-end;gap:10px}
+
+/* ── Form Controls ── */
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;
+  letter-spacing:.04em;margin-bottom:6px}
+.form-input,.form-select{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;
+  padding:10px 14px;color:#fff;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus{border-color:#4ade80}
+.form-select{cursor:pointer}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* ── CTA Banner ── */
+.cta-banner{background:linear-gradient(135deg,rgba(74,222,128,.06),rgba(96,165,250,.06));
+  border:1px dashed #333;border-radius:12px;padding:28px;text-align:center;margin-bottom:24px}
+.cta-banner h3{font-size:14px;font-weight:700;margin-bottom:6px}
+.cta-banner p{font-size:12px;color:#666;margin-bottom:16px}
+
+/* ── Loading / Empty / Toast ── */
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.loading-pulse{animation:loadPulse 1.2s ease infinite}
+@keyframes loadPulse{0%,100%{opacity:.4}50%{opacity:1}}
+.skel-row{height:14px;background:#1a1a1a;border-radius:4px;margin-bottom:10px;animation:loadPulse 1.2s ease infinite}
+.skel-row.w60{width:60%}.skel-row.w80{width:80%}.skel-row.w40{width:40%}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .3s ease;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.toast-error{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+.toast-success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .device-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active">
+      <div class="fn-group-btn" onclick="fnToggle(this)">CROG-VRS <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">🧹 Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item fn-dd-active" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div>
+    </div>
+    <div class="fn-group fn-g-blue">
+      <div class="fn-group-btn" onclick="fnToggle(this)">Operations <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/legal">⚖️ Legal Command</a>
+        <a class="fn-dd-item" href="/email-intake">📧 Email Intake</a>
+        <a class="fn-dd-item" href="/intelligence">🔍 Intelligence</a>
+      </div>
+    </div>
+    <div class="fn-group fn-g-amber">
+      <div class="fn-group-btn" onclick="fnToggle(this)">System <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/vault">🔐 Key Vault</a>
+        <a class="fn-dd-item" href="/users">👥 Users</a>
+        <a class="fn-dd-item" href="/profile">⚙️ Profile</a>
+        <a class="fn-dd-item" href="/docs-center">📚 Docs</a>
+        <a class="fn-dd-item" href="/webui">🖥 Mission Control</a>
+      </div>
+    </div>
+  </div>
+  <div class="fn-right">
+    <span class="fn-dot"></span>
+    <span class="fn-clock" id="fn-clock"></span>
+    <div class="fn-user">
+      <div class="fn-user-btn" onclick="this.parentElement.classList.toggle('open')">👤 Admin <span class="fn-caret">▾</span></div>
+      <div class="fn-user-dd">
+        <a class="fn-dd-item" href="/profile">⚙️ Profile</a>
+        <a class="fn-dd-item" href="/api/logout">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Page Header -->
+<div class="page-hdr">
+  <h1>CROG-VRS — <span>IoT & Smart Home</span></h1>
+  <div class="hdr-right">
+    <button class="btn btn-green btn-sm" onclick="loadDemoData()">⚡ Load Demo Data</button>
+    <button class="btn btn-blue btn-sm" onclick="openAddDevice()">+ Add Device</button>
+    <span class="hdr-badge" id="conn-badge">CONNECTED</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- CTA Banner -->
+  <div class="cta-banner" id="cta-banner" style="display:none">
+    <h3>🔌 Connect Your Smart Home Integrations</h3>
+    <p>Link Schlage, August, Nest, Ring, Minut, or NoiseAware to enable real-time device management.</p>
+    <button class="btn btn-green" onclick="toast('Integration setup coming soon','success')">Connect Integration</button>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="section-head">Device Overview</div>
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card"><div class="kpi-val blue" id="kpi-total">—</div><div class="kpi-label">Total Devices</div><div class="kpi-sub" id="kpi-total-sub">across all properties</div></div>
+    <div class="kpi-card"><div class="kpi-val green" id="kpi-online">—</div><div class="kpi-label">Online</div><div class="kpi-sub" id="kpi-online-sub">connected & reporting</div></div>
+    <div class="kpi-card"><div class="kpi-val red" id="kpi-alerts">—</div><div class="kpi-label">Alerts Active</div><div class="kpi-sub" id="kpi-alerts-sub">require attention</div></div>
+    <div class="kpi-card"><div class="kpi-val teal" id="kpi-props">—</div><div class="kpi-label">Properties with IoT</div><div class="kpi-sub" id="kpi-props-sub">smart-enabled</div></div>
+  </div>
+
+  <!-- Property Selector -->
+  <div class="prop-selector">
+    <label>Property</label>
+    <select id="prop-select" onchange="renderDevices()">
+      <option value="all">All Properties</option>
+    </select>
+  </div>
+
+  <!-- Device Grid -->
+  <div class="section-head">Devices <span id="device-count-label" style="font-weight:400;color:#555;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px"></span></div>
+  <div class="device-grid" id="device-grid">
+    <div class="empty-state"><div class="empty-icon">📡</div>No devices configured yet.<br>Click <strong>Load Demo Data</strong> to populate sample devices.</div>
+  </div>
+
+  <!-- Access Code Manager + Alert Log -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">🔑 Access Code Manager <span class="badge badge-green" id="code-count">0 CODES</span></div>
+      <div id="access-codes-body">
+        <div class="empty-state">No upcoming check-ins with access codes.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🚨 Alert Log <span class="badge badge-red" id="alert-count">0 ALERTS</span></div>
+      <div id="alert-log-body" style="max-height:400px;overflow-y:auto">
+        <div class="empty-state">No recent alerts.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add Device Modal -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-hdr"><h2>Add Device</h2><button class="modal-close" onclick="closeModal('modal-add')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Property</label>
+        <select class="form-select" id="add-prop"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Device Type</label>
+          <select class="form-select" id="add-type" onchange="updateIntegrationOptions()">
+            <option value="lock">🔒 Smart Lock</option>
+            <option value="thermostat">🌡️ Thermostat</option>
+            <option value="noise">🔊 Noise Monitor</option>
+            <option value="camera">📹 Camera</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Integration</label>
+          <select class="form-select" id="add-integration"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Device Name</label>
+        <input class="form-input" id="add-name" placeholder="e.g. Front Door Lock">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <select class="form-select" id="add-location">
+            <option value="indoor">Indoor</option>
+            <option value="outdoor">Outdoor</option>
+            <option value="entrance">Entrance</option>
+            <option value="garage">Garage</option>
+            <option value="patio">Patio</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Credentials / API Key</label>
+          <input class="form-input" id="add-creds" placeholder="Optional — for real integration">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add')">Cancel</button>
+      <button class="btn btn-green" onclick="saveDevice()">Add Device</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast-el"></div>
+
+<script>
+/* ── Nav JS ── */
+function fnToggle(btn){const g=btn.closest('.fn-group');document.querySelectorAll('.fn-group.open').forEach(o=>{if(o!==g)o.classList.remove('open')});g.classList.toggle('open')}
+document.addEventListener('click',e=>{if(!e.target.closest('.fn-group'))document.querySelectorAll('.fn-group.open').forEach(g=>g.classList.remove('open'));if(!e.target.closest('.fn-user'))document.querySelectorAll('.fn-user.open').forEach(u=>u.classList.remove('open'))});
+function fnClock(){const d=new Date();document.getElementById('fn-clock').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
+fnClock();setInterval(fnClock,1000);
+
+/* ── Toast ── */
+let toastTimer;
+function toast(msg,type='error'){
+  const el=document.getElementById('toast-el');
+  el.className='toast toast-'+type+' show';
+  el.textContent=msg;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+/* ── Modal ── */
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+/* ── Data Layer ── */
+const STORAGE_KEY='crog_iot_devices';
+const ALERTS_KEY='crog_iot_alerts';
+const CODES_KEY='crog_iot_codes';
+
+function getDevices(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]}catch{return[]}}
+function saveDevices(d){localStorage.setItem(STORAGE_KEY,JSON.stringify(d))}
+function getAlerts(){try{return JSON.parse(localStorage.getItem(ALERTS_KEY))||[]}catch{return[]}}
+function saveAlerts(a){localStorage.setItem(ALERTS_KEY,JSON.stringify(a))}
+function getCodes(){try{return JSON.parse(localStorage.getItem(CODES_KEY))||[]}catch{return[]}}
+function saveCodes(c){localStorage.setItem(CODES_KEY,JSON.stringify(c))}
+
+let properties=[];
+
+/* ── Integration Maps ── */
+const integrationsByType={
+  lock:['Schlage','August','Yale','Kwikset'],
+  thermostat:['Nest','Ecobee','Honeywell','Emerson'],
+  noise:['Minut','NoiseAware','Roomonitor'],
+  camera:['Ring','Nest','Arlo','Wyze']
+};
+
+function updateIntegrationOptions(){
+  const type=document.getElementById('add-type').value;
+  const sel=document.getElementById('add-integration');
+  sel.innerHTML=integrationsByType[type].map(i=>`<option value="${i}">${i}</option>`).join('');
+}
+
+/* ── Load Properties ── */
+async function loadProperties(){
+  try{
+    const r=await fetch('/api/vrs/properties',{credentials:'include'});
+    if(!r.ok)throw new Error('API error');
+    const data=await r.json();
+    properties=Array.isArray(data)?data:(data.properties||data.data||[]);
+  }catch{
+    properties=[
+      {id:'prop-1',name:'Mountain View Cabin'},
+      {id:'prop-2',name:'Lakeside Villa'},
+      {id:'prop-3',name:'Downtown Penthouse'},
+      {id:'prop-4',name:'Coastal Retreat'},
+      {id:'prop-5',name:'Desert Oasis'}
+    ];
+  }
+  populatePropertySelectors();
+}
+
+function populatePropertySelectors(){
+  const sel=document.getElementById('prop-select');
+  const addSel=document.getElementById('add-prop');
+  const opts=properties.map(p=>`<option value="${p.id||p.property_id||p.name}">${p.name||p.property_name||p.id}</option>`).join('');
+  sel.innerHTML='<option value="all">All Properties</option>'+opts;
+  addSel.innerHTML=opts;
+}
+
+/* ── Render KPIs ── */
+function renderKPIs(){
+  const devices=getDevices();
+  const online=devices.filter(d=>d.status==='online').length;
+  const alertCount=devices.filter(d=>d.status==='alert').length+getAlerts().filter(a=>!a.resolved).length;
+  const propsWithIoT=new Set(devices.map(d=>d.propertyId)).size;
+
+  document.getElementById('kpi-total').textContent=devices.length;
+  document.getElementById('kpi-online').textContent=online;
+  document.getElementById('kpi-alerts').textContent=alertCount;
+  document.getElementById('kpi-props').textContent=propsWithIoT;
+
+  document.getElementById('cta-banner').style.display=devices.length===0?'block':'none';
+}
+
+/* ── Render Devices ── */
+function renderDevices(){
+  const sel=document.getElementById('prop-select').value;
+  let devices=getDevices();
+  if(sel!=='all')devices=devices.filter(d=>d.propertyId===sel);
+
+  const grid=document.getElementById('device-grid');
+  document.getElementById('device-count-label').textContent=`(${devices.length} device${devices.length!==1?'s':''})`;
+
+  if(!devices.length){
+    grid.innerHTML='<div class="empty-state"><div class="empty-icon">📡</div>No devices for this property.<br>Click <strong>Add Device</strong> to get started.</div>';
+    return;
+  }
+
+  grid.innerHTML=devices.map(d=>renderDeviceCard(d)).join('');
+}
+
+function renderDeviceCard(d){
+  const statusClass=d.status||'online';
+  let icon='',iconClass='',statsHtml='';
+
+  switch(d.type){
+    case 'lock':
+      icon='🔒';iconClass='lock';
+      statsHtml=`
+        <div class="device-stat"><span class="device-stat-label">Status</span><span class="device-stat-val ${d.locked?'green':'red'}">${d.locked?'🔒 Locked':'🔓 Unlocked'}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Code</span><span class="device-stat-val" style="letter-spacing:.1em">${d.currentCode||'—'}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Battery</span><span class="device-battery">${batteryHtml(d.battery)}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Last Activity</span><span class="device-stat-val">${timeAgo(d.lastActivity)}</span></div>`;
+      break;
+    case 'thermostat':
+      icon='🌡️';iconClass='thermo';
+      statsHtml=`
+        <div class="device-stat"><span class="device-stat-label">Current Temp</span><span class="device-stat-val blue">${d.currentTemp||'—'}°F</span></div>
+        <div class="device-stat"><span class="device-stat-label">Set Temp</span><span class="device-stat-val">${d.setTemp||'—'}°F</span></div>
+        <div class="device-stat"><span class="device-stat-label">Mode</span><span class="device-stat-val ${d.mode==='heat'?'red':d.mode==='cool'?'blue':'green'}">${(d.mode||'auto').toUpperCase()}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Battery</span><span class="device-battery">${batteryHtml(d.battery)}</span></div>`;
+      break;
+    case 'noise':
+      icon='🔊';iconClass='noise';
+      const dbLevel=d.currentDb||0;
+      const dbColor=dbLevel>d.threshold?'red':dbLevel>d.threshold*0.8?'amber':'green';
+      statsHtml=`
+        <div class="device-stat"><span class="device-stat-label">Current Level</span><span class="device-stat-val ${dbColor}">${dbLevel} dB</span></div>
+        <div class="device-stat"><span class="device-stat-label">Threshold</span><span class="device-stat-val">${d.threshold||'—'} dB</span></div>
+        <div class="device-stat"><span class="device-stat-label">Alert</span><span class="device-stat-val ${d.noiseAlert?'red':'green'}">${d.noiseAlert?'⚠ TRIGGERED':'✓ Normal'}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Last Reading</span><span class="device-stat-val">${timeAgo(d.lastActivity)}</span></div>`;
+      break;
+    case 'camera':
+      icon='📹';iconClass='camera';
+      statsHtml=`
+        <div class="device-stat"><span class="device-stat-label">Status</span><span class="device-stat-val ${d.status==='online'?'green':'red'}">${d.status==='online'?'● Recording':'○ Offline'}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Last Motion</span><span class="device-stat-val">${d.lastMotion?timeAgo(d.lastMotion):'No motion'}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Storage</span><span class="device-stat-val">${d.storage||'Cloud'}</span></div>
+        <div class="device-stat"><span class="device-stat-label">Night Vision</span><span class="device-stat-val green">${d.nightVision?'ON':'OFF'}</span></div>`;
+      break;
+  }
+
+  const propName=properties.find(p=>(p.id||p.property_id||p.name)===d.propertyId);
+  const propLabel=propName?(propName.name||propName.property_name):'Unknown';
+
+  return `<div class="device-card">
+    <div class="device-status-stripe ${statusClass}"></div>
+    <div class="device-card-hdr">
+      <div class="device-icon ${iconClass}">${icon}</div>
+      <div style="flex:1;overflow:hidden">
+        <div class="device-name">${esc(d.name)}</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">${esc(propLabel)} · ${esc(d.location||'—')}</div>
+      </div>
+      <span class="device-type-tag">${esc(d.integration||d.type)}</span>
+    </div>
+    <div class="device-stats">${statsHtml}</div>
+    <div class="device-actions">
+      ${d.type==='lock'?`<button class="btn btn-sm ${d.locked?'btn-amber':'btn-green'}" onclick="toggleLock('${d.id}')">${d.locked?'Unlock':'Lock'}</button>`:''}
+      ${d.type==='thermostat'?`<button class="btn btn-sm btn-blue" onclick="adjustTemp('${d.id}')">Adjust</button>`:''}
+      <button class="btn btn-sm btn-ghost" onclick="removeDevice('${d.id}')">Remove</button>
+    </div>
+  </div>`;
+}
+
+function batteryHtml(pct){
+  if(pct==null)return '<span class="device-stat-val">—</span>';
+  const cls=pct>50?'high':pct>20?'mid':'low';
+  return `<div class="battery-bar"><div class="battery-fill ${cls}" style="width:${pct}%"></div></div><span class="device-stat-val" style="font-size:10px">${pct}%</span>`;
+}
+
+function timeAgo(ts){
+  if(!ts)return '—';
+  const diff=Date.now()-new Date(ts).getTime();
+  const mins=Math.floor(diff/60000);
+  if(mins<1)return 'Just now';
+  if(mins<60)return mins+'m ago';
+  const hrs=Math.floor(mins/60);
+  if(hrs<24)return hrs+'h ago';
+  return Math.floor(hrs/24)+'d ago';
+}
+
+function esc(s){if(!s)return '';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+/* ── Device Actions ── */
+function toggleLock(id){
+  const devices=getDevices();
+  const d=devices.find(x=>x.id===id);
+  if(!d)return;
+  d.locked=!d.locked;
+  d.lastActivity=new Date().toISOString();
+  saveDevices(devices);
+  addAlert(d.locked?'info':'warning',`${d.name} ${d.locked?'locked':'unlocked'}`,d.propertyId);
+  renderAll();
+  toast(d.name+(d.locked?' locked':' unlocked'),'success');
+}
+
+function adjustTemp(id){
+  const devices=getDevices();
+  const d=devices.find(x=>x.id===id);
+  if(!d)return;
+  const newTemp=prompt('Set temperature (°F):',d.setTemp||72);
+  if(newTemp===null)return;
+  d.setTemp=parseInt(newTemp)||72;
+  d.lastActivity=new Date().toISOString();
+  saveDevices(devices);
+  renderAll();
+  toast(`${d.name} set to ${d.setTemp}°F`,'success');
+}
+
+function removeDevice(id){
+  if(!confirm('Remove this device?'))return;
+  const devices=getDevices().filter(d=>d.id!==id);
+  saveDevices(devices);
+  renderAll();
+  toast('Device removed','success');
+}
+
+/* ── Add Device ── */
+function openAddDevice(){
+  updateIntegrationOptions();
+  document.getElementById('add-name').value='';
+  document.getElementById('add-creds').value='';
+  openModal('modal-add');
+}
+
+function saveDevice(){
+  const propId=document.getElementById('add-prop').value;
+  const type=document.getElementById('add-type').value;
+  const integration=document.getElementById('add-integration').value;
+  const name=document.getElementById('add-name').value.trim();
+  const location=document.getElementById('add-location').value;
+
+  if(!name){toast('Device name is required');return}
+
+  const device={
+    id:'dev-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+    propertyId:propId,
+    type,integration,name,location,
+    status:'online',
+    createdAt:new Date().toISOString(),
+    lastActivity:new Date().toISOString()
+  };
+
+  switch(type){
+    case 'lock':
+      device.locked=true;
+      device.currentCode=genCode();
+      device.battery=Math.floor(Math.random()*40)+60;
+      break;
+    case 'thermostat':
+      device.currentTemp=Math.floor(Math.random()*10)+68;
+      device.setTemp=72;
+      device.mode=['heat','cool','auto'][Math.floor(Math.random()*3)];
+      device.battery=Math.floor(Math.random()*30)+70;
+      break;
+    case 'noise':
+      device.currentDb=Math.floor(Math.random()*30)+35;
+      device.threshold=70;
+      device.noiseAlert=false;
+      break;
+    case 'camera':
+      device.lastMotion=null;
+      device.storage='Cloud';
+      device.nightVision=true;
+      break;
+  }
+
+  const devices=getDevices();
+  devices.push(device);
+  saveDevices(devices);
+  closeModal('modal-add');
+  renderAll();
+  toast(`${name} added successfully`,'success');
+}
+
+function genCode(){return String(Math.floor(1000+Math.random()*9000))}
+
+/* ── Access Codes ── */
+function renderAccessCodes(){
+  const devices=getDevices().filter(d=>d.type==='lock');
+  const codes=getCodes();
+  const body=document.getElementById('access-codes-body');
+
+  if(!devices.length&&!codes.length){
+    body.innerHTML='<div class="empty-state">No smart locks configured. Add locks to manage access codes.</div>';
+    document.getElementById('code-count').textContent='0 CODES';
+    return;
+  }
+
+  const allCodes=[
+    ...codes,
+    ...devices.filter(d=>d.currentCode).map(d=>({
+      id:d.id,deviceName:d.name,propertyId:d.propertyId,
+      code:d.currentCode,guest:'Current Code',
+      checkIn:'Active',checkOut:'—',type:'permanent'
+    }))
+  ];
+
+  document.getElementById('code-count').textContent=allCodes.length+' CODE'+(allCodes.length!==1?'S':'');
+
+  body.innerHTML=`<table class="data-table"><thead><tr>
+    <th>Property / Lock</th><th>Guest</th><th>Code</th><th>Check-in</th><th>Check-out</th><th></th>
+  </tr></thead><tbody>${allCodes.map(c=>{
+    const prop=properties.find(p=>(p.id||p.property_id||p.name)===c.propertyId);
+    return `<tr>
+      <td style="font-weight:600;color:#fff">${esc(c.deviceName||'Lock')}<br><span style="font-size:10px;color:#555">${esc(prop?prop.name:'')}</span></td>
+      <td>${esc(c.guest)}</td>
+      <td><span class="code-display">${esc(c.code)}</span></td>
+      <td class="mono" style="font-size:11px">${esc(c.checkIn)}</td>
+      <td class="mono" style="font-size:11px">${esc(c.checkOut)}</td>
+      <td><button class="btn btn-sm btn-amber" onclick="regenCode('${c.id}')">↻</button></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function regenCode(id){
+  const devices=getDevices();
+  const d=devices.find(x=>x.id===id);
+  if(d){
+    d.currentCode=genCode();
+    d.lastActivity=new Date().toISOString();
+    saveDevices(devices);
+    renderAll();
+    toast('Code regenerated: '+d.currentCode,'success');
+    return;
+  }
+  const codes=getCodes();
+  const c=codes.find(x=>x.id===id);
+  if(c){c.code=genCode();saveCodes(codes);renderAll();toast('Code regenerated: '+c.code,'success')}
+}
+
+/* ── Alert Log ── */
+function addAlert(level,msg,propertyId){
+  const alerts=getAlerts();
+  alerts.unshift({
+    id:'alt-'+Date.now(),
+    level,msg,propertyId,
+    timestamp:new Date().toISOString(),
+    resolved:false
+  });
+  if(alerts.length>100)alerts.length=100;
+  saveAlerts(alerts);
+}
+
+function renderAlerts(){
+  const alerts=getAlerts().slice(0,30);
+  const body=document.getElementById('alert-log-body');
+  const activeCount=alerts.filter(a=>!a.resolved).length;
+  document.getElementById('alert-count').textContent=activeCount+' ALERT'+(activeCount!==1?'S':'');
+
+  if(!alerts.length){
+    body.innerHTML='<div class="empty-state">No recent alerts.</div>';
+    return;
+  }
+
+  const iconMap={critical:'🔴',warning:'🟡',info:'🔵'};
+  body.innerHTML=alerts.map(a=>{
+    const prop=properties.find(p=>(p.id||p.property_id||p.name)===a.propertyId);
+    return `<div class="alert-row">
+      <span class="alert-icon">${iconMap[a.level]||'⚪'}</span>
+      <div class="alert-content">
+        <div class="alert-msg">${esc(a.msg)}</div>
+        <div class="alert-meta">
+          <span>${prop?esc(prop.name):'—'}</span>
+          <span>${timeAgo(a.timestamp)}</span>
+        </div>
+      </div>
+      <span class="alert-level ${a.level}">${a.level.toUpperCase()}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ── Render All ── */
+function renderAll(){
+  renderKPIs();
+  renderDevices();
+  renderAccessCodes();
+  renderAlerts();
+}
+
+/* ── Demo Data ── */
+function loadDemoData(){
+  if(getDevices().length&&!confirm('This will replace existing device data. Continue?'))return;
+
+  const propIds=properties.map(p=>p.id||p.property_id||p.name);
+  const now=Date.now();
+  const devices=[];
+
+  propIds.slice(0,4).forEach((pid,pi)=>{
+    devices.push({
+      id:`demo-lock-${pi}a`,propertyId:pid,type:'lock',integration:'Schlage',
+      name:'Front Door Lock',location:'entrance',status:'online',
+      locked:true,currentCode:genCode(),battery:85+Math.floor(Math.random()*15),
+      lastActivity:new Date(now-Math.random()*3600000).toISOString(),
+      createdAt:new Date(now-86400000*30).toISOString()
+    });
+    if(pi<3){
+      devices.push({
+        id:`demo-lock-${pi}b`,propertyId:pid,type:'lock',integration:'August',
+        name:'Back Door Lock',location:'entrance',status:pi===2?'offline':'online',
+        locked:pi!==2,currentCode:genCode(),battery:pi===2?12:60+Math.floor(Math.random()*30),
+        lastActivity:new Date(now-Math.random()*7200000).toISOString(),
+        createdAt:new Date(now-86400000*25).toISOString()
+      });
+    }
+    devices.push({
+      id:`demo-thermo-${pi}`,propertyId:pid,type:'thermostat',integration:'Nest',
+      name:'Main Thermostat',location:'indoor',status:'online',
+      currentTemp:68+Math.floor(Math.random()*8),setTemp:72,
+      mode:['heat','cool','auto'][pi%3],battery:70+Math.floor(Math.random()*30),
+      lastActivity:new Date(now-Math.random()*1800000).toISOString(),
+      createdAt:new Date(now-86400000*20).toISOString()
+    });
+    devices.push({
+      id:`demo-noise-${pi}`,propertyId:pid,type:'noise',integration:'Minut',
+      name:'Living Room Monitor',location:'indoor',status:'online',
+      currentDb:pi===1?78:35+Math.floor(Math.random()*25),threshold:70,
+      noiseAlert:pi===1,
+      lastActivity:new Date(now-Math.random()*600000).toISOString(),
+      createdAt:new Date(now-86400000*15).toISOString()
+    });
+    if(pi<2){
+      devices.push({
+        id:`demo-cam-${pi}`,propertyId:pid,type:'camera',integration:'Ring',
+        name:'Front Porch Camera',location:'outdoor',status:'online',
+        lastMotion:new Date(now-Math.random()*3600000*4).toISOString(),
+        storage:'Cloud',nightVision:true,
+        createdAt:new Date(now-86400000*10).toISOString()
+      });
+    }
+  });
+
+  saveDevices(devices);
+
+  const alerts=[
+    {id:'alt-d1',level:'critical',msg:'Noise threshold exceeded — 78 dB at Lakeside Villa',propertyId:propIds[1],timestamp:new Date(now-120000).toISOString(),resolved:false},
+    {id:'alt-d2',level:'warning',msg:'Low battery (12%) — Back Door Lock at Downtown Penthouse',propertyId:propIds[2],timestamp:new Date(now-600000).toISOString(),resolved:false},
+    {id:'alt-d3',level:'warning',msg:'Device offline — Back Door Lock at Downtown Penthouse',propertyId:propIds[2],timestamp:new Date(now-900000).toISOString(),resolved:false},
+    {id:'alt-d4',level:'info',msg:'Front Door Lock unlocked at Mountain View Cabin',propertyId:propIds[0],timestamp:new Date(now-1800000).toISOString(),resolved:false},
+    {id:'alt-d5',level:'info',msg:'Motion detected — Front Porch Camera at Mountain View Cabin',propertyId:propIds[0],timestamp:new Date(now-3600000).toISOString(),resolved:true},
+    {id:'alt-d6',level:'info',msg:'Thermostat adjusted to 72°F at Coastal Retreat',propertyId:propIds[3],timestamp:new Date(now-7200000).toISOString(),resolved:true},
+    {id:'alt-d7',level:'warning',msg:'Noise level rising — 65 dB at Lakeside Villa',propertyId:propIds[1],timestamp:new Date(now-3000000).toISOString(),resolved:true}
+  ];
+  saveAlerts(alerts);
+
+  const codes=[
+    {id:'code-d1',deviceName:'Front Door Lock',propertyId:propIds[0],code:genCode(),guest:'Sarah Johnson',checkIn:'Feb 22, 2026',checkOut:'Feb 25, 2026',type:'guest'},
+    {id:'code-d2',deviceName:'Front Door Lock',propertyId:propIds[1],code:genCode(),guest:'Mike Chen',checkIn:'Feb 21, 2026',checkOut:'Feb 23, 2026',type:'guest'},
+    {id:'code-d3',deviceName:'Front Door Lock',propertyId:propIds[3],code:genCode(),guest:'Emma Williams',checkIn:'Feb 24, 2026',checkOut:'Feb 28, 2026',type:'guest'}
+  ];
+  saveCodes(codes);
+
+  renderAll();
+  toast('Demo data loaded — '+devices.length+' devices across '+propIds.slice(0,4).length+' properties','success');
+}
+
+/* ── Init ── */
+async function init(){
+  await loadProperties();
+  renderAll();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodic Crog-Fortress AI Cluster Reconcile
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Unit=nuc-cluster-orchestrator.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+

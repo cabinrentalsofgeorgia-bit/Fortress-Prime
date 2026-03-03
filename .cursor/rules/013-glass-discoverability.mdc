@@ -1,0 +1,56 @@
+---
+description: Glass Discoverability Mandate — ensures every UI module is natively reachable from the Command Center
+alwaysApply: true
+---
+
+# GLASS DISCOVERABILITY MANDATE (Amendment XIV)
+
+**Effective Date:** 2026-02-23
+**Classification:** Engineering Standard — Enforced
+
+## I. THE PRINCIPLE
+
+No UI module, dashboard, or operational glass shall be built as an orphaned route. Every new feature must be natively discoverable from the primary Command Center (`tools/dashboard.html` served at `/` by `tools/master_console.py`).
+
+A feature that exists only as a bare URL is not a feature — it is a prototype. Production features are integrated into the navigation surface or they are not done.
+
+## II. REQUIRED INTEGRATION POINTS
+
+When creating a new frontend view, the agent MUST update **all** of the following before declaring the work complete:
+
+1. **Quick Access Grid** — Add a card to the "Quick Access" grid (or equivalent main hub section) in `tools/dashboard.html`. The card must include an icon, a human-readable title, a one-line description, and a working `href` to the new route.
+2. **Global Navigation** — Add the new page to the appropriate dropdown menu or sidebar section in the Command Center header/nav bar. If the page belongs to an existing domain (VRS, Legal, Operations), nest it under that domain's dropdown. If it represents a new domain, propose a new nav group.
+3. **Proxy Route** — Ensure `tools/master_console.py` has a `GET` route that serves the HTML file **and** any required `/api/vrs/*` proxy routes for the page's data fetching.
+
+## III. VISUAL CONSISTENCY
+
+1. New navigation cards and links must perfectly match the existing CSS styling, icon weight, and hover states of the surrounding UI elements.
+2. Card backgrounds, border radii, text colors, and spacing must be inherited from the established design system (`#000` background, `#111` card, `#1a1a1a` border, `#4ade80` primary accent, `#4fd1c5` secondary accent, `#fff`/`#888` text).
+3. Do not introduce new icon libraries, font families, or color tokens without explicit Human approval.
+
+## IV. FORBIDDEN PATTERNS
+
+1. **DO NOT** build a new HTML page without adding it to the Command Center navigation surface.
+2. **DO NOT** rely on the user manually typing URLs (e.g., `localhost:9800/new-feature`) to access production features.
+3. **DO NOT** create a proxy route in `master_console.py` without a corresponding navigation link on the dashboard.
+4. **DO NOT** add navigation entries that point to dead routes or unimplemented pages.
+5. **DO NOT** add a feature to only one integration point (e.g., nav bar but not Quick Access). Both must be updated.
+
+## V. VERIFICATION PROTOCOL
+
+Before declaring any new UI module complete:
+
+1. Load `tools/dashboard.html` in the browser and confirm the new card appears in the Quick Access grid with correct styling.
+2. Confirm the nav bar dropdown contains the new link and it navigates to the correct page.
+3. Confirm the page loads without errors from the Command Center route (not from a raw `localhost:port` URL).
+4. Confirm all API proxy routes for the new page return data (not 404/502).
+
+## VI. CANONICAL FILE REFERENCES
+
+| File | Relevance |
+|---|---|
+| `tools/dashboard.html` | Primary Command Center hub — Quick Access grid lives here |
+| `tools/master_console.py` | Route definitions and API proxy — serves all HTML pages |
+| `tools/fortress_nav.py` | Shared navigation bar component (if used) |
+| `.cursor/rules/004-quality-gate.mdc` | Quality Gate — browser verification mandate (referenced, not duplicated) |
+| `.cursor/rules/002-sovereign-constitution.mdc` | VRS navigation structure (canonical nav order lives there) |

@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Contracts &amp; E-Sign</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-dd-icon{font-size:13px;width:18px;text-align:center;flex-shrink:0}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:24px}
+
+/* ── KPI Banner ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a;
+  display:flex;align-items:center;justify-content:space-between}
+
+/* ── Filter Bar ── */
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:8px;border:1px solid #222;background:#111;
+  color:#888;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;
+  text-transform:uppercase;letter-spacing:.04em}
+.filter-btn:hover{color:#fff;border-color:#333}
+.filter-btn.active{color:#fff;background:rgba(74,222,128,.1);border-color:#4ade80}
+.filter-search{padding:6px 14px;border-radius:8px;border:1px solid #222;background:#111;
+  color:#ccc;font-size:12px;font-family:inherit;outline:none;min-width:240px;transition:border-color .15s}
+.filter-search:focus{border-color:#4ade80;box-shadow:0 0 0 2px rgba(74,222,128,.15)}
+.filter-search::placeholder{color:#555}
+
+/* ── Table ── */
+.table-wrap{background:#111;border:1px solid #1a1a1a;border-radius:14px;overflow:hidden;margin-bottom:32px}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;
+  border-bottom:1px solid #1a1a1a}
+.table-header h3{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;
+  display:flex;align-items:center;gap:8px}
+.table-count{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80}
+.table-scroll{max-height:calc(100vh - 380px);overflow-y:auto}
+table{width:100%;border-collapse:collapse}
+thead{position:sticky;top:0;z-index:5}
+th{background:#0a0a0a;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;
+  color:#555;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #1a1a1a}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid #0d0d0d;color:#ccc}
+tr.contract-row{transition:background .12s}
+tr.contract-row:hover{background:rgba(255,255,255,.03)}
+
+/* ── Status Badges ── */
+.status-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.st-pending{background:rgba(251,191,36,.12);color:#fbbf24}
+.st-sent{background:rgba(96,165,250,.12);color:#60a5fa}
+.st-signed{background:rgba(74,222,128,.12);color:#4ade80}
+.st-expired{background:rgba(248,113,113,.12);color:#f87171}
+.st-voided{background:rgba(168,85,247,.12);color:#a78bfa}
+.st-draft{background:rgba(100,100,100,.15);color:#888}
+
+/* ── Action Buttons ── */
+.action-btn{padding:5px 12px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#ccc;
+  font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;
+  transition:all .15s;white-space:nowrap}
+.action-btn:hover{border-color:#4ade80;color:#4ade80}
+.action-btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-send{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:#4ade80}
+.btn-send:hover:not(:disabled){background:rgba(74,222,128,.2)}
+.btn-resend{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:#60a5fa}
+.btn-resend:hover:not(:disabled){background:rgba(96,165,250,.2)}
+.btn-view{background:rgba(79,209,197,.08);border-color:rgba(79,209,197,.3);color:#4fd1c5}
+.btn-view:hover:not(:disabled){background:rgba(79,209,197,.18)}
+.btn-void{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.3);color:#f87171}
+.btn-void:hover:not(:disabled){background:rgba(248,113,113,.15)}
+.action-group{display:flex;gap:6px}
+
+/* ── Template Cards ── */
+.tmpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:32px}
+.tmpl-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  transition:all .15s;display:flex;flex-direction:column;gap:12px}
+.tmpl-card:hover{border-color:#4fd1c5;background:#0d1a1a}
+.tmpl-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.tmpl-card-title{font-size:14px;font-weight:700;color:#fff;line-height:1.4}
+.tmpl-card-type{font-size:9px;padding:3px 8px;border-radius:5px;font-weight:700;
+  background:rgba(79,209,197,.12);color:#4fd1c5;text-transform:uppercase;letter-spacing:.04em;
+  white-space:nowrap;flex-shrink:0}
+.tmpl-card-desc{font-size:12px;color:#888;line-height:1.5}
+.tmpl-card-meta{display:flex;gap:16px;font-size:10px;color:#555}
+.tmpl-card-meta span{display:flex;align-items:center;gap:4px}
+.tmpl-card-actions{display:flex;gap:8px;margin-top:auto}
+.tmpl-btn{padding:6px 14px;border-radius:8px;border:1px solid #222;background:#1a1a1a;
+  color:#ccc;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;
+  letter-spacing:.04em;transition:all .15s}
+.tmpl-btn:hover{border-color:#4fd1c5;color:#4fd1c5}
+.tmpl-btn-primary{background:rgba(79,209,197,.1);border-color:rgba(79,209,197,.3);color:#4fd1c5}
+.tmpl-btn-primary:hover{background:rgba(79,209,197,.2)}
+
+/* ── Empty State ── */
+.empty-state{text-align:center;padding:40px 20px;color:#555;font-size:13px}
+.empty-state-icon{font-size:36px;margin-bottom:12px;opacity:.5}
+.empty-state-title{font-size:14px;font-weight:600;color:#888;margin-bottom:6px}
+
+/* ── Loading Spinner ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #333;
+  border-top-color:#4ade80;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-wrap{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:#666;font-size:12px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .25s;pointer-events:none;max-width:400px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-ok{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-err{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+.toast-info{background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.25)}
+
+/* ── Modal Overlay ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:#111;border:1px solid #222;border-radius:14px;width:540px;max-width:90vw;
+  max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;
+  border-bottom:1px solid #1a1a1a}
+.modal-header h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.modal-close{background:none;border:none;color:#666;font-size:18px;cursor:pointer;
+  padding:4px 8px;border-radius:6px;transition:all .15s}
+.modal-close:hover{color:#fff;background:rgba(255,255,255,.06)}
+.modal-body{padding:20px 24px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;
+  border-top:1px solid #1a1a1a}
+.form-group{margin-bottom:16px}
+.form-label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;
+  letter-spacing:.04em;display:block;margin-bottom:6px}
+.form-input,.form-select{background:#0a0a0a;border:1px solid #222;border-radius:8px;
+  color:#ccc;padding:10px 12px;font-size:12px;font-family:inherit;width:100%;
+  outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus{border-color:#4fd1c5;box-shadow:0 0 0 2px rgba(79,209,197,.15)}
+.form-select{appearance:none;-webkit-appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+
+/* ── Responsive ── */
+@media(max-width:960px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .tmpl-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:1fr}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .filter-search{min-width:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">🧹 Housekeeping</a><a class="fn-dd-item fn-dd-active" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>&#9998;&ensp;Contracts &amp; <span>E-Sign</span></h1>
+  <div class="hdr-right">
+    <span class="hdr-badge" id="contractsBadge">loading...</span>
+    <button class="action-btn btn-send" onclick="openNewContractModal()">+ New Contract</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val teal" id="kpiTotal">—</div>
+      <div class="kpi-label">Total Contracts</div>
+      <div class="kpi-sub" id="kpiTotalSub">all time</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val amber" id="kpiPending">—</div>
+      <div class="kpi-label">Pending Signatures</div>
+      <div class="kpi-sub" id="kpiPendingSub">awaiting guest</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val green" id="kpiSigned">—</div>
+      <div class="kpi-label">Signed</div>
+      <div class="kpi-sub" id="kpiSignedSub">completed</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val purple" id="kpiTemplates">—</div>
+      <div class="kpi-label">Templates</div>
+      <div class="kpi-sub" id="kpiTemplatesSub">available</div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <input type="text" class="filter-search" id="contractSearch" placeholder="&#128269; Search guest, property, or template..." oninput="debounceFilter()">
+    <button class="filter-btn active" data-status="all" onclick="setStatusFilter('all',this)">All</button>
+    <button class="filter-btn" data-status="pending" onclick="setStatusFilter('pending',this)">Pending</button>
+    <button class="filter-btn" data-status="signed" onclick="setStatusFilter('signed',this)">Signed</button>
+    <button class="filter-btn" data-status="expired" onclick="setStatusFilter('expired',this)">Expired</button>
+    <button class="filter-btn" data-status="voided" onclick="setStatusFilter('voided',this)">Voided</button>
+  </div>
+
+  <!-- CONTRACTS TABLE -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <h3>&#128203; Agreements <span class="table-count" id="tableCount">0</span></h3>
+      <button class="action-btn" onclick="loadContracts()" title="Refresh">&#8635; Refresh</button>
+    </div>
+    <div class="table-scroll" id="tableScroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Guest</th>
+            <th>Property</th>
+            <th>Template</th>
+            <th>Status</th>
+            <th>Sent</th>
+            <th>Signed</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="contractsBody">
+          <tr><td colspan="7"><div class="loading-wrap"><span class="spinner"></span> Loading contracts...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TEMPLATES SECTION -->
+  <div class="section-head">
+    <span>&#128196; Contract Templates</span>
+    <button class="tmpl-btn tmpl-btn-primary" onclick="openNewTemplateModal()">+ New Template</button>
+  </div>
+  <div class="tmpl-grid" id="templatesGrid">
+    <div class="loading-wrap"><span class="spinner"></span> Loading templates...</div>
+  </div>
+
+</div>
+
+<!-- NEW CONTRACT MODAL -->
+<div class="modal-overlay" id="newContractModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>&#9998; Send New Contract</h3>
+      <button class="modal-close" onclick="closeModal('newContractModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Guest Name</label>
+        <input type="text" class="form-input" id="ncGuest" placeholder="Enter guest name or email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Guest Email</label>
+        <input type="email" class="form-input" id="ncEmail" placeholder="guest@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Property</label>
+        <input type="text" class="form-input" id="ncProperty" placeholder="Property name or unit">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contract Template</label>
+        <select class="form-select" id="ncTemplate">
+          <option value="">Select a template...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <input type="text" class="form-input" id="ncNotes" placeholder="Additional notes...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="action-btn" onclick="closeModal('newContractModal')">Cancel</button>
+      <button class="action-btn btn-send" id="ncSubmitBtn" onclick="submitNewContract()">Send for Signature</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW TEMPLATE MODAL -->
+<div class="modal-overlay" id="newTemplateModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>&#128196; New Template</h3>
+      <button class="modal-close" onclick="closeModal('newTemplateModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Template Name</label>
+        <input type="text" class="form-input" id="ntName" placeholder="e.g. Standard Rental Agreement">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="ntType">
+          <option value="rental_agreement">Rental Agreement</option>
+          <option value="damage_waiver">Damage Waiver</option>
+          <option value="pet_addendum">Pet Addendum</option>
+          <option value="pool_liability">Pool / Liability Waiver</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" class="form-input" id="ntDesc" placeholder="Brief description of this template">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="action-btn" onclick="closeModal('newTemplateModal')">Cancel</button>
+      <button class="action-btn btn-send" onclick="submitNewTemplate()">Create Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTRACT DETAIL MODAL -->
+<div class="modal-overlay" id="contractDetailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>&#128203; Contract Details</h3>
+      <button class="modal-close" onclick="closeModal('contractDetailModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="contractDetailBody"></div>
+    <div class="modal-footer" id="contractDetailFooter"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Nav ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── State ── */
+var allContracts=[];
+var allTemplates=[];
+var currentFilter='all';
+var searchQuery='';
+var debounceTimer=null;
+
+/* ── API helpers ── */
+function api(url,opts){
+  return fetch(url,Object.assign({credentials:'include'},opts||{}))
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    });
+}
+
+/* ── Toast ── */
+function showToast(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast toast-'+(type||'ok')+' show';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(function(){t.classList.remove('show')},3500);
+}
+
+/* ── Modal helpers ── */
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(function(el){
+  el.addEventListener('click',function(e){if(e.target===el) el.classList.remove('open')});
+});
+
+/* ── Load Dashboard Stats ── */
+async function loadDashboard(){
+  try{
+    var stats=await api('/api/vrs/agreements/dashboard');
+    document.getElementById('kpiTotal').textContent=stats.total||stats.total_agreements||0;
+    document.getElementById('kpiPending').textContent=stats.pending||stats.pending_signatures||0;
+    document.getElementById('kpiSigned').textContent=stats.signed||stats.completed||0;
+    document.getElementById('kpiTemplates').textContent=stats.templates||stats.template_count||0;
+    if(stats.this_month!==undefined) document.getElementById('kpiTotalSub').textContent=stats.this_month+' this month';
+    if(stats.overdue!==undefined) document.getElementById('kpiPendingSub').textContent=stats.overdue+' overdue';
+    document.getElementById('contractsBadge').textContent=(stats.total||stats.total_agreements||0)+' contracts';
+  }catch(e){
+    document.getElementById('contractsBadge').textContent='offline';
+    ['kpiTotal','kpiPending','kpiSigned','kpiTemplates'].forEach(function(id){
+      document.getElementById(id).textContent='0';
+    });
+  }
+}
+
+/* ── Load Contracts ── */
+async function loadContracts(){
+  var tbody=document.getElementById('contractsBody');
+  tbody.innerHTML='<tr><td colspan="7"><div class="loading-wrap"><span class="spinner"></span> Loading contracts...</div></td></tr>';
+  try{
+    var data=await api('/api/vrs/agreements');
+    allContracts=Array.isArray(data)?data:(data.agreements||data.data||[]);
+    renderContracts();
+  }catch(e){
+    allContracts=[];
+    tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">&#128203;</div><div class="empty-state-title">No contracts yet</div>Connect your e-sign provider or create your first contract above.</div></td></tr>';
+    document.getElementById('tableCount').textContent='0';
+  }
+}
+
+function renderContracts(){
+  var tbody=document.getElementById('contractsBody');
+  var filtered=allContracts.filter(function(c){
+    if(currentFilter!=='all'){
+      var st=(c.status||'').toLowerCase();
+      if(st!==currentFilter) return false;
+    }
+    if(searchQuery){
+      var q=searchQuery.toLowerCase();
+      var haystack=[c.guest_name,c.guest_email,c.property_name,c.property,c.template_name,c.template].join(' ').toLowerCase();
+      if(haystack.indexOf(q)===-1) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('tableCount').textContent=filtered.length;
+
+  if(filtered.length===0){
+    var msg=allContracts.length===0?'No contracts yet — send your first agreement above.':'No contracts match the current filters.';
+    tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">&#128203;</div><div class="empty-state-title">'+msg+'</div></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML=filtered.map(function(c,i){
+    var st=(c.status||'draft').toLowerCase();
+    var stClass='st-'+st;
+    var sentDate=c.sent_date||c.sent_at||c.created_at||'—';
+    var signedDate=c.signed_date||c.signed_at||'—';
+    if(sentDate!=='—') sentDate=formatDate(sentDate);
+    if(signedDate!=='—') signedDate=formatDate(signedDate);
+    var guest=esc(c.guest_name||c.guest_email||'Unknown Guest');
+    var prop=esc(c.property_name||c.property||'—');
+    var tmpl=esc(c.template_name||c.template||'—');
+    var actions=buildActions(c,i);
+
+    return '<tr class="contract-row">'+
+      '<td><strong>'+guest+'</strong>'+(c.guest_email?'<br><span style="font-size:10px;color:#666">'+esc(c.guest_email)+'</span>':'')+'</td>'+
+      '<td>'+prop+'</td>'+
+      '<td>'+tmpl+'</td>'+
+      '<td><span class="status-badge '+stClass+'">'+esc(st)+'</span></td>'+
+      '<td style="font-size:11px;color:#888">'+sentDate+'</td>'+
+      '<td style="font-size:11px;color:#888">'+signedDate+'</td>'+
+      '<td><div class="action-group">'+actions+'</div></td>'+
+      '</tr>';
+  }).join('');
+}
+
+function buildActions(c,idx){
+  var st=(c.status||'').toLowerCase();
+  var btns='<button class="action-btn btn-view" onclick="viewContract('+idx+')" title="View details">View</button>';
+  if(st==='draft'||st==='pending'){
+    btns+='<button class="action-btn btn-resend" onclick="resendContract('+idx+')" title="Resend">Resend</button>';
+  }
+  if(st!=='voided'&&st!=='signed'){
+    btns+='<button class="action-btn btn-void" onclick="voidContract('+idx+')" title="Void">Void</button>';
+  }
+  return btns;
+}
+
+/* ── Load Templates ── */
+async function loadTemplates(){
+  var grid=document.getElementById('templatesGrid');
+  grid.innerHTML='<div class="loading-wrap"><span class="spinner"></span> Loading templates...</div>';
+  try{
+    var data=await api('/api/vrs/agreements/templates');
+    allTemplates=Array.isArray(data)?data:(data.templates||data.data||[]);
+    renderTemplates();
+    populateTemplateSelect();
+  }catch(e){
+    allTemplates=[];
+    grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">&#128196;</div><div class="empty-state-title">No templates yet</div>Create your first contract template to get started.</div>';
+    document.getElementById('kpiTemplates').textContent='0';
+  }
+}
+
+function renderTemplates(){
+  var grid=document.getElementById('templatesGrid');
+  if(allTemplates.length===0){
+    grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">&#128196;</div><div class="empty-state-title">No templates yet</div>Create your first contract template to get started.</div>';
+    return;
+  }
+  grid.innerHTML=allTemplates.map(function(t,i){
+    var type=t.type||t.template_type||'custom';
+    var name=esc(t.name||t.template_name||'Untitled Template');
+    var desc=esc(t.description||t.desc||'No description provided.');
+    var used=t.usage_count||t.times_used||0;
+    var updated=t.updated_at||t.modified_at||t.created_at||'';
+    if(updated) updated=formatDate(updated);
+
+    return '<div class="tmpl-card">'+
+      '<div class="tmpl-card-header">'+
+        '<div class="tmpl-card-title">'+name+'</div>'+
+        '<span class="tmpl-card-type">'+esc(type.replace(/_/g,' '))+'</span>'+
+      '</div>'+
+      '<div class="tmpl-card-desc">'+desc+'</div>'+
+      '<div class="tmpl-card-meta">'+
+        '<span>&#128203; Used '+used+' times</span>'+
+        (updated?'<span>&#128197; '+updated+'</span>':'')+
+      '</div>'+
+      '<div class="tmpl-card-actions">'+
+        '<button class="tmpl-btn tmpl-btn-primary" onclick="useTemplate('+i+')">Use Template</button>'+
+        '<button class="tmpl-btn" onclick="previewTemplate('+i+')">Preview</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function populateTemplateSelect(){
+  var sel=document.getElementById('ncTemplate');
+  var opts='<option value="">Select a template...</option>';
+  allTemplates.forEach(function(t){
+    var id=t.id||t.template_id||'';
+    var name=esc(t.name||t.template_name||'Untitled');
+    opts+='<option value="'+id+'">'+name+'</option>';
+  });
+  sel.innerHTML=opts;
+}
+
+/* ── Filter Logic ── */
+function setStatusFilter(status,btn){
+  currentFilter=status;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  renderContracts();
+}
+
+function debounceFilter(){
+  clearTimeout(debounceTimer);
+  debounceTimer=setTimeout(function(){
+    searchQuery=document.getElementById('contractSearch').value.trim();
+    renderContracts();
+  },250);
+}
+
+/* ── Contract Actions ── */
+function viewContract(idx){
+  var c=getFilteredContracts()[idx]||allContracts[idx];
+  if(!c) return;
+  var body=document.getElementById('contractDetailBody');
+  var footer=document.getElementById('contractDetailFooter');
+  var st=(c.status||'draft').toLowerCase();
+
+  body.innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
+      field('Guest',c.guest_name||c.guest_email||'—')+
+      field('Email',c.guest_email||'—')+
+      field('Property',c.property_name||c.property||'—')+
+      field('Template',c.template_name||c.template||'—')+
+      field('Status','<span class="status-badge st-'+st+'">'+st+'</span>')+
+      field('Sent',formatDate(c.sent_date||c.sent_at||c.created_at)||'—')+
+      field('Signed',formatDate(c.signed_date||c.signed_at)||'—')+
+      field('Expires',formatDate(c.expires_at||c.expiry_date)||'—')+
+    '</div>'+
+    (c.notes?'<div style="margin-top:16px">'+field('Notes',esc(c.notes))+'</div>':'')+
+    (c.signing_url?'<div style="margin-top:16px"><a href="'+esc(c.signing_url)+'" target="_blank" style="color:#4fd1c5;font-size:12px">&#128279; Open signing link</a></div>':'');
+
+  var btns='<button class="action-btn" onclick="closeModal(\'contractDetailModal\')">Close</button>';
+  if(st==='pending'||st==='draft'){
+    btns+='<button class="action-btn btn-resend" onclick="resendContractById(\''+esc(c.id||c.agreement_id||'')+'\')">Resend</button>';
+  }
+  footer.innerHTML=btns;
+  openModal('contractDetailModal');
+}
+
+function field(label,val){
+  return '<div style="margin-bottom:8px"><div class="form-label" style="margin-bottom:4px">'+label+'</div><div style="font-size:13px;color:#ccc">'+val+'</div></div>';
+}
+
+function getFilteredContracts(){
+  return allContracts.filter(function(c){
+    if(currentFilter!=='all'&&(c.status||'').toLowerCase()!==currentFilter) return false;
+    if(searchQuery){
+      var q=searchQuery.toLowerCase();
+      var h=[c.guest_name,c.guest_email,c.property_name,c.property,c.template_name,c.template].join(' ').toLowerCase();
+      if(h.indexOf(q)===-1) return false;
+    }
+    return true;
+  });
+}
+
+async function resendContract(idx){
+  var c=getFilteredContracts()[idx]||allContracts[idx];
+  if(!c) return;
+  var id=c.id||c.agreement_id;
+  if(!id){showToast('No contract ID found','err');return}
+  await resendContractById(id);
+}
+
+async function resendContractById(id){
+  try{
+    await api('/api/vrs/agreements/'+id+'/resend',{method:'POST'});
+    showToast('Contract resent successfully','ok');
+  }catch(e){
+    showToast('Failed to resend contract','err');
+  }
+}
+
+async function voidContract(idx){
+  var c=getFilteredContracts()[idx]||allContracts[idx];
+  if(!c) return;
+  var id=c.id||c.agreement_id;
+  if(!id){showToast('No contract ID found','err');return}
+  if(!confirm('Void this contract for '+(c.guest_name||'this guest')+'? This cannot be undone.')) return;
+  try{
+    await api('/api/vrs/agreements/'+id+'/void',{method:'POST'});
+    showToast('Contract voided','ok');
+    loadContracts();
+    loadDashboard();
+  }catch(e){
+    showToast('Failed to void contract','err');
+  }
+}
+
+/* ── New Contract ── */
+function openNewContractModal(){
+  document.getElementById('ncGuest').value='';
+  document.getElementById('ncEmail').value='';
+  document.getElementById('ncProperty').value='';
+  document.getElementById('ncTemplate').selectedIndex=0;
+  document.getElementById('ncNotes').value='';
+  openModal('newContractModal');
+}
+
+async function submitNewContract(){
+  var guest=document.getElementById('ncGuest').value.trim();
+  var email=document.getElementById('ncEmail').value.trim();
+  var prop=document.getElementById('ncProperty').value.trim();
+  var tmpl=document.getElementById('ncTemplate').value;
+  if(!guest||!email){showToast('Guest name and email are required','err');return}
+  if(!tmpl){showToast('Please select a template','err');return}
+
+  var btn=document.getElementById('ncSubmitBtn');
+  btn.disabled=true;
+  btn.textContent='Sending...';
+
+  try{
+    await api('/api/vrs/agreements',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        guest_name:guest,
+        guest_email:email,
+        property_name:prop,
+        template_id:tmpl,
+        notes:document.getElementById('ncNotes').value.trim()
+      })
+    });
+    showToast('Contract sent for signature','ok');
+    closeModal('newContractModal');
+    loadContracts();
+    loadDashboard();
+  }catch(e){
+    showToast('Failed to send contract: '+e.message,'err');
+  }finally{
+    btn.disabled=false;
+    btn.textContent='Send for Signature';
+  }
+}
+
+/* ── Template Actions ── */
+function useTemplate(idx){
+  var t=allTemplates[idx];
+  if(!t) return;
+  openNewContractModal();
+  var sel=document.getElementById('ncTemplate');
+  var id=t.id||t.template_id||'';
+  for(var i=0;i<sel.options.length;i++){
+    if(sel.options[i].value==id){sel.selectedIndex=i;break}
+  }
+}
+
+function previewTemplate(idx){
+  var t=allTemplates[idx];
+  if(!t) return;
+  var body=document.getElementById('contractDetailBody');
+  var footer=document.getElementById('contractDetailFooter');
+  var type=t.type||t.template_type||'custom';
+
+  body.innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
+      field('Template Name',esc(t.name||t.template_name||'Untitled'))+
+      field('Type','<span class="tmpl-card-type">'+esc(type.replace(/_/g,' '))+'</span>')+
+      field('Description',esc(t.description||t.desc||'—'))+
+      field('Usage Count',(t.usage_count||t.times_used||0)+' contracts')+
+    '</div>';
+
+  footer.innerHTML='<button class="action-btn" onclick="closeModal(\'contractDetailModal\')">Close</button>'+
+    '<button class="action-btn btn-send" onclick="closeModal(\'contractDetailModal\');useTemplate('+idx+')">Use Template</button>';
+
+  document.querySelector('#contractDetailModal .modal-header h3').innerHTML='&#128196; Template Preview';
+  openModal('contractDetailModal');
+}
+
+function openNewTemplateModal(){
+  document.getElementById('ntName').value='';
+  document.getElementById('ntType').selectedIndex=0;
+  document.getElementById('ntDesc').value='';
+  openModal('newTemplateModal');
+}
+
+async function submitNewTemplate(){
+  var name=document.getElementById('ntName').value.trim();
+  var type=document.getElementById('ntType').value;
+  var desc=document.getElementById('ntDesc').value.trim();
+  if(!name){showToast('Template name is required','err');return}
+
+  try{
+    await api('/api/vrs/agreements/templates',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,type:type,description:desc})
+    });
+    showToast('Template created successfully','ok');
+    closeModal('newTemplateModal');
+    loadTemplates();
+    loadDashboard();
+  }catch(e){
+    showToast('Failed to create template: '+e.message,'err');
+  }
+}
+
+/* ── Helpers ── */
+function esc(s){
+  if(!s) return '';
+  var d=document.createElement('div');
+  d.textContent=String(s);
+  return d.innerHTML;
+}
+
+function formatDate(d){
+  if(!d||d==='—') return '';
+  try{
+    var dt=new Date(d);
+    if(isNaN(dt.getTime())) return String(d);
+    return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  }catch(e){return String(d)}
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded',function(){
+  loadUser();
+  loadDashboard();
+  loadContracts();
+  loadTemplates();
+});
+</script>
+</body>
+</html>

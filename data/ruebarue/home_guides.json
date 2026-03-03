@@ -1,0 +1,171 @@
+{
+  "extracted_at": "2026-02-17T12:35:19.879291",
+  "count": 13,
+  "architecture_note": "RueBaRue uses a Master Home Guide (shared template) + per-property macro values. The guide content for each property is the master guide with property-specific substitutions.",
+  "master_guide_ref": "data/ruebarue/master_guide.json",
+  "master_guide_summary": {
+    "categories": [
+      "Your Stay",
+      "Your Stay",
+      "Your Stay",
+      "About Our Home",
+      "About Our Home",
+      "About Our Home",
+      "Check-out Procedures",
+      "Check-out Procedures",
+      "Check-out Procedures",
+      "Rental Rules",
+      "Rental Rules",
+      "Rental Rules",
+      "Emergency Info",
+      "Emergency Info",
+      "Emergency Info"
+    ],
+    "total_items": 70
+  },
+  "properties": [
+    {
+      "name": "Skyfall",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/5803921146875897",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/5803921146875897",
+        "https://guide.ruebarue.com/rental/5803921146875897/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Chase Mountain Dreams",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/3868694481896529",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/3868694481896529",
+        "https://guide.ruebarue.com/rental/3868694481896529/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Cohutta Sunset",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/5933000618278912",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/5933000618278912",
+        "https://guide.ruebarue.com/rental/5933000618278912/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Serendipity on Noontootla Creek",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/6456035964223488",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/6456035964223488",
+        "https://guide.ruebarue.com/rental/6456035964223488/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Creekside Green",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/4682902439788544",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/4682902439788544",
+        "https://guide.ruebarue.com/rental/4682902439788544/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Riverview Lodge",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/4882481414012928",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/4882481414012928",
+        "https://guide.ruebarue.com/rental/4882481414012928/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Fallen Timber Lodge",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/5441254545293312",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/5441254545293312",
+        "https://guide.ruebarue.com/rental/5441254545293312/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Aska Escape Lodge",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/6391583034179584",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/6391583034179584",
+        "https://guide.ruebarue.com/rental/6391583034179584/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "The Rivers Edge",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/5771841634172928",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/5771841634172928",
+        "https://guide.ruebarue.com/rental/5771841634172928/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "High Hopes",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/6006558509891584",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/6006558509891584",
+        "https://guide.ruebarue.com/rental/6006558509891584/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Above the Timberline",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/6301698294153216",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/6301698294153216",
+        "https://guide.ruebarue.com/rental/6301698294153216/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Blue Ridge Lake Sanctuary",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/6044007705477120",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/6044007705477120",
+        "https://guide.ruebarue.com/rental/6044007705477120/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    },
+    {
+      "name": "Cherokee Sunrise on Noontootla Creek",
+      "address": "Address",
+      "rental_url": "https://guide.ruebarue.com/rental/5415936786825216",
+      "guide_links": [
+        "https://guide.ruebarue.com/rental/5415936786825216",
+        "https://guide.ruebarue.com/rental/5415936786825216/print"
+      ],
+      "master_guide_template": true,
+      "note": "Per-property guides use the Master Home Guide template with property-specific macro substitution ([PropertyId], [PropertyAddress], [WifiSecurityKey], etc.)"
+    }
+  ]
+}

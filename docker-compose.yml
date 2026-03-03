@@ -508,10 +508,14 @@ services:
     image: qdrant/qdrant:v1.13.2
     platform: linux/arm64
     container_name: fortress-qdrant
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6333:6333"
-      - "127.0.0.1:6334:6334"
+      - "0.0.0.0:6333:6333"
+      - "0.0.0.0:6334:6334"
     volumes:
       - /home/admin/fortress_qdrant_data:/qdrant/storage
     environment:

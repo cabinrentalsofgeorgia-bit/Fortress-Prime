@@ -20,14 +20,18 @@ except ImportError:
 
 load_dotenv()
 
+# Canonical market simulator switch.
+# This file is the single retained simulator after de-duplication.
+SIMULATION_MODE = True
+
 # --- CONFIGURATION ---
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
 
-# Use analyst_writer user for data ingestion
-DB_USER = "analyst_writer"
-DB_PASSWORD = "6652201a"
+# Use .env for credentials (align with vault)
+DB_USER = os.getenv("DB_USER", "miner_bot")
+DB_PASSWORD = os.getenv("DB_PASSWORD", os.getenv("DB_PASS", ""))
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
@@ -218,6 +222,7 @@ def main_loop():
     print("🛡️  FORTRESS PRIME - FLEET COMMANDER")
     print("=" * 60)
     print(f"📡 Database: {DB_NAME}@{DB_HOST}:{DB_PORT}")
+    print(f"🧪 Simulation mode: {'ENABLED' if SIMULATION_MODE else 'DISABLED'}")
     print(f"👤 User: {DB_USER}")
     print(f"📅 Target Date: {TARGET_DATE}")
     print(f"⏱️  Check Interval: 10 seconds")
@@ -250,13 +255,37 @@ def main_loop():
     except Exception as e:
         print(f"\n\n❌ Unexpected error in main loop: {e}")
         print(f"   Error type: {type(e).__name__}")
-        print("   Fleet Commander will restart in 10 seconds...")
-        time.sleep(10)
-        main_loop()  # Restart
+        raise
+
+
+MAX_RESTARTS = 5
+
+
+def run_with_bounds():
+    """Bounded restart wrapper — prevents infinite recursion on persistent errors."""
+    restart_count = 0
+    while restart_count < MAX_RESTARTS:
+        try:
+            main_loop()
+            break  # Clean exit (KeyboardInterrupt handled internally)
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            restart_count += 1
+            print(f"   Fleet Commander restart {restart_count}/{MAX_RESTARTS}. Error: {e}")
+            if restart_count >= MAX_RESTARTS:
+                print("=" * 60)
+                print("P0-CRITICAL: Fleet Commander exceeded max restarts.")
+                print("Manual intervention required. Exiting.")
+                print("=" * 60)
+                sys.exit(1)
+            print(f"   Restarting in 10 seconds...")
+            time.sleep(10)
 
 
 if __name__ == "__main__":
-    # Verify database connection before starting
+    import sys
+
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -264,6 +293,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
         print(f"   Please ensure PostgreSQL is running and accessible at {DATABASE_URL}")
-        exit(1)
-    
-    main_loop()
+        sys.exit(1)
+
+    run_with_bounds()

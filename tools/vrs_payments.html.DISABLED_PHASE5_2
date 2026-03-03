@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Payments</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.04em}
+.hdr-badge-ok{background:rgba(74,222,128,.12);color:#4ade80}
+.hdr-badge-warn{background:rgba(251,191,36,.12);color:#fbbf24}
+.hdr-badge-err{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:24px}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Filter Bar ── */
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:8px;border:1px solid #222;background:#111;
+  color:#888;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;
+  text-transform:uppercase;letter-spacing:.04em}
+.filter-btn:hover{color:#fff;border-color:#333}
+.filter-btn.active{color:#fff;background:rgba(74,222,128,.1);border-color:#4ade80}
+.search-input{padding:6px 12px;border-radius:8px;border:1px solid #222;background:#111;
+  color:#ccc;font-size:11px;font-family:inherit;outline:none;min-width:260px;transition:border-color .15s}
+.search-input:focus{border-color:#4ade80;box-shadow:0 0 0 2px rgba(74,222,128,.15)}
+.search-input::placeholder{color:#555}
+
+/* ── Panels ── */
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;margin-bottom:24px;overflow:hidden}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-teal{background:rgba(79,209,197,.12);color:#4fd1c5}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+.badge-blue{background:rgba(96,165,250,.12);color:#60a5fa}
+.badge-red{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Two-Column ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+
+/* ── Data Table ── */
+.table-wrap{background:#111;border:1px solid #1a1a1a;border-radius:14px;overflow:hidden;margin-bottom:24px}
+.table-scroll{max-height:calc(100vh - 340px);overflow-y:auto}
+table{width:100%;border-collapse:collapse}
+thead{position:sticky;top:0;z-index:5}
+th{background:#0a0a0a;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;
+  color:#555;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #1a1a1a}
+th.right{text-align:right}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid #0d0d0d;color:#ccc}
+td.right{text-align:right}
+td.mono{font-family:'SF Mono',Consolas,monospace;font-size:11px}
+td.code-col{font-family:'SF Mono',Consolas,monospace;color:#60a5fa;font-weight:600;font-size:11px}
+td.amount-col{font-family:'SF Mono',Consolas,monospace;color:#4ade80;font-weight:600}
+tr.pay-row{transition:background .12s}
+tr.pay-row:hover{background:rgba(255,255,255,.03)}
+
+/* ── Status Badges ── */
+.status-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.st-paid{background:rgba(74,222,128,.12);color:#4ade80}
+.st-partial{background:rgba(251,191,36,.12);color:#fbbf24}
+.st-unpaid{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Action Buttons ── */
+.action-btn{padding:5px 12px;border-radius:6px;border:1px solid #333;background:#1a1a1a;
+  color:#ccc;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;
+  letter-spacing:.04em;transition:all .15s;white-space:nowrap}
+.action-btn:hover{border-color:#4ade80;color:#4ade80}
+.action-btn.btn-collect{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:#4ade80}
+.action-btn.btn-collect:hover{background:rgba(74,222,128,.2)}
+.action-btn.btn-view{background:rgba(96,165,250,.08);border-color:rgba(96,165,250,.3);color:#60a5fa}
+.action-btn.btn-view:hover{background:rgba(96,165,250,.15)}
+.td-actions{display:flex;gap:6px;justify-content:flex-end}
+
+/* ── Bar Charts ── */
+.bar-chart{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:flex;align-items:center;gap:12px}
+.bar-label{width:120px;font-size:12px;color:#888;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:22px;background:#1a1a1a;border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease;min-width:2px;position:relative}
+.bar-fill.green{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.bar-fill.teal{background:linear-gradient(90deg,#14b8a6,#4fd1c5)}
+.bar-fill.blue{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.bar-fill.amber{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.bar-fill.red{background:linear-gradient(90deg,#ef4444,#f87171)}
+.bar-fill.purple{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.bar-value{width:90px;font-size:12px;font-weight:600;color:#ccc;text-align:right;flex-shrink:0;
+  font-family:'SF Mono',Consolas,monospace}
+
+/* ── Loading / Empty ── */
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+.loading-pulse{animation:loadPulse 1.2s ease infinite}
+@keyframes loadPulse{0%,100%{opacity:.4}50%{opacity:1}}
+.data-unavail{color:#555;font-style:italic;font-size:12px;text-align:center;padding:20px}
+
+/* ── Skeleton ── */
+.skel-row{display:flex;gap:14px;padding:12px 14px;border-bottom:1px solid #0d0d0d}
+.skel-cell{height:14px;border-radius:4px;background:#1a1a1a;animation:loadPulse 1.2s ease infinite}
+
+/* ── Last Updated ── */
+.last-updated{text-align:right;font-size:10px;color:#444;margin-bottom:20px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .25s;pointer-events:none;max-width:400px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-ok{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-err{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:50000;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#111;border:1px solid #222;border-radius:14px;width:100%;max-width:520px;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);overflow:hidden}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;
+  border-bottom:1px solid #1a1a1a;background:#0a0a0a}
+.modal-header h2{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.modal-close{background:none;border:none;color:#555;font-size:20px;cursor:pointer;
+  padding:4px 8px;border-radius:6px;transition:all .15s;line-height:1}
+.modal-close:hover{color:#fff;background:rgba(255,255,255,.06)}
+.modal-body{padding:24px}
+.modal-field{margin-bottom:16px}
+.modal-field label{display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;
+  letter-spacing:.04em;margin-bottom:6px}
+.modal-field input,.modal-field select{width:100%;padding:10px 14px;background:#0a0a0a;
+  border:1px solid #222;border-radius:8px;color:#fff;font-size:13px;font-family:inherit;outline:none;
+  transition:border-color .15s}
+.modal-field input:focus{border-color:#4ade80;box-shadow:0 0 0 2px rgba(74,222,128,.15)}
+.modal-field .field-hint{font-size:10px;color:#555;margin-top:4px}
+.modal-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;
+  padding:14px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px}
+.modal-info-item{display:flex;flex-direction:column;gap:3px}
+.modal-info-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.modal-info-val{font-size:13px;font-weight:600}
+.modal-footer{padding:16px 24px;border-top:1px solid #1a1a1a;display:flex;justify-content:flex-end;gap:10px;background:#0a0a0a}
+.modal-btn{padding:10px 24px;border-radius:8px;border:none;font-size:12px;font-weight:700;
+  cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.modal-btn:disabled{opacity:.4;cursor:not-allowed}
+.modal-btn-cancel{background:#1a1a1a;color:#888;border:1px solid #333}
+.modal-btn-cancel:hover{color:#fff;border-color:#555}
+.modal-btn-stripe{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
+.modal-btn-stripe:hover:not(:disabled){background:rgba(74,222,128,.25)}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .search-input{min-width:0;width:100%}
+  .bar-label{width:70px;font-size:10px}
+  .td-actions{flex-direction:column;gap:4px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active">
+      <div class="fn-group-btn" onclick="fnToggle(this)">CROG-VRS <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">🧹 Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item fn-dd-active" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div>
+    </div>
+    <div class="fn-group fn-g-blue">
+      <div class="fn-group-btn" onclick="fnToggle(this)">Operations <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/legal">&#9878;&#65039; Legal Command</a>
+        <a class="fn-dd-item" href="/email-intake">&#128231; Email Intake</a>
+        <a class="fn-dd-item" href="/intelligence">&#128269; Intelligence</a>
+      </div>
+    </div>
+    <div class="fn-group fn-g-amber">
+      <div class="fn-group-btn" onclick="fnToggle(this)">System <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/vault">&#128272; Key Vault</a>
+        <a class="fn-dd-item" href="/users">&#128101; Users</a>
+        <a class="fn-dd-item" href="/profile">&#9881;&#65039; Profile</a>
+        <a class="fn-dd-item" href="/docs-center">&#128218; Docs</a>
+        <a class="fn-dd-item" href="/webui">&#128421; Mission Control</a>
+      </div>
+    </div>
+  </div>
+  <div class="fn-right">
+    <span class="fn-dot"></span>
+    <span class="fn-clock" id="fn-clock"></span>
+    <div class="fn-user">
+      <div class="fn-user-btn" onclick="this.parentElement.classList.toggle('open')">&#128100; Admin <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-user-dd">
+        <a class="fn-dd-item" href="/profile">&#9881;&#65039; Profile</a>
+        <a class="fn-dd-item" href="/api/logout">&#128682; Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>&#128179;&ensp;<span>CROG-VRS</span> &mdash; Payments</h1>
+  <div class="hdr-right">
+    <span class="hdr-badge hdr-badge-warn" id="stripeBadge">Checking Stripe...</span>
+    <span style="font-size:11px;color:#555">Cabin Rentals of Georgia, LLC</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="last-updated">Last refreshed: <span id="lastUpdated" class="loading-pulse">loading...</span></div>
+
+  <!-- KPIs -->
+  <div class="section-head">Financial Overview</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val green" id="kTotalRev">&mdash;</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-sub" id="kRevSub">Sum of all paid amounts</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val amber" id="kOutstanding">&mdash;</div>
+      <div class="kpi-label">Outstanding Balance</div>
+      <div class="kpi-sub" id="kOutSub">Balance due across all</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val blue" id="kCollected">&mdash;</div>
+      <div class="kpi-label">Payments Collected</div>
+      <div class="kpi-sub">Reservations with payments</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val red" id="kRefunds">&mdash;</div>
+      <div class="kpi-label">Refunds Processed</div>
+      <div class="kpi-sub">Refund transactions</div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="section-head">Recent Payments</div>
+  <div class="filter-bar">
+    <input type="text" class="search-input" id="paySearch" placeholder="&#128269; Search confirmation, guest, property..." oninput="debounceFilter()">
+    <button class="filter-btn active" data-status="all" onclick="setStatusFilter('all',this)">All</button>
+    <button class="filter-btn" data-status="paid" onclick="setStatusFilter('paid',this)">Paid</button>
+    <button class="filter-btn" data-status="partial" onclick="setStatusFilter('partial',this)">Partial</button>
+    <button class="filter-btn" data-status="unpaid" onclick="setStatusFilter('unpaid',this)">Unpaid</button>
+  </div>
+
+  <!-- PAYMENTS TABLE -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Confirmation</th>
+            <th>Guest</th>
+            <th>Property</th>
+            <th class="right">Total</th>
+            <th class="right">Paid</th>
+            <th class="right">Balance</th>
+            <th>Status</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="payBody">
+          <tr><td colspan="8"><div class="empty-state loading-pulse">Loading payment data...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FINANCIAL SUMMARY BY SOURCE -->
+  <div class="section-head">Financial Summary by Booking Source</div>
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">Revenue by Source <span class="badge badge-green">All Time</span></div>
+      <div id="sourceRevenueChart" class="bar-chart">
+        <div class="empty-state loading-pulse">Loading source data...</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Bookings by Source <span class="badge badge-teal">Count</span></div>
+      <div id="sourceCountChart" class="bar-chart">
+        <div class="empty-state loading-pulse">Loading source data...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COLLECT PAYMENT MODAL -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>&#128179; Collect Payment</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-info">
+        <div class="modal-info-item">
+          <div class="modal-info-label">Confirmation</div>
+          <div class="modal-info-val" id="mConf" style="color:#60a5fa">&mdash;</div>
+        </div>
+        <div class="modal-info-item">
+          <div class="modal-info-label">Guest</div>
+          <div class="modal-info-val" id="mGuest">&mdash;</div>
+        </div>
+        <div class="modal-info-item">
+          <div class="modal-info-label">Property</div>
+          <div class="modal-info-val" id="mProp">&mdash;</div>
+        </div>
+        <div class="modal-info-item">
+          <div class="modal-info-label">Outstanding</div>
+          <div class="modal-info-val" id="mBalance" style="color:#fbbf24">&mdash;</div>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label for="mAmount">Amount to Collect (USD)</label>
+        <input type="number" id="mAmount" min="0.01" step="0.01" placeholder="0.00">
+        <div class="field-hint">Pre-filled with outstanding balance. Adjust if collecting a partial amount.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-stripe" id="mStripeBtn" onclick="processStripePayment()">&#9889; Process via Stripe</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>&#128196; Payment Details</h2>
+      <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="detailBody">
+      <div class="empty-state loading-pulse">Loading details...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-cancel" onclick="closeDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Nav ── */
+function fnToggle(btn){var g=btn.closest('.fn-group');document.querySelectorAll('.fn-group.open').forEach(function(o){if(o!==g)o.classList.remove('open')});g.classList.toggle('open')}
+document.addEventListener('click',function(e){if(!e.target.closest('.fn-group'))document.querySelectorAll('.fn-group.open').forEach(function(g){g.classList.remove('open')});if(!e.target.closest('.fn-user'))document.querySelectorAll('.fn-user.open').forEach(function(u){u.classList.remove('open')})});
+function fnClock(){var d=new Date();document.getElementById('fn-clock').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
+fnClock();setInterval(fnClock,1000);
+
+/* ── State ── */
+var allReservations=[];
+var activeFilter='all';
+var searchQuery='';
+var currentModalRes=null;
+var debounceTimer=null;
+var stripeConfigured=false;
+
+/* ── Helpers ── */
+function fmtCurrency(n){
+  if(n==null||isNaN(n))return '$0';
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function safeFetch(url){
+  return fetch(url,{credentials:'include'}).then(function(r){
+    if(!r.ok)throw new Error(r.status);
+    return r.json();
+  }).catch(function(){return null});
+}
+
+function showToast(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(type==='ok'?'toast-ok':'toast-err')+' show';
+  setTimeout(function(){t.classList.remove('show')},3500);
+}
+
+function getPaymentStatus(res){
+  var paid=res.paid_amount||res.amount_paid||0;
+  var total=res.total_price||res.total||res.base_rate||0;
+  var balance=res.balance_due!=null?res.balance_due:(total-paid);
+  if(balance<=0&&total>0)return 'paid';
+  if(paid>0)return 'partial';
+  return 'unpaid';
+}
+
+function getFinancials(res){
+  var total=res.total_price||res.total||res.base_rate||0;
+  var paid=res.paid_amount||res.amount_paid||0;
+  var balance=res.balance_due!=null?res.balance_due:(total-paid);
+  return{total:total,paid:paid,balance:balance};
+}
+
+/* ── Debounce ── */
+function debounceFilter(){
+  clearTimeout(debounceTimer);
+  debounceTimer=setTimeout(function(){
+    searchQuery=document.getElementById('paySearch').value.toLowerCase().trim();
+    renderTable();
+  },250);
+}
+
+/* ── Status Filter ── */
+function setStatusFilter(status,btn){
+  activeFilter=status;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  renderTable();
+}
+
+/* ── Skeleton Loader ── */
+function renderSkeletons(){
+  var html='';
+  for(var i=0;i<8;i++){
+    html+='<tr><td colspan="8"><div class="skel-row">'+
+      '<div class="skel-cell" style="width:80px"></div>'+
+      '<div class="skel-cell" style="flex:1"></div>'+
+      '<div class="skel-cell" style="flex:1"></div>'+
+      '<div class="skel-cell" style="width:70px"></div>'+
+      '<div class="skel-cell" style="width:70px"></div>'+
+      '<div class="skel-cell" style="width:70px"></div>'+
+      '<div class="skel-cell" style="width:60px"></div>'+
+      '<div class="skel-cell" style="width:120px"></div>'+
+    '</div></td></tr>';
+  }
+  document.getElementById('payBody').innerHTML=html;
+}
+
+/* ── Render Table ── */
+function renderTable(){
+  var tbody=document.getElementById('payBody');
+  var filtered=allReservations.filter(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return false;
+
+    if(activeFilter!=='all'){
+      var pst=getPaymentStatus(r);
+      if(pst!==activeFilter)return false;
+    }
+
+    if(searchQuery){
+      var conf=(r.confirmation_code||r.confirmation||'').toLowerCase();
+      var guest=(r.guest_name||r.guest||'').toLowerCase();
+      var prop=(r.property_name||'').toLowerCase();
+      var email=(r.guest_email||'').toLowerCase();
+      if(conf.indexOf(searchQuery)===-1&&guest.indexOf(searchQuery)===-1&&
+         prop.indexOf(searchQuery)===-1&&email.indexOf(searchQuery)===-1)return false;
+    }
+
+    return true;
+  });
+
+  if(filtered.length===0){
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty-state">'+(searchQuery||activeFilter!=='all'?'No payments match your filters':'No reservation data available')+'</div></td></tr>';
+    return;
+  }
+
+  filtered.sort(function(a,b){
+    var ba=getFinancials(a).balance;
+    var bb=getFinancials(b).balance;
+    return bb-ba;
+  });
+
+  tbody.innerHTML=filtered.map(function(r){
+    var f=getFinancials(r);
+    var pst=getPaymentStatus(r);
+    var stClass=pst==='paid'?'st-paid':pst==='partial'?'st-partial':'st-unpaid';
+    var stLabel=pst.charAt(0).toUpperCase()+pst.slice(1);
+    var conf=r.confirmation_code||r.confirmation||'—';
+    var guest=r.guest_name||r.guest||'Unknown';
+    var prop=r.property_name||'—';
+    var resId=r.id||r.reservation_id||'';
+
+    return '<tr class="pay-row">'+
+      '<td class="code-col">'+escHtml(conf)+'</td>'+
+      '<td>'+escHtml(guest)+'</td>'+
+      '<td>'+escHtml(prop)+'</td>'+
+      '<td class="right mono" style="color:#4ade80">'+fmtCurrency(f.total)+'</td>'+
+      '<td class="right mono">'+fmtCurrency(f.paid)+'</td>'+
+      '<td class="right mono" style="color:'+(f.balance>0?'#fbbf24':'#4ade80')+'">'+fmtCurrency(f.balance)+'</td>'+
+      '<td><span class="status-badge '+stClass+'">'+stLabel+'</span></td>'+
+      '<td class="right"><div class="td-actions">'+
+        '<button class="action-btn btn-view" onclick="viewDetails(\''+resId+'\')">View</button>'+
+        (f.balance>0?'<button class="action-btn btn-collect" onclick="openCollectModal(\''+resId+'\')">Collect</button>':'')+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function escHtml(s){
+  if(!s)return '';
+  var d=document.createElement('div');d.textContent=s;return d.innerHTML;
+}
+
+/* ── Bar Chart Renderer ── */
+function renderBarChart(containerId,items,colorClass){
+  var el=document.getElementById(containerId);
+  if(!items||items.length===0){
+    el.innerHTML='<div class="data-unavail">No data available</div>';
+    return;
+  }
+  var max=Math.max.apply(null,items.map(function(i){return i.value||0}));
+  if(max===0)max=1;
+  el.innerHTML=items.map(function(item){
+    var pct=Math.max((item.value/max)*100,1);
+    var color=item.color||colorClass||'green';
+    return '<div class="bar-row">'+
+      '<div class="bar-label" title="'+item.label+'">'+item.label+'</div>'+
+      '<div class="bar-track"><div class="bar-fill '+color+'" style="width:'+pct+'%"></div></div>'+
+      '<div class="bar-value">'+item.display+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ── KPI Update ── */
+function updateKPIs(){
+  var totalRev=0,outstanding=0,collected=0,refunds=0;
+
+  allReservations.forEach(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return;
+    var f=getFinancials(r);
+    totalRev+=f.paid;
+    outstanding+=Math.max(f.balance,0);
+    if(f.paid>0)collected++;
+  });
+
+  document.getElementById('kTotalRev').textContent=fmtCurrency(totalRev);
+  document.getElementById('kRevSub').textContent=allReservations.length+' reservations';
+  document.getElementById('kOutstanding').textContent=fmtCurrency(outstanding);
+  document.getElementById('kOutSub').textContent=(outstanding>0?'Action needed':'All settled');
+  document.getElementById('kCollected').textContent=collected.toLocaleString();
+  document.getElementById('kRefunds').textContent=refunds.toLocaleString();
+}
+
+/* ── Source Summary ── */
+function updateSourceSummary(){
+  var sourceRev={};
+  var sourceCount={};
+
+  allReservations.forEach(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return;
+    var src=r.source||r.channel||r.booking_source||'Direct';
+    src=src.charAt(0).toUpperCase()+src.slice(1);
+    var f=getFinancials(r);
+    sourceRev[src]=(sourceRev[src]||0)+f.total;
+    sourceCount[src]=(sourceCount[src]||0)+1;
+  });
+
+  var colors=['green','teal','blue','amber','purple','red'];
+
+  var revArr=Object.keys(sourceRev).map(function(k){return{label:k,value:sourceRev[k],display:fmtCurrency(sourceRev[k])}})
+    .sort(function(a,b){return b.value-a.value});
+  revArr.forEach(function(c,i){c.color=colors[i%colors.length]});
+  renderBarChart('sourceRevenueChart',revArr);
+
+  var cntArr=Object.keys(sourceCount).map(function(k){return{label:k,value:sourceCount[k],display:sourceCount[k]+' bookings'}})
+    .sort(function(a,b){return b.value-a.value});
+  cntArr.forEach(function(c,i){c.color=colors[i%colors.length]});
+  renderBarChart('sourceCountChart',cntArr);
+}
+
+/* ── Modal: Collect Payment ── */
+function openCollectModal(resId){
+  var res=allReservations.find(function(r){return(r.id||r.reservation_id)==resId});
+  if(!res){showToast('Reservation not found','err');return}
+  currentModalRes=res;
+  var f=getFinancials(res);
+
+  document.getElementById('mConf').textContent=res.confirmation_code||res.confirmation||'—';
+  document.getElementById('mGuest').textContent=res.guest_name||res.guest||'Unknown';
+  document.getElementById('mProp').textContent=res.property_name||'—';
+  document.getElementById('mBalance').textContent=fmtCurrency(f.balance);
+  document.getElementById('mAmount').value=f.balance>0?f.balance.toFixed(2):'';
+
+  var btn=document.getElementById('mStripeBtn');
+  btn.disabled=!stripeConfigured;
+  btn.title=stripeConfigured?'':'Stripe is not configured';
+
+  document.getElementById('payModal').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('payModal').classList.remove('open');
+  currentModalRes=null;
+}
+
+async function processStripePayment(){
+  if(!currentModalRes)return;
+  var amt=parseFloat(document.getElementById('mAmount').value);
+  if(isNaN(amt)||amt<=0){showToast('Enter a valid amount','err');return}
+
+  var btn=document.getElementById('mStripeBtn');
+  btn.disabled=true;
+  btn.textContent='Processing...';
+
+  try{
+    var resId=currentModalRes.id||currentModalRes.reservation_id;
+    var resp=await fetch('/api/vrs/payments/create-intent',{
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({reservation_id:resId,amount_cents:Math.round(amt*100)})
+    });
+
+    if(!resp.ok){
+      var errData=await resp.json().catch(function(){return{}});
+      throw new Error(errData.error||errData.message||'Payment failed ('+resp.status+')');
+    }
+
+    var data=await resp.json();
+    showToast('Payment intent created: '+(data.client_secret?'Ready for checkout':'Success'),'ok');
+    closeModal();
+    loadPayments();
+  }catch(e){
+    showToast(e.message||'Payment processing failed','err');
+  }finally{
+    btn.disabled=!stripeConfigured;
+    btn.innerHTML='&#9889; Process via Stripe';
+  }
+}
+
+/* ── Modal: View Details ── */
+async function viewDetails(resId){
+  document.getElementById('detailModal').classList.add('open');
+  document.getElementById('detailBody').innerHTML='<div class="empty-state loading-pulse">Loading details...</div>';
+
+  var res=allReservations.find(function(r){return(r.id||r.reservation_id)==resId});
+  var detail=await safeFetch('/api/vrs/payments/reservation/'+resId);
+
+  var f=res?getFinancials(res):{total:0,paid:0,balance:0};
+  var pst=res?getPaymentStatus(res):'unpaid';
+  var stClass=pst==='paid'?'st-paid':pst==='partial'?'st-partial':'st-unpaid';
+
+  var html='<div class="modal-info" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px">'+
+    '<div class="modal-info-item"><div class="modal-info-label">Confirmation</div><div class="modal-info-val" style="color:#60a5fa">'+(res?escHtml(res.confirmation_code||res.confirmation||'—'):'—')+'</div></div>'+
+    '<div class="modal-info-item"><div class="modal-info-label">Guest</div><div class="modal-info-val">'+(res?escHtml(res.guest_name||res.guest||'—'):'—')+'</div></div>'+
+    '<div class="modal-info-item"><div class="modal-info-label">Property</div><div class="modal-info-val">'+(res?escHtml(res.property_name||'—'):'—')+'</div></div>'+
+  '</div>';
+
+  html+='<div class="modal-info" style="margin-bottom:16px">'+
+    '<div class="modal-info-item"><div class="modal-info-label">Total Price</div><div class="modal-info-val" style="color:#4ade80">'+fmtCurrency(f.total)+'</div></div>'+
+    '<div class="modal-info-item"><div class="modal-info-label">Amount Paid</div><div class="modal-info-val">'+fmtCurrency(f.paid)+'</div></div>'+
+    '<div class="modal-info-item"><div class="modal-info-label">Balance Due</div><div class="modal-info-val" style="color:'+(f.balance>0?'#fbbf24':'#4ade80')+'">'+fmtCurrency(f.balance)+'</div></div>'+
+    '<div class="modal-info-item"><div class="modal-info-label">Status</div><div class="modal-info-val"><span class="status-badge '+stClass+'">'+pst+'</span></div></div>'+
+  '</div>';
+
+  if(detail&&detail.payments&&detail.payments.length>0){
+    html+='<div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Payment History</div>';
+    html+='<div style="display:flex;flex-direction:column;gap:6px">';
+    detail.payments.forEach(function(p){
+      html+='<div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">'+
+        '<div><div style="font-size:12px;font-weight:600">'+(p.method||p.type||'Payment')+'</div>'+
+        '<div style="font-size:10px;color:#555">'+(p.date||p.created_at||'')+'</div></div>'+
+        '<div style="font-family:\'SF Mono\',Consolas,monospace;font-size:13px;font-weight:700;color:#4ade80">'+fmtCurrency(p.amount)+'</div>'+
+      '</div>';
+    });
+    html+='</div>';
+  }else if(detail&&!detail.payments){
+    html+='<div class="data-unavail">No payment history records found for this reservation</div>';
+  }else if(!detail){
+    html+='<div class="data-unavail">Unable to load payment details from server</div>';
+  }
+
+  if(res){
+    html+='<div style="margin-top:16px;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Reservation Info</div>';
+    html+='<div class="modal-info" style="grid-template-columns:1fr 1fr 1fr">'+
+      '<div class="modal-info-item"><div class="modal-info-label">Check-in</div><div class="modal-info-val">'+(res.check_in_date||'—')+'</div></div>'+
+      '<div class="modal-info-item"><div class="modal-info-label">Check-out</div><div class="modal-info-val">'+(res.check_out_date||'—')+'</div></div>'+
+      '<div class="modal-info-item"><div class="modal-info-label">Source</div><div class="modal-info-val">'+(res.source||res.channel||res.booking_source||'Direct')+'</div></div>'+
+    '</div>';
+  }
+
+  document.getElementById('detailBody').innerHTML=html;
+}
+
+function closeDetailModal(){
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+/* ── Check Stripe Config ── */
+async function checkStripe(){
+  var badge=document.getElementById('stripeBadge');
+  var data=await safeFetch('/api/vrs/payments/config');
+  if(data&&(data.configured||data.stripe_configured)){
+    stripeConfigured=true;
+    badge.textContent='Stripe Connected';
+    badge.className='hdr-badge hdr-badge-ok';
+  }else{
+    stripeConfigured=false;
+    badge.textContent='Stripe Not Configured';
+    badge.className='hdr-badge hdr-badge-err';
+  }
+}
+
+/* ── Main Load ── */
+async function loadPayments(){
+  renderSkeletons();
+
+  var data=await safeFetch('/api/vrs/reservations?limit=500');
+  allReservations=Array.isArray(data)?data:[];
+
+  updateKPIs();
+  renderTable();
+  updateSourceSummary();
+
+  document.getElementById('lastUpdated').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('lastUpdated').classList.remove('loading-pulse');
+}
+
+/* ── Close modals on Escape ── */
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    closeModal();
+    closeDetailModal();
+  }
+});
+
+/* ── Init ── */
+checkStripe();
+loadPayments();
+setInterval(loadPayments,120000);
+</script>
+</body>
+</html>

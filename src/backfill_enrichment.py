@@ -1,9 +1,10 @@
+import os
 import pandas as pd
 from sqlalchemy import create_engine, text
 import re
 
 # --- CONFIGURATION ---
-DB_URL = "postgresql://analyst_reader:6652201a@localhost:5432/fortress_db"
+DB_URL = os.getenv("DB_URL", f"postgresql://{os.getenv('DB_USER', 'analyst_reader')}:{os.getenv('DB_PASSWORD', os.getenv('DB_PASS', ''))}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'fortress_db')}")
 engine = create_engine(DB_URL)
 
 def get_stats():

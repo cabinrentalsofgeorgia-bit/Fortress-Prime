@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iron Mountain — Legal Intelligence</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2235;
+            --bg-hover: #1e293b;
+            --border: #2d3748;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            --green: #22c55e;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --purple: #a78bfa;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+        .logo { font-size: 1.5rem; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+        .logo-sub { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+        .status-badge {
+            display: flex; align-items: center; gap: 0.4rem;
+            font-size: 0.75rem; color: var(--text-secondary);
+            background: var(--bg-card); padding: 0.3rem 0.8rem; border-radius: 9999px;
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+        .status-dot.offline { background: var(--red); }
+
+        /* Main Layout */
+        .main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+        /* Search Bar */
+        .search-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .search-row { display: flex; gap: 0.75rem; align-items: stretch; }
+        .search-input {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            font-size: 1rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        .search-input::placeholder { color: var(--text-muted); }
+        .btn {
+            padding: 0.85rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .btn-secondary.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+        /* Filters */
+        .filters {
+            display: flex; gap: 0.5rem; margin-top: 0.75rem;
+            flex-wrap: wrap; align-items: center;
+        }
+        .filter-label { font-size: 0.75rem; color: var(--text-muted); margin-right: 0.25rem; }
+        .filter-chip {
+            padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.75rem;
+            background: var(--bg-card); color: var(--text-secondary);
+            border: 1px solid transparent; cursor: pointer; transition: all 0.15s;
+        }
+        .filter-chip:hover { border-color: var(--border); color: var(--text-primary); }
+        .filter-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+        .mode-toggle {
+            margin-left: auto; display: flex; gap: 0.5rem; align-items: center;
+        }
+        .mode-toggle label { font-size: 0.75rem; color: var(--text-muted); cursor: pointer; }
+
+        /* Results */
+        .results-header {
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin-bottom: 1rem; padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .results-count { font-size: 0.875rem; color: var(--text-secondary); }
+        .results-time { font-size: 0.75rem; color: var(--text-muted); }
+
+        .result-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+            transition: border-color 0.15s;
+        }
+        .result-card:hover { border-color: var(--accent); }
+        .result-meta {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin-bottom: 0.6rem; flex-wrap: wrap;
+        }
+        .result-rank {
+            font-size: 0.7rem; font-weight: 700; color: var(--accent);
+            background: var(--accent-glow); padding: 0.15rem 0.5rem;
+            border-radius: 4px; min-width: 1.5rem; text-align: center;
+        }
+        .result-filename {
+            font-size: 0.875rem; font-weight: 600; color: var(--text-primary);
+            word-break: break-all;
+        }
+        .result-cat {
+            font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em;
+            padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600;
+        }
+        .cat-legal { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .cat-financial { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .cat-property { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .cat-communications { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .cat-business { background: rgba(236,72,153,0.15); color: #ec4899; }
+        .cat-personal { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .cat-web { background: rgba(20,184,166,0.15); color: #14b8a6; }
+        .cat-general { background: rgba(148,163,184,0.1); color: #64748b; }
+        .result-dir { font-size: 0.7rem; color: var(--text-muted); }
+        .result-score {
+            font-size: 0.7rem; color: var(--text-muted); margin-left: auto;
+        }
+        .result-text {
+            font-size: 0.85rem; color: var(--text-secondary); line-height: 1.65;
+            max-height: 120px; overflow: hidden; position: relative;
+            transition: max-height 0.3s;
+        }
+        .result-text.expanded { max-height: none; }
+        .result-text-fade {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
+            background: linear-gradient(transparent, var(--bg-secondary));
+            pointer-events: none;
+        }
+        .result-text.expanded .result-text-fade { display: none; }
+        .expand-btn {
+            font-size: 0.75rem; color: var(--accent); background: none;
+            border: none; cursor: pointer; margin-top: 0.5rem; padding: 0;
+        }
+        .expand-btn:hover { text-decoration: underline; }
+        .copy-btn {
+            font-size: 0.75rem; color: var(--text-muted); background: var(--bg-card);
+            border: 1px solid var(--border); cursor: pointer; padding: 0.25rem 0.6rem;
+            border-radius: 4px; margin-top: 0.5rem; margin-left: 0.5rem; transition: all 0.15s;
+        }
+        .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+        .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+        /* AI Answer Panel */
+        .ai-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--purple);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .ai-panel-header {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin-bottom: 1rem; padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .ai-badge {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--purple);
+            background: rgba(167,139,250,0.1); padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+        .ai-model { font-size: 0.7rem; color: var(--text-muted); }
+        .ai-timing { font-size: 0.7rem; color: var(--text-muted); margin-left: auto; }
+        .ai-answer {
+            font-size: 0.9rem; line-height: 1.8; color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+        .ai-answer strong { color: var(--accent); }
+        .ai-sources {
+            margin-top: 1rem; padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+        .ai-sources-title { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .ai-source-chip {
+            display: inline-block; font-size: 0.7rem;
+            background: var(--bg-card); color: var(--text-secondary);
+            padding: 0.2rem 0.6rem; border-radius: 4px; margin: 0.15rem 0.25rem 0.15rem 0;
+        }
+
+        /* Loading */
+        .spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid var(--border); border-top-color: var(--accent);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-bar {
+            height: 3px; background: var(--accent);
+            position: fixed; top: 0; left: 0; z-index: 100;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 0 2px 2px 0;
+        }
+        @keyframes loading {
+            0% { width: 0; left: 0; }
+            50% { width: 70%; left: 15%; }
+            100% { width: 0; left: 100%; }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center; padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+        .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+        .empty-title { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .empty-hint { font-size: 0.85rem; }
+
+        /* Keyboard hint */
+        kbd {
+            display: inline-block; padding: 0.1rem 0.4rem;
+            font-size: 0.7rem; font-family: monospace;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-bar" id="loadingBar" style="display:none;"></div>
+
+    <header class="header">
+        <div class="header-left">
+            <div>
+                <div class="logo">Iron Mountain</div>
+                <div class="logo-sub">Division 1 — Legal Intelligence</div>
+            </div>
+        </div>
+        <div class="status-badge" id="statusBadge">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Connecting...</span>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="search-container">
+            <div class="search-row">
+                <input type="text" class="search-input" id="searchInput"
+                       placeholder="Search 157,000+ documents... (e.g., easement agreement, Higginbotham case)"
+                       autocomplete="off" autofocus>
+                <button class="btn btn-primary" id="searchBtn" onclick="doSearch()">Search</button>
+                <button class="btn btn-secondary" id="askBtn" onclick="doAsk()" title="AI-powered analysis">
+                    Ask AI
+                </button>
+            </div>
+            <div class="filters">
+                <span class="filter-label">Category:</span>
+                <span class="filter-chip active" data-cat="" onclick="setCategory(this)">All</span>
+                <span class="filter-chip" data-cat="legal" onclick="setCategory(this)">Legal</span>
+                <span class="filter-chip" data-cat="financial" onclick="setCategory(this)">Financial</span>
+                <span class="filter-chip" data-cat="property" onclick="setCategory(this)">Property</span>
+                <span class="filter-chip" data-cat="communications" onclick="setCategory(this)">Communications</span>
+                <span class="filter-chip" data-cat="business" onclick="setCategory(this)">Business</span>
+                <span class="filter-chip" data-cat="personal" onclick="setCategory(this)">Personal</span>
+                <div class="mode-toggle">
+                    <label title="Use fast 8b model for AI analysis">
+                        <input type="checkbox" id="fastMode"> Fast mode
+                    </label>
+                    <span style="color:var(--text-muted); font-size:0.7rem; margin-left:0.25rem;">
+                        <kbd>/</kbd> to focus
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div id="aiPanel"></div>
+        <div id="resultsArea">
+            <div class="empty-state">
+                <div class="empty-icon">&#x2696;</div>
+                <div class="empty-title">Total Recall of Legal History</div>
+                <div class="empty-hint">
+                    Search across 157,000+ indexed documents spanning legal, financial, and property records.<br>
+                    Use <strong>Search</strong> for instant vector lookup or <strong>Ask AI</strong> for DeepSeek-R1 legal analysis.
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+const API = '';  // relative — same origin
+let activeCategory = '';
+let isLoading = false;
+
+// ─── Health check ──────────────────────────────────
+async function checkHealth() {
+    try {
+        const r = await fetch(`${API}/health`);
+        const d = await r.json();
+        const dot = document.getElementById('statusDot');
+        const txt = document.getElementById('statusText');
+        if (d.status === 'OPERATIONAL') {
+            dot.className = 'status-dot';
+            txt.textContent = `${d.chromadb.documents.toLocaleString()} documents`;
+        } else {
+            dot.className = 'status-dot offline';
+            txt.textContent = 'Degraded';
+        }
+    } catch {
+        document.getElementById('statusDot').className = 'status-dot offline';
+        document.getElementById('statusText').textContent = 'Offline';
+    }
+}
+
+// ─── Category filter ───────────────────────────────
+function setCategory(el) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activeCategory = el.dataset.cat;
+}
+
+// ─── Loading state ─────────────────────────────────
+function setLoading(on) {
+    isLoading = on;
+    document.getElementById('loadingBar').style.display = on ? 'block' : 'none';
+    document.getElementById('searchBtn').disabled = on;
+    document.getElementById('askBtn').disabled = on;
+}
+
+// ─── Vector Search ─────────────────────────────────
+async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q || isLoading) return;
+    setLoading(true);
+    document.getElementById('aiPanel').innerHTML = '';
+
+    try {
+        const body = { query: q, top_k: 12 };
+        if (activeCategory) body.category = activeCategory;
+
+        const r = await fetch(`${API}/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        renderResults(d);
+    } catch (e) {
+        document.getElementById('resultsArea').innerHTML =
+            `<div class="empty-state"><div class="empty-title" style="color:var(--red)">Search Error</div><div class="empty-hint">${esc(e.message)}</div></div>`;
+    } finally {
+        setLoading(false);
+    }
+}
+
+// ─── AI Ask ────────────────────────────────────────
+async function doAsk() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q || isLoading) return;
+    setLoading(true);
+
+    const panel = document.getElementById('aiPanel');
+    panel.innerHTML = `<div class="ai-panel"><div class="ai-panel-header"><span class="ai-badge">AI Analyzing</span><span class="ai-model"><span class="spinner"></span> Retrieving documents & reasoning...</span></div></div>`;
+    document.getElementById('resultsArea').innerHTML = '';
+
+    try {
+        const body = { question: q, top_k: 8, fast: document.getElementById('fastMode').checked };
+        if (activeCategory) body.category = activeCategory;
+
+        const r = await fetch(`${API}/ask`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        renderAIAnswer(d);
+
+        // Also run a search for the source documents
+        const body2 = { query: q, top_k: 12 };
+        if (activeCategory) body2.category = activeCategory;
+        const r2 = await fetch(`${API}/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body2),
+        });
+        const d2 = await r2.json();
+        renderResults(d2);
+    } catch (e) {
+        panel.innerHTML = `<div class="ai-panel"><div style="color:var(--red)">AI Analysis Failed: ${esc(e.message)}</div></div>`;
+    } finally {
+        setLoading(false);
+    }
+}
+
+// ─── Render AI Answer ──────────────────────────────
+function renderAIAnswer(d) {
+    const panel = document.getElementById('aiPanel');
+    const sourcesHtml = (d.sources || []).map(s =>
+        `<span class="ai-source-chip">${esc(s.file_name)} <span style="color:var(--text-muted)">(${s.category})</span></span>`
+    ).join('');
+
+    panel.innerHTML = `
+        <div class="ai-panel">
+            <div class="ai-panel-header">
+                <span class="ai-badge">AI Analysis</span>
+                <span class="ai-model">${esc(d.model || 'DeepSeek-R1')}</span>
+                <span class="ai-timing">
+                    Retrieval: ${d.retrieval_time_s}s | Reasoning: ${d.reasoning_time_s}s | Total: ${d.total_time_s}s
+                </span>
+            </div>
+            <div class="ai-answer">${formatAnswer(d.answer || 'No answer generated.')}</div>
+            ${sourcesHtml ? `<div class="ai-sources"><div class="ai-sources-title">Sources Referenced (${d.chunks_used} chunks)</div>${sourcesHtml}</div>` : ''}
+        </div>
+    `;
+}
+
+// ─── Render Search Results ─────────────────────────
+function renderResults(d) {
+    const area = document.getElementById('resultsArea');
+
+    if (!d.results || d.results.length === 0) {
+        area.innerHTML = `<div class="empty-state"><div class="empty-icon">&#x1F50D;</div><div class="empty-title">No Results</div><div class="empty-hint">Try different keywords or remove the category filter.</div></div>`;
+        return;
+    }
+
+    let html = `<div class="results-header"><span class="results-count">${d.total_hits} results for "${esc(d.query)}"${d.category_filter ? ` in <strong>${d.category_filter}</strong>` : ''}</span><span class="results-time">${d.search_time_ms}ms</span></div>`;
+
+    d.results.forEach((r, i) => {
+        const catClass = 'cat-' + (r.category || 'general');
+        const textId = `text-${i}`;
+        html += `
+            <div class="result-card">
+                <div class="result-meta">
+                    <span class="result-rank">#${r.rank}</span>
+                    <span class="result-filename">${esc(r.file_name)}</span>
+                    <span class="result-cat ${catClass}">${esc(r.category)}</span>
+                    ${r.parent_dir ? `<span class="result-dir">${esc(r.parent_dir)}</span>` : ''}
+                    <span class="result-score">${(r.relevance * 100).toFixed(1)}% match</span>
+                </div>
+                <div class="result-text" id="${textId}">
+                    ${esc(r.text)}
+                    <div class="result-text-fade"></div>
+                </div>
+                <div style="display:flex;gap:0.25rem;align-items:center;">
+                    <button class="expand-btn" onclick="toggleExpand('${textId}', this)">Show more</button>
+                    <button class="copy-btn" onclick="copyText(this, '${textId}')">Copy</button>
+                </div>
+            </div>
+        `;
+    });
+
+    area.innerHTML = html;
+}
+
+function copyText(btn, textId) {
+    const el = document.getElementById(textId);
+    const text = el.innerText || el.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+    });
+}
+
+function toggleExpand(id, btn) {
+    const el = document.getElementById(id);
+    el.classList.toggle('expanded');
+    btn.textContent = el.classList.contains('expanded') ? 'Show less' : 'Show more';
+}
+
+function formatAnswer(text) {
+    // Basic formatting: bold markers, source references
+    let html = esc(text);
+    // Bold **text**
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // [Source: filename] highlighting
+    html = html.replace(/\[Source:\s*([^\]]+)\]/g, '<span style="color:var(--purple);font-size:0.8em">[Source: $1]</span>');
+    // Headers (lines starting with #)
+    html = html.replace(/^(#{1,3})\s+(.+)$/gm, (_, h, t) => {
+        const sz = h.length === 1 ? '1.1rem' : h.length === 2 ? '1rem' : '0.95rem';
+        return `<strong style="font-size:${sz};display:block;margin:0.75em 0 0.25em">${t}</strong>`;
+    });
+    // Bullet points
+    html = html.replace(/^[-*]\s+(.+)$/gm, '<span style="display:block;padding-left:1em">&#x2022; $1</span>');
+    return html;
+}
+
+function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// ─── Keyboard shortcuts ────────────────────────────
+document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== document.getElementById('searchInput')) {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+    }
+});
+document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        if (e.shiftKey) doAsk();
+        else doSearch();
+    }
+});
+
+// ─── Init ──────────────────────────────────────────
+checkHealth();
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>

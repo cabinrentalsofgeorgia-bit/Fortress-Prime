@@ -15,7 +15,7 @@ WATCH_FOLDER = "/mnt/fortress_data/market_input"
 PROCESSED_FOLDER = "/mnt/fortress_data/market_input/Processed"
 
 # Database & AI Credentials
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 OLLAMA_API_URL = "http://localhost:11434/api"
 LOG_FILE = "/home/admin/fortress-prime/logs/watcher.log"
 

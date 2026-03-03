@@ -1,18 +1,109 @@
-supabase
-streamlit
-streamlit-option-menu
-openai
-langchain
-langchain-core
-langchain-community
-langchain-openai
-langchain-text-splitters
-tiktoken
-plotly
-pypdf
-psycopg2-binary
-pydantic
-python-dotenv
-requests
-sqlalchemy
-psutil
+# =============================================================================
+# FORTRESS PRIME — Python Dependencies
+# =============================================================================
+# Constitution Article IV.5: No pip install ad-hoc. All packages declared here.
+# Install: pip install -r requirements.txt
+# GPU deps (torch): pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+# =============================================================================
+
+# ── Core AI / LLM ──────────────────────────────────────────────────────────────
+openai>=2.16.0,<3.0               # OpenAI-compatible client (NIM, Gemini, Grok, Claude proxy)
+langchain>=1.2.0,<2.0             # Agent framework
+langchain-core>=1.2.0,<2.0        # LangChain core abstractions
+langchain-community>=0.4.0,<1.0   # Community integrations
+langchain-openai>=1.1.0,<2.0      # OpenAI/compatible LLM bindings
+langchain-chroma>=1.1.0,<2.0      # ChromaDB vector store integration
+langchain-text-splitters>=1.1.0,<2.0 # Document chunking
+langgraph>=1.0.0,<2.0             # Multi-agent workflow graphs (StateGraph)
+langgraph-checkpoint>=4.0.0,<5.0  # LangGraph state persistence
+tiktoken>=0.12.0                  # Token counting (OpenAI models)
+mcp[server]>=1.0.0                # Model Context Protocol (MCP) server framework
+
+# ── Vector Databases ───────────────────────────────────────────────────────────
+qdrant-client>=1.16.0,<2.0        # Qdrant vector DB (fortress_knowledge, email_embeddings, legal_library)
+chromadb>=1.4.0,<2.0              # ChromaDB (legacy RAG, Open WebUI integration)
+
+# ── Databases ──────────────────────────────────────────────────────────────────
+psycopg2-binary>=2.9.0            # PostgreSQL driver (fortress_db) — also handles pgvector types via string casting
+sqlalchemy>=2.0.0                 # ORM / query builder
+redis>=7.1.0,<8.0                 # Redis queue (Docker Swarm task distribution, Batch Classifier job tracking)
+# supabase removed from baseline to preserve data sovereignty; add only in service-specific override if explicitly required.
+
+# ── Web / API ──────────────────────────────────────────────────────────────────
+aiohttp>=3.13.0,<4.0              # Claude proxy server (gateway/claude_proxy.py)
+fastapi>=0.128.0,<0.129           # REST API framework (gateway, agents)
+uvicorn>=0.40.0,<1.0              # ASGI server for FastAPI
+starlette>=0.52.0,<0.53           # ASGI toolkit (FastAPI dependency)
+sse-starlette>=3.2.0,<4.0         # Server-Sent Events for Starlette/FastAPI
+requests>=2.32.0,<3.0             # HTTP client (tool calls, health checks)
+PyJWT>=2.11.0,<3.0                # JWT token handling (API gateway)
+python-jose[cryptography]>=3.3.0,<4.0  # Transitional legacy JWT dependency (migrate to PyJWT)
+httpx>=0.28.0,<0.29               # Async HTTP client (OpenAI SDK dependency)
+httpx-sse>=0.4.0,<0.5             # SSE streaming support
+flask>=3.0.0,<4.0                 # Legacy guest agent API service
+slowapi>=0.1.9,<1.0               # API rate limiting middleware
+
+# ── Document Processing ────────────────────────────────────────────────────────
+pypdf>=6.6.0                      # PDF text extraction (ingestion, OCR pipeline)
+pypdfium2>=5.3.0                  # PDF rendering (fallback)
+reportlab>=4.4.0                  # PDF generation (audit reports)
+beautifulsoup4>=4.14.0            # HTML parsing (email body extraction)
+lxml>=6.0.0                       # XML/HTML parser (fast, C-backed)
+pytesseract>=0.3.13               # OCR via Tesseract (scanned documents)
+
+# ── Data / Science ─────────────────────────────────────────────────────────────
+pydantic>=2.12.0,<3.0             # Data validation (all schemas, tool definitions)
+pydantic-settings>=2.12.0,<3.0    # Settings management from env vars
+numpy>=2.4.0,<3.0                 # Numerical operations
+scipy>=1.17.0,<2.0                # Scientific computing (stats, optimization)
+pandas>=2.2.0,<3.0                # DataFrame processing used by dashboards/analytics
+yfinance>=0.2.0,<1.0              # Market data provider for market_sentinel
+pycoingecko>=3.2.0,<4.0           # CoinGecko API client
+
+# ── Dashboard / UI ─────────────────────────────────────────────────────────────
+streamlit>=1.54.0,<2.0            # Dashboard framework (src/dashboard_v2.py)
+streamlit-option-menu>=0.4.0,<1.0 # Streamlit sidebar navigation
+plotly>=5.0.0,<6.0                # Interactive charts
+
+# ── Infrastructure / DevOps ────────────────────────────────────────────────────
+python-dotenv>=1.2.0,<2.0         # .env file loading
+pyyaml>=6.0.0,<7.0                # YAML parsing (fortress_atlas.yaml, configs)
+psutil>=5.9.0,<8.0                # System monitoring (CPU, RAM, disk)
+pynvml>=13.0.0,<14.0              # NVIDIA GPU monitoring (temp, VRAM, utilization)
+docker>=7.1.0,<8.0                # Docker SDK (container management)
+kubernetes>=35.0.0,<36.0          # K8s SDK (future NIM orchestration)
+watchdog>=6.0.0,<7.0              # Filesystem watcher (sentinel, live reload)
+
+# ── Google APIs ────────────────────────────────────────────────────────────────
+google-api-python-client>=2.0.0,<3.0 # Google API client (Gmail, Drive)
+google-auth-httplib2>=0.2.0,<1.0  # Google auth transport
+google-auth-oauthlib>=1.2.0,<2.0  # Google OAuth flow
+
+# ── Security / Auth ────────────────────────────────────────────────────────────
+cryptography>=46.0.0,<47.0        # TLS, JWT, encryption primitives
+bcrypt>=4.2.0,<5.0                # Password hashing (direct usage, replaces passlib)
+# passlib — REMOVED: broken on Python 3.12 + bcrypt 5.x (ValueError in wrap-bug detection)
+
+# ── Event Streaming ───────────────────────────────────────────────────────────
+kafka-python>=2.0.0,<3.0            # Kafka admin client (topic management via Redpanda)
+aiokafka>=0.10.0,<1.0               # Async Kafka producer/consumer (Redpanda event bus)
+aiomqtt>=2.0.0,<3.0                 # Async MQTT client (Z-Wave IoT bridge)
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+rich>=14.0.0,<15.0                # Rich terminal output (logs, tables)
+tqdm>=4.67.0,<5.0                 # Progress bars (batch processing)
+regex>=2026.1.0,<2027.0           # Advanced regex (email parsing)
+python-dateutil>=2.9.0,<3.0       # Date parsing (flexible formats)
+Jinja2>=3.1.0,<4.0                # Template engine (report generation)
+ImageHash>=4.3.0,<5.0             # Perceptual image hashing (dedup)
+structlog>=24.4.0,<26.0           # Structured logging
+playwright>=1.50.0,<2.0           # Browser automation for extraction/testing
+opencv-python-headless>=4.11.0,<5.0 # Video/image processing
+Pillow>=10.4.0,<11.0              # Image processing backend
+
+# ── GPU / ML (install separately with CUDA index) ─────────────────────────────
+# torch>=2.10.0                   # PyTorch (GPU inference, embeddings)
+# torchvision>=0.25.0             # Vision models
+# torchaudio>=2.10.0              # Audio models
+# Install with: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+google-search-results  # SerpAPI client for Legal Headhunter attorney discovery

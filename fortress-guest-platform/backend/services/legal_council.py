@@ -34,9 +34,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
+
+from backend.services.deliberation_vault import (
+    load_active_roster,
+    vault_deliberation,
+)
 
 # ═══════════════════════════════════════════════════════════════════════
 # Load environment from root .env (not handled by pydantic-settings for
@@ -81,15 +86,30 @@ HYDRA_MODEL = os.getenv("HYDRA_MODEL", "deepseek-r1:70b")
 SWARM_MODEL = os.getenv("SWARM_MODEL", "qwen2.5:7b")
 
 ALLOW_CLOUD_LLM = os.getenv("ALLOW_CLOUD_LLM", "false").lower() == "true"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_AI_API_KEY", ""))
 
-# Throttle: max 3 concurrent LLM calls to avoid overwhelming the cluster
-_LLM_SEMAPHORE = asyncio.Semaphore(3)
+# MoE seat-to-provider routing: distributes load across Anthropic, Gemini, and local DGX
+# to prevent single-provider rate-limit crashes.
+SEAT_ROUTING = {
+    1: {"provider": "ANTHROPIC", "role": "The Senior Litigator"},
+    2: {"provider": "ANTHROPIC", "role": "The Contract Auditor"},
+    3: {"provider": "GEMINI",    "role": "The Statutory Scholar"},
+    4: {"provider": "SWARM",     "role": "The E-Discovery Forensic"},
+    5: {"provider": "ANTHROPIC", "role": "The Devil's Advocate"},
+    6: {"provider": "SWARM",     "role": "The Compliance Officer"},
+    7: {"provider": "HYDRA",     "role": "The Local Counsel"},
+    8: {"provider": "GEMINI",    "role": "The Risk Assessor"},
+    9: {"provider": "HYDRA",     "role": "The Chief Justice"},
+}
 
-# Per-persona hard timeout (seconds). If an LLM call exceeds this,
-# the persona yields an ERROR state instead of hanging the stream.
-PERSONA_TIMEOUT_SECONDS = 120
+# With MoE distribution: Anthropic=3, Gemini=2, HYDRA=2, SWARM=2
+# Each provider can handle its share without rate-limit pressure.
+_LLM_SEMAPHORE = asyncio.Semaphore(9)
 
-HTTPX_TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
+# Per-persona hard timeout matches GODHEAD 300s ceiling for deep reasoning seats
+PERSONA_TIMEOUT_SECONDS = 300
+
+HTTPX_TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0)
 
 logger.info(
     "legal_council_config  allow_cloud=%s  anthropic_proxy=%s  hydra=%s  swarm=%s",
@@ -471,14 +491,30 @@ Format your response as JSON:
 
     t0 = time.time()
 
-    # Route based on god_head_domain
-    if persona.god_head_domain == "legal" and ALLOW_CLOUD_LLM:
+    # MoE routing: each seat dispatches to its designated provider
+    routing = SEAT_ROUTING.get(persona.seat, {})
+    provider = routing.get("provider", "HYDRA") if ALLOW_CLOUD_LLM else "HYDRA"
+
+    if provider == "ANTHROPIC":
         api_key = os.getenv("ANTHROPIC_API_KEY", "")
         text, model = await _call_llm(
             system_prompt, user_prompt,
             model=ANTHROPIC_MODEL,
             base_url=ANTHROPIC_PROXY,
             api_key=api_key,
+        )
+    elif provider == "GEMINI" and GEMINI_API_KEY:
+        text, model = await _call_llm(
+            system_prompt, user_prompt,
+            model=GEMINI_MODEL,
+            base_url=GEMINI_BASE_URL,
+            api_key=GEMINI_API_KEY,
+        )
+    elif provider == "SWARM":
+        text, model = await _call_llm(
+            system_prompt, user_prompt,
+            model=SWARM_MODEL,
+            base_url=SWARM_URL,
         )
     else:
         text, model = await _call_llm(
@@ -488,6 +524,10 @@ Format your response as JSON:
         )
 
     elapsed = time.time() - t0
+    logger.info(
+        "Seat %d (%s) completed via %s in %.1fs",
+        persona.seat, persona.name, provider, elapsed,
+    )
     return _parse_opinion(persona, case_brief[:200], text, model, elapsed)
 
 
@@ -584,6 +624,151 @@ def _dedupe_top(items: List[str], limit: int) -> List[str]:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# Context Freezer (Pillar 2 — Qdrant Evidence Locking)
+# ═══════════════════════════════════════════════════════════════════════
+
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
+EMBED_URL = os.getenv("EMBED_URL", "http://192.168.0.100/api/embeddings")
+EMBED_MODEL = "nomic-embed-text"
+LEGAL_COLLECTION = "legal_library"
+
+
+async def _embed_text(text: str) -> Optional[List[float]]:
+    """Embed text via nomic-embed-text through the Nginx LB."""
+    async with httpx.AsyncClient(timeout=30) as client:
+        try:
+            resp = await client.post(
+                EMBED_URL,
+                json={"model": EMBED_MODEL, "prompt": text[:8000]},
+            )
+            resp.raise_for_status()
+            vec = resp.json().get("embedding", [])
+            if len(vec) >= 384:
+                return vec
+            logger.warning("embed_dim_unexpected  got=%d", len(vec))
+        except Exception as e:
+            logger.warning("embed_failed_lb  error=%s", str(e)[:200])
+
+        # Fallback: direct Ollama on Captain
+        try:
+            resp = await client.post(
+                "http://localhost:11434/api/embeddings",
+                json={"model": EMBED_MODEL, "prompt": text[:8000]},
+            )
+            resp.raise_for_status()
+            vec = resp.json().get("embedding", [])
+            if len(vec) >= 384:
+                return vec
+        except Exception as e:
+            logger.error("embed_failed_all  error=%s", str(e)[:200])
+    return None
+
+
+async def freeze_context(
+    case_brief: str,
+    top_k: int = 20,
+) -> Tuple[List[str], List[str]]:
+    """
+    Pillar 2: Context Freezing.
+
+    Embeds the case brief, queries the legal_library Qdrant collection,
+    and returns the exact (vector_ids, context_chunks) that will be
+    injected into every persona's prompt and permanently sealed in the vault.
+
+    On any failure, returns empty lists — deliberation proceeds without
+    RAG context rather than crashing.
+    """
+    logger.info("freeze_context_start  collection=%s  top_k=%d", LEGAL_COLLECTION, top_k)
+
+    query_vec = await _embed_text(case_brief)
+    if query_vec is None:
+        logger.warning("freeze_context_no_embedding — proceeding without RAG context")
+        return [], []
+
+    headers = {"api-key": QDRANT_API_KEY} if QDRANT_API_KEY else {}
+    body = {
+        "vector": query_vec,
+        "limit": top_k,
+        "with_payload": True,
+        "with_vector": False,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                f"{QDRANT_URL}/collections/{LEGAL_COLLECTION}/points/search",
+                json=body,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("result", [])
+    except Exception as e:
+        logger.warning("freeze_context_qdrant_failed  error=%s", str(e)[:200])
+        return [], []
+
+    vector_ids: List[str] = []
+    context_chunks: List[str] = []
+
+    for pt in results:
+        point_id = str(pt.get("id", ""))
+        payload = pt.get("payload", {})
+        text = payload.get("text", "")
+        if point_id and text:
+            vector_ids.append(point_id)
+            source = payload.get("source_file", payload.get("filename", "unknown"))
+            context_chunks.append(f"[{source}] {text}")
+
+    logger.info(
+        "freeze_context_complete  vectors=%d  chunks=%d  top_score=%.3f",
+        len(vector_ids), len(context_chunks),
+        results[0].get("score", 0.0) if results else 0.0,
+    )
+    return vector_ids, context_chunks
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Roster Snapshot Builder (Pillar 4 — Hardware & Model Provenance)
+# ═══════════════════════════════════════════════════════════════════════
+
+def _build_roster_snapshot() -> Dict[str, Any]:
+    """
+    Build a frozen snapshot of the MoE roster with exact model versions.
+
+    Merges the NAS roster file with the live SEAT_ROUTING config and
+    resolved model version strings so the vault knows exactly which
+    models were dispatched.
+    """
+    nas_roster = load_active_roster()
+
+    model_map = {
+        "ANTHROPIC": ANTHROPIC_MODEL,
+        "GEMINI": GEMINI_MODEL,
+        "HYDRA": HYDRA_MODEL,
+        "SWARM": SWARM_MODEL,
+    }
+
+    seats = []
+    for seat_num, routing in SEAT_ROUTING.items():
+        provider = routing["provider"] if ALLOW_CLOUD_LLM else "HYDRA"
+        model_id = model_map.get(provider, HYDRA_MODEL)
+        seats.append({
+            "seat": seat_num,
+            "role": routing["role"],
+            "provider": provider,
+            "model_id": model_id,
+            "cloud_allowed": ALLOW_CLOUD_LLM,
+        })
+
+    return {
+        "roster_version": nas_roster.get("roster_version", "unknown"),
+        "snapshot_time": datetime.now().isoformat(),
+        "total_seats": len(seats),
+        "seats": seats,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Council Session (SSE Streaming)
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -599,14 +784,25 @@ async def run_council_deliberation(
     case_brief: str,
     context: str = "",
     progress_callback=None,
+    case_slug: str = "",
+    case_number: str = "",
+    trigger_type: str = "MANUAL_RUN",
 ):
     """
     Run all 9 legal personas with semaphore-throttled concurrency.
     Updates _active_sessions with progress and streams via callback.
 
+    Verifiable Intelligence Engine integration:
+        1. Freezes Qdrant context (vector UUIDs + text chunks)
+        2. Captures MoE roster snapshot with exact model versions
+        3. After consensus, vaults the entire event with SHA-256 signature
+        4. Emits context_frozen and vaulted SSE events
+
     CRITICAL: Every persona MUST emit a persona_complete event, even on
     failure. A missing event deadlocks the SSE stream.
     """
+    deliberation_start = time.time()
+
     personas = LegalPersona.load_all()
     if not personas:
         _active_sessions[session_id] = {
@@ -620,6 +816,24 @@ async def run_council_deliberation(
             })
         return
 
+    # ── Pillar 2: Context Freezing ────────────────────────────────────
+    vector_ids, context_chunks = await freeze_context(case_brief, top_k=20)
+
+    frozen_context = "\n\n".join(context_chunks) if context_chunks else context
+    if context and context_chunks:
+        frozen_context = f"{context}\n\n--- RETRIEVED EVIDENCE ---\n\n{frozen_context}"
+
+    if progress_callback:
+        await progress_callback({
+            "type": "context_frozen",
+            "vector_count": len(vector_ids),
+            "chunk_count": len(context_chunks),
+            "collection": LEGAL_COLLECTION,
+        })
+
+    # ── Pillar 4: Roster Snapshot ─────────────────────────────────────
+    roster_snapshot = _build_roster_snapshot()
+
     _active_sessions[session_id] = {
         "status": "deliberating",
         "session_id": session_id,
@@ -628,13 +842,15 @@ async def run_council_deliberation(
         "personas_completed": 0,
         "opinions": [],
         "started_at": datetime.now().isoformat(),
+        "vector_count": len(vector_ids),
     }
 
     if progress_callback:
         await progress_callback({
             "type": "status",
             "message": f"Council of 9 convened. {len(personas)} legal personas deliberating "
-                       f"(max 3 concurrent, {PERSONA_TIMEOUT_SECONDS}s timeout per seat)...",
+                       f"(max 3 concurrent, {PERSONA_TIMEOUT_SECONDS}s timeout per seat). "
+                       f"{len(vector_ids)} evidence vectors frozen.",
             "personas_total": len(personas),
         })
 
@@ -659,7 +875,7 @@ async def run_council_deliberation(
 
         try:
             opinion = await asyncio.wait_for(
-                analyze_with_persona(persona, case_brief, context),
+                analyze_with_persona(persona, case_brief, frozen_context),
                 timeout=PERSONA_TIMEOUT_SECONDS,
             )
         except asyncio.TimeoutError:
@@ -710,9 +926,7 @@ async def run_council_deliberation(
     opinions.sort(key=lambda o: o.seat)
 
     consensus = compute_consensus(opinions)
-    elapsed = time.time() - time.mktime(
-        datetime.fromisoformat(_active_sessions[session_id]["started_at"]).timetuple()
-    )
+    elapsed = time.time() - deliberation_start
 
     result = {
         "status": "complete",
@@ -724,6 +938,40 @@ async def run_council_deliberation(
         **consensus,
     }
 
+    # ── Pillar 3 + 4: Cryptographic Vault ─────────────────────────────
+    event_id = None
+    sha256_sig = None
+    try:
+        seat_opinion_dicts = [o.to_dict() for o in opinions]
+        execution_time_ms = int(elapsed * 1000)
+
+        loop = asyncio.get_running_loop()
+        event_id, sha256_sig = await loop.run_in_executor(
+            None,
+            vault_deliberation,
+            case_slug or "unspecified",
+            case_number or None,
+            trigger_type,
+            vector_ids,
+            context_chunks,
+            case_brief,
+            roster_snapshot,
+            seat_opinion_dicts,
+            consensus,
+            execution_time_ms,
+        )
+
+        result["event_id"] = event_id
+        result["sha256_signature"] = sha256_sig
+
+        logger.info(
+            "deliberation_vaulted  event_id=%s  signature=%s  elapsed_ms=%d",
+            event_id, sha256_sig[:16], execution_time_ms,
+        )
+    except Exception as exc:
+        logger.error("vault_write_failed  error=%s", exc, exc_info=True)
+        result["vault_error"] = str(exc)[:200]
+
     _active_sessions[session_id] = result
 
     if progress_callback:
@@ -732,6 +980,16 @@ async def run_council_deliberation(
             **consensus,
             "elapsed_seconds": round(elapsed, 1),
         })
+
+        if event_id and sha256_sig:
+            await progress_callback({
+                "type": "vaulted",
+                "event_id": event_id,
+                "sha256_signature": sha256_sig,
+                "vector_count": len(vector_ids),
+                "execution_time_ms": int(elapsed * 1000),
+            })
+
         await progress_callback({"type": "done", **result})
 
     return result

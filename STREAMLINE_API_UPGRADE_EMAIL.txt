@@ -1,0 +1,57 @@
+=====================================================================
+READY-TO-SEND EMAIL — Forward from taylor.knight@cabin-rentals-of-georgia.com
+=====================================================================
+
+TO:   integrationpartners@streamlinevrs.zohodesk.com
+CC:   taylor.knight@cabin-rentals-of-georgia.com
+SUBJ: API Token Permission Upgrade Request — Cabin Rentals of Georgia (Company ID: 796)
+
+---------------------------------------------------------------------
+
+Hi Streamline Integration Partners Team,
+
+We are Cabin Rentals of Georgia (Company ID: 796) and currently use
+Streamline VRS as our primary Property Management System for our
+portfolio of 14 vacation rental cabins in Blue Ridge, Georgia.
+
+We have an active API integration token and are building an enterprise
+guest communication and operations platform that integrates directly
+with Streamline VRS via your JSON API (web.streamlinevrs.com/api/json).
+
+CURRENT ACCESS (working):
+  - GetPropertyList
+  - GetPropertyInfo
+  - GetPropertyAmenities
+  - GetPropertyGalleryImages
+  - GetPropertyRates
+  - GetBlockedDaysForUnit
+  - GetWorkOrders
+  - GetOwnerList
+  - GetGuestReviews
+  - RenewExpiredToken
+
+REQUESTED ADDITIONAL PERMISSIONS:
+  - GetReservationList
+  - GetReservationsListByDates
+  - GetReservationsByProperty
+  - GetGuestList
+  - GetHousekeepingTasks
+  - GetOwnerStatements
+
+These methods currently return error code E0014 ("Method is not
+allowed for this token"). We need these permissions to sync
+reservations and guest data into our operations platform for
+automated guest communication and housekeeping coordination.
+
+Current Token Key Prefix: 9d4b5e96...
+
+Please upgrade our token permissions at your earliest convenience.
+
+Best regards,
+
+Taylor Knight
+Operations Manager
+Cabin Rentals of Georgia
+Phone: (706) 258-8999
+Email: taylor.knight@cabin-rentals-of-georgia.com
+Website: bookcrgluxury.com

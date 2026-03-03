@@ -1,0 +1,3370 @@
+OFFICIAL CODE OF GEORGIA ANNOTATED
+Georgia Code Title 51 - Torts
+============================================================
+
+
+
+============================================================
+
+Chapter 1 - General Provisions
+
+============================================================
+
+
+§ 51-1-1.
+§ 51-1-1 - Tort Defined
+
+A tort is the unlawful violation of a private legal right other than a mere breach of contract, express or implied. A tort may also be the violation of a public duty if, as a result of the violation, some special damage accrues to the individual.
+Section: 51-1-1
+51-1-2
+51-1-3
+51-1-4
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+Next
+Last modified: October 14, 2016
+
+§ 51-1-2.
+§ 51-1-2 - Ordinary Diligence and Ordinary Negligence Defined
+
+In general, ordinary diligence is that degree of care which is exercised by ordinarily prudent persons under the same or similar circumstances. As applied to the preservation of property, the term "ordinary diligence" means that care which every prudent man takes of his own property of a similar nature. The absence of such diligence is termed ordinary negligence.
+Section:
+51-1-1
+51-1-2
+51-1-3
+51-1-4
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+Next
+Last modified: October 14, 2016
+
+§ 51-1-3.
+§ 51-1-3 - Extraordinary Diligence and Slight Negligence Defined
+
+In general, extraordinary diligence is that extreme care and caution which very prudent and thoughtful persons exercise under the same or similar circumstances. As applied to the preservation of property, the term "extraordinary diligence" means that extreme care and caution which very prudent and thoughtful persons use in securing and preserving their own property. The absence of such extraordinary diligence is termed slight negligence.
+Section:
+Previous
+51-1-1
+51-1-2
+51-1-3
+51-1-4
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+Next
+Last modified: October 14, 2016
+
+§ 51-1-4.
+§ 51-1-4 - Slight Diligence and Gross Negligence Defined
+
+In general, slight diligence is that degree of care which every man of common sense, however inattentive he may be, exercises under the same or similar circumstances. As applied to the preservation of property, the term "slight diligence" means that care which every man of common sense, however inattentive he may be, takes of his own property. The absence of such care is termed gross negligence.
+Section:
+Previous
+51-1-1
+51-1-2
+51-1-3
+51-1-4
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+Next
+Last modified: October 14, 2016
+
+§ 51-1-5.
+§ 51-1-5 - Meaning of
+
+The term "due care," when used in reference to a child of tender years, is such care as the child's mental and physical capacities enable him to exercise in the actual circumstances of the occasion and situation under investigation.
+Section:
+Previous
+51-1-1
+51-1-2
+51-1-3
+51-1-4
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+Next
+Last modified: October 14, 2016
+
+§ 51-1-6.
+§ 51-1-6 - Recovery of Damages Upon Breach of Legal Duty
+
+When the law requires a person to perform an act for the benefit of another or to refrain from doing an act which may injure another, although no cause of action is given in express terms, the injured party may recover for the breach of such legal duty if he suffers damage thereby.
+Section:
+Previous
+51-1-1
+51-1-2
+51-1-3
+51-1-4
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+Next
+Last modified: October 14, 2016
+
+§ 51-1-11.
+§ 51-1-11 - When Privity Required to Support Action; Product Liability Action and Time Limitation Therefore; Industry-Wide Liability Theories Rejected
+
+(a) Except as otherwise provided in this Code section, no privity is necessary to support a tort action; but, if the tort results from the violation of a duty which is itself the consequence of a contract, the right of action is confined to the parties and those in privity to that contract, except in cases where the party would have a right of action for the injury done independently of the contract and except as provided in Code Section 11-2-318.
+(b) (1) The manufacturer of any personal property sold as new property directly or through a dealer or any other person shall be liable in tort, irrespective of privity, to any natural person who may use, consume, or reasonably be affected by the property and who suffers injury to his person or property because the property when sold by the manufacturer was not merchantable and reasonably suited to the use intended, and its condition when sold is the proximate cause of the injury sustained.
+(2) No action shall be commenced pursuant to this subsection with respect to an injury after ten years from the date of the first sale for use or consumption of the personal property causing or otherwise bringing about the injury.
+(3) A manufacturer may not exclude or limit the operation of this subsection.
+(c) The limitation of paragraph (2) of subsection (b) of this Code section regarding bringing an action within ten years from the date of the first sale for use or consumption of personal property shall also apply to the commencement of an action claiming negligence of a manufacturer as the basis of liability, except an action seeking to recover from a manufacturer for injuries or damages arising out of the negligence of such manufacturer in manufacturing products which cause a disease or birth defect, or arising out of conduct which manifests a willful, reckless, or wanton disregard for life or property. Nothing contained in this subsection shall relieve a manufacturer from the duty to warn of a danger arising from use of a product once that danger becomes known to the manufacturer.
+(d) Irrespective of privity, a manufacturer shall not be held liable for the manufacture of a product alleged to be defective based on theories of market share or enterprise, or other theories of industry-wide liability.
+(e) Irrespective of privity, a manufacturer of a product alleged to be defective shall not be held liable for a public nuisance based on theories of market share or enterprise, or other theories of industry-wide liability.
+Section:
+Previous
+51-1-4
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+Next
+Last modified: October 14, 2016
+
+§ 51-1-11.1.
+§ 51-1-11.1 - Liability of Product Seller As a Manufacturer
+
+(a) As used in this Code section, the term "product seller" means a person who, in the course of a business conducted for the purpose leases or sells and distributes; installs; prepares; blends; packages; labels; markets; or assembles pursuant to a manufacturer's plan, intention, design, specifications, or formulation; or repairs; maintains; or otherwise is involved in placing a product in the stream of commerce. This definition does not include a manufacturer which, because of certain activities, may additionally be included within all or a portion of the definition of a product seller.
+(b) For purposes of a product liability action based in whole or in part on the doctrine of strict liability in tort, a product seller is not a manufacturer as provided in Code Section 51-1-11 and is not liable as such.
+(c) Nothing contained in this Code section shall be construed to grant a cause of action in strict liability in tort or any other legal theory or to affect the right of any person to seek and obtain indemnity or contribution.
+(d) This Code section shall apply to all causes of action accruing on or after July 1, 1987.
+Section:
+Previous
+51-1-5
+51-1-6
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+Next
+Last modified: October 14, 2016
+
+§ 51-1-13.
+§ 51-1-13 - Cause of Action for Physical Injury; Intention Considered in Assessing Damages
+
+A physical injury done to another shall give a right of action to the injured party, whatever may be the intention of the person causing the injury, unless he is justified under some rule of law. However, intention shall be considered in the assessment of damages.
+Section:
+Previous
+51-1-7
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+Next
+Last modified: October 14, 2016
+
+§ 51-1-14.
+§ 51-1-14 - Violent Injury or Attempt to Commit Injury
+
+Any violent injury or illegal attempt to commit a physical injury upon a person is a tort for which damages may be recovered.
+Section:
+Previous
+51-1-8
+51-1-9
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+Next
+Last modified: October 14, 2016
+
+§ 51-1-16.
+§ 51-1-16 - Right of Action for Seduction of Daughter; Exemplary Damages
+
+The seduction of a daughter, unmarried and living with her parent, whether followed by pregnancy or not, shall give a right of action to the father or to the mother if the father is dead, or absent permanently, or refuses to bring an action. No loss of services need be alleged or proved. The seduction is the gist of the action, and in well-defined cases exemplary damages shall be granted.
+Section:
+Previous
+51-1-10
+51-1-11
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+Next
+Last modified: October 14, 2016
+
+§ 51-1-18.
+§ 51-1-18 - Furnishing Alcoholic Beverages to Minor Children; Gambling With Minor Children
+
+(a) The custodial parent or parents shall have a right of action against any person who shall sell or furnish alcoholic beverages to that parent's underage child for the child's use without the permission of the child's parent.
+(b) A parent shall have a right of action against any person who shall play and bet at any game of chance with his minor child for money or any other thing of value without the parent's permission.
+Section:
+Previous
+51-1-11.1
+51-1-12
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+Next
+Last modified: October 14, 2016
+
+§ 51-1-19.
+§ 51-1-19 - Negligence by Person Given Trust or Confidence for Consideration
+
+When trust or confidence is reposed in a person in consideration of the payment or promise of a reward to him, negligence in the person trusted which results in injury to the other person shall give the injured party a right of action.
+Section:
+Previous
+51-1-12
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+Next
+Last modified: October 14, 2016
+
+§ 51-1-20.
+§ 51-1-20 - Liability of Persons Serving Charitable Organizations and Public Entities While Acting in Good Faith
+
+(a) A person serving with or without compensation as a member, director, or trustee, or as an officer of the board without compensation, of any nonprofit hospital or association or of any nonprofit, charitable, or eleemosynary institution or organization or of any local governmental agency, board, authority, or entity shall be immune from civil liability for any act or any omission to act arising out of such service if such person was acting in good faith within the scope of his or her official actions and duties and unless the damage or injury was caused by the willful or wanton misconduct of such person.
+(b) As used in this Code section, the term "compensation" shall not include reimbursement for reasonable expenses related to said services.
+(c) This Code section shall not affect any immunity of any person arising from any source, whether or not such person may additionally be subject to and possess an immunity provided by this Code section. The immunity provided by this Code section shall be supplemental to any such existing immunity.
+Section:
+Previous
+51-1-13
+51-1-14
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+Next
+Last modified: October 14, 2016
+
+§ 51-1-20.1.
+§ 51-1-20.1 - Liability of Volunteers, Employees, or Officers of Nonprofit Association Conducting or Sponsoring Sports or Safety Program; Liability of Association
+
+(a) As used in this Code section, the term:
+(1) "Compensation" does not mean or include any gift, any reimbursement for any reasonable expense incurred for the benefit of a nonprofit athletic program, or, in the case of an umpire or referee, a modest honorarium.
+(2) "Nonprofit association" means any entity which is organized as a nonprofit corporation or a nonprofit unincorporated association under the laws of this state, including, but not limited to, youth or sports associations, volunteer fire associations, or religious, charitable, fraternal, veterans, civic, county fair, or agricultural associations, or any separately chartered auxiliary of the foregoing, if organized and operated on a nonprofit basis.
+
+§ 51-1-20.2.
+§ 51-1-20.2 - Liability of Child Passenger Safety Technicians
+
+(a) As used in this Code section, the term:
+(1) "Child passenger safety technician" means a person who holds a current certification as a child passenger safety technician or technician instructor by the National Highway Traffic Safety Administration of the United States Department of Transportation, the American Automobile Association, or other entity designated by the National Highway Traffic Safety Administration but specifically does not include any person who is an employee or agent of a manufacturer of child safety seats.
+(2) "Child safety seat" means a seat as defined in paragraph (1) of subsection (b) of Code Section 40-8-76.
+(3) "Sponsoring organization" means a person or organization other than a manufacturer of or an employee or agent of a manufacturer of child safety seats that:
+(A) Offers or arranges for the public a nonprofit child safety seat educational program, checkup event, or fitting station program utilizing child passenger safety technicians; or
+(B) Owns property upon which a nonprofit child safety seat educational program, checkup event, or fitting station program for the public occurs utilizing child passenger safety technicians.
+(b) A child passenger safety technician or sponsoring organization shall not be liable to any person as a result of any act or omission that occurs solely in the inspection, installation or adjustment of a child safety seat, or in providing education regarding the installation or adjustment of a child safety seat if the child passenger safety technician or sponsoring organization provides the services without a fee and acts in good faith within the scope of training for which the technician is currently certified and unless the act or omission constitutes willful and wanton misconduct or gross negligence.
+(c) Nothing in this Code section shall be construed as affecting, modifying, or eliminating the liability of a manufacturer of a child safety seat or its employees or agents under any legal claim, including but not limited to product liability claims.
+(d) This Code section shall apply to any cause of action arising on or after July 1, 2002.
+Section:
+Previous
+51-1-15
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+Next
+Last modified: October 14, 2016
+
+§ 51-1-21.
+§ 51-1-21 - Liability of Owner of Watercraft for Torts Generally
+
+(a) As used in this Code section, the term:
+(1) "Owner" means a person other than a secured party who has title to personal property or who has the use and possession of personal property subject to a security interest.
+(2) "Watercraft" means any boat, vessel, or craft, other than a seaplane, used as a means of transportation on water.
+(b) The owner of a watercraft shall be liable for any tort caused by the operation of the watercraft, in the same manner and to the same degree as the owner of an automobile is liable for torts caused by its operation.
+Section:
+Previous
+51-1-16
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+Next
+Last modified: October 14, 2016
+
+§ 51-1-22.
+§ 51-1-22 - Owner's Liability for Negligent Operation of Vessel; Express or Implied Consent Prerequisite
+
+The owner of a vessel shall be liable for any injury or damage occasioned by the negligent operation of the vessel, whether the negligence consists of a violation of the statutes of this state or of neglecting to observe such ordinary care in such operation as the rules of common law require. The owner shall not be liable, however, unless the vessel is being used with his or her express or implied consent. It shall be presumed that the vessel is being operated with the knowledge and consent of the owner if, at the time of the injury or damage, the vessel is under the control of his or her spouse, father, mother, brother, sister, son, daughter, or other immediate member of the owner's family. Nothing contained in this Code section shall be construed to relieve any other person from any liability which he would otherwise have nor shall anything contained in this Code section be construed to authorize or permit any recovery in excess of injury or damage actually incurred.
+Section:
+Previous
+51-1-17
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+Next
+Last modified: October 14, 2016
+
+§ 51-1-23.
+§ 51-1-23 - Sale of Unwholesome Provisions
+
+Any person who knowingly or negligently sells unwholesome provisions of any kind to another person, the defect being unknown to the purchaser, by the use of which damage results to the purchaser or to his family, shall be liable in damages for such injury.
+Section:
+Previous
+51-1-18
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+Next
+Last modified: October 14, 2016
+
+§ 51-1-24.
+§ 51-1-24 - Sale of Adulterated Drugs or Alcoholic Beverages
+
+Any person who knowingly or negligently, by himself or his agent, sells adulterated drugs or alcoholic beverages to another person, by the use of which damage accrues to the purchaser, his patients, his family, or his property, shall be liable in damages for the injury done.
+Section:
+Previous
+51-1-19
+51-1-20
+51-1-20.1
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+Next
+Last modified: October 14, 2016
+
+§ 51-1-27.
+§ 51-1-27 - Recovery for Medical Malpractice Authorized
+
+A person professing to practice surgery or the administering of medicine for compensation must bring to the exercise of his profession a reasonable degree of care and skill. Any injury resulting from a want of such care and skill shall be a tort for which a recovery may be had.
+Section:
+Previous
+51-1-20.2
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+Next
+Last modified: October 14, 2016
+
+§ 51-1-28.
+§ 51-1-28 - Transfusions, Transplants, and Transfers of Human Blood, Tissue, Organs; Negligence Prerequisite to Recovery for Damages
+
+(a) The injection, transfusion, or other transfer of human whole blood, blood plasma, blood products, or blood derivatives and the transplanting or other transfer of any tissue, bones, or organs into or onto the human body shall not be considered a sale of any commodity, goods, property, or product subject to sale or barter but, instead, shall be considered as the rendition of medical services. No implied warranties of any kind or description shall be applicable thereto and no person, firm, or corporation participating in such services shall be liable for damages unless negligence is proven.
+(b) Code Section 51-1-27 shall not be affected by subsection (a) of this Code section.
+Section:
+Previous
+51-1-21
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+Next
+Last modified: October 14, 2016
+
+§ 51-1-29.
+§ 51-1-29 - Liability of Persons Rendering Emergency Care
+
+(a) Any person, including any person licensed to practice medicine and surgery pursuant to Article 2 of Chapter 34 of Title 43 and any person licensed to render services ancillary thereto, who in good faith renders emergency care at the scene of an accident or emergency to the victims thereof without making any charge therefor shall not be liable for any civil damages as a result of any act or omission by such person in rendering emergency care or as a result of any act or failure to act to provide or arrange for further medical treatment or care for the injured person.
+(b) As used in this Code section, the term "emergency care" shall include, but shall not be limited to, the rescue or attempted rescue of an incapacitated or endangered individual from a locked motor vehicle.
+Section:
+Previous
+51-1-22
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+Next
+Last modified: October 14, 2016
+
+§ 51-1-29.1.
+§ 51-1-29.1 - Liability of Voluntary Health Care Provider and Sponsoring Organization
+
+(a) Without waiving or affecting and cumulative of any existing immunity from any source, unless it is established that injuries or death were caused by gross negligence or willful or wanton misconduct:
+(1) No health care provider licensed under Chapter 9, 11, 26, 30, 33, or 34 of Title 43 who voluntarily and without the expectation or receipt of compensation provides professional services, within the scope of such health care provider's licensure, for and at the request of a hospital, public school, nonprofit organization, or an agency of the state or one of its political subdivisions or provides such professional services to a person at the request of such an organization, which organization does not expect or receive compensation with respect to such services from the recipient of such services; or
+(2) No licensed hospital, public school, or nonprofit organization which requests, sponsors, or participates in the providing of the services under the circumstances provided in paragraph (1) of this subsection
+shall be liable for damages or injuries alleged to have been sustained by the person nor for damages for the injury or death of the person when the injuries or death are alleged to have occurred by reason of an act or omission in the rendering of such services.
+(b) Nothing in this Code section shall be construed to change the scope of practice of any health care provider granted immunity in this Code section.
+(c) This Code section shall apply only to causes of action arising on or after July 1, 1987.
+Section:
+Previous
+51-1-23
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+Next
+Last modified: October 14, 2016
+
+§ 51-1-29.2.
+§ 51-1-29.2 - Liability of Persons or Entities Acting to Prevent, Minimize, and Repair Injury and Damage Resulting From Catastrophic Acts of Nature
+
+Any natural person and any association, fraternal organization, private for profit entity, not for profit entity, religious organization, or charitable organization and the officers, directors, employees, and agents of such associations, organizations, and entities, when such persons, associations, organizations, or entities are working in coordination and under the direction of an appropriate state agency, who voluntarily and without the expectation or receipt of compensation provides services or goods in preparation for, anticipation of, or during a time of emergency and in a place of emergency as declared by the Governor for the benefit of any natural person or his or her property to prevent or minimize harm to such natural person or to prevent, minimize, and repair injury and damage to such person's property resulting from biological, chemical, or nuclear agents; terrorism; pandemics or epidemics of infectious disease; or catastrophic acts of nature, including, but not limited to, fire, flood, earthquake, wind, storm, or wave action, or any other occurrence which warrants the declaration of a state of emergency or disaster by the Governor pursuant to Code Section 38-3-51 or by a federal agency shall not be civilly liable to any natural person receiving such assistance as a result of any act or omission in rendering such service if such natural person, association, organization, or entity was acting in good faith and unless the damage or injury was caused by the willful or wanton negligence or misconduct of such natural person, association, organization, or entity. Nothing in this Code section shall be construed to amend, repeal, alter, or affect in any manner any other provision of law granting immunity or limiting liability. Nothing in this Code section shall be construed to abrogate the sovereign immunity of this state as to all actions executed by any party under this Code section.
+Section:
+Previous
+51-1-24
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+Next
+Last modified: October 14, 2016
+
+§ 51-1-29.3.
+§ 51-1-29.3 - Immunity for Operators of External Defibrillators
+
+(a) The persons described in this Code section shall be immune from civil liability for any act or omission to act related to the provision of emergency care or treatment by the use of or provision of an automated external defibrillator, as described in Code Sections 31-11-53.1 and 31-11-53.2, except that such immunity shall not apply to an act of willful or wanton misconduct and shall not apply to a person acting within the scope of a licensed profession if such person acts with gross negligence. The immunity provided for in this Code section shall extend to:
+(1) Any person who gratuitously and in good faith renders emergency care or treatment by the use of or provision of an automated external defibrillator without objection of the person to whom care or treatment is rendered;
+(2) The owner or operator of any premises or conveyance who installs or provides automated external defibrillator equipment in or on such premises or conveyance;
+(3) Any physician or other medical professional who authorizes, directs, or supervises the installation or provision of automated external defibrillator equipment in or on any premises or conveyance other than any medical facility as defined in paragraph (5) of Code Section 31-7-1; and
+(4) Any person who provides training in the use of automated external defibrillator equipment as required by subparagraph (b)(1)(A) of Code Section 31-11-53.2, whether compensated or not. This Code section is not applicable to any training or instructions provided by the manufacturer of the automated external defibrillator or to any claim for failure to warn on the part of the manufacturer.
+(b) Nothing in this Code section shall be construed so as to provide immunity to the manufacturer of any automated external defibrillator or off-premises automated external defibrillator maintenance or service providers, nor shall it relieve the manufacturer from any claim for product liability or failure to warn.
+Section:
+Previous
+51-1-25
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+Next
+Last modified: October 14, 2016
+
+§ 51-1-29.4.
+§ 51-1-29.4 - Liability of Voluntary Health Care Providers and Sponsoring Organizations; Cumulative Immunity; Application
+
+(a) As used in this Code section, the term:
+(1) "Free health clinic" means a nonprofit, charitable, or eleemosynary institution or organization which voluntarily and without expectation or receipt of payment or other compensation or financial benefit provides health care services to persons who do not qualify for medicare or Medicaid, have no private health insurance, and cannot afford to see a medical care professional.
+(2) "Medical care professional" means a professional who is licensed under Chapter 4 of Title 26 or Chapter 9, 11, 11A, 26, 30, 33, 34, or 44 of Title 43.
+(b) (1) A free health clinic and its agents, employees, and volunteers when acting within the scope of that relationship shall not be liable to a patient for ordinary negligence which proximately causes injury to or the death of that patient if the services provided to that patient were free of any charge and the free health clinic and the medical care professional whose services are at issue neither received nor expected to receive any payment or other compensation or financial benefit for providing care to that patient.
+(2) A licensed hospital, public school, or nonprofit organization which requests, sponsors, or participates in providing the services of a free health clinic shall not be liable to a patient for ordinary negligence which proximately causes injury to or the death of that patient if the services requested, sponsored, or provided to that patient were free of any charge and the free health clinic, the medical care professional whose services are at issue, the licensed hospital, the public school, or the nonprofit organization did not receive or expect to receive any payment or other compensation or financial benefit for providing care to that patient.
+(3) The immunity granted under this Code section shall not waive or affect and is cumulative of any existing immunity from any other source.
+(c) This Code section shall apply only to causes of action arising on or after July 1, 2004.
+Section:
+Previous
+51-1-26
+51-1-27
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+Next
+Last modified: October 14, 2016
+
+§ 51-1-29.5.
+§ 51-1-29.5 - Definitions; Limitation on Health Care Liability Claim to Gross Negligence in Emergency Medical Care; Factors for Jury Consideration
+
+(a) As used in this Code section, the term:
+(1) "Affiliate" means a person who, directly or indirectly through one or more intermediaries, controls, is controlled by, or is under common control with a specified person, including any direct or indirect parent or subsidiary.
+(2) "Claimant" means a person, including a decedent's estate, who seeks or has sought recovery of damages in a health care liability claim. All persons claiming to have sustained damages as the result of the bodily injury or death of a single person are considered a single claimant.
+(3) "Control" means the possession, directly or indirectly, of the power to direct or cause the direction of the management and policies of the person, whether through ownership of equity or securities, by contract, or otherwise.
+(4) "Court" means any federal or state court.
+(5) "Emergency medical care" means bona fide emergency services provided after the onset of a medical or traumatic condition manifesting itself by acute symptoms of sufficient severity, including severe pain, such that the absence of immediate medical attention could reasonably be expected to result in placing the patient's health in serious jeopardy, serious impairment to bodily functions, or serious dysfunction of any bodily organ or part. The term does not include medical care or treatment that occurs after the patient is stabilized and is capable of receiving medical treatment as a nonemergency patient or care that is unrelated to the original medical emergency.
+(6) "Emergency medical services provider" means any person providing emergency medical care.
+(7) "Health care" means any act or treatment performed or furnished, or that should have been performed or furnished, by any health care provider for, to, or on behalf of a patient during the patient's medical care, treatment, or confinement.
+(8) "Health care institution" means:
+(A) An ambulatory surgical center;
+
+§ 51-1-29.6.
+§ 51-1-29.6 - Liability of Health Care Institutions and Providers Regarding Thc Oil
+
+(a) As used in this Code section, the term:
+(1) "Caregiver" shall have the same meaning as set forth in Code Section 31-2A-18.
+(2) "Health care institution" shall have the same meaning as set forth in Code Section 51-1-29.5.
+(3) "Health care provider" means any person licensed, certified, or registered under Chapter 9, 10A, 11, 11A, 26, 28, 30, 33, 34, 35, 39, or 44 of Title 43 or Chapter 4 of Title 26.
+(4) "Low THC oil" shall have the same meaning as set forth in Code Section 16-12-190.
+(b) A health care institution shall not be subject to any civil liability, penalty, licensing sanction, or other detrimental action and a health care provider shall not be subject to any civil liability, penalty, denial of a right or privilege, disciplinary action by a professional licensing board, or other detrimental action for allowing an individual or caregiver to possess, administer, or use low THC oil on the premises of a health care institution or offices of a health care provider provided that the possession of such substance is in accordance with the laws of this state.
+Section:
+Previous
+51-1-28
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+Next
+Last modified: October 14, 2016
+
+§ 51-1-30.
+§ 51-1-30 - Liability of Officers and Agents for Acts Performed While Fighting Fires or Performing Duties At the Scene of Emergencies
+
+(a) As used in this Code section, the term "fire department" includes volunteer fire departments established pursuant to local act, ordinance, or resolution or established as nonprofit corporations pursuant to private subscription and any fire department established as a department, bureau, or agency of a municipality, county, fire district, or authority of this state.
+(b) The officers, members, agents, or employees of any fire department established by any county, municipality, fire district, or authority shall not be liable at law for any act or acts done while actually fighting a fire or performing duties at the scene of an emergency, except for willful negligence or malfeasance.
+(c) This Code section shall not affect the right of any party to recover damages for an act which occurred before July 1, 1980.
+Section:
+Previous
+51-1-29
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+Next
+Last modified: October 14, 2016
+
+§ 51-1-30.1.
+§ 51-1-30.1 - Exemption From Tort Liability of Drivers and Operators of Fire Apparatus in Certain Municipalities
+
+(a) As used in this Code section, the term "fire apparatus" means salvage and first-aid cars, chiefs' cars, hose wagons, pumpers, aerial trucks, water towers, service trucks, supply trucks, or other publicly owned and operated automotive equipment used in fire fighting.
+(b) A driver or operator of fire apparatus publicly owned and operated by any member of a fire department in municipalities having a population of more than 300,000 according to the United States decennial census of 1940 or any future such census shall be exempted from any tort liability by reason of injuries sustained to the person or property of anyone where such damage or injury is caused by the driving of such apparatus in responding to a fire alarm or while returning to a fire station under emergency orders of a chief or assistant chief to put equipment back into service for another call.
+(c) Nothing in this Code section shall affect in any manner the liability of such municipalities owning such fire apparatus for the torts of its employees under the general laws of this state.
+Section:
+Previous
+51-1-29.1
+51-1-29.2
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+Next
+Last modified: October 14, 2016
+
+§ 51-1-30.3.
+§ 51-1-30.3 - Immunity From Liability for Persons Providing Certain Services Upon Public or Private School Property and for Public or Private Schools Requesting Such Services
+
+(a) Unless it is established that injuries or death were caused by gross negligence or willful or wanton misconduct:
+(1) No natural person who voluntarily and without the expectation or receipt of compensation provides services for and at the request and sanction of a public school or private school and who does not expect or receive compensation with respect to such services from the recipient of such services; or
+(2) No public school or private school which requests, sponsors, or participates in the providing of the services under the circumstances provided in paragraph (1) of this subsection
+shall be liable for damages or injuries alleged to have been sustained by another person or damages for the injury or death of the other person when the injuries or death are alleged to have occurred by reason of an act or omission occurring on school property in the rendering of such services if such services are provided upon school property or at a school sponsored function.
+(b) This Code section shall not apply to any incident or incidents arising out of the operation of a motor vehicle or motor vehicles. This Code section also shall not apply to any public or private school to the extent that any such public or private school has insurance in effect which covers any damages or injury or death described in paragraph (a) above.
+(c) This Code section shall not apply to persons who are performing tasks associated with their normal or ordinary course of business or their trade or profession.
+(d) This Code section shall apply only to causes of action arising on or after July 1, 1994.
+(e) Nothing in this Code section shall be construed to alter, affect, or repeal any other provision of law granting immunity from liability or to alter or affect any other immunity provision from whatever source and shall be cumulative of any existing immunity from any source.
+Section:
+Previous
+51-1-29.3
+51-1-29.4
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+Next
+Last modified: October 14, 2016
+
+§ 51-1-31.
+§ 51-1-31 - Liability From Donation of Canned or Perishable Food to Charitable or Nonprofit Organizations for Use or Distribution
+
+(a) As used in this Code section, the term:
+(1) "Canned food" means any food which has been commercially processed and prepared for human consumption and which has been commercially packaged in such a manner as to remain nonperishable without refrigeration for a reasonable length of time.
+(2) "Donor" includes, but is not limited to, a farmer, processor, distributor, commercial food service operator, wholesaler, or retailer of food.
+(3) "Gleaner" means a person who harvests for use or distribution an agricultural crop that has been donated by the owner.
+(4) "Perishable food" means any food that may spoil or otherwise become unfit for human consumption because of its nature, type, or physical condition. "Perishable food" includes, but is not limited to, table-ready food, cooked foods, fresh or processed meats, poultry, seafood, dairy products, bakery products, eggs, fresh fruits or vegetables, and foods that have been noncommercially or commercially packaged or that have been frozen or otherwise require temperature control to remain nonperishable for a reasonable length of time.
+(b) A good faith donor or gleaner of any canned or perishable food apparently fit for human consumption who donates such food to a bona fide charitable or nonprofit organization for use or distribution shall not be subject to criminal penalty or civil damages arising from the condition of the food, unless an injury is caused by the recklessness or intentional misconduct of the donor or gleaner.
+(c) A bona fide charitable or nonprofit organization which accepts any canned or perishable food apparently fit for human consumption from a good faith donor or gleaner for use or distribution shall not be subject to criminal penalty or civil damages arising from the condition of the food, unless an injury is caused by the recklessness or intentional misconduct of the charitable or nonprofit organization.
+(d) The provisions of this Code section apply to the good faith donation of canned or perishable food not readily marketable due to appearance, freshness, grade, surplus, or other such considerations.
+(e) The provisions of this Code section shall not be construed to restrict the authority of any lawful agency otherwise to regulate or ban the use of food for human consumption.
+Section:
+Previous
+51-1-29.5
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+Next
+Last modified: October 14, 2016
+
+§ 51-1-32.
+§ 51-1-32 - Separate Causes of Action for Personal Injury and Property Damage Caused by Motor Vehicle
+
+In cases arising from the wrongful or negligent operation of a motor vehicle in which the single wrongful or negligent act causes or results in both physical injuries to a person and injuries to the property of such person, the injured person shall have a separate and distinct cause of action against the person whose wrongful or negligent act caused such injury for the physical injury to his person and a separate and distinct cause of action for the injuries to his property. The injured party shall have the right, in his sole discretion, to prosecute each cause of action separately or to combine the two causes of action in one single action.
+Section:
+Previous
+51-1-29.6
+51-1-30
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+Next
+Last modified: October 14, 2016
+
+§ 51-1-34.
+§ 51-1-34 - Settlement of Single Action Under Code § 51-1-32 -- Effect in Separate Action
+
+The settlement of a claim or cause of action arising from a motor vehicle collision for property damage shall not bar or otherwise affect the prosecution of the claim or cause of action for physical injury to the person. The settlement of a claim or cause of action arising from a motor vehicle collision for physical injury to the person shall not bar or otherwise affect the prosecution of the claim or cause of action for property damage.
+Section:
+Previous
+51-1-30.1
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+Next
+Last modified: October 14, 2016
+
+§ 51-1-35.
+§ 51-1-35 - When Negotiating or Obtaining Statement From Injured Adverse Party Prohibited; Effect of Prohibited Settlement in Court Action
+
+(a) No person whose interest is or may become adverse to an injured person who is confined to a hospital or health care center as a patient shall, within 15 days from the date of the occurrence causing the person's injury:
+(1) Negotiate or attempt to negotiate a settlement with the injured patient;
+(2) Obtain or attempt to obtain a general release of liability from the injured patient; or
+(3) Obtain or attempt to obtain any statement, either written or oral from the injured patient, for use in negotiating a settlement or obtaining a release.
+(b) Any settlement agreement entered into or any general release of liability made by any person who is confined in a hospital or health care center after he incurs a personal injury which is obtained contrary to the provisions of subsection (a) of this Code section shall not be admitted as evidence in any court action relating to the injury and shall not be utilized for any purpose in any legal action in connection therewith.
+(c) Nothing in this Code section is intended to preclude an interested party from visiting an injured party while confined as a patient to a hospital or health care center for purposes of expressing concern for the injured or determining the extent of injuries incurred.
+Section:
+Previous
+51-1-30.2
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+Next
+Last modified: October 14, 2016
+
+§ 51-1-36.
+§ 51-1-36 - Duty of Care of Operator of Motor Vehicle to Passengers
+
+The operator of a motor vehicle owes to passengers therein the same duty of ordinary care owed to others.
+Section:
+Previous
+51-1-30.3
+51-1-30.4
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+Next
+Last modified: October 14, 2016
+
+§ 51-1-37.
+§ 51-1-37 - Negligent or Improper Administration of Polygraph Examination; Measure of Damages
+
+(a) Any person who is given a polygraph examination and who suffers damages as a result of such polygraph examination having been administered in a negligent manner shall have a cause of action against the polygraph examiner.
+
+§ 51-1-38.
+§ 51-1-38 - Tort Immunity for Medical Students; Exceptions
+
+(a) No student who participates in the provision of medical care or medical treatment under the supervision of a medical facility, academic institution, or doctor of medicine, as a part of an academic curriculum leading to the award of a medical degree, shall be liable for any civil damages as a result of any act or omission in such participation, except for willful or wanton misconduct.
+(b) Subsection (a) of this Code section shall not be construed to affect or limit the liability of a medical facility, academic institution, or doctor of medicine.
+Section:
+Previous
+51-1-31
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+Next
+Last modified: October 14, 2016
+
+§ 51-1-39.
+§ 51-1-39 - Liability for Injuries of Person Committing Crime on Political Subdivision Property
+
+A person who engages in a criminal act on property owned or leased by a political subdivision of this state and who suffers an injury as a result of said criminal act which is not inflicted by an officer, employee, or agent of such political subdivision shall not have a cause of action against such political subdivision for any injury sustained. The provisions of this Code section shall not have the effect of waiving the sovereign immunity of any political subdivision.
+Section:
+Previous
+51-1-32
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+Next
+Last modified: October 14, 2016
+
+§ 51-1-40.
+§ 51-1-40 - Liability for Acts of Intoxicated Persons
+
+(a) The General Assembly finds and declares that the consumption of alcoholic beverages, rather than the sale or furnishing or serving of such beverages, is the proximate cause of any injury, including death and property damage, inflicted by an intoxicated person upon himself or upon another person, except as otherwise provided in subsection (b) of this Code section.
+(b) A person who sells, furnishes, or serves alcoholic beverages to a person of lawful drinking age shall not thereby become liable for injury, death, or damage caused by or resulting from the intoxication of such person, including injury or death to other persons; provided, however, a person who willfully, knowingly, and unlawfully sells, furnishes, or serves alcoholic beverages to a person who is not of lawful drinking age, knowing that such person will soon be driving a motor vehicle, or who knowingly sells, furnishes, or serves alcoholic beverages to a person who is in a state of noticeable intoxication, knowing that such person will soon be driving a motor vehicle, may become liable for injury or damage caused by or resulting from the intoxication of such minor or person when the sale, furnishing, or serving is the proximate cause of such injury or damage. Nothing contained in this Code section shall authorize the consumer of any alcoholic beverage to recover from the provider of such alcoholic beverage for injuries or damages suffered by the consumer.
+(c) In determining whether the sale, furnishing, or serving of alcoholic beverages to a person not of legal drinking age is done willfully, knowingly, and unlawfully as provided in subsection (b) of this Code section, evidence that the person selling, furnishing, or serving alcoholic beverages had been furnished with and acted in reliance on identification as defined in subsection (d) of Code Section 3-3-23 showing that the person to whom the alcoholic beverages were sold, furnished, or served was 21 years of age or older shall constitute rebuttable proof that the alcoholic beverages were not sold, furnished, or served willfully, knowingly, and unlawfully.
+(d) No person who owns, leases, or otherwise lawfully occupies a premises, except a premises licensed for the sale of alcoholic beverages, shall be liable to any person who consumes alcoholic beverages on the premises in the absence of and without the consent of the owner, lessee, or lawful occupant or to any other person, or to the estate or survivors of either, for any injury or death suffered on or off the premises, including damage to property, caused by the intoxication of the person who consumed the alcoholic beverages.
+Section:
+Previous
+51-1-33
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+Next
+Last modified: October 14, 2016
+
+§ 51-1-41.
+§ 51-1-41 - Liability of Sports Officials At Amateur Athletic Contests
+
+(a) Sports officials who officiate amateur athletic contests at any level of competition in this state shall not be liable to any person or entity in any civil action for injuries or damages claimed to have arisen by virtue of actions or inactions related in any manner to officiating duties within the confines of the athletic facility at which the athletic contest is played.
+(b) For the purposes of this Code section, the term "sports officials" means:
+(1) Those individuals who serve as referees, umpires, linesmen, and those who serve in similar capacities but may be known by other titles and are duly registered with or are members of a local, state, regional, or national organization which is engaged in part in providing education and training to sports officials; and
+(2) Those individuals who render service without compensation as a manager, coach, instructor, or assistant manager, coach, or instructor in any system of supervised recreation established pursuant to Chapter 64 of Title 36.
+(c) Nothing in this Code section shall be deemed to grant the protection set forth in subsection (a) of this Code section to sports officials who cause injury or damage to a person or entity by actions or inactions which are intentional, willful, wanton, reckless, malicious, or grossly negligent.
+Section:
+Previous
+51-1-34
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+Next
+Last modified: October 14, 2016
+
+§ 51-1-42.
+§ 51-1-42 - Limitation of Liability for Transportation of Senior Citizens by Volunteer
+
+(a) As used in this Code section, the term:
+(1) "Charitable organization" means any charitable unit of a religious or civic group, including those supported wholly or partially by private donations.
+(2) "Human service agency" means any human service unit, clinic, senior citizens program, congregate meal center, or day-care center for the elderly, whether supported wholly or partially from public funds.
+(3) "Volunteer transportation" means motor vehicle transportation provided by an individual under the direction, sponsorship, or supervision of a human service agency or a charitable organization. A volunteer may receive reimbursement for actual expenses or an allowance to defray expenses of operating the vehicle used to provide transportation services but shall not receive compensation for his or her time.
+(b) Any person who provides volunteer transportation for senior citizens shall not be liable for any civil damages for any injury to such senior citizens arising out of or resulting from such transportation if such person was acting in good faith within the scope of his or her official actions and duties and unless the conduct of such person amounts to willful and wanton misconduct.
+Section:
+Previous
+51-1-35
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+Next
+Last modified: October 14, 2016
+
+§ 51-1-43.
+§ 51-1-43 -
+
+(a) This Code section shall be known and may be cited as the "Roller Skating Safety Act of 1993."
+(b) As used in this Code section, the term:
+(1) "Operator" means a person or entity who owns or controls or who has operational responsibility for a roller skating center.
+(2) "Roller skater" means a person wearing roller skates while that person is in a roller skating center for the purpose of roller skating.
+(3) "Roller skating center" means a building, facility, or premises which provides an area specifically designed to be used for roller skating by the public.
+(4) "Spectator" means a person who is present in a roller skating center only for the purpose of observing skating activity, whether recreational or competitive.
+(c) Each operator of a roller skating center shall be required to:
+(1) Post the duties of roller skaters and spectators as prescribed in this Code section in conspicuous places;
+(2) Comply with the safety standards ordinarily accepted in the roller skating rink industry;
+(3) Maintain roller skating equipment and roller skating surfaces according to the safety standards cited in paragraph (2) of this subsection; and
+(4) Maintain the stability and legibility of all required signs, symbols, and posted notices.
+(d) While in a roller skating center, each roller skater shall do all of the following:
+(1) Maintain reasonable control of his or her speed and course at all times;
+(2) Read all posted signs and warnings;
+(3) Maintain a proper lookout to avoid other roller skaters and objects;
+(4) Accept the responsibility for knowing the range of his or her own ability to negotiate the intended direction of travel while on roller skates and to skate within the limits of that ability; and
+(5) Refrain from acting in a manner which may cause injury to others.
+(e) Each person who participates in roller skating in a roller skating center accepts the risks that are inherent in that activity insofar as the risks are obvious and necessary.
+(f) A roller skater, spectator, or operator who violates the provisions of this Code section shall be liable in a civil action for damages for that portion of the loss or damage resulting from the violation.
+(g) Nothing in this Code section shall be construed to relieve an operator from exercising ordinary diligence in his or her operational responsibility.
+Section:
+Previous
+51-1-36
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+Next
+Last modified: October 14, 2016
+
+§ 51-1-44.
+§ 51-1-44 - Limitation of Liability for Dental Students
+
+(a) No dental student who participates in the provision of dental care or dental treatment under the supervision of a medical facility, academic institution, or dentist, as a part of an academic curriculum leading to the award of a dental degree, shall be liable for any civil damages to the patient as a result of any act or omission in such participation, except for willful or wanton misconduct.
+(b) Subsection (a) of this Code section shall not be construed to affect or limit the liability of a medical facility, academic institution, or dentist.
+Section:
+Previous
+51-1-37
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+Next
+Last modified: October 14, 2016
+
+§ 51-1-45.
+§ 51-1-45 - Immunity of Persons Serving Without Compensation As Athletic Team Physicians
+
+Any person licensed to practice medicine and surgery pursuant to Article 2 of Chapter 34 of Title 43 and including any person licensed to render services ancillary thereto who in good faith renders voluntary service without compensation as an athletic team physician, either as the team doctor during or in conjunction with athletic practice activities or athletic contests or in conducting preseason physicals for athletes, shall not be liable for any civil damages as a result of any act or omission by such person in rendering such voluntary service or in conducting such physicals or as a result of any act or failure to act to provide or arrange for further medical treatment or care for the amateur or nonprofessional athlete. Liability for civil damages shall attach to any willful or wanton act or omission by such person committed in rendering such voluntary service or in conducting such physicals or as a result of any act or failure to act to provide or arrange for further medical treatment or care for the athlete.
+Section:
+Previous
+51-1-38
+51-1-39
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+Next
+Last modified: October 14, 2016
+
+§ 51-1-46.
+§ 51-1-46 -
+
+(a) This Code section shall be known and may be cited as the "Drug Dealer Liability Act."
+(b) The General Assembly finds and declares that every community in Georgia is impacted by the marketing and distribution of illegal drugs. The purpose of this Code section is to provide a civil remedy for damages to persons in a community injured as a result of illegal drug use. Those persons include parents, employers, insurers, governmental entities, and others who pay for drug treatments, as well as infants injured as a result of exposure to drugs in utero. This Code section will enable them to recover from those persons in the community who have joined the illegal drug market. A further purpose of this Code section is to shift, to the extent possible, the cost of the damage caused by the existence of the illegal drug market in a community to those who illegally profit from that market. Another purpose of this Code section is to establish the prospect of substantial monetary loss as a deterrent to those who have not yet entered into the illegal drug distribution market.
+(c) As used in this Code section, the term:
+(1) "Controlled substance" means that term as defined by paragraph (4) of Code Section 16-13-21. For the purpose of this Code section, the term "controlled substance" shall include marijuana as defined by paragraph (16) of Code Section 16-13-21.
+(2) "Individual drug abuser" means an individual who uses a controlled substance that is not obtained directly from or pursuant to a valid prescription or order of a practitioner who is acting in the course of the practitioner's professional practice or which use is not otherwise authorized by state law.
+(3) "Level one participation" means participating in illegal marketing of less than 50 grams of a mixture containing a specified controlled substance or of one or more pounds or 25 or more plants, but less than four pounds or 50 plants, of marijuana.
+(4) "Level two participation" means participating in illegal marketing of 50 or more grams, but less than 225 grams, of a mixture containing a specified controlled substance or of four or more pounds or 50 or more plants, but less than eight pounds or 75 plants, of marijuana.
+(5) "Level three participation" means participating in illegal marketing of 225 or more grams, but less than 650 grams, of a mixture containing a specified controlled substance or of eight or more pounds or 75 or more plants, but less than 16 pounds or 100 plants, of marijuana.
+(6) "Level four participation" means participating in illegal marketing of 650 or more grams of a mixture containing a specified controlled substance or of 16 or more pounds or 100 or more plants of marijuana.
+(7) "Market area" means the area in which a person is presumed to have participated in illegal marketing of a market area controlled substance.
+(8) "Market area controlled substance" means a specified controlled substance or marijuana.
+(9) "Participate in illegal marketing" means doing any of the following in violation of state or federal law:
+(A) Manufacturing, distributing, or delivering or attempting or conspiring to manufacture, distribute, or deliver, a controlled substance; or
+(B) Possessing or attempting or conspiring to possess a controlled substance with the intent to manufacture, distribute, or deliver a controlled substance. This definition shall not include any licensed practitioner who is acting in the course of the practitioner's professional practice.
+(10) "Person" means an individual, governmental entity, sole proprietorship, corporation, limited liability company, firm, trust, partnership, or incorporated or unincorporated association existing under or authorized by the laws of this state, another state, or a foreign country.
+(11) "Practitioner" means that term as defined in paragraph (23) of Code Section 16-13-21.
+(d) (1) A person injured by an individual drug abuser may bring an action under this Code section for damages against a person who participated in illegal marketing of the controlled substance used by the individual abuser. In an action brought under this Code section, participation in illegal marketing shall be proven by clear and convincing evidence.
+(2) If a plaintiff in an action under this Code section proves that the defendant participated in illegal marketing of a market area controlled substance actually used by the individual abuser who injured the plaintiff, the defendant is presumed to have injured the plaintiff and to have acted willfully and wantonly if the plaintiff is one of the following:
+(A) A parent, legal guardian, child, spouse, or sibling of the individual abuser;
+(B) A child whose mother was an individual abuser while the child was in utero;
+(C) The individual abuser's employer; or
+(D) A medical facility, insurer, governmental entity, or other legal entity that financially supports a drug treatment or other assistance program for, or that otherwise expends money or provides unreimbursed service on behalf of, the individual abuser.
+(e) (1) A plaintiff under paragraph (2) of subsection (d) of this Code section may prove that a defendant participated in illegal marketing of the market area controlled substance used by the individual abuser who injured the plaintiff by proving both of the following:
+(A) The defendant was participating in the illegal marketing of the market area controlled substance at the time the individual abuser obtained or used that market area controlled substance; and
+(B) The individual abuser obtained or used the market area controlled substance, or caused the injury, within the defendant's market area.
+(2) If a person participated in illegal marketing of a market area controlled substance, the person's market area for that controlled substance is the following:
+(A) For level one participation, each county in which the person participated in illegal marketing;
+(B) For level two participation, each market area described in subparagraph (A) of this paragraph plus all counties with a border contiguous to each of those market areas;
+(C) For level three participation, each market area described in subparagraph (B) of this paragraph plus all counties with a border contiguous to each of those market areas; and
+(D) For level four participation, the state.
+(f) (1) If a defendant under this Code section has a criminal conviction under state or federal law for an act that constitutes participation in illegal marketing of a controlled substance under this Code section, that person is conclusively presumed to have participated in illegal marketing of a controlled substance for the purposes of this Code section.
+(2) If a defendant is proved or presumed to have participated in illegal marketing of a controlled substance, that defendant is presumed to have participated during the two years before and the two years after the date of the participation or conviction, unless the defendant proves otherwise by clear and convincing evidence.
+(3) In addition to each county in which a defendant is proved to have actually participated in illegal marketing of a controlled substance, the defendant is presumed to have participated in each county in which the defendant resides, attends school, is employed, or does business during the period of participation. In addition to the counties in which the individual abuser is presumed to have obtained or used the controlled substance, the individual abuser is presumed to have obtained or used the controlled substance in each county in which the individual abuser resides, attends school, or is employed during the period of the individual's abuse of that controlled substance, unless the defendant proves otherwise by clear and convincing evidence.
+
+§ 51-1-47.
+§ 51-1-47 - Immunity for Disconnection of Motor Vehicle Air Bags
+
+The manufacturers, distributors, dealers, and sellers of a motor vehicle and those who, on authorization and direction of the owner or lessee, lawfully install in a prudent and workmanlike manner a switch to turn off the air bag shall be immune from civil liability for any injuries caused by the failure of an air bag to deploy when the air bag has been disconnected, turned off, or otherwise disabled by the owner, lessee, or operator of the motor vehicle or an agent of the owner or lessee of the motor vehicle.
+Section:
+Previous
+51-1-40
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Next
+Last modified: October 14, 2016
+
+§ 51-1-48.
+§ 51-1-48 - Diligence Required in Reviewing Claims; Nonwaivable Liability is Not Created; Definitions
+
+(a) Any claim administrator, health care advisor, private review agent, or other person or entity which administers benefits or reviews or adjusts claims under a managed care plan shall exercise ordinary diligence to do so in a timely and appropriate manner in accordance with the practices and standards of the profession of the health care provider generally. Notwithstanding any other provision of law to the contrary, any injury or death to an enrollee resulting from a want of such ordinary diligence shall be a tort for which a recovery may be had against the managed care entity offering such plan, but no recovery shall be had for punitive damages for such tort.
+(b) The provisions of this Code section may not be waived, shifted, or modified by contract or agreement and responsibility therefor shall be a duty which shall not be delegated. Any effort to waive, modify, delegate, or shift liability for a breach of the duty provided by this Code section, through a contract for indemnification or otherwise, shall be invalid.
+(c) This Code section shall not create any liability on the part of an employer of an enrollee or that employer's employees, unless the employer is the enrollee's managed care entity. This Code section shall not create any liability on the part of an employee organization, a voluntary employee beneficiary organization, or a similar organization, unless such organization is the enrollee's managed care entity and makes coverage determinations under a managed care plan.
+(d) As used in this Code section and in Code Section 51-1-49, the terms "claim administrator," "enrollee," "health care advisor," and "private review agent" shall be defined as set forth in Chapter 46 of Title 33 except that "enrollee" shall include the enrollee's eligible dependents; "managed care entity" and "managed care plan" shall be defined as set forth in Code Section 33-20A-3; and "independent review" means a review pursuant to Article 2 of Chapter 20A of Title 33, the "Patient's Right to Independent Review Act."
+Section:
+Previous
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Next
+Last modified: October 14, 2016
+
+§ 51-1-49.
+§ 51-1-49 - Requirements for Maintaining Cause of Action Against Managed Care Entity; Notice; Independent Review
+
+(a) No person may maintain a cause of action pursuant to Code Section 51-1-48 unless the affected enrollee or the enrollee's representative:
+(1) Has exhausted the grievance procedure provided for under Code Section 33-20A-5 and before instituting the action:
+(A) Gives written notice of intent to file suit to the managed care entity; and
+(B) Agrees to submit the claim to independent review if required under subsection (c) of this Code section; or
+(2) Has filed a pleading alleging in substance that:
+(A) Harm to the enrollee has already occurred for which the managed care entity may be liable; and
+(B) The grievance procedure or independent review is not timely or otherwise available or would not make the enrollee whole,
+in which case the court, upon motion by the managed care entity, shall stay the action and order such grievance procedure or independent review to be conducted and exhausted.
+(b) The notice required by paragraph (1) of subsection (a) of this Code section must be delivered or mailed to the managed care entity not fewer than 30 days before the action is filed.
+(c) The managed care entity receiving notice of intent to file suit may obtain independent review of the claim, if notice of a request for review is mailed or delivered to the Health Planning Agency, or its successor agency, and the affected enrollee within ten days of receipt of the notice of intent to file suit.
+Section:
+Previous
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Next
+Last modified: October 14, 2016
+
+§ 51-1-50.
+§ 51-1-50 - Immunity of Broadcasters From Liability for Levi's Call: Georgia's Amber Alert Program
+
+(a) As used in this Code section, the term:
+(1) "Broadcast" means the transmission of video or audio programming by an electronic or other signal conducted by radiowaves or microwaves, by wires, lines, coaxial cables, wave guides or fiber optics, by satellite transmissions directly or indirectly to viewers or listeners, or by any other means of communication.
+(2) "Broadcaster" means any corporation or other entity that is engaged in the business of broadcasting video or audio programming, whether through the public airwaves, by cable, by direct or indirect satellite transmission, or by any other means of communication.
+(3) "Levi's Call: Georgia's Amber Alert Program" means the voluntary program entered into by the Georgia Bureau of Investigation, the Georgia Emergency Management Agency, the Georgia Association of Broadcasters, and certain broadcasters licensed to serve in the State of Georgia, which program provides that if the Georgia Bureau of Investigation verifies that a child has been abducted and is in danger, an alert containing known details of the abduction is transmitted to the Georgia Emergency Management Agency, which is then transmitted by the Georgia Emergency Management Agency to broadcasters in Georgia; and those broadcasters participating in the program then broadcast or otherwise disseminate the alert to listeners, viewers, or subscribers.
+(b) Any broadcaster participating in Levi's Call: Georgia's Amber Alert Program shall not be liable for any civil damages arising from the broadcast or other dissemination of any alert generated pursuant to the Levi's Call: Georgia's Amber Alert Program. The immunity provided for in this Code section shall apply to any broadcast or dissemination of information that is substantially consistent with the information transmitted by the Georgia Emergency Management Agency and that takes place during an alert requested by the Georgia Emergency Management Agency and for a period of two hours after such alert has ended or the Georgia Emergency Management Agency informs the participating broadcasters that the alert has changed in content.
+(c) Nothing in this Code section shall be construed to limit or restrict in any way any legal protection a broadcaster may have under any other law for broadcasting or otherwise disseminating any information.
+Section:
+Previous
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Next
+Last modified: October 14, 2016
+
+§ 51-1-51.
+§ 51-1-51 - Limitations on Liability of Liquefied Petroleum Gas Providers
+
+(a) As used in this Code section, the term:
+(1) "Liquefied petroleum gas equipment" means a liquefied petroleum gas appliance or liquefied petroleum gas equipment.
+(2) "Liquefied petroleum gas provider" means any person or entity engaged in the business of supplying, handling, transporting, or selling at retail liquefied petroleum gas in this state.
+(b) A liquefied petroleum gas provider shall be immune from civil liability if the proximate cause of the injury or damages was:
+(1) An alteration, modification, or repair of liquefied petroleum gas equipment that could not have been discovered by the liquefied petroleum gas provider in the exercise of reasonable care; or
+(2) The use of liquefied petroleum gas equipment in a manner or for a purpose other than that for which the liquefied petroleum gas equipment was intended to be used or for which could reasonably have been foreseen, provided that the liquefied petroleum gas provider or the manufacturer of the liquefied petroleum gas equipment has taken reasonable steps to warn the ultimate consumer of the hazards associated with foreseeable misuses of the liquefied petroleum gas equipment.
+(c) Nothing in this Code section shall be construed as affecting, modifying, or eliminating the liability of a manufacturer of liquefied petroleum gas equipment or its employees or agents under any legal claim, including but not limited to product liability claims.
+(d) This Code section shall apply to any cause of action arising on or after July 1, 2005.
+Section:
+Previous
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Next
+Last modified: October 14, 2016
+
+§ 51-1-52.
+§ 51-1-52 - Federal Law Payor Guidelines and Criteria Not a Legal Basis for Negligence or Standard of Care for Medical Malpractice or Product Liability
+
+(a) As used in this Code section, the term:
+(1) "Criteria" means criteria relating to administrative procedures and shall not include criteria relating to medical treatment, quality of care, or best practices.
+(2) "Guideline" means a guideline relating to administrative procedures and shall not include guidelines relating to medical treatment, quality of care, or best practices.
+(3) "Payor" means any insurer, health maintenance organization, self-insurance plan, or other person or entity which provides, offers to provide, or administers hospital, outpatient, medical, or other health care benefits to persons treated by a health care provider in this state pursuant to any policy, plan, or contract of accident and sickness insurance as defined in Code Section 33-7-2.
+(4) "Standard" means a standard relating to administrative procedures and shall not include standards relating to medical treatment, quality of care, or best practices.
+(b) The development, recognition, or implementation of any guideline by any public or private payor or the establishment of any payment standard or reimbursement criteria under any federal laws or regulations related to health care shall not be construed, without competent expert testimony establishing the appropriate standard of care, to establish a legal basis for negligence or the standard of care or duty of care owed by a health care provider to a patient in any civil action for medical malpractice or product liability. Nor shall compliance with such a guideline, standard, or criteria establish a health care provider's compliance with the standard of care or duty of care owed by a health care provider to a patient in any civil action for medical malpractice or medical product liability without competent expert testimony establishing the appropriate standard of care.
+Section:
+Previous
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Next
+Last modified: October 14, 2016
+
+§ 51-1-53.
+§ 51-1-53 - Recreational Joint-Use Agreements
+
+(a) As used in this Code section, the term:
+(1) "Facilities" means a school's buildings, fixtures, and equipment, including, but not limited to, classrooms, libraries, rooms and space for physical education, space for fine arts, restrooms, specialized laboratories, cafeterias, media centers, building equipment, building fixtures, furnishings, gardens, tracks, stadiums, and other facilities or portions of facilities used primarily for athletic competition.
+(2) "Recreational joint-use agreement" means a written agreement between the governing authority of a school and a private entity authorizing such entity to access the facilities of a school under the governing authority's jurisdiction for the purposes of conducting or engaging in recreational, physical, or performing arts activity.
+(3) "School" means any public pre-kindergarten, elementary school, or secondary school.
+(b) A recreational joint-use agreement shall:
+(1) Set forth the terms and conditions of the use of a facility;
+(2) Include a hold harmless provision in favor of the governing authority;
+(3) Be revocable at any time by the governing authority of the school;
+(4) Require the private entity to maintain and provide proof of a minimum of $1 million in liability insurance coverage applicable to the use of the facilities and effective for the duration of such agreement; and
+(5) Provide a citation that such agreement shall be governed by this Code section.
+(c) The governing authority of a school that enters into a recreational joint-use agreement which complies with subsection (b) of this Code section shall not be deemed to have waived its sovereign immunity as to damages to persons or property arising out of or resulting from such recreational joint-use agreement.
+(d) Code Section 51-12-33 shall not apply to claims for civil damages arising from the use of a school's facilities pursuant to a recreational joint-use agreement.
+(e) This Code section shall apply to causes of action arising on or after July 1, 2013.
+Section:
+Previous
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Next
+Last modified: October 14, 2016
+
+§ 51-1-54.
+§ 51-1-54 - Program and Treatment Completion Certificate
+
+(a) As used in this Code section, the term "Program and Treatment Completion Certificate" means the certificate issued pursuant to Code Section 42-2-5.2.
+(b) Issuance of a Program and Treatment Completion Certificate by the Department of Corrections or the granting of a pardon from the State Board of Pardons and Paroles as provided in the Constitution and Code Section 42-9-42 shall create a presumption of due care in hiring, retaining, licensing, leasing to, admitting to a school or program, or otherwise engaging in activity with the individual to whom the Program and Treatment Completion Certificate was issued or the pardon was granted. Such presumption may be rebutted by relevant evidence which extends beyond the scope of the Program and Treatment Completion Certificate or pardon and which was known or should have been known by the person against whom negligence is asserted.
+(c) Nothing in this Code section shall be construed to constitute a waiver of the sovereign immunity of the state, and no action shall be maintained against the state or any agency or department thereof for issuance of or failure to issue any Program and Treatment Completion Certificate or issuance of or failure to grant a pardon.
+Section:
+Previous
+51-1-41
+51-1-42
+51-1-43
+51-1-44
+51-1-45
+51-1-46
+51-1-47
+51-1-48
+51-1-49
+51-1-50
+51-1-51
+51-1-52
+51-1-53
+51-1-54
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 2 - Imputable Negligence
+
+============================================================
+
+
+§ 51-2-1.
+§ 51-2-1 - Basis for Imputation of Negligence; Fault of Parents or Custodians Not Imputable to Child
+
+(a) For the negligence of one person to be properly imputable to another, the one to whom it is imputed must stand in such a relation or privity to the negligent person as to create the relation of principal and agent.
+(b) In an action by an infant, the fault of the parent or of custodians selected by the parents is not imputable to the child.
+Section: 51-2-1
+51-2-2
+51-2-3
+51-2-4
+51-2-5
+51-2-5.1
+51-2-6
+51-2-7
+Next
+Last modified: October 14, 2016
+
+§ 51-2-3.
+§ 51-2-3 - Liability for Malicious Acts of Minor Child
+
+(a) Every parent or guardian having the custody and control over a minor child or children under the age of 18 shall be liable in an amount not to exceed $10,000.00 plus court costs for the willful or malicious acts of the minor child or children resulting in reasonable medical expenses to another, damage to the property of another, or both reasonable medical expenses and damage to property.
+(b) This Code section shall be cumulative and shall not be restrictive of any remedies now available to any person, firm, or corporation for injuries or damages arising out of the acts, torts, or negligence of a minor child under the "family-purpose car doctrine," any statute, or common law in force and effect in this state.
+(c) The intent of the General Assembly in passing this Code section is to provide for the public welfare and aid in the control of juvenile delinquency, not to provide restorative compensation to victims of injurious or tortious conduct by children.
+Section:
+Previous
+51-2-1
+51-2-2
+51-2-3
+51-2-4
+51-2-5
+51-2-5.1
+51-2-6
+51-2-7
+Next
+Last modified: October 14, 2016
+
+§ 51-2-5.1.
+§ 51-2-5.1 - Relationship Between Hospital and Health Care Provider Prerequisite to Liability; Notice Regarding Independent Contractor Status; Factors for Consideration in Determining Status
+
+(a) As used in this Code section, the term:
+(1) "Health care professional" means a professional licensed as an audiologist, chiropractor, clinical social worker, dentist, dietitian, medical doctor, marriage and family therapist, registered professional or licensed practical nurse, occupational therapist, optometrist, osteopathic physician, pharmacist, physical therapist, physician assistant, professional counselor, podiatrist, psychologist, radiological technician, respiratory therapist, or speech-language pathologist.
+(2) "Hospital" means a facility that has a valid permit or provisional permit issued by the Department of Community Health under Chapter 7 of Title 31.
+(b) Notwithstanding the provisions of Code Section 51-2-5, no hospital which complies with the notice provisions of either subsection (c) or subsection (d) of this Code section shall be liable in a tort action for the acts or omissions of a health care professional unless there exists an actual agency or employment relationship between the hospital and the health care professional.
+(c) The hospital shall post a notice in the form and manner described herein. Such notice shall:
+(1) Be posted conspicuously in the hospital lobby or a public area of the hospital;
+(2) Contain print at least one inch high; and
+(3) Provide language substantially similar to the following:
+"Some or all of the health care professionals performing services in this hospital are independent contractors and are not hospital agents or employees. Independent contractors are responsible for their own actions and the hospital shall not be liable for the acts or omissions of any such independent contractors."
+(d) The hospital shall have the patient or the patient's personal representative sign a written acknowledgment that contains language substantially similar to that set forth in paragraph (3) of subsection (c) of this Code section.
+(e) The notice required in this Code section shall be sufficient if it meets the requirements of either subsection (c) or subsection (d) of this Code section even if the patient or the patient's personal representative did not see or read such notice for any reason, including but not limited to medical condition or language proficiency.
+(f) Whether a health care professional is an actual agent, an employee, or an independent contractor shall be determined by the language of the contract between the health care professional and the hospital. In the absence of such a contract, or if the contract is unclear or ambiguous, a health care professional shall only be considered the hospital's employee or actual agent if it can be shown by a preponderance of the evidence that the hospital reserves the right to control the time, manner, or method in which the health care professional performs the services for which licensed, as distinguished from the right to merely require certain definite results.
+(g) If the court finds that there is no contract or that the contract is unclear or ambiguous as to the relationship between the hospital and health care professional, the court shall apply the following:
+(1) Factors that may be considered as evidence the hospital exercises a right of control over the time, manner, or method of the health care professional's services include: the parties believed they were creating an actual agency or employment relationship; the health care professional receives substantially all the employee benefits received by actual employees of the hospital; the hospital directs the details of the health care professional's work step-by-step; the health care professional's services are terminable at the will of the hospital without cause and without notice; the hospital withholds, or is required to withhold, federal and state taxes from the remuneration paid to the health care professional for services to the patients of the hospital; and factors not specifically excluded in paragraph (2) of this subsection; and
+(2) Factors that shall not be considered as evidence a hospital exercises a right of control over the time, manner, or method of the health care professional's services include: a requirement by the hospital that such health care professional treat all patients or that any health care professional or group is obligated to staff a hospital department continuously or from time to time; the hospital's payment to the health care professional on an hourly basis; the provision of facilities or equipment by the hospital; the fact a health care professional does not maintain a separate practice outside the hospital; the source of the payment for the professional liability insurance premium for that health care professional; the fact that the professional fees for services are billed by the hospital; or any requirement by the hospital that such health care professional engage in conduct required to satisfy any state or federal statute or regulation, any standard of care, any standard or guideline set by an association of hospitals or health care professionals, or any accreditation standard adopted by a national accreditation organization.
+Section:
+Previous
+51-2-1
+51-2-2
+51-2-3
+51-2-4
+51-2-5
+51-2-5.1
+51-2-6
+51-2-7
+Next
+Last modified: October 14, 2016
+
+§ 51-2-7.
+§ 51-2-7 - Liability of Owner or Keeper of Vicious or Dangerous Animal for Injuries Caused by Animal
+
+A person who owns or keeps a vicious or dangerous animal of any kind and who, by careless management or by allowing the animal to go at liberty, causes injury to another person who does not provoke the injury by his own act may be liable in damages to the person so injured. In proving vicious propensity, it shall be sufficient to show that the animal was required to be at heel or on a leash by an ordinance of a city, county, or consolidated government, and the said animal was at the time of the occurrence not at heel or on a leash. The foregoing sentence shall not apply to domesticated fowl including roosters with spurs. The foregoing sentence shall not apply to domesticated livestock.
+Section:
+Previous
+51-2-1
+51-2-2
+51-2-3
+51-2-4
+51-2-5
+51-2-5.1
+51-2-6
+51-2-7
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 3 - Liability of Owners and Occupiers of Land
+
+============================================================
+
+
+§ 51-3-2.
+§ 51-3-2 - Duty of Owner of Premises to Licensee
+
+(a) A licensee is a person who:
+(1) Is neither a customer, a servant, nor a trespasser;
+(2) Does not stand in any contractual relation with the owner of the premises; and
+(3) Is permitted, expressly or impliedly, to go on the premises merely for his own interests, convenience, or gratification.
+(b) The owner of the premises is liable to a licensee only for willful or wanton injury.
+Section:
+51-3-1
+51-3-2
+51-3-3
+Next
+Last modified: October 14, 2016
+
+§ 51-3-3.
+§ 51-3-3 - Lawful Possessor of Land Owes No Duty of Care to Trespasser
+
+(a) As used in this Code section, the term "possessor of land" means the landowner, occupant of the land, holder of any easement to the land, or lessee of the land.
+(b) A lawful possessor of land owes no duty of care to a trespasser except to refrain from causing a willful or wanton injury.
+(c) Georgia common law as it exists and is applied to the doctrine of attractive nuisance, in effect as of January 1, 2014, shall not be construed to be altered by this Code section.
+(d) This Code section shall not affect any immunities from or defenses to civil liability to which a lawful possessor of land may be entitled.
+Section:
+Previous
+51-3-1
+51-3-2
+51-3-3
+Last modified: October 14, 2016
+
+§ 51-3-20.
+, Title 51, Chapter 3, § 51-3-20 - Purpose of Article
+
+The purpose of this article is to encourage owners of land to make land and water areas available to the public for recreational purposes by limiting the owners' liability toward persons entering thereon for recreational purposes.
+Section: 51-3-20
+51-3-21
+51-3-22
+51-3-23
+51-3-24
+51-3-25
+51-3-26
+Next
+Last modified: October 14, 2016
+
+§ 51-3-22.
+§ 51-3-22 - Duty of Owner of Land to Those Using Same for Recreation Generally
+
+Except as specifically recognized by or provided in Code Section 51-3-25, an owner of land owes no duty of care to keep the premises safe for entry or use by others for recreational purposes or to give any warning of a dangerous condition, use, structure, or activity on the premises to persons entering for recreational purposes.
+Section:
+Previous
+51-3-20
+51-3-21
+51-3-22
+51-3-23
+51-3-24
+51-3-25
+51-3-26
+Next
+Last modified: October 14, 2016
+
+§ 51-3-23.
+§ 51-3-23 - Effect of Invitation or Permission to Use Land for Recreation
+
+Except as specifically recognized by or provided in Code Section 51-3-25, an owner of land who either directly or indirectly invites or permits without charge any person to use the property for recreational purposes does not thereby:
+(1) Extend any assurance that the premises are safe for any purpose;
+(2) Confer upon such person the legal status of an invitee or licensee to whom a duty of care is owed; or
+(3) Assume responsibility for or incur liability for any injury to person or property caused by an act of omission of such persons.
+Section:
+Previous
+51-3-20
+51-3-21
+51-3-22
+51-3-23
+51-3-24
+51-3-25
+51-3-26
+Next
+Last modified: October 14, 2016
+
+§ 51-3-24.
+§ 51-3-24 - Applicability of Code §s 51-3-22 and 51-3-23 to Owner of Land Leased to State or Subdivision for Recreation
+
+Unless otherwise agreed in writing, Code Sections 51-3-22 and 51-3-23 shall be deemed applicable to the duties and liability of an owner of land leased to the state or any subdivision thereof for recreational purposes.
+Section:
+Previous
+51-3-20
+51-3-21
+51-3-22
+51-3-23
+51-3-24
+51-3-25
+51-3-26
+Next
+Last modified: October 14, 2016
+
+§ 51-3-30.
+§ 51-3-30 - Liability of Landowner or Hunter for Injury Caused by Wildlife Crossing Public Roadway
+
+A landowner who allows wildlife to traverse the owner's property, or a person hunting game on such property with permission, shall be immune from civil liability for damage and injuries which may be caused by wildlife which traverse the landowner's property and enter a public roadway or right of way, provided that the conduct of the landowner or person hunting game does not constitute gross negligence or willful and wanton misconduct.
+Section: 51-3-30
+51-3-31
+Next
+Last modified: October 14, 2016
+
+§ 51-3-31.
+§ 51-3-31 - Agritourism Defined; Immunity for Civil Liability; Warnings
+
+(a) For the purposes of this Code section, the term "agritourism" shall carry the same meaning as set out in subparagraph (p)(7)(B) of Code Section 48-5-7.4.
+(b) A landowner who charges admission for a person who is 18 years of age or older to hunt or fish on the owner's property or to enter the owner's property for the purposes of agritourism shall be immune from civil liability for any injuries caused by the inherent risk associated with agritourism, hunting, or fishing activity, provided that:
+(1) The landowner's conduct does not constitute gross negligence or willful and wanton misconduct;
+(2) The landowner has posted at the main point of entry, if present, to the property a sign with a warning notice stating the following:
+(A) In the case of agritourism:
+"Warning
+Under Georgia law, there is no liability for an injury or death of a participant at least 18 years of age in a registered agritourism activity conducted at this registered agritourism location if such injury or death results from the inherent risks of such agritourism activity. Inherent risks of agritourism activities include, but shall not be limited to, the potential of you to act in a negligent manner that may contribute to your injury or death and the potential of another participant to act in a negligent manner that may contribute to your injury or death. You are assuming the risk of participating in this registered agritourism activity."
+(B) In the case of a landowner who charges admission for a person who is 18 years of age or older to hunt or fish on the owner's property:
+"Warning
+Under Georgia law, there is no liability for an injury or death of a hunting or fishing participant at least 18 years of age conducted at this location if such injury or death results from the inherent risks of such hunting or fishing activity. Inherent risks of hunting or fishing activities include, but shall not be limited to, the potential of you to act in a negligent manner that may contribute to your injury or death and the potential of another participant to act in a negligent manner that may contribute to your injury or death. You are assuming the risk of participating in this hunting or fishing activity."
+The warning notice specified in this paragraph shall appear on the sign in black letters, with each letter to be a minimum of one inch in height; and
+(3) The person who has paid admission to the landowner to enter such landowner's property to hunt, fish, or for the purposes of agritourism has signed a waiver of liability form stating that the person entering the landowner's property has waived all civil liability against the landowner for any injuries caused by the inherent risk associated with agritourism, hunting, or fishing activity. Such waiver of liability form shall mirror the language provided for in paragraph (2) of this subsection regarding the warning notice.
+(c) This Code section shall be supplemental to all other provisions of law that provide defenses to property owners. This Code section shall not create any new cause of action against a property owner or additional liability to property owners.
+Section:
+51-3-30
+51-3-31
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 4 - Wrongful Death
+
+============================================================
+
+
+§ 51-4-2.
+§ 51-4-2 - Persons Entitled to Bring Action for Wrongful Death of Spouse or Parent; Survival of Action; Release of Wrongdoer; Disposition of Recovery; Exemption of Recovery From Liability for Decedent's Debts; Recovery Not Barred by Child's Being Born Out of Wedlock
+
+(a) The surviving spouse or, if there is no surviving spouse, a child or children, either minor or sui juris, may recover for the homicide of the spouse or parent the full value of the life of the decedent, as shown by the evidence.
+(b) (1) If an action for wrongful death is brought by a surviving spouse under subsection (a) of this Code section and the surviving spouse dies pending the action, the action shall survive to the child or children of the decedent.
+(2) If an action for wrongful death is brought by a child or children under subsection (a) of this Code section and one of the children dies pending the action, the action shall survive to the surviving child or children.
+(c) The surviving spouse may release the alleged wrongdoer without the concurrence of the child or children or any representative thereof and without any order of court, provided that such spouse shall hold the consideration for such release subject to subsection (d) of this Code section.
+(d) (1) Any amount recovered under subsection (a) of this Code section shall be equally divided, share and share alike, among the surviving spouse and the children per capita, and the descendants of children shall take per stirpes, provided that any such recovery to which a minor child is entitled and which equals less than $15,000.00 shall be held by the natural guardian of the child, who shall hold and use such money for the benefit of the child and shall be accountable for same; and any such recovery to which a minor child is entitled and which equals $15,000.00 or more shall be held by a guardian of the property of such child.
+(2) Notwithstanding paragraph (1) of this subsection, the surviving spouse shall receive no less than one-third of such recovery as such spouse's share.
+(e) No recovery had under subsection (a) of this Code section shall be subject to any debt or liability of the decedent.
+(f) In actions for recovery under this Code section, the fact that a child has been born out of wedlock shall be no bar to recovery.
+Section:
+51-4-1
+51-4-2
+51-4-3
+51-4-4
+51-4-5
+51-4-6
+Next
+Last modified: October 14, 2016
+
+§ 51-4-4.
+§ 51-4-4 - Wrongful Death of Child
+
+The right to recover for the homicide of a child shall be as provided in Code Section 19-7-1.
+Section:
+Previous
+51-4-1
+51-4-2
+51-4-3
+51-4-4
+51-4-5
+51-4-6
+Next
+Last modified: October 14, 2016
+
+§ 51-4-5.
+§ 51-4-5 - Recovery by Personal Representative for Wrongful Death and for Certain Expenses
+
+(a) When there is no person entitled to bring an action for the wrongful death of a decedent under Code Section 51-4-2 or 51-4-4, the administrator or executor of the decedent may bring an action for and may recover and hold the amount recovered for the benefit of the next of kin. In any such case the amount of the recovery shall be the full value of the life of the decedent.
+(b) When death of a human being results from a crime or from criminal or other negligence, the personal representative of the deceased person shall be entitled to recover for the funeral, medical, and other necessary expenses resulting from the injury and death of the deceased person.
+Section:
+Previous
+51-4-1
+51-4-2
+51-4-3
+51-4-4
+51-4-5
+51-4-6
+Next
+Last modified: October 14, 2016
+
+§ 51-4-6.
+§ 51-4-6 - Notification of Licensing Boards of Judgments Against Health Care Provider
+
+(a) As used in this Code section, the term "health care provider" shall have the same meaning as set forth in Code Section 16-5-5.
+(b) Within ten days of a judgment, a health care provider against whom a judgment has been obtained under the provisions of this chapter shall notify in writing the applicable licensing board for his or her licensure, certification, registration, or other authorization to conduct such health care provider's occupation so that disciplinary action may be taken as determined necessary by the applicable board.
+Section:
+Previous
+51-4-1
+51-4-2
+51-4-3
+51-4-4
+51-4-5
+51-4-6
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 5 - Libel and Slander
+
+============================================================
+
+
+§ 51-5-1.
+§ 51-5-1 - Libel Defined; Publication Prerequisite to Recovery
+
+(a) A libel is a false and malicious defamation of another, expressed in print, writing, pictures, or signs, tending to injure the reputation of the person and exposing him to public hatred, contempt, or ridicule.
+(b) The publication of the libelous matter is essential to recovery.
+Section: 51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-2.
+§ 51-5-2 - Newspaper Libel Defined; Publication Prerequisite to Recovery
+
+(a) Any false and malicious defamation of another in any newspaper, magazine, or periodical, tending to injure the reputation of the person and expose him to public hatred, contempt, or ridicule, shall constitute a newspaper libel.
+(b) The publication of the libelous matter is essential to recovery.
+Section:
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-3.
+§ 51-5-3 - What Constitutes Publication of Libel
+
+A libel is published as soon as it is communicated to any person other than the party libeled.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-4.
+§ 51-5-4 - Slander Defined; When Special Damage Required; When Damage Inferred
+
+(a) Slander or oral defamation consists in:
+(1) Imputing to another a crime punishable by law;
+(2) Charging a person with having some contagious disorder or with being guilty of some debasing act which may exclude him from society;
+(3) Making charges against another in reference to his trade, office, or profession, calculated to injure him therein; or
+(4) Uttering any disparaging words productive of special damage which flows naturally therefrom.
+(b) In the situation described in paragraph (4) of subsection (a) of this Code section, special damage is essential to support an action; in the situations described in paragraphs (1) through (3) of subsection (a) of this Code section, damage is inferred.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-5.
+§ 51-5-5 - Inference of Malice; Rebuttal Thereof; Effect of Rebuttal
+
+In all actions for printed or spoken defamation, malice is inferred from the character of the charge. However, the existence of malice may be rebutted by proof. In all cases, such proof shall be considered in mitigation of damages. In cases of privileged communications, such proof shall bar a recovery.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-6.
+§ 51-5-6 - Truth As Justification
+
+The truth of the charge made may always be proved in justification of an alleged libel or slander.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-7.
+§ 51-5-7 - Privileged Communications
+
+The following communications are deemed privileged:
+(1) Statements made in good faith in the performance of a public duty;
+(2) Statements made in good faith in the performance of a legal or moral private duty;
+(3) Statements made with a good faith intent on the part of the speaker to protect his or her interest in a matter in which it is concerned;
+(4) Statements made in good faith as part of an act in furtherance of the right of free speech or the right to petition government for a redress of grievances under the Constitution of the United States or the Constitution of the State of Georgia in connection with an issue of public interest or concern, as defined in subsection (c) of Code Section 9-11-11.1;
+(5) Fair and honest reports of the proceedings of legislative or judicial bodies;
+(6) Fair and honest reports of court proceedings;
+(7) Comments of counsel, fairly made, on the circumstances of a case in which he or she is involved and on the conduct of the parties in connection therewith;
+(8) Truthful reports of information received from any arresting officer or police authorities; and
+(9) Comments upon the acts of public men or public women in their public capacity and with reference thereto.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-9.
+§ 51-5-9 - Right of Action for Malicious Use of Privilege
+
+In every case of privileged communications, if the privilege is used merely as a cloak for venting private malice and not bona fide in promotion of the object for which the privilege is granted, the party defamed shall have a right of action.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-10.
+§ 51-5-10 - Liability for Defamatory Statements in Visual or Sound Broadcast; Damages
+
+(a) The owner, licensee, or operator of a visual or sound broadcasting station or network of stations and the agents or employees of any owner, licensee, or operator shall not be liable for any damages for any defamatory statement published or uttered in or as a part of a visual or sound broadcast by one other than the owner, licensee, or operator or an agent or employee thereof, unless it is alleged and proved by the complaining party that the owner, licensee, operator or the agent or employee has failed to exercise due care to prevent the publication or utterance of the statement in the broadcast.
+(b) In no event shall any owner, licensee, or operator or the agents or employees of any owner, licensee, or operator of such a station or network of stations be held liable for any damages for any defamatory statement uttered over the facilities of the station or network by or on behalf of any candidate for public office.
+(c) In any action for damages for any defamatory statement published or uttered in or as a part of a visual or sound broadcast, the complaining party shall be allowed only such actual, consequential, or punitive damages as have been alleged and proved.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-11.
+§ 51-5-11 - Admissibility of Evidence in Libel Action Concerning Correction and Retraction; Effect Thereof on Damages
+
+(a) In any civil action for libel which charges the publication of an erroneous statement alleged to be libelous, it shall be relevant and competent evidence for either party to prove that the plaintiff requested retraction in writing at least seven days prior to the filing of the action or omitted to request retraction in this manner.
+(b) In any such action, the defendant may allege and give proof of the following matters, as applicable:
+(1) (A) That the matter alleged to have been published and to be libelous was published without malice;
+(B) That the defendant, in a regular issue of the newspaper or other publication in question, within seven days after receiving written demand, or in the next regular issue of the newspaper or other publication following receipt of the demand if the next regular issue was not published within seven days after receiving the demand, corrected and retracted the allegedly libelous statement in as conspicuous and public a manner as that in which the alleged libelous statement was published; and
+(C) That, if the plaintiff so requested, the retraction and correction were accompanied, in the same issue, by an editorial in which the allegedly libelous statement was specifically repudiated; or
+(2) That no request for correction and retraction was made in writing by the plaintiff.
+(c) Upon proof of the facts specified in paragraph (1) or (2) of subsection (b) of this Code section, the plaintiff shall not be entitled to any punitive damages and the defendant shall be liable only to pay actual damages. The defendant may plead the publication of the correction, retraction, or explanation, including the editorial, if demanded, in mitigation of damages.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Next
+Last modified: October 14, 2016
+
+§ 51-5-12.
+§ 51-5-12 - Admissibility of Evidence in Defamation Action Concerning Correction and Retraction; Effect on Damages
+
+(a) In any civil action for a defamatory statement which charges the visual or sound broadcast of an erroneous statement alleged to be defamatory, it shall be relevant and competent evidence for either party to prove that the plaintiff requested retraction or omitted to request retraction.
+(b) In any such action, the defendant may allege and give proof of the following matters, as applicable:
+(1) (A) That the matter alleged to have been broadcast and to be defamatory was published without malice;
+(B) That the defendant, in a regular broadcast of the station over which the broadcast in question was made, within three days after receiving written demand, corrected and retracted the allegedly defamatory statement in as conspicuous and public a manner as that in which the alleged defamatory statement was broadcast; and
+(C) That, if the plaintiff so requested, the retraction and correction were accompanied, on the same day, by an editorial in which the allegedly defamatory statement was specifically repudiated; or
+(2) That no request for correction and retraction was made by the plaintiff.
+(c) Upon proof of the facts specified in paragraph (1) or (2) of subsection (b) of this Code section, the plaintiff shall not be entitled to any punitive damages and the defendant shall be liable only to pay actual damages. The defendant may plead the broadcast of the correction, retraction, or explanation, including the editorial, if demanded, in mitigation of damages.
+Section:
+Previous
+51-5-1
+51-5-2
+51-5-3
+51-5-4
+51-5-5
+51-5-6
+51-5-7
+51-5-8
+51-5-9
+51-5-10
+51-5-11
+51-5-12
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 6 - Fraud and Deceit
+
+============================================================
+
+
+§ 51-6-2.
+§ 51-6-2 - When Misrepresentation of Material Fact Actionable As Deceit; Effect of Mere Concealment; Knowledge of Falsehood Essential to Deceit; When Knowledge Implied
+
+(a) Willful misrepresentation of a material fact, made to induce another to act, upon which such person acts to his injury, will give him a right of action. Mere concealment of a material fact, unless done in such a manner as to deceive and mislead, will not support an action.
+(b) In all cases of deceit, knowledge of the falsehood constitutes an essential element of the tort. A fraudulent or reckless representation of facts as true when they are not, if intended to deceive, is equivalent to a knowledge of their falsehood even if the party making the representation does not know that such facts are false.
+Section:
+51-6-1
+51-6-2
+51-6-3
+51-6-4
+Next
+Last modified: October 14, 2016
+
+§ 51-6-3.
+§ 51-6-3 - Letters to Obtain Credit
+
+No action shall be sustained for deceit in a representation to obtain credit for another unless the misrepresentation is in writing and is signed by the party to be charged therewith.
+Section:
+Previous
+51-6-1
+51-6-2
+51-6-3
+51-6-4
+Next
+Last modified: October 14, 2016
+
+§ 51-6-4.
+§ 51-6-4 - Fraud by Acts or Silence; Estoppel to Assert Title
+
+(a) A fraud may be committed by acts as well as words.
+(b) One who silently stands by and permits another to purchase his property, without disclosing his title, is guilty of such a fraud as estops him from subsequently setting up such title against the purchaser.
+Section:
+Previous
+51-6-1
+51-6-2
+51-6-3
+51-6-4
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 7 - False Arrest, False Imprisonment, Malicious Prosecution, and Abusive Litigation
+
+============================================================
+
+
+§ 51-7-4.
+§ 51-7-4 - Arrest Under Civil Process of Person Exempt From Such Arrest
+
+The willful arrest, under civil process, of a person exempt by law from such arrest shall be deemed malicious until the contrary shall be proved.
+Section:
+Previous
+51-7-1
+51-7-2
+51-7-3
+51-7-4
+Last modified: October 14, 2016
+
+§ 51-7-40.
+§ 51-7-40 - Right of Action for Malicious Prosecution
+
+A criminal prosecution which is carried on maliciously and without any probable cause and which causes damage to the person prosecuted shall give him a cause of action.
+Section: 51-7-40
+51-7-41
+51-7-42
+51-7-43
+51-7-44
+51-7-45
+51-7-46
+51-7-47
+Next
+Last modified: October 14, 2016
+
+§ 51-7-41.
+§ 51-7-41 - Accrual of Right of Action
+
+The criminal prosecution forming the basis for an action for malicious prosecution must be ended before the right of action for malicious prosecution accrues.
+Section:
+51-7-40
+51-7-41
+51-7-42
+51-7-43
+51-7-44
+51-7-45
+51-7-46
+51-7-47
+Next
+Last modified: October 14, 2016
+
+§ 51-7-44.
+§ 51-7-44 - Inference of Malice From Lack of Probable Cause; Rebuttal of Inference
+
+A total lack of probable cause is a circumstance from which malice may be inferred; however, the inference may be rebutted by proof.
+Section:
+Previous
+51-7-40
+51-7-41
+51-7-42
+51-7-43
+51-7-44
+51-7-45
+51-7-46
+51-7-47
+Next
+Last modified: October 14, 2016
+
+§ 51-7-46.
+§ 51-7-46 - Immunity of Grand Jurors From Action for Malicious Prosecution; Liability of Person Instigating Presentment
+
+(a) No member of a grand jury shall be subject to an action for malicious prosecution based upon a presentment made by the grand jury.
+(b) If a presentment is made at the instigation of a third person, from malice on his part and without probable cause, he shall be liable to an action for malicious prosecution just as if he were named as prosecutor.
+Section:
+Previous
+51-7-40
+51-7-41
+51-7-42
+51-7-43
+51-7-44
+51-7-45
+51-7-46
+51-7-47
+Next
+Last modified: October 14, 2016
+
+§ 51-7-61.
+§ 51-7-61 - Activation of Antishoplifting Device As Constituting Probable Cause for Detention; Notice of Such Device to Be Posted
+
+(a) As used in this Code section, the term "antishoplifting or inventory control device" means a mechanism or other device designed and operated for the purpose of detecting the removal of specially marked or tagged merchandise from a mercantile establishment or similar enclosure or from a protected area within such an enclosure.
+(b) In the case of a mercantile establishment utilizing an antishoplifting or inventory control device, the automatic activation of the device as a result of a person exiting the establishment or a protected area within the establishment shall constitute reasonable cause for the detention of the person so exiting by the owner or operator of the establishment or by an agent or employee of the owner or operator. Each detention shall be made only in a reasonable manner and only for a reasonable period of time sufficient for any inquiry into the circumstances surrounding the activation of the device.
+(c) This Code section shall apply only with respect to mercantile establishments in which a notice has been posted in a clear and visible manner advising patrons of the establishment that an antishoplifting or inventory control device is being utilized in the establishment.
+Section:
+51-7-60
+51-7-61
+51-7-62
+Next
+Last modified: October 14, 2016
+
+§ 51-7-81.
+§ 51-7-81 - Liability for Abusive Litigation
+
+Any person who takes an active part in the initiation, continuation, or procurement of civil proceedings against another shall be liable for abusive litigation if such person acts:
+(1) With malice; and
+(2) Without substantial justification.
+Section:
+51-7-80
+51-7-81
+51-7-82
+51-7-83
+51-7-84
+51-7-85
+Next
+Last modified: October 14, 2016
+
+§ 51-7-82.
+§ 51-7-82 - Defenses
+
+(a) It shall be a complete defense to any claim for abusive litigation that the person against whom a claim of abusive litigation is asserted has voluntarily withdrawn, abandoned, discontinued, or dismissed the civil proceeding, claim, defense, motion, appeal, civil process, or other position which the injured person claims constitutes abusive litigation within 30 days after the mailing of the notice required by subsection (a) of Code Section 51-7-84 or prior to a ruling by the court relative to the civil proceeding, claim, defense, motion, appeal, civil process, or other position, whichever shall first occur; provided, however, that this defense shall not apply where the alleged act of abusive litigation involves the seizure or interference with the use of the injured person's property by process of attachment, execution, garnishment, writ of possession, lis pendens, injunction, restraining order, or similar process which results in special damage to the injured person.
+(b) It shall be a complete defense to any claim for abusive litigation that the person against whom a claim of abusive litigation is asserted acted in good faith; provided, however, that good faith shall be an affirmative defense and the burden of proof shall be on the person asserting the actions were taken in good faith.
+(c) It shall be a complete defense to any claim for abusive litigation that the person against whom a claim of abusive litigation is asserted was substantially successful on the issue forming the basis for the claim of abusive litigation in the underlying civil proceeding.
+Section:
+Previous
+51-7-80
+51-7-81
+51-7-82
+51-7-83
+51-7-84
+51-7-85
+Next
+Last modified: October 14, 2016
+
+§ 51-7-84.
+§ 51-7-84 - Notice of Claim Asserted; When Action Must Be Brought
+
+(a) As a condition precedent to any claim for abusive litigation, the person injured by such act shall give written notice by registered or certified mail or statutory overnight delivery or some other means evidencing receipt by the addressee to any person against whom such injured person intends to assert a claim for abusive litigation and shall thereby give the person against whom an abusive litigation claim is contemplated an opportunity to voluntarily withdraw, abandon, discontinue, or dismiss the civil proceeding, claim, defense, motion, appeal, civil process, or other position. Such notice shall identify the civil proceeding, claim, defense, motion, appeal, civil process, or other position which the injured person claims constitutes abusive litigation.
+(b) An action or claim under this article requires the final termination of the proceeding in which the alleged abusive litigation occurred and must be brought within one year of the date of final termination.
+Section:
+Previous
+51-7-80
+51-7-81
+51-7-82
+51-7-83
+51-7-84
+51-7-85
+Next
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 9 - Injuries to Real Estate
+
+============================================================
+
+
+§ 51-9-1.
+§ 51-9-1 - Cause of Action for Interference With Enjoyment of Property
+
+The right of enjoyment of private property being an absolute right of every citizen, every act of another which unlawfully interferes with such enjoyment is a tort for which an action shall lie.
+Section: 51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-2.
+§ 51-9-2 - Recovery of Possession of Lands; Damages
+
+The bare right to possession of lands shall authorize their recovery by the owner of such right, as well as damages for the withholding of such right.
+Section:
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-3.
+§ 51-9-3 - Recovery for Wrongful Interference With Possession of Land
+
+The bare possession of land shall authorize the possessor to recover damages from any person who wrongfully interferes with such possession in any manner.
+Section:
+Previous
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-4.
+§ 51-9-4 - Action for Trespass by Person Having Title
+
+The person having title to lands, if no one is in actual possession under the same title with him, may bring an action for a trespass thereon. If a tenant is in possession and the trespass is one which injures the freehold, the owner or a remainderman or reversioner may still bring the action.
+Section:
+Previous
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-7.
+§ 51-9-7 - Diversion, Obstruction, or Pollution of Stream As Trespass
+
+The owner of land through which nonnavigable watercourses flow is entitled to have the water in such streams come to his land in its natural and usual flow, subject only to such detention or diminution as may be caused by a reasonable use of it by other riparian proprietors. The diverting of the stream in whole or in part from its natural and usual flow, or the obstructing thereof so as to impede its course or cause it to overflow or injure the land through which it flows or any right appurtenant thereto, or the polluting thereof so as to lessen its value to the owner of such land shall constitute a trespass upon the property.
+Section:
+Previous
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-8.
+§ 51-9-8 - Interference With Underground Streams
+
+The course of a stream of water underground and its exact condition before its first use are so difficult of ascertainment that trespass may not be brought for any supposed interference with the rights of a proprietor.
+Section:
+Previous
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-9.
+§ 51-9-9 - Interference With Rights of Owner Above and Below Surface of Property
+
+The owner of realty has title downwards and upwards indefinitely; and an unlawful interference with his rights, either below or above the surface, gives him a right of action.
+Section:
+Previous
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-10.
+§ 51-9-10 - Interference With Right of Way or Right of Common
+
+The unlawful interference with a right of way or a right of common constitutes a trespass to the party entitled thereto.
+Section:
+Previous
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Next
+Last modified: October 14, 2016
+
+§ 51-9-11.
+§ 51-9-11 - Slander or Libel Concerning Title to Land
+
+The owner of any estate in lands may bring an action for libelous or slanderous words which falsely and maliciously impugn his title if any damage accrues to him therefrom.
+Section:
+Previous
+51-9-1
+51-9-2
+51-9-3
+51-9-4
+51-9-5
+51-9-6
+51-9-7
+51-9-8
+51-9-9
+51-9-10
+51-9-11
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 10 - Injuries to Personalty
+
+============================================================
+
+
+§ 51-10-1.
+§ 51-10-1 - Right of Action for Deprivation of Possession of Personalty
+
+The owner of personalty is entitled to its possession. Any deprivation of such possession is a tort for which an action lies.
+Section: 51-10-1
+51-10-2
+51-10-3
+51-10-4
+51-10-5
+51-10-6
+Next
+Last modified: October 14, 2016
+
+§ 51-10-3.
+§ 51-10-3 - Abuse of or Damage to Personalty As Trespass
+
+Any unlawful abuse of or damage done to the personal property of another constitutes a trespass for which damages may be recovered.
+Section:
+Previous
+51-10-1
+51-10-2
+51-10-3
+51-10-4
+51-10-5
+51-10-6
+Next
+Last modified: October 14, 2016
+
+§ 51-10-5.
+§ 51-10-5 - Right of Action for Injury to Remainder or Reversionary Interest in Personalty; Joint Action With Tenant in Possession
+
+A remainderman or reversioner of personalty may bring an action against a wrongdoer for any injury tending to destroy the existence or ultimate value of the property. In such cases the tenant in possession may bring an action jointly with the remainderman or reversioner for the injury to the entire estate, the recovery being held under like limitations.
+Section:
+Previous
+51-10-1
+51-10-2
+51-10-3
+51-10-4
+51-10-5
+51-10-6
+Next
+Last modified: October 14, 2016
+
+§ 51-10-6.
+§ 51-10-6 - Owner's Right of Action for Damage to or Theft Involving Personal Property
+
+(a) Any owner of personal property shall be authorized to bring a civil action to recover damages from any person who willfully damages the owner's personal property or who commits a theft as defined in Article 1 of Chapter 8 of Title 16 involving the owner's personal property. The owner of the personal property may recover as follows:
+(1) In any such action, the property owner may recover compensatory damages which may include, in addition to the value of the personal property, any other loss sustained as a result of the willful damage or theft offense; and
+(2) In any such action in which the value of the total claim, including exemplary damages, is less than $5,000.00, the property owner may recover compensatory damages, as described in paragraph (1) of this subsection, and additionally may recover liquidated exemplary damages equal to $300.00 or triple the amount of the entire loss sustained by the property owner as a result of the willful damage or theft offense, whichever is greater, and the cost of maintaining the civil action if all of the following apply:
+(A) The property owner, at least 30 days prior to the filing of the action, provided written notice of a demand by personal delivery or certified mail or statutory overnight delivery, return receipt requested, for payment of the value of that personal property, the amount of any other loss sustained as a result of the willful damage or theft offense, and the liquidated exemplary damages set out in this paragraph upon the person who willfully damaged the property or who committed the theft offense;
+(B) Either the person who willfully damaged the personal property or who committed the theft offense did not make payment to the property owner of the amount specified in the demand within 30 days after the date of receipt of the written demand or did not enter into an agreement with the property owner during that 30 day period for such payment, or the person who willfully damaged the personal property or who committed the theft offense entered into an agreement with the property owner during that 30 day period for such payment but the person did not make such payment in accordance with the terms of the agreement; and
+(C) The property owner did not file a civil complaint against the person who willfully damaged the personal property or who committed the theft offense prior to the expiration of 30 days after the date of service of the written demand upon the person, or, if the person had entered into an agreement with the property owner during that 30 day period for payment, prior to the day on which the person failed to make payment in accordance with the terms of the agreement, whichever is applicable.
+
+
+============================================================
+
+Chapter 11 - Defenses to Tort Actions
+
+============================================================
+
+
+§ 51-11-8.
+§ 51-11-8 - Liability of Person Employed by Compressed Gas Dealer Who Provides Assistance Upon Request of Law Enforcement Agency
+
+(a) Any person employed by a licensed compressed gas dealer who provides assistance upon request of any law enforcement agency, fire department, rescue or emergency squad, or any governmental agency in the event of an accident or other emergency involving the use, handling, transportation, transmission, or storage of liquefied petroleum gas, when the reasonably apparent circumstances require prompt decisions and actions, shall not be liable for any civil damages resulting from any act of commission or omission on his part in the course of his rendering such assistance unless such acts or omissions amount to willful or wanton negligence or intentional wrongdoing. Nothing in this Code section shall be deemed or construed to relieve any person from liability for civil damages: (1) where the accident or emergency referred to in this subsection involved his own facilities or equipment or (2) resulting from any act of commission or omission on his part in the course of providing care or assistance in the normal and ordinary course of conducting his own business or profession, nor shall this Code section be construed to relieve from liability for civil damages any other tort-feasor not referred to in this Code section.
+(b) Nothing in subsection (a) of this Code section applies to the rendering of such care, assistance, or advice where the same is rendered for remuneration beyond reimbursement for out-of-pocket expenses in connection therewith, or with the expectation of such remuneration, from the recipient or recipients of such care, assistance, or advice or someone on his or their behalf.
+(c) Subsection (a) of this Code section shall not preclude liability for civil damages as the result of gross negligence or intentional misconduct. Reckless, willful, or wanton misconduct shall constitute gross negligence.
+Section:
+Previous
+51-11-1
+51-11-2
+51-11-3
+51-11-4
+51-11-5
+51-11-6
+51-11-7
+51-11-8
+51-11-9
+51-11-10
+Next
+Last modified: October 14, 2016
+
+§ 51-11-9.
+§ 51-11-9 - Immunity From Civil Liability for Threat or Use of Force in Defense of Habitation
+
+A person who is justified in threatening or using force against another under the provisions of Code Section 16-3-21, relating to the use of force in defense of self or others, Code Section 16-3-23, relating to the use of force in defense of a habitation, or Code Section 16-3-24, relating to the use of force in defense of property other than a habitation, has no duty to retreat from the use of such force and shall not be held liable to the person against whom the use of force was justified or to any person acting as an accomplice or assistant to such person in any civil action brought as a result of the threat or use of such force.
+Section:
+Previous
+51-11-1
+51-11-2
+51-11-3
+51-11-4
+51-11-5
+51-11-6
+51-11-7
+51-11-8
+51-11-9
+51-11-10
+Next
+Last modified: October 14, 2016
+
+§ 51-11-20.
+§ 51-11-20 - Satisfaction and Settlement of Tort Authorized; What Agreements Allowed Where Tort Constitutes Crime
+
+(a) If a tort does not amount to a crime, the person injured may consent to a satisfaction and settlement thereof.
+(b) (1) If a tort amounts to a crime, the person injured may agree upon and receive compensation for the personal injury.
+(2) However, any attempt to satisfy the public offense or to suppress a prosecution therefor is illegal and will vitiate the entire agreement, except in those cases for which the law expressly allows such a settlement. Such an attempt to satisfy or to suppress prosecution of a public offense which amounts to a felony is itself an offense under this Code; and, even if executed, an agreement to this effect shall be no defense to an action for the tort. If the offense does not amount to a felony and the agreement is fully executed, such agreement shall constitute satisfaction for the private tort.
+Section: 51-11-20
+51-11-21
+Next
+Last modified: October 14, 2016
+
+§ 51-11-21.
+§ 51-11-21 - Tender of Damages in Tort Action; Effect of Continuing Tender
+
+A person committing a tort may, before or after an action is brought, tender to the person injured such an amount of damages as in his judgment will cover the injury; and, if the same shall be rejected, he may deposit the amount in the office of the clerk of the superior court of the county of his residence as a continuing tender; and, if the jury trying the cause shall give no more damages than the amount tendered, the plaintiff shall recover no costs accruing subsequently to the time of the tender.
+Section:
+51-11-20
+51-11-21
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 12 - Damages
+
+============================================================
+
+
+§ 51-12-1.
+§ 51-12-1 - Types of Damages; Evidence Admissible in Actions Involving Special Damages
+
+(a) Damages may be either general or special, direct or consequential.
+(b) In any civil action, whether in tort or in contract, for the recovery of damages arising from a tortious injury in which special damages are sought to be recovered or evidence of same is otherwise introduced by the plaintiff, evidence of all compensation, indemnity, insurance (other than life insurance), wage loss replacement, income replacement, or disability benefits or payments available to the injured party from any and all governmental or private sources and the cost of providing and the extent of such available benefits or payments shall be admissible for consideration by the trier of fact. The trier of fact, in its discretion, may consider such available benefits or payments and the cost thereof but shall not be directed to reduce an award of damages accordingly.
+Section: 51-12-1
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-2.
+§ 51-12-2 - General and Special Damages Distinguished; When Recovered
+
+(a) General damages are those which the law presumes to flow from any tortious act; they may be recovered without proof of any amount.
+(b) Special damages are those which actually flow from a tortious act; they must be proved in order to be recovered.
+Section:
+51-12-1
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-3.
+§ 51-12-3 - Direct and Consequential Damages Distinguished
+
+(a) Direct damages are those which follow immediately upon the doing of a tortious act.
+(b) Consequential damages are those which are the necessary and connected effect of a tortious act, even though they are to some extent dependent upon other circumstances.
+Section:
+Previous
+51-12-1
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-5.
+§ 51-12-5 - Additional Damages for Aggravating Circumstances
+
+(a) In a tort action in which there are aggravating circumstances, in either the act or the intention, the jury may give additional damages to deter the wrongdoer from repeating the trespass or as compensation for the wounded feelings of the plaintiff.
+(b) This Code section shall apply only to causes of action for torts arising before July 1, 1987.
+Section:
+Previous
+51-12-1
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-5.1.
+§ 51-12-5.1 - Punitive Damages
+
+(a) As used in this Code section, the term "punitive damages" is synonymous with the terms "vindictive damages," "exemplary damages," and other descriptions of additional damages awarded because of aggravating circumstances in order to penalize, punish, or deter a defendant.
+(b) Punitive damages may be awarded only in such tort actions in which it is proven by clear and convincing evidence that the defendant's actions showed willful misconduct, malice, fraud, wantonness, oppression, or that entire want of care which would raise the presumption of conscious indifference to consequences.
+(c) Punitive damages shall be awarded not as compensation to a plaintiff but solely to punish, penalize, or deter a defendant.
+(d) (1) An award of punitive damages must be specifically prayed for in a complaint. In any case in which punitive damages are claimed, the trier of fact shall first resolve from the evidence produced at trial whether an award of punitive damages shall be made. This finding shall be made specially through an appropriate form of verdict, along with the other required findings.
+(2) If it is found that punitive damages are to be awarded, the trial shall immediately be recommenced in order to receive such evidence as is relevant to a decision regarding what amount of damages will be sufficient to deter, penalize, or punish the defendant in light of the circumstances of the case. It shall then be the duty of the trier of fact to set the amount to be awarded according to subsection (e), (f), or (g) of this Code section, as applicable.
+(e) (1) In a tort case in which the cause of action arises from product liability, there shall be no limitation regarding the amount which may be awarded as punitive damages. Only one award of punitive damages may be recovered in a court in this state from a defendant for any act or omission if the cause of action arises from product liability, regardless of the number of causes of action which may arise from such act or omission.
+
+§ 51-12-6.
+§ 51-12-6 - Damages for Injury to Peace, Happiness, or Feelings
+
+In a tort action in which the entire injury is to the peace, happiness, or feelings of the plaintiff, no measure of damages can be prescribed except the enlightened consciences of impartial jurors. In such an action, punitive damages under Code Section 51-12-5 or Code Section 51-12-5.1 shall not be awarded.
+Section:
+Previous
+51-12-1
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-7.
+§ 51-12-7 - Recovery of Necessary Expenses
+
+In all cases, necessary expenses consequent upon an injury are a legitimate item in the estimate of damages.
+Section:
+Previous
+51-12-1
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-10.
+§ 51-12-10 - Exception to Rule Against Recovery of Remote Damages
+
+When a tort is committed, a contract is broken, or a duty is omitted with knowledge and for the purpose of depriving the plaintiff of certain contemplated benefits, the remote damages occasioned thereby become a proper subject for the consideration of the jury.
+Section:
+Previous
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-11.
+§ 51-12-11 - Mitigation of Damages Required; Exception
+
+When a person is injured by the negligence of another, he must mitigate his damages as far as is practicable by the use of ordinary care and diligence. However, this duty to mitigate does not apply in cases of positive and continuous torts.
+Section:
+Previous
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-12.
+§ 51-12-12 - Court Interference With Jury Verdict As to Damages
+
+(a) The question of damages is ordinarily one for the jury; and the court should not interfere with the jury's verdict unless the damages awarded by the jury are clearly so inadequate or so excessive as to be inconsistent with the preponderance of the evidence in the case.
+(b) If the jury's award of damages is clearly so inadequate or so excessive as to any party as to be inconsistent with the preponderance of the evidence, the trial court may order a new trial as to damages only, as to any or all parties, or may condition the grant of such a new trial upon any party's refusal to accept an amount determined by the trial court.
+(c) Only one grant of a new trial by the judge may be based upon the powers conferred by this Code section. The first grant of a new trial other than one ordered under this Code section and which order granting the new trial is not based on this Code section shall remain governed by Code Section 5-5-50.
+Section:
+Previous
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-13.
+§ 51-12-13 - Reduction of Expenses, Wages, and Other Damages to Present Value
+
+(a) In determining the present value of future medical expenses, living expenses, lost wages, or other economic damages, the trier of fact may reduce the same to the present value based on a discount rate of 5 percent or any other discount rate as the trier of fact may deem appropriate.
+(b) This Code section shall not be construed to provide for the introduction of evidence showing the cost of any specific private investment product, including, but not limited to, an annuity.
+Section:
+Previous
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Next
+Last modified: October 14, 2016
+
+§ 51-12-14.
+§ 51-12-14 - Procedure for Demand of Unliquidated Damages in Tort Actions; When Interest May Be Recovered
+
+(a) Where a claimant has given written notice by registered or certified mail or statutory overnight delivery to a person against whom claim is made of a demand for an amount of unliquidated damages in a tort action and the person against whom such claim is made fails to pay such amount within 30 days from the mailing or delivering of the notice, the claimant shall be entitled to receive interest on the amount demanded if, upon trial of the case in which the claim is made, the judgment is for an amount not less than the amount demanded. However, if, at any time after the 30 days and before the claimant has withdrawn his or her demand, the person against whom such claim is made gives written notice by registered or certified mail or statutory overnight delivery of an offer to pay the amount of the claimant's demand plus interest under this Code section through the date such notice is given, and such offer is not accepted by the person making the demand for unliquidated damages within 30 days from the mailing or delivering of such notice by the person against whom such claim is made, the claimant shall not be entitled to receive interest on the amount of the demand after the thirtieth day following the date on which the notice of the offer is mailed or delivered even if, upon trial of the case in which the claim is made, the judgment is for an amount not less than the sum demanded pursuant to this Code section.
+(b) Any written notice referred to in subsection (a) of this Code section shall specify that it is being given pursuant to this Code section.
+(c) The interest provided for by this Code section shall be at an annual rate equal to the prime rate as published by the Board of Governors of the Federal Reserve System, as published in statistical release H. 15 or any publication that may supersede it, on the thirtieth day following the date of the mailing of the last written notice plus 3 percent, and shall begin to run from the thirtieth day following the date of the mailing or delivering of the written notice until the date of judgment. This subsection shall apply to all civil actions filed on or after July 1, 2003.
+(d) Evidence or discussion of interest on liquidated damages, as well as evidence of the offer, shall not be submitted to the jury. Interest shall be made a part of the judgment upon presentation of evidence to the satisfaction of the court that this Code section has been complied with and that the verdict of the jury or the award by the judge trying the case without a jury is equal to or exceeds the amount claimed in the notice.
+(e) This Code section shall be known and may be cited as the "Unliquidated Damages Interest Act."
+Section:
+Previous
+51-12-2
+51-12-3
+51-12-4
+51-12-5
+51-12-5.1
+51-12-6
+51-12-7
+51-12-8
+51-12-9
+51-12-10
+51-12-11
+51-12-12
+51-12-13
+51-12-14
+Last modified: October 14, 2016
+
+§ 51-12-30.
+§ 51-12-30 - Procurer of Wrong As Joint Wrongdoer; How Action Brought Against Joint Wrongdoer
+
+In all cases, a person who maliciously procures an injury to be done to another, whether an actionable wrong or a breach of contract, is a joint wrongdoer and may be subject to an action either alone or jointly with the person who actually committed the injury.
+Section: 51-12-30
+51-12-31
+51-12-32
+51-12-33
+Next
+Last modified: October 14, 2016
+
+§ 51-12-31.
+§ 51-12-31 - Recovery Against Joint Trespassers
+
+Except as provided in Code Section 51-12-33, where an action is brought jointly against several persons, the plaintiff may recover damages for an injury caused by any of the defendants against only the defendant or defendants liable for the injury. In its verdict, the jury may specify the particular damages to be recovered of each defendant. Judgment in such a case must be entered severally.
+Section:
+51-12-30
+51-12-31
+51-12-32
+51-12-33
+Next
+Last modified: October 14, 2016
+
+§ 51-12-32.
+§ 51-12-32 - Right of Contribution Among Joint Trespassers; Effect of Settlement
+
+(a) Except as provided in Code Section 51-12-33, where a tortious act does not involve moral turpitude, contribution among several trespassers may be enforced just as if an action had been brought against them jointly. Without the necessity of being charged by action or judgment, the right of a joint trespasser to contribution from another or others shall continue unabated and shall not be lost or prejudiced by compromise and settlement of a claim or claims for injury to person or property or for wrongful death and release therefrom.
+(b) If judgment is entered jointly against several trespassers and is paid off by one of them, the others shall be liable to him for contribution.
+(c) Without the necessity of being charged by an action or judgment, the right of indemnity, express or implied, from another or others shall continue unabated and shall not be lost or prejudiced by compromise and settlement of a claim or claims for injury to person or property or for wrongful death and release therefrom.
+Section:
+Previous
+51-12-30
+51-12-31
+51-12-32
+51-12-33
+Next
+Last modified: October 14, 2016
+
+§ 51-12-33.
+§ 51-12-33 - Reduction and Apportionment of Award or Bar of Recovery According to Percentage of Fault of Parties and Nonparties
+
+(a) Where an action is brought against one or more persons for injury to person or property and the plaintiff is to some degree responsible for the injury or damages claimed, the trier of fact, in its determination of the total amount of damages to be awarded, if any, shall determine the percentage of fault of the plaintiff and the judge shall reduce the amount of damages otherwise awarded to the plaintiff in proportion to his or her percentage of fault.
+(b) Where an action is brought against more than one person for injury to person or property, the trier of fact, in its determination of the total amount of damages to be awarded, if any, shall after a reduction of damages pursuant to subsection (a) of this Code section, if any, apportion its award of damages among the persons who are liable according to the percentage of fault of each person. Damages apportioned by the trier of fact as provided in this Code section shall be the liability of each person against whom they are awarded, shall not be a joint liability among the persons liable, and shall not be subject to any right of contribution.
+(c) In assessing percentages of fault, the trier of fact shall consider the fault of all persons or entities who contributed to the alleged injury or damages, regardless of whether the person or entity was, or could have been, named as a party to the suit.
+(d) (1) Negligence or fault of a nonparty shall be considered if the plaintiff entered into a settlement agreement with the nonparty or if a defending party gives notice not later than 120 days prior to the date of trial that a nonparty was wholly or partially at fault.
+(2) The notice shall be given by filing a pleading in the action designating the nonparty and setting forth the nonparty's name and last known address, or the best identification of the nonparty which is possible under the circumstances, together with a brief statement of the basis for believing the nonparty to be at fault.
+(e) Nothing in this Code section shall eliminate or diminish any defenses or immunities which currently exist, except as expressly stated in this Code section.
+(f) (1) Assessments of percentages of fault of nonparties shall be used only in the determination of the percentage of fault of named parties.
+(2) Where fault is assessed against nonparties pursuant to this Code section, findings of fault shall not subject any nonparty to liability in any action or be introduced as evidence of liability in any action.
+(g) Notwithstanding the provisions of this Code section or any other provisions of law which might be construed to the contrary, the plaintiff shall not be entitled to receive any damages if the plaintiff is 50 percent or more responsible for the injury or damages claimed.
+Section:
+Previous
+51-12-30
+51-12-31
+51-12-32
+51-12-33
+Last modified: October 14, 2016
+
+§ 51-12-50.
+§ 51-12-50 - Measure of Damages for Converted Timber; Presumption
+
+(a) Except as provided in Code Section 51-12-51, when a plaintiff recovers for timber cut or cut and carried away, the measure of damages shall be:
+(1) Treble the fair market value of the trees cut as they stood;
+(2) Treble the diminished fair market value of any trees incidentally harmed;
+(3) Costs of reasonable reforestation activities related to the plaintiff's injury; and
+
+§ 51-12-71.
+§ 51-12-71 - Prerequisites for Transfer of Structured Settlement Payment Rights
+
+(a) No direct or indirect transfer of structured settlement payment rights shall be effective and no structured settlement obligor or annuity issuer shall be required to make any payment directly or indirectly to any transferee of structured settlement payment rights unless the transfer has been approved in advance in a final court order by a court of competent jurisdiction or order of any government authority vested by law with exclusive jurisdiction over the settled claim resolved by the structured settlement based on express findings by the court or government authority that:
+(1) The transfer complies with the requirements of this article and does not contravene any federal or state statute or the order of any court or any responsible administrative authority;
+(2) The transfer is in the best interest of the payee taking into account the welfare and support of the payee's dependents;
+(3) Not less than ten days prior to the date on which the transfer agreement is executed in writing, the transferee has provided to the payee an informational pamphlet relating to transfers of structured settlements as provided for in subsection (b) of Code Section 51-12-73, when available, and a separate disclosure statement in bold type, no smaller than 14 points, setting forth:
+(A) The amounts and due dates of the structured settlement payments to be transferred;
+(B) The aggregate amount of such payments;
+(C) The discounted present value of such payments, together with the discount rate used in determining such discounted present value;
+(D) The gross amount payable to the payee in exchange for such payments;
+(E) An itemized listing of all brokers' commissions, service charges, application fees, processing fees, closing costs, filing fees, administrative fees, legal fees, notary fees and other commissions, fees, costs, expenses, and charges payable by the payee or deductible from the gross amount otherwise payable to the payee;
+(F) The net amount payable to the payee after deduction of all commissions, fees, costs, expenses, and charges described in subparagraph (E) of this paragraph;
+(G) The quotient (expressed as a percentage) obtained by dividing the net payment amount by the discounted present value of the payments; and
+(H) The amount of any penalty and the aggregate amount of any liquidated damages (inclusive of penalties) payable by the payee in the event of any breach of the transfer agreement by the payee; and
+(4) The transferee has given written notice of the transferee's name, address, and taxpayer identification number to the annuity issuer and the structured settlement obligor and has filed a copy of the notice with the court.
+(b) At least 20 days before the hearing which is scheduled on an application for authorizing a transfer of structured settlement payment rights under this Code section, the transferee shall file with the court and deliver to all interested parties a notice of the proposed transfer and the application for its authorization. The notice shall include the following:
+(1) A copy of the transferee's application to the court;
+(2) A copy of the transfer agreement;
+(3) A copy of the disclosure statement required under paragraph (3) of subsection (a) of this Code section;
+(4) Notification that an interested party may support, oppose, or otherwise respond to the transferee's application, either in person or through counsel, by participating in the hearing or by submitting written comments to the court; and
+(5) A rule nisi containing notification of the time and place of the hearing and notification of the manner in and the time by which any written response to the application must be filed in order to be considered by the court. A written response shall be filed within 15 days after service of the transferee's notice.
+(c) Delivery of notice as required by subsection (b) of this Code section may be made as provided in Code Section 9-11-4 or by registered or certified mail, return receipt requested. Notice by registered or certified mail is effective upon the date of delivery as shown on the return receipt. If notice by registered or certified mail is refused or returned undelivered, notice shall be delivered as provided in Code Section 9-11-4.
+(d) The venue for any application brought under this Code section shall be in the county in which any transferee or transferor resides or in any county in which any of the transferees or transferors have consented to venue.
+Section:
+51-12-70
+51-12-71
+51-12-72
+51-12-73
+51-12-74
+51-12-75
+51-12-76
+51-12-77
+Next
+Last modified: October 14, 2016
+
+§ 51-12-72.
+§ 51-12-72 - Written Transfer Agreement Required
+
+(a) Any transfer agreement of structured settlement payment rights must, in addition to the other requirements of this article, be executed in writing and filed as provided in Code Section 51-12-71. The transfer agreement shall not be so executed until after the expiration of the ten-day period provided for in paragraph (3) of subsection (a) of Code Section 51-12-71.
+(b) No payee shall incur any obligation of any type with respect to a proposed transfer of structured settlement payment rights prior to the execution in writing of the transfer agreement.
+(c) Any payee who executes in writing a transfer agreement shall have the right to rescind the transfer at any time within the next 21 days following the written execution of the transfer agreement or at the hearing provided for in subsection (b) of Code Section 51-12-71, whichever event occurs last. The transferee shall furnish to the payee at the time of execution of the transfer agreement a notice to the payee allowing the payee 21 days to cancel the transfer. This right to cancel shall not limit or otherwise affect the payee's right to cancel pursuant to any other provision of applicable law. The notice shall serve as the cover sheet to the transfer documents. It shall be on a separate sheet of paper with no other written or pictorial material, in at least ten-point bold type, double spaced, and shall read substantially as follows:
+"NOTICE OF CANCELLATION RIGHTS:
+Please read this form completely and carefully. It contains valuable cancellation rights. You may cancel this transaction at any time prior to 5:00 P.M. of the twenty-first day following receipt of this notice or at the hearing on the application for authorization of a transfer of structured settlement payment rights, whichever event occurs last. This cancellation right cannot be waived in any manner. To cancel, sign this form, and mail or deliver it to the address below by 5:00 P.M. of (the twenty-first day following the transaction) . It is best to mail it by certified mail or statutory overnight delivery, return receipt requested, and to keep a photocopy of the signed form and your post office receipt.
+Address to which cancellation is to be returned.
+I (we) hereby cancel this transaction.
+Payee's Signature
+Date
+Section:
+Previous
+51-12-70
+51-12-71
+51-12-72
+51-12-73
+51-12-74
+51-12-75
+51-12-76
+51-12-77
+Next
+Last modified: October 14, 2016
+
+§ 51-12-76.
+§ 51-12-76 - Provisions Unwaivable; No Penalty or Forfeiture
+
+(a) The provisions of this article may not be waived.
+(b) No payee who proposes to make a transfer of structured settlement payment rights shall incur any penalty, forfeit any application fee or other payment, or otherwise incur any liability to the proposed transferee based on:
+(1) Any failure of such transfer to satisfy the conditions of this article; or
+(2) Any failure by the payee to execute the transfer agreement or any cancellation by the payee within the time prescribed in Code Section 51-12-72.
+Section:
+Previous
+51-12-70
+51-12-71
+51-12-72
+51-12-73
+51-12-74
+51-12-75
+51-12-76
+51-12-77
+Next
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 13 - Recovery in Medical Malpractice Actions
+
+============================================================
+
+
+§ 51-13-1.
+§ 51-13-1 - Definitions; Maximum Liability; Allowance for Periodic Payments
+
+(a) As used in this Code section, the term:
+(1) "Claimant" means a person, including a decedent's estate, who seeks or has sought recovery of damages in a medical malpractice action. All persons claiming to have sustained damages as the result of the bodily injury or death of a single person are considered a single claimant.
+(2) "Health care provider" means any person licensed under Chapter 9, 10A, 11, 11A, 26, 28, 30, 33, 34, 35, 39, or 44 of Title 43. The term shall also include any corporation, professional corporation, partnership, limited liability company, limited liability partnership, authority, or other entity comprised of such health care providers.
+(3) "Medical facility" means any institution or medical facility licensed under Chapter 7 of Title 31 or any combination thereof under common ownership, operation, or control.
+(4) "Noneconomic damages" means damages for physical and emotional pain, discomfort, anxiety, hardship, distress, suffering, inconvenience, physical impairment, mental anguish, disfigurement, loss of enjoyment of life, loss of society and companionship, loss of consortium, injury to reputation, and all other nonpecuniary losses of any kind or nature. This term does not include past or future:
+(A) Medical expenses, including rehabilitation and therapy;
+(B) Wages or earnings capacity;
+(C) Income;
+(D) Funeral and burial expenses;
+(E) The value of services performed by the injured in the absence of the injury or death including those domestic and other necessary services performed without compensation; or
+(F) Other monetary expenses.
+(b) In any verdict returned or judgment entered in a medical malpractice action, including an action for wrongful death, against one or more health care providers, the total amount recoverable by a claimant for noneconomic damages in such action shall be limited to an amount not to exceed $350,000.00, regardless of the number of defendant health care providers against whom the claim is asserted or the number of separate causes of action on which the claim is based.
+(c) In any verdict returned or judgment entered in a medical malpractice action, including an action for wrongful death, against a single medical facility, inclusive of all persons and entities for which vicarious liability theories may apply, the total amount recoverable by a claimant for noneconomic damages in such action shall be limited to an amount not to exceed $350,000.00, regardless of the number of separate causes of action on which the claim is based.
+(d) In any verdict returned or judgment entered in a medical malpractice action, including an action for wrongful death, against more than one medical facility, inclusive of all persons and entities for which vicarious liability theories may apply, the total amount recoverable by a claimant for noneconomic damages in such action shall be limited to an amount not to exceed $350,000.00 from any single medical facility and $700,000.00 from all medical facilities, regardless of the number of defendant medical facilities against whom the claim is asserted or the number of separate causes of action on which the claim is based.
+(e) In applying subsections (b), (c), and (d) of this Code section, the aggregate amount of noneconomic damages recoverable under such subsections shall in no event exceed $1,050,000.00.
+(f) In any medical malpractice action, if an award of future damages equaling or exceeding $350,000.00 is made against any party in the action, the trial court shall, upon the request of any party, issue an order providing that such damages be paid by periodic payments. Such periodic payments shall be funded through an annuity policy with the premium for such annuity equal to the amount of the award for future damages.
+Section: 51-13-1
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 14 - Asbestos and Silica Claims
+
+============================================================
+
+
+§ 51-14-1.
+§ 51-14-1 - Legislative Findings and Purpose
+
+(a) The General Assembly finds that:
+(1) Asbestos is a mineral that was widely used prior to the 1980's for insulation, fire-proofing, and other purposes;
+(2) Many American workers and others were exposed to asbestos, especially during and after World War II, at shipyards and other sites, prior to the advent of regulation by the United States Occupational Safety and Health Administration in the early 1970's;
+(3) Exposure to asbestos is associated with various types of cancer, including mesothelioma, as well as nonmalignant conditions such as asbestosis and diffuse pleural thickening;
+(4) Diseases caused by asbestos exposure often have long latency periods;
+(5) Silica is a naturally occurring mineral and is the second most common constituent of the earth's crust. Crystalline silica in the form of quartz is present in sand, gravel, soil, and rocks;
+(6) Silica related illnesses, including silicosis, can develop from the inhalation of respirable silica dust. Silicosis was widely recognized as an occupational disease many years ago;
+(7) Concerns about statutes of limitations may prompt unimpaired asbestos and silica claimants to bring lawsuits to protect their ability to recover for their potentially progressive occupational disease;
+(8) It is proper for the General Assembly to support and protect the Georgia courts from the massive litigation expense and the crowding of trial dockets caused by asbestos and silica litigation;
+(9) The cost of compensating exposed individuals who are not sick and legal costs spent on their claims jeopardize recoveries both now and in the future by people with cancer or other serious asbestos related injuries; threaten the savings, retirement benefits, and jobs of current and retired employees of the defendants; and adversely affect the communities in which the defendants operate;
+(10) In February, 2003, the American Bar Association Commission on Asbestos Litigation, with input from ten of the nation's most prominent physicians in the area of pulmonary function, adopted the "ABA Standard For Non-Malignant Asbestos-Related Disease Claims," which sets forth medical criteria for demonstrating asbestos related impairment that provide the underlying framework for the criteria set forth in this chapter and in similar legislation adopted in several other states;
+(11) Ohio, Florida, Texas, Kansas, South Carolina, and Tennessee have enacted legislation similar to this chapter that, among other things, sets medical criteria governing asbestos or silica claims or both, tolls statutes of limitations, and requires persons alleging nonmalignant disease claims to demonstrate physical impairment as a prerequisite to filing or maintaining such claims; and
+(12) Sound public policy requires deferring the claims of persons exposed to asbestos or silica and who are not presently impaired in order to give priority to those cases that involve claims of actual and current conditions of impairment; preserve compensation for people with cancer and other serious injuries; and safeguard the jobs, benefits, and savings of workers.
+(b) It is the purpose of this chapter to:
+(1) Give priority to claimants who can demonstrate actual physical harm or illness caused by asbestos or silica;
+(2) Preserve the rights of claimants to pursue asbestos or silica claims if an exposed person becomes sick in the future;
+(3) Enhance the ability of the courts to supervise and control asbestos litigation and silica litigation; and
+(4) Conserve resources to allow compensation of claimants who have cancer and others who are impaired as a result of exposure to asbestos or silica while securing the right to similar compensation for those who may suffer physical impairment in the future.
+Section: 51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-3.
+§ 51-14-3 - Definitions
+
+The board certified internist, board certified pulmonologist, board certified pathologist, board certified occupational medicine physician, or board certified oncologist who submits a report under this chapter may be an expert witness retained by counsel for the exposed person or claimant, so long as the physician otherwise meets the requirements of this chapter and any other applicable Code sections governing the qualifications of expert witnesses.
+(20) "Silica" means a group of naturally occurring crystalline forms of silicon dioxide, including, but not limited to, quartz and silica sand, whether in the form of respirable free silica or any quartz-containing or crystalline silica-containing dust, in the form of a quartz-containing by-product or crystalline silica-containing by-product, or dust released from individual or commercial use, release, or disturbance of silica sand, silicon dioxide, or crystalline-silica containing media, consumables, or materials.
+(21) (A) "Silica claim" means any claim, wherever or whenever made, for damages, losses, indemnification, contribution, loss of consortium, or other relief arising out of, based on, or in any way related to the health effects of exposure to silica, including, but not limited to:
+(i) Any claim, to the extent recognized by applicable state law now or in the future, for:
+(I) Personal injury or death;
+(II) Mental or emotional injury;
+(III) Risk or fear of disease or other injury; or
+(IV) The costs of medical monitoring or surveillance; and
+(ii) Any claim made by or on behalf of an exposed person or based on that exposed person's exposure to silica, including a representative, spouse, parent, child, or other relative of the exposed person.
+(B) "Silica claim" shall not mean a claim brought under:
+(i) A workers' compensation law administered by this state to provide benefits, funded by a responsible employer or its insurance carrier, for occupational diseases or injuries or for disability or death caused by occupational diseases or injuries;
+(ii) The Act of April 22, 1908, known as the Federal Employers' Liability Act, 45 U.S.C. Section 51, et seq.;
+(iii) The Longshore and Harbor Workers' Compensation Act, 33 U.S.C. Sections 901-944, 948-950; or
+(iv) The Federal Employees Compensation Act, 5 U.S.C. Chapter 81.
+(22) "Silicosis" means nodular interstitial fibrosis of the lung produced by inhalation of silica.
+(23) "Substantial contributing factor" means that exposure to asbestos or silica took place on a regular basis over an extended period of time and in close proximity to the exposed person and was a factor without which the physical impairment in question would not have occurred.
+(24) "Total lung capacity" means the volume of gas contained in the lungs at the end of a maximal inspiration.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-4.
+§ 51-14-4 - Prima-Facie Evidence of Physical Impairment a Prerequisite of Asbestos or Silica Claims
+
+(a) Prima-facie evidence of physical impairment of the exposed person as defined in paragraph (17) or (18) of Code Section 51-14-3 shall be an essential element of an asbestos claim or silica claim.
+(b) In order to bring or maintain an asbestos claim or silica claim, the claimant shall submit prima-facie evidence of physical impairment in accordance with the requirements of this chapter.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-6.
+§ 51-14-6 - Dismissal for Failure to Establish Prima-Facie Evidence of Physical Impairment With Respect to an Asbestos Claim or Silica Claim; Procedure; Evidentiary Requirements
+
+In the event a trial is scheduled to commence in less than 60 days after May 1, 2007, a trial court can shorten the deadlines contained in this paragraph as necessary in order to make a determination regarding the prima-facie evidence of physical impairment before trial commences; and
+(2) (A) The plaintiff in any asbestos claim or silica claim filed in this state on or after May 1, 2007, shall file together with the complaint a medical report (which shall be in the form of an affidavit) and accompanying documentation setting forth the medical findings necessary to establish prima-facie evidence of physical impairment as provided in paragraph (17) or (18) of Code Section 51-14-3. In addition, the plaintiff's complaint shall allege with specificity that the plaintiff satisfies the prima-facie evidence of physical impairment with respect to an asbestos claim or silica claim.
+(B) Within 90 days of service of plaintiff's complaint, any defendant may file an opposition with the trial court challenging plaintiff's prima-facie evidence of physical impairment. To the extent any such opposition is based upon the medical opinion of a licensed physician, that physician shall be a qualified physician, as that term is defined in subparagraph (A) of paragraph (19) of Code Section 51-14-3, and shall be either a board certified internist, a board certified pathologist, a board certified pulmonologist, a board certified occupational medicine physician, a board certified oncologist, or a certified B-reader. Defendant's opposition shall be filed with the trial court and served on plaintiff's counsel and each defendant.
+(C) If the defendant does not file an opposition challenging plaintiff's prima-facie evidence of physical impairment within the time permitted, the trial court shall determine if the plaintiff has established prima-facie evidence of physical impairment based on the papers and documentation submitted to the trial court. The trial court's decision shall be made in a timely manner.
+(D) If the defendant files an objection, the plaintiff may file a reply with the trial court within ten days of service of defendant's opposition. The reply must be served on each defendant.
+(E) The trial court shall determine if the plaintiff has established prima-facie evidence of physical impairment with respect to an asbestos claim or silica claim in a timely manner based on the papers and documentation submitted to the trial court. A hearing will be conducted only if the trial court so orders on its own motion, or if, in the exercise of discretion, the trial court grants a party's request for a hearing. No testimony shall be taken at the hearing. A decision of the trial court not to grant a request for a hearing may not be appealed and does not constitute reversible error. If the trial court determines that the plaintiff has failed to establish prima-facie evidence of physical impairment, it shall dismiss the plaintiff's complaint without prejudice.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-7.
+§ 51-14-7 - Sworn Information Form Providing Required Information; Failure to State a Claim; Class Actions Barred
+
+(a) All asbestos claims and silica claims filed in this state on or after May 1, 2007, shall include with the complaint a sworn information form containing the following information:
+(1) The exposed person's name, address, date of birth, social security number, and marital status;
+(2) If the exposed person alleges exposure to asbestos or silica through the testimony of another person or other than by direct or bystander exposure to a product or products, the name, address, date of birth, social security number, and marital status for each person by which claimant alleges exposure, hereafter the "index person," and the claimant's relationship to each such person;
+(3) The specific location of each alleged exposure;
+(4) The specific asbestos-containing product or silica-containing product to which the exposed person was exposed and the manufacturer of each product;
+(5) The beginning and ending dates of each alleged exposure as to each asbestos-containing product or silica-containing product for each location at which exposure allegedly took place for plaintiff and for each index person;
+(6) The occupation and name of employer of the exposed person at the time of each alleged exposure;
+(7) The specific condition related to asbestos or silica claimed to exist;
+(8) Any supporting documentation of the condition claimed to exist; and
+(9) The identity of any bankruptcy trust to which a claim has been submitted concerning any asbestos or silica injury of the exposed person, attaching any claim form or other information submitted to such trust or trusts with respect to the exposed person. Plaintiff must also identify any bankruptcy trust that the plaintiff believes is or may be liable for all or part of the injury at issue, even if a claim has not been submitted to that trust at the time the complaint is filed.
+(b) If a plaintiff filing an asbestos claim or silica claim fails to file with the complaint a sworn information form or files a sworn information form that is allegedly defective or incomplete, and one or more defendants allege, with specificity, by motion to dismiss filed on or before the close of discovery, that said sworn information form is missing, defective, or incomplete, the plaintiff's complaint shall be dismissed without prejudice for failure to state a claim, except that the plaintiff may file the sworn information form or cure the alleged defect or omission any time between service of the motion to dismiss and 30 days after any order of dismissal identifying the defective or missing item or items. The trial court may, in the exercise of its discretion, extend the time for filing the missing information as it shall determine justice requires.
+(c) All asbestos claims and silica claims along with sworn information forms must be individually filed in separate civil actions except that claims relating to the exposure to asbestos or silica for the same exposed person whose alleged injury is the basis for the civil action may be joined in a single action. Otherwise, no claims on behalf of a group or class of persons shall be joined in single civil action.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-8.
+§ 51-14-8 - Limitations on Discovery; Satisfaction of Medical Criteria Necessary to Establish Prima-Facie Evidence of Medical Impairment; Admissibility of Expert Reports
+
+(a) Until such time as the trial court enters an order determining that the plaintiff has established prima-facie evidence of physical impairment, no asbestos claim or silica claim shall be subject to discovery, except discovery related to establishing or challenging the prima-facie evidence of physical impairment or by order of the trial court upon motion of one of the parties and for good cause shown.
+(b) The medical criteria set forth in this chapter to establish prima-facie evidence of physical impairment are solely for the purpose of determining whether a claim meets the criteria to proceed in court. The fact that a plaintiff satisfies the criteria necessary to establish prima-facie evidence of physical impairment for an asbestos claim or silica claim shall not be construed as an admission or determination that the exposed person in fact has a condition related to exposure to asbestos or silica and shall not be cited, referred to, or otherwise used at trial.
+(c) Unless stipulated to by the parties, an expert report submitted for the purpose of establishing or challenging prima-facie evidence of physical impairment is inadmissible for any other purpose.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-9.
+§ 51-14-9 - Who May Bring a Claim; Claims in Multiple Jurisdictions
+
+(a) Notwithstanding Code Section 1-2-6 or 1-2-10, a civil action alleging an asbestos claim or silica claim may only be brought or maintained in the courts of Georgia if the plaintiff, whether a citizen of Georgia or a citizen of some other state, is a resident of Georgia at the time of filing the action or the exposure to asbestos or silica on which the claim is based occurred in Georgia; provided, however, nothing contained in this chapter shall preclude a nonresident of Georgia who currently has a case pending in this state that was filed before April 12, 2005, from maintaining that asbestos claim or silica claim if that nonresident can establish prima-facie evidence of physical impairment with respect to an asbestos claim or silica claim as provided in paragraph (17) or (18) of Code Section 51-14-3. Civil actions alleging an asbestos claim or silica claim filed on or after May 1, 2007, must comply with the forum provisions set forth in this Code section. Civil actions alleging an asbestos claim or silica claim filed on or after April 12, 2005, and before May 1, 2007, must comply with the forum provisions of Code Section 51-14-8, as enacted on April 12, 2005, by 2005 Act No. 29 (Ga. L. 2005, p. 145) as they existed prior to May 1, 2007.
+(b) The trial court, on motion of a defendant, shall dismiss each asbestos claim or silica claim that is subject to this chapter against the defendant unless the plaintiff files a written statement with the trial court electing to abate the plaintiff's claim against the defendant for a period of 180 days from the date the trial court disposes of the defendant's motions in order to afford the plaintiff an opportunity to file a new action on the claims in another state of the United States.
+(c) (1) A trial court may not abate or dismiss a claim under this Code section until the defendant files with the trial court or with the clerk of the court a written stipulation that, with respect to a new action on the claim commenced by the plaintiff, the defendant waives the right to assert a statute of limitations defense in all other states of the United States in which the claim was not barred by limitations at the time the claim was filed in this state as necessary to effect a tolling of the limitations periods in those states beginning on the date the claim was filed in this state and ending on the date the claim is dismissed or the period of abatement ends. The fact that a claim subject to this Code section was barred by the statute of limitations in all other states of the United States at the time it was filed in this state shall not prevent the claim from being dismissed pursuant to this Code section and such claim shall be dismissed even if it cannot be filed in another state. The trial court may not abate or dismiss a claim under this Code section until the defendant files with the trial court or with the clerk of the court a written stipulation that, with respect to a new action on the claim commenced by the plaintiff in another state of the United States, the plaintiff may elect that the plaintiff and the defendant may rely on responses to discovery already provided under Georgia law, plus any additional discovery that may be conducted under the rules of civil procedure in another state, or use responses to discovery already provided and conduct additional discovery as permitted under the rules of civil procedure in such other state.
+(2) If less than all of the defendants agree to provide the stipulations set forth in paragraph (1) of this subsection, then the court shall dismiss the claims against those defendants who so stipulate.
+(d) To comply with this Code section in relation to an action that involves both claims that arose in this state and claims that arose outside this state, a trial court shall consider each claim individually and shall sever from the action the claims that are subject to this Code section.
+(e) If a plaintiff alleges that the exposed person was exposed to asbestos or silica while located in more than one jurisdiction, the trial court shall determine, for purposes of this Code section, which of the jurisdictions is the most appropriate forum for the claim, considering the relative amounts and lengths of the exposed person's exposure to asbestos or silica in each jurisdiction.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-11.
+§ 51-14-11 - Consolidation of Claims
+
+A trial court may consolidate for trial any number and type of asbestos claims or silica claims with the consent of all the parties. In the absence of such consent, the trial court may consolidate for trial only asbestos claims or silica claims relating to the same exposed person and members of his or her household.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-12.
+§ 51-14-12 - Application of Chapter Dependent Upon Date Claim Accrues
+
+(a) Asbestos claims and silica claims that accrued before April 12, 2005, or that will accrue on or after May 1, 2007, shall be governed by this chapter, as it exists on May 1, 2007. Asbestos claims and silica claims that accrued on or after April 12, 2005, and before May 1, 2007, shall be governed by Chapter 14 of Title 51, as enacted on April 12, 2005, by 2005 Act No. 29 (Ga. L. 2005, p. 145).
+(b) Notwithstanding the foregoing, all asbestos claims and silica claims filed on or after April 12, 2005, and before May 1, 2007, shall be subject to and comply with the provisions of Code Sections 51-14-6, 51-14-7, 51-14-8, 51-14-9, and 51-14-10, as enacted on April 12, 2005, by 2005 Act No. 29 (Ga. L. 2005, p. 145). All asbestos claims and silica claims filed on or after May 1, 2007, shall be subject to and comply with Code Sections 51-14-7, 51-14-8, 51-14-9, 51-14-10, and 51-14-11, as they exist on May 1, 2007.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Next
+Last modified: October 14, 2016
+
+§ 51-14-13.
+§ 51-14-13 - Severability
+
+In the event any part, portion, section, subsection, paragraph, sentence, clause, phrase, or word of this chapter shall be declared or adjudged invalid or unconstitutional, such adjudication shall in no manner affect the other parts, portions, sections, subsections, paragraphs, sentences, clauses, phrases, or words of this chapter which shall remain of full force and effect as if the part, portion, section, subsection, paragraph, sentence, clause, phrase, or word so declared or adjudged invalid or unconstitutional were not originally a part hereof. For example, if a court determines that a particular word renders any portion or application of this chapter unconstitutional, in that event, the court shall strike that word and apply this chapter as if it were enacted without that word. The General Assembly declares that it would have passed the remaining parts of this chapter if it had known that such part or parts hereof would be declared or adjudged invalid or unconstitutional. The General Assembly does not intend for this chapter to make any substantive change in the law governing claims that accrued before April 12, 2005, and has only included procedural provisions that govern where such claims can be filed and what early reports must be filed in such cases. This chapter shall be interpreted consistently with the General Assembly's intention not to make any substantive changes in the law applicable to cases that accrued before April 12, 2005. The General Assembly expressly declares its intent that Code Section 51-14-9 remain in full force and effect if any other part or parts of this chapter shall be declared or adjudged invalid or unconstitutional. The General Assembly further expressly declares its intent that, in the event any part, portion, section, subsection, paragraph, sentence, clause, phrase, or word of this chapter shall be declared or adjudged invalid or unconstitutional as applied to asbestos claims or silica claims that accrued before April 12, 2005, such adjudication shall in no manner affect the applicability of any part, portion, section, subsection, paragraph, sentence, clause, phrase, or word of this chapter to asbestos claims or silica claims that accrued or may accrue on or after May 1, 2007.
+Section:
+Previous
+51-14-1
+51-14-2
+51-14-3
+51-14-4
+51-14-5
+51-14-6
+51-14-7
+51-14-8
+51-14-9
+51-14-10
+51-14-11
+51-14-12
+51-14-13
+Last modified: October 14, 2016
+
+
+============================================================
+
+Chapter 15 - Asbestos Claims
+
+============================================================
+
+
+§ 51-15-1.
+§ 51-15-1 - Legislative Findings; Limitations on Liabilities
+
+The General Assembly finds that the number of asbestos related claims has increased significantly in recent years and threatens the continued viability of a number of uniquely situated companies that have not ever manufactured, sold, or distributed asbestos or asbestos products and are argued to be liable only as successor corporations. This liability has created an overpowering public necessity to provide an immediate, clarifying, and remedial legislative solution. The General Assembly intends that the cumulative recovery by all asbestos claimants from innocent successors be limited, and intends to simply clarify and fix the form of asbestos claimants' remedies without impairing their substantive rights and finds that there are no alternative means to meet this public necessity. The General Assembly finds that Pennsylvania, Ohio, Texas, Mississippi, Florida, and South Carolina have enacted legislation similar to this chapter that, among other things, provides limitations of liabilities for asbestos claims for innocent successors. The General Assembly finds the public interest as a whole is best served by providing relief to these innocent successors so that they may remain viable and continue to contribute to this state. The General Assembly further finds that Georgia's successor liability statutes were never intended or contemplated to impose liability on successors in the situation covered by this chapter.
+Section: 51-15-1
+51-15-2
+51-15-3
+51-15-4
+51-15-5
+51-15-6
+51-15-7
+51-15-8
+Next
+Last modified: October 14, 2016
+
+§ 51-15-3.
+§ 51-15-3 - Domestic or Foreign Corporation As Successor; Exemption From Limitations
+
+(a) The limitations contained in Code Section 51-15-4 apply to a domestic or foreign corporation that is a successor and became a successor before January 1, 1972, or is any of that successor corporation's successor corporation.
+(b) The limitations contained in Code Section 51-15-4 do not apply to:
+(1) Any claim against a corporation that does not constitute a successor asbestos related liability;
+(2) An insurance corporation;
+(3) Any obligations under the federal National Labor Relations Act or under any collective bargaining agreement; or
+(4) A successor that, after a merger or consolidation, continued in the business of mining asbestos, in the business of selling or distributing asbestos fibers, or in the business of manufacturing, distributing, removing, or installing asbestos-containing products that were the same or substantially the same as those products previously manufactured, distributed, removed, or installed by the transferor.
+Section:
+Previous
+51-15-1
+51-15-2
+51-15-3
+51-15-4
+51-15-5
+51-15-6
+51-15-7
+51-15-8
+Next
+Last modified: October 14, 2016
+
+§ 51-15-4.
+§ 51-15-4 - Determination of Liability and Limitation on Liability
+
+(a) Except as further limited in subsection (b) of this Code section, the cumulative successor asbestos related liabilities of a corporation are limited to the fair market value of the total gross assets of the transferor determined as of the time of the merger or consolidation. The corporation does not have any responsibility for successor asbestos related liabilities in excess of this limitation.
+(b) If the transferor had assumed or incurred successor asbestos related liabilities in connection with a prior merger or consolidation with a prior transferor, the fair market value of the total assets of the prior transferor, determined as of the time of the earlier merger or consolidation, shall be substituted for the limitation set forth in subsection (a) of this Code section for the purpose of determining the limitation of liability of a corporation.
+Section:
+Previous
+51-15-1
+51-15-2
+51-15-3
+51-15-4
+51-15-5
+51-15-6
+51-15-7
+51-15-8
+Next
+Last modified: October 14, 2016
+
+§ 51-15-5.
+§ 51-15-5 - Fair Market Value Determinations; Gross Assets Determination
+
+(a) A corporation may establish the fair market value of total gross assets for the purpose of the limitations under Code Section 51-15-4 through any method reasonable under the circumstances, including:
+(1) By reference to the going concern value of the assets or to the purchase price attributable to or paid for the assets in an arm's length transaction; or
+(2) In the absence of other readily available information from which fair market value can be determined, by reference to the value of the assets recorded on a balance sheet.
+(b) Total gross assets include intangible assets.
+(c) Total gross assets include the aggregate coverage under any applicable third-party liability insurance that was issued to the transferor whose assets are being valued for purposes of this Code section, which insurance has been collected or is collectable to cover successor asbestos related liabilities except compensation for liabilities arising from workers' exposure to asbestos solely during the course of their employment by the transferor. For purposes of this subsection, a settlement with an insurance company shall fix what amount of coverage was collectable.
+Section:
+Previous
+51-15-1
+51-15-2
+51-15-3
+51-15-4
+51-15-5
+51-15-6
+51-15-7
+51-15-8
+Next
+Last modified: October 14, 2016
+
+§ 51-15-6.
+§ 51-15-6 - Market Value; Prime Rate; Adjustment
+
+(a) Except as provided in subsections (b), (c), and (d) of this Code section, the fair market value of total gross assets at the time of a merger or consolidation shall increase annually at a rate equal to the sum of:
+(1) The prime rate as published by the Board of Governors of the Federal Reserve System, as published in statistical release H.15 or any publication that may supersede it, for each calendar year since the merger or consolidation; and
+(2) One percent.
+(b) The rate provided in subsection (a) of this Code section shall not be compounded.
+(c) The adjustment of fair market value of total gross assets shall continue as provided under subsection (a) of this Code section until the date the adjusted value is first exceeded by the cumulative amounts of successor asbestos related liabilities paid or committed to be paid by or on behalf of the corporation or a predecessor, or by or on behalf of a transferor, after the time of the merger or consolidation for which the fair market value of total gross assets is determined.
+(d) No adjustment of the fair market value of total gross assets shall be applied to any liability insurance otherwise included in the definition of total gross assets by subsection (c) of Code Section 51-15-5.
+Section:
+Previous
+51-15-1
+51-15-2
+51-15-3
+51-15-4
+51-15-5
+51-15-6
+51-15-7
+51-15-8
+Next
+Last modified: October 14, 2016
+
+§ 51-15-7.
+§ 51-15-7 - Liberal Interpretation to Accomplish Remedial Purposes
+
+The courts in this state shall apply, to the fullest extent permissible under the United States Constitution, this state's substantive law, including the limitation under this chapter, to the issue of successor asbestos related liabilities. This chapter shall be construed liberally to accomplish its remedial purposes.
+Section:
+Previous
+51-15-1
+51-15-2
+51-15-3
+51-15-4
+51-15-5
+51-15-6
+51-15-7
+51-15-8
+Next
+Last modified: October 14, 2016

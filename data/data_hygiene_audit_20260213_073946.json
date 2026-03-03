@@ -1,0 +1,196 @@
+{
+  "started_at": "2026-02-13T07:39:46.390944",
+  "phases": {
+    "2d": {
+      "spam_emails_to_delete": 610,
+      "spam_email_samples": [
+        {
+          "id": 158797,
+          "sender": "TDSCustomerServiceePay@tdstelecom.com",
+          "subject": "Thanks for Enrolling in TDS ePay Auto Pay"
+        },
+        {
+          "id": 158809,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "House Votes 214\u2013217 on GOP\u2019s Effort to Block Tariff Votes"
+        },
+        {
+          "id": 158827,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "Breaking: House Votes 218\u2013213 on Voter ID Bill"
+        },
+        {
+          "id": 165453,
+          "sender": "mytotalconnectcomfort@alarmnet.com",
+          "subject": "Honeywell Home \u2013 High Temperature Alert"
+        },
+        {
+          "id": 159667,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "Breaking: Trump Unveils Board of Peace in Davos"
+        },
+        {
+          "id": 160091,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "Breaking: Trump Unveils Board of Peace in Davos"
+        },
+        {
+          "id": 165367,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "It's Time, Holiday Savings are LIVE!"
+        },
+        {
+          "id": 159258,
+          "sender": "Travelzoo <exclusive@us.travelzoo.com>",
+          "subject": "$499\u2014Europe big-city trips w/flights"
+        },
+        {
+          "id": 164900,
+          "sender": "The Home Depot <HomeDepot@order.homedepot.com>",
+          "subject": "Hi Gary Knight, your Home Depot receipt for # WH14758569 is here"
+        },
+        {
+          "id": 164740,
+          "sender": "Epoch Times Good Evening <newsletter@theepochtimes.com>",
+          "subject": "Campbell's Responds to 3D-Printed Chicken Claims"
+        },
+        {
+          "id": 164901,
+          "sender": "The Home Depot <HomeDepotPro@order.homedepot.com>",
+          "subject": "Thank you for your pickup order!"
+        },
+        {
+          "id": 164745,
+          "sender": "August Home <noreply@august.com>",
+          "subject": "Gary! Unlock Your Exclusive Black Friday Deal Today."
+        },
+        {
+          "id": 165061,
+          "sender": "Epoch Times Good Evening <newsletter@theepochtimes.com>",
+          "subject": "Trump Has \u2018Great Meeting\u2019 With Mamdani"
+        },
+        {
+          "id": 165078,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "Zelenskyy Comments on Leaked US Peace Proposal"
+        },
+        {
+          "id": 159256,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "Trump Issues New Order on Housing"
+        },
+        {
+          "id": 158755,
+          "sender": "Epoch Opinion <newsletter@theepochtimes.com>",
+          "subject": "Mollie Engelhart: The Labor Crisis Nobody Wants to Admit"
+        },
+        {
+          "id": 165088,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "Your Winter Upgrade: From Closet to Kitchen."
+        },
+        {
+          "id": 165090,
+          "sender": "Travelzoo <editorial@us.travelzoo.com>",
+          "subject": "Best Bets: our top picks for trips in 2026"
+        },
+        {
+          "id": 158757,
+          "sender": "Auto-Receipt <noreply@mail.authorize.net>",
+          "subject": "Successful Credit Card Settlement Report for CABIN RENTALS OF GEORGIA LLC"
+        },
+        {
+          "id": 165114,
+          "sender": "The Home Depot <HomeDepot@order.homedepot.com>",
+          "subject": "Order #WH15283403 is Out for Delivery Today, Gary!"
+        }
+      ],
+      "spam_sender_breakdown": [
+        {
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "count": 141
+        },
+        {
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "count": 128
+        },
+        {
+          "sender": "Epoch Times Good Evening <newsletter@theepochtimes.com>",
+          "count": 83
+        },
+        {
+          "sender": "Travelzoo <exclusive@us.travelzoo.com>",
+          "count": 61
+        },
+        {
+          "sender": "August Home <noreply@august.com>",
+          "count": 52
+        },
+        {
+          "sender": "The Home Depot <HomeDepot@order.homedepot.com>",
+          "count": 35
+        },
+        {
+          "sender": "mytotalconnectcomfort@alarmnet.com",
+          "count": 31
+        },
+        {
+          "sender": "Travelzoo <top20@us.travelzoo.com>",
+          "count": 14
+        },
+        {
+          "sender": "Google <no-reply@accounts.google.com>",
+          "count": 13
+        },
+        {
+          "sender": "The Home Depot <HomeDepotPro@order.homedepot.com>",
+          "count": 12
+        },
+        {
+          "sender": "Travelzoo <editorial@us.travelzoo.com>",
+          "count": 12
+        },
+        {
+          "sender": "TDSCustomerServiceePay@tdstelecom.com",
+          "count": 7
+        },
+        {
+          "sender": "Auto-Receipt <noreply@mail.authorize.net>",
+          "count": 5
+        },
+        {
+          "sender": "Travelzoo <travelzoo@us.travelzoo.com>",
+          "count": 4
+        },
+        {
+          "sender": "Epoch Times Morning Brief <newsletter@theepochtimes.com>",
+          "count": 4
+        },
+        {
+          "sender": "billpay@paymentus.com",
+          "count": 3
+        },
+        {
+          "sender": "Epoch Specials <newsletter@theepochtimes.com>",
+          "count": 2
+        },
+        {
+          "sender": "Epoch Opinion <newsletter@theepochtimes.com>",
+          "count": 2
+        },
+        {
+          "sender": "The Epoch Times <newsletter@theepochtimes.com>",
+          "count": 1
+        }
+      ],
+      "spam_emails_deleted": 610
+    }
+  },
+  "summary": {
+    "elapsed_seconds": 1.04,
+    "dry_run": false,
+    "final_email_archive_count": 62252,
+    "final_mined_count": 62218,
+    "completed_at": "2026-02-13T07:39:47.454899"
+  }
+}

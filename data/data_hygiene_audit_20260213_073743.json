@@ -1,0 +1,360 @@
+{
+  "started_at": "2026-02-13T07:37:43.503336",
+  "phases": {
+    "2a": {
+      "spam_email_ids_count": 610,
+      "sales_intel_affected": 0,
+      "guest_leads_affected": 0,
+      "market_intel_affected": 29,
+      "finance_invoices_affected": 14,
+      "real_estate_intel_affected": 14,
+      "legal_intel_affected": 93,
+      "market_signals_affected": 0,
+      "hedge_fund.market_signals_affected": 0,
+      "total_downstream_deleted": 0
+    },
+    "2b": {
+      "sales_intel_empty_shells": 0,
+      "guest_leads_empty_shells": 0,
+      "market_intel_empty_shells": 749,
+      "total_empty_shells_deleted": 0
+    },
+    "2c": {
+      "market_intel_hallucinated_price": 6605,
+      "hallucinated_price_samples": [
+        {
+          "id": 19788,
+          "ticker": null,
+          "price": "225025.0000",
+          "action": "SELL"
+        },
+        {
+          "id": 20858,
+          "ticker": "AND",
+          "price": "225025.0000",
+          "action": null
+        },
+        {
+          "id": 20859,
+          "ticker": null,
+          "price": "225025.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 20861,
+          "ticker": "ZH",
+          "price": "225025.0000",
+          "action": null
+        },
+        {
+          "id": 17587,
+          "ticker": "FTX",
+          "price": "184176.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 18024,
+          "ticker": "PM",
+          "price": "304000.0000",
+          "action": "SELL"
+        },
+        {
+          "id": 20962,
+          "ticker": "SMR",
+          "price": "466649.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 17589,
+          "ticker": "SPXU",
+          "price": "970000.0000",
+          "action": null
+        },
+        {
+          "id": 17590,
+          "ticker": "BAND",
+          "price": "680000.0000",
+          "action": "BUY"
+        },
+        {
+          "id": 17591,
+          "ticker": "JOE",
+          "price": "6132267.0000",
+          "action": "BUY"
+        }
+      ],
+      "hedge_fund_market_signals_bad_ticker": 7,
+      "total_hallucinated_deleted": 0
+    },
+    "2d": {
+      "spam_emails_to_delete": 610,
+      "spam_email_samples": [
+        {
+          "id": 165036,
+          "sender": "Travelzoo <exclusive@us.travelzoo.com>",
+          "subject": "$69 & up\u2014Atlanta: 'LUZIA' by Cirque du Soleil, up to 40% off"
+        },
+        {
+          "id": 165138,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "CDC Disapproves Previous Autism and Vaccines Claim"
+        },
+        {
+          "id": 165224,
+          "sender": "Travelzoo <exclusive@us.travelzoo.com>",
+          "subject": "$1645 & up\u2014Europe & Caribbean cruises, up to $2350 off"
+        },
+        {
+          "id": 165368,
+          "sender": "The Home Depot <HomeDepotPro@order.homedepot.com>",
+          "subject": "Your order's ready!"
+        },
+        {
+          "id": 165412,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "Your Weekly Warehouse Insider"
+        },
+        {
+          "id": 165423,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "NEW Holiday Savings are Almost Here! Preview Now!"
+        },
+        {
+          "id": 160186,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "Your Next Home Upgrade Starts Here"
+        },
+        {
+          "id": 165350,
+          "sender": "Travelzoo <exclusive@us.travelzoo.com>",
+          "subject": "$199\u2014Savannah 4-star Kimpton, up to 49% off"
+        },
+        {
+          "id": 158725,
+          "sender": "Epoch Times Morning Brief <newsletter@theepochtimes.com>",
+          "subject": "New Demand Revealed in Guthrie Case; Dr. Oz Speaks on Vaccines"
+        },
+        {
+          "id": 159234,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "We've Saved Your Shopping Cart For You"
+        },
+        {
+          "id": 159733,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "We've Saved Your Shopping Cart For You"
+        },
+        {
+          "id": 160157,
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "subject": "We've Saved Your Shopping Cart For You"
+        },
+        {
+          "id": 165245,
+          "sender": "mytotalconnectcomfort@alarmnet.com",
+          "subject": "Honeywell Home \u2013 High Temperature Alert"
+        },
+        {
+          "id": 165465,
+          "sender": "Travelzoo <exclusive@us.travelzoo.com>",
+          "subject": "$149\u2014Hilton Head resort, up to 43% off"
+        },
+        {
+          "id": 158758,
+          "sender": "Epoch Times Morning Brief <newsletter@theepochtimes.com>",
+          "subject": "Savannah Guthrie Makes Plea; Social Security Checks Get Update\u2013What You Need to "
+        },
+        {
+          "id": 165489,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "47 US Lawmakers Not Seeking Reelection: What We Know"
+        },
+        {
+          "id": 165499,
+          "sender": "The Home Depot <HomeDepot@order.homedepot.com>",
+          "subject": "Your Electronic Receipt"
+        },
+        {
+          "id": 159083,
+          "sender": "mytotalconnectcomfort@alarmnet.com",
+          "subject": "Honeywell Home \u2013 Low Temperature Alert"
+        },
+        {
+          "id": 158797,
+          "sender": "TDSCustomerServiceePay@tdstelecom.com",
+          "subject": "Thanks for Enrolling in TDS ePay Auto Pay"
+        },
+        {
+          "id": 158809,
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "subject": "House Votes 214\u2013217 on GOP\u2019s Effort to Block Tariff Votes"
+        }
+      ],
+      "spam_sender_breakdown": [
+        {
+          "sender": "Epoch Newsroom <newsletter@theepochtimes.com>",
+          "count": 141
+        },
+        {
+          "sender": "Costco Wholesale <Costco@digital.costco.com>",
+          "count": 128
+        },
+        {
+          "sender": "Epoch Times Good Evening <newsletter@theepochtimes.com>",
+          "count": 83
+        },
+        {
+          "sender": "Travelzoo <exclusive@us.travelzoo.com>",
+          "count": 61
+        },
+        {
+          "sender": "August Home <noreply@august.com>",
+          "count": 52
+        },
+        {
+          "sender": "The Home Depot <HomeDepot@order.homedepot.com>",
+          "count": 35
+        },
+        {
+          "sender": "mytotalconnectcomfort@alarmnet.com",
+          "count": 31
+        },
+        {
+          "sender": "Travelzoo <top20@us.travelzoo.com>",
+          "count": 14
+        },
+        {
+          "sender": "Google <no-reply@accounts.google.com>",
+          "count": 13
+        },
+        {
+          "sender": "The Home Depot <HomeDepotPro@order.homedepot.com>",
+          "count": 12
+        },
+        {
+          "sender": "Travelzoo <editorial@us.travelzoo.com>",
+          "count": 12
+        },
+        {
+          "sender": "TDSCustomerServiceePay@tdstelecom.com",
+          "count": 7
+        },
+        {
+          "sender": "Auto-Receipt <noreply@mail.authorize.net>",
+          "count": 5
+        },
+        {
+          "sender": "Travelzoo <travelzoo@us.travelzoo.com>",
+          "count": 4
+        },
+        {
+          "sender": "Epoch Times Morning Brief <newsletter@theepochtimes.com>",
+          "count": 4
+        },
+        {
+          "sender": "billpay@paymentus.com",
+          "count": 3
+        },
+        {
+          "sender": "Epoch Specials <newsletter@theepochtimes.com>",
+          "count": 2
+        },
+        {
+          "sender": "Epoch Opinion <newsletter@theepochtimes.com>",
+          "count": 2
+        },
+        {
+          "sender": "The Epoch Times <newsletter@theepochtimes.com>",
+          "count": 1
+        }
+      ]
+    },
+    "2e": {
+      "duplicate_rows_to_delete": 5545,
+      "top_duplicate_groups": [
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "US100",
+          "count": 64
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "Macroeconomics",
+          "count": 59
+        },
+        {
+          "sender": "Synology Notification System <sns@synologynotification.com>",
+          "subject": "[DS1825] Active Backup for Business - The backup tasks on DS",
+          "count": 58
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "End of Day Bulletin",
+          "count": 44
+        },
+        {
+          "sender": "August Home <noreply@august.com>",
+          "subject": "Your August Smart Lock batteries are critically low",
+          "count": 33
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "IREN",
+          "count": 26
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "EOSE",
+          "count": 25
+        },
+        {
+          "sender": "The Home Depot <HomeDepot@order.homedepot.com>",
+          "subject": "Your Electronic Receipt",
+          "count": 24
+        },
+        {
+          "sender": "GoldFix <vblgoldfix@substack.com>",
+          "subject": "Founders: First Look",
+          "count": 18
+        },
+        {
+          "sender": "DTI Trader <Support@j.dtitrader.com>",
+          "subject": "Morning Market Update with TBUZ TV",
+          "count": 18
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "heading home friends",
+          "count": 18
+        },
+        {
+          "sender": "GoldFix <vblgoldfix@substack.com>",
+          "subject": "GoldFix PM:",
+          "count": 18
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "RKLB",
+          "count": 18
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "BTC",
+          "count": 17
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "MVST",
+          "count": 17
+        }
+      ]
+    }
+  },
+  "summary": {
+    "elapsed_seconds": 1.18,
+    "dry_run": true,
+    "final_email_archive_count": 62862,
+    "final_mined_count": 62828,
+    "completed_at": "2026-02-13T07:37:44.759408"
+  }
+}

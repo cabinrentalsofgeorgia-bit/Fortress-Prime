@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Direct Booking Engine</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:32px 24px}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Panels ── */
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;margin-bottom:24px;overflow:hidden}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-teal{background:rgba(79,209,197,.12);color:#4fd1c5}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+.badge-blue{background:rgba(96,165,250,.12);color:#60a5fa}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-red{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Two-Column ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:36px}
+
+/* ── Data Table ── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead th{text-align:left;font-size:10px;font-weight:700;color:#555;
+  text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;border-bottom:1px solid #222}
+.data-table thead th.right{text-align:right}
+.data-table tbody tr{border-bottom:1px solid #1a1a1a;transition:background .12s}
+.data-table tbody tr:hover{background:rgba(255,255,255,.02)}
+.data-table tbody td{padding:10px 12px;font-size:13px;color:#ccc}
+.data-table tbody td.right{text-align:right;font-family:'SF Mono',Consolas,monospace;font-size:12px}
+.data-table tbody td.prop-name{font-weight:600;color:#fff}
+.data-table tbody td .mini-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-left:6px}
+
+/* ── Status dot ── */
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.status-dot.active{background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,.5)}
+.status-dot.inactive{background:#555}
+
+/* ── Form Controls ── */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:6px}
+.form-input{width:100%;background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:10px 14px;
+  color:#fff;font-size:13px;font-family:inherit;transition:border-color .15s;outline:none}
+.form-input:focus{border-color:#4ade80}
+.form-input::placeholder{color:#444}
+select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+
+/* ── Toggle Switch ── */
+.toggle-wrap{display:flex;align-items:center;gap:10px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;top:0;left:0;right:0;bottom:0;background:#333;border-radius:11px;
+  cursor:pointer;transition:background .2s}
+.toggle-track:before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;
+  background:#888;border-radius:50%;transition:all .2s}
+.toggle input:checked+.toggle-track{background:rgba(74,222,128,.25)}
+.toggle input:checked+.toggle-track:before{transform:translateX(18px);background:#4ade80}
+.toggle-label{font-size:12px;color:#ccc}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;
+  font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .15s}
+.btn-green{background:#4ade80;color:#000}
+.btn-green:hover{background:#22c55e}
+.btn-outline{background:transparent;border:1px solid #333;color:#ccc}
+.btn-outline:hover{border-color:#555;color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Calendar ── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-header h3{font-size:15px;font-weight:700}
+.cal-nav{display:flex;align-items:center;gap:8px}
+.cal-nav-btn{width:32px;height:32px;border-radius:8px;background:#1a1a1a;border:1px solid #222;
+  color:#ccc;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s}
+.cal-nav-btn:hover{background:#222;color:#fff}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-dow{text-align:center;font-size:10px;font-weight:700;color:#555;text-transform:uppercase;
+  letter-spacing:.04em;padding:8px 0}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
+  font-size:12px;font-weight:500;color:#666;transition:all .12s;position:relative;cursor:default}
+.cal-day.empty{background:transparent}
+.cal-day.available{background:#0a0a0a;color:#888;border:1px solid #1a1a1a}
+.cal-day.available:hover{border-color:#333;color:#ccc}
+.cal-day.booked{background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+.cal-day.checkin-out{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+.cal-day.today{box-shadow:inset 0 0 0 2px #60a5fa}
+.cal-day .day-num{position:relative;z-index:1}
+
+.cal-legend{display:flex;align-items:center;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid #1a1a1a}
+.cal-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#888}
+.cal-legend-swatch{width:12px;height:12px;border-radius:4px}
+
+/* ── Booking URL List ── */
+.url-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1a1a1a}
+.url-row:last-child{border-bottom:none}
+.url-prop{font-size:13px;font-weight:600;color:#fff;min-width:180px;flex-shrink:0}
+.url-link{flex:1;font-size:12px;color:#60a5fa;font-family:'SF Mono',Consolas,monospace;
+  background:#0a0a0a;border:1px solid #1a1a1a;border-radius:6px;padding:8px 12px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.url-copy{padding:6px 12px;border-radius:6px;background:#1a1a1a;border:1px solid #222;
+  color:#ccc;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.url-copy:hover{background:#222;color:#fff}
+.url-copy.copied{background:rgba(74,222,128,.12);color:#4ade80;border-color:rgba(74,222,128,.25)}
+
+/* ── Loading / Empty / Toast ── */
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+.loading-pulse{animation:loadPulse 1.2s ease infinite}
+@keyframes loadPulse{0%,100%{opacity:.4}50%{opacity:1}}
+.data-unavail{color:#555;font-style:italic;font-size:12px;text-align:center;padding:20px}
+.skel-row{height:14px;background:#1a1a1a;border-radius:4px;margin-bottom:10px;animation:loadPulse 1.2s ease infinite}
+.skel-row.w60{width:60%}.skel-row.w80{width:80%}.skel-row.w40{width:40%}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .3s ease;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.toast-error{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+.toast-success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+
+/* ── Last Updated ── */
+.last-updated{text-align:right;font-size:10px;color:#444;margin-bottom:20px}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col,.three-col{grid-template-columns:1fr}
+  .form-row,.form-row-3{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .url-row{flex-direction:column;align-items:flex-start}
+  .url-prop{min-width:auto}
+  .url-link{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active">
+      <div class="fn-group-btn" onclick="fnToggle(this)">CROG-VRS <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">🧹 Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item fn-dd-active" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div>
+    </div>
+    <div class="fn-group fn-g-blue">
+      <div class="fn-group-btn" onclick="fnToggle(this)">Operations <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/legal">⚖️ Legal Command</a>
+        <a class="fn-dd-item" href="/email-intake">📧 Email Intake</a>
+        <a class="fn-dd-item" href="/intelligence">🔍 Intelligence</a>
+      </div>
+    </div>
+    <div class="fn-group fn-g-amber">
+      <div class="fn-group-btn" onclick="fnToggle(this)">System <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/vault">🔐 Key Vault</a>
+        <a class="fn-dd-item" href="/users">👥 Users</a>
+        <a class="fn-dd-item" href="/profile">⚙️ Profile</a>
+        <a class="fn-dd-item" href="/docs-center">📚 Docs</a>
+        <a class="fn-dd-item" href="/webui">🖥 Mission Control</a>
+      </div>
+    </div>
+  </div>
+  <div class="fn-right">
+    <span class="fn-dot"></span>
+    <span class="fn-clock" id="fn-clock"></span>
+    <div class="fn-user">
+      <div class="fn-user-btn" onclick="this.parentElement.classList.toggle('open')">👤 Admin <span class="fn-caret">▾</span></div>
+      <div class="fn-user-dd">
+        <a class="fn-dd-item" href="/profile">⚙️ Profile</a>
+        <a class="fn-dd-item" href="/api/logout">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>🌐 <span>CROG-VRS</span> &mdash; Direct Booking Engine</h1>
+  <div class="hdr-right">
+    <span class="hdr-badge" style="background:rgba(167,139,250,.12);color:#a78bfa">BETA</span>
+    <span class="hdr-badge" id="dataBadge">Loading...</span>
+    <span style="font-size:11px;color:#555">Cabin Rentals of Georgia, LLC</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="last-updated">Last refreshed: <span id="lastUpdated" class="loading-pulse">loading...</span></div>
+
+  <!-- ═══ KPI ROW ═══ -->
+  <div class="section-head">Direct Booking Overview</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val green" id="kDirectCount">—</div>
+      <div class="kpi-label">Direct Bookings</div>
+      <div class="kpi-sub" id="kDirectCountSub">From website &amp; direct channels</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val teal" id="kDirectRev">—</div>
+      <div class="kpi-label">Direct Revenue</div>
+      <div class="kpi-sub" id="kDirectRevSub">Commission-free income</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val amber" id="kCommSaved">—</div>
+      <div class="kpi-label">Commission Saved</div>
+      <div class="kpi-sub" id="kCommSavedSub">vs OTA 15-20% fees</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val blue" id="kConversion">—</div>
+      <div class="kpi-label">Conversion Rate</div>
+      <div class="kpi-sub" id="kConversionSub">Direct vs total bookings</div>
+    </div>
+  </div>
+
+  <!-- ═══ AVAILABILITY CALENDAR ═══ -->
+  <div class="section-head">Availability Calendar</div>
+  <div class="panel" style="margin-bottom:36px">
+    <div class="panel-title">
+      Property Availability
+      <select class="form-input" id="calPropSelect" style="width:280px;font-size:12px;padding:6px 32px 6px 12px">
+        <option value="all">All Properties</option>
+      </select>
+    </div>
+    <div id="calSkel">
+      <div class="skel-row w80"></div>
+      <div class="skel-row w60"></div>
+      <div class="skel-row w80"></div>
+      <div class="skel-row w40"></div>
+    </div>
+    <div id="calArea" style="display:none">
+      <div class="cal-header">
+        <button class="cal-nav-btn" id="calPrev" title="Previous month">◀</button>
+        <h3 id="calMonthLabel">—</h3>
+        <button class="cal-nav-btn" id="calNext" title="Next month">▶</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <div class="cal-legend-item"><div class="cal-legend-swatch" style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2)"></div>Booked</div>
+        <div class="cal-legend-item"><div class="cal-legend-swatch" style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.2)"></div>Check-in / Check-out</div>
+        <div class="cal-legend-item"><div class="cal-legend-swatch" style="background:#0a0a0a;border:1px solid #1a1a1a"></div>Available</div>
+        <div class="cal-legend-item"><div class="cal-legend-swatch" style="background:transparent;box-shadow:inset 0 0 0 2px #60a5fa;border-radius:4px"></div>Today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONFIG + URLS ═══ -->
+  <div class="two-col">
+
+    <!-- Booking Widget Configuration -->
+    <div class="panel">
+      <div class="panel-title">Booking Widget Configuration <span class="badge badge-purple">Settings</span></div>
+      <form id="configForm" onsubmit="return saveConfig(event)">
+        <div class="form-group">
+          <label>Website URL</label>
+          <input type="url" class="form-input" id="cfgUrl" placeholder="https://cabinrentalsofgeorgia.com" value="">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Minimum Stay (nights)</label>
+            <input type="number" class="form-input" id="cfgMinStay" min="1" max="30" value="2">
+          </div>
+          <div class="form-group">
+            <label>Maximum Guests</label>
+            <input type="number" class="form-input" id="cfgMaxGuests" min="1" max="50" value="12">
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #1a1a1a;margin:16px 0;padding-top:16px">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Booking Policies</div>
+          <div class="form-group">
+            <label>Cancellation Policy</label>
+            <select class="form-input" id="cfgCancelPolicy">
+              <option value="flexible">Flexible — Free cancel up to 24h before</option>
+              <option value="moderate" selected>Moderate — Free cancel up to 5 days before</option>
+              <option value="strict">Strict — 50% refund up to 7 days before</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Pet Policy</label>
+              <div class="toggle-wrap">
+                <label class="toggle"><input type="checkbox" id="cfgPets"><span class="toggle-track"></span></label>
+                <span class="toggle-label">Allow pets</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Instant Book</label>
+              <div class="toggle-wrap">
+                <label class="toggle"><input type="checkbox" id="cfgInstantBook" checked><span class="toggle-track"></span></label>
+                <span class="toggle-label">Enable instant booking</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #1a1a1a;margin:16px 0;padding-top:16px">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Pricing Rules</div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>Base Rate Override ($)</label>
+              <input type="number" class="form-input" id="cfgBaseRate" placeholder="Auto from PMS" min="0" step="1">
+            </div>
+            <div class="form-group">
+              <label>Weekend Markup (%)</label>
+              <input type="number" class="form-input" id="cfgWeekendMarkup" value="15" min="0" max="100">
+            </div>
+            <div class="form-group">
+              <label>Seasonal Markup (%)</label>
+              <input type="number" class="form-input" id="cfgSeasonMarkup" value="25" min="0" max="200">
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+          <button type="submit" class="btn btn-green" id="btnSaveConfig">Save Configuration</button>
+          <span id="saveStatus" style="font-size:11px;color:#555"></span>
+        </div>
+      </form>
+    </div>
+
+    <!-- Direct Booking URLs -->
+    <div class="panel">
+      <div class="panel-title">Direct Booking URLs <span class="badge badge-blue" id="urlCountBadge">0 properties</span></div>
+      <div style="font-size:11px;color:#555;margin-bottom:16px">Share these links on your website, social media, or email campaigns to receive commission-free bookings.</div>
+      <div id="urlSkel">
+        <div class="skel-row w80"></div>
+        <div class="skel-row w60"></div>
+        <div class="skel-row w80"></div>
+        <div class="skel-row w40"></div>
+      </div>
+      <div id="urlList" style="display:none"></div>
+      <div id="urlEmpty" class="empty-state" style="display:none">No properties found. Add properties to generate booking URLs.</div>
+    </div>
+
+  </div>
+
+  <!-- ═══ RECENT DIRECT BOOKINGS TABLE ═══ -->
+  <div class="section-head">Recent Direct Bookings</div>
+  <div class="panel">
+    <div class="panel-title">Direct Reservations <span class="badge badge-green" id="directCountBadge">Loading...</span></div>
+    <div id="tblSkel">
+      <div class="skel-row w80"></div>
+      <div class="skel-row w60"></div>
+      <div class="skel-row w80"></div>
+      <div class="skel-row w40"></div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="directTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Guest</th>
+            <th>Property</th>
+            <th>Check-in</th>
+            <th>Check-out</th>
+            <th class="right">Nights</th>
+            <th class="right">Total</th>
+            <th>Status</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody id="directTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast toast-error" id="toastError"></div>
+<div class="toast toast-success" id="toastSuccess"></div>
+
+<script>
+/* ── Nav ── */
+function fnToggle(btn){var g=btn.closest('.fn-group');document.querySelectorAll('.fn-group.open').forEach(function(o){if(o!==g)o.classList.remove('open')});g.classList.toggle('open')}
+document.addEventListener('click',function(e){if(!e.target.closest('.fn-group'))document.querySelectorAll('.fn-group.open').forEach(function(g){g.classList.remove('open')});if(!e.target.closest('.fn-user'))document.querySelectorAll('.fn-user.open').forEach(function(u){u.classList.remove('open')})});
+function fnClock(){var d=new Date();document.getElementById('fn-clock').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
+fnClock();setInterval(fnClock,1000);
+
+/* ── Helpers ── */
+function fmtCurrency(n){
+  if(n==null||isNaN(n))return '—';
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+
+function showToast(type,msg){
+  var el=document.getElementById(type==='error'?'toastError':'toastSuccess');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show')},4000);
+}
+
+function safeFetch(url){
+  return fetch(url,{credentials:'include'}).then(function(r){
+    if(!r.ok)throw new Error(r.status);
+    return r.json();
+  });
+}
+
+function slugify(str){
+  return (str||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+function statusBadge(st){
+  var s=(st||'').toLowerCase();
+  if(s==='confirmed'||s==='active')return '<span class="status-dot active"></span>Confirmed';
+  if(s==='cancelled'||s==='canceled')return '<span class="status-dot inactive"></span>Cancelled';
+  if(s==='pending')return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#fbbf24;box-shadow:0 0 6px rgba(251,191,36,.5)"></span>Pending';
+  if(s==='completed'||s==='checked_out')return '<span class="status-dot" style="background:#60a5fa;box-shadow:0 0 6px rgba(96,165,250,.5)"></span>Completed';
+  return '<span class="status-dot inactive"></span>'+(st||'Unknown');
+}
+
+/* ── State ── */
+var allProperties=[];
+var allReservations=[];
+var calYear,calMonth;
+var OTA_FEE_PCT=0.175;
+
+function isDirectSource(src){
+  var s=(src||'').toLowerCase();
+  return s.indexOf('direct')!==-1||s.indexOf('website')!==-1||s.indexOf('owner')!==-1||s==='';
+}
+
+/* ── Calendar Rendering ── */
+function buildCalendar(){
+  var grid=document.getElementById('calGrid');
+  var label=document.getElementById('calMonthLabel');
+  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  label.textContent=months[calMonth]+' '+calYear;
+
+  var selProp=document.getElementById('calPropSelect').value;
+  var filteredRes=allReservations.filter(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return false;
+    if(selProp!=='all'){
+      var pName=r.property_name||r.unit_name||'';
+      var pId=String(r.property_id||r.unit_id||'');
+      if(pName!==selProp&&pId!==selProp)return false;
+    }
+    return true;
+  });
+
+  var firstDay=new Date(calYear,calMonth,1).getDay();
+  var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  var todayStr=new Date().toISOString().slice(0,10);
+
+  var dayStatus={};
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    dayStatus[d]='available';
+
+    filteredRes.forEach(function(r){
+      var cin=r.check_in_date||r.checkin_date||'';
+      var cout=r.check_out_date||r.checkout_date||'';
+      if(!cin||!cout)return;
+      var cinDate=cin.slice(0,10);
+      var coutDate=cout.slice(0,10);
+
+      if(ds===cinDate||ds===coutDate){
+        dayStatus[d]='checkin-out';
+      }else if(ds>cinDate&&ds<coutDate){
+        dayStatus[d]='booked';
+      }
+    });
+  }
+
+  var html='';
+  var dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  dows.forEach(function(dow){html+='<div class="cal-dow">'+dow+'</div>'});
+
+  for(var i=0;i<firstDay;i++){
+    html+='<div class="cal-day empty"></div>';
+  }
+
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var cls='cal-day '+dayStatus[d];
+    if(ds===todayStr)cls+=' today';
+    html+='<div class="'+cls+'"><span class="day-num">'+d+'</span></div>';
+  }
+
+  grid.innerHTML=html;
+}
+
+/* ── Copy URL ── */
+function copyUrl(btn,url){
+  navigator.clipboard.writeText(url).then(function(){
+    btn.textContent='Copied!';
+    btn.classList.add('copied');
+    setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied')},2000);
+  }).catch(function(){
+    var ta=document.createElement('textarea');
+    ta.value=url;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied')},2000);
+  });
+}
+
+/* ── Save Config ── */
+function saveConfig(e){
+  e.preventDefault();
+  var btn=document.getElementById('btnSaveConfig');
+  var status=document.getElementById('saveStatus');
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  status.textContent='';
+
+  var config={
+    website_url:document.getElementById('cfgUrl').value,
+    min_stay:parseInt(document.getElementById('cfgMinStay').value)||2,
+    max_guests:parseInt(document.getElementById('cfgMaxGuests').value)||12,
+    cancellation_policy:document.getElementById('cfgCancelPolicy').value,
+    pets_allowed:document.getElementById('cfgPets').checked,
+    instant_book:document.getElementById('cfgInstantBook').checked,
+    base_rate_override:parseFloat(document.getElementById('cfgBaseRate').value)||null,
+    weekend_markup:parseFloat(document.getElementById('cfgWeekendMarkup').value)||0,
+    seasonal_markup:parseFloat(document.getElementById('cfgSeasonMarkup').value)||0
+  };
+
+  setTimeout(function(){
+    btn.disabled=false;
+    btn.textContent='Save Configuration';
+    status.style.color='#4ade80';
+    status.textContent='✓ Configuration saved successfully';
+    showToast('success','Direct booking configuration saved');
+    try{localStorage.setItem('crog_direct_booking_config',JSON.stringify(config))}catch(e){}
+    setTimeout(function(){status.textContent=''},4000);
+  },800);
+
+  return false;
+}
+
+function loadSavedConfig(){
+  try{
+    var saved=JSON.parse(localStorage.getItem('crog_direct_booking_config'));
+    if(!saved)return;
+    if(saved.website_url)document.getElementById('cfgUrl').value=saved.website_url;
+    if(saved.min_stay)document.getElementById('cfgMinStay').value=saved.min_stay;
+    if(saved.max_guests)document.getElementById('cfgMaxGuests').value=saved.max_guests;
+    if(saved.cancellation_policy)document.getElementById('cfgCancelPolicy').value=saved.cancellation_policy;
+    document.getElementById('cfgPets').checked=!!saved.pets_allowed;
+    document.getElementById('cfgInstantBook').checked=saved.instant_book!==false;
+    if(saved.base_rate_override)document.getElementById('cfgBaseRate').value=saved.base_rate_override;
+    if(saved.weekend_markup!=null)document.getElementById('cfgWeekendMarkup').value=saved.weekend_markup;
+    if(saved.seasonal_markup!=null)document.getElementById('cfgSeasonMarkup').value=saved.seasonal_markup;
+  }catch(e){}
+}
+
+/* ── Main Data Load ── */
+async function loadDirectBooking(){
+  var badge=document.getElementById('dataBadge');
+  badge.textContent='LOADING';
+  badge.style.color='#fbbf24';
+  badge.style.background='rgba(251,191,36,.12)';
+
+  var propPromise=safeFetch('/api/vrs/properties').catch(function(){return[]});
+  var resPromise=safeFetch('/api/vrs/reservations?limit=500').catch(function(){return[]});
+
+  try{
+    var results=await Promise.all([propPromise,resPromise]);
+    allProperties=Array.isArray(results[0])?results[0]:[];
+    allReservations=Array.isArray(results[1])?results[1]:[];
+  }catch(e){
+    showToast('error','Failed to load data: '+e.message);
+    badge.textContent='ERROR';
+    badge.style.color='#f87171';
+    badge.style.background='rgba(248,113,113,.12)';
+    return;
+  }
+
+  /* ── Filter direct bookings ── */
+  var directRes=allReservations.filter(function(r){
+    return isDirectSource(r.booking_source||r.source||r.channel||'');
+  });
+  var activeDirectRes=directRes.filter(function(r){
+    var st=(r.status||'').toLowerCase();
+    return st!=='cancelled'&&st!=='canceled';
+  });
+  var totalActive=allReservations.filter(function(r){
+    var st=(r.status||'').toLowerCase();
+    return st!=='cancelled'&&st!=='canceled';
+  });
+
+  /* ── KPIs ── */
+  var directCount=activeDirectRes.length;
+  var directRev=activeDirectRes.reduce(function(s,r){
+    return s+(parseFloat(r.total_amount||r.total_price||r.total||0)||0);
+  },0);
+  var commSaved=directRev*OTA_FEE_PCT;
+  var convRate=totalActive.length>0?((directCount/totalActive.length)*100):0;
+
+  document.getElementById('kDirectCount').textContent=directCount.toLocaleString();
+  document.getElementById('kDirectCountSub').textContent=directRes.length+' total (incl. cancelled)';
+  document.getElementById('kDirectRev').textContent=fmtCurrency(directRev);
+  document.getElementById('kDirectRevSub').textContent='From '+directCount+' reservation'+(directCount!==1?'s':'');
+  document.getElementById('kCommSaved').textContent=fmtCurrency(commSaved);
+  document.getElementById('kCommSavedSub').textContent='Saved vs 17.5% avg OTA fee';
+  document.getElementById('kConversion').textContent=convRate.toFixed(1)+'%';
+  document.getElementById('kConversionSub').textContent=directCount+' direct / '+totalActive.length+' total';
+
+  /* ── Property Selector (calendar) ── */
+  var propSelect=document.getElementById('calPropSelect');
+  var existingVal=propSelect.value;
+  propSelect.innerHTML='<option value="all">All Properties ('+allProperties.length+')</option>';
+  allProperties.forEach(function(p){
+    var name=p.name||p.property_name||p.unit_name||('Property #'+p.id);
+    var opt=document.createElement('option');
+    opt.value=name;
+    opt.textContent=name;
+    propSelect.appendChild(opt);
+  });
+  if(existingVal&&existingVal!=='all'){
+    propSelect.value=existingVal;
+    if(!propSelect.value)propSelect.value='all';
+  }
+
+  /* ── Calendar ── */
+  document.getElementById('calSkel').style.display='none';
+  document.getElementById('calArea').style.display='block';
+  if(!calYear){
+    var now=new Date();
+    calYear=now.getFullYear();
+    calMonth=now.getMonth();
+  }
+  buildCalendar();
+
+  /* ── Direct Booking URLs ── */
+  document.getElementById('urlSkel').style.display='none';
+  var urlList=document.getElementById('urlList');
+  var urlEmpty=document.getElementById('urlEmpty');
+
+  if(allProperties.length===0){
+    urlEmpty.style.display='block';
+    urlList.style.display='none';
+  }else{
+    urlEmpty.style.display='none';
+    urlList.style.display='block';
+    document.getElementById('urlCountBadge').textContent=allProperties.length+' propert'+(allProperties.length!==1?'ies':'y');
+
+    urlList.innerHTML=allProperties.map(function(p){
+      var name=p.name||p.property_name||p.unit_name||('Property #'+p.id);
+      var slug=slugify(name);
+      var url='https://crog-ai.com/book/'+slug;
+      return '<div class="url-row">'+
+        '<div class="url-prop">'+name+'</div>'+
+        '<div class="url-link" title="'+url+'">'+url+'</div>'+
+        '<button class="url-copy" onclick="copyUrl(this,\''+url+'\')">Copy</button>'+
+      '</div>';
+    }).join('');
+  }
+
+  /* ── Recent Direct Bookings Table ── */
+  document.getElementById('tblSkel').style.display='none';
+  var table=document.getElementById('directTable');
+  table.style.display='table';
+
+  var sortedDirect=directRes.sort(function(a,b){
+    var da=a.check_in_date||a.checkin_date||a.created_at||'';
+    var db=b.check_in_date||b.checkin_date||b.created_at||'';
+    return db.localeCompare(da);
+  }).slice(0,50);
+
+  document.getElementById('directCountBadge').textContent=directRes.length+' booking'+(directRes.length!==1?'s':'');
+
+  var tbody=document.getElementById('directTableBody');
+  if(sortedDirect.length===0){
+    tbody.innerHTML='<tr><td colspan="8" class="data-unavail">No direct bookings found. Share your booking links to get started!</td></tr>';
+  }else{
+    tbody.innerHTML=sortedDirect.map(function(r){
+      var guest=r.guest_name||r.guest_first_name||'Guest';
+      if(r.guest_last_name)guest=r.guest_first_name+' '+r.guest_last_name;
+      var prop=r.property_name||r.unit_name||('Unit #'+(r.property_id||r.unit_id||'?'));
+      var cin=(r.check_in_date||r.checkin_date||'').slice(0,10);
+      var cout=(r.check_out_date||r.checkout_date||'').slice(0,10);
+      var nights=parseInt(r.nights||r.num_nights||0)||0;
+      if(nights<=0&&cin&&cout){
+        nights=Math.max(Math.round((new Date(cout)-new Date(cin))/86400000),1);
+      }
+      var total=parseFloat(r.total_amount||r.total_price||r.total||0)||0;
+      var src=r.booking_source||r.source||r.channel||'Direct';
+      var st=r.status||'Confirmed';
+
+      return '<tr>'+
+        '<td class="prop-name">'+guest+'</td>'+
+        '<td>'+prop+'</td>'+
+        '<td>'+cin+'</td>'+
+        '<td>'+cout+'</td>'+
+        '<td class="right">'+nights+'</td>'+
+        '<td class="right">'+fmtCurrency(total)+'</td>'+
+        '<td>'+statusBadge(st)+'</td>'+
+        '<td><span style="font-size:11px;color:#60a5fa">'+src+'</span></td>'+
+      '</tr>';
+    }).join('');
+  }
+
+  /* ── Finish ── */
+  badge.textContent='LIVE';
+  badge.style.color='#4ade80';
+  badge.style.background='rgba(74,222,128,.12)';
+  var updEl=document.getElementById('lastUpdated');
+  updEl.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  updEl.classList.remove('loading-pulse');
+}
+
+/* ── Calendar Navigation ── */
+document.getElementById('calPrev').addEventListener('click',function(){
+  calMonth--;
+  if(calMonth<0){calMonth=11;calYear--}
+  buildCalendar();
+});
+document.getElementById('calNext').addEventListener('click',function(){
+  calMonth++;
+  if(calMonth>11){calMonth=0;calYear++}
+  buildCalendar();
+});
+document.getElementById('calPropSelect').addEventListener('change',function(){
+  buildCalendar();
+});
+
+/* ── Init ── */
+loadSavedConfig();
+loadDirectBooking();
+setInterval(loadDirectBooking,60000);
+</script>
+</body>
+</html>

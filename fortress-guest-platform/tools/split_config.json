@@ -1,0 +1,19 @@
+{
+  "_doc": "Commission split config for Cabin Rentals of Georgia. owner_pct + pm_pct MUST = 100. Update actual splits per owner management agreement. Keyed by property name (matched against GetPropertyList).",
+  "splits": {
+    "Above the Timberline":                  { "unit_id": "382651",  "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Aska Escape Lodge":                     { "unit_id": "235641",  "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Blue Ridge Lake Sanctuary":             { "unit_id": "419022",  "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Chase Mountain Dreams":                 { "unit_id": "980130",  "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Cherokee Sunrise on Noontootla Creek":  { "unit_id": "306758",  "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Cohutta Sunset":                        { "unit_id": "70206",   "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Creekside Green":                       { "unit_id": "756771",  "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Fallen Timber Lodge":                   { "unit_id": "70209",   "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "High Hopes":                            { "unit_id": "441334",  "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Restoration Luxury":                    { "unit_id": "1012373", "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Riverview Lodge":                       { "unit_id": "70220",   "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Serendipity on Noontootla Creek":       { "unit_id": "70222",   "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "Skyfall":                               { "unit_id": "1001528", "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" },
+    "The Rivers Edge":                       { "unit_id": "70224",   "owner_pct": 65.0, "pm_pct": 35.0, "effective_from": "2023-01-01" }
+  }
+}

@@ -1,0 +1,102 @@
+---
+description: Canonical DGX Spark and NVIDIA NIM operations standard for production inference
+alwaysApply: true
+---
+
+# NVIDIA DGX SPARK + NIM OPERATIONS STANDARD (Amendment XII)
+
+**Effective Date:** 2026-02-21  
+**Classification:** Production Infrastructure Standard — NON-NEGOTIABLE
+
+## I. Mandate
+
+1. Production inference MUST run on NVIDIA-optimized products and runtimes.
+2. NVIDIA NIM is the default and required inference runtime for production model serving.
+3. Non-NIM runtimes are allowed only for explicitly approved fallback scenarios documented in `001-titan-protocol.mdc`.
+4. **Hybrid Control Plane / one-way boundary** is mandatory: Master Architect (Cloud API) -> Local Execution (DGX/NIM). External APIs provide strategic directives; sensitive or un-anonymized legal/financial/PII data must not be sent upstream.
+5. All DGX nodes are ARM-class (`aarch64`/`linux/arm64`). AMD64/x86 container images and binaries are forbidden in production.
+
+## II. Cluster Operating Model (4 DGX Spark Nodes)
+
+- Node roles are declared in `config.py` and infra rule `001-titan-protocol.mdc`.
+- Use management LAN for control-plane traffic and fabric LAN for compute-path traffic.
+- Inference services run with Docker bridge mode plus explicit port mapping as the production baseline; host networking is exception-only with explicit approval.
+- Outbound control-plane egress from NUC to approved Master Architect Cloud APIs is allowed for directives/planning only, while execution and sensitive synthesis remain local on DGX/NIM.
+- NUC preflight must verify `/mnt/fortress_nas` is a live remote NAS mount before Docker startup. Local-path fallbacks are non-compliant.
+
+## III. DEFCON Scheduling and Capacity
+
+1. Only one primary DEFCON mode is active at a time (SWARM, HYDRA, TITAN).
+2. Mode switches are performed through controlled orchestration (`switch_defcon.sh` or successor controller), never ad-hoc process toggles.
+3. Each mode has explicit GPU memory budgets, queue limits, and timeout profiles.
+4. A mode switch requires health checks before and after activation.
+
+## IV. NIM Model Lifecycle
+
+### A. Promotion Path
+1. **Candidate:** New NIM image/version staged in non-production.
+2. **Canary:** One-node canary with representative load and golden prompts.
+3. **Fleet rollout:** 25% -> 50% -> 100% with telemetry gates.
+4. **Promotion:** Marked production baseline only after SLO pass and no regression.
+
+### B. Rollback Path
+1. Keep previous stable NIM image digest pinned and deployable.
+2. Rollback trigger criteria:
+   - p95 latency regression > 25%
+   - sustained error rate > 2%
+   - correctness drift on golden prompt suite
+3. Rollback must be executable in under 10 minutes.
+
+## V. Version Pinning and Release Discipline
+
+1. Pin NIM images by immutable digest, not floating tags.
+2. `:latest` tags are forbidden in production compose files.
+3. Any runtime config using floating tags is non-compliant and must be blocked by review.
+4. Track the active model/runtime matrix in infra inventory docs.
+5. Review NVIDIA release notes on a scheduled cadence (monthly minimum).
+6. Adopt newly optimized NVIDIA products/runtimes through the lifecycle above; no direct production jumps.
+
+## VI. Inference SLOs and Error Budgets
+
+Minimum service objectives:
+
+- SWARM: p95 latency <= 2.5s for standard requests, error rate < 1%
+- HYDRA: p95 latency <= 20s for deep reasoning requests, error rate < 2%
+- TITAN: queue depth controlled to single-shot strategic jobs, error rate < 3%
+
+Error budget burn must trigger automatic escalation and mode review.
+
+## VII. Observability Requirements
+
+Required metrics:
+
+1. GPU utilization, VRAM used/free, thermal headroom
+2. Queue depth, request rate, p50/p95/p99 latency
+3. Error classes by endpoint/model
+4. Node-level health and failover events
+
+All inference paths must emit structured logs and be visible in Grafana/Loki dashboards.
+
+## VIII. Security and Access Controls
+
+1. NIM endpoints must stay on private network paths unless explicitly proxied by hardened gateways.
+2. Access to NIM admin/control paths is operator-only.
+3. Model artifacts and cache directories are treated as controlled infrastructure assets.
+4. Secrets (registry credentials, API tokens) must be environment-managed; never in code or rule examples with real values.
+
+## IX. Operational Guardrails
+
+Forbidden in production:
+
+1. Unpinned NIM images
+2. Runtime swaps without canary
+3. Manual emergency edits that bypass telemetry checks
+4. Unverified “works on one node” rollout claims
+
+## X. Verification Checklist (Before Declaring Runtime Changes Done)
+
+1. NIM containers start cleanly on target nodes
+2. Health checks pass on all active endpoints
+3. Golden prompt suite passes without regression
+4. SLO metrics remain within threshold for at least one observation window
+5. Rollback path tested and documented

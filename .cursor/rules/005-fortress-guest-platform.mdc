@@ -1,0 +1,177 @@
+---
+description: Canonical guest platform architecture, sync engine, and production operational policy
+alwaysApply: true
+---
+
+# FORTRESS GUEST PLATFORM — Sovereign Guest Operations Constitution (Amendment VII)
+
+**Effective Date:** 2026-02-20
+**Classification:** Core Revenue Infrastructure — NON-NEGOTIABLE
+
+## I. PURPOSE
+
+The Fortress Guest Platform (FGP) is the enterprise operating system for Cabin Rentals of Georgia's guest operations. It replaces Streamline VRS's UI with a sovereign platform that owns the data, automates guest communication, manages damage claims, tracks housekeeping, and provides owner financial transparency.
+
+**FGP is a revenue-critical production system.** Changes to FGP follow the same discipline as changes to a bank's core ledger.
+
+## II. ARCHITECTURE
+
+### A. Stack
+
+| Layer | Technology | Location |
+|-------|-----------|----------|
+| **Frontend** | Next.js 14 (App Router) + shadcn/ui | `fortress-guest-platform/frontend-next/` |
+| **Backend** | FastAPI + SQLAlchemy (async) | `fortress-guest-platform/backend/` |
+| **Database** | PostgreSQL 16 (`fortress_guest`) | `localhost:5432` |
+| **PMS Integration** | Streamline VRS JSON-RPC API | `backend/integrations/streamline_vrs.py` |
+| **AI Models** | HYDRA (R1-70B), SWARM (qwen2.5:7b), OpenAI (fallback) | `backend/services/legal_drafter.py` |
+| **Ports** | Backend: 8100, Frontend: 3001 | Always-on production |
+
+### B. Database Schema (32+ Tables)
+
+The `fortress_guest` database is the single source of truth. Every table has an `id UUID PRIMARY KEY` and `created_at TIMESTAMP`.
+
+**Core Tables:**
+- `properties` — 14 rental cabins with Streamline IDs, owner data, rate cards
+- `reservations` — All bookings with financial detail, notes, price breakdown
+- `guests` — CRM profiles with scoring, loyalty, verification
+- `messages` — SMS/email communication log
+- `rental_agreements` — Per-reservation agreements (2,141 on file)
+
+**Operations Tables:**
+- `housekeeping_tasks` — Cleaning schedule synced from Streamline
+- `work_orders` — Maintenance tickets
+- `damage_claims` — Damage reporting with AI legal draft generation
+
+**Financial Tables:**
+- `owner_statements` — Monthly owner payout reports
+- `trust_balance` — Per-property owner fund balances
+- `extra_orders` — Upsell/add-on purchases
+
+**Intelligence Tables:**
+- `guest_reviews` — Bidirectional review system (19 Streamline + manual)
+- `guest_surveys` — Post-stay surveys with NPS
+- `analytics_events` — Behavioral telemetry
+- `knowledge_base_entries` — RAG knowledge for AI agents
+
+**SCHEMA GOVERNANCE RULES:**
+1. **Never DROP a column in production.** Add new columns, deprecate old ones with a `_deprecated` suffix, remove after 90 days.
+2. **Every new table needs a migration file** in `database/migrations/`. Raw `ALTER TABLE` in psql is acceptable for urgent column adds but MUST be followed by a migration file within 24 hours.
+3. **JSONB is for flexible data, not for avoiding schema design.** If a JSONB field consistently has the same 5+ keys, promote those keys to real columns.
+4. **Foreign keys are mandatory** for any column ending in `_id` that references another table.
+5. **Indexes are mandatory** on any column used in WHERE clauses across 3+ queries.
+
+## III. STREAMLINE VRS INTEGRATION
+
+### A. The 9-Phase Sync Engine
+
+The `sync_all()` method in `streamline_vrs.py` runs every 5 minutes and executes these phases IN ORDER:
+
+| Phase | API Method | Target | Records |
+|-------|-----------|--------|---------|
+| **1** | `GetPropertyList` + `GetPropertyInfo` + `GetPropertyRates` | `properties` + `rate_card` | 14 properties |
+| **2** | `GetReservations` (return_full:true) | `reservations` + `guests` | 2,650+ reservations |
+| **2.5** | `GetReservationNotes` | `reservations.streamline_notes` | 494 with notes |
+| **3** | `GetBlockedDaysForUnit` | Availability cache | Per-property |
+| **4** | `GetWorkOrders` | `work_orders` | Maintenance tickets |
+| **5** | `GetDocumentList` + template fallback | `rental_agreements` | 2,141 agreements |
+| **6** | `GetReservationPrice` | `reservations` fee columns + `streamline_financial_detail` | 391 enriched |
+| **7** | `GetUnitOwnerBalance` + `GetOwnerList` | `properties.owner_balance` + `trust_balance` | 14 properties |
+| **8** | `GetHousekeepingCleaningReport` | `housekeeping_tasks` | 16+ tasks |
+| **9** | `GetAllFeedback` | `guest_reviews` | 19+ reviews |
+
+### B. Streamline API Method Registry
+
+**Confirmed Working:**
+`GetPropertyList`, `GetPropertyInfo`, `GetPropertyAmenities`, `GetPropertyGalleryImages`, `GetPropertyRates`, `GetReservations`, `GetReservationInfo`, `GetReservationPrice`, `GetReservationNotes`, `GetAllReservationsByEmail`, `GetClientReservationsHistory`, `GetAllFeedback`, `GetGuestReviews`, `GetOwnerList`, `GetUnitOwnerBalance`, `GetMonthEndStatement`, `GetHousekeepingCleaningReport`, `GetWorkOrders`, `GetBlockedDaysForUnit`, `RenewExpiredToken`
+
+**Still Restricted (E0014):**
+`GetDocumentList`, `GetReservationDocuments`, `GetSignedDocuments`, `GetGuestList`, `GetGuestNotes`, `GetHousekeepingTasks`, `GetOwnerStatements`
+
+### C. Sync Rules
+
+1. **The sync loop MUST be idempotent.** Running it twice produces the same result. Use upsert logic (match on `confirmation_code` or `streamline_property_id`), never blind INSERT.
+2. **Rate limit awareness.** Streamline allows 100 requests/minute. The sync engine MUST NOT exceed this. Batch where possible. If rate-limited (429 or E0013), back off exponentially.
+3. **Token renewal is automatic.** The `_call()` method handles E0015 (expired token) transparently. Never manually manage tokens.
+4. **New Streamline methods require registration.** When Streamline grants new API permissions, the method MUST be: (a) added to the header docstring, (b) implemented as an async method, (c) added to the appropriate sync phase, (d) documented in this constitution.
+5. **Streamline data is advisory, local DB is authoritative.** If there's a conflict between Streamline and our DB (e.g., a manually corrected damage description), our DB wins.
+
+## IV. API ENDPOINT REGISTRY
+
+### A. Guest Operations (`/api/`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/damage-claims/` | List all damage claims |
+| GET | `/api/damage-claims/stats` | Dashboard statistics |
+| GET | `/api/damage-claims/{id}` | Single claim detail |
+| PATCH | `/api/damage-claims/{id}` | Update claim (description, status) |
+| POST | `/api/damage-claims/{id}/generate-legal-draft` | AI legal response |
+| POST | `/api/damage-claims/{id}/approve` | Approve and send |
+
+### B. Integrations (`/api/integrations/`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/streamline/status` | Connection health check |
+| POST | `/streamline/sync` | Manual full sync |
+| GET | `/streamline/properties` | Preview properties (no DB write) |
+| GET | `/streamline/reservations` | Preview reservations (no DB write) |
+| POST | `/notes/backfill` | Backfill reservation notes |
+| POST | `/agreements/backfill` | Generate missing agreements |
+| POST | `/prices/backfill` | Enrich financial detail |
+| POST | `/owners/sync` | Sync owner balances |
+| GET | `/owners/list` | Owner directory (live) |
+| GET | `/owners/{id}/statement` | Monthly statement (live) |
+| POST | `/housekeeping/sync` | Sync cleaning schedule |
+| GET | `/housekeeping/report` | Preview cleaning report (live) |
+| POST | `/feedback/sync` | Import guest feedback |
+| GET | `/feedback/preview` | Preview feedback (live) |
+| GET | `/guests/{email}/history` | Guest lookup + history |
+| GET | `/reservation/{code}/detail` | Full reservation detail (live) |
+
+### C. Owner Portal (`/api/owner/`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/dashboard/{owner_id}` | Owner dashboard metrics |
+| GET | `/reservations/{owner_id}` | Reservations calendar |
+| GET | `/work-orders/{owner_id}` | Work orders |
+| GET | `/statements/{owner_id}` | Financial statements |
+| GET | `/documents/{owner_id}` | Documents |
+| GET | `/balances/{owner_id}` | Trust balances (cached) |
+| GET | `/balances/{owner_id}/live` | Live balance from Streamline |
+| GET | `/balances/{owner_id}/statement` | Live monthly statement |
+
+### D. API Rules
+
+1. **Every new endpoint MUST be registered** in this section before deployment.
+2. **POST endpoints that trigger external API calls** (Streamline, Twilio, OpenAI) MUST log the call with `structlog` including: method, target, latency, success/failure.
+3. **All list endpoints MUST support pagination** (default: 50 items, max: 200).
+4. **All mutation endpoints MUST return the updated object**, not just a status message.
+5. **Error responses MUST follow the canonical RFC 7807 policy in `008-api-integration-standards.mdc`** (`application/problem+json`).
+
+## V. AI LEGAL DRAFTING
+
+The damage claim legal drafter (`backend/services/legal_drafter.py`) generates responses using:
+1. **Rental agreement** — the signed agreement for this specific reservation
+2. **Staff notes** — `streamline_notes` from the property management system
+3. **Damage description** — editable by staff to improve model accuracy
+4. **Property-specific clauses** — from the agreement template
+
+**AI Draft Rules:**
+1. **Draft source audit trail is mandatory.** Every generated draft stores `draft_source` in `agreement_clauses` JSONB, recording: confirmation_code, reservation_id, whether an agreement was used, and the agreement's signed_at date.
+2. **Agreement validation is mandatory.** Before using a rental agreement in a draft, verify that its `reservation_id` AND `property_id` match the claim. Cross-reservation agreement use is a critical bug.
+3. **Staff notes are primary evidence.** When present, staff notes from Streamline carry more weight than generic policy language. The LLM prompt explicitly instructs this.
+4. **Model fallback chain:** HYDRA (R1-70B) → SWARM (qwen2.5:7b) → OpenAI (gpt-4o). Never skip to OpenAI without trying local models first.
+
+## VI. FORBIDDEN PATTERNS
+
+1. **DO NOT** hardcode Streamline API credentials anywhere except `.env` files.
+2. **DO NOT** store guest PII (SSN, passport numbers, credit card numbers) in the database. Phone, email, and address are acceptable.
+3. **DO NOT** call Streamline API methods directly from frontend code. All Streamline access goes through the backend.
+4. **DO NOT** modify `sync_all()` phase ordering without updating this constitution.
+5. **DO NOT** add a new JSONB column without documenting its expected schema in a comment on the model class.
+6. **DO NOT** delete reservation or guest records. Soft-delete only (set `status = 'archived'`).
+7. **DO NOT** expose raw Streamline API responses to the frontend without sanitizing PII and removing auth tokens.
+8. **DO NOT** run backfill endpoints during peak hours (8 AM – 10 PM ET) without operator approval. The sync loop handles incremental updates.

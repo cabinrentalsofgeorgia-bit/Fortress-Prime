@@ -1,10 +1,11 @@
 import os
 import psycopg2
+import psycopg2.extras
 import pypdf
 import sys
 
 # --- CONFIGURATION ---
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 LEGAL_PATH = "/mnt/fortress_data/legal_archive"
 BUSINESS_PATH = "/mnt/fortress_data/documents/Cabin Rentals Of Georgia"
 # We scan the root documents for Knight specific business folders too
@@ -26,38 +27,61 @@ def extract_text_from_pdf(filepath):
         return ""
 
 def ingest_folder(path, table_name, category_mode="folder"):
-    print(f"🚀 Starting Ingest: {path} -> Table: {table_name}")
     if not os.path.exists(path):
-        print(f"⚠️ Path not found: {path}")
+        print(f"Path not found: {path}")
         return
 
     conn = get_db_connection()
     cur = conn.cursor()
+
+    all_pdfs = []
+    for dirpath, _, filenames in os.walk(path):
+        for f in filenames:
+            if f.lower().endswith('.pdf'):
+                all_pdfs.append((os.path.join(dirpath, f), os.path.basename(dirpath)))
+
+    if not all_pdfs:
+        conn.close()
+        return
+
+    paths = [p[0] for p in all_pdfs]
+    cur.execute(
+        f"SELECT file_path FROM {table_name} WHERE file_path = ANY(%s)",
+        (paths,)
+    )
+    existing = {row[0] for row in cur.fetchall()}
+
     count = 0
-    
-    for dirpath, dirnames, filenames in os.walk(path):
-        pdfs = [f for f in filenames if f.lower().endswith('.pdf')]
-        for pdf in pdfs:
-            full_path = os.path.join(dirpath, pdf)
-            
-            # Idempotency Check
-            cur.execute(f"SELECT id FROM {table_name} WHERE file_path = %s", (full_path,))
-            if cur.fetchone(): continue 
-            
-            if count % 20 == 0: print(f"   📖 Reading: {pdf[:40]}...")
-            
-            content = extract_text_from_pdf(full_path)
-            if content:
-                try:
-                    cat = os.path.basename(dirpath) if category_mode == "folder" else "General"
-                    cur.execute(f"INSERT INTO {table_name} (file_path, category, content) VALUES (%s, %s, %s)", 
-                               (full_path, cat, content))
-                    conn.commit()
-                    count += 1
-                except:
-                    conn.rollback()
-    
-    print(f"✅ Ingest Complete for {table_name}: {count} new docs.")
+    batch = []
+    for full_path, folder in all_pdfs:
+        if full_path in existing:
+            continue
+
+        content = extract_text_from_pdf(full_path)
+        if content:
+            cat = folder if category_mode == "folder" else "General"
+            batch.append((full_path, cat, content[:500000]))
+
+            if len(batch) >= 50:
+                psycopg2.extras.execute_batch(
+                    cur,
+                    f"INSERT INTO {table_name} (file_path, category, content) VALUES (%s, %s, %s)",
+                    batch,
+                )
+                conn.commit()
+                count += len(batch)
+                batch = []
+
+    if batch:
+        psycopg2.extras.execute_batch(
+            cur,
+            f"INSERT INTO {table_name} (file_path, category, content) VALUES (%s, %s, %s)",
+            batch,
+        )
+        conn.commit()
+        count += len(batch)
+
+    print(f"Ingest complete: {count} new docs")
     conn.close()
 
 if __name__ == "__main__":

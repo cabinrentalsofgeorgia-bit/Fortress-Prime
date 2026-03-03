@@ -1,0 +1,178 @@
+#!/bin/bash
+################################################################################
+# SOVEREIGN YLTRA — Yltra with Hive Mind Integration
+################################################################################
+# This wrapper adds Sovereign Context Protocol to yltra queries.
+#
+# USAGE:
+#   sovereign-yltra jordi "What is your Bitcoin outlook?"
+#   sovereign-yltra legal "Summarize easement law"
+#   sovereign-yltra crog "What properties need turnover?"
+#   sovereign-yltra [query]  # Uses default persona (Jordi)
+#
+# The wrapper:
+#   1. Gets the Godhead prompt for the specified persona
+#   2. Searches the knowledge base for relevant context
+#   3. Combines both and sends to yltra/ultra/deepseek
+#
+# Author: Fortress Prime
+# Version: 1.0.0
+################################################################################
+
+set -e
+
+FORTRESS_ROOT="/home/admin/Fortress-Prime"
+SOVEREIGN_CLI="$FORTRESS_ROOT/bin/sovereign"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Default persona
+DEFAULT_PERSONA="jordi"
+
+# Parse arguments
+if [ $# -eq 0 ]; then
+    echo -e "${RED}Error: No arguments provided${NC}"
+    echo "Usage: sovereign-yltra [persona] <query>"
+    echo "       sovereign-yltra <query>  # Uses default persona: $DEFAULT_PERSONA"
+    echo ""
+    echo "Personas: jordi, legal, crog, comp"
+    echo ""
+    echo "Examples:"
+    echo "  sovereign-yltra jordi \"What is your Bitcoin outlook?\""
+    echo "  sovereign-yltra legal \"Summarize easement rights\""
+    echo "  sovereign-yltra \"What's happening in crypto?\"  # Uses jordi"
+    exit 1
+fi
+
+# Check if first arg is a persona or query
+PERSONAS="jordi legal crog comp"
+if echo "$PERSONAS" | grep -w "$1" > /dev/null 2>&1; then
+    PERSONA="$1"
+    shift
+    QUERY="$*"
+else
+    PERSONA="$DEFAULT_PERSONA"
+    QUERY="$*"
+fi
+
+if [ -z "$QUERY" ]; then
+    echo -e "${RED}Error: No query provided${NC}"
+    exit 1
+fi
+
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  SOVEREIGN YLTRA — Hive Mind Integration${NC}"
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+echo ""
+echo -e "${YELLOW}Persona:${NC} $PERSONA"
+echo -e "${YELLOW}Query:${NC} $QUERY"
+echo ""
+
+# Step 1: Get Godhead prompt
+echo -e "${BLUE}[1/3]${NC} Loading $PERSONA Godhead prompt..."
+GODHEAD=$($SOVEREIGN_CLI prompt $PERSONA 2>/dev/null)
+if [ $? -ne 0 ] || [ -z "$GODHEAD" ]; then
+    echo -e "${RED}Error: Failed to load Godhead prompt${NC}"
+    exit 1
+fi
+GODHEAD_LENGTH=$(echo -n "$GODHEAD" | wc -c)
+echo -e "      ${GREEN}✓${NC} Loaded ${GODHEAD_LENGTH} character persona"
+
+# Step 2: Search knowledge base for context
+echo -e "${BLUE}[2/3]${NC} Searching knowledge base..."
+
+# Determine which search to use based on persona
+case $PERSONA in
+    legal)
+        CONTEXT=$($SOVEREIGN_CLI legal "$QUERY" 2>/dev/null)
+        SEARCH_TYPE="Legal Library (15.6K vectors)"
+        ;;
+    jordi)
+        CONTEXT=$($SOVEREIGN_CLI jordi "$QUERY" 2>/dev/null)
+        SEARCH_TYPE="Jordi Knowledge (not yet populated)"
+        # Fallback to Oracle if Jordi not populated
+        if echo "$CONTEXT" | grep -q "not_created"; then
+            CONTEXT=$($SOVEREIGN_CLI oracle "$QUERY" 2>/dev/null)
+            SEARCH_TYPE="Oracle Fallback (224K vectors)"
+        fi
+        ;;
+    crog|comp)
+        # For operational personas, search emails + Oracle
+        CONTEXT=$($SOVEREIGN_CLI oracle "$QUERY" 2>/dev/null)
+        SEARCH_TYPE="Oracle (224K vectors)"
+        ;;
+    *)
+        CONTEXT=$($SOVEREIGN_CLI oracle "$QUERY" 2>/dev/null)
+        SEARCH_TYPE="Oracle (224K vectors)"
+        ;;
+esac
+
+if [ $? -ne 0 ]; then
+    echo -e "      ${YELLOW}⚠${NC} Search failed, proceeding without context"
+    CONTEXT=""
+else
+    CONTEXT_LENGTH=$(echo -n "$CONTEXT" | wc -c)
+    echo -e "      ${GREEN}✓${NC} Found context: ${CONTEXT_LENGTH} characters from $SEARCH_TYPE"
+fi
+
+# Step 3: Build combined prompt and send to LLM
+echo -e "${BLUE}[3/3]${NC} Sending to LLM..."
+echo ""
+
+# Detect which LLM tool is available
+if command -v yltra &> /dev/null; then
+    LLM_CMD="yltra"
+elif command -v ultra &> /dev/null; then
+    LLM_CMD="ultra"
+elif command -v ollama &> /dev/null; then
+    LLM_CMD="ollama run deepseek-r1:70b"
+else
+    echo -e "${RED}Error: No LLM tool found (yltra, ultra, or ollama)${NC}"
+    exit 1
+fi
+
+# Build the full system prompt
+SYSTEM_PROMPT="$GODHEAD"
+
+# Build the user prompt with context
+if [ -n "$CONTEXT" ]; then
+    USER_PROMPT="CONTEXT FROM KNOWLEDGE BASE:
+$CONTEXT
+
+USER QUERY: $QUERY
+
+Please answer the user's query using the provided context where relevant. If the context is not directly applicable, answer based on your persona's knowledge and beliefs."
+else
+    USER_PROMPT="$QUERY"
+fi
+
+# Send to LLM
+echo -e "${BLUE}────────────────────────────────────────────────────────────────${NC}"
+echo ""
+
+if [ "$LLM_CMD" = "yltra" ] || [ "$LLM_CMD" = "ultra" ]; then
+    # Yltra/Ultra style
+    echo "$SYSTEM_PROMPT" > /tmp/sovereign_system.txt
+    echo "$USER_PROMPT" > /tmp/sovereign_user.txt
+    
+    $LLM_CMD --system "$(cat /tmp/sovereign_system.txt)" "$(cat /tmp/sovereign_user.txt)"
+    
+    rm -f /tmp/sovereign_system.txt /tmp/sovereign_user.txt
+else
+    # Ollama style
+    $LLM_CMD <<EOF
+System: $SYSTEM_PROMPT
+
+User: $USER_PROMPT
+EOF
+fi
+
+echo ""
+echo -e "${BLUE}────────────────────────────────────────────────────────────────${NC}"
+echo -e "${GREEN}Response complete${NC}"
+echo ""

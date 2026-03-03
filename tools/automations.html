@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Automations — Sovereign Templating Engine</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh;overflow:hidden}
+
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-caret{font-size:7px;opacity:.5;transition:transform .2s}
+.fn-g-green .fn-group-btn{border-bottom-color:#4ade80;color:#4ade80}
+.fn-g-blue .fn-group-btn{border-bottom-color:transparent}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa;color:#60a5fa}
+.fn-g-amber .fn-group-btn{border-bottom-color:transparent}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;background:#111;border:1px solid #222;
+  border-radius:0 0 8px 8px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:10000;
+  padding:4px 0}
+.fn-group.open .fn-dropdown{display:block}
+.fn-group.open .fn-caret{transform:rotate(180deg)}
+.fn-dd-item{display:block;padding:8px 16px;color:#888;text-decoration:none;font-size:12px;
+  font-weight:500;transition:all .1s;white-space:nowrap}
+.fn-dd-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.fn-dd-active{color:#4ade80 !important;font-weight:700}
+.fn-dd-sep{border-top:1px solid #222;margin:4px 0}
+.fn-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 10px;cursor:pointer;
+  color:#888;font-size:11px;font-weight:600;height:100%;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;background:#111;border:1px solid #222;
+  border-radius:0 0 8px 8px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:10000;padding:4px 0}
+.fn-user.open .fn-user-dd{display:block}
+
+/* ── Secondary Nav ── */
+.sec-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;
+  border-bottom:1px solid #111;flex-shrink:0}
+.sec-left{display:flex;align-items:center;gap:12px}
+.sec-title{font-size:16px;font-weight:700;color:#fff}
+.sec-subtitle{font-size:11px;color:#555;font-weight:500}
+
+/* ── Split Layout ── */
+.split{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 90px);overflow:hidden}
+.pane-list{border-right:1px solid #1a1a1a;display:flex;flex-direction:column;overflow:hidden}
+.pane-editor{display:flex;flex-direction:column;overflow:hidden;background:#050505}
+
+/* ── Template List ── */
+.list-header{padding:12px 16px;border-bottom:1px solid #1a1a1a;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.list-search{flex:1;background:#111;border:1px solid #222;border-radius:8px;color:#fff;
+  padding:8px 12px;font-size:12px;outline:none}
+.list-search:focus{border-color:#4ade80}
+.btn-new{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:11px;
+  font-weight:700;background:#4ade80;color:#000;transition:all .15s;white-space:nowrap}
+.btn-new:hover{background:#22c55e}
+.list-items{flex:1;overflow-y:auto;padding:4px 0}
+.tpl-card{padding:12px 16px;cursor:pointer;border-bottom:1px solid #111;transition:background .1s}
+.tpl-card:hover{background:rgba(255,255,255,.03)}
+.tpl-card.active{background:rgba(74,222,128,.06);border-left:3px solid #4ade80}
+.tpl-name{font-size:13px;font-weight:600;color:#fff;margin-bottom:4px}
+.tpl-trigger{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em}
+.tpl-status{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;margin-left:8px}
+.tpl-active{background:rgba(74,222,128,.15);color:#4ade80}
+.tpl-inactive{background:rgba(248,113,113,.12);color:#f87171}
+.list-empty{padding:40px 20px;text-align:center;color:#444;font-size:12px}
+
+/* ── Editor ── */
+.editor-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#333;font-size:14px}
+.editor-content{display:none;flex-direction:column;height:100%;overflow:hidden}
+.editor-content.visible{display:flex}
+.editor-scroll{flex:1;overflow-y:auto;padding:24px}
+.editor-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.editor-field{display:flex;flex-direction:column;gap:4px}
+.editor-field.full{grid-column:1/-1}
+.field-label{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em}
+.field-input{background:#111;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;
+  font-size:13px;outline:none;font-family:inherit}
+.field-input:focus{border-color:#4ade80}
+select.field-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+select.field-input option{background:#111;color:#fff}
+.body-area{background:#111;border:1px solid #222;border-radius:8px;color:#fff;padding:14px;
+  font-size:13px;font-family:'SF Mono',Consolas,monospace;line-height:1.6;
+  outline:none;resize:none;min-height:320px;width:100%}
+.body-area:focus{border-color:#4ade80}
+.editor-footer{padding:12px 24px;border-top:1px solid #1a1a1a;display:flex;gap:10px;
+  align-items:center;flex-shrink:0}
+.btn-save{padding:10px 24px;border-radius:8px;border:none;cursor:pointer;font-size:13px;
+  font-weight:700;background:#4ade80;color:#000;transition:all .15s}
+.btn-save:hover:not(:disabled){background:#22c55e;transform:translateY(-1px)}
+.btn-save:disabled{opacity:.4;cursor:not-allowed}
+.btn-preview{padding:10px 20px;border-radius:8px;border:1px solid #333;background:transparent;
+  cursor:pointer;font-size:12px;font-weight:600;color:#888;transition:all .15s}
+.btn-preview:hover{border-color:#555;color:#fff}
+.btn-toggle{padding:10px 20px;border-radius:8px;border:1px solid #333;background:transparent;
+  cursor:pointer;font-size:12px;font-weight:600;color:#888;transition:all .15s;margin-left:auto}
+.btn-toggle.active-on{border-color:rgba(74,222,128,.3);color:#4ade80}
+.btn-toggle.active-off{border-color:rgba(248,113,113,.3);color:#f87171}
+
+/* ── Variables Guide ── */
+.vars-guide{margin-top:20px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:16px}
+.vars-title{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.var-tag{display:inline-block;padding:4px 10px;margin:3px 4px 3px 0;background:#111;
+  border:1px solid #222;border-radius:6px;font-family:'SF Mono',Consolas,monospace;
+  font-size:11px;color:#4ade80;cursor:pointer;transition:all .15s;user-select:none}
+.var-tag:hover{background:#1a1a1a;border-color:#4ade80}
+.var-tag.copied{border-color:#4ade80;color:#fff}
+
+/* ── Preview Modal ── */
+.preview-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);
+  display:none;align-items:center;justify-content:center;z-index:20000;backdrop-filter:blur(4px)}
+.preview-overlay.visible{display:flex}
+.preview-box{background:#111;border:1px solid #222;border-radius:14px;width:700px;max-height:80vh;
+  display:flex;flex-direction:column;overflow:hidden}
+.preview-header{padding:16px 20px;border-bottom:1px solid #1a1a1a;display:flex;
+  align-items:center;justify-content:space-between}
+.preview-title{font-size:14px;font-weight:700}
+.preview-close{background:none;border:none;color:#888;font-size:18px;cursor:pointer;
+  padding:4px 8px;transition:color .15s}
+.preview-close:hover{color:#fff}
+.preview-body{padding:20px;overflow-y:auto;flex:1}
+.preview-subject{font-size:13px;font-weight:600;color:#4ade80;margin-bottom:12px;
+  padding-bottom:12px;border-bottom:1px solid #1a1a1a}
+.preview-html{font-size:13px;line-height:1.7;color:#ccc}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:14px 24px;border-radius:10px;
+  font-size:13px;font-weight:600;transform:translateY(100px);opacity:0;
+  transition:all .3s;z-index:10001;max-width:400px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:#4ade80;color:#000}
+.toast.error{background:#f87171;color:#000}
+</style>
+</head>
+<body>
+
+<!-- UNIFIED NAV BAR -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">&#128202; VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">&#127968; Properties</a><a class="fn-dd-item" href="/vrs/reservations">&#128197; Reservations</a><a class="fn-dd-item" href="/vrs/guests">&#128100; Guests</a><a class="fn-dd-item" href="/vrs/work-orders">&#128295; Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">&#129529; Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">&#128221; Contracts</a><a class="fn-dd-item" href="/vrs/analytics">&#128200; Analytics</a><a class="fn-dd-item" href="/vrs/payments">&#128179; Payments</a><a class="fn-dd-item" href="/vrs/utilities">&#9889; Utilities</a><a class="fn-dd-item" href="/vrs/channels">&#128225; Channels</a><a class="fn-dd-item" href="/vrs/owners">&#128084; Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">&#127760; Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">&#127969; IoT &amp; Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/vrs/leads">&#9889; Lead Engine</a><a class="fn-dd-item" href="/guest-agent">&#129302; Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue fn-g-active" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item">&#128231; Email Intake</a><a href="/intelligence" class="fn-dd-item">&#9813; Intelligence</a><a href="/docs-center" class="fn-dd-item">&#128196; Documents</a><a href="/legal" class="fn-dd-item">&#9878; Legal Cases</a><a href="/automations" class="fn-dd-item fn-dd-active">&#9889; Automations</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item">&#128273; Key Vault</a><a href="/users" class="fn-dd-item">&#128101; Users</a><a href="/profile" class="fn-dd-item">&#9881; Profile</a><a href="/webui" class="fn-dd-item">&#9798; Mission Control</a></div></div>
+  </div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item">&#9881; Profile</a><a href="/users" class="fn-dd-item">&#128101; Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false">&#10140; Sign Out</a></div></div></div>
+</div>
+
+<!-- SECONDARY NAV -->
+<div class="sec-nav">
+  <div class="sec-left">
+    <span class="sec-title">Email Automations</span>
+    <span class="sec-subtitle">Sovereign Templating Engine</span>
+  </div>
+</div>
+
+<!-- SPLIT LAYOUT -->
+<div class="split">
+
+  <!-- LEFT: Template List -->
+  <div class="pane-list">
+    <div class="list-header">
+      <input class="list-search" id="searchInput" placeholder="Search templates..." oninput="filterTemplates()">
+      <button class="btn-new" onclick="createNew()">+ New</button>
+    </div>
+    <div class="list-items" id="listItems">
+      <div class="list-empty">Loading templates...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Editor -->
+  <div class="pane-editor">
+    <div class="editor-empty" id="editorEmpty">Select a template or create a new one</div>
+    <div class="editor-content" id="editorContent">
+      <div class="editor-scroll">
+        <div class="editor-row">
+          <div class="editor-field">
+            <span class="field-label">Template Name</span>
+            <input class="field-input" id="fldName" placeholder="e.g., Pre-Arrival Guide">
+          </div>
+          <div class="editor-field">
+            <span class="field-label">Trigger Event</span>
+            <select class="field-input" id="fldTrigger"></select>
+          </div>
+        </div>
+        <div class="editor-field full" style="margin-bottom:16px">
+          <span class="field-label">Subject Line</span>
+          <input class="field-input" id="fldSubject" placeholder="e.g., Your stay at {{ property_name }} is coming up!">
+        </div>
+        <div class="editor-field full">
+          <span class="field-label">Email Body (HTML / Jinja2)</span>
+          <textarea class="body-area" id="fldBody" placeholder="Write your email template here. Use {{ variable_name }} for dynamic content."></textarea>
+        </div>
+        <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px;padding:12px 16px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;color:#ccc;user-select:none">
+            <input type="checkbox" id="fldApproval" style="width:16px;height:16px;accent-color:#4ade80;cursor:pointer">
+            Requires Human Approval
+          </label>
+          <span style="font-size:10px;color:#555">When enabled, automated emails are queued as drafts for review in the Guest Agent Inbox</span>
+        </div>
+        <div class="vars-guide">
+          <div class="vars-title">Available Variables (click to copy)</div>
+          <span class="var-tag" onclick="copyVar(this)">{{ guest_name }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ property_name }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ check_in_date }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ check_out_date }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ nights }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ grand_total }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ checkout_link }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ confirmation_code }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ access_code }}</span>
+          <span class="var-tag" onclick="copyVar(this)">{{ wifi_password }}</span>
+        </div>
+      </div>
+      <div class="editor-footer">
+        <button class="btn-save" id="btnSave" onclick="saveTemplate()">Save Template</button>
+        <button class="btn-preview" onclick="previewTemplate()">Preview</button>
+        <button class="btn-toggle" id="btnToggle" onclick="toggleActive()"></button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Preview Modal -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-box">
+    <div class="preview-header">
+      <span class="preview-title">Template Preview</span>
+      <button class="preview-close" onclick="closePreview()">&times;</button>
+    </div>
+    <div class="preview-body">
+      <div class="preview-subject" id="previewSubject"></div>
+      <div class="preview-html" id="previewBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+var allTemplates = [];
+var triggers = [];
+var activeTemplate = null;
+var isNewMode = false;
+
+var API = '/api/vrs/templates';
+
+function esc(s) {
+  if (!s) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(s)));
+  return d.innerHTML;
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success') + ' show';
+  setTimeout(function() { t.className = 'toast'; }, 4000);
+}
+
+/* ── Nav ── */
+setInterval(function() {
+  document.getElementById('fnClock').textContent =
+    new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}, 1000);
+
+function toggleGroup(name) {
+  var all = document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g) {
+    if (g.dataset.group === name) g.classList.toggle('open');
+    else g.classList.remove('open');
+  });
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.fn-group') && !e.target.closest('.fn-user')) {
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g) { g.classList.remove('open'); });
+  }
+});
+
+function logout() {
+  document.cookie = 'fortress_session=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  window.location.href = '/login';
+}
+
+/* ── Load Data ── */
+function loadTriggers() {
+  fetch(API + '/triggers', {credentials:'include'}).then(function(r) { return r.json(); })
+  .then(function(data) {
+    triggers = data.triggers || [];
+    var sel = document.getElementById('fldTrigger');
+    sel.innerHTML = '';
+    triggers.forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t.replace(/_/g, ' ');
+      sel.appendChild(opt);
+    });
+  }).catch(function() { showToast('Failed to load triggers', 'error'); });
+}
+
+function loadTemplates() {
+  fetch(API, {credentials:'include'}).then(function(r) {
+    if (!r.ok) throw new Error('API ' + r.status);
+    return r.json();
+  }).then(function(data) {
+    allTemplates = Array.isArray(data) ? data : [];
+    renderList();
+  }).catch(function(e) {
+    document.getElementById('listItems').innerHTML =
+      '<div class="list-empty" style="color:#f87171">Failed: ' + esc(e.message) + '</div>';
+  });
+}
+
+function renderList() {
+  var search = (document.getElementById('searchInput').value || '').toLowerCase();
+  var filtered = allTemplates.filter(function(t) {
+    if (!search) return true;
+    return (t.name + ' ' + t.trigger_event).toLowerCase().indexOf(search) >= 0;
+  });
+
+  if (filtered.length === 0) {
+    document.getElementById('listItems').innerHTML =
+      '<div class="list-empty">No templates found. Click + New to create one.</div>';
+    return;
+  }
+
+  var html = '';
+  filtered.forEach(function(t) {
+    var isActive = activeTemplate && activeTemplate.id === t.id;
+    var statusCls = t.is_active ? 'tpl-active' : 'tpl-inactive';
+    var statusLabel = t.is_active ? 'Active' : 'Inactive';
+    html += '<div class="tpl-card' + (isActive ? ' active' : '') + '" onclick="selectTemplate(\'' + t.id + '\')">' +
+      '<div class="tpl-name">' + esc(t.name) + '</div>' +
+      '<div class="tpl-trigger">' + esc(t.trigger_event.replace(/_/g, ' ')) +
+        '<span class="tpl-status ' + statusCls + '">' + statusLabel + '</span>' +
+      '</div>' +
+    '</div>';
+  });
+  document.getElementById('listItems').innerHTML = html;
+}
+
+function filterTemplates() { renderList(); }
+
+/* ── Select & Edit ── */
+function selectTemplate(id) {
+  isNewMode = false;
+  activeTemplate = allTemplates.find(function(t) { return t.id === id; });
+  if (!activeTemplate) return;
+
+  document.getElementById('editorEmpty').style.display = 'none';
+  document.getElementById('editorContent').classList.add('visible');
+
+  document.getElementById('fldName').value = activeTemplate.name;
+  document.getElementById('fldTrigger').value = activeTemplate.trigger_event;
+  document.getElementById('fldSubject').value = activeTemplate.subject_template;
+  document.getElementById('fldBody').value = activeTemplate.body_template;
+  document.getElementById('fldApproval').checked = activeTemplate.requires_human_approval !== false;
+
+  updateToggleBtn();
+  renderList();
+}
+
+function createNew() {
+  isNewMode = true;
+  activeTemplate = null;
+
+  document.getElementById('editorEmpty').style.display = 'none';
+  document.getElementById('editorContent').classList.add('visible');
+
+  document.getElementById('fldName').value = '';
+  document.getElementById('fldTrigger').value = triggers[0] || '';
+  document.getElementById('fldSubject').value = '';
+  document.getElementById('fldBody').value = '';
+  document.getElementById('fldApproval').checked = true;
+
+  var btn = document.getElementById('btnToggle');
+  btn.textContent = 'Active';
+  btn.className = 'btn-toggle active-on';
+
+  renderList();
+  document.getElementById('fldName').focus();
+}
+
+function updateToggleBtn() {
+  var btn = document.getElementById('btnToggle');
+  if (!activeTemplate) return;
+  if (activeTemplate.is_active) {
+    btn.textContent = 'Active';
+    btn.className = 'btn-toggle active-on';
+  } else {
+    btn.textContent = 'Inactive';
+    btn.className = 'btn-toggle active-off';
+  }
+}
+
+function toggleActive() {
+  if (isNewMode) {
+    var btn = document.getElementById('btnToggle');
+    if (btn.classList.contains('active-on')) {
+      btn.textContent = 'Inactive';
+      btn.className = 'btn-toggle active-off';
+    } else {
+      btn.textContent = 'Active';
+      btn.className = 'btn-toggle active-on';
+    }
+    return;
+  }
+  if (!activeTemplate) return;
+  var newState = !activeTemplate.is_active;
+  fetch(API + '/' + activeTemplate.id, {
+    method: 'PUT', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({is_active: newState}),
+  }).then(function(r) { return r.json(); })
+  .then(function(data) {
+    activeTemplate.is_active = data.is_active;
+    var idx = allTemplates.findIndex(function(t) { return t.id === data.id; });
+    if (idx >= 0) allTemplates[idx] = data;
+    updateToggleBtn();
+    renderList();
+    showToast('Template ' + (data.is_active ? 'activated' : 'deactivated'));
+  }).catch(function() { showToast('Failed to toggle status', 'error'); });
+}
+
+/* ── Save ── */
+function saveTemplate() {
+  var name = document.getElementById('fldName').value.trim();
+  var trigger = document.getElementById('fldTrigger').value;
+  var subject = document.getElementById('fldSubject').value;
+  var body = document.getElementById('fldBody').value;
+
+  if (!name) { showToast('Template name is required', 'error'); return; }
+
+  var btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  var toggleBtn = document.getElementById('btnToggle');
+  var isActive = toggleBtn.classList.contains('active-on');
+
+  var payload = {
+    name: name,
+    trigger_event: trigger,
+    subject_template: subject,
+    body_template: body,
+    is_active: isActive,
+    requires_human_approval: document.getElementById('fldApproval').checked,
+  };
+
+  var url = isNewMode ? API : API + '/' + activeTemplate.id;
+  var method = isNewMode ? 'POST' : 'PUT';
+
+  fetch(url, {
+    method: method, credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Save failed: ' + r.status);
+    return r.json();
+  }).then(function(data) {
+    if (isNewMode) {
+      allTemplates.push(data);
+    } else {
+      var idx = allTemplates.findIndex(function(t) { return t.id === data.id; });
+      if (idx >= 0) allTemplates[idx] = data;
+    }
+    activeTemplate = data;
+    isNewMode = false;
+    renderList();
+    updateToggleBtn();
+    showToast('Template saved');
+  }).catch(function(e) {
+    showToast(e.message || 'Save failed', 'error');
+  }).finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Save Template';
+  });
+}
+
+/* ── Preview ── */
+function previewTemplate() {
+  if (!activeTemplate || isNewMode) {
+    showToast('Save the template first to preview', 'error');
+    return;
+  }
+  fetch(API + '/' + activeTemplate.id + '/preview', {
+    method: 'POST', credentials: 'include',
+  }).then(function(r) { return r.json(); })
+  .then(function(data) {
+    document.getElementById('previewSubject').textContent = 'Subject: ' + (data.subject || '(empty)');
+    document.getElementById('previewBody').innerHTML = data.body || '<em>(empty body)</em>';
+    document.getElementById('previewOverlay').classList.add('visible');
+  }).catch(function() { showToast('Preview failed', 'error'); });
+}
+
+function closePreview() {
+  document.getElementById('previewOverlay').classList.remove('visible');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePreview();
+});
+
+/* ── Copy Variable Tag ── */
+function copyVar(el) {
+  var text = el.textContent.trim();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      el.classList.add('copied');
+      setTimeout(function() { el.classList.remove('copied'); }, 1500);
+      showToast('Copied: ' + text);
+    });
+  } else {
+    var ta = document.createElement('textarea'); ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Copied: ' + text);
+  }
+}
+
+/* ── Init ── */
+loadTriggers();
+loadTemplates();
+</script>
+</body>
+</html>

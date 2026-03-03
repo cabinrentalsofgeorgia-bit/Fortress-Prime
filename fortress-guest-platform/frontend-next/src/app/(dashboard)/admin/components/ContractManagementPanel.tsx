@@ -154,7 +154,7 @@ export default function ContractManagementPanel({
       map[p.id] = p.name || p.id;
     }
     for (const fp of fleet) {
-      if (fp.property_id) map[fp.property_id] = fp.property_name || fp.property_id;
+      if (fp.property_id) map[fp.property_id] = fp.name || fp.property_id;
     }
     return map;
   }, [propertiesData, fleet]);
@@ -276,7 +276,7 @@ export default function ContractManagementPanel({
                   <SelectContent>
                     {fleet.map((fp) => (
                       <SelectItem key={fp.property_id} value={fp.property_id}>
-                        {fp.property_name || fp.property_id}
+                        {fp.name || fp.property_id}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -341,7 +341,7 @@ export default function ContractManagementPanel({
                   <SelectContent>
                     {fleet.map((fp) => (
                       <SelectItem key={fp.property_id} value={fp.property_id}>
-                        {fp.property_name || fp.property_id}
+                        {fp.name || fp.property_id}
                       </SelectItem>
                     ))}
                   </SelectContent>

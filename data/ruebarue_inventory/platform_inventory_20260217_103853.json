@@ -1,0 +1,339 @@
+{
+  "extracted_at": "2026-02-17T10:36:21.345562",
+  "account": "taylor.knight@cabin-rentals-of-georgia.com",
+  "sections": [
+    {
+      "name": "Messages",
+      "url": "https://app.ruebarue.com/messages",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103634_messages.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103634_messages.html",
+      "record_count": 168,
+      "has_export": false,
+      "subsections": [],
+      "notes": []
+    },
+    {
+      "name": "Guests",
+      "url": "https://app.ruebarue.com/guests?search_term=&filters=all&preset=soon&start_date=2026-02-17&end_date=2026-02-20&end_type=check_in&page=0&checked_in=false&checked_out=false&categories=&per_page=20",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103640_guests.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103640_guests.html",
+      "record_count": 3,
+      "has_export": false,
+      "subsections": [
+        "Guest Journey",
+        "Stays",
+        "Message Logs",
+        "Ratings",
+        "Surveys",
+        "Guestbook Views"
+      ],
+      "notes": [
+        "Table 1: , AUTO\nSEND, CHECK-IN & OUT/ NAME/EMAIL/PHONE, PROPERTY ID/RESERVATION NUMBER/BOOKING SOURCE, DOOR\nCODE, TAGS, SCHEDULED MESSAGES, ACTIONS",
+        "Table 2: CHECK-IN & OUT, PROPERTY ID, CREATED AT",
+        "Table 3: SENT AT, SENT BY, MESSAGE",
+        "Table 4: RATED ON, GUEST NAME, CHECK-IN DATE, PROPERTY ID, RATING",
+        "Table 5: SUBMITTED AT, CHECK-IN Date, PROPERTY ID, SURVEY, RESPONSE",
+        "Table 6: VIEWED AT, PROPERTY ID, HOME GUIDE"
+      ]
+    },
+    {
+      "name": "Contacts",
+      "url": "https://app.ruebarue.com/contacts",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103646_contacts.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103646_contacts.html",
+      "record_count": 39,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: , NAME/PHONE/EMAIL, PROPERTIES, TAGS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Orders",
+      "url": "https://app.ruebarue.com/orders",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103652_orders.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103652_orders.html",
+      "record_count": "1 visible",
+      "has_export": false,
+      "subsections": [
+        "ALL",
+        "NEW",
+        "PENDING FULFILLMENT",
+        "PARTIALLY FULFILLED",
+        "FULFILLED"
+      ],
+      "notes": [
+        "No records found",
+        "Table 1: #, AWAITING RESPONSE, ORDER DATE/\nSTATUS, CHECK-IN & OUT/ NAME/EMAIL/PHONE, PROPERTY ID/ADDRESS, ITEMS, TOTAL, PAYMENT STATUS, FULFILLMENT STATUS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Scheduler",
+      "url": "https://app.ruebarue.com/scheduler?type=All&active=All&search=&sort=schedule&page=0&tag=-1",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103657_scheduler.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103657_scheduler.html",
+      "record_count": 20,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: ACTIVE, TYPE, NAME, SCHEDULED FOR, TAGS, BOOKING SOURCE, FLAGS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Extend Stays",
+      "url": "https://app.ruebarue.com/extend-guest-stay",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103703_extend_stays.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103703_extend_stays.html",
+      "record_count": "2 visible",
+      "has_export": false,
+      "subsections": [],
+      "notes": []
+    },
+    {
+      "name": "Alerts",
+      "url": "https://app.ruebarue.com/alerts",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103709_alerts.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103709_alerts.html",
+      "record_count": "3 visible",
+      "has_export": false,
+      "subsections": [
+        "SCHEDULED",
+        "PAST"
+      ],
+      "notes": [
+        "No records found",
+        "Table 1: TYPE, NAME, SCHEDULED FOR, TAGS, ACTIONS",
+        "Table 2: Type, Name, Sent At, Tags, ACTIONS"
+      ]
+    },
+    {
+      "name": "Surveys",
+      "url": "https://app.ruebarue.com/surveys",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103714_surveys.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103714_surveys.html",
+      "record_count": 1,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: NAME, RESPONSES, ACTIONS"
+      ]
+    },
+    {
+      "name": "Saved Responses",
+      "url": "https://app.ruebarue.com/saved-responses",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103720_saved_responses.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103720_saved_responses.html",
+      "record_count": 4,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: NAME, ACTIONS"
+      ]
+    },
+    {
+      "name": "Message Templates",
+      "url": "https://app.ruebarue.com/message-templates",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103726_message_templates.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103726_message_templates.html",
+      "record_count": 1,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: NAME, FOLDER, ACTIONS"
+      ]
+    },
+    {
+      "name": "Operations Dashboard",
+      "url": "https://app.ruebarue.com/operations",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103731_operations_dashboard.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103731_operations_dashboard.html",
+      "record_count": "15 visible",
+      "has_export": false,
+      "subsections": [],
+      "notes": []
+    },
+    {
+      "name": "Work Orders",
+      "url": "https://app.ruebarue.com/work-orders?search_term=&filters=new&sort=updated_at&category=&priority=&assignee=&property=&tag=&date_from=&date_to=&page=0&per=20",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103737_work_orders.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103737_work_orders.html",
+      "record_count": "2 visible",
+      "has_export": false,
+      "subsections": [
+        "NEW",
+        "STARTED",
+        "COMPLETED",
+        "CLOSED"
+      ],
+      "notes": [
+        "No records found",
+        "Table 1: #, SUMMARY / PROPERTY, STATUS / PRIORITY, CATEGORY, ASSIGNED TO, CHECKLIST, COST, TAGS, LAST UPDATED, ACTIONS"
+      ]
+    },
+    {
+      "name": "Checklists",
+      "url": "https://app.ruebarue.com/operations/checklists",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103742_checklists.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103743_checklists.html",
+      "record_count": "2 visible",
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "No records found",
+        "Table 1: NAME, TYPE, # ITEMS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Master Home Guide",
+      "url": "https://app.ruebarue.com/master-home-guide",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103748_master_home_guide.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103748_master_home_guide.html",
+      "record_count": "56 visible",
+      "has_export": false,
+      "subsections": [],
+      "notes": []
+    },
+    {
+      "name": "Home Guides",
+      "url": "https://app.ruebarue.com/properties?search_term=&sort=updated_at&page=0&tag=all&filter=destination_id",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103754_home_guides.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103754_home_guides.html",
+      "record_count": 13,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: , PROPERTY ID/ADDRESS, TAGS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Extras Guide",
+      "url": "https://app.ruebarue.com/extras",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103800_extras_guide.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103800_extras_guide.html",
+      "record_count": "Unknown",
+      "has_export": false,
+      "subsections": [],
+      "notes": []
+    },
+    {
+      "name": "Area Guides",
+      "url": "https://app.ruebarue.com/areas",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103805_area_guides.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103806_area_guides.html",
+      "record_count": 1,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: GUIDE, TAGS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "url": "https://app.ruebarue.com/subscriptions",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103811_subscriptions.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103811_subscriptions.html",
+      "record_count": 2,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: , SUBSCRIBED ON, EMAIL, GUEST NAME, GUIDE, ACTIONS"
+      ]
+    },
+    {
+      "name": "Units",
+      "url": "https://app.ruebarue.com/units?search_term=&sort=updated_at&page=0&tag=all",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103817_units.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103817_units.html",
+      "record_count": 13,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: , PROPERTY ID/ADDRESS, TAGS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Macros",
+      "url": "https://app.ruebarue.com/macros",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103822_macros.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103823_macros.html",
+      "record_count": 3,
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: FIELD, MACRO, TYPE, ACTIONS"
+      ]
+    },
+    {
+      "name": "AI Chatbot FAQs",
+      "url": "https://app.ruebarue.com/chatbot-faqs",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103828_ai_chatbot_faqs.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103828_ai_chatbot_faqs.html",
+      "record_count": "54 visible",
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "Table 1: QUESTION, ANSWER, ACTIONS"
+      ]
+    },
+    {
+      "name": "AI Chatbot Unanswered Questions",
+      "url": "https://app.ruebarue.com/unanswered-questions",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103834_ai_chatbot_unanswered_questions.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103834_ai_chatbot_unanswered_questions.html",
+      "record_count": "2 visible",
+      "has_export": false,
+      "subsections": [],
+      "notes": [
+        "No records found",
+        "Table 1: , UNANSWERED QUESTION, ASKED AT, STATUS, ACTIONS"
+      ]
+    },
+    {
+      "name": "Settings",
+      "url": "https://app.ruebarue.com/settings/branding",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103840_settings.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103840_settings.html",
+      "record_count": "2 visible",
+      "has_export": false,
+      "subsections": [
+        "Branding",
+        "Digital Guestbooks",
+        "Texting Platform",
+        "Extras Guide",
+        "Area Guide",
+        "Chatbot",
+        "Tags",
+        "Five Star Review",
+        "API"
+      ],
+      "notes": []
+    },
+    {
+      "name": "Profile",
+      "url": "https://app.ruebarue.com/profile",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103845_profile.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103845_profile.html",
+      "record_count": "1 visible",
+      "has_export": false,
+      "subsections": [],
+      "notes": []
+    },
+    {
+      "name": "Reports",
+      "url": "https://app.ruebarue.com/reports/overview",
+      "screenshot": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103851_reports.png",
+      "html": "/home/admin/Fortress-Prime/data/ruebarue_inventory/20260217_103851_reports.html",
+      "record_count": "1 visible",
+      "has_export": false,
+      "subsections": [
+        "Overview",
+        "Text Message Logs",
+        "AI Chatbot Logs",
+        "Webchat Activities",
+        "Booking Source Mapping",
+        "Property Macros"
+      ],
+      "notes": []
+    }
+  ]
+}

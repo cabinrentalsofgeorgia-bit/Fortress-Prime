@@ -1,0 +1,160 @@
+---
+description: Canonical security, secrets, RBAC, and incident response policy
+alwaysApply: true
+---
+
+# SECURITY & COMPLIANCE FRAMEWORK (Amendment VIII)
+
+**Effective Date:** 2026-02-20
+**Classification:** Non-Negotiable Enterprise Security Standard
+
+## I. CLASSIFICATION LEVELS
+
+All data in Fortress Prime is classified into four tiers:
+
+| Tier | Label | Examples | Storage | Encryption | Access |
+|------|-------|----------|---------|-----------|--------|
+| **T1** | PUBLIC | Property listings, amenity descriptions, published reviews | Any | Optional | Unrestricted |
+| **T2** | INTERNAL | Reservation counts, occupancy rates, housekeeping schedules | Local DB only | At rest | Staff authenticated |
+| **T3** | CONFIDENTIAL | Guest PII (name, email, phone, address), financial data, owner balances, trust accounting | Local DB only | At rest + in transit | Role-based, logged |
+| **T4** | RESTRICTED | API secrets, JWT signing keys, database credentials, Streamline tokens, Twilio auth | `.env` files only | At rest + in transit | Operator only, never in logs |
+
+## II. SECRETS MANAGEMENT
+
+### A. Rules
+
+1. **Secrets live in `.env` files ONLY.** Never in source code, never in database, never in YAML, never in cursor rules.
+2. **`.env` files are in `.gitignore`.** Verify this. If `.env` appears in `git status` as tracked, that is a P0 incident.
+3. **Never log secrets.** Structlog calls MUST NOT include: `token_key`, `token_secret`, `api_key`, `password`, `secret`, `jwt`. Log the first 8 characters of token keys for debugging (e.g., `f97677a4...`).
+4. **Rotate Streamline tokens** when Streamline sends a renewal notice. The `RenewExpiredToken` method handles this automatically, but verify the new credentials are persisted to `.env`.
+5. **JWT secrets MUST be at least 64 characters** of cryptographic randomness. Never use dictionary words.
+
+### B. Secret Inventory
+
+| Secret | Location | Rotation Schedule |
+|--------|----------|------------------|
+| `STREAMLINE_API_KEY` / `SECRET` | `fortress-guest-platform/.env` | Auto-renewed by API |
+| `DATABASE_URL` | `fortress-guest-platform/.env` | On credential change |
+| `SECRET_KEY` (JWT) | `fortress-guest-platform/.env` | Quarterly |
+| `TWILIO_AUTH_TOKEN` | `fortress-guest-platform/.env` | Annually |
+| `OPENAI_API_KEY` | `fortress-guest-platform/.env` | Annually |
+| `CLAUDE_API_KEY` | `fortress-guest-platform/.env` | Annually |
+| `GRAFANA_ADMIN_PASSWORD` | `.env.security` | Quarterly |
+| `GATEWAY_ADMIN_PASSWORD` | `.env.security` | Quarterly |
+
+## III. ACCESS CONTROL
+
+### A. Role-Based Access (RBAC)
+
+FGP implements role-based access through the `staff_users` table:
+
+| Role | Permissions | Examples |
+|------|------------|---------|
+| **operator** | Full system access, DEFCON control, backfill triggers, schema changes | Gary Knight |
+| **admin** | Staff management, all CRUD operations, report generation, sync triggers | Taylor Knight |
+| **manager** | Reservation management, damage claims, housekeeping, owner portal read | Property managers |
+| **agent** | Guest communication, work order creation, checklist completion | Front-line staff |
+| **viewer** | Read-only access to dashboards and reports | Owners, accountants |
+
+### B. Authentication Rules
+
+1. **All API endpoints except health checks require authentication.** Public endpoints: `GET /health`, `GET /api/properties/{slug}/guide` (guest-facing).
+2. **JWT tokens expire in 24 hours.** No "remember me" tokens longer than 7 days.
+3. **Failed login attempts are rate-limited:** 5 attempts per 15 minutes per IP. After lockout, require operator reset.
+4. **Session tokens are HttpOnly, Secure, SameSite=Strict** in production.
+
+## IV. DATA PROTECTION
+
+### A. PII Handling
+
+1. **Collect minimum necessary PII.** Guest profiles need: name, phone, email. Do NOT collect: SSN, passport number, credit card number, driver's license number.
+2. **PII in logs is forbidden.** Structlog formatters MUST redact phone numbers, email addresses, and names from log output. Log `guest_id` (UUID), never `guest_name`.
+3. **PII in error messages is forbidden.** API error responses MUST NOT include guest names, emails, or phone numbers. Use IDs only.
+4. **Guest data deletion requests** (GDPR/CCPA): Set `guest.status = 'data_deleted'`, null all PII fields, retain only the UUID and anonymized analytics. Reservation financial records are retained for tax compliance (7 years).
+
+### B. Data Retention
+
+| Data Type | Retention | Justification |
+|-----------|----------|---------------|
+| Reservations + financial records | 7 years | IRS audit requirements |
+| Guest PII | Until deletion request or 3 years after last stay | CCPA compliance |
+| SMS/email messages | 3 years | Business records |
+| Damage claim records | 7 years | Legal liability |
+| Staff audit logs | 2 years | Security compliance |
+| Streamline sync logs | 90 days | Operational debugging |
+| AI draft audit trail | 7 years | Legal defensibility |
+
+## V. AUDIT LOGGING
+
+### A. What MUST Be Logged
+
+Every state-changing operation MUST produce a structured log entry:
+
+```
+{
+  "event": "damage_claim_updated",
+  "actor": "staff_user_id",
+  "target": "claim_id",
+  "changes": {"damage_description": {"old": "...", "new": "..."}},
+  "ip": "...",
+  "timestamp": "ISO-8601"
+}
+```
+
+**Mandatory audit events:**
+- Login/logout (success and failure)
+- Guest record creation/modification
+- Damage claim status changes
+- Legal draft generation (including model used and draft_source)
+- Financial data modifications (owner balance, trust_balance)
+- Streamline sync start/complete/error
+- Staff user permission changes
+- Backfill endpoint invocations
+- API key usage (which key, which endpoint)
+
+### B. Log Storage
+
+- Application logs: `structlog` → stdout → collected by Docker/systemd
+- Audit trail: `analytics_events` table with `event_type = 'audit'`
+- Streamline sync summaries: stored in sync response, logged via structlog
+
+## VI. NETWORK SECURITY
+
+1. **FGP backend (port 8100) is NOT exposed to the internet.** It is accessible only from the local network (192.168.0.0/24) and the Nginx reverse proxy.
+2. **FGP frontend (port 3001) is served behind Nginx** with TLS termination.
+3. **Streamline API calls are HTTPS only.** The `httpx` client enforces TLS verification.
+4. **Database connections use password authentication.** The `fgp_app` PostgreSQL user has limited permissions (no `DROP DATABASE`, no `CREATE ROLE`).
+5. **Inter-node communication** (Spark-01 through Spark-04) uses the dedicated 10Gbps fabric LAN (10.10.10.0/24), physically isolated from the guest WiFi network.
+
+## VII. INCIDENT RESPONSE
+
+### Severity Levels
+
+| Level | Definition | Response Time | Examples |
+|-------|-----------|---------------|---------|
+| **P0** | Data breach, credential exposure, production down | 15 minutes | Secret in git, DB exposed to internet, total sync failure |
+| **P1** | Financial data corruption, guest communication failure | 1 hour | Wrong owner balance, SMS sending to wrong guest, AI draft with wrong reservation data |
+| **P2** | Feature degradation, partial sync failure | 4 hours | Housekeeping sync empty, feedback not importing, one API endpoint 500 |
+| **P3** | Cosmetic, non-blocking | 24 hours | UI layout issue, log formatting, deprecated warning |
+
+### P0 Protocol
+
+1. **STOP** — Do not attempt to fix in production. Assess scope.
+2. **CONTAIN** — If credentials are exposed: rotate immediately. If data is leaking: take the service offline.
+3. **NOTIFY** — Operator (Gary Knight) is notified immediately.
+4. **INVESTIGATE** — Full audit trail review. What changed? When? By whom?
+5. **REMEDIATE** — Fix the root cause, not the symptom.
+6. **POSTMORTEM** — Document in `audit/` directory within 48 hours.
+
+## VIII. FORBIDDEN SECURITY PATTERNS
+
+1. **DO NOT** commit `.env` files to git. Ever. Under any circumstances.
+2. **DO NOT** use `eval()` or `exec()` on user input or API responses.
+3. **DO NOT** construct SQL queries with string concatenation. Use SQLAlchemy ORM or parameterized queries only.
+4. **DO NOT** disable TLS verification (`verify=False`) in production HTTP clients.
+5. **DO NOT** store passwords in plaintext. Use bcrypt with cost factor >= 12.
+6. **DO NOT** expose stack traces to API consumers. Catch exceptions and return sanitized error messages.
+7. **DO NOT** run the application as root. Use a dedicated service account.
+8. **DO NOT** grant the database user `SUPERUSER` privileges.
+9. **DO NOT** log full HTTP request/response bodies that may contain auth headers or PII.
+10. **DO NOT** use `pickle` or `yaml.load()` (unsafe) for deserialization.

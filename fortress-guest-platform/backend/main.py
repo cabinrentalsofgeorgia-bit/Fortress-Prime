@@ -56,12 +56,14 @@ from backend.api import legal_docgen as legal_docgen_api
 from backend.api import legal_cases as legal_cases_api
 from backend.api import legal_strategy as legal_strategy_api
 from backend.api import legal_counsel_dispatch as legal_counsel_dispatch_api
+from backend.api import legal_hold as legal_hold_api
 from backend.api import verses as verses_api
 from backend.api import wealth as wealth_api
 from backend.api import reservation_webhooks
 from backend.api import contracts as contracts_api
 from backend.api import dispute_webhooks
 from backend.api import disputes as disputes_api
+from backend.api import system_sensors as system_sensors_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -131,6 +133,9 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if any(path.startswith(prefix) for prefix in PUBLIC_PATH_PREFIXES):
+            return await call_next(request)
+
+        if "/download/" in path and path.startswith("/api/legal/cases/"):
             return await call_next(request)
 
         if request.method == "OPTIONS":
@@ -368,12 +373,14 @@ app.include_router(legal_docgen_api.router, prefix="/api/legal", tags=["Legal Do
 app.include_router(legal_cases_api.router, prefix="/api/legal", tags=["Legal Cases"])
 app.include_router(legal_strategy_api.router, prefix="/api/legal", tags=["Legal Strategy"])
 app.include_router(legal_counsel_dispatch_api.router, prefix="/api/legal", tags=["Outside Counsel Dispatch"])
+app.include_router(legal_hold_api.router, prefix="/api/legal", tags=["Legal Hold"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
 app.include_router(wealth_api.router, prefix="/api/wealth", tags=["Wealth & Development"])
 app.include_router(reservation_webhooks.router, prefix="/api/webhooks", tags=["Reservation Webhooks"])
 app.include_router(dispute_webhooks.router, prefix="/api/webhooks", tags=["Dispute Webhooks"])
 app.include_router(contracts_api.router, prefix="/api/admin/contracts", tags=["Management Contracts"])
 app.include_router(disputes_api.router, prefix="/api/admin/disputes", tags=["Dispute Exception Desk"])
+app.include_router(system_sensors_api.router, prefix="/api/system/sensors", tags=["System Sensors"])
 
 
 # ---------------------------------------------------------------------------

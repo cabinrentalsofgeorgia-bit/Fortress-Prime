@@ -1,0 +1,179 @@
+#!/bin/bash
+################################################################################
+# SOVEREIGN DEEPSEEK — DeepSeek-R1 with Hive Mind Integration
+################################################################################
+# Direct integration with DeepSeek-R1 via Ollama, using Sovereign context.
+#
+# USAGE:
+#   sovereign-deepseek jordi "What is your Bitcoin outlook?"
+#   sovereign-deepseek legal "Summarize the Morgan Ridge easement"
+#   sovereign-deepseek "General query"  # Uses jordi by default
+#
+# Features:
+#   - Injects Godhead persona prompts
+#   - Searches relevant knowledge bases
+#   - Strips <think> tags from DeepSeek output
+#   - Direct Ollama API calls (no wrapper needed)
+#
+# Author: Fortress Prime
+# Version: 1.0.0
+################################################################################
+
+set -e
+
+FORTRESS_ROOT="/home/admin/Fortress-Prime"
+SOVEREIGN_CLI="$FORTRESS_ROOT/bin/sovereign"
+OLLAMA_URL="http://localhost:11434/api/chat"
+MODEL="deepseek-r1:70b"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Parse arguments
+DEFAULT_PERSONA="jordi"
+
+if [ $# -eq 0 ]; then
+    echo -e "${RED}Error: No arguments provided${NC}"
+    echo "Usage: sovereign-deepseek [persona] <query>"
+    echo ""
+    echo "Personas: jordi, legal, crog, comp"
+    exit 1
+fi
+
+PERSONAS="jordi legal crog comp"
+if echo "$PERSONAS" | grep -w "$1" > /dev/null 2>&1; then
+    PERSONA="$1"
+    shift
+    QUERY="$*"
+else
+    PERSONA="$DEFAULT_PERSONA"
+    QUERY="$*"
+fi
+
+if [ -z "$QUERY" ]; then
+    echo -e "${RED}Error: No query provided${NC}"
+    exit 1
+fi
+
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  SOVEREIGN DEEPSEEK-R1 — Hive Mind Integration${NC}"
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+echo ""
+echo -e "${YELLOW}Model:${NC} $MODEL"
+echo -e "${YELLOW}Persona:${NC} $PERSONA"
+echo -e "${YELLOW}Query:${NC} $QUERY"
+echo ""
+
+# Get Godhead
+echo -e "${BLUE}[1/3]${NC} Loading $PERSONA Godhead..."
+GODHEAD=$($SOVEREIGN_CLI prompt $PERSONA 2>/dev/null)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Error: Failed to load Godhead${NC}"
+    exit 1
+fi
+echo -e "      ${GREEN}✓${NC} Loaded persona"
+
+# Search knowledge base
+echo -e "${BLUE}[2/3]${NC} Searching knowledge base..."
+case $PERSONA in
+    legal)
+        CONTEXT=$($SOVEREIGN_CLI legal "$QUERY" 2>/dev/null)
+        ;;
+    jordi)
+        CONTEXT=$($SOVEREIGN_CLI jordi "$QUERY" 2>/dev/null)
+        # Fallback to Oracle if Jordi not populated
+        if echo "$CONTEXT" | grep -q "not_created"; then
+            CONTEXT=$($SOVEREIGN_CLI oracle "$QUERY" 2>/dev/null)
+        fi
+        ;;
+    *)
+        CONTEXT=$($SOVEREIGN_CLI oracle "$QUERY" 2>/dev/null)
+        ;;
+esac
+
+if [ $? -eq 0 ] && [ -n "$CONTEXT" ]; then
+    echo -e "      ${GREEN}✓${NC} Context retrieved"
+    HAS_CONTEXT=true
+else
+    echo -e "      ${YELLOW}⚠${NC} No context, using persona only"
+    HAS_CONTEXT=false
+fi
+
+# Build prompt
+if [ "$HAS_CONTEXT" = true ]; then
+    USER_PROMPT="CONTEXT FROM KNOWLEDGE BASE:
+$CONTEXT
+
+USER QUERY: $QUERY
+
+Answer the query using the context where relevant."
+else
+    USER_PROMPT="$QUERY"
+fi
+
+# Escape JSON
+escape_json() {
+    python3 -c 'import json, sys; print(json.dumps(sys.stdin.read()))'
+}
+
+SYSTEM_JSON=$(echo "$GODHEAD" | escape_json)
+USER_JSON=$(echo "$USER_PROMPT" | escape_json)
+
+# Build JSON payload
+PAYLOAD=$(cat <<EOF
+{
+  "model": "$MODEL",
+  "messages": [
+    {"role": "system", "content": $SYSTEM_JSON},
+    {"role": "user", "content": $USER_JSON}
+  ],
+  "stream": false,
+  "options": {
+    "temperature": 0.2,
+    "num_predict": 4096
+  }
+}
+EOF
+)
+
+# Call Ollama
+echo -e "${BLUE}[3/3]${NC} Generating response with DeepSeek-R1..."
+echo ""
+echo -e "${BLUE}────────────────────────────────────────────────────────────────${NC}"
+echo ""
+
+RESPONSE=$(curl -s "$OLLAMA_URL" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD")
+
+# Extract and clean response
+ANSWER=$(echo "$RESPONSE" | python3 -c "
+import sys, json, re
+try:
+    data = json.load(sys.stdin)
+    content = data.get('message', {}).get('content', '')
+    # Strip <think> tags (DeepSeek R1 reasoning)
+    cleaned = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+    print(cleaned.strip())
+except Exception as e:
+    print(f'Error parsing response: {e}', file=sys.stderr)
+    sys.exit(1)
+")
+
+if [ $? -eq 0 ] && [ -n "$ANSWER" ]; then
+    echo "$ANSWER"
+else
+    echo -e "${RED}Error: Failed to get response from DeepSeek${NC}"
+    echo "Raw response:" >&2
+    echo "$RESPONSE" >&2
+    exit 1
+fi
+
+echo ""
+echo -e "${BLUE}────────────────────────────────────────────────────────────────${NC}"
+echo -e "${GREEN}Response complete${NC}"
+echo ""

@@ -1,0 +1,20 @@
+{
+  "extracted_at": "2026-02-17T12:24:35.402722",
+  "surveys": [
+    {
+      "name": "Guest Satisfaction Survey",
+      "response_count": "199",
+      "questions": [],
+      "responses": [],
+      "full_text": "Messages\nGuests\nContacts\nOrders\nMessaging\nOperations\nGuest Guides\nGuest Satisfaction Survey\nOVERVIEW\nLIST\nHow likely are you to book one of our vacation rental properties again?\n2 Reponse(s)\nHow would you rate our customer service?\n2 Reponse(s)\nHow would you rate the cleanliness of the home?\n2 Reponse(s)\nHow would you rate the overall comfort of the cabin?\n2 Reponse(s)\nDo you have any suggestions to make this cabin a better and more enjoyable place to stay?\n1 Reponse(s)\nThe pool cues could need to be replaced. A couple of them are a little warped. Maybe some rugs outside the showers. Other than that we found everything to be excellent.\nWhat was the highlight of your Blue Ridge getaway?\n1 Reponse(s)\nCoffee in the morning in front of the outdoor fireplace. Being able to grill dinner on the deck and the peace and quiet. We had a very enjoyable time.\nSigned in as: taylor.knight@cabin-rentals-of-georgia.comSMS Number: +17065255482",
+      "response_rows": [
+        {
+          "col_0": "Guest Satisfaction Survey",
+          "col_1": "199",
+          "col_2": ""
+        }
+      ],
+      "list_text": ""
+    }
+  ]
+}

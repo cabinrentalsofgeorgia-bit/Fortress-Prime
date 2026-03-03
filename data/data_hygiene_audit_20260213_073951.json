@@ -1,0 +1,93 @@
+{
+  "started_at": "2026-02-13T07:39:51.116841",
+  "phases": {
+    "2e": {
+      "duplicate_rows_to_delete": 5372,
+      "top_duplicate_groups": [
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "US100",
+          "count": 64
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "Macroeconomics",
+          "count": 59
+        },
+        {
+          "sender": "Synology Notification System <sns@synologynotification.com>",
+          "subject": "[DS1825] Active Backup for Business - The backup tasks on DS",
+          "count": 58
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "End of Day Bulletin",
+          "count": 44
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "IREN",
+          "count": 26
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "EOSE",
+          "count": 25
+        },
+        {
+          "sender": "GoldFix <vblgoldfix@substack.com>",
+          "subject": "GoldFix PM:",
+          "count": 18
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "heading home friends",
+          "count": 18
+        },
+        {
+          "sender": "GoldFix <vblgoldfix@substack.com>",
+          "subject": "Founders: First Look",
+          "count": 18
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "RKLB",
+          "count": 18
+        },
+        {
+          "sender": "DTI Trader <Support@j.dtitrader.com>",
+          "subject": "Morning Market Update with TBUZ TV",
+          "count": 18
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "RCAT",
+          "count": 17
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "MVST",
+          "count": 17
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "BTC",
+          "count": 17
+        },
+        {
+          "sender": "MarketMaestro <bingo@patreon.com>",
+          "subject": "NBIS",
+          "count": 16
+        }
+      ],
+      "duplicates_deleted": 5372
+    }
+  },
+  "summary": {
+    "elapsed_seconds": 0.82,
+    "dry_run": false,
+    "final_email_archive_count": 56880,
+    "final_mined_count": 56851,
+    "completed_at": "2026-02-13T07:39:51.977305"
+  }
+}

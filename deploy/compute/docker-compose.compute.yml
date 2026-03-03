@@ -1,0 +1,64 @@
+x-nim-common: &nim-common
+  init: true
+  restart: unless-stopped
+  pull_policy: always
+  stop_grace_period: 30s
+  ipc: host
+  ulimits:
+    memlock: -1
+    stack: 67108864
+  environment:
+    NVIDIA_VISIBLE_DEVICES: all
+    NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    NGC_API_KEY: ${NGC_API_KEY:?NGC_API_KEY is required for NIM profile access}
+  volumes:
+    - /mnt/fortress_nas/nim_cache:/opt/nim/.cache
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/v1/health/ready || curl -fsS http://127.0.0.1:8000/health || exit 1"]
+    interval: 20s
+    timeout: 5s
+    retries: 6
+    start_period: 90s
+
+services:
+  nim-swarm:
+    <<: *nim-common
+    image: nvcr.io/nim/nvidia/nv-embedqa-e5-v5@sha256:42ca8375efa5a8685cf522547ce3279593186206eda7860d930b963e0f2ba84a
+    container_name: nim-swarm
+    ports:
+      - "8000:8000"
+    profiles: ["swarm", "inference"]
+
+  # DISABLED: nim-hydra requires AMD64 (exec format error on aarch64 DGX Spark).
+  # Re-enable when NVIDIA publishes an ARM64-compatible NIM for llama-3.1-70b-instruct.
+  # Tracked digest (AMD64): nvcr.io/nim/meta/llama-3.1-70b-instruct@sha256:a4725e770270f3c4011eeea66c844d2c6b36f1b3efa7f5d6fc92b3ba8db447d3
+  # nim-hydra:
+  #   <<: *nim-common
+  #   image: nvcr.io/nim/meta/llama-3.1-70b-instruct@sha256:a4725e770270f3c4011eeea66c844d2c6b36f1b3efa7f5d6fc92b3ba8db447d3
+  #   container_name: nim-hydra
+  #   ports:
+  #     - "8000:8000"
+  #   profiles: ["hydra"]
+
+  nim-embeddings:
+    <<: *nim-common
+    image: nvcr.io/nim/nvidia/nv-embedqa-e5-v5@sha256:42ca8375efa5a8685cf522547ce3279593186206eda7860d930b963e0f2ba84a
+    container_name: nim-embeddings
+    ports:
+      - "8000:8000"
+    profiles: ["embeddings"]
+

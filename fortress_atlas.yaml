@@ -25,6 +25,13 @@ fortress_prime:
     - ".cursor/rules/000-enterprise-constitution.mdc"
     - ".cursor/rules/001-titan-protocol.mdc"
     - ".cursor/rules/002-sovereign-constitution.mdc"
+    - ".cursor/rules/003-legal-command-center.mdc"
+    - ".cursor/rules/004-quality-gate.mdc"
+    - ".cursor/rules/005-fortress-guest-platform.mdc"
+    - ".cursor/rules/006-security-compliance.mdc"
+    - ".cursor/rules/007-financial-data-governance.mdc"
+    - ".cursor/rules/008-api-integration-standards.mdc"
+    - ".cursor/rules/009-testing-deployment.mdc"
 
   # =========================================================================
   # SECTOR 01: CROG — Cabin Rentals of Georgia (Property Management)
@@ -39,6 +46,45 @@ fortress_prime:
         Revenue-generating flagship. Manages 36 rental properties across
         Blue Ridge and Fannin County, GA. Handles guest communications,
         maintenance dispatch, pricing optimization, and trust accounting.
+
+      # THE TAYLOR STANDARD (Constitutional Mandate — see 000-enterprise-constitution.mdc III.A-1)
+      # Taylor Knight is the sovereign voice of CROG. All guest-facing AI MUST:
+      #   1. Access the Voice Data Pipeline (outbound SMS → Taylor emails → CROG staff emails → templates)
+      #   2. Match her attributes: warm, welcoming, authoritative, bright, polished, southern hospitality
+      #   3. Use VERIFIED property data (WiFi, door codes) — NEVER fabricate
+      #   4. Feed Taylor's edits back through the recursive learning loop
+      voice_standard: "Taylor Knight — Blue Ridge Vacation Specialist"
+      voice_attributes:
+        - "Warm and genuinely welcoming"
+        - "Authoritative with grace — knows everything, delivers it with kindness"
+        - "Bright and solutions-oriented — anticipates guest needs"
+        - "Top-shelf writing — clean, polished, effortless prose"
+        - "Southern hospitality, elevated — friendly, genuine, unhurried"
+      voice_data_pipeline:
+        - table: "message_archive"
+          filter: "direction = 'outbound'"
+          priority: 1
+          description: "1,542+ real SMS responses — primary voice reference (same medium)"
+        - table: "email_archive"
+          filter: "sender ILIKE '%taylor.knight@cabin-rentals-of-georgia.com%'"
+          priority: 2
+          description: "866+ Taylor emails — bookings, follow-ups, rental agreements"
+        - table: "email_archive"
+          filter: "sender ILIKE '%@cabin-rentals-of-georgia.com%' (guest-facing only)"
+          priority: 3
+          description: "12,300+ CROG staff emails — full team voice library"
+        - table: "ruebarue_message_templates"
+          priority: 4
+          description: "20 official templates with verified WiFi, door codes, gate codes"
+        - table: "agent_response_queue"
+          filter: "edited_draft IS NOT NULL"
+          priority: 5
+          description: "Taylor's real-time corrections — recursive learning input"
+      voice_implementation:
+        agent: "src/guest_agent.py"
+        prompt: "prompts/v1/guest_sms_agent.yaml"
+        retriever: "KnowledgeRetriever.get_taylor_voice_exemplars()"
+        learning_endpoint: "POST /api/guest-agent/learning/apply"
 
       # Data Sources
       db_schema: "division_b"
@@ -60,6 +106,14 @@ fortress_prime:
         - "public.fin_reservations"
         - "public.fin_revenue_snapshots"
         - "public.fin_owner_balances"
+        - "public.message_archive"
+        - "public.agent_response_queue"
+        - "public.agent_learning_log"
+        - "public.guest_profiles"
+        - "public.property_sms_config"
+        - "public.ruebarue_message_templates"
+        - "public.ruebarue_knowledge_base"
+        - "public.ruebarue_area_guide"
 
       qdrant_collections:
         - "email_embeddings"      # Filtered by division = 'REAL_ESTATE'
@@ -70,6 +124,7 @@ fortress_prime:
       code_modules:
         - "division_b_property/"
         - "cabins/"
+        - "src/guest_agent.py"
         - "src/guest_reply_engine.py"
         - "src/listing_doctor.py"
 
@@ -84,6 +139,12 @@ fortress_prime:
         - name: "Plaid"
           type: "Banking API"
           bridge: "division_b_property/plaid_client.py"
+        - name: "RueBaRue"
+          type: "Guest Messaging Platform"
+          bridge: "src/guest_agent.py"
+        - name: "Twilio"
+          type: "SMS Gateway"
+          bridge: "fortress-sms/"
 
       firewall: "NEVER access division_a or hedge_fund schemas."
 
@@ -210,6 +271,7 @@ fortress_prime:
     - slug: "bloom"
       name: "Verses in Bloom"
       code: "S04"
+      status: "planned"
       persona: "The Artisan"
       model_bias: "Creative / Market Trends / E-Commerce"
       description: >
@@ -276,21 +338,154 @@ fortress_prime:
         - "src/legal_analyst.py"
         - "src/legal_partner_r1.py"
         - "src/forensic_audit.py"
+        - "src/agents/legal_sentinel.py"      # OODA Legal Sentinel (Counselor)
+        - "src/agents/legal_steward.py"       # OODA Document Indexer (Steward)
+        - "src/legal_api.py"                  # Gateway API router (/v1/legal)
+        - "Modules/CF-03_CounselorCRM/"       # RAG engine (query + ingest)
 
       nas_paths:
         - "/mnt/fortress_nas/Corporate_Legal/"
 
-      integrations: []
+      integrations:
+        - "Qdrant legal_library (2,455+ vectors, nomic-embed-text 768-dim)"
+        - "CF-03 CounselorCRM (RAG pipeline, query + ingest)"
+        - "Thunderdome (adversarial legal swarm, ChromaDB law_library)"
 
       firewall: >
         READ access to ALL schemas (for contract cross-reference).
-        WRITE only to public.legal_* tables.
-        Privileged: May access any division's data for audit/compliance purposes.
+
+    # =========================================================================
+    # SECTOR 06: FGP — Fortress Guest Platform (Guest Operations Engine)
+    # =========================================================================
+    - slug: "fgp"
+      name: "Fortress Guest Platform"
+      code: "S06"
+      persona: "The Concierge"
+      model_bias: "Guest Operations / Hospitality / Revenue Optimization"
+      description: >
+        Enterprise guest operations platform. Manages the full guest lifecycle:
+        reservations, communications, housekeeping, damage claims, owner
+        financials, and trust accounting. Integrates with Streamline VRS via
+        9-phase sync engine. Replaces Streamline's UI with a sovereign system
+        that owns the data.
+
+      constitution: ".cursor/rules/005-fortress-guest-platform.mdc"
+      security: ".cursor/rules/006-security-compliance.mdc"
+      financial_governance: ".cursor/rules/007-financial-data-governance.mdc"
+
+      db_name: "fortress_guest"
+      db_user: "fgp_app"
+      db_tables:
+        - "properties"               # 14 rental cabins with Streamline IDs
+        - "reservations"             # 2,650+ bookings with financial detail
+        - "guests"                   # 2,975+ CRM profiles with scoring
+        - "messages"                 # SMS/email communication log
+        - "message_templates"        # Auto-response templates
+        - "scheduled_messages"       # Timed message queue
+        - "rental_agreements"        # 2,141 per-reservation agreements
+        - "agreement_templates"      # Agreement content templates
+        - "damage_claims"            # Damage reporting + AI legal drafts
+        - "housekeeping_tasks"       # Cleaning schedule (Streamline sync)
+        - "work_orders"              # Maintenance tickets
+        - "guest_reviews"            # Bidirectional review system (19 Streamline)
+        - "guest_surveys"            # Post-stay surveys with NPS
+        - "owner_statements"         # Monthly owner payout reports
+        - "trust_balance"            # Per-property owner fund balances
+        - "extra_orders"             # Upsell/add-on purchases
+        - "guest_verifications"      # Identity verification records
+        - "guest_activities"         # CRM activity log
+        - "analytics_events"         # Behavioral telemetry
+        - "knowledge_base_entries"   # RAG knowledge for AI agents
+        - "staff_users"              # Staff accounts with RBAC
+        - "staff_invites"            # Staff onboarding tokens
+        - "property_utilities"       # Utility provider tracking
+        - "utility_readings"         # Usage/cost readings
+        - "agent_response_queue"     # AI draft review queue
+
+      services:
+        backend:
+          port: 8100
+          framework: "FastAPI + SQLAlchemy (async)"
+          location: "fortress-guest-platform/backend/"
+        frontend:
+          port: 3001
+          framework: "Next.js 14 + shadcn/ui"
+          location: "fortress-guest-platform/frontend-next/"
+
+      integrations:
+        streamline_vrs:
+          api_url: "https://web.streamlinevrs.com/api/json"
+          protocol: "JSON-RPC"
+          company_id: 796
+          sync_interval_seconds: 300
+          sync_phases: 9
+          methods_available: 20
+          methods_restricted: 7
+        twilio:
+          purpose: "Guest SMS communication"
+          webhook: "/api/webhooks/twilio"
+        ai_models:
+          legal_drafting: "HYDRA (R1-70B) → SWARM (qwen2.5:7b) → OpenAI (gpt-4o)"
+          guest_agent: "SWARM (qwen2.5:7b) with Taylor Voice Pipeline"
+
+      data_inventory:
+        reservations_total: 2650
+        guests_total: 2975
+        properties_total: 14
+        agreements_total: 2141
+        reviews_total: 19
+        housekeeping_tasks: 23
+        notes_with_data: 494
+        financial_enriched: 391
+        owner_balances: 14
+        owners_mapped: 12
+
+      api_endpoints:
+        total: 26
+        categories:
+          damage_claims: 6
+          integrations: 16
+          owner_portal: 8
+
+      code_modules:
+        - "fortress-guest-platform/backend/api/"
+        - "fortress-guest-platform/backend/models/"
+        - "fortress-guest-platform/backend/services/"
+        - "fortress-guest-platform/backend/integrations/streamline_vrs.py"
+        - "fortress-guest-platform/backend/core/"
+        - "fortress-guest-platform/frontend-next/src/"
+
+      firewall: >
+        FGP owns all data in the fortress_guest database. No other sector
+        writes to fortress_guest. LEGAL sector has READ access for damage
+        claim cross-reference. COMP sector has READ access for financial
+        reporting. All other cross-sector access is FORBIDDEN.
+        WRITE only to fortress_guest.* tables.
 
   # =========================================================================
   # ROUTING RULES (for the Titan Executive)
   # =========================================================================
   routing:
+    precedence:
+      - "fgp"
+      - "crog"
+      - "dev"
+      - "comp"
+      - "legal"
+      - "bloom"
+
+    disambiguation:
+      fgp_if_contains_any:
+        - "damage claim"
+        - "damage waiver"
+        - "trust accounting"
+        - "rental agreement"
+        - "twilio"
+      crog_if_contains_any:
+        - "blue ridge"
+        - "fannin"
+        - "property management"
+
     # Keywords and patterns that map to sectors
     keyword_hints:
       crog:
@@ -363,6 +558,25 @@ fortress_prime:
         - "attorney"
         - "clause"
         - "dispute"
+      fgp:
+        - "reservation"
+        - "guest"
+        - "check-in"
+        - "check-out"
+        - "housekeeping"
+        - "cleaning"
+        - "damage claim"
+        - "damage waiver"
+        - "owner balance"
+        - "trust accounting"
+        - "owner statement"
+        - "rental agreement"
+        - "Streamline"
+        - "SMS"
+        - "Twilio"
+        - "guest review"
+        - "turnover"
+        - "occupancy"
 
     # Cross-division routing
     cross_sector_rules:
@@ -378,3 +592,19 @@ fortress_prime:
         to: "dev"
         condition: "Query about property improvements or construction on existing rentals"
         action: "Route to DEV with CROG property reference"
+      - from: "fgp"
+        to: "legal"
+        condition: "Damage claim exceeds $500 or involves legal dispute"
+        action: "Route to LEGAL with claim details and rental agreement"
+      - from: "fgp"
+        to: "comp"
+        condition: "Query about owner payouts, trust reconciliation, or tax reporting"
+        action: "Route to COMP with trust_balance and owner_statement data"
+      - from: "crog"
+        to: "fgp"
+        condition: "Query about specific guest, reservation, or property operations"
+        action: "Route to FGP with confirmation_code or property name"
+      - from: "any"
+        to: "fgp"
+        condition: "Query mentions reservations, guests, housekeeping, or damage claims"
+        action: "Route to FGP — it owns the fortress_guest database"

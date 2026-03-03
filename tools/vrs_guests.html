@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Guest CRM</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:24px}
+
+/* ── KPI Banner ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:18px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:26px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-val.green{color:#4ade80}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Search Bar ── */
+.search-wrap{margin-bottom:20px;position:relative}
+.search-input{width:100%;padding:12px 16px 12px 42px;background:#111;border:1px solid #1a1a1a;
+  border-radius:10px;color:#fff;font-size:13px;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:#4ade80}
+.search-input::placeholder{color:#555}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#555;font-size:15px}
+
+/* ── Guest Table ── */
+.tbl-wrap{background:#111;border:1px solid #1a1a1a;border-radius:14px;overflow:hidden;margin-bottom:24px}
+.guest-table{width:100%;border-collapse:collapse}
+.guest-table th{text-align:left;padding:12px 16px;font-size:10px;color:#666;
+  text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #1a1a1a;
+  background:#0d0d0d;font-weight:600;position:sticky;top:0}
+.guest-table td{padding:11px 16px;font-size:13px;border-bottom:1px solid #0d0d0d;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.guest-table tbody tr{cursor:pointer;transition:background .12s}
+.guest-table tbody tr:hover{background:rgba(74,222,128,.04)}
+.guest-table tbody tr.selected{background:rgba(74,222,128,.08)}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 8px;
+  border-radius:6px;font-weight:600;letter-spacing:.02em}
+.badge-vip{background:rgba(255,215,0,.15);color:#ffd700}
+.badge-blacklist{background:rgba(248,113,113,.15);color:#f87171}
+.badge-tier{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.tier-bronze{background:rgba(205,127,50,.15);color:#cd7f32}
+.tier-silver{background:rgba(192,192,192,.15);color:#c0c0c0}
+.tier-gold{background:rgba(255,215,0,.15);color:#ffd700}
+.tier-platinum{background:rgba(229,228,226,.15);color:#e5e4e2}
+
+.score-bar{width:48px;height:6px;background:#1a1a1a;border-radius:3px;display:inline-block;vertical-align:middle;margin-left:6px}
+.score-fill{height:100%;border-radius:3px}
+
+/* ── 360 Profile Panel ── */
+.panel-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.5);z-index:10000}
+.panel-overlay.open{display:block}
+.profile-panel{position:fixed;top:0;right:-520px;width:520px;height:100%;background:#111;
+  border-left:1px solid #222;z-index:10001;transition:right .3s ease;
+  display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.4)}
+.profile-panel.open{right:0}
+.pp-header{padding:20px 24px;border-bottom:1px solid #1a1a1a;display:flex;
+  align-items:center;justify-content:space-between;flex-shrink:0}
+.pp-close{background:none;border:none;color:#666;font-size:22px;cursor:pointer;
+  padding:4px 8px;border-radius:6px;transition:all .15s}
+.pp-close:hover{color:#fff;background:rgba(255,255,255,.06)}
+.pp-body{flex:1;overflow-y:auto;padding:24px}
+.pp-name{font-size:20px;font-weight:700;margin-bottom:2px}
+.pp-sub{font-size:12px;color:#666;margin-bottom:16px}
+
+.pp-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+
+.pp-section{margin-bottom:24px}
+.pp-section-title{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.06em;
+  font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1a1a1a}
+.pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pp-field{background:#0d0d0d;border-radius:8px;padding:10px 12px}
+.pp-field-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.pp-field-val{font-size:13px;font-weight:600}
+
+.pp-list{display:flex;flex-direction:column;gap:8px}
+.pp-list-item{background:#0d0d0d;border-radius:8px;padding:12px;transition:background .12s}
+.pp-list-item:hover{background:#1a1a1a}
+.pp-list-item-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.pp-list-item-sub{font-size:11px;color:#666}
+
+.pp-tag{display:inline-block;padding:3px 8px;background:rgba(96,165,250,.1);color:#60a5fa;
+  border-radius:5px;font-size:10px;font-weight:600;margin:2px}
+
+.empty-state{text-align:center;padding:40px;color:#555;font-size:13px}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .profile-panel{width:100%;right:-100%}
+}
+@media(max-width:700px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .guest-table td:nth-child(n+5),.guest-table th:nth-child(n+5){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item fn-dd-active" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">🧹 Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1><span>Guest CRM</span></h1>
+  <div class="hdr-right">
+    <span class="hdr-badge" id="guestCountBadge">0 Guests</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI BANNER -->
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-val green" id="kTotal">-</div><div class="kpi-label">Total Guests</div></div>
+    <div class="kpi-card"><div class="kpi-val amber" id="kVip">-</div><div class="kpi-label">VIP Guests</div></div>
+    <div class="kpi-card"><div class="kpi-val blue" id="kRepeat">-</div><div class="kpi-label">Repeat Rate</div></div>
+    <div class="kpi-card"><div class="kpi-val purple" id="kAvgScore">-</div><div class="kpi-label">Avg Value Score</div></div>
+    <div class="kpi-card"><div class="kpi-val red" id="kBlacklist">-</div><div class="kpi-label">Blacklisted</div></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input type="text" class="search-input" id="searchInput" placeholder="Search guests by name, phone, or email..." autocomplete="off">
+  </div>
+
+  <!-- TABLE -->
+  <div class="tbl-wrap">
+    <table class="guest-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Loyalty Tier</th>
+          <th>Value Score</th>
+          <th>VIP</th>
+          <th>Blacklist</th>
+          <th>Total Stays</th>
+        </tr>
+      </thead>
+      <tbody id="guestBody">
+        <tr><td colspan="8" class="empty-state">Loading guests...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- 360 PROFILE PANEL -->
+<div class="panel-overlay" id="panelOverlay"></div>
+<div class="profile-panel" id="profilePanel">
+  <div class="pp-header">
+    <div style="font-size:14px;font-weight:700;color:#4ade80">360&deg; Guest Profile</div>
+    <button class="pp-close" id="ppClose">&times;</button>
+  </div>
+  <div class="pp-body" id="ppBody">
+    <div class="empty-state">Select a guest to view profile</div>
+  </div>
+</div>
+
+<script>
+/* ── Nav ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+/* ── Clock ── */
+setInterval(function(){
+  document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+/* ── Auth ── */
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── State ── */
+var allGuests=[];
+var selectedGuestId=null;
+
+var TIER_COLORS={bronze:'#cd7f32',silver:'#c0c0c0',gold:'#ffd700',platinum:'#e5e4e2'};
+
+function tierBadge(tier){
+  if(!tier) return '<span class="badge" style="background:rgba(85,85,85,.15);color:#555">—</span>';
+  var t=tier.toLowerCase();
+  var cls='tier-'+(TIER_COLORS[t]?t:'bronze');
+  return '<span class="badge badge-tier '+cls+'">'+escH(tier)+'</span>';
+}
+
+function vipBadge(isVip){
+  return isVip?'<span class="badge badge-vip">&#11088; VIP</span>':'';
+}
+
+function blacklistBadge(isBl){
+  return isBl?'<span class="badge badge-blacklist">&#9760; Blocked</span>':'';
+}
+
+function scoreBar(val){
+  var v=parseFloat(val)||0;
+  var pct=Math.min(Math.max(v,0),100);
+  var color=pct>=70?'#4ade80':pct>=40?'#fbbf24':'#f87171';
+  return '<span style="color:#ccc;font-size:12px;font-weight:600">'+v.toFixed(0)+'</span>'+
+    '<div class="score-bar"><div class="score-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+}
+
+function escH(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function guestName(g){
+  if(g.full_name) return g.full_name;
+  var fn=g.first_name||'', ln=g.last_name||'';
+  return (fn+' '+ln).trim()||'Unknown Guest';
+}
+
+/* ── Render Table ── */
+function renderGuests(guests){
+  var tbody=document.getElementById('guestBody');
+  if(!guests||guests.length===0){
+    tbody.innerHTML='<tr><td colspan="8" class="empty-state">No guests found</td></tr>';
+    return;
+  }
+  tbody.innerHTML=guests.map(function(g){
+    var sel=g.id===selectedGuestId?' class="selected"':'';
+    return '<tr'+sel+' data-id="'+escH(g.id)+'" onclick="openProfile(\''+escH(g.id)+'\')">'+
+      '<td style="font-weight:600">'+escH(guestName(g))+'</td>'+
+      '<td style="color:#888;font-family:\'SF Mono\',Consolas,monospace;font-size:12px">'+escH(g.phone_number||'—')+'</td>'+
+      '<td style="color:#888">'+escH(g.email||'—')+'</td>'+
+      '<td>'+tierBadge(g.loyalty_tier)+'</td>'+
+      '<td>'+scoreBar(g.value_score)+'</td>'+
+      '<td>'+vipBadge(g.is_vip)+'</td>'+
+      '<td>'+blacklistBadge(g.is_blacklisted)+'</td>'+
+      '<td style="text-align:center;font-weight:600">'+(g.total_stays!=null?g.total_stays:'—')+'</td>'+
+      '</tr>';
+  }).join('');
+}
+
+/* ── Search ── */
+document.getElementById('searchInput').addEventListener('input',function(){
+  var q=this.value.toLowerCase().trim();
+  if(!q){renderGuests(allGuests);return}
+  var filtered=allGuests.filter(function(g){
+    var name=guestName(g).toLowerCase();
+    var phone=(g.phone_number||'').toLowerCase();
+    var email=(g.email||'').toLowerCase();
+    return name.indexOf(q)!==-1||phone.indexOf(q)!==-1||email.indexOf(q)!==-1;
+  });
+  renderGuests(filtered);
+});
+
+/* ── Analytics ── */
+async function loadAnalytics(){
+  try{
+    var r=await fetch('/api/vrs/guests/analytics',{credentials:'include'});
+    if(!r.ok) return;
+    var d=await r.json();
+    document.getElementById('kTotal').textContent=d.total_guests!=null?d.total_guests:'-';
+    document.getElementById('kVip').textContent=d.vip_count!=null?d.vip_count:'-';
+    document.getElementById('kRepeat').textContent=d.repeat_rate!=null?(d.repeat_rate*100).toFixed(1)+'%':'-';
+    document.getElementById('kAvgScore').textContent=d.avg_value_score!=null?parseFloat(d.avg_value_score).toFixed(1):'-';
+    document.getElementById('kBlacklist').textContent=d.blacklisted_count!=null?d.blacklisted_count:'-';
+  }catch(e){}
+}
+
+/* ── Load Guests ── */
+async function loadGuests(){
+  try{
+    var r=await fetch('/api/vrs/guests',{credentials:'include'});
+    if(!r.ok){
+      document.getElementById('guestBody').innerHTML='<tr><td colspan="8" class="empty-state">Failed to load guests</td></tr>';
+      return;
+    }
+    allGuests=await r.json();
+    if(!Array.isArray(allGuests)) allGuests=[];
+    document.getElementById('guestCountBadge').textContent=allGuests.length+' Guest'+(allGuests.length!==1?'s':'');
+    var q=document.getElementById('searchInput').value.toLowerCase().trim();
+    if(q){document.getElementById('searchInput').dispatchEvent(new Event('input'))}
+    else{renderGuests(allGuests)}
+  }catch(e){
+    document.getElementById('guestBody').innerHTML='<tr><td colspan="8" class="empty-state">Error loading guests</td></tr>';
+  }
+}
+
+/* ── 360 Profile ── */
+function openPanel(){
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById('profilePanel').classList.add('open');
+}
+function closePanel(){
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.getElementById('profilePanel').classList.remove('open');
+  selectedGuestId=null;
+  document.querySelectorAll('.guest-table tbody tr.selected').forEach(function(r){r.classList.remove('selected')});
+}
+document.getElementById('ppClose').addEventListener('click',closePanel);
+document.getElementById('panelOverlay').addEventListener('click',closePanel);
+
+async function openProfile(id){
+  selectedGuestId=id;
+  document.querySelectorAll('.guest-table tbody tr').forEach(function(r){
+    r.classList.toggle('selected',r.dataset.id===id);
+  });
+  openPanel();
+  var body=document.getElementById('ppBody');
+  body.innerHTML='<div class="empty-state">Loading profile...</div>';
+
+  var guest=allGuests.find(function(g){return g.id===id})||{};
+  var profile=null;
+
+  try{
+    var r=await fetch('/api/vrs/guests/'+encodeURIComponent(id)+'/360',{credentials:'include'});
+    if(r.ok) profile=await r.json();
+  }catch(e){}
+
+  var data=Object.assign({},guest,profile||{});
+  renderProfile(data);
+}
+
+function fmtCurrency(v){
+  if(v==null) return '—';
+  return '$'+parseFloat(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function fmtDate(d){
+  if(!d) return '—';
+  try{return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+  catch(e){return d}
+}
+
+function renderProfile(d){
+  var body=document.getElementById('ppBody');
+  var name=d.full_name||(((d.first_name||'')+' '+(d.last_name||'')).trim())||'Unknown Guest';
+
+  var badges='';
+  if(d.loyalty_tier) badges+=tierBadge(d.loyalty_tier);
+  if(d.is_vip) badges+=vipBadge(true);
+  if(d.is_blacklisted) badges+=blacklistBadge(true);
+  if(d.is_verified) badges+='<span class="badge" style="background:rgba(96,165,250,.12);color:#60a5fa">&#10003; Verified</span>';
+  if(d.is_repeat_guest) badges+='<span class="badge" style="background:rgba(167,139,250,.12);color:#a78bfa">&#8634; Repeat</span>';
+
+  var tagHtml='';
+  if(d.tags){
+    var tags=Array.isArray(d.tags)?d.tags:(typeof d.tags==='string'?d.tags.split(','):[]);
+    tagHtml=tags.map(function(t){return '<span class="pp-tag">'+escH(t.trim())+'</span>'}).join('');
+  }
+
+  var html='<div class="pp-name">'+escH(name)+'</div>'+
+    '<div class="pp-sub">'+(d.guest_source?'Source: '+escH(d.guest_source):'Guest Profile')+'</div>'+
+    '<div class="pp-badges">'+badges+'</div>';
+
+  html+='<div class="pp-section"><div class="pp-section-title">Contact Information</div>'+
+    '<div class="pp-grid">'+
+    '<div class="pp-field"><div class="pp-field-label">Phone</div><div class="pp-field-val">'+escH(d.phone_number||'—')+'</div></div>'+
+    '<div class="pp-field"><div class="pp-field-label">Email</div><div class="pp-field-val">'+escH(d.email||'—')+'</div></div>'+
+    '</div></div>';
+
+  html+='<div class="pp-section"><div class="pp-section-title">Metrics</div>'+
+    '<div class="pp-grid">'+
+    '<div class="pp-field"><div class="pp-field-label">Value Score</div><div class="pp-field-val" style="color:#4ade80">'+(d.value_score!=null?parseFloat(d.value_score).toFixed(1):'—')+'</div></div>'+
+    '<div class="pp-field"><div class="pp-field-label">Risk Score</div><div class="pp-field-val" style="color:#f87171">'+(d.risk_score!=null?parseFloat(d.risk_score).toFixed(1):'—')+'</div></div>'+
+    '<div class="pp-field"><div class="pp-field-label">Total Stays</div><div class="pp-field-val">'+(d.total_stays!=null?d.total_stays:'—')+'</div></div>'+
+    '<div class="pp-field"><div class="pp-field-label">Lifetime Revenue</div><div class="pp-field-val" style="color:#fbbf24">'+fmtCurrency(d.lifetime_revenue)+'</div></div>'+
+    '<div class="pp-field"><div class="pp-field-label">Avg Rating</div><div class="pp-field-val">'+(d.average_rating!=null?'&#11088; '+parseFloat(d.average_rating).toFixed(1):'—')+'</div></div>'+
+    '<div class="pp-field"><div class="pp-field-label">Last Stay</div><div class="pp-field-val">'+fmtDate(d.last_stay_date)+'</div></div>'+
+    '</div></div>';
+
+  if(d.verification_status){
+    html+='<div class="pp-section"><div class="pp-section-title">Verification</div>'+
+      '<div class="pp-field"><div class="pp-field-label">Status</div><div class="pp-field-val">'+escH(d.verification_status)+'</div></div></div>';
+  }
+
+  if(tagHtml){
+    html+='<div class="pp-section"><div class="pp-section-title">Tags</div><div>'+tagHtml+'</div></div>';
+  }
+
+  if(d.reservations&&Array.isArray(d.reservations)&&d.reservations.length>0){
+    html+='<div class="pp-section"><div class="pp-section-title">Reservations ('+d.reservations.length+')</div><div class="pp-list">'+
+      d.reservations.map(function(r){
+        return '<div class="pp-list-item"><div class="pp-list-item-title">'+escH(r.property_name||r.confirmation_code||'Reservation')+'</div>'+
+          '<div class="pp-list-item-sub">'+fmtDate(r.check_in_date)+' &rarr; '+fmtDate(r.check_out_date)+
+          (r.status?' &bull; <span style="color:#4ade80">'+escH(r.status)+'</span>':'')+
+          (r.confirmation_code?' &bull; <span style="color:#60a5fa;font-family:monospace">'+escH(r.confirmation_code)+'</span>':'')+
+          '</div></div>';
+      }).join('')+'</div></div>';
+  }
+
+  if(d.messages&&Array.isArray(d.messages)&&d.messages.length>0){
+    html+='<div class="pp-section"><div class="pp-section-title">Recent Messages ('+d.messages.length+')</div><div class="pp-list">'+
+      d.messages.slice(0,10).map(function(m){
+        var dir=m.direction==='inbound'?'&#8592; IN':'&#8594; OUT';
+        var dirColor=m.direction==='inbound'?'#60a5fa':'#4ade80';
+        return '<div class="pp-list-item"><div class="pp-list-item-title"><span style="color:'+dirColor+';font-size:11px;font-weight:600">'+dir+'</span> '+escH((m.body||m.content||'').substring(0,80))+'</div>'+
+          '<div class="pp-list-item-sub">'+fmtDate(m.created_at||m.sent_at)+'</div></div>';
+      }).join('')+'</div></div>';
+  }
+
+  if(d.notes&&Array.isArray(d.notes)&&d.notes.length>0){
+    html+='<div class="pp-section"><div class="pp-section-title">Notes</div><div class="pp-list">'+
+      d.notes.map(function(n){
+        return '<div class="pp-list-item"><div class="pp-list-item-title">'+escH(n.content||n.note||n.text||'')+'</div>'+
+          '<div class="pp-list-item-sub">'+fmtDate(n.created_at)+'</div></div>';
+      }).join('')+'</div></div>';
+  }
+
+  var extraFields=['preferences','special_requests','address','city','state','zip','country'];
+  var extraHtml='';
+  extraFields.forEach(function(f){
+    if(d[f]){
+      var val=typeof d[f]==='object'?JSON.stringify(d[f]):d[f];
+      extraHtml+='<div class="pp-field"><div class="pp-field-label">'+f.replace(/_/g,' ')+'</div><div class="pp-field-val">'+escH(val)+'</div></div>';
+    }
+  });
+  if(extraHtml){
+    html+='<div class="pp-section"><div class="pp-section-title">Additional Details</div><div class="pp-grid">'+extraHtml+'</div></div>';
+  }
+
+  body.innerHTML=html;
+}
+
+/* ── Init ── */
+loadUser();
+loadAnalytics();
+loadGuests();
+setInterval(function(){loadAnalytics();loadGuests()},30000);
+</script>
+</body>
+</html>

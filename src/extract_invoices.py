@@ -7,7 +7,7 @@ from datetime import datetime
 import re
 
 # --- CONFIGURATION ---
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 OUTPUT_DIR = "/mnt/fortress_data/invoices"
 
 def get_db_connection():

@@ -41,6 +41,37 @@ logger = logging.getLogger("sovereign.ooda")
 
 
 # =============================================================================
+# 0. INVOCATION RATE LIMITER (Bounded Recursion Enforcement)
+# =============================================================================
+
+import time as _time
+import threading as _threading
+
+_invocation_timestamps: list[float] = []
+_rate_lock = _threading.Lock()
+MAX_INVOCATIONS_PER_HOUR = 50
+
+
+def _check_ooda_rate_limit() -> None:
+    """Reject invocations that exceed the hourly budget."""
+    global _invocation_timestamps
+    now = _time.time()
+    with _rate_lock:
+        _invocation_timestamps = [ts for ts in _invocation_timestamps if now - ts < 3600]
+        if len(_invocation_timestamps) >= MAX_INVOCATIONS_PER_HOUR:
+            logger.critical(
+                "OODA rate limit exceeded (%d/%d per hour). Blocking invocation.",
+                len(_invocation_timestamps),
+                MAX_INVOCATIONS_PER_HOUR,
+            )
+            raise RuntimeError(
+                f"OODA Loop invocation limit exceeded ({MAX_INVOCATIONS_PER_HOUR}/hr). "
+                "System locked to prevent runaway recursion."
+            )
+        _invocation_timestamps.append(now)
+
+
+# =============================================================================
 # I. THE SOVEREIGN STATE (Mandated by Constitution Article III)
 # =============================================================================
 
@@ -199,11 +230,44 @@ def _default_decide(state: SovereignState) -> SovereignState:
     DECIDE: Choose the action based on orientation.
     In TITAN mode, this calls R1 for deep reasoning.
     In SWARM mode, this uses fast Ollama inference.
+
+    God-Head escalation (Autonomous Swarm Directive Section VI):
+    If confidence is below threshold and the sector maps to a God-Head domain,
+    escalate to the appropriate external API via god_head_router.
     """
     state["decision"] = (
         f"[Default Decider] Based on orientation, proceeding with standard action."
     )
     state["confidence"] = 0.5
+
+    try:
+        from src.god_head_router import should_escalate, route as god_head_route
+
+        sector = state.get("sector", "")
+        domain_map = {"legal": "legal", "comp": "financial", "dev": "architecture"}
+        domain = domain_map.get(sector, "general")
+
+        if should_escalate(domain, state["confidence"]):
+            logger.info(f"OODA escalating to God-Head: domain={domain}, confidence={state['confidence']}")
+            result = god_head_route(
+                domain=domain,
+                prompt=state.get("query", ""),
+                context=state.get("orientation", ""),
+            )
+            state["decision"] = (
+                f"[God-Head Escalation] Provider={result['provider']}, "
+                f"fallback={result['fallback_used']}: {result['response'][:500]}"
+            )
+            state["audit_trail"].append(
+                f"[{datetime.now(timezone.utc).isoformat()}] DECIDE: Escalated to God-Head "
+                f"domain={domain} provider={result['provider']} "
+                f"escalation_id={result['escalation_id']}"
+            )
+            return state
+
+    except Exception as exc:
+        logger.debug(f"God-Head escalation skipped: {exc}")
+
     state["audit_trail"].append(
         f"[{datetime.now(timezone.utc).isoformat()}] DECIDE: Default decider invoked "
         f"(confidence={state['confidence']})"
@@ -273,6 +337,66 @@ def _post_mortem_node(state: SovereignState) -> SovereignState:
 
 
 # =============================================================================
+# III-B. INSTITUTIONAL LESSON RETRIEVAL (Autonomous Swarm Directive — Pillar 3)
+# =============================================================================
+
+def _retrieve_institutional_lessons(state: SovereignState) -> SovereignState:
+    """
+    Inject institutional memory into the OODA cycle before the Decide phase.
+    Queries Qdrant fortress_lessons collection for relevant past resolutions.
+    Gracefully degrades if the collection does not exist yet.
+    """
+    query_text = f"{state.get('query', '')} {state.get('orientation', '')}"[:500]
+    lessons_context = ""
+    try:
+        import requests as _req
+        qdrant_url = os.getenv("QDRANT_URL", "http://192.168.0.100:6333")
+        embed_url = os.getenv("EMBED_URL", "http://192.168.0.100/api/embeddings")
+
+        embed_resp = _req.post(
+            embed_url,
+            json={"model": "nomic-embed-text", "prompt": query_text},
+            timeout=10,
+        )
+        if embed_resp.status_code != 200:
+            raise ValueError(f"embedding request failed: {embed_resp.status_code}")
+        vector = embed_resp.json().get("embedding", [])
+        if not vector:
+            raise ValueError("empty embedding returned")
+
+        search_resp = _req.post(
+            f"{qdrant_url}/collections/fortress_lessons/points/search",
+            json={"vector": vector, "limit": 3, "with_payload": True},
+            timeout=5,
+        )
+        if search_resp.status_code == 200:
+            results = search_resp.json().get("result", [])
+            if results:
+                lines = ["[Institutional Lessons Retrieved]"]
+                for i, r in enumerate(results, 1):
+                    p = r.get("payload", {})
+                    lines.append(
+                        f"  {i}. [{p.get('domain','?')}] {p.get('pattern','?')} "
+                        f"— Fix: {p.get('fix_applied','?')}"
+                    )
+                lessons_context = "\n".join(lines)
+
+    except Exception as exc:
+        logger.debug(f"Institutional lesson retrieval skipped: {exc}")
+
+    if lessons_context:
+        state["orientation"] = state.get("orientation", "") + "\n\n" + lessons_context
+        state["audit_trail"].append(
+            f"[{datetime.now(timezone.utc).isoformat()}] LESSONS: Retrieved institutional memory"
+        )
+    else:
+        state["audit_trail"].append(
+            f"[{datetime.now(timezone.utc).isoformat()}] LESSONS: No relevant lessons found (collection may not exist yet)"
+        )
+    return state
+
+
+# =============================================================================
 # IV. OODA GRAPH BUILDER
 # =============================================================================
 
@@ -319,9 +443,14 @@ def build_ooda_graph(
     """
     from langgraph.graph import StateGraph, END
 
+    def _rate_limit_gate(state: SovereignState) -> SovereignState:
+        _check_ooda_rate_limit()
+        return state
+
     graph = StateGraph(SovereignState)
 
-    # Add nodes
+    # Add nodes (rate_limit gate fires before observe on every invocation)
+    graph.add_node("rate_limit", _rate_limit_gate)
     graph.add_node("observe", observe_fn or _default_observe)
     graph.add_node("orient", orient_fn or _default_orient)
     graph.add_node("decide", decide_fn or _default_decide)
@@ -329,9 +458,13 @@ def build_ooda_graph(
     graph.add_node("post_mortem", _post_mortem_node)
 
     # Wire the OODA sequence
-    graph.set_entry_point("observe")
+    graph.add_node("retrieve_lessons", _retrieve_institutional_lessons)
+
+    graph.set_entry_point("rate_limit")
+    graph.add_edge("rate_limit", "observe")
     graph.add_edge("observe", "orient")
-    graph.add_edge("orient", "decide")
+    graph.add_edge("orient", "retrieve_lessons")
+    graph.add_edge("retrieve_lessons", "decide")
     graph.add_edge("decide", "act")
     graph.add_edge("act", "post_mortem")
     graph.add_edge("post_mortem", END)
@@ -366,3 +499,263 @@ def make_initial_state(sector: str, query: str) -> SovereignState:
         confidence=0.0,
         severity="info",
     )
+
+
+# =============================================================================
+# VI. SEQUENTIAL OODA RUNNER (preserves full state dict)
+# =============================================================================
+# LangGraph's StateGraph only tracks channels declared in the TypedDict.
+# Internal keys (prefixed with _) used for passing data between OODA nodes
+# (e.g. _files, _chunks, _ingest_mod) are silently dropped between nodes.
+#
+# This sequential runner executes the same 5-step OODA cycle using plain
+# function composition, preserving ALL dict keys. Use this for agents that
+# pass internal state between nodes.
+
+def run_ooda_sequence(
+    state: dict,
+    observe_fn: Callable,
+    orient_fn: Callable,
+    decide_fn: Callable,
+    act_fn: Callable,
+) -> dict:
+    """
+    Execute the full OODA cycle sequentially, preserving all state keys.
+
+    Runs: observe -> orient -> decide -> act -> post_mortem -> return
+
+    Unlike build_ooda_graph().compile().invoke(), this runner preserves
+    internal keys (prefixed with _) that LangGraph's StateGraph channels
+    would drop. Use this for agents that pass rich internal state between
+    OODA phases.
+
+    Args:
+        state: Initial state dict (from make_initial_state + extra keys).
+        observe_fn: OBSERVE function.
+        orient_fn: ORIENT function.
+        decide_fn: DECIDE function.
+        act_fn: ACT function.
+
+    Returns:
+        Final state dict with all OODA fields and internal keys intact.
+    """
+    _check_ooda_rate_limit()
+    state = observe_fn(state)
+    state = orient_fn(state)
+    state = decide_fn(state)
+    state = act_fn(state)
+    state = _post_mortem_node(state)
+    return state
+
+
+# =============================================================================
+# VII. COUNCIL INTELLIGENCE OODA AGENT
+# =============================================================================
+# A complete closed-loop intelligence agent that wires the Council of Giants
+# into the OODA framework. When triggered by an event:
+#   OBSERVE  — Ingest market event (FRED data, VIX spike, news)
+#   ORIENT   — Run Council.vote_on(event) to get consensus + all opinions
+#   DECIDE   — Evaluate conviction threshold: escalate if high, log if low
+#   ACT      — Send alert email, persist to PostgreSQL, update Grafana
+#   POST_MORTEM — Write audit record, ready for accuracy resolution later
+
+def _council_observe(state: SovereignState) -> SovereignState:
+    """OBSERVE: Gather the raw event data."""
+    event = state["query"]
+    state["observation"] = f"Market event detected: {event}"
+    state["audit_trail"].append(
+        f"[{datetime.now(timezone.utc).isoformat()}] OBSERVE: Event ingested — {event[:100]}"
+    )
+    return state
+
+
+def _council_orient(state: SovereignState) -> SovereignState:
+    """ORIENT: Run Council vote on the event to get multi-persona analysis."""
+    try:
+        from persona_template import Persona, Council
+
+        slugs = sorted(Persona.list_all())
+        if not slugs:
+            state["orientation"] = "No personas available for Council vote."
+            state["confidence"] = 0.0
+            return state
+
+        personas = [Persona.load(s) for s in slugs]
+        council = Council(personas)
+
+        result = council.vote_on(state["query"])
+
+        # Store the full result in orientation for the decide step
+        state["orientation"] = (
+            f"Council consensus: {result.get('consensus_signal', 'NEUTRAL')} | "
+            f"Conviction: {result.get('consensus_conviction', 0):.0%} | "
+            f"Agreement: {result.get('agreement_rate', 0):.0%} | "
+            f"Bullish: {result.get('bullish_count', 0)} / "
+            f"Bearish: {result.get('bearish_count', 0)} / "
+            f"Neutral: {result.get('neutral_count', 0)}"
+        )
+
+        # Stash full result for decide/act steps
+        state["_council_result"] = result
+        state["confidence"] = result.get("consensus_conviction", 0.5)
+
+        state["audit_trail"].append(
+            f"[{datetime.now(timezone.utc).isoformat()}] ORIENT: "
+            f"Council voted — {result.get('consensus_signal')} "
+            f"({result.get('consensus_conviction', 0):.0%} conviction, "
+            f"{result.get('elapsed_seconds', 0)}s)"
+        )
+
+    except Exception as e:
+        logger.error(f"Council orient failed: {e}")
+        state["orientation"] = f"Council vote failed: {str(e)[:200]}"
+        state["confidence"] = 0.0
+        state["_council_result"] = None
+
+    return state
+
+
+def _council_decide(state: SovereignState) -> SovereignState:
+    """DECIDE: Evaluate if the signal warrants escalation."""
+    result = state.get("_council_result")
+    if not result:
+        state["decision"] = "No Council data — cannot make decision. Logging as informational."
+        state["confidence"] = 0.0
+        return state
+
+    conviction = result.get("consensus_conviction", 0)
+    agreement = result.get("agreement_rate", 0)
+    signal = result.get("consensus_signal", "NEUTRAL")
+
+    if conviction > 0.8 and agreement > 0.7:
+        state["decision"] = (
+            f"ESCALATE: High-confidence signal — {signal} with "
+            f"{conviction:.0%} conviction and {agreement:.0%} agreement. "
+            f"Sending alert and persisting to database."
+        )
+        state["_escalate"] = True
+    elif conviction > 0.6:
+        state["decision"] = (
+            f"LOG: Moderate signal — {signal} with "
+            f"{conviction:.0%} conviction. Persisting to database for tracking."
+        )
+        state["_escalate"] = False
+    else:
+        state["decision"] = (
+            f"MONITOR: Low-confidence signal — {signal} with "
+            f"{conviction:.0%} conviction. Logging only."
+        )
+        state["_escalate"] = False
+
+    state["audit_trail"].append(
+        f"[{datetime.now(timezone.utc).isoformat()}] DECIDE: "
+        f"{'ESCALATE' if state.get('_escalate') else 'LOG'} — "
+        f"conviction={conviction:.0%}, agreement={agreement:.0%}"
+    )
+
+    return state
+
+
+def _council_act(state: SovereignState) -> SovereignState:
+    """ACT: Persist results, send alerts if escalated."""
+    result = state.get("_council_result")
+    actions_taken = []
+
+    # Always persist to database
+    if result:
+        try:
+            import sys
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+            from intelligence_engine import _persist_vote
+            import uuid
+            vote_id = str(uuid.uuid4())
+            _persist_vote(vote_id, result, "qwen2.5:7b")
+            actions_taken.append(f"Persisted vote {vote_id[:8]}... to PostgreSQL")
+        except Exception as e:
+            actions_taken.append(f"DB persistence failed: {str(e)[:60]}")
+
+    # Send alert email if escalated
+    if state.get("_escalate") and result:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+
+            gmail = os.getenv("GMAIL_ADDRESS", "")
+            gmail_pw = os.getenv("GMAIL_APP_PASSWORD", "")
+            if gmail and gmail_pw:
+                signal = result.get("consensus_signal", "NEUTRAL")
+                body = (
+                    f"Council OODA Alert\n\n"
+                    f"Event: {state['query']}\n"
+                    f"Signal: {signal}\n"
+                    f"Conviction: {result.get('consensus_conviction', 0):.0%}\n"
+                    f"Agreement: {result.get('agreement_rate', 0):.0%}\n\n"
+                    f"Decision: {state.get('decision', 'N/A')}\n\n"
+                    f"View: http://192.168.0.100:9800/intelligence"
+                )
+                msg = MIMEText(body)
+                msg["Subject"] = f"[OODA] Council Alert: {signal} — {state['query'][:50]}"
+                msg["From"] = gmail
+                msg["To"] = gmail
+
+                server = smtplib.SMTP("smtp.gmail.com", 587)
+                server.starttls()
+                server.login(gmail, gmail_pw)
+                server.send_message(msg)
+                server.quit()
+                actions_taken.append("Alert email sent")
+            else:
+                actions_taken.append("Email not configured — alert skipped")
+        except Exception as e:
+            actions_taken.append(f"Email failed: {str(e)[:60]}")
+
+    state["action_result"] = " | ".join(actions_taken) if actions_taken else "No action taken"
+    state["audit_trail"].append(
+        f"[{datetime.now(timezone.utc).isoformat()}] ACT: {state['action_result']}"
+    )
+
+    return state
+
+
+def build_council_ooda_graph() -> Any:
+    """
+    Build a complete Council Intelligence OODA agent.
+
+    Usage:
+        from sovereign_ooda import build_council_ooda_graph, make_initial_state
+        graph = build_council_ooda_graph()
+        agent = graph.compile()
+        result = agent.invoke(make_initial_state("intel", "VIX spikes to 35"))
+    """
+    return build_ooda_graph(
+        observe_fn=_council_observe,
+        orient_fn=_council_orient,
+        decide_fn=_council_decide,
+        act_fn=_council_act,
+    )
+
+
+def run_council_ooda(event: str) -> dict:
+    """
+    Convenience function: run the full Council OODA loop on an event.
+    Uses the sequential runner to preserve internal state keys.
+
+    Args:
+        event: Market event description to analyze.
+
+    Returns:
+        Final OODA state dict with all fields populated.
+    """
+    state = make_initial_state(sector="intel", query=event)
+    state["_council_result"] = None
+    state["_escalate"] = False
+
+    final = run_ooda_sequence(
+        state,
+        observe_fn=_council_observe,
+        orient_fn=_council_orient,
+        decide_fn=_council_decide,
+        act_fn=_council_act,
+    )
+
+    return final

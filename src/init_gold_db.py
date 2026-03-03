@@ -15,7 +15,7 @@ load_dotenv()
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_USER = os.getenv("DB_USER", "miner_bot")
-DB_PASS = os.getenv("DB_PASS", "190AntiochCemeteryRD!!!")
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 
 def get_db_connection():
     """Establish database connection."""

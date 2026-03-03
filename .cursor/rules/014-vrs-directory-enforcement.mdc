@@ -1,0 +1,140 @@
+---
+description: CROG-VRS architecture, DDD layering, directory boundary enforcement, and data integrity standards
+alwaysApply: true
+---
+
+# CROG-VRS ARCHITECTURE & DIRECTORY ENFORCEMENT (Amendment XV)
+
+**Effective Date:** 2026-02-23
+**Classification:** Engineering Standard — Enforced
+
+## I. THE PRINCIPLE
+
+All files, components, logic, automations, and data handlers for the CROG-VRS product MUST be created and maintained inside designated VRS boundary paths. VRS-specific code does not belong in the Command Center core, global `src/` scripts, `gateway/`, `sovereign/`, or generic shared folders unless explicitly instructed by the Human.
+
+Zero leakage of VRS domain logic into the Command Center or global shared state is mandatory.
+
+## II. CANONICAL PATH MAP
+
+CROG-VRS code lives within three boundary zones:
+
+| Zone | Path | Contents |
+|---|---|---|
+| **Frontend HTML** | `tools/vrs_*.html` | All VRS UI pages. New pages MUST use the `vrs_` filename prefix. |
+| **Backend** | `fortress-guest-platform/backend/` | API routes (`api/`), models (`models/`), services (`services/`), integrations (`integrations/`), templates (`templates/`). |
+| **Proxy + Routing** | `tools/master_console.py` | Route handlers serving VRS HTML at `/vrs/*` paths, and `/api/vrs/*` proxy endpoints forwarding to port 8100. |
+
+When creating a new VRS feature, all three zones must be addressed:
+
+1. Backend endpoint in `fortress-guest-platform/backend/api/`
+2. Frontend page in `tools/vrs_<feature>.html`
+3. Proxy route and HTML serving in `tools/master_console.py`
+
+## III. DOMAIN-DRIVEN DESIGN (DDD) LAYERED ARCHITECTURE
+
+Code within the VRS backend MUST be organized by responsibility layer. The existing `fortress-guest-platform/backend/` directory maps to four DDD layers:
+
+| DDD Layer | Directory | Responsibility | Examples |
+|---|---|---|---|
+| **Domain** | `backend/models/` | Entities, SQLAlchemy models, and Pydantic validation schemas. Defines the strict shape of all Streamline and internal data. | `property.py`, `reservation.py`, `quote.py`, `lead.py` |
+| **Infrastructure** | `backend/integrations/` | External API clients, DB repositories, and message queue publishers. The Streamline ingestion layer lives here. | `streamline_vrs.py`, `stripe_payments.py` |
+| **Application** | `backend/services/` | Business logic, use cases, and automation triggers. Orchestrates domain objects and infrastructure calls. | `scheduler.py`, `template_engine.py`, `legal_drafter.py`, `document_engine.py` |
+| **Presentation** | `backend/api/` + `tools/vrs_*.html` | FastAPI route handlers (the API presentation layer) and frontend HTML pages (the UI presentation layer). | `leads.py`, `checkout.py`, `templates.py` |
+
+### DDD Rules
+
+1. **Domain models are the source of truth.** All data crossing module boundaries MUST use Pydantic models with `Field(...)` constraints. Pydantic is the Python equivalent of Zod — it enforces strict runtime validation.
+2. **Infrastructure never contains business logic.** The Streamline client (`streamline_vrs.py`) fetches and returns data. Decisions about what to do with that data belong in the Application layer (`services/`).
+3. **Presentation never calls Infrastructure directly.** API route handlers in `backend/api/` call Application services, which in turn call Infrastructure. No raw `streamline_vrs.fetch_*()` calls from route handlers.
+4. **Domain models never depend on Infrastructure.** SQLAlchemy models and Pydantic schemas must not import from `integrations/` or `services/`.
+
+## IV. DATA INTEGRITY
+
+### A. Never Trust Raw External API Data
+
+All incoming Streamline VRS payloads MUST be validated against strict Pydantic schemas before processing. Raw API responses are advisory; the local database is authoritative (per Rule 005 Section III.C.5).
+
+**Mandatory validation points:**
+
+1. **Type coercion:** Streamline returns dates as `MM/DD/YYYY` strings and amounts as mixed string/float. All values must be parsed and validated before database insertion.
+2. **Null safety:** Missing or `None` fields in Streamline responses must be handled with explicit defaults or rejection — never silently stored as `NULL` when the business logic requires a value.
+3. **Business rule enforcement:** Pydantic validators must enforce domain constraints (e.g., `check_out_date > check_in_date`, `total_amount >= 0`, phone numbers normalized to E.164).
+4. **Schema drift detection:** If a Streamline response contains unexpected fields or missing required fields, log a structured warning and proceed with safe defaults rather than crashing the sync loop.
+
+### B. Financial Data Validation
+
+Financial amounts from Streamline (`GetReservationPrice`, `GetUnitOwnerBalance`) MUST use `Decimal` types throughout the pipeline. See `007-financial-data-governance.mdc` for the authoritative financial data policy (referenced, not duplicated here).
+
+## V. ERROR HANDLING & RESILIENCE
+
+### A. External Integration Resilience
+
+All external API calls (Streamline, Stripe, Twilio, SMTP) MUST implement:
+
+1. **Retry with exponential backoff:** 3 attempts with delays of 1s, 2s, 4s. Use `tenacity` (already in use by `streamline_vrs.py`) or equivalent.
+2. **Timeout enforcement:** Every HTTP call must have an explicit timeout (default: 30s for Streamline, 15s for SMTP, 60s for AI models).
+3. **Circuit-breaker logging:** On 3 consecutive failures, log a structured error with `structlog` at `error` level including the service name, endpoint, and last error. Do not silently retry forever.
+4. **Graceful degradation:** If Streamline is unreachable, serve cached data from the local database. If SMTP fails, queue the message for retry. If AI is down, queue drafts for human review. See `008-api-integration-standards.mdc` Section VII for the full graceful degradation policy.
+
+### B. No Silent Failures
+
+Every error path MUST produce an auditable log entry. Bare `except: pass` blocks are strictly forbidden. All exceptions must be caught, logged with context (service, operation, entity ID), and either re-raised or handled with a documented fallback.
+
+## VI. AUTOMATIONS BOUNDARY
+
+VRS automations (email templates, scheduler, copilot queue) live within the FGP backend:
+
+| Component | Path |
+|---|---|
+| Scheduler engine | `fortress-guest-platform/backend/services/scheduler.py` |
+| Template CRUD API | `fortress-guest-platform/backend/api/templates.py` |
+| Copilot Queue API | `fortress-guest-platform/backend/api/copilot_queue.py` |
+| Template models | `fortress-guest-platform/backend/models/template.py` |
+| Message queue model | `fortress-guest-platform/backend/models/message_queue.py` |
+
+New automation UI pages must use the `vrs_` prefix (e.g., `tools/vrs_automations.html`).
+
+## VII. ACKNOWLEDGED EXCEPTIONS
+
+The following files pre-date this rule and are acknowledged as legacy exceptions. They are VRS-related but do not carry the `vrs_` filename prefix. They are NOT to be duplicated as a pattern for new work:
+
+| File | Purpose | Status |
+|---|---|---|
+| `tools/automations.html` | Email template engine UI | Legacy exception |
+| `tools/checkout.html` | Guest-facing checkout gateway | Legacy exception |
+| `tools/guest_agent.html` | Agentic lead inbox | Legacy exception |
+
+New VRS pages MUST conform to the `vrs_` prefix convention. These exceptions will be renamed in a future migration wave if the Human approves.
+
+## VIII. FORBIDDEN PATTERNS
+
+1. **DO NOT** place VRS-specific request handlers, models, or services in `src/`, `gateway/`, `sovereign/`, `recursive_core/`, or other non-VRS directories.
+2. **DO NOT** create VRS API routes outside `fortress-guest-platform/backend/api/`.
+3. **DO NOT** create VRS frontend pages without the `vrs_` prefix (see Section VII for pre-existing exceptions).
+4. **DO NOT** embed VRS business logic directly into `tools/master_console.py`. The master console is a proxy and HTML server only -- business logic belongs in the FGP backend.
+5. **DO NOT** create standalone VRS services on new ports. All VRS backend traffic flows through port 8100 (FGP backend), proxied by `master_console.py` on port 9800.
+6. **DO NOT** pass raw, unvalidated Streamline API responses directly into database write operations. All external data must pass through Pydantic validation first.
+7. **DO NOT** use bare `except: pass` or `except Exception: pass` without logging. Every caught exception must produce a structured log entry.
+8. **DO NOT** call Infrastructure layer methods (e.g., `streamline_vrs.fetch_*()`) directly from Presentation layer route handlers. Route through Application services.
+
+## IX. VERIFICATION
+
+Before declaring any new VRS feature complete:
+
+1. Confirm the backend file lives under `fortress-guest-platform/backend/`.
+2. Confirm the frontend HTML filename starts with `vrs_` and lives in `tools/`.
+3. Confirm the proxy route exists in `tools/master_console.py`.
+4. Confirm no VRS-specific logic leaked into `src/`, `gateway/`, or other non-VRS paths.
+5. Confirm all external API calls have retry logic and explicit timeouts.
+6. Confirm all incoming external data passes through Pydantic validation before DB writes.
+
+## X. CANONICAL REFERENCES
+
+| File | Relevance |
+|---|---|
+| `fortress-guest-platform/backend/main.py` | Router registration -- all VRS API routers live here |
+| `tools/master_console.py` | Proxy layer and HTML serving |
+| `.cursor/rules/005-fortress-guest-platform.mdc` | FGP architecture (complementary, not duplicated) |
+| `.cursor/rules/007-financial-data-governance.mdc` | Financial data validation policy (referenced) |
+| `.cursor/rules/008-api-integration-standards.mdc` | Error handling and graceful degradation policy (referenced) |
+| `.cursor/rules/013-glass-discoverability.mdc` | Navigation integration mandate (referenced, not duplicated) |

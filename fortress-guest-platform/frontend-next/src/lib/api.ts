@@ -1,6 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8100";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-const BFF_PREFIXES = ["/api/auth", "/api/email-intake", "/api/legal", "/api/intelligence"];
+const BFF_PREFIXES = ["/api/auth", "/api/email-intake", "/api/legal", "/api/intelligence", "/api/payments", "/api/system-health", "/api/reservations", "/api/vault", "/api/iot", "/api/admin"];
 
 function resolveBase(path: string): string {
   if (BFF_PREFIXES.some((p) => path.startsWith(p))) return "";
@@ -58,9 +58,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const res = await fetch(url, { ...fetchOpts, headers, redirect: "follow" });
 
   if (res.status === 401) {
-    clearToken();
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
+    const isSessionCheck = path === "/api/auth/me";
+    if (isSessionCheck) {
+      clearToken();
     }
     throw new ApiError(401, "Unauthorized");
   }

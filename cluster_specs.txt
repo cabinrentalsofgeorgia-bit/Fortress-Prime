@@ -1,0 +1,16 @@
+==========================================
+🚀 FORTRESS CLUSTER HARDWARE AUDIT
+==========================================
+
+--- NODE: SPARK 2 (Local) ---
+CPU: Cortex-X925 Cortex-A725
+RAM: 119Gi
+GPU Check:
+NVIDIA GB10, [N/A], [N/A]
+
+--- NODE: SPARK 1 (Remote: 192.168.0.104) ---
+CPU: $(lscpu | grep Model name | cut -d: -f2 | xargs)
+RAM: $(free -h | grep Mem | awk {print })
+GPU Check:
+NVIDIA GB10, [N/A], [N/A]
+==========================================

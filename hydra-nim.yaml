@@ -1,0 +1,172 @@
+# =============================================================================
+# FORTRESS PRIME — HYDRA NIM Deployment Spec (DEFCON 3 — Assault Mode)
+# =============================================================================
+# Reference specification for the 4x NIM deployment.
+#
+# NOTE: This file is NOT deployed via `docker stack deploy` because Docker
+# Swarm does not support `network_mode: host`. Instead, switch_defcon.sh
+# deploys each container directly via `docker run --network host` on each
+# node over SSH. This file serves as:
+#   1. Documentation of the target architecture
+#   2. A `docker compose` file for single-node testing
+#
+# Architecture:
+#   - 4 independent NVIDIA NIM instances (one per DGX Spark node)
+#   - Each serves DeepSeek-R1-Distill-Llama-70B on port 8000
+#   - Host networking for GPU/RDMA performance (no bridge overhead)
+#   - Shared NIM cache on NAS (download once, serve from all)
+#   - Nginx LB distributes across all 4 heads
+#
+# VRAM Budget (per node, 128GB unified memory):
+#   Model:     ~40GB (70B Q4 via TensorRT-LLM)
+#   KV Cache:  ~40GB (32k context window)
+#   Headroom:  ~48GB (OS, Docker, vector caching)
+#
+# Deployment:
+#   ./switch_defcon.sh hydra          # Deploys to all 4 nodes
+#   ./switch_defcon.sh status         # Check health
+#   ./switch_defcon.sh swarm          # Return to production
+#
+# Single-node test:
+#   NGC_API_KEY=<key> docker compose -f hydra-nim.yaml up hydra-captain
+#
+# Constitution Reference: Amendment IV-B, HYDRA Rules
+# =============================================================================
+
+services:
+
+  # ── Spark-01 (Captain) — 192.168.0.100 ── Swarm: spark-node-2 ──
+  hydra-captain:
+    image: nvcr.io/nim/deepseek-ai/deepseek-r1-distill-llama-70b:latest
+    container_name: hydra-nim-captain
+    network_mode: "host"
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:?Set NGC_API_KEY}
+      - NIM_MODEL_NAME=deepseek-r1-distill-llama-70b
+      - NIM_SERVER_PORT=8000
+      - NIM_MAX_MODEL_LEN=32768
+      - NIM_TENSOR_PARALLEL_SIZE=1
+      - NIM_LOG_LEVEL=info
+    volumes:
+      - /mnt/fortress_nas/nim_cache:/opt/nim/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ── Spark-02 (Muscle) — 192.168.0.104 ── Swarm: spark-node-1 ──
+  hydra-muscle:
+    image: nvcr.io/nim/deepseek-ai/deepseek-r1-distill-llama-70b:latest
+    container_name: hydra-nim-muscle
+    network_mode: "host"
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:?Set NGC_API_KEY}
+      - NIM_MODEL_NAME=deepseek-r1-distill-llama-70b
+      - NIM_SERVER_PORT=8000
+      - NIM_MAX_MODEL_LEN=32768
+      - NIM_TENSOR_PARALLEL_SIZE=1
+      - NIM_LOG_LEVEL=info
+    volumes:
+      - /mnt/fortress_nas/nim_cache:/opt/nim/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ── Spark-03 (Ocular) — 192.168.0.105 ── Hostname: spark-3 ──
+  hydra-ocular:
+    image: nvcr.io/nim/deepseek-ai/deepseek-r1-distill-llama-70b:latest
+    container_name: hydra-nim-ocular
+    network_mode: "host"
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:?Set NGC_API_KEY}
+      - NIM_MODEL_NAME=deepseek-r1-distill-llama-70b
+      - NIM_SERVER_PORT=8000
+      - NIM_MAX_MODEL_LEN=32768
+      - NIM_TENSOR_PARALLEL_SIZE=1
+      - NIM_LOG_LEVEL=info
+    volumes:
+      - /mnt/fortress_nas/nim_cache:/opt/nim/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ── Spark-04 (Sovereign) — 192.168.0.106 ── Swarm: spark-4 ──
+  hydra-sovereign:
+    image: nvcr.io/nim/deepseek-ai/deepseek-r1-distill-llama-70b:latest
+    container_name: hydra-nim-sovereign
+    network_mode: "host"
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:?Set NGC_API_KEY}
+      - NIM_MODEL_NAME=deepseek-r1-distill-llama-70b
+      - NIM_SERVER_PORT=8000
+      - NIM_MAX_MODEL_LEN=32768
+      - NIM_TENSOR_PARALLEL_SIZE=1
+      - NIM_LOG_LEVEL=info
+    volumes:
+      - /mnt/fortress_nas/nim_cache:/opt/nim/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"

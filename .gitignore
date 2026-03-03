@@ -39,6 +39,51 @@ full_index.txt
 
 # Sensitive data
 .env
+.env.bak
 *.key
 *.pem
 id_*
+secrets/
+alembic/versions/baseline_schema.sql
+
+# Deployment configs with API keys / credentials
+mission_control.yaml
+docker-compose.override.yml
+gateway/claude_proxy_keys.json
+
+# Audit artifacts (may contain financial data)
+audit_sample_*.csv
+*_audit_report.json
+nas_audit_report.json
+
+# NAS / model data
+nim_cache/
+*.gguf
+.env.security
+.env.security
+.secrets/
+venv_whisperx/
+.venv_verify/
+venv_browser/
+titan_engine/
+full_folder_manifest.txt
+site_content_map.csv
+Fortress_Vol1_Master_Atlas.pdf
+Fortress_Vol1_Clean_Atlas.pdf
+Fortress_NAS_Audit_Full.pdf
+Generali_v_CROG_Counsel_Briefing.pdf
+coverage.xml
+source_audit_clean.json
+TWILIO_CONFIGURED_SUCCESS.md
+TWILIO_SMS_WORKING.md
+test_webhook_delivery.py
+TWILIO_EXISTING_ACCOUNT_SETUP.md
+auth_remote.sh
+auto_configure_twilio.py
+configure_twilio_manual.sh
+deploy_secure_console.sh
+setup_twilio.sh
+webhook_server.py
+check_twilio_logs.py
+configure_ruebarue_webhook.py
+setup_a2p_messaging.py

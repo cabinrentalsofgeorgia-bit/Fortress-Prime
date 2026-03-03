@@ -1,0 +1,24 @@
+{
+  "started_at": "2026-02-13T07:39:33.878432",
+  "phases": {
+    "2a": {
+      "spam_email_ids_count": 610,
+      "sales_intel_affected": 0,
+      "guest_leads_affected": 0,
+      "market_intel_affected": 29,
+      "finance_invoices_affected": 14,
+      "real_estate_intel_affected": 14,
+      "legal_intel_affected": 93,
+      "market_signals_affected": 0,
+      "hedge_fund.market_signals_affected": 0,
+      "total_downstream_deleted": 150
+    }
+  },
+  "summary": {
+    "elapsed_seconds": 0.25,
+    "dry_run": false,
+    "final_email_archive_count": 62862,
+    "final_mined_count": 62828,
+    "completed_at": "2026-02-13T07:39:34.159319"
+  }
+}

@@ -1,0 +1,1102 @@
+################################################################################
+#                                                                              #
+#            FORTRESS PRIME — SOVEREIGN INFRASTRUCTURE AUDIT REPORT            #
+#                                                                              #
+################################################################################
+#
+#  Generated: 2026-03-02T14:11:36Z UTC
+#  Host:      spark-node-2
+#  Operator:  admin
+#
+################################################################################
+
+============================================================================
+  SECTION 1: HEADER AND ENVIRONMENT
+============================================================================
+
+  Timestamp (UTC) : 2026-03-02T14:11:36Z
+  Timestamp (Local): Mon Mar  2 09:11:36 AM EST 2026
+  Hostname         : spark-node-2
+  Kernel           : 6.14.0-1015-nvidia
+  Architecture     : aarch64
+  OS               : Ubuntu 24.04.3 LTS
+
+  --- DEFCON State ---
+  HYDRA
+
+  --- Git Status ---
+  Branch     : feature/vrs-financial-core
+  Last Commit: b7c6993 feat(legal-hemisphere): Deploy Fiduciary Contracting, Chargeback Ironclad, IoT Grid, Prospectus Engine, Dispute Exception Desk (2026-03-02 07:41:11 -0500)
+  Repo State : 534 uncommitted changes
+
+============================================================================
+  SECTION 2: CLUSTER HARDWARE (ALL 4 DGX SPARK NODES)
+============================================================================
+
+  --- Node: CAPTAIN (192.168.0.100) | Fabric: 10.10.10.2 ---
+  CPU      : Cortex-X925 Cortex-A725
+  Cores    : 20
+  RAM Total: 119Gi
+  RAM Avail: 102Gi
+  Disk:
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/nvme0n1p2  3.7T  640G  2.9T  18% /
+    /dev/nvme0n1p2  3.7T  640G  2.9T  18% /
+  GPU:
+    NVIDIA GB10, [N/A], [N/A], [N/A], 49
+
+  --- Node: MUSCLE (192.168.0.104) | Fabric: 10.10.10.1 ---
+  CPU      : Cortex-X925 Cortex-A725
+  Cores    : 20
+  RAM Total: 119Gi
+  RAM Avail: 111Gi
+  Disk:
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/nvme0n1p2  3.7T  269G  3.3T   8% /
+    /dev/nvme0n1p2  3.7T  269G  3.3T   8% /
+  GPU:
+    NVIDIA GB10, [N/A], [N/A], [N/A], 47
+
+  --- Node: OCULAR (192.168.0.105) | Fabric: 10.10.10.3 ---
+  CPU      : Cortex-X925 Cortex-A725
+  Cores    : 20
+  RAM Total: 119Gi
+  RAM Avail: 107Gi
+  Disk:
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/nvme0n1p2  3.7T  140G  3.4T   4% /
+    /dev/nvme0n1p2  3.7T  140G  3.4T   4% /
+  GPU:
+    NVIDIA GB10, [N/A], [N/A], [N/A], 53
+
+  --- Node: SOVEREIGN (192.168.0.106) | Fabric: 10.10.10.4 ---
+  CPU      : Cortex-X925 Cortex-A725
+  Cores    : 20
+  RAM Total: 119Gi
+  RAM Avail: 107Gi
+  Disk:
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/nvme0n1p2  3.7T  151G  3.4T   5% /
+    /dev/nvme0n1p2  3.7T  151G  3.4T   5% /
+  GPU:
+    NVIDIA GB10, [N/A], [N/A], [N/A], 53
+
+  --- Fabric LAN Connectivity (200G RoCEv2) ---
+  CAPTAIN (10.10.10.2): REACHABLE
+  MUSCLE (10.10.10.1): REACHABLE
+  OCULAR (10.10.10.3): REACHABLE
+  SOVEREIGN (10.10.10.4): REACHABLE
+
+============================================================================
+  SECTION 3: NAS / SYNOLOGY VAULT
+============================================================================
+
+  --- NFS Mount Verification ---
+  Status: MOUNTED
+  /mnt/fortress_nas 192.168.0.112:/volume2/ai-data nfs4   rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=192.168.0.103,local_lock=none,addr=192.168.0.112
+
+  --- NAS Disk Usage ---
+  192.168.0.112:/volume2/ai-data                  nfs4      705G  560G  146G  80% /mnt/fortress_nas
+  192.168.0.113:/volume1/MailPlus                 nfs4       63T  6.7T   57T  11% /mnt/vol1_source/System/MailPlus_Server
+  192.168.0.113:/volume1/ai_bulk                  nfs4       63T  6.7T   57T  11% /mnt/ai_bulk
+  192.168.0.113:/volume2/ai_fast                  nfs4      705G  560G  146G  80% /mnt/ai_fast
+  192.168.0.113:/volume1/C-Panel-FullBackup       nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Backups/CPanel_Full
+  192.168.0.113:/volume1/Mac Backups              nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Backups/Mac_Backups
+  192.168.0.113:/volume1/CROG                     nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Business/CROG
+  192.168.0.113:/volume1/Legal                    nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Business/Legal
+  192.168.0.113:/volume1/marketclub_data          nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Business/MarketClub
+  192.168.0.113:/volume1/Bible Doctrine           nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Personal/Bible_Doctrine
+  192.168.0.113:/volume1/Documents                nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Personal/Documents
+  192.168.0.113:/volume1/Garage Office PC         nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Personal/Garage_Office_PC
+  192.168.0.113:/volume1/Garys IMAC garage office nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Personal/Garys_IMAC_Garage
+  192.168.0.113:/volume1/Lissa IMAC RML           nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Personal/Lissa_IMAC_RML
+  192.168.0.113:/volume1/photo                    nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Personal/Photos
+  192.168.0.113:/volume1/video                    nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Personal/Video_Library
+  192.168.0.113:/volume1/200 Amber Ridge Mac      nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Properties/200_Amber_Ridge_Mac
+  192.168.0.113:/volume1/2115 Lakeshore Court     nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Properties/2115_Lakeshore_Court
+  192.168.0.113:/volume1/570 Morgan Street        nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Properties/570_Morgan_Street
+  192.168.0.113:/volume1/homes                    nfs4       63T  6.7T   57T  11% /mnt/vol1_source/System/Homes
+  192.168.0.113:/volume1/Public                   nfs4       63T  6.7T   57T  11% /mnt/vol1_source/System/Public
+  192.168.0.113:/volume1/Security Video           nfs4       63T  6.7T   57T  11% /mnt/vol1_source/System/Security_Check
+  192.168.0.113:/volume1/CROG-AI-Workspace        nfs4       63T  6.7T   57T  11% /mnt/vol1_source/Business/AI_Workspace
+
+  --- Key NAS Directories (depth 2) ---
+  [sectors/legal]
+    /mnt/fortress_nas/sectors/legal
+    /mnt/fortress_nas/sectors/legal/vectors
+    /mnt/fortress_nas/sectors/legal/snapshots
+    /mnt/fortress_nas/sectors/legal/context
+    /mnt/fortress_nas/sectors/legal/case_23-11161-JKS
+    /mnt/fortress_nas/sectors/legal/case_23-11161-JKS/evidence
+    /mnt/fortress_nas/sectors/legal/case_23-11161-JKS/correspondence
+    /mnt/fortress_nas/sectors/legal/case_23-11161-JKS/certified_mail
+    /mnt/fortress_nas/sectors/legal/case_23-11161-JKS/filings
+    /mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013
+    /mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013/evidence
+    /mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013/correspondence
+    /mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013/certified_mail
+    /mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013/filings
+    /mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013/alerts
+    /mnt/fortress_nas/sectors/legal/prime-trust-23-11161
+    /mnt/fortress_nas/sectors/legal/prime-trust-23-11161/filings
+    /mnt/fortress_nas/sectors/legal/prime-trust-23-11161/evidence
+    /mnt/fortress_nas/sectors/legal/prime-trust-23-11161/correspondence
+    /mnt/fortress_nas/sectors/legal/prime-trust-23-11161/certified_mail
+    /mnt/fortress_nas/sectors/legal/pdf_archive
+    /mnt/fortress_nas/sectors/legal/owner-statements
+    /mnt/fortress_nas/sectors/legal/owner-statements/897648
+    /mnt/fortress_nas/sectors/legal/owner-statements/451821
+    /mnt/fortress_nas/sectors/legal/owner-statements/920014
+    /mnt/fortress_nas/sectors/legal/owner-statements/385151
+    /mnt/fortress_nas/sectors/legal/owner-statements/416418
+    /mnt/fortress_nas/sectors/legal/owner-statements/503499
+    /mnt/fortress_nas/sectors/legal/owner-statements/146514
+    Files: 87
+
+  [backups]
+    /mnt/fortress_nas/backups
+    /mnt/fortress_nas/backups/2026-02-24_03-00
+    /mnt/fortress_nas/backups/2026-02-25_03-00
+    /mnt/fortress_nas/backups/2026-02-26_03-00
+    /mnt/fortress_nas/backups/2026-02-27_03-00
+    /mnt/fortress_nas/backups/2026-02-28_03-00
+    /mnt/fortress_nas/backups/2026-03-01_03-00
+    /mnt/fortress_nas/backups/2026-03-02_03-00
+    Files: 14
+
+  [nim_cache]
+    /mnt/fortress_nas/nim_cache
+    /mnt/fortress_nas/nim_cache/ngc
+    /mnt/fortress_nas/nim_cache/ngc/hub
+    Files: 9
+
+  [fortress_data]
+    /mnt/fortress_nas/fortress_data
+    /mnt/fortress_nas/fortress_data/ai_brain
+    /mnt/fortress_nas/fortress_data/ai_brain/logs
+    /mnt/fortress_nas/fortress_data/ai_brain/cabins
+    /mnt/fortress_nas/fortress_data/ai_brain/market_data
+    /mnt/fortress_nas/fortress_data/ai_brain/backups
+    /mnt/fortress_nas/fortress_data/ai_brain/division_a
+    /mnt/fortress_nas/fortress_data/ai_brain/division_b
+    /mnt/fortress_nas/fortress_data/ai_brain/secrets
+    /mnt/fortress_nas/fortress_data/ai_brain/rag_quarantine
+    /mnt/fortress_nas/fortress_data/ai_brain/loki
+    /mnt/fortress_nas/fortress_data/grafana_data
+    /mnt/fortress_nas/fortress_data/grafana_data/plugins
+    /mnt/fortress_nas/fortress_data/grafana_data/png
+    /mnt/fortress_nas/fortress_data/grafana_data/csv
+    /mnt/fortress_nas/fortress_data/grafana_data/pdf
+    /mnt/fortress_nas/fortress_data/grafana_data/dashboards
+    /mnt/fortress_nas/fortress_data/chroma_server_data
+    /mnt/fortress_nas/fortress_data/langfuse
+    /mnt/fortress_nas/fortress_data/langfuse/pgdata
+    Files: 3145
+
+  --- Critical File Counts ---
+  sectors/legal/owner-contracts: (not found)
+  sectors/legal/prime-trust-23-11161: 9 files
+  sectors/legal/fish-trap-suv2026000013: 42 files
+
+============================================================================
+  SECTION 4: DOCKER FLEET (ALL 4 NODES)
+============================================================================
+
+  --- CAPTAIN (192.168.0.100) Docker Containers ---
+  NAMES                                                                          STATUS                     PORTS                                                                                                                                                                    IMAGE
+  fortress-event-console                                                         Up 45 hours                0.0.0.0:8085->8080/tcp, [::]:8085->8080/tcp                                                                                                                              docker.redpanda.com/redpandadata/console:v2.4.6
+  fortress-event-broker                                                          Up 45 hours (healthy)      8081-8082/tcp, 0.0.0.0:9644->9644/tcp, [::]:9644->9644/tcp, 0.0.0.0:18082->18082/tcp, [::]:18082->18082/tcp, 9092/tcp, 0.0.0.0:19092->19092/tcp, [::]:19092->19092/tcp   docker.redpanda.com/redpandadata/redpanda:v23.3.11
+  fortress_portainer.1.8abo8yswikevurds129xcrl9n                                 Up 3 days                  8000/tcp, 9443/tcp, 0.0.0.0:8888->9000/tcp, [::]:8888->9000/tcp                                                                                                          portainer/portainer-ce:lts
+  fortress_portainer-agent.s7uo0m3blos0b7lbp6zqmzdfe.fuic7km0hux0mpeu3cc75rsec   Up 3 days                                                                                                                                                                                           portainer/agent:lts
+  fortress_portainer.1.pdd7jo3scauu8olota4ec17no                                 Exited (2) 3 days ago                                                                                                                                                                               portainer/portainer-ce:lts
+  fortress_portainer-agent.s7uo0m3blos0b7lbp6zqmzdfe.lj8ze108bxmot65pc6npjw89s   Exited (2) 3 days ago                                                                                                                                                                               portainer/agent:lts
+  fortress_portainer.1.9e7cil55w34idgme04kef87c9                                 Exited (2) 3 days ago                                                                                                                                                                               portainer/portainer-ce:lts
+  fortress_portainer-agent.s7uo0m3blos0b7lbp6zqmzdfe.4248a12znmi2wvlyld7ubmw39   Exited (2) 3 days ago                                                                                                                                                                               portainer/agent:lts
+  fortress_portainer.1.upprrkjb64wbae5efbpdyyz3d                                 Exited (2) 3 days ago                                                                                                                                                                               portainer/portainer-ce:lts
+  fortress_portainer.1.xsxgjt7tp2i3toyjlq8gbeufq                                 Exited (2) 3 days ago                                                                                                                                                                               portainer/portainer-ce:lts
+  fortress_portainer-agent.s7uo0m3blos0b7lbp6zqmzdfe.db16rxb8spzi5tpqypa1735zx   Exited (2) 5 days ago                                                                                                                                                                               portainer/agent:lts
+  fortress_portainer-agent.s7uo0m3blos0b7lbp6zqmzdfe.r6jubya4v46233c6au0qqpap3   Exited (2) 5 days ago                                                                                                                                                                               portainer/agent:lts
+  fortress-qdrant                                                                Up 7 days                  127.0.0.1:6333-6334->6333-6334/tcp                                                                                                                                       qdrant/qdrant:latest
+  fortress-scheduler                                                             Up 7 days                  8000/tcp                                                                                                                                                                 fortress-prime:latest
+  fortress-grafana                                                               Up 7 days (healthy)        0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp                                                                                                                              grafana/grafana-enterprise:latest
+  fortress-watchdog                                                              Up 7 days (unhealthy)                                                                                                                                                                               fortress-prime-watchdog
+  fortress-gateway                                                               Up 7 days (healthy)        0.0.0.0:8001->8000/tcp, [::]:8001->8000/tcp                                                                                                                              fortress-prime:latest
+  fortress-promtail                                                              Up 7 days                                                                                                                                                                                           grafana/promtail:3.4.2
+  fortress-refinery-agent                                                        Up 7 days                                                                                                                                                                                           fortress-prime-refinery-agent
+  fortress-pulse-agent                                                           Up 7 days                                                                                                                                                                                           fortress-prime-pulse-agent
+  fortress-prometheus                                                            Up 7 days (healthy)        0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp                                                                                                                              prom/prometheus:v3.2.1
+  fortress-loki                                                                  Up 7 days (healthy)        0.0.0.0:3100->3100/tcp, [::]:3100->3100/tcp                                                                                                                              grafana/loki:3.4.2
+  nim-swarm                                                                      Up 8 days (healthy)        0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp                                                                                                                              nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+  wolfpack-lb                                                                    Up 2 days                                                                                                                                                                                           nginx:latest
+  neo4j                                                                          Exited (255) 12 days ago   0.0.0.0:7474->7474/tcp, [::]:7474->7474/tcp, 7473/tcp, 0.0.0.0:7687->7687/tcp, [::]:7687->7687/tcp                                                                       neo4j:latest
+  fortress_mission_control                                                       Up 8 days (healthy)                                                                                                                                                                                 ghcr.io/open-webui/open-webui:main
+  fortress-chroma                                                                Up 8 days                  0.0.0.0:8020->8000/tcp, [::]:8020->8000/tcp                                                                                                                              chromadb/chroma:latest
+  fortress-nim-brain                                                             Exited (137) 2 weeks ago                                                                                                                                                                            nvcr.io/nim/qwen/qwen3-32b-dgx-spark:latest
+  quizzical_brattain                                                             Exited (255) 12 days ago                                                                                                                                                                            vsc-fortress-prime-c64474d4c48e7933dcefb58caae021724e81765d240cfcc003e038d7137806c2-uid
+
+  --- MUSCLE (192.168.0.104) Docker Containers ---
+  NAMES                                                                          STATUS                     PORTS                                         IMAGE
+  nim-swarm                                                                      Up 8 days (healthy)        0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp   nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+  fortress_portainer-agent.rnk87f6xbug4yf3y53oy0hzi9.jwkw57hp7v2baoplhctep5j1u   Exited (255) 12 days ago                                                 portainer/agent:lts
+  fortress-nim-qwen32b                                                           Exited (137) 2 weeks ago                                                 nvcr.io/nim/qwen/qwen3-32b-dgx-spark:latest
+
+  --- OCULAR (192.168.0.105) Docker Containers ---
+  NAMES                                                                          STATUS                     PORTS     IMAGE
+  nim-swarm                                                                      Exited (143) 3 days ago              nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+  ollama                                                                         Exited (0) 12 days ago               ollama/ollama:latest
+  fortress_portainer-agent.rihkbvgxy66u0qkk8vo7kp8iv.isusg1isypd0coo1jro2gj4i7   Exited (255) 12 days ago             portainer/agent:lts
+
+  --- SOVEREIGN (192.168.0.106) Docker Containers ---
+  NAMES                                                                          STATUS                     PORTS     IMAGE
+  nim-swarm                                                                      Exited (143) 3 days ago              nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+  ollama                                                                         Exited (0) 12 days ago               ollama/ollama:latest
+  fortress_portainer-agent.x9kofrzs00ublkffqseop0kp3.zcx2sj64eiqwmkds4h37tiwte   Exited (255) 12 days ago             portainer/agent:lts
+
+  --- Captain: Docker Volumes ---
+  Images space usage:
+  
+  REPOSITORY                                                                                TAG                       IMAGE ID       CREATED         SIZE      SHARED SIZE   UNIQUE SIZE   CONTAINERS
+  fortress-prime                                                                            latest                    7b20cebc1a60   8 days ago      5.11GB    230.3MB       4.883GB       2
+  fortress-prime-watchdog                                                                   latest                    e504c34ac844   8 days ago      180MB     179.7MB       10.02kB       1
+  <none>                                                                                    <none>                    6c0cac46386d   8 days ago      180MB     179.7MB       9.558kB       0
+  fortress-prime-refinery-agent                                                             latest                    4a708e054f33   8 days ago      265MB     212.2MB       53.2MB        1
+  fortress-prime-pulse-agent                                                                latest                    23e7a1e7f25f   8 days ago      236MB     211.6MB       24.45MB       1
+  <none>                                                                                    <none>                    93c2454cd807   10 days ago     5.28GB    1.484GB       3.796GB       0
+  fortress-swarm-worker                                                                     latest                    5dac2ceb5360   12 days ago     289MB     288.7MB       36.79kB       0
+  <none>                                                                                    <none>                    2e7f13f2ca8b   2 weeks ago     2.14GB    1.484GB       658.4MB       0
+  <none>                                                                                    <none>                    75c62d87afa9   2 weeks ago     2.15GB    1.488GB       658.2MB       0
+  <none>                                                                                    <none>                    dca01d8fbf82   2 weeks ago     2.15GB    1.488GB       658.2MB       0
+  <none>                                                                                    <none>                    1dbcc1106717   2 weeks ago     2.15GB    1.488GB       658.2MB       0
+  <none>                                                                                    <none>                    88e32cb91126   2 weeks ago     2.14GB    230.3MB       1.912GB       0
+  ghcr.io/open-webui/open-webui                                                             main                      df5d5d4b3c2b   2 weeks ago     4.15GB    97.2MB        4.05GB        1
+  <none>                                                                                    <none>                    da12d654cf91   2 weeks ago     289MB     288.7MB       28.69kB       0
+  <none>                                                                                    <none>                    acaaf13d0735   2 weeks ago     289MB     288.7MB       28.56kB       0
+  <none>                                                                                    <none>                    40f6467aa654   2 weeks ago     289MB     288.7MB       28.23kB       0
+  <none>                                                                                    <none>                    4d5b9e815495   2 weeks ago     186MB     159MB         27.31MB       0
+  postgres                                                                                  16-alpine                 656ce000ee1e   2 weeks ago     272MB     8.701MB       262.9MB       0
+  <none>                                                                                    <none>                    15c31307f634   2 weeks ago     265MB     212.2MB       53.14MB       0
+  <none>                                                                                    <none>                    af88efb5eac2   2 weeks ago     235MB     211.6MB       23.32MB       0
+  <none>                                                                                    <none>                    3e7d6d975b5a   2 weeks ago     1.9GB     230.3MB       1.669GB       0
+  <none>                                                                                    <none>                    516ab5a61bf2   2 weeks ago     1.9GB     230.3MB       1.669GB       0
+  neo4j                                                                                     latest                    e89c3fe10f07   2 weeks ago     628MB     100.5MB       528MB         1
+  <none>                                                                                    <none>                    4ff98c7338ba   2 weeks ago     130MB     0B            129.7MB       5
+  <none>                                                                                    <none>                    24fab8b8f344   2 weeks ago     176MB     0B            176.1MB       5
+  chromadb/chroma                                                                           latest                    1a4f74695be4   3 weeks ago     619MB     0B            619.3MB       1
+  alpine/curl                                                                               latest                    59eab98abe4d   3 weeks ago     14.3MB    8.701MB       5.638MB       0
+
+  --- Captain: Docker Networks ---
+  NAME                              DRIVER    SCOPE
+  bridge                            bridge    local
+  crog-fortress-ai_default          bridge    local
+  docker_gwbridge                   bridge    local
+  fortress-network                  bridge    local
+  fortress-prime_fortress-network   bridge    local
+  fortress_net                      overlay   swarm
+  host                              host      local
+  ingress                           overlay   swarm
+  none                              null      local
+
+============================================================================
+  SECTION 5: POSTGRESQL — fortress_db SCHEMA
+============================================================================
+
+  --- Database Size ---
+  1828 MB
+
+  --- Schemas ---
+     schema_name   
+  -----------------
+   division_a
+   division_b
+   engineering
+   finance
+   hedge_fund
+   intelligence
+   legal
+   legal_cmd
+   pg_temp_3
+   pg_temp_8
+   pg_toast_temp_3
+   pg_toast_temp_8
+   public
+  (13 rows)
+  
+
+  --- Tables with Row Counts ---
+              table_name             | row_count 
+  -----------------------------------+-----------
+   division_a.account_mappings       |         0
+   division_a.audit_log              |         0
+   division_a.chart_of_accounts      |         0
+   division_a.general_ledger         |         0
+   division_a.journal_entries        |         0
+   division_a.predictions            |         0
+   division_a.transactions           |         0
+   division_b.account_mappings       |         0
+   division_b.chart_of_accounts      |         0
+   division_b.escrow                 |         0
+   division_b.general_ledger         |         0
+   division_b.journal_entries        |         0
+   division_b.predictions            |         0
+   division_b.transactions           |         0
+   division_b.trust_ledger           |         0
+   division_b.vendor_payouts         |         0
+   engineering.change_orders         |         0
+   engineering.compliance_log        |         0
+   engineering.cost_estimates        |         0
+   engineering.drawings              |         0
+   engineering.inspections           |         0
+   engineering.mep_systems           |         0
+   engineering.permits               |         0
+   engineering.projects              |         0
+   engineering.punch_items           |         0
+   engineering.rfis                  |         0
+   engineering.submittals            |         0
+   finance.classification_rules      |        50
+   finance.vendor_classifications    |         0
+   hedge_fund.active_strategies      |         0
+   hedge_fund.extraction_log         |      1602
+   hedge_fund.market_signals         |      1105
+   hedge_fund.watchlist              |         0
+   intelligence.entities             |         0
+   intelligence.golden_reasoning     |         0
+   intelligence.relationships        |         0
+   intelligence.titan_traces         |         0
+   legal.case_actions                |         2
+   legal.case_evidence               |         4
+   legal.case_precedents             |         0
+   legal.case_watchdog               |         0
+   legal.cases                       |         0
+   legal.correspondence              |         5
+   legal.deadlines                   |         8
+   legal.expense_intake              |         1
+   legal.filings                     |         0
+   legal.uploads                     |         0
+   legal_cmd.attorneys               |         0
+   legal_cmd.documents               |         0
+   legal_cmd.matters                 |         0
+   legal_cmd.meetings                |         1
+   legal_cmd.timeline                |         0
+   public.ab_test_observations       |         0
+   public.ab_tests                   |         0
+   public.accounts                   |         0
+   public.active_learning_queue      |         0
+   public.agent_learning_log         |        23
+   public.agent_performance_log      |         0
+   public.agent_response_queue       |        18
+   public.ai_training_labels         |         0
+   public.alembic_version            |         0
+   public.anomaly_flags              |         0
+   public.api_key_vault              |         7
+   public.asset_docs                 |         0
+   public.conversation_threads       |         0
+   public.council_votes              |        60
+   public.email_archive              |     36246
+   public.email_classification_rules |       329
+   public.email_dead_letter_queue    |         0
+   public.email_escalation_queue     |      3617
+   public.email_escalation_rules     |        23
+   public.email_intake_review_log    |       176
+   public.email_quarantine           |     28542
+   public.email_routing_rules        |       114
+   public.email_triage_precedents    |         1
+   public.fin_owner_balances         |         0
+   public.fin_reservations           |         0
+   public.fin_revenue_snapshots      |         0
+   public.finance_invoices           |      6872
+   public.fortress_api_keys          |         0
+   public.fortress_users             |        11
+   public.general_ledger             |         0
+   public.guest_leads                |     13691
+   public.guest_profiles             |         0
+   public.images                     |         0
+   public.journal_entries            |         1
+   public.journal_line_items         |         2
+   public.learning_judgments         |         0
+   public.learning_optimizations     |         0
+   public.legal_clients              |         0
+   public.legal_docket               |         0
+   public.legal_intel                |        40
+   public.legal_matter_notes         |         0
+   public.legal_matters              |         0
+   public.maintenance_log            |         0
+   public.market_intel               |     25984
+   public.market_signals             |         0
+   public.message_analytics          |         0
+   public.message_archive            |      5059
+   public.model_telemetry            |         0
+   public.ops_crew                   |         0
+   public.ops_log                    |         0
+   public.ops_overrides              |         0
+   public.ops_properties             |         0
+   public.ops_tasks                  |         0
+   public.ops_turnovers              |         0
+   public.ops_visuals                |         0
+   public.pages                      |         0
+   public.persona_scores             |         9
+   public.properties                 |         0
+   public.property_events            |         0
+   public.property_sms_config        |        14
+   public.quarantine_inbox           |       664
+   public.rag_query_feedback         |         0
+   public.real_estate_intel          |       139
+   public.recursive_trace_log        |         0
+   public.revenue_ledger             |         0
+   public.ruebarue_area_guide        |       119
+   public.ruebarue_contacts          |        39
+   public.ruebarue_guests            |      1341
+   public.ruebarue_knowledge_base    |       141
+   public.ruebarue_message_templates |        20
+   public.sales_intel                |     17598
+   public.sender_registry            |         0
+   public.sentinel_alerts            |        48
+   public.sentinel_state             |         0
+   public.sms_providers              |         0
+   public.sovereign_cycles           |         0
+   public.system_post_mortems        |       337
+   public.system_telemetry           |         0
+   public.trust_balance              |         0
+   public.vision_runs                |         0
+  (132 rows)
+  
+
+  --- Foreign Keys ---
+             table_name           |     column_name     |        references_table        | references_column 
+  --------------------------------+---------------------+--------------------------------+-------------------
+   division_a.account_mappings    | debit_account       | division_a.chart_of_accounts   | code
+   division_a.account_mappings    | credit_account      | division_b.chart_of_accounts   | code
+   division_a.account_mappings    | credit_account      | division_a.chart_of_accounts   | code
+   division_a.account_mappings    | credit_account      | division_b.chart_of_accounts   | code
+   division_a.account_mappings    | debit_account       | division_b.chart_of_accounts   | code
+   division_a.account_mappings    | debit_account       | division_a.chart_of_accounts   | code
+   division_a.account_mappings    | credit_account      | division_a.chart_of_accounts   | code
+   division_a.account_mappings    | debit_account       | division_b.chart_of_accounts   | code
+   division_a.general_ledger      | account_code        | division_b.chart_of_accounts   | code
+   division_a.general_ledger      | journal_entry_id    | division_a.journal_entries     | entry_id
+   division_a.general_ledger      | journal_entry_id    | division_b.journal_entries     | entry_id
+   division_a.general_ledger      | account_code        | division_a.chart_of_accounts   | code
+   division_a.general_ledger      | journal_entry_id    | division_a.journal_entries     | entry_id
+   division_a.general_ledger      | account_code        | division_a.chart_of_accounts   | code
+   division_a.general_ledger      | journal_entry_id    | division_b.journal_entries     | entry_id
+   division_a.general_ledger      | account_code        | division_b.chart_of_accounts   | code
+   division_b.account_mappings    | debit_account       | division_a.chart_of_accounts   | code
+   division_b.account_mappings    | credit_account      | division_b.chart_of_accounts   | code
+   division_b.account_mappings    | credit_account      | division_a.chart_of_accounts   | code
+   division_b.account_mappings    | debit_account       | division_b.chart_of_accounts   | code
+   division_b.account_mappings    | debit_account       | division_a.chart_of_accounts   | code
+   division_b.account_mappings    | debit_account       | division_b.chart_of_accounts   | code
+   division_b.account_mappings    | credit_account      | division_a.chart_of_accounts   | code
+   division_b.account_mappings    | credit_account      | division_b.chart_of_accounts   | code
+   division_b.general_ledger      | account_code        | division_a.chart_of_accounts   | code
+   division_b.general_ledger      | journal_entry_id    | division_a.journal_entries     | entry_id
+   division_b.general_ledger      | journal_entry_id    | division_a.journal_entries     | entry_id
+   division_b.general_ledger      | journal_entry_id    | division_b.journal_entries     | entry_id
+   division_b.general_ledger      | account_code        | division_b.chart_of_accounts   | code
+   division_b.general_ledger      | account_code        | division_a.chart_of_accounts   | code
+   division_b.general_ledger      | journal_entry_id    | division_b.journal_entries     | entry_id
+   division_b.general_ledger      | account_code        | division_b.chart_of_accounts   | code
+   engineering.change_orders      | project_id          | engineering.projects           | id
+   engineering.compliance_log     | property_id         | public.properties              | id
+   engineering.compliance_log     | drawing_id          | engineering.drawings           | id
+   engineering.compliance_log     | project_id          | engineering.projects           | id
+   engineering.cost_estimates     | project_id          | engineering.projects           | id
+   engineering.drawings           | project_id          | engineering.projects           | id
+   engineering.drawings           | property_id         | public.properties              | id
+   engineering.inspections        | property_id         | public.properties              | id
+   engineering.inspections        | project_id          | engineering.projects           | id
+   engineering.inspections        | permit_id           | engineering.permits            | id
+   engineering.mep_systems        | property_id         | public.properties              | id
+   engineering.permits            | project_id          | engineering.projects           | id
+   engineering.permits            | property_id         | public.properties              | id
+   engineering.projects           | property_id         | public.properties              | id
+   engineering.punch_items        | project_id          | engineering.projects           | id
+   engineering.punch_items        | inspection_id       | engineering.inspections        | id
+   engineering.rfis               | project_id          | engineering.projects           | id
+   engineering.submittals         | project_id          | engineering.projects           | id
+   finance.classification_rules   | source_vendor_id    | finance.vendor_classifications | id
+   hedge_fund.extraction_log      | email_id            | public.email_archive           | id
+   hedge_fund.market_signals      | source_email_id     | public.email_archive           | id
+   intelligence.relationships     | from_entity_id      | intelligence.entities          | id
+   intelligence.relationships     | to_entity_id        | intelligence.entities          | id
+   legal.case_actions             | case_id             | legal.cases                    | id
+   legal.case_evidence            | case_id             | legal.cases                    | id
+   legal.case_precedents          | case_slug           | legal.cases                    | case_slug
+   legal.case_watchdog            | case_id             | legal.cases                    | id
+   legal.correspondence           | case_id             | legal.cases                    | id
+   legal.deadlines                | case_id             | legal.cases                    | id
+   legal.filings                  | case_id             | legal.cases                    | id
+   legal.uploads                  | case_id             | legal.cases                    | id
+   legal.uploads                  | filing_id           | legal.filings                  | id
+   legal_cmd.documents            | matter_id           | legal_cmd.matters              | id
+   legal_cmd.matters              | attorney_id         | legal_cmd.attorneys            | id
+   legal_cmd.meetings             | attorney_id         | legal_cmd.attorneys            | id
+   legal_cmd.meetings             | matter_id           | legal_cmd.matters              | id
+   legal_cmd.timeline             | related_meeting_id  | legal_cmd.meetings             | id
+   legal_cmd.timeline             | related_attorney_id | legal_cmd.attorneys            | id
+   legal_cmd.timeline             | matter_id           | legal_cmd.matters              | id
+   public.ab_test_observations    | test_id             | public.ab_tests                | id
+   public.accounts                | parent_id           | public.accounts                | id
+   public.active_learning_queue   | judgment_id         | public.learning_judgments      | id
+   public.agent_learning_log      | queue_id            | public.agent_response_queue    | id
+   public.agent_response_queue    | inbound_message_id  | public.message_archive         | id
+   public.ai_training_labels      | message_id          | public.message_archive         | id
+   public.anomaly_flags           | journal_entry_id    | public.journal_entries         | id
+   public.anomaly_flags           | account_id          | public.accounts                | id
+   public.asset_docs              | property_id         | public.properties              | id
+   public.email_escalation_queue  | email_id            | public.email_archive           | id
+   public.email_intake_review_log | escalation_id       | public.email_escalation_queue  | id
+   public.email_intake_review_log | email_id            | public.email_archive           | id
+   public.email_quarantine        | rule_id             | public.email_routing_rules     | id
+   public.finance_invoices        | source_email_id     | public.email_archive           | id
+   public.fortress_api_keys       | owner_id            | public.fortress_users          | id
+   public.guest_leads             | source_email_id     | public.email_archive           | id
+   public.journal_line_items      | account_id          | public.accounts                | id
+   public.journal_line_items      | journal_entry_id    | public.journal_entries         | id
+   public.legal_docket            | matter_id           | public.legal_matters           | matter_id
+   public.legal_matter_notes      | matter_id           | public.legal_matters           | matter_id
+   public.legal_matters           | client_id           | public.legal_clients           | client_id
+   public.ops_tasks               | property_id         | public.ops_properties          | property_id
+   public.ops_tasks               | assigned_to         | public.ops_crew                | id
+   public.ops_tasks               | turnover_id         | public.ops_turnovers           | id
+   public.ops_turnovers           | property_id         | public.ops_properties          | property_id
+   public.ops_visuals             | property_id         | public.ops_properties          | property_id
+   public.property_events         | property_id         | public.properties              | id
+   public.property_sms_config     | provider_id         | public.sms_providers           | id
+   public.sales_intel             | source_email_id     | public.email_archive           | id
+  (100 rows)
+  
+
+  --- Index Count per Table (top 30) ---
+            table_name          | index_count 
+  ------------------------------+-------------
+   public.message_archive       |          11
+   public.ops_visuals           |          10
+   public.ops_tasks             |           8
+   public.email_archive         |           7
+   public.journal_entries       |           7
+   public.general_ledger        |           7
+   public.guest_profiles        |           6
+   public.maintenance_log       |           6
+   engineering.drawings         |           6
+   public.model_telemetry       |           6
+   public.conversation_threads  |           6
+   legal_cmd.matters            |           6
+   public.revenue_ledger        |           6
+   public.sender_registry       |           5
+   division_a.transactions      |           5
+   hedge_fund.market_signals    |           5
+   public.recursive_trace_log   |           5
+   public.anomaly_flags         |           5
+   engineering.projects         |           5
+   public.asset_docs            |           5
+   engineering.permits          |           5
+   public.learning_judgments    |           5
+   public.guest_leads           |           5
+   legal.deadlines              |           5
+   intelligence.relationships   |           5
+   public.agent_response_queue  |           5
+   public.accounts              |           5
+   division_b.transactions      |           4
+   finance.classification_rules |           4
+   public.ai_training_labels    |           4
+  (30 rows)
+  
+
+============================================================================
+  SECTION 6: POSTGRESQL — fortress_guest SCHEMA
+============================================================================
+
+  --- Database Size ---
+  345 MB
+
+  --- Tables with Row Counts ---
+             table_name           | row_count 
+  --------------------------------+-----------
+   iot_schema.device_events       |     53403
+   iot_schema.digital_twins       |         5
+   public.accounts                |        32
+   public.agent_response_queue    |         0
+   public.agreement_templates     |         2
+   public.alembic_version         |         1
+   public.analytics_events        |         0
+   public.anomaly_flags           |         0
+   public.blocked_days            |        69
+   public.capex_staging           |         3
+   public.channel_mappings        |         0
+   public.channel_sync_log        |         0
+   public.damage_claims           |       170
+   public.development_expenses    |         1
+   public.email_templates         |         7
+   public.expense_events_archive  |       136
+   public.extra_orders            |         0
+   public.extras                  |         0
+   public.guest_activities        |         0
+   public.guest_reviews           |        19
+   public.guest_surveys           |         0
+   public.guest_verifications     |         0
+   public.guestbook_guides        |         0
+   public.guests                  |      8183
+   public.housekeeping_tasks      |        27
+   public.journal_entries         |      2273
+   public.journal_line_items      |      8807
+   public.knowledge_base_entries  |       134
+   public.leads                   |         5
+   public.maintenance_log         |         0
+   public.management_splits       |        14
+   public.message_queue           |         0
+   public.message_templates       |         0
+   public.messages                |        59
+   public.owner_magic_tokens      |         7
+   public.owner_markup_rules      |        14
+   public.owner_payout_accounts   |         0
+   public.owner_property_map      |        14
+   public.owner_statement_archive |         9
+   public.owner_statements        |         0
+   public.payout_ledger           |         0
+   public.properties              |        14
+   public.property_utilities      |         8
+   public.quote_options           |         3
+   public.quotes                  |         8
+   public.rental_agreements       |      2148
+   public.reservations            |      2654
+   public.scheduled_messages      |         0
+   public.staff_invites           |         0
+   public.staff_users             |         8
+   public.survey_templates        |         0
+   public.tenants                 |         1
+   public.trust_balance           |        14
+   public.trust_balance_legacy    |        14
+   public.utility_readings        |        14
+   public.vault_audit_logs        |         9
+   public.vrs_automation_events   |    499808
+   public.vrs_automations         |         0
+   public.work_orders             |         4
+   verses_schema.products         |         1
+  (60 rows)
+  
+
+  --- Financial Table Integrity ---
+  [trust_balance]
+    rows: 14
+  [reservations]
+    rows: 2654
+  [owner_statements]
+    rows: 0
+  [properties]
+    rows: 14
+  [guests]
+    rows: 8183
+  [damage_claims]
+    rows: 170
+  [rental_agreements]
+    rows: 2148
+  [messages]
+    rows: 59
+
+============================================================================
+  SECTION 7: QDRANT VECTOR DATABASE
+============================================================================
+
+  --- Collections Overview ---
+  {
+      "result": {
+          "collections": [
+              {
+                  "name": "sound_money_intel"
+              },
+              {
+                  "name": "raoul_intel"
+              },
+              {
+                  "name": "real_estate_intel"
+              },
+              {
+                  "name": "legal_headhunter_memory"
+              },
+              {
+                  "name": "historical_quotes"
+              },
+              {
+                  "name": "jordi_intel"
+              },
+              {
+                  "name": "market_intelligence"
+              },
+              {
+                  "name": "legal_library"
+              },
+              {
+                  "name": "permabear_intel"
+              },
+              {
+                  "name": "black_swan_intel"
+              },
+              {
+                  "name": "fortress_knowledge"
+              },
+              {
+                  "name": "fgp_knowledge"
+              },
+              {
+                  "name": "email_embeddings"
+              },
+              {
+                  "name": "vol_trader_intel"
+              },
+              {
+                  "name": "fgp_golden_claims"
+              },
+              {
+                  "name": "fed_watcher_intel"
+              },
+              {
+                  "name": "lyn_intel"
+              }
+          ]
+      },
+      "status": "ok",
+      "time": 7.824e-06
+  }
+
+  --- Collection Detail: fortress_knowledge ---
+  Vectors :            ?
+  Points  :      4827315
+  Segments:            0
+  Status  : green
+  Dim     : 768
+
+  --- Collection Detail: email_embeddings ---
+  Vectors :            ?
+  Points  :       651323
+  Segments:            0
+  Status  : green
+  Dim     : 768
+
+  --- Collection Detail: legal_library ---
+  Vectors :            ?
+  Points  :        15943
+  Segments:            0
+  Status  : green
+  Dim     : 768
+
+
+============================================================================
+  SECTION 8: REDPANDA / KAFKA EVENT BUS
+============================================================================
+
+  Container: fortress-event-broker (running)
+
+  --- Cluster Health ---
+  CLUSTER HEALTH OVERVIEW
+  =======================
+  Healthy:                          true
+  Unhealthy reasons:                []
+  Controller ID:                    0
+  All nodes:                        [0]
+  Nodes down:                       []
+  Leaderless partitions (0):        []
+  Under-replicated partitions (0):  []
+
+  --- Topics ---
+  NAME                                PARTITIONS  REPLICAS
+  development.expenses.logged         3           1
+  ecommerce.orders.created            3           1
+  ecommerce.seo.generation_requested  3           1
+  enterprise.inbox.raw                3           1
+  iot.cameras.motion_detected         3           1
+  iot.locks.state_changed             3           1
+  iot.thermostat.state_changed        1           1
+  legal.intake.staged                 1           1
+  market.crypto.ticks                 3           1
+  market.macro.news                   3           1
+  market.thesis.approved              3           1
+  pricing.adjustment.staged           3           1
+  system.health.alerts                3           1
+  trust.accounting.staged             3           1
+  trust.expense.staged                1           1
+  trust.payout.staged                 3           1
+  trust.revenue.staged                3           1
+
+  --- Consumer Groups ---
+  BROKER  GROUP
+  0       digital_twin_sync_v1
+  0       eda_verify_test
+  0       fortress-expense-consumer
+  0       fortress-prime-glass
+  0       fortress-revenue-consumer
+  0       legal_intake_v1
+  0       triage_router_v1
+  0       triage_router_v10
+  0       triage_router_v11
+  0       triage_router_v2
+  0       triage_router_v3
+  0       triage_router_v4
+  0       triage_router_v5
+  0       triage_router_v6
+  0       triage_router_v7
+  0       triage_router_v8
+  0       triage_router_v9
+  0       trust_accounting_v1
+  0       trust_accounting_v2
+  0       trust_accounting_v3
+  0       trust_accounting_v4
+  0       trust_accounting_v5
+  0       trust_accounting_v6
+  0       trust_accounting_v7
+  0       trust_accounting_v8
+  0       trust_accounting_v9
+  0       verses_seo_v1
+  0       wealth_expenses_v1
+
+============================================================================
+  SECTION 9: ACTIVE DAEMONS AND SERVICES
+============================================================================
+
+  --- Key Processes ---
+  [RUNNING] master_console (PID: 3036123)
+  [RUNNING] bare_metal_dashboard (PID: 5954)
+  [RUNNING] batch_classifier (PID: 2284951)
+  [RUNNING] legal_case_manager (PID: 2395178)
+  [RUNNING] fortress_sentinel (PID: 3261673)
+  [RUNNING] claude_proxy (PID: 3416)
+  [RUNNING] uvicorn.*8100 (PID: 2057856)
+  [RUNNING] next.*3001 (PID: 2060590)
+  [  OFF  ] payout_consumer
+  [  OFF  ] iot_consumer
+  [RUNNING] revenue_consumer (PID: 1671638)
+  [RUNNING] mining_rig (PID: 2544064)
+
+  --- Port Listeners ---
+  PORT     STATUS     PROCESS
+  -------- ---------- -----------------------------
+  3000     LISTENING  unknown
+  3001     LISTENING  next-server (v1
+  3100     LISTENING  unknown
+  5100     LISTENING  python
+  6333     LISTENING  unknown
+  8001     LISTENING  unknown
+  8080     LISTENING  unknown
+  8085     LISTENING  unknown
+  8100     LISTENING  python3
+  9090     LISTENING  unknown
+  9644     LISTENING  unknown
+  9800     LISTENING  python
+  9876     LISTENING  python
+  9877     LISTENING  python
+  9878     LISTENING  python3
+
+============================================================================
+  SECTION 10: NGINX LOAD BALANCER
+============================================================================
+
+  Container: wolfpack-lb (running)
+
+  --- Upstream Definitions (from wolfpack_ai.conf) ---
+  upstream wolfpack_cluster {
+      server 192.168.0.100:11434;  # Captain   (Ollama)
+      server 192.168.0.104:11434;  # Muscle    (Ollama — DGX)
+      server 192.168.0.105:11434;  # Ocular    (Ollama — GB10)
+      server 192.168.0.106:11434;  # Sovereign (Ollama — GB10)
+  upstream hydra_cluster {
+      server 192.168.0.104:11434;  # Muscle    — R1-70B loaded (57GB VRAM)
+      server 192.168.0.105:11434;  # Ocular    — R1-70B loaded (102GB VRAM)
+      server 192.168.0.106:11434;  # Sovereign — R1-70B loaded (102GB VRAM)
+  upstream wolfpack_embed {
+      server 192.168.0.100:11434;  # Captain   — 33ms, model pre-loaded
+      server 192.168.0.104:11434;  # Muscle    — 1.7s
+      server 192.168.0.105:11434;  # Ocular    — 1.7s
+      server 192.168.0.106:11434;  # Sovereign — has nomic-embed-text
+  upstream nim_brain {
+      server 192.168.0.100:8010;
+  upstream command_center {
+      server 127.0.0.1:9800;
+  upstream guest_platform {
+      server 127.0.0.1:8100;
+  upstream crog_gateway {
+      server 127.0.0.1:8001;
+  upstream health_panel {
+      server 127.0.0.1:9876;
+  upstream nextjs_frontend {
+      server 127.0.0.1:3001;
+  server {
+  server {
+  server {
+
+  --- Nginx Health Check ---
+  /health: Wolfpack Online — SWARM+HYDRA
+
+============================================================================
+  SECTION 11: CRONTAB / SCHEDULED OPERATIONS
+============================================================================
+
+  --- Container Cron (scheduler/crontab) ---
+  0 3 * * 0  cd /app && python3 tools/data_hygiene.py --execute >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/cron.log 2>&1
+  30 3 * * 0  cd /app && python3 tools/vector_gc.py --execute >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/vector_gc_cron.log 2>&1
+  0 4 * * 0  cd /app && python3 -c "import psycopg2,os;c=psycopg2.connect(host=os.getenv('DB_HOST','host.docker.internal'),database=os.getenv('DB_NAME','fortress_db'),user=os.getenv('DB_USER','miner_bot'),password=os.getenv('DB_PASS',''));c.autocommit=True;cur=c.cursor();[cur.execute(f'VACUUM ANALYZE {t}') for t in ['email_archive','sales_intel','guest_leads','market_intel','quarantine_inbox']];print('VACUUM ANALYZE complete');c.close()" >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/vacuum_cron.log 2>&1
+  0 2 * * *  cd /app && python3 tools/classification_janitor.py --mode hydra >> /mnt/fortress_nas/fortress_data/ai_brain/logs/janitor/cron.log 2>&1
+  0 */2 * * *  cd /app && python3 tools/kyc_watchdog.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/kyc_watchdog/cron.log 2>&1
+  30 3 * * *  cd /app && python3 src/lesson_extractor.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/lesson_extractor/cron.log 2>&1
+  0 4 * * *  cd /app && python3 src/ingest_macro_data.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/macro_ingest/cron.log 2>&1
+  0 14 * * *  cd /app && python3 src/ingest_macro_data.py --fomc-only >> /mnt/fortress_nas/fortress_data/ai_brain/logs/macro_ingest/fomc.log 2>&1
+  30 6 * * *  cd /app && python3 tools/nvidia_sentinel.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/sentinel/cron.log 2>&1
+  0 0 1 * * find /mnt/fortress_nas/fortress_data/ai_brain/logs -name "*.log" -mtime +30 -delete 2>/dev/null
+
+  --- Host Crontab (Captain) ---
+  0 3 * * * /home/admin/Fortress-Prime/lockdown_cluster.sh >> /home/admin/Fortress-Prime/backup.log 2>&1
+  0 1 * * * /home/admin/Fortress-Prime/bin/night_shift.sh
+  0 6 * * * cd /home/admin/Fortress-Prime && /usr/bin/python3 -m src.market_watcher --email >> /mnt/fortress_nas/fortress_data/ai_brain/logs/market_watcher/daily_run.log 2>&1
+  */10 8-22 * * * cd /home/admin/Fortress-Prime && /usr/bin/python3 -m src.gmail_watcher --cabin rolling_river >> /mnt/fortress_nas/fortress_data/ai_brain/logs/gmail_watcher/cron_run.log 2>&1
+  0 0 1 * * find /mnt/fortress_nas/fortress_data/ai_brain/logs -name "*.log" -mtime +30 -delete 2>/dev/null
+  0 4 * * * /home/admin/Fortress-Prime/bin/backup_code.sh
+  0 3 * * * rsync -av --delete /mnt/fortress_nas/fortress_data/chroma_server_data/ /mnt/fortress_nas/fortress_data/ai_brain/backups/chroma_db_mirror/
+  0 6 * * * cd /home/admin/Fortress-Prime && /usr/bin/python3 -m src.market_sentinel --email >> /mnt/fortress_nas/fortress_data/ai_brain/logs/market_sentinel/daily.log 2>&1
+  15 6 * * * /home/admin/Fortress-Prime/bin/ops_heartbeat.sh >> /home/admin/Fortress-Prime/logs/ops_heartbeat.log 2>&1
+  0 5 * * * /usr/bin/python3 /home/admin/Fortress-Prime/src/bridges/streamline_property_sync.py >> /home/admin/Fortress-Prime/logs/asset_sync.log 2>&1
+  15 5 * * * /usr/bin/python3 /home/admin/Fortress-Prime/src/bridges/groundskeeper_shadow.py >> /home/admin/Fortress-Prime/logs/groundskeeper_shadow.log 2>&1
+  0 6 * * * cd /home/admin/Fortress-Prime && /usr/bin/python3 -m src.watchtower_briefing >> /mnt/fortress_nas/fortress_data/ai_brain/logs/watchtower/cron.log 2>&1
+  30 5 * * * cd /home/admin/Fortress-Prime && /usr/bin/python3 src/quant_revenue.py --days 30 >> /home/admin/Fortress-Prime/logs/quantrevenue_cron.log 2>&1
+  0 5-21/2 * * *  cd /home/admin/Fortress-Prime && /usr/bin/python3 -m src.ingest_market_imap --days 3 >> /mnt/fortress_nas/fortress_data/ai_brain/logs/imap_ingest/cron.log 2>&1
+  15 5-21/2 * * *  cd /home/admin/Fortress-Prime && /usr/bin/python3 src/mining_rig.py --batch 50 >> /mnt/fortress_nas/fortress_data/ai_brain/logs/mining_rig/cron.log 2>&1
+  0 3 * * 0  cd /home/admin/Fortress-Prime && /usr/bin/python3 tools/data_hygiene.py --execute >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/cron.log 2>&1
+  30 3 * * 0  cd /home/admin/Fortress-Prime && /usr/bin/python3 tools/vector_gc.py --execute >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/vector_gc_cron.log 2>&1
+  0 4 * * 0  cd /home/admin/Fortress-Prime && /usr/bin/python3 -c "import psycopg2,os;from dotenv import load_dotenv;load_dotenv();c=psycopg2.connect(host=os.getenv('DB_HOST','localhost'),database=os.getenv('DB_NAME','fortress_db'),user=os.getenv('ADMIN_DB_USER') or os.getenv('DB_USER','miner_bot'),password=os.getenv('ADMIN_DB_PASS') or os.getenv('DB_PASS',''));c.autocommit=True;cur=c.cursor();[cur.execute(f'VACUUM ANALYZE {t}') for t in ['email_archive','sales_intel','guest_leads','market_intel','quarantine_inbox']];print('VACUUM ANALYZE complete');c.close()" >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/vacuum_cron.log 2>&1
+  30 6 * * * cd /home/admin/Fortress-Prime && ./venv/bin/python tools/nvidia_sentinel.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/sentinel/cron.log 2>&1
+  0 2 * * * /home/admin/Fortress-Prime/venv/bin/python /home/admin/Fortress-Prime/tools/classification_janitor.py --mode hydra >> /tmp/janitor.log 2>&1
+  0 */2 * * * cd /home/admin/Fortress-Prime && ./venv/bin/python tools/kyc_watchdog.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/kyc_watchdog/cron.log 2>&1
+  45 5 * * * cd /home/admin/Fortress-Prime && set -a && . .env && set +a && /usr/bin/python3 src/universal_intelligence_hunter.py --all >> /mnt/fortress_nas/fortress_data/ai_brain/logs/intelligence_hunter/daily.log 2>&1
+  0 4 * * * /home/admin/Fortress-Prime/update_intelligence.sh >> /home/admin/Fortress-Prime/ingestion.log 2>&1
+  @reboot cd /home/admin/Fortress-Prime && ./venv/bin/python src/revenue_consumer_daemon.py >> /tmp/revenue_consumer.log 2>&1
+
+  --- Host Crontab (MUSCLE, 192.168.0.104) ---
+  (empty or unreachable)
+
+  --- Host Crontab (OCULAR, 192.168.0.105) ---
+  (empty or unreachable)
+
+  --- Host Crontab (SOVEREIGN, 192.168.0.106) ---
+  (empty or unreachable)
+
+
+============================================================================
+  SECTION 12: NVIDIA NIM / INFERENCE STATUS
+============================================================================
+
+  --- NIM Containers (all nodes) ---
+  [CAPTAIN]
+    nim-swarm Up 8 days (healthy)
+  [MUSCLE]
+    nim-swarm Up 8 days (healthy)
+  [OCULAR]
+    (none found or unreachable)
+  [SOVEREIGN]
+    (none found or unreachable)
+
+  --- SWARM Endpoint (http://192.168.0.100/v1/models) ---
+  Model: nomic-embed-text:latest
+  Model: qwen2.5:7b
+  Model: deepseek-r1:70b
+
+  --- HYDRA Endpoint (http://192.168.0.100/hydra/v1/models) ---
+  Model: nomic-embed-text:latest
+
+============================================================================
+  SECTION 13: OPEN WEBUI / MISSION CONTROL
+============================================================================
+
+  Container: fortress_mission_control | Up 8 days (healthy)
+
+  --- Health Check (port 8080) ---
+  Status: {"status":true}
+
+============================================================================
+  SECTION 14: FGP BACKEND HEALTH (PORT 8100)
+============================================================================
+
+  --- Health Endpoint ---
+  {
+      "status": "healthy",
+      "service": "Fortress Guest Platform",
+      "version": "1.0.0",
+      "environment": "development"
+  }
+
+  --- Streamline VRS Connection ---
+  [UNREACHABLE] Streamline status endpoint not responding
+
+  --- FGP Entity Counts (from fortress_guest DB) ---
+  properties:               14
+  reservations:             2654
+  guests:                   8183
+  damage_claims:            170
+  rental_agreements:        2148
+  work_orders:              13
+  messages:                 59
+  housekeeping_tasks:       27
+  guest_reviews:            19
+
+============================================================================
+  SECTION 15: FGP FRONTEND HEALTH (PORT 3001)
+============================================================================
+
+  HTTP Status: 200
+  Status: HEALTHY
+
+  --- Next.js Build Info ---
+  .next directory: EXISTS
+  Last modified:   2026-03-01 15:15:50.813447128 -0500
+  Build ID:        asO1Rr9dFXh4q9m3zv1ws
+
+============================================================================
+  SECTION 16: IOT SUBSYSTEM
+============================================================================
+
+  --- MQTT Broker (192.168.0.50:1883) ---
+  Status: UNREACHABLE
+
+  --- IoT Consumer Daemon ---
+  Status: NOT RUNNING
+
+  --- IoT Database Tables (fortress_guest) ---
+  iot_event_log:       (table not found or empty)
+  iot_device_map:      (table not found or empty)
+
+  --- IoT Digital Twins (fortress_guest) ---
+  digital_twins: (table not found)
+
+============================================================================
+  SECTION 17: LEGAL COMMAND CENTER
+============================================================================
+
+  --- Legal Case Manager (port 9878) ---
+  Status: UNREACHABLE (port 9878)
+
+  --- Legal Schema (fortress_db) ---
+  legal.cases:                   2 rows
+  legal.case_actions:            37 rows
+  legal.case_watchdog:           40 rows
+  legal.case_evidence:           69 rows
+  legal.correspondence:          15 rows
+  legal.deadlines:               8 rows
+
+  --- Upcoming Deadlines ---
+  ERROR:  column "case_slug" does not exist
+  LINE 2:         SELECT case_slug, deadline_type, due_date,
+                         ^
+  (no deadlines table or empty)
+
+============================================================================
+  AUDIT SUMMARY
+============================================================================
+
+  Total Docker Containers (running):  19
+  Total Tables (fortress_db):         132
+  Total Tables (fortress_guest):      60
+  Total Vectors (Qdrant):             0
+  NAS Storage:                        560G used / 705G total (80%)
+
+  All sections completed successfully. No failures detected.
+
+============================================================================
+  Report generated in 11 seconds
+  Output: /home/admin/Fortress-Prime/audit_report_20260302_091136.txt
+============================================================================

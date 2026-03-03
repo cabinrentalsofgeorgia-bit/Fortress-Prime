@@ -1,0 +1,206 @@
+---
+description: Canonical legal CRM, evidence preservation, and litigation workflow policy
+alwaysApply: true
+---
+
+# LEGAL COMMAND CENTER — Autonomous CRM Protocol
+
+## Overview
+
+The Fortress Legal Command Center is an autonomous multi-case litigation CRM integrated into the Batch Classifier dashboard and backed by a dedicated PostgreSQL schema (`legal.*`). It provides:
+- **Case Management** — CRUD for cases, deadlines, evidence, watchdog terms
+- **Correspondence Engine** — Draft, approve, and track all legal communications
+- **Document Generator** — Template-driven court filings and formal letters
+- **Gmail Integration** — Push approved correspondence to Gmail as drafts (human reviews and sends)
+- **Deadline Monitor** — Autonomous cron-based alerting for upcoming/overdue deadlines
+- **Correspondence Watch** — Auto-detect replies from opposing parties
+
+## Architecture
+
+### Database Schema: `legal.*`
+
+| Table | Purpose |
+|---|---|
+| `legal.cases` | Case registry — one row per case with all metadata |
+| `legal.case_actions` | Timeline — every action taken on a case (email, mail, filing, etc.) |
+| `legal.case_watchdog` | Search terms — monitored senders, subjects, body phrases per case |
+| `legal.case_evidence` | Evidence index — emails, documents, receipts linked to cases |
+| `legal.correspondence` | CRM memory — all inbound/outbound communications with status tracking |
+| `legal.deadlines` | Deadline tracking — due dates, extensions, alert thresholds, urgency |
+
+### NAS Structure
+
+Each case gets a directory at `/mnt/fortress_nas/sectors/legal/{case_slug}/`:
+```
+/mnt/fortress_nas/sectors/legal/{case_slug}/
+├── evidence/           # Forensic reports, evidence CSVs, email exports
+├── correspondence/     # Letters, emails (draft + sent), formal requests
+├── certified_mail/     # Print packages, USPS receipts, green cards (scanned)
+└── filings/
+    ├── incoming/       # Complaints, motions from opposing party
+    └── outgoing/       # Our motions, answers, generated documents
+```
+
+### Services
+
+| Service | Port | Purpose |
+|---|---|---|
+| Batch Classifier (Legal CRM + Legal Hold tabs) | 9877 | Primary UI — CRM dashboard, case selector, deadline dashboard, correspondence timeline, document vault |
+| Legal Case Manager + CRM API | 9878 | Full CRUD API — cases, actions, evidence, watchdog, correspondence, deadlines, document generation, Gmail draft integration |
+| Legal CRM Watchdog (cron) | N/A | Every 2h: email archive scan + deadline monitor + correspondence reply detection |
+
+### API Endpoints (Port 9878)
+
+**Case Management:**
+- `GET /api/cases` — List all cases
+- `GET /api/cases/{slug}` — Full case detail with actions, evidence, watchdog
+- `POST /api/cases` — Register new case
+- `GET /api/crm/overview` — Full CRM dashboard data (cases, deadlines, correspondence, actions)
+
+**Correspondence:**
+- `GET /api/cases/{slug}/correspondence` — List correspondence for a case
+- `POST /api/cases/{slug}/correspondence` — Create correspondence draft
+- `PUT /api/correspondence/{id}/approve` — Approve draft for sending
+- `PUT /api/correspondence/{id}/mark-sent` — Mark as sent (with optional tracking number)
+- `POST /api/correspondence/{id}/create-gmail-draft` — Push to Gmail as draft
+
+**Deadlines:**
+- `GET /api/cases/{slug}/deadlines` — List deadlines with countdown and urgency
+- `POST /api/cases/{slug}/deadlines` — Add a deadline
+- `PUT /api/deadlines/{id}` — Update deadline (extend, complete, etc.)
+- `GET /api/deadlines/all` — All active deadlines across all cases
+
+**Documents:**
+- `GET /api/cases/{slug}/documents` — List all files on NAS for a case
+- `GET /api/templates` — List available document templates
+- `POST /api/cases/{slug}/generate/{template}` — Generate document from template, save to NAS
+
+**Templates Available:**
+- `court_caption` — Standard Georgia Superior Court caption block
+- `motion_extension` — Motion for Extension of Time
+- `answer_complaint` — Answer to Complaint with affirmative defenses
+- `correspondence_formal` — Formal letter to opposing counsel
+- `demand_letter` — Settlement/demand letter (Rule 408 protected)
+- `email_opposing_counsel` — Email body for Gmail draft
+- `certificate_of_service` — Standalone Certificate of Service
+- `attorney_briefing` — Case summary briefing package
+
+## MANDATORY RULES
+
+### 1. Case Registration Protocol
+
+**Every legal case MUST be registered before any code touches it:**
+
+```python
+# Register via API
+POST /api/cases
+{
+    "case_slug": "prime-trust-23-11161",      # URL-friendly unique ID
+    "case_number": "23-11161-JKS",            # Official case number
+    "case_name": "Prime Core Technologies d/b/a Prime Trust",
+    "court": "USBC District of Delaware",
+    "case_type": "bankruptcy",                 # bankruptcy, class_action, civil, regulatory
+    "our_role": "creditor",                    # creditor, plaintiff, defendant, claimant
+    "critical_date": "2026-03-12",
+    "plan_admin_email": "don.detweiler@wbd-us.com"
+}
+```
+
+### 2. Correspondence Protocol (CRM Workflow)
+
+All outbound legal communications follow a strict workflow:
+
+1. **DRAFT** — Create via API or dashboard. Saved to `legal.correspondence`.
+2. **APPROVE** — Human reviews and approves via dashboard button.
+3. **GMAIL DRAFT** — Push to Gmail (optional). Creates a draft the human sends.
+4. **SENT** — Marked as sent after human confirms delivery.
+5. **REPLY DETECTED** — Watchdog auto-detects inbound replies and logs them.
+
+**Rules:**
+- **NEVER auto-send** — All outbound correspondence requires human approval
+- **Gmail scope is `compose` only** — physically cannot send without human action
+- **Every communication logged** — All correspondence tracked in `legal.correspondence`
+- **Audit trail** — Every action auto-logged to `legal.case_actions`
+
+### 3. Evidence Preservation Protocol
+
+- **Never delete emails** that are linked to active legal cases
+- **Every document generated** (forensic reports, letters, motions) MUST be saved to NAS
+- **SHA-256 hash** every generated document for tamper-proofing
+- **Timestamp everything** with UTC ISO 8601
+- **Certified mail receipts** must be scanned and saved to `certified_mail/`
+
+### 4. Deadline Management Protocol
+
+- **Every case MUST have deadlines** in `legal.deadlines`
+- **Urgency levels** — overdue (red), critical (<=3 days), urgent (<=7), warning (<=14), normal
+- **Watchdog monitors deadlines** every 2 hours via cron
+- **P0 alerts** for overdue deadlines, **P1** for critical/urgent
+- **Extensions tracked** — `extended_to` field with `extension_reason`
+- **Missed deadlines** auto-marked by watchdog when overdue with no extension
+
+### 5. Document Generation Rules
+
+When generating legal documents:
+- **Use the template engine** — `POST /api/cases/{slug}/generate/{template}`
+- **All documents saved to NAS** with timestamp in filename
+- **SHA-256 hash included** in every generated document
+- **Use formal legal formatting** — case captions, docket references, proper citations
+- **Always include a Certificate of Service** in court filings
+- **Templates pull from case data** — no hardcoded party names
+
+### 6. Watchdog Rules
+
+The watchdog cron (`tools/kyc_watchdog.py`) runs three scans every 2 hours:
+
+| Scan | Function | Alerts |
+|---|---|---|
+| Email Archive | Searches watchdog terms against 57K+ emails | P1-CRITICAL, P2-INVESTIGATE |
+| Deadline Monitor | Checks `legal.deadlines` for approaching/overdue items | P0-OVERDUE, P0-TODAY, P1-CRITICAL, P1-URGENT |
+| Correspondence Watch | Detects replies to sent outbound communications | Auto-links to `legal.correspondence` |
+
+- **Every case MUST have watchdog terms** in `legal.case_watchdog`
+- **Prioritize terms**: P1 (critical — direct from opposing party), P2 (important), P3 (monitoring)
+- **False positive filtering**: Use high-specificity terms only
+- **Alerts written** to `sentinel_alerts` table (if exists) for P0/P1
+
+### 7. Golden Rules Integration
+
+For each legal case:
+- **Add vendor patterns** to `finance.classification_rules` with `LITIGATION_RECOVERY` category
+- **Include all known entity names**: opposing counsel, fiduciary agents, collection agencies
+- **Use `CFO-LITIGATION` as `created_by`** for all litigation golden rules
+
+### 8. Adding a New Legal Case (Checklist)
+
+When the user says they have a new legal case:
+
+1. **Gather case metadata**: case number, court, parties, our role, key dates
+2. **Register the case**: `POST /api/cases` with all available metadata
+3. **Create NAS directories**: `mkdir -p /mnt/fortress_nas/sectors/legal/{slug}/...`
+4. **Add deadlines**: `POST /api/cases/{slug}/deadlines` for all known dates
+5. **Add watchdog terms**: All known senders, subjects, body phrases for the opposing party
+6. **Inject golden rules**: Add entity names to `finance.classification_rules`
+7. **Run initial forensic scan**: Search 57K+ emails for any existing correspondence
+8. **Index existing evidence**: Link any discovered emails to `legal.case_evidence`
+9. **Generate documents**: Use template engine for motions, answers, briefings
+10. **Create correspondence**: Draft any needed outbound communications
+11. **Update this file**: Add the case to the Active Cases table below
+
+## File Conventions
+
+| Path | Purpose |
+|---|---|
+| `tools/batch_classifier.py` | Primary UI (Legal CRM tab, Legal Hold tab, forensic tools) |
+| `tools/legal_case_manager.py` | CRM API (CRUD for cases, actions, evidence, watchdog, correspondence, deadlines, documents) |
+| `tools/legal_templates.py` | Document template library (8 templates: motions, answers, letters, briefings) |
+| `tools/legal_crm_setup.sql` | SQL migration for `legal.correspondence` and `legal.deadlines` tables |
+| `tools/kyc_watchdog.py` | Cron job (every 2h) — email scan + deadline monitor + correspondence watch |
+| `.cursor/rules/003-legal-command-center.mdc` | This file — legal CRM architecture and rules |
+
+## Active Cases
+
+| Slug | Case | Court | Role | Critical Date | Status |
+|---|---|---|---|---|---|
+| `prime-trust-23-11161` | 23-11161-JKS | USBC Delaware | Creditor | 2026-03-12 | Active — awaiting Plan Admin response |
+| `fish-trap-suv2026000013` | SUV2026000013 | Fannin County Superior Court, GA | **Defendant** | **2026-03-17 (Extended Answer Deadline — Motion Filed)** | Active — Generali Global Assistance v. CROG ($7,500 travel insurance commissions). Motion for Extension filed Feb 15. Check for default. 9 defenses drafted incl. Blackman authority issue. |

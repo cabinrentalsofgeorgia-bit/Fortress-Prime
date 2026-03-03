@@ -1,9 +1,10 @@
+import os
 import psycopg2
 import requests
 import sys
 
 # --- CONFIGURATION ---
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 WORKER_IP = "192.168.0.104"
 OLLAMA_API = f"http://{WORKER_IP}:11434/api/generate"
 OLLAMA_EMBED = f"http://{WORKER_IP}:11434/api/embeddings"

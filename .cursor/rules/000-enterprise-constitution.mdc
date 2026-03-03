@@ -1,0 +1,74 @@
+---
+description: Enterprise constitution index and authority map for Fortress Prime governance
+alwaysApply: true
+---
+
+# FORTRESS ONE: ENTERPRISE CONSTITUTION (Authoritative Index)
+
+This constitution is the enterprise authority map for Fortress Prime. It defines mission, non-negotiable operating principles, and canonical ownership of policy domains.
+
+## I. PRIME MISSION
+
+Fortress Prime operates as a sovereign enterprise intelligence system. All engineering decisions must optimize for:
+
+1. Operational sovereignty
+2. Data protection and fiduciary compliance
+3. Reliable production execution
+4. Fast, reversible improvement with auditability
+
+## II. NON-NEGOTIABLE PRINCIPLES
+
+1. **NVIDIA NIM Mandate:** Production inference runs on NVIDIA-optimized runtimes. See `001-titan-protocol.mdc`.
+2. **Single Active DEFCON Mode:** SWARM, HYDRA, and TITAN are mutually exclusive at runtime unless explicitly defined in canonical infra policy.
+3. **Local-First Sensitive Data:** PII, legal, and financial records stay in sovereign local systems.
+4. **Quality Gate Required:** No change is done until verified per `004-quality-gate.mdc`.
+5. **Single Source of Policy Truth:** Every normative policy has one owning rule. Other rules reference owners, not duplicate policy text.
+6. **Hybrid Control Plane / one-way boundary:** Master Architect (Cloud API) -> Local Execution (DGX/NIM). External strategic directives are authorized inbound to local systems; sensitive or un-anonymized legal/financial/PII data is prohibited from outbound cloud flow.
+
+## III. RULE AUTHORITY ORDER (Canonical Owners)
+
+Use this matrix to avoid policy duplication and drift:
+
+| Domain | Canonical Rule | Notes |
+|---|---|---|
+| Cluster runtime, DGX operations, DEFCON, NIM | `001-titan-protocol.mdc` | Infra source of truth |
+| Governance framework, ownership matrix, policy workflow | `002-sovereign-constitution.mdc` | Meta-governance source |
+| Legal CRM and litigation operations | `003-legal-command-center.mdc` | Legal source |
+| Quality/verification gate | `004-quality-gate.mdc` | Mandatory execution standard |
+| Guest platform architecture and operations | `005-fortress-guest-platform.mdc` | FGP source |
+| Security and compliance controls | `006-security-compliance.mdc` | Security source |
+| Financial governance and trust accounting | `007-financial-data-governance.mdc` | Financial source |
+| API contracts and error format | `008-api-integration-standards.mdc` | API source |
+| Testing and deployment requirements | `009-testing-deployment.mdc` | Test/deploy source |
+| NVIDIA DGX/NIM lifecycle operations | `010-nvidia-dgx-nim-operations.mdc` | Hardware/runtime ops source |
+| Autonomous swarm, self-healing, agentic behavior | `011-autonomous-swarm-directive.mdc` | Swarm autonomy source |
+| Agentic copilot queue, human-in-the-loop automation | `012-agentic-copilot-principle.mdc` | Copilot source |
+| Glass discoverability, Command Center navigation | `013-glass-discoverability.mdc` | UI integration source |
+| CROG-VRS architecture and directory enforcement | `014-vrs-directory-enforcement.mdc` | VRS boundary source |
+
+## IV. ENTERPRISE OPERATING STANDARDS
+
+1. **Do not restate owned policy text** outside canonical rule owners.
+2. **If policy changes, update canonical owner first** and then update references.
+3. **Every new major subsystem must declare owner rule mapping** before implementation.
+4. **Any contradiction across rules is a P1 governance incident** and must be corrected before declaring work complete.
+
+## V. EFFECTIVE REFERENCE INDEX
+
+- Governance: `002-sovereign-constitution.mdc`
+- Infrastructure/NIM: `001-titan-protocol.mdc` and `010-nvidia-dgx-nim-operations.mdc`
+- Quality and rollout: `004-quality-gate.mdc` and `009-testing-deployment.mdc`
+- Product/compliance domains: `005`, `006`, `007`, `008`
+- Autonomous swarm: `011-autonomous-swarm-directive.mdc`
+- Copilot/automation governance: `012-agentic-copilot-principle.mdc`
+- Glass discoverability: `013-glass-discoverability.mdc`
+- VRS directory enforcement: `014-vrs-directory-enforcement.mdc`
+
+## VI. AMENDMENT CONTROL
+
+All amendments must:
+
+1. Identify canonical owner
+2. Include impact list of referencing rules
+3. Include verification evidence (tests, runtime checks, browser checks when applicable)
+4. Preserve backward compatibility or include migration guidance

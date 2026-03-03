@@ -23,10 +23,10 @@ st.markdown("""
 # --- 3. FUNCTIONS ---
 def get_conn():
     return psycopg2.connect(
-        host="localhost",
-        database="fortress_db",
-        user="miner_bot",
-        password="190AntiochCemeteryRD!!!"
+        host=os.getenv("DB_HOST", "localhost"),
+        database=os.getenv("DB_NAME", "fortress_db"),
+        user=os.getenv("DB_USER", "miner_bot"),
+        password=os.getenv("DB_PASSWORD", os.getenv("DB_PASS", "")),
     )
 
 def get_gpu_stats():

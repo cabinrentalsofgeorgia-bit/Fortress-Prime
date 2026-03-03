@@ -1,0 +1,17 @@
+[Unit]
+Description=Crog-Fortress AI NUC Cluster Orchestrator
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+ExecStart=/usr/bin/env bash /home/admin/Fortress-Prime/deploy/compute/nuc_cluster_orchestrator.sh
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target
+

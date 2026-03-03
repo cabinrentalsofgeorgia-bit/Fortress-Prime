@@ -1,0 +1,168 @@
+---
+description: Canonical API contract, RFC 7807 errors, integration standards, and rate limiting policy
+alwaysApply: true
+---
+
+# API CONTRACT & INTEGRATION STANDARDS (Amendment X)
+
+**Effective Date:** 2026-02-20
+**Classification:** Engineering Standard
+
+## I. API DESIGN PRINCIPLES
+
+1. **RESTful by default.** Resources are nouns (`/api/reservations`), actions are HTTP verbs. Exceptions: complex operations use `/api/resource/{id}/action` (e.g., `/api/damage-claims/{id}/generate-legal-draft`).
+2. **JSON everywhere.** Request and response bodies are `application/json`. No XML, no form-encoded bodies for API endpoints.
+3. **UTC timestamps.** All `datetime` fields in API responses use ISO-8601 format with UTC timezone: `"2026-02-20T19:08:31Z"`. Local time conversion happens in the frontend.
+4. **UUIDs for identifiers.** All resource IDs are UUID v4. Never expose auto-increment integers to clients.
+5. **Consistent naming.** Snake_case for JSON keys (`check_in_date`, `total_amount`). CamelCase is forbidden in API responses.
+
+## II. VERSIONING
+
+### Current Version: v1 (implicit)
+
+All current endpoints are unversioned (e.g., `/api/damage-claims/`). This is acceptable for internal-only APIs.
+
+### When Versioning Becomes Mandatory
+
+Versioning (`/api/v2/resource`) is REQUIRED when:
+1. An endpoint is exposed to external consumers (owners, vendors, cloud developers)
+2. A breaking change is needed to an endpoint that third parties depend on
+3. The response schema changes in a way that would break existing frontend code
+
+### Breaking Change Policy
+
+A change is **breaking** if it:
+- Removes a field from the response
+- Changes a field's type (e.g., string → number)
+- Changes the meaning of a field
+- Adds a required field to the request body
+- Changes an endpoint's URL
+
+A change is **non-breaking** (and does NOT require versioning) if it:
+- Adds a new optional field to the response
+- Adds a new optional query parameter
+- Adds a new endpoint
+- Increases a rate limit
+
+## III. ERROR HANDLING
+
+### A. Standard Error Response (RFC 7807)
+
+All 4xx and 5xx responses MUST use `application/problem+json`:
+
+```json
+{
+  "type": "https://fortress/errors/validation",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "check_in_date must be in the future",
+  "instance": "/api/reservations"
+}
+```
+
+### B. Status Code Usage
+
+| Code | Meaning | When to Use |
+|------|---------|------------|
+| 200 | OK | Successful GET, PATCH |
+| 201 | Created | Successful POST that creates a resource |
+| 204 | No Content | Successful DELETE |
+| 400 | Bad Request | Invalid input, missing required fields |
+| 401 | Unauthorized | Missing or invalid auth token |
+| 403 | Forbidden | Valid token but insufficient permissions |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Duplicate creation attempt (e.g., same confirmation_code) |
+| 422 | Unprocessable | Valid JSON but business logic rejection |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Error | Unhandled exception (log full stack, return sanitized message) |
+| 502 | Bad Gateway | Upstream service failure (Streamline, Twilio, OpenAI) |
+| 503 | Unavailable | Service starting up or shutting down |
+
+### C. Error Rules
+
+1. **Never expose stack traces** in production error responses. Log them server-side, return a generic message to the client.
+2. **Never expose PII** in error messages. "Guest not found" is acceptable. "Guest john.doe@gmail.com not found" is not.
+3. **Upstream failures (502) include the service name** but not the full error. E.g., `"Streamline VRS API unavailable"` not `"Streamline returned E0015: token expired at..."`.
+4. **Validation details may be included as extension members** (`invalid_params`) under RFC 7807 when multiple fields fail validation.
+
+## IV. RATE LIMITING
+
+### A. Internal API Rate Limits
+
+| Endpoint Category | Limit | Window |
+|------------------|-------|--------|
+| Read endpoints (GET) | 200 requests | Per minute per IP |
+| Write endpoints (POST/PATCH) | 50 requests | Per minute per IP |
+| Sync/Backfill endpoints | 5 requests | Per minute (global) |
+| AI generation endpoints | 10 requests | Per minute (global) |
+| Streamline proxy endpoints | 100 requests | Per minute (Streamline's limit) |
+
+### B. Rate Limit Rules
+
+1. **Rate limits are enforced server-side**, not client-side. Frontend retry logic does not substitute for backend protection.
+2. **Rate limit responses use 429** with a `Retry-After` header indicating seconds until the limit resets.
+3. **Backfill endpoints are especially rate-limited** because they make hundreds of Streamline API calls. One operator, one backfill at a time.
+
+## V. PAGINATION
+
+### Standard Pagination Parameters
+
+```
+GET /api/reservations?page=1&per_page=50&sort=check_in_date&order=desc
+```
+
+| Parameter | Default | Max | Description |
+|-----------|---------|-----|-------------|
+| `page` | 1 | — | 1-indexed page number |
+| `per_page` | 50 | 200 | Items per page |
+| `sort` | `created_at` | — | Column to sort by |
+| `order` | `desc` | — | `asc` or `desc` |
+
+### Pagination Response Envelope
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "per_page": 50,
+    "total": 2650,
+    "total_pages": 53
+  }
+}
+```
+
+## VI. EXTERNAL INTEGRATION CONTRACTS
+
+### A. Streamline VRS
+
+- **Protocol:** JSON-RPC over HTTPS POST
+- **Auth:** `token_key` + `token_secret` per request
+- **Rate limit:** 100 requests/minute
+- **Timeout:** 30 seconds per call (configurable)
+- **Retry:** 3 attempts with exponential backoff (1s, 2s, 4s)
+- **Error codes:** E0013 (rate limit), E0014 (method not allowed), E0015 (token expired)
+- **Data format:** Dates as `MM/DD/YYYY`, amounts as strings or floats, nested dicts/lists
+- **Idempotency:** All read methods are idempotent. No write methods are currently used.
+
+### B. Twilio
+
+- **Protocol:** REST API over HTTPS
+- **Auth:** Account SID + Auth Token
+- **Rate limit:** 1 message/second per phone number
+- **Webhook:** Inbound messages POST to `/api/webhooks/twilio`
+- **Verification:** All inbound webhooks MUST be verified using Twilio's signature validation
+
+### C. AI Model Providers
+
+- **Local (HYDRA/SWARM):** OpenAI-compatible API via NVIDIA NIM gateway. No auth on private LAN, network ACL enforced. Timeout: 600s for HYDRA, 30s for SWARM.
+- **OpenAI:** REST API with Bearer token. Model: gpt-4o. Timeout: 60s.
+- **Claude:** REST API with x-api-key. Used via Claude Proxy for tool calling translation.
+
+## VII. INTEGRATION RULES
+
+1. **Every external integration MUST have a health check endpoint** that verifies connectivity without side effects.
+2. **Every external integration MUST have graceful degradation.** If Streamline is down, the system serves cached data. If Twilio is down, messages queue for retry. If AI is down, drafts queue for human review.
+3. **External API responses are NEVER trusted blindly.** Validate data types, check for null/empty, enforce business rules before writing to the database.
+4. **HTTP clients use connection pooling** (`httpx.AsyncClient` with keepalive). Never create a new client per request.
+5. **Webhook endpoints verify signatures** before processing. Unverified webhooks are logged and rejected with 403.

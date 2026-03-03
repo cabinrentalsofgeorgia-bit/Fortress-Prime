@@ -1,0 +1,26 @@
+{
+  "extracted_at": "2026-02-17T12:18:42.237674",
+  "count": 4,
+  "responses": [
+    {
+      "name": "Decline Early Check-In",
+      "text": "We are very sorry but  unfortunately we are not able to allow an early check-in at this time. ",
+      "full_modal_text": "Edit Saved Response\nName*\nMessage*\nCharacters Remaining: 518\nSAVECANCEL\nLast Updated: 02/07/2022, 3:21 PM\nAdded at: 10/14/2020, 3:40 PM"
+    },
+    {
+      "name": "Check-Out Time",
+      "text": "Just a friendly reminder that check-out is at 10:00 AM. We hope you had a wonderful stay!",
+      "full_modal_text": "Edit Saved Response\nName*\nMessage*\nCharacters Remaining: 523\nSAVECANCEL\nLast Updated: 02/07/2022, 3:20 PM\nAdded at: 10/07/2020, 3:18 PM"
+    },
+    {
+      "name": "Check-In Time",
+      "text": "Check-in is at 3:30 PM. We ask that you respect this time frame which allows our cleaners to have the house ready for you. Let us know if you have any other questions.",
+      "full_modal_text": "Edit Saved Response\nName*\nMessage*\nCharacters Remaining: 445\nSAVECANCEL\nLast Updated: 02/07/2022, 3:19 PM\nAdded at: 10/07/2020, 3:18 PM"
+    },
+    {
+      "name": "Post Check-Out - Thank You",
+      "text": "Thank you for staying with us! Have a safe rest of your journey. Let me know if anything was needed or what we can do to improve on our home. We aim to provide the best guest experiences. If you would like to stay with us again you can find our listing here: https://www.xxxxx.com\n\nIt was nice to meet you, we wish you can stay with us again soon!",
+      "full_modal_text": "Edit Saved Response\nName*\nMessage*\nCharacters Remaining: 265\nSAVECANCEL\nLast Updated: 10/14/2020, 3:42 PM\nAdded at: 10/14/2020, 3:42 PM"
+    }
+  ]
+}

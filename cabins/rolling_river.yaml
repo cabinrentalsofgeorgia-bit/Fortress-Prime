@@ -1,0 +1,154 @@
+# =============================================================================
+# ROLLING RIVER — Cabin Data (Topic-Sliced)
+# =============================================================================
+# Each section maps to a topic_classifier topic tag.
+# The context_slicer loads ONLY the relevant section into the prompt.
+# Edit this file to keep the AI's answers accurate and current.
+
+name: Rolling River
+status: sold
+sold_date: "2025-05-30"
+bedrooms: 3
+bathrooms: 2
+max_guests: 8
+pet_friendly: true
+
+# --- TOPIC SECTIONS ---
+
+general_summary: |
+  Rolling River is a 3-bedroom, 2-bathroom cabin in Blue Ridge, GA (Fannin County).
+  Sleeps up to 8 guests. Pet-friendly. Features include a hot tub, game room,
+  EV charger, fire pit, and mountain views. 15 minutes from downtown Blue Ridge.
+
+ev_charging: |
+  EV Charging: NEMA 14-50 outlet (240V, 50A) located in the carport.
+  Supports Level 2 charging for Tesla (bring your Mobile Connector), Rivian,
+  Ford Lightning, and all J1772-compatible vehicles.
+  Typical charge time: 6-8 hours for a full battery overnight.
+  The outlet is clearly labeled and located on the left wall of the carport.
+
+pets: |
+  Pet Policy: Rolling River IS pet-friendly.
+  - One-time pet fee: $75 per stay (up to 2 dogs).
+  - Dogs must be kept off furniture and beds.
+  - Fenced section of the back yard available.
+  - Water bowls and treats provided at check-in.
+  - Please clean up after your pet in the yard.
+  - Cats and exotic animals are not permitted.
+  - Service animals welcome at no additional charge (documentation required).
+
+hot_tub: |
+  Hot Tub: 6-person hot tub on the back deck with mountain views.
+  - Always heated and ready for use (pre-set to 102°F).
+  - Remove cover by lifting from the center handle.
+  - Jet controls are on the panel to the right side.
+  - Temperature can be adjusted on the control panel (range: 95-104°F).
+  - Please replace cover when not in use to retain heat.
+  - No glass containers on the hot tub deck.
+  - Hot tub is cleaned and chemically balanced between every guest stay.
+
+internet: |
+  WiFi: High-speed Starlink internet throughout the cabin.
+  - Network name: "RollingRiver_Guest"
+  - Password: printed on the welcome card on the kitchen counter.
+  - Speed: 100-200 Mbps download, suitable for streaming and video calls.
+  - Ethernet port available in the office nook (upstairs loft).
+  - Streaming: Smart TV with Netflix, Hulu, Disney+, and Prime Video pre-loaded.
+  - Zoom/Teams calls: tested and reliable from the loft office area.
+
+checkin: |
+  Check-In: 4:00 PM
+  - Self check-in via electronic keypad on the front door.
+  - Door code will be texted 24 hours before arrival.
+  - Early check-in: Available upon request (subject to cleaning schedule, $25 fee).
+  - Directions: From Blue Ridge, take Aska Road south for 8 miles.
+    Turn right on Rolling River Lane. Cabin is the second driveway on the left.
+  - GPS address: 123 Rolling River Lane, Blue Ridge, GA 30513.
+  - Parking: Pull all the way up the driveway to the carport.
+
+checkout: |
+  Check-Out: 11:00 AM
+  - Late checkout: Available upon request ($25 fee, subject to next booking).
+  - Departure checklist:
+    1. Turn off all lights and fans.
+    2. Set thermostat to 68°F (winter) or 75°F (summer).
+    3. Replace hot tub cover.
+    4. Start the dishwasher if dishes were used.
+    5. Place all trash in the bear-proof bin at the bottom of the driveway.
+    6. Lock the front door (it auto-locks after 30 seconds).
+  - No need to strip beds or wash towels — our cleaning crew handles that.
+
+hvac: |
+  Heating & Cooling:
+  - Central HVAC: Nest thermostat on the main floor hallway wall.
+  - Gas fireplace: Switch on the wall to the left of the mantle. No wood needed.
+  - Space heaters: Two portable heaters in the hall closet for extra warmth.
+  - Summer A/C: Same Nest thermostat, set to desired temperature.
+  - Ceiling fans in all bedrooms and the great room.
+  - Emergency: If HVAC stops working, call (706) 555-0100 immediately.
+
+kitchen: |
+  Kitchen: Fully equipped gourmet kitchen.
+  - Gas grill: Weber Spirit on the main deck. Propane tank provided (backup under deck).
+  - Coffee: Keurig machine + drip coffee maker. K-cups and ground coffee provided.
+  - Appliances: Full-size fridge, dishwasher, oven, microwave, toaster, blender.
+  - Cookware: Full set of pots, pans, baking sheets, and utensils.
+  - Dishes: Service for 10 (plates, bowls, glasses, wine glasses, mugs).
+  - Groceries: Nearest grocery store is Ingles Market, 12 minutes away on Aska Road.
+  - Grill tools and charcoal are NOT provided (gas only).
+
+parking: |
+  Parking: Space for 3 vehicles in the driveway + carport.
+  - Driveway: Paved, moderate grade. All-wheel drive NOT required.
+  - Carport: Covered parking for 1 vehicle (where EV outlet is located).
+  - Trailers/RVs: Driveway can accommodate a small trailer. No large RVs.
+  - In winter: Driveway is treated. Chains not required but recommended in heavy snow.
+
+activities: |
+  Nearby Activities:
+  - Downtown Blue Ridge: 15-minute drive. Shops, restaurants, and the scenic railroad.
+  - Aska Adventure Area: Hiking, mountain biking, horseback riding (5 min).
+  - Toccoa River: Tubing, kayaking, and trout fishing (2 min drive or walk).
+  - Mercier Orchards: Apple picking (seasonal), bakery, cafe (25 min).
+  - Lake Blue Ridge: Swimming, boating, paddleboarding (20 min).
+  - Blue Ridge Scenic Railway: Vintage train ride to McCaysville (reservations recommended).
+  - Wineries: Bear Claw Vineyards (15 min), Serenberry Vineyards (20 min).
+  - Zip-lining: Zipline Canopy Tours at Banning Mills (45 min).
+
+accessibility: |
+  Accessibility: Rolling River is a multi-level cabin.
+  - Main level: Kitchen, great room, one bedroom (queen), one full bath.
+  - Upper level: Loft with office nook, one bedroom (king).
+  - Lower level: Game room, one bedroom (two twins), one full bath.
+  - Stairs required to access upper and lower levels.
+  - NOT wheelchair accessible (no ramp, narrow doorways on lower level).
+  - Walk-in shower on the main level bathroom (no step-over tub).
+  - Grab bar installed in main-level shower.
+
+policies: |
+  House Rules & Policies:
+  - Quiet hours: 10:00 PM - 8:00 AM (noise carries in the mountains).
+  - No smoking inside the cabin. Smoking permitted on the lower deck only.
+  - No parties or events. Max occupancy enforced (8 guests).
+  - Minimum age: Primary renter must be 25+.
+  - Cancellation: Full refund if cancelled 30+ days before check-in.
+    14-30 days: 50% refund. Under 14 days: no refund.
+  - Security deposit: $300 (refunded within 7 days if no damage).
+  - Extra guests beyond 8: not permitted.
+  - Fireworks and open flames (other than fire pit and grill): prohibited.
+
+amenities: |
+  Full Amenities List:
+  - Hot tub (6-person, mountain view)
+  - Game room (pool table, foosball, dartboard, board games)
+  - Fire pit (lower yard, firewood provided)
+  - Gas grill (Weber Spirit, propane provided)
+  - Smart TVs in every bedroom + great room (Netflix, Hulu, Disney+, Prime)
+  - Starlink WiFi (100-200 Mbps)
+  - EV charger (NEMA 14-50, Level 2)
+  - Washer & dryer (full size, detergent provided)
+  - Keurig + drip coffee maker
+  - Pack-n-play crib and high chair (available on request)
+  - Books and board games library
+  - Rocking chairs on the main deck
+  - Mountain views from deck and hot tub

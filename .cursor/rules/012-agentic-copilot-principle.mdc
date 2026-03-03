@@ -1,0 +1,105 @@
+---
+description: Agentic Copilot Principle — human-in-the-loop draft queue governance for all automated communications
+alwaysApply: true
+---
+
+# AGENTIC COPILOT PRINCIPLE (Amendment XIV)
+
+**Effective Date:** 2026-02-24
+**Classification:** Non-Negotiable Automation Standard — BINDING
+
+## I. THE PRINCIPLE
+
+Never build blind, legacy automation. All automated communications and revenue-impacting state changes MUST natively support a **"Drafted"** state. The machine gathers context, synthesizes the data, and stages the action in a Copilot Queue. The human maintains executive oversight and provides the final 1% approval via the glass.
+
+Full autonomy (Zero-Touch) is only granted via an explicit **"Human Approval Required: OFF"** toggle on the governing template.
+
+## II. STATE MACHINE
+
+Every automated message follows this lifecycle:
+
+```
+[Trigger Match] -> [Render Template] -> [Insert MessageQueue as "drafted"]
+                                                    |
+                            +-----------+-----------+-----------+
+                            |                                   |
+                   requires_human_approval=True      requires_human_approval=False
+                            |                                   |
+                      status: drafted                   status: sent (auto-dispatch)
+                            |
+                   Human reviews on glass
+                      /            \
+              [ Approve ]      [ Cancel ]
+                  |                |
+           status: approved   status: cancelled
+                  |
+           [SMTP Dispatch]
+                  |
+           status: sent
+```
+
+Valid status transitions:
+- `drafted` -> `approved` (human clicks Approve & Send)
+- `drafted` -> `cancelled` (human clicks Cancel)
+- `approved` -> `sent` (background SMTP dispatch succeeds)
+- Direct `drafted` -> `sent` is FORBIDDEN unless `requires_human_approval = False` on the template
+
+## III. DEFAULT POSTURE
+
+1. **`requires_human_approval` defaults to `True`** with `server_default="true"` on `EmailTemplate`. This is non-negotiable.
+2. New templates created via the API or UI inherit `requires_human_approval = True` unless the operator explicitly unchecks the toggle.
+3. Zero-Touch (auto-send without human review) is an **opt-out**, never an opt-in. The system is safe by default.
+4. Changing `requires_human_approval` to `False` on a template is an explicit grant of full autonomy for that trigger. The operator assumes responsibility.
+
+## IV. IDEMPOTENCY MANDATE
+
+1. The `message_queue` table enforces a `UniqueConstraint("quote_id", "template_id")` at the database level. A guest can NEVER receive the same template drafted or sent twice for the same quote.
+2. The scheduler MUST query existing `MessageQueue` rows before inserting. If a row exists for the `(quote_id, template_id)` pair, skip silently.
+3. The `POST /api/copilot-queue/{id}/approve` endpoint MUST verify `status == 'drafted'` before transitioning. Approving an already-approved or sent message returns HTTP 409.
+4. Duplicate API calls to approve or cancel are idempotent failures, not double-sends.
+
+## V. CANONICAL INFRASTRUCTURE
+
+| Component | Path | Purpose |
+|---|---|---|
+| Queue Model | `fortress-guest-platform/backend/models/message_queue.py` | `MessageQueue` table with UniqueConstraint |
+| Template Model | `fortress-guest-platform/backend/models/template.py` | `EmailTemplate` with `requires_human_approval` |
+| Copilot API | `fortress-guest-platform/backend/api/copilot_queue.py` | CRUD at `/api/copilot-queue` |
+| Trigger Sweep | `fortress-guest-platform/backend/services/scheduler.py` | Hourly sweep, render, queue/dispatch |
+| Template Engine | `fortress-guest-platform/backend/services/template_engine.py` | Jinja2 string rendering |
+| The Glass (Inbox) | `tools/guest_agent.html` | Copilot Drafts tab, Approve & Send, Cancel |
+| The Glass (Editor) | `tools/automations.html` | Template editor with approval checkbox |
+| Proxy Routes | `tools/master_console.py` | `/api/vrs/copilot-queue/*` proxy to port 8100 |
+
+## VI. TRIGGER REGISTRY
+
+All supported trigger events and their matching logic:
+
+| Trigger Event | Match Condition | Source |
+|---|---|---|
+| `payment_confirmed` | `Quote.status == 'paid'` and no existing queue row | `scheduler.py` |
+| `quote_sent` | `Quote.status == 'draft'` and `created_at > 24h ago` and no existing queue row | `scheduler.py` |
+
+New triggers MUST be registered in this table before implementation.
+
+## VII. FORBIDDEN PATTERNS
+
+1. **DO NOT** call `send_email()` directly from any automation path without inserting into `MessageQueue` first. All automated dispatches flow through the queue.
+2. **DO NOT** create new scheduler triggers without an idempotency guard (check for existing `MessageQueue` rows).
+3. **DO NOT** change the default of `requires_human_approval` to `False` on the model or migration. The default is `True`. Period.
+4. **DO NOT** add a state transition that bypasses `drafted` for templates with `requires_human_approval = True`.
+5. **DO NOT** expose a "bulk approve all" endpoint without operator-level authentication and audit logging.
+6. **DO NOT** delete `MessageQueue` rows. Cancelled messages remain as audit records with `status = 'cancelled'`.
+7. **DO NOT** modify the `UniqueConstraint` on `message_queue` without Human approval. It is the idempotency guarantee.
+
+## VIII. EXTENDING THE COPILOT QUEUE
+
+When adding new automated communication types (SMS, push notifications, in-app alerts):
+
+1. Register the new trigger in Section VI of this rule.
+2. Implement the matcher in `scheduler.py` following the existing pattern.
+3. Ensure the `MessageQueue` insert uses the same `(quote_id, template_id)` idempotency.
+4. Add a rendering path in `template_engine.py` if the channel requires different formatting.
+5. Add a dispatch path in the approve endpoint (or a channel-specific dispatcher).
+6. Update the glass (`guest_agent.html`) to display the new message type in the Copilot tab.
+7. All new channels default to `requires_human_approval = True`.

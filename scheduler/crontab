@@ -1,0 +1,39 @@
+# =============================================================================
+# FORTRESS PRIME — Container Scheduler (supercronic)
+# =============================================================================
+# Application-level scheduled jobs running inside the Docker container.
+# Host-level jobs (backups, GPU tasks) remain in the host crontab.
+#
+# Container paths: /app = Fortress-Prime root, /mnt/fortress_nas = NAS mount
+# DB access: host.docker.internal:5432
+# =============================================================================
+
+# -- DATA HYGIENE: Weekly purge + dedup (Sunday 03:00) --
+0 3 * * 0  cd /app && python3 tools/data_hygiene.py --execute >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/cron.log 2>&1
+
+# -- VECTOR GC: Purge ghost vectors from ChromaDB (Sunday 03:30) --
+30 3 * * 0  cd /app && python3 tools/vector_gc.py --execute >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/vector_gc_cron.log 2>&1
+
+# -- VACUUM: Reclaim dead tuples after hygiene (Sunday 04:00) --
+0 4 * * 0  cd /app && python3 -c "import psycopg2,os;c=psycopg2.connect(host=os.getenv('DB_HOST','host.docker.internal'),database=os.getenv('DB_NAME','fortress_db'),user=os.getenv('DB_USER','miner_bot'),password=os.getenv('DB_PASS',''));c.autocommit=True;cur=c.cursor();[cur.execute(f'VACUUM ANALYZE {t}') for t in ['email_archive','sales_intel','guest_leads','market_intel','quarantine_inbox']];print('VACUUM ANALYZE complete');c.close()" >> /mnt/fortress_nas/fortress_data/ai_brain/logs/data_hygiene/vacuum_cron.log 2>&1
+
+# -- CLASSIFICATION JANITOR: Nightly self-healing (02:00) --
+0 2 * * *  cd /app && python3 tools/classification_janitor.py --mode hydra >> /mnt/fortress_nas/fortress_data/ai_brain/logs/janitor/cron.log 2>&1
+
+# -- KYC WATCHDOG: Case 23-11161-JKS monitor (every 2h) --
+0 */2 * * *  cd /app && python3 tools/kyc_watchdog.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/kyc_watchdog/cron.log 2>&1
+
+# -- LESSON EXTRACTOR: Cross-domain institutional memory (03:30 nightly) --
+30 3 * * *  cd /app && python3 src/lesson_extractor.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/lesson_extractor/cron.log 2>&1
+
+# -- MACRO DATA INGESTION: FRED series + FOMC content (daily 04:00) --
+0 4 * * *  cd /app && python3 src/ingest_macro_data.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/macro_ingest/cron.log 2>&1
+
+# -- FOMC DEEP PULL: FOMC releases + minutes only (14:00, for post-meeting days) --
+0 14 * * *  cd /app && python3 src/ingest_macro_data.py --fomc-only >> /mnt/fortress_nas/fortress_data/ai_brain/logs/macro_ingest/fomc.log 2>&1
+
+# -- NVIDIA SENTINEL: Supply chain intelligence (06:30) --
+30 6 * * *  cd /app && python3 tools/nvidia_sentinel.py >> /mnt/fortress_nas/fortress_data/ai_brain/logs/sentinel/cron.log 2>&1
+
+# -- HOUSEKEEPING: Log rotation (1st of each month) --
+0 0 1 * * find /mnt/fortress_nas/fortress_data/ai_brain/logs -name "*.log" -mtime +30 -delete 2>/dev/null

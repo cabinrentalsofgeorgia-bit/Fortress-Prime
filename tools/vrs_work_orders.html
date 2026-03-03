@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Work Orders</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.btn-primary{padding:8px 18px;border-radius:8px;border:1px solid rgba(74,222,128,.4);
+  background:rgba(74,222,128,.12);color:#4ade80;font-size:11px;font-weight:700;
+  cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.btn-primary:hover{background:rgba(74,222,128,.22);border-color:#4ade80}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:24px}
+
+/* ── KPI Banner ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:18px;
+  text-align:center;transition:border-color .15s;cursor:pointer}
+.kpi-card:hover{border-color:#333}
+.kpi-card.active{border-color:#4ade80;box-shadow:0 0 12px rgba(74,222,128,.08)}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+
+/* ── Filter Bar ── */
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:8px;border:1px solid #222;background:#111;
+  color:#888;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;
+  text-transform:uppercase;letter-spacing:.04em}
+.filter-btn:hover{color:#fff;border-color:#333}
+.filter-btn.active{color:#fff;background:rgba(74,222,128,.1);border-color:#4ade80}
+.search-input{padding:8px 14px 8px 36px;background:#111;border:1px solid #222;
+  border-radius:8px;color:#fff;font-size:12px;outline:none;transition:border-color .15s;
+  min-width:260px}
+.search-input:focus{border-color:#4ade80}
+.search-input::placeholder{color:#555}
+.search-wrap{position:relative;margin-left:auto}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#555;font-size:13px}
+
+/* ── Table ── */
+.tbl-wrap{background:#111;border:1px solid #1a1a1a;border-radius:14px;overflow:hidden}
+.tbl-scroll{max-height:calc(100vh - 340px);overflow-y:auto}
+.wo-table{width:100%;border-collapse:collapse}
+.wo-table th{text-align:left;padding:12px 16px;font-size:10px;color:#666;
+  text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #1a1a1a;
+  background:#0d0d0d;font-weight:600;position:sticky;top:0;z-index:5}
+.wo-table td{padding:11px 16px;font-size:12px;border-bottom:1px solid #0d0d0d;color:#ccc}
+.wo-table tbody tr.wo-row{cursor:pointer;transition:background .12s}
+.wo-table tbody tr.wo-row:hover{background:rgba(255,255,255,.03)}
+.wo-table tbody tr.wo-row.selected{background:rgba(74,222,128,.04)}
+td.id-col{font-family:'SF Mono',Consolas,monospace;color:#60a5fa;font-weight:600;font-size:11px}
+
+/* ── Priority Badges ── */
+.pri-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.pri-low{background:rgba(74,222,128,.12);color:#4ade80}
+.pri-medium{background:rgba(96,165,250,.12);color:#60a5fa}
+.pri-high{background:rgba(251,191,36,.12);color:#fbbf24}
+.pri-urgent{background:rgba(248,113,113,.15);color:#f87171;animation:fn-pulse 2s ease infinite}
+
+/* ── Status Badges ── */
+.st-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.st-open{background:rgba(96,165,250,.12);color:#60a5fa}
+.st-in_progress{background:rgba(251,191,36,.12);color:#fbbf24}
+.st-completed{background:rgba(74,222,128,.12);color:#4ade80}
+.st-cancelled{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Expanded Detail Row ── */
+tr.detail-row td{padding:0;border-bottom:1px solid #1a1a1a}
+.detail-inner{padding:20px 24px;background:#0a0a0a}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.detail-field{display:flex;flex-direction:column;gap:3px}
+.detail-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.detail-value{font-size:13px;font-weight:500}
+.detail-desc{background:#111;border:1px solid #1a1a1a;border-radius:8px;padding:14px;
+  font-size:12px;color:#ccc;line-height:1.6;white-space:pre-wrap;margin-bottom:16px}
+.detail-notes{background:#111;border:1px solid #1a1a1a;border-radius:8px;padding:14px;
+  font-size:12px;color:#999;line-height:1.6;white-space:pre-wrap;margin-bottom:16px}
+.detail-notes-title{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:8px}
+.detail-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.action-btn{padding:7px 16px;border-radius:8px;border:1px solid #333;background:#1a1a1a;
+  color:#ccc;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;
+  letter-spacing:.04em;transition:all .15s}
+.action-btn:hover{border-color:#4ade80;color:#4ade80}
+.action-btn:disabled{opacity:.4;cursor:not-allowed}
+.action-btn.btn-progress{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:#fbbf24}
+.action-btn.btn-progress:hover:not(:disabled){background:rgba(251,191,36,.2)}
+.action-btn.btn-complete{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3);color:#4ade80}
+.action-btn.btn-complete:hover:not(:disabled){background:rgba(74,222,128,.2)}
+.action-btn.btn-cancel{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.3);color:#f87171}
+.action-btn.btn-cancel:hover:not(:disabled){background:rgba(248,113,113,.15)}
+.action-btn.btn-reopen{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.3);color:#60a5fa}
+.action-btn.btn-reopen:hover:not(:disabled){background:rgba(96,165,250,.2)}
+
+/* ── Notes inline form ── */
+.note-form{display:flex;gap:8px;margin-top:12px}
+.note-input{flex:1;background:#111;border:1px solid #222;border-radius:6px;color:#ccc;
+  padding:8px 10px;font-size:12px;font-family:inherit;outline:none;transition:border-color .15s;resize:none}
+.note-input:focus{border-color:#4ade80}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+  z-index:10001;backdrop-filter:blur(4px);opacity:0;transition:opacity .2s}
+.modal-overlay.open{display:flex;align-items:center;justify-content:center;opacity:1}
+.modal{background:#111;border:1px solid #222;border-radius:16px;width:560px;max-width:95vw;
+  max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-header{padding:20px 24px;border-bottom:1px solid #1a1a1a;display:flex;
+  align-items:center;justify-content:space-between;position:sticky;top:0;background:#111;
+  border-radius:16px 16px 0 0;z-index:1}
+.modal-header h2{font-size:16px;font-weight:700}
+.modal-close{background:none;border:1px solid #333;color:#888;width:32px;height:32px;
+  border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:all .15s}
+.modal-close:hover{color:#fff;border-color:#555;background:#1a1a1a}
+.modal-body{padding:24px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-full{margin-bottom:14px}
+.form-label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;
+  letter-spacing:.04em;display:block;margin-bottom:5px}
+.form-input,.form-select,.form-textarea{background:#0a0a0a;border:1px solid #222;
+  border-radius:8px;color:#ccc;padding:9px 12px;font-size:12px;font-family:inherit;
+  width:100%;outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#4ade80;
+  box-shadow:0 0 0 2px rgba(74,222,128,.1)}
+.form-select{appearance:none;-webkit-appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+.form-textarea{resize:vertical;min-height:80px}
+.modal-footer{padding:16px 24px;border-top:1px solid #1a1a1a;display:flex;
+  justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#111;
+  border-radius:0 0 16px 16px}
+.btn-secondary{padding:8px 18px;border-radius:8px;border:1px solid #333;background:#1a1a1a;
+  color:#ccc;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;
+  letter-spacing:.04em;transition:all .15s}
+.btn-secondary:hover{border-color:#555;color:#fff}
+.btn-submit{padding:8px 22px;border-radius:8px;border:1px solid rgba(74,222,128,.4);
+  background:rgba(74,222,128,.15);color:#4ade80;font-size:11px;font-weight:700;
+  cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.btn-submit:hover{background:rgba(74,222,128,.25);border-color:#4ade80}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-ok{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-err{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+
+/* ── Empty State ── */
+.empty-state{text-align:center;padding:40px;color:#555;font-size:13px}
+.empty-icon{font-size:36px;margin-bottom:10px;opacity:.4}
+
+/* ── Loading Spinner ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #333;
+  border-top-color:#4ade80;border-radius:50%;animation:spin .6s linear infinite;
+  vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Responsive ── */
+@media(max-width:960px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .detail-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .search-wrap{margin-left:0}
+  .search-input{width:100%}
+  .detail-grid{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .modal{width:100%;max-width:100vw;border-radius:0}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item fn-dd-active" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/housekeeping">🧹 Housekeeping</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1><span>CROG-VRS</span> &mdash; Work Orders</h1>
+  <div class="hdr-right">
+    <button class="btn-primary" onclick="showCreateModal()">+ New Work Order</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card active" onclick="kpiFilter('all')" id="kpiAll">
+      <div class="kpi-val teal" id="kpiTotal">—</div>
+      <div class="kpi-label">Total</div>
+    </div>
+    <div class="kpi-card" onclick="kpiFilter('open')" id="kpiOpen">
+      <div class="kpi-val blue" id="kpiOpenVal">—</div>
+      <div class="kpi-label">Open</div>
+    </div>
+    <div class="kpi-card" onclick="kpiFilter('in_progress')" id="kpiProgress">
+      <div class="kpi-val amber" id="kpiProgressVal">—</div>
+      <div class="kpi-label">In Progress</div>
+    </div>
+    <div class="kpi-card" onclick="kpiFilter('completed')" id="kpiDone">
+      <div class="kpi-val green" id="kpiDoneVal">—</div>
+      <div class="kpi-label">Completed</div>
+    </div>
+    <div class="kpi-card" onclick="kpiFilter('overdue')" id="kpiOverdue">
+      <div class="kpi-val red" id="kpiOverdueVal">—</div>
+      <div class="kpi-label">Overdue</div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <button class="filter-btn active" data-status="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-status="open" onclick="setFilter('open',this)">Open</button>
+    <button class="filter-btn" data-status="in_progress" onclick="setFilter('in_progress',this)">In Progress</button>
+    <button class="filter-btn" data-status="completed" onclick="setFilter('completed',this)">Completed</button>
+    <button class="filter-btn" data-status="cancelled" onclick="setFilter('cancelled',this)">Cancelled</button>
+    <div class="search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search work orders..." oninput="debounceSearch()" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="tbl-wrap">
+    <div class="tbl-scroll">
+      <table class="wo-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Property</th>
+            <th>Title</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Assigned To</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="woBody">
+          <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128295;</div>Loading work orders...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- CREATE MODAL -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>&#128295; New Work Order</h2>
+      <button class="modal-close" onclick="hideCreateModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div>
+          <label class="form-label">Property *</label>
+          <select class="form-select" id="frmProperty" required>
+            <option value="">Select property...</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Priority</label>
+          <select class="form-select" id="frmPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-full">
+        <label class="form-label">Title *</label>
+        <input class="form-input" type="text" id="frmTitle" placeholder="Brief description of the issue" required>
+      </div>
+      <div class="form-full">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="frmDesc" placeholder="Detailed description of the work needed..." rows="4"></textarea>
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="form-label">Assigned To</label>
+          <input class="form-input" type="text" id="frmAssigned" placeholder="Name or team">
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select class="form-select" id="frmStatus">
+            <option value="open" selected>Open</option>
+            <option value="in_progress">In Progress</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-full">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="frmNotes" placeholder="Additional notes..." rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="hideCreateModal()">Cancel</button>
+      <button class="btn-submit" id="btnSubmit" onclick="submitWorkOrder()">Create Work Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Nav ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+/* ── Auth ── */
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── Toast ── */
+function showToast(msg,ok){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(ok?'toast-ok':'toast-err')+' show';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){t.classList.remove('show')},3500);
+}
+
+/* ── State ── */
+var allOrders=[];
+var properties=[];
+var activeFilter='all';
+var expandedId=null;
+var searchTimer=null;
+var searchTerm='';
+
+/* ── Helpers ── */
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function fmtDate(d){
+  if(!d) return '—';
+  var dt=new Date(d);
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function fmtDateTime(d){
+  if(!d) return '—';
+  var dt=new Date(d);
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+
+         dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+
+function priClass(p){
+  return 'pri-'+(p||'medium');
+}
+
+function priLabel(p){
+  var m={low:'Low',medium:'Medium',high:'High',urgent:'Urgent'};
+  return m[p]||p||'Medium';
+}
+
+function stClass(s){
+  return 'st-'+(s||'open');
+}
+
+function stLabel(s){
+  var m={open:'Open',in_progress:'In Progress',completed:'Completed',cancelled:'Cancelled'};
+  return m[s]||s||'Open';
+}
+
+function isOverdue(wo){
+  if(wo.status==='completed'||wo.status==='cancelled') return false;
+  if(!wo.created_at) return false;
+  var created=new Date(wo.created_at);
+  var now=new Date();
+  var diff=(now-created)/(1000*60*60*24);
+  return diff>7;
+}
+
+/* ── Search ── */
+function debounceSearch(){
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(function(){
+    searchTerm=document.getElementById('searchInput').value.trim().toLowerCase();
+    renderTable();
+  },250);
+}
+
+/* ── Filters ── */
+function setFilter(status,btn){
+  activeFilter=status;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  if(btn) btn.classList.add('active');
+  syncKpiHighlight();
+  renderTable();
+}
+
+function kpiFilter(f){
+  activeFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(function(b){
+    b.classList.toggle('active',b.dataset.status===f);
+  });
+  if(f==='overdue'){
+    document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  }
+  syncKpiHighlight();
+  renderTable();
+}
+
+function syncKpiHighlight(){
+  var cards={all:'kpiAll',open:'kpiOpen',in_progress:'kpiProgress',completed:'kpiDone',overdue:'kpiOverdue'};
+  document.querySelectorAll('.kpi-card').forEach(function(c){c.classList.remove('active')});
+  var el=document.getElementById(cards[activeFilter]);
+  if(el) el.classList.add('active');
+}
+
+function filtered(){
+  return allOrders.filter(function(wo){
+    if(activeFilter==='overdue'){
+      if(!isOverdue(wo)) return false;
+    } else if(activeFilter!=='all'&&wo.status!==activeFilter){
+      return false;
+    }
+    if(searchTerm){
+      var hay=(wo.title||'')+(wo.description||'')+(wo.property_name||'')+(wo.assigned_to||'')+(wo.id||'');
+      if(hay.toLowerCase().indexOf(searchTerm)===-1) return false;
+    }
+    return true;
+  });
+}
+
+/* ── KPI ── */
+function updateKPIs(){
+  var total=allOrders.length;
+  var open=0,prog=0,done=0,overdue=0;
+  allOrders.forEach(function(wo){
+    if(wo.status==='open') open++;
+    else if(wo.status==='in_progress') prog++;
+    else if(wo.status==='completed') done++;
+    if(isOverdue(wo)) overdue++;
+  });
+  document.getElementById('kpiTotal').textContent=total;
+  document.getElementById('kpiOpenVal').textContent=open;
+  document.getElementById('kpiProgressVal').textContent=prog;
+  document.getElementById('kpiDoneVal').textContent=done;
+  document.getElementById('kpiOverdueVal').textContent=overdue;
+}
+
+/* ── Render ── */
+function renderTable(){
+  var data=filtered();
+  var body=document.getElementById('woBody');
+  if(!data.length){
+    body.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#128295;</div>No work orders match the current filter</div></td></tr>';
+    return;
+  }
+  var html='';
+  data.forEach(function(wo){
+    var sel=expandedId===wo.id?'selected':'';
+    var overdueFlag=isOverdue(wo);
+    html+='<tr class="wo-row '+sel+'" onclick="toggleExpand(\''+wo.id+'\')">';
+    html+='<td class="id-col">#'+esc(String(wo.id))+'</td>';
+    html+='<td>'+esc(wo.property_name||'—')+'</td>';
+    html+='<td style="font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(wo.title||'—')+'</td>';
+    html+='<td><span class="pri-badge '+priClass(wo.priority)+'">'+priLabel(wo.priority)+'</span></td>';
+    html+='<td><span class="st-badge '+stClass(wo.status)+'">'+stLabel(wo.status)+'</span>'+(overdueFlag?' <span style="color:#f87171;font-size:10px;font-weight:700">OVERDUE</span>':'')+'</td>';
+    html+='<td>'+esc(wo.assigned_to||'Unassigned')+'</td>';
+    html+='<td style="white-space:nowrap">'+fmtDate(wo.created_at)+'</td>';
+    html+='<td><button class="action-btn" onclick="event.stopPropagation();toggleExpand(\''+wo.id+'\')">Details</button></td>';
+    html+='</tr>';
+    if(expandedId===wo.id){
+      html+=buildDetailRow(wo);
+    }
+  });
+  body.innerHTML=html;
+}
+
+function buildDetailRow(wo){
+  var html='<tr class="detail-row"><td colspan="8"><div class="detail-inner">';
+
+  html+='<div class="detail-grid">';
+  html+='<div class="detail-field"><div class="detail-label">Work Order ID</div><div class="detail-value" style="color:#60a5fa;font-family:\'SF Mono\',Consolas,monospace">#'+esc(String(wo.id))+'</div></div>';
+  html+='<div class="detail-field"><div class="detail-label">Property</div><div class="detail-value">'+esc(wo.property_name||'—')+'</div></div>';
+  html+='<div class="detail-field"><div class="detail-label">Priority</div><div class="detail-value"><span class="pri-badge '+priClass(wo.priority)+'">'+priLabel(wo.priority)+'</span></div></div>';
+  html+='<div class="detail-field"><div class="detail-label">Status</div><div class="detail-value"><span class="st-badge '+stClass(wo.status)+'">'+stLabel(wo.status)+'</span>'+(isOverdue(wo)?' <span style="color:#f87171;font-size:10px;font-weight:700">OVERDUE</span>':'')+'</div></div>';
+  html+='<div class="detail-field"><div class="detail-label">Assigned To</div><div class="detail-value">'+esc(wo.assigned_to||'Unassigned')+'</div></div>';
+  html+='<div class="detail-field"><div class="detail-label">Created</div><div class="detail-value">'+fmtDateTime(wo.created_at)+'</div></div>';
+  if(wo.updated_at){
+    html+='<div class="detail-field"><div class="detail-label">Last Updated</div><div class="detail-value">'+fmtDateTime(wo.updated_at)+'</div></div>';
+  }
+  html+='</div>';
+
+  if(wo.description){
+    html+='<div class="detail-notes-title">Description</div>';
+    html+='<div class="detail-desc">'+esc(wo.description)+'</div>';
+  }
+
+  if(wo.notes){
+    html+='<div class="detail-notes-title">Notes</div>';
+    html+='<div class="detail-notes">'+esc(wo.notes)+'</div>';
+  }
+
+  html+='<div class="note-form">';
+  html+='<textarea class="note-input" id="noteInput_'+wo.id+'" placeholder="Add a note..." rows="1" onclick="event.stopPropagation()"></textarea>';
+  html+='<button class="action-btn btn-complete" onclick="event.stopPropagation();addNote(\''+wo.id+'\')" style="white-space:nowrap">Add Note</button>';
+  html+='</div>';
+
+  html+='<div class="detail-actions" style="margin-top:16px">';
+  if(wo.status==='open'){
+    html+='<button class="action-btn btn-progress" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'in_progress\')">Start Work</button>';
+    html+='<button class="action-btn btn-complete" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'completed\')">Mark Complete</button>';
+    html+='<button class="action-btn btn-cancel" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'cancelled\')">Cancel</button>';
+  } else if(wo.status==='in_progress'){
+    html+='<button class="action-btn btn-complete" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'completed\')">Mark Complete</button>';
+    html+='<button class="action-btn btn-reopen" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'open\')">Reopen</button>';
+    html+='<button class="action-btn btn-cancel" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'cancelled\')">Cancel</button>';
+  } else if(wo.status==='completed'){
+    html+='<button class="action-btn btn-reopen" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'open\')">Reopen</button>';
+  } else if(wo.status==='cancelled'){
+    html+='<button class="action-btn btn-reopen" onclick="event.stopPropagation();updateStatus(\''+wo.id+'\',\'open\')">Reopen</button>';
+  }
+  html+='</div>';
+
+  html+='</div></td></tr>';
+  return html;
+}
+
+function toggleExpand(id){
+  expandedId=expandedId===id?null:id;
+  renderTable();
+}
+
+/* ── API Calls ── */
+async function loadWorkOrders(){
+  try{
+    var r=await fetch('/api/vrs/workorders',{credentials:'include'});
+    if(!r.ok) throw new Error('Failed to load work orders');
+    var data=await r.json();
+    allOrders=Array.isArray(data)?data:(data.work_orders||data.workorders||data.data||[]);
+    allOrders.sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0)});
+    updateKPIs();
+    renderTable();
+  }catch(e){
+    console.error('Load error:',e);
+    document.getElementById('woBody').innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">&#9888;</div>Failed to load work orders</div></td></tr>';
+  }
+}
+
+async function loadProperties(){
+  try{
+    var r=await fetch('/api/vrs/properties',{credentials:'include'});
+    if(!r.ok) return;
+    var data=await r.json();
+    properties=Array.isArray(data)?data:(data.properties||data.data||[]);
+    var sel=document.getElementById('frmProperty');
+    properties.forEach(function(p){
+      var opt=document.createElement('option');
+      opt.value=p.id||p.property_id||'';
+      opt.textContent=p.name||p.property_name||'Unknown';
+      sel.appendChild(opt);
+    });
+  }catch(e){
+    console.error('Properties load error:',e);
+  }
+}
+
+async function updateStatus(id,newStatus){
+  try{
+    var r=await fetch('/api/vrs/workorders/'+id,{
+      method:'PATCH',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status:newStatus})
+    });
+    if(!r.ok) throw new Error('Update failed');
+    showToast('Work order #'+id+' updated to '+stLabel(newStatus),'ok');
+    await loadWorkOrders();
+    expandedId=id;
+    renderTable();
+  }catch(e){
+    showToast('Failed to update work order',false);
+    console.error(e);
+  }
+}
+
+async function addNote(id){
+  var input=document.getElementById('noteInput_'+id);
+  if(!input) return;
+  var text=input.value.trim();
+  if(!text){showToast('Enter a note first',false);return}
+
+  var wo=allOrders.find(function(w){return String(w.id)===String(id)});
+  var existingNotes=wo&&wo.notes?wo.notes+'\n':'';
+  var timestamp=new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  var newNotes=existingNotes+'['+timestamp+'] '+text;
+
+  try{
+    var r=await fetch('/api/vrs/workorders/'+id,{
+      method:'PATCH',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({notes:newNotes})
+    });
+    if(!r.ok) throw new Error('Update failed');
+    showToast('Note added','ok');
+    await loadWorkOrders();
+    expandedId=id;
+    renderTable();
+  }catch(e){
+    showToast('Failed to add note',false);
+    console.error(e);
+  }
+}
+
+/* ── Modal ── */
+function showCreateModal(){
+  document.getElementById('createModal').classList.add('open');
+  document.getElementById('frmTitle').focus();
+}
+
+function hideCreateModal(){
+  document.getElementById('createModal').classList.remove('open');
+  document.getElementById('frmProperty').value='';
+  document.getElementById('frmPriority').value='medium';
+  document.getElementById('frmTitle').value='';
+  document.getElementById('frmDesc').value='';
+  document.getElementById('frmAssigned').value='';
+  document.getElementById('frmStatus').value='open';
+  document.getElementById('frmNotes').value='';
+}
+
+async function submitWorkOrder(){
+  var property=document.getElementById('frmProperty').value;
+  var title=document.getElementById('frmTitle').value.trim();
+
+  if(!property){showToast('Please select a property',false);return}
+  if(!title){showToast('Please enter a title',false);return}
+
+  var btn=document.getElementById('btnSubmit');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Creating...';
+
+  var payload={
+    property_id:property,
+    title:title,
+    description:document.getElementById('frmDesc').value.trim(),
+    priority:document.getElementById('frmPriority').value,
+    status:document.getElementById('frmStatus').value,
+    assigned_to:document.getElementById('frmAssigned').value.trim()||null,
+    notes:document.getElementById('frmNotes').value.trim()||null
+  };
+
+  try{
+    var r=await fetch('/api/vrs/workorders',{
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok){
+      var err=await r.json().catch(function(){return{}});
+      throw new Error(err.error||err.message||'Create failed');
+    }
+    showToast('Work order created','ok');
+    hideCreateModal();
+    await loadWorkOrders();
+  }catch(e){
+    showToast(e.message||'Failed to create work order',false);
+    console.error(e);
+  }finally{
+    btn.disabled=false;
+    btn.textContent='Create Work Order';
+  }
+}
+
+/* ── Keyboard ── */
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    if(document.getElementById('createModal').classList.contains('open')){
+      hideCreateModal();
+    } else if(expandedId){
+      expandedId=null;
+      renderTable();
+    }
+  }
+});
+
+/* ── Init ── */
+loadUser();
+loadProperties();
+loadWorkOrders();
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ import io
 from datetime import datetime
 
 # --- CONFIGURATION ---
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 CHART_DIR = "/mnt/fortress_data/charts"
 
 def get_db_connection():
