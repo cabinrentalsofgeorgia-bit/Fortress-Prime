@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-02-17T10:11:23.689069",
+  "file": "/home/admin/Fortress-Prime/data/ruebarue_messages/20260217_101026_error.html",
+  "title": "Messages - RueBaRue",
+  "tables": [],
+  "message_elements": [
+    {
+      "class_pattern": "message",
+      "count": 80
+    },
+    {
+      "class_pattern": "chat",
+      "count": 86
+    }
+  ],
+  "pagination": {
+    "elements_found": 10,
+    "has_pagination": true
+  },
+  "export_options": [],
+  "total_count": null
+}

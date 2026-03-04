@@ -72,49 +72,83 @@ PERSONAS_DIR = os.getenv(
     "/home/admin/Fortress-Prime/personas/legal",
 )
 
-ANTHROPIC_PROXY = os.getenv("ANTHROPIC_PROXY_URL", "http://localhost:5100/v1")
+ANTHROPIC_PROXY = os.getenv("ANTHROPIC_PROXY_URL", "http://localhost:5100/v1").rstrip("/")
 GEMINI_BASE_URL = os.getenv(
     "GEMINI_BASE_URL",
-    "https://generativelanguage.googleapis.com/v1beta/openai/",
-)
-HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", "http://192.168.0.100/hydra/v1")
-SWARM_URL = os.getenv("SWARM_URL", "http://192.168.0.100/v1")
+    "https://generativelanguage.googleapis.com/v1beta/openai",
+).rstrip("/")
+XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai/v1").rstrip("/")
+HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", "http://192.168.0.100/hydra/v1").rstrip("/")
+SWARM_URL = os.getenv("SWARM_URL", "http://192.168.0.100/v1").rstrip("/")
+
+HYDRA_32B_URL = os.getenv("HYDRA_32B_URL", "http://192.168.0.105:11434/v1").rstrip("/")
+HYDRA_120B_URL = os.getenv("HYDRA_120B_URL", "http://192.168.0.106:11434/v1").rstrip("/")
+VLLM_120B_URL = os.getenv("VLLM_120B_URL", "http://192.168.0.106:8000/v1").rstrip("/")
 
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
-HYDRA_MODEL = os.getenv("HYDRA_MODEL", "deepseek-r1:70b")
+XAI_MODEL = os.getenv("XAI_MODEL", "grok-3")
+XAI_MODEL_FLAGSHIP = os.getenv("XAI_MODEL_FLAGSHIP", "grok-4-0709")
+VLLM_MODEL_120B = os.getenv("VLLM_MODEL_120B", "openai/gpt-oss-120b")
+HYDRA_MODEL_32B = os.getenv("HYDRA_MODEL_32B", "qwen3:32b")
+HYDRA_MODEL_120B = os.getenv("HYDRA_MODEL_120B", "gpt-oss:120b")
 SWARM_MODEL = os.getenv("SWARM_MODEL", "qwen2.5:7b")
+HYDRA_MODEL = HYDRA_MODEL_120B
 
 ALLOW_CLOUD_LLM = os.getenv("ALLOW_CLOUD_LLM", "false").lower() == "true"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_AI_API_KEY", ""))
+XAI_API_KEY = os.getenv("XAI_API_KEY", "")
 
-# MoE seat-to-provider routing: distributes load across Anthropic, Gemini, and local DGX
-# to prevent single-provider rate-limit crashes.
+# Anthropic=2, Gemini=2, xAI=2, Local-32B(Ocular)=2, Local-120B(Sovereign)=1
 SEAT_ROUTING = {
-    1: {"provider": "ANTHROPIC", "role": "The Senior Litigator"},
-    2: {"provider": "ANTHROPIC", "role": "The Contract Auditor"},
-    3: {"provider": "GEMINI",    "role": "The Statutory Scholar"},
-    4: {"provider": "SWARM",     "role": "The E-Discovery Forensic"},
-    5: {"provider": "ANTHROPIC", "role": "The Devil's Advocate"},
-    6: {"provider": "SWARM",     "role": "The Compliance Officer"},
-    7: {"provider": "HYDRA",     "role": "The Local Counsel"},
-    8: {"provider": "GEMINI",    "role": "The Risk Assessor"},
-    9: {"provider": "HYDRA",     "role": "The Chief Justice"},
+    1: {"provider": "ANTHROPIC",    "role": "The Senior Litigator"},
+    2: {"provider": "ANTHROPIC",    "role": "The Contract Auditor"},
+    3: {"provider": "GEMINI",       "role": "The Statutory Scholar"},
+    4: {"provider": "HYDRA_32B",    "role": "The E-Discovery Forensic"},
+    5: {"provider": "XAI",          "role": "The Devil's Advocate"},
+    6: {"provider": "HYDRA_32B",    "role": "The Compliance Officer"},
+    7: {"provider": "VLLM_120B",    "role": "The Local Counsel"},
+    8: {"provider": "GEMINI",       "role": "The Risk Assessor"},
+    9: {"provider": "XAI_FLAGSHIP", "role": "The Chief Justice"},
 }
 
-# With MoE distribution: Anthropic=3, Gemini=2, HYDRA=2, SWARM=2
-# Each provider can handle its share without rate-limit pressure.
 _LLM_SEMAPHORE = asyncio.Semaphore(9)
 
-# Per-persona hard timeout matches GODHEAD 300s ceiling for deep reasoning seats
-PERSONA_TIMEOUT_SECONDS = 300
+PERSONA_TIMEOUT_SECONDS = 600
 
-HTTPX_TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0)
+HTTPX_TIMEOUT = httpx.Timeout(connect=60.0, read=600.0, write=10.0, pool=10.0)
+HTTPX_FALLBACK_TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
+
+_OLLAMA_ENDPOINTS = {HYDRA_32B_URL, HYDRA_120B_URL, HYDRA_URL, SWARM_URL}
+_OLLAMA_CTX_LIMITS: dict[str, int] = {
+    HYDRA_120B_URL: 8192,
+    HYDRA_32B_URL: 16384,
+}
+_OLLAMA_CTX_DEFAULT = 8192
+
+_CLOUD_PROVIDERS = {"ANTHROPIC", "GEMINI", "XAI", "XAI_FLAGSHIP"}
 
 logger.info(
-    "legal_council_config  allow_cloud=%s  anthropic_proxy=%s  hydra=%s  swarm=%s",
-    ALLOW_CLOUD_LLM, ANTHROPIC_PROXY, HYDRA_URL, SWARM_URL,
+    "legal_council_config  allow_cloud=%s  anthropic=%s  xai=%s  hydra_32b=%s  hydra_120b=%s  vllm_120b=%s",
+    ALLOW_CLOUD_LLM, ANTHROPIC_PROXY, XAI_BASE_URL, HYDRA_32B_URL, HYDRA_120B_URL, VLLM_120B_URL,
 )
+
+_PII_PATTERNS = [
+    (re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"), "[PHONE_REDACTED]"),
+    (re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"), "[EMAIL_REDACTED]"),
+    (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "[SSN_REDACTED]"),
+    (re.compile(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"), "[CARD_REDACTED]"),
+    (re.compile(r"\b(?:192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})\b"), "[IP_REDACTED]"),
+    (re.compile(r"(?i)\b(?:password|passwd|secret_key|api_key|token)\s*[:=]\s*\S+"), "[CREDENTIAL_REDACTED]"),
+]
+
+
+def _sanitize_for_cloud(text: str) -> str:
+    """Strip PII, internal IPs, and credentials before sending to cloud LLMs."""
+    result = text
+    for pattern, replacement in _PII_PATTERNS:
+        result = pattern.sub(replacement, result)
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -236,6 +270,21 @@ class LegalPersona:
 # LLM Inference (Anthropic via Claude Proxy, with HYDRA fallback)
 # ═══════════════════════════════════════════════════════════════════════
 
+_REASONING_MODELS = {"qwen3:32b", "gpt-oss:120b", "gpt-oss", "deepseek-r1:70b", "openai/gpt-oss-120b"}
+
+
+def _extract_content(data: dict) -> str:
+    """Extract text from LLM response, preferring content but falling back to reasoning."""
+    msg = data.get("choices", [{}])[0].get("message", {})
+    content = msg.get("content", "") or ""
+    if content.strip():
+        return content
+    reasoning = msg.get("reasoning", "") or msg.get("reasoning_content", "") or ""
+    if reasoning.strip():
+        return reasoning
+    return ""
+
+
 async def _call_llm(
     system_prompt: str,
     user_prompt: str,
@@ -247,8 +296,10 @@ async def _call_llm(
 ) -> tuple[str, str]:
     """
     Call an OpenAI-compatible LLM endpoint. Returns (response_text, model_used).
-    Falls back through: Primary → HYDRA → SWARM → empty.
-    Respects the semaphore for concurrency control.
+    Falls back through: Primary → HYDRA_120B (Sovereign) → SWARM → empty.
+    Injects num_ctx caps for Ollama endpoints to prevent VRAM overrun.
+    For Ollama reasoning models, disables internal chain-of-thought via /no_think
+    prefix so all tokens go to structured output.
     """
     if not model:
         model = ANTHROPIC_MODEL
@@ -257,21 +308,35 @@ async def _call_llm(
 
     async with _LLM_SEMAPHORE:
         async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
-            # Primary: specified endpoint (Anthropic proxy or HYDRA)
             try:
                 headers = {"Content-Type": "application/json"}
                 if api_key:
                     headers["Authorization"] = f"Bearer {api_key}"
 
-                payload = {
+                effective_user = user_prompt
+                is_ollama = base_url in _OLLAMA_ENDPOINTS
+                is_vllm = (base_url == VLLM_120B_URL)
+                is_local_reasoning = model in _REASONING_MODELS and (is_ollama or is_vllm)
+                if is_local_reasoning:
+                    effective_user = f"/no_think\n{user_prompt}"
+
+                payload: dict[str, Any] = {
                     "model": model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
+                        {"role": "user", "content": effective_user},
                     ],
                     "temperature": temperature,
                     "max_tokens": max_tokens,
                 }
+
+                if is_ollama:
+                    ctx = _OLLAMA_CTX_LIMITS.get(base_url, _OLLAMA_CTX_DEFAULT)
+                    payload["options"] = {"num_ctx": ctx}
+
+                if is_vllm:
+                    payload["response_format"] = {"type": "json_object"}
+                    payload.pop("max_tokens", None)
 
                 resp = await client.post(
                     f"{base_url}/chat/completions",
@@ -281,44 +346,47 @@ async def _call_llm(
 
                 if resp.status_code == 200:
                     data = resp.json()
-                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    content = _extract_content(data)
                     if content:
                         return content, model
 
                 logger.warning(
-                    "Primary LLM %s returned %d, falling back to HYDRA",
-                    model, resp.status_code,
+                    "Primary LLM %s @ %s returned %d, falling back",
+                    model, base_url, resp.status_code,
                 )
             except Exception as e:
-                logger.warning("Primary LLM %s failed: %s, falling back to HYDRA", model, e)
+                logger.warning("Primary LLM %s failed: %s, falling back", model, e)
 
-            # Fallback: HYDRA (R1-70B via Nginx LB)
-            if base_url != HYDRA_URL:
+            # Fallback: HYDRA_120B (Sovereign Ollama) -- SKIP when primary was
+            # also on Sovereign (vLLM or Ollama) to prevent OOM from dual-loading.
+            if base_url not in (HYDRA_120B_URL, VLLM_120B_URL):
                 try:
-                    payload = {
-                        "model": HYDRA_MODEL,
+                    fb_user = f"/no_think\n{user_prompt}" if HYDRA_MODEL_120B in _REASONING_MODELS else user_prompt
+                    fb_payload: dict[str, Any] = {
+                        "model": HYDRA_MODEL_120B,
                         "messages": [
                             {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt},
+                            {"role": "user", "content": fb_user},
                         ],
                         "temperature": temperature,
                         "max_tokens": max_tokens,
+                        "options": {"num_ctx": _OLLAMA_CTX_LIMITS.get(HYDRA_120B_URL, 8192)},
                     }
-                    resp = await client.post(
-                        f"{HYDRA_URL}/chat/completions",
-                        json=payload,
-                    )
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                        if content:
-                            return content, f"HYDRA ({HYDRA_MODEL})"
+                    async with httpx.AsyncClient(timeout=HTTPX_FALLBACK_TIMEOUT) as fb_client:
+                        resp = await fb_client.post(
+                            f"{HYDRA_120B_URL}/chat/completions",
+                            json=fb_payload,
+                        )
+                        if resp.status_code == 200:
+                            content = _extract_content(resp.json())
+                            if content:
+                                return content, f"HYDRA_120B ({HYDRA_MODEL_120B})"
                 except Exception as e:
-                    logger.error("HYDRA fallback failed: %s", e)
+                    logger.error("HYDRA_120B fallback failed: %s", e)
 
-            # Last resort: SWARM
+            # Last resort: SWARM (Captain qwen2.5:7b)
             try:
-                payload = {
+                sw_payload: dict[str, Any] = {
                     "model": SWARM_MODEL,
                     "messages": [
                         {"role": "system", "content": system_prompt},
@@ -326,16 +394,17 @@ async def _call_llm(
                     ],
                     "temperature": temperature,
                     "max_tokens": max_tokens,
+                    "options": {"num_ctx": _OLLAMA_CTX_DEFAULT},
                 }
-                resp = await client.post(
-                    f"{SWARM_URL}/chat/completions",
-                    json=payload,
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                    if content:
-                        return content, f"SWARM ({SWARM_MODEL})"
+                async with httpx.AsyncClient(timeout=HTTPX_FALLBACK_TIMEOUT) as sw_client:
+                    resp = await sw_client.post(
+                        f"{SWARM_URL}/chat/completions",
+                        json=sw_payload,
+                    )
+                    if resp.status_code == 200:
+                        content = _extract_content(resp.json())
+                        if content:
+                            return content, f"SWARM ({SWARM_MODEL})"
             except Exception as e:
                 logger.error("SWARM fallback also failed: %s", e)
 
@@ -345,6 +414,14 @@ async def _call_llm(
 def _extract_json_block(raw: str) -> dict:
     """Robust JSON extraction that handles markdown fences and nested braces."""
     cleaned = raw.strip()
+
+    # Fast path: if the response is already valid JSON (e.g. vLLM guided decoding),
+    # parse directly without brace surgery that breaks on braces inside strings.
+    try:
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
     fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
     if fence:
         cleaned = fence.group(1)
@@ -493,22 +570,62 @@ Format your response as JSON:
 
     # MoE routing: each seat dispatches to its designated provider
     routing = SEAT_ROUTING.get(persona.seat, {})
-    provider = routing.get("provider", "HYDRA") if ALLOW_CLOUD_LLM else "HYDRA"
+    provider = routing.get("provider", "HYDRA_120B") if ALLOW_CLOUD_LLM else "HYDRA_120B"
+
+    # PII sanitization gate for cloud-bound prompts
+    if provider in _CLOUD_PROVIDERS:
+        cloud_system = _sanitize_for_cloud(system_prompt)
+        cloud_user = _sanitize_for_cloud(user_prompt)
+    else:
+        cloud_system = system_prompt
+        cloud_user = user_prompt
 
     if provider == "ANTHROPIC":
         api_key = os.getenv("ANTHROPIC_API_KEY", "")
         text, model = await _call_llm(
-            system_prompt, user_prompt,
+            cloud_system, cloud_user,
             model=ANTHROPIC_MODEL,
             base_url=ANTHROPIC_PROXY,
             api_key=api_key,
         )
     elif provider == "GEMINI" and GEMINI_API_KEY:
         text, model = await _call_llm(
-            system_prompt, user_prompt,
+            cloud_system, cloud_user,
             model=GEMINI_MODEL,
             base_url=GEMINI_BASE_URL,
             api_key=GEMINI_API_KEY,
+        )
+    elif provider == "XAI" and XAI_API_KEY:
+        text, model = await _call_llm(
+            cloud_system, cloud_user,
+            model=XAI_MODEL,
+            base_url=XAI_BASE_URL,
+            api_key=XAI_API_KEY,
+        )
+    elif provider == "XAI_FLAGSHIP" and XAI_API_KEY:
+        text, model = await _call_llm(
+            cloud_system, cloud_user,
+            model=XAI_MODEL_FLAGSHIP,
+            base_url=XAI_BASE_URL,
+            api_key=XAI_API_KEY,
+        )
+    elif provider == "VLLM_120B":
+        text, model = await _call_llm(
+            system_prompt, user_prompt,
+            model=VLLM_MODEL_120B,
+            base_url=VLLM_120B_URL,
+        )
+    elif provider == "HYDRA_32B":
+        text, model = await _call_llm(
+            system_prompt, user_prompt,
+            model=HYDRA_MODEL_32B,
+            base_url=HYDRA_32B_URL,
+        )
+    elif provider == "HYDRA_120B":
+        text, model = await _call_llm(
+            system_prompt, user_prompt,
+            model=HYDRA_MODEL_120B,
+            base_url=HYDRA_120B_URL,
         )
     elif provider == "SWARM":
         text, model = await _call_llm(
@@ -519,14 +636,14 @@ Format your response as JSON:
     else:
         text, model = await _call_llm(
             system_prompt, user_prompt,
-            model=HYDRA_MODEL,
-            base_url=HYDRA_URL,
+            model=HYDRA_MODEL_120B,
+            base_url=HYDRA_120B_URL,
         )
 
     elapsed = time.time() - t0
     logger.info(
-        "Seat %d (%s) completed via %s in %.1fs",
-        persona.seat, persona.name, provider, elapsed,
+        "Seat %d (%s) completed via %s [%s] in %.1fs",
+        persona.seat, persona.name, provider, model, elapsed,
     )
     return _parse_opinion(persona, case_brief[:200], text, model, elapsed)
 
@@ -744,14 +861,19 @@ def _build_roster_snapshot() -> Dict[str, Any]:
     model_map = {
         "ANTHROPIC": ANTHROPIC_MODEL,
         "GEMINI": GEMINI_MODEL,
+        "XAI": XAI_MODEL,
+        "XAI_FLAGSHIP": XAI_MODEL_FLAGSHIP,
         "HYDRA": HYDRA_MODEL,
+        "HYDRA_32B": HYDRA_MODEL_32B,
+        "HYDRA_120B": HYDRA_MODEL_120B,
+        "VLLM_120B": VLLM_MODEL_120B,
         "SWARM": SWARM_MODEL,
     }
 
     seats = []
     for seat_num, routing in SEAT_ROUTING.items():
-        provider = routing["provider"] if ALLOW_CLOUD_LLM else "HYDRA"
-        model_id = model_map.get(provider, HYDRA_MODEL)
+        provider = routing["provider"] if ALLOW_CLOUD_LLM else "HYDRA_120B"
+        model_id = model_map.get(provider, HYDRA_MODEL_120B)
         seats.append({
             "seat": seat_num,
             "role": routing["role"],
