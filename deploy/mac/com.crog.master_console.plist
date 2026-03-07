@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.crog.master_console</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__SOTA_REPO__/deploy/mac/run_master_console.sh</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>__SOTA_REPO__</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+	<key>StandardOutPath</key>
+	<string>/var/log/crog/master_console.stdout.log</string>
+	<key>StandardErrorPath</key>
+	<string>/var/log/crog/master_console.stderr.log</string>
+	<key>UserName</key>
+	<string>__SOTA_USER__</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>ENVIRONMENT</key>
+		<string>production</string>
+		<key>BASE_IP</key>
+		<string>192.168.0.100</string>
+	</dict>
+</dict>
+</plist>

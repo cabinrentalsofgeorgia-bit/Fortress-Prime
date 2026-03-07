@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.crog.ai_gateway</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/bin/nginx</string>
+		<string>-c</string>
+		<string>__SOTA_REPO__/deploy/mac/nginx_ai_gateway.conf</string>
+		<string>-g</string>
+		<string>daemon off;</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+	<key>StandardOutPath</key>
+	<string>/var/log/crog/ai_gateway.stdout.log</string>
+	<key>StandardErrorPath</key>
+	<string>/var/log/crog/ai_gateway.stderr.log</string>
+	<key>UserName</key>
+	<string>__SOTA_USER__</string>
+	<key>WorkingDirectory</key>
+	<string>__SOTA_REPO__</string>
+</dict>
+</plist>

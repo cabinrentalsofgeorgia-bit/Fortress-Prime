@@ -1,0 +1,28 @@
+# Fortress Inference — DGX Spark fleet arm on boot
+# Runs switch_defcon.sh fortress_legal so GPUs are ready before the Brain (master_console) asks.
+# Tier 1 SOTA — Constitution Article VI, REQUIREMENTS.md Section 1.4
+#
+# Install: deploy/linux/setup.sh
+# Requires: /home/admin/Fortress-Prime/switch_defcon.sh (Human-approved per Constitution)
+
+[Unit]
+Description=Fortress Legal inference mode (DGX Sparks)
+Documentation=file:///home/admin/Fortress-Prime/CONSTITUTION.md file:///home/admin/Fortress-Prime/REQUIREMENTS.md
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/admin/Fortress-Prime
+ExecStart=/home/admin/Fortress-Prime/switch_defcon.sh fortress_legal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-inference
+User=admin
+Group=admin
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
