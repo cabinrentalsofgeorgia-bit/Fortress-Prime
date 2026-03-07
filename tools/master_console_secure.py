@@ -196,6 +196,12 @@ async def universal_chat(payload: ChatPayload):
 
 app.include_router(chat_router)
 
+# Same handler on alternate path to test if /v1/chat/completions is special
+@app.post("/api/chat")
+async def api_chat(payload: ChatPayload):
+    """Alias for universal_chat to isolate route-specific crashes."""
+    return await universal_chat(payload)
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MODELS (WITH VALIDATION)
 # ══════════════════════════════════════════════════════════════════════════════
