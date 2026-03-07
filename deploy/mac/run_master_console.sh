@@ -5,4 +5,4 @@
 set -e
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 [[ -f "${REPO}/.env" ]] && set -a && source "${REPO}/.env" && set +a
-exec "${REPO}/venv/bin/python" "${REPO}/tools/master_console.py" "$@"
+exec "${REPO}/venv/bin/python" "${REPO}/tools/master_console_secure.py" "$@"
