@@ -202,6 +202,15 @@ async def api_chat(payload: ChatPayload):
     """Alias for universal_chat to isolate route-specific crashes."""
     return await universal_chat(payload)
 
+# Minimal route: no Pydantic, raw body; to isolate if ChatPayload parsing kills the process
+@app.post("/api/chat/ping")
+async def api_chat_ping(request: Request):
+    body = await request.json()
+    msg = (body or {}).get("message", "")
+    if msg.strip().lower() == "ping":
+        return {"reply": "pong", "routed_via": "debug", "sovereign_status": "SECURE"}
+    return {"reply": "send message: ping", "routed_via": "debug", "sovereign_status": "SECURE"}
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MODELS (WITH VALIDATION)
 # ══════════════════════════════════════════════════════════════════════════════
