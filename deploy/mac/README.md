@@ -76,3 +76,5 @@ curl -s http://127.0.0.1:8090/v1/models
 ```
 
 You should see the two launchd jobs, a successful HTTP response from :9800, and a response from :8090 (or 502 if Sparks are not up yet). Logs: `/var/log/crog/`.
+
+**If you get 502 on :8090:** Another Nginx may be bound to 8090 (e.g. `nginx -c .../nginx/fortress_legal_gateway.conf`), which proxies to a different subnet (10.10.10.x). Stop it (`pkill -f "nginx.*fortress_legal_gateway"` or kill the nginx master PID from `ps aux | grep nginx`), then run `sudo launchctl kickstart -k system/com.crog.ai_gateway` so the CROG gateway (192.168.0.x upstreams) runs on 8090.

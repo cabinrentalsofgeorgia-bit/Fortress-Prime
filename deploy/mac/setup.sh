@@ -29,10 +29,13 @@ else
   echo "Log dir exists: ${LOG_DIR}"
 fi
 
-# 2. Optional: Apple Silicon uses Homebrew nginx at /opt/homebrew/bin/nginx
-#    Edit com.crog.ai_gateway.plist if nginx is not at /usr/local/bin/nginx
-if [[ -x /opt/homebrew/bin/nginx ]] && [[ ! -x /usr/local/bin/nginx ]]; then
-  echo "Note: nginx found at /opt/homebrew/bin/nginx; ensure com.crog.ai_gateway.plist uses that path if needed."
+# 2. Detect nginx binary for ai_gateway (Apple Silicon: /opt/homebrew/bin/nginx, Intel: /usr/local/bin/nginx)
+NGINX_BIN="/usr/local/bin/nginx"
+if [[ -x /opt/homebrew/bin/nginx ]]; then
+  NGINX_BIN="/opt/homebrew/bin/nginx"
+fi
+if [[ ! -x "${NGINX_BIN}" ]]; then
+  echo "WARNING: nginx not found at ${NGINX_BIN}; ai_gateway may fail to start."
 fi
 
 # 3. Ensure wrapper is executable (sources .env for JWT_SECRET)
@@ -41,7 +44,7 @@ chmod +x "${MAC_DIR}/run_master_console.sh" 2>/dev/null || true
 # 4. Substitute __SOTA_REPO__ and __SOTA_USER__ in plist templates and install to LaunchDaemons
 echo "Installing plists into ${LAUNCHD_DIR}"
 sed "s|__SOTA_REPO__|${REPO}|g; s|__SOTA_USER__|${SOTA_USER}|g" "${MAC_DIR}/com.crog.master_console.plist" | sudo tee "${LAUNCHD_DIR}/com.crog.master_console.plist" >/dev/null
-sed "s|__SOTA_REPO__|${REPO}|g; s|__SOTA_USER__|${SOTA_USER}|g" "${MAC_DIR}/com.crog.ai_gateway.plist" | sudo tee "${LAUNCHD_DIR}/com.crog.ai_gateway.plist" >/dev/null
+sed "s|__SOTA_REPO__|${REPO}|g; s|__SOTA_USER__|${SOTA_USER}|g; s|__NGINX_BIN__|${NGINX_BIN}|g" "${MAC_DIR}/com.crog.ai_gateway.plist" | sudo tee "${LAUNCHD_DIR}/com.crog.ai_gateway.plist" >/dev/null
 sudo chown root:wheel "${LAUNCHD_DIR}/com.crog.master_console.plist" "${LAUNCHD_DIR}/com.crog.ai_gateway.plist"
 sudo chmod 644 "${LAUNCHD_DIR}/com.crog.master_console.plist" "${LAUNCHD_DIR}/com.crog.ai_gateway.plist"
 

@@ -6,7 +6,7 @@
 	<string>com.crog.ai_gateway</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/usr/local/bin/nginx</string>
+		<string>__NGINX_BIN__</string>
 		<string>-c</string>
 		<string>__SOTA_REPO__/deploy/mac/nginx_ai_gateway.conf</string>
 		<string>-g</string>
