@@ -13,6 +13,7 @@ SECURITY IMPROVEMENTS:
 - Security headers
 """
 
+import asyncio
 import os
 import logging
 import httpx
@@ -20,7 +21,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import APIRouter, FastAPI, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, EmailStr
@@ -111,6 +112,82 @@ async def add_security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     
     return response
+
+# ══════════════════════════════════════════════════════════════════════════════
+# UNIVERSAL CHAT ROUTER (Local DGX + Anthropic)
+# ══════════════════════════════════════════════════════════════════════════════
+
+try:
+    import litellm
+except ImportError:
+    litellm = None
+
+chat_router = APIRouter()
+
+class ChatPayload(BaseModel):
+    message: str = Field(min_length=1, max_length=65536)
+    provider: str = "local"  # Default to sovereign compute for security
+
+LOCAL_AI_GATEWAY = "http://127.0.0.1:8090"
+
+@chat_router.post("/v1/chat/completions")
+async def universal_chat(payload: ChatPayload):
+    log.info("Universal chat request: provider=%s", payload.provider)
+    try:
+        if payload.provider == "local":
+            # Direct proxy to AI Gateway (OpenAI-compatible); avoids LiteLLM for sovereign path
+            model_string = "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+            resp = await _http_client.post(
+                f"{LOCAL_AI_GATEWAY}/v1/chat/completions",
+                json={
+                    "model": model_string,
+                    "messages": [{"role": "user", "content": payload.message}],
+                },
+                timeout=120.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            content = (
+                (data.get("choices") or [{}])[0].get("message", {}).get("content")
+                or ""
+            )
+            return {
+                "reply": content,
+                "routed_via": model_string,
+                "sovereign_status": "SECURE",
+            }
+        elif payload.provider == "anthropic":
+            if litellm is None:
+                raise HTTPException(status_code=503, detail="LiteLLM not installed. pip install litellm")
+            api_key = os.getenv("ANTHROPIC_API_KEY") or ""
+            if not api_key:
+                raise HTTPException(status_code=400, detail="ANTHROPIC_API_KEY not set in .env")
+            model_string = "claude-3-5-sonnet-20241022"
+            response = await asyncio.to_thread(
+                litellm.completion,
+                model=model_string,
+                messages=[{"role": "user", "content": payload.message}],
+                api_key=api_key,
+            )
+            content = getattr(
+                getattr(getattr(response, "choices", [None])[0], "message", None),
+                "content",
+                None,
+            ) or ""
+            return {
+                "reply": content,
+                "routed_via": model_string,
+                "sovereign_status": "CLOUD",
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Provider not configured.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception("Universal chat error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+app.include_router(chat_router)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MODELS (WITH VALIDATION)

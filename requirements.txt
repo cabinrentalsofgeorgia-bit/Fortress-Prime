@@ -8,6 +8,7 @@
 
 # ── Core AI / LLM ──────────────────────────────────────────────────────────────
 openai>=2.16.0,<3.0               # OpenAI-compatible client (NIM, Gemini, Grok, Claude proxy)
+litellm>=1.0.0                    # Universal router (local DGX + Anthropic/OpenAI/Gemini/xAI)
 langchain>=1.2.0,<2.0             # Agent framework
 langchain-core>=1.2.0,<2.0        # LangChain core abstractions
 langchain-community>=0.4.0,<1.0   # Community integrations
