@@ -1,519 +1,469 @@
 #!/usr/bin/env bash
-# =============================================================================
-# FORTRESS PRIME — DEFCON MODE SWITCH (Constitution Amendment IV-B)
-# =============================================================================
-# Single entry point for toggling between operational modes.
+# ============================================================================
+# FORTRESS PRIME — DEFCON Mode Switch (The Kill Switch)
+# ============================================================================
+# Governing Documents:
+#   CONSTITUTION.md   — Article VI (Kill Switch Protocol)
+#   REQUIREMENTS.md   — Section 1.4 (VRAM), Section 2.3 (Service Mesh)
+#   config.py         — Cluster topology, DEFCON env var
 #
-# MODES:
-#   SWARM  (DEFCON 5) — Production. Ollama (qwen2.5:7b) x4 via Nginx LB.
-#   HYDRA  (DEFCON 3) — Assault. Ollama (R1-70B) x4 parallel, preloaded.
-#   TITAN  (DEFCON 1) — Strategic. R1-671B across 4 nodes via RPC.
+# DEFCON Tiers:
+#   SWARM  (5) — Ollama via Nginx LB        ./switch_defcon.sh swarm
+#   HYDRA  (3) — 70B model via RPC bridge   ./switch_defcon.sh hydra
+#   TITAN  (1) — 671B model via RPC bridge  ./switch_defcon.sh titan
 #
-# PLATFORM: DGX Spark (GB10 Grace Blackwell) = ARM64/aarch64
-#   NVIDIA NIM containers are x86-only (as of 2026-02). Ollama provides
-#   ARM64-native llama.cpp inference. HYDRA uses Ollama to serve R1-70B.
-#   When ARM64 NIM ships, this script will be updated.
-#
-# USAGE:
-#   ./switch_defcon.sh swarm       # Production mode
-#   ./switch_defcon.sh hydra       # 4x R1-70B parallel (deep + fast)
-#   ./switch_defcon.sh titan       # 671B pooled (deepest reasoning)
-#   ./switch_defcon.sh status      # Show current mode and health
-#
-# Author: Fortress Prime Architect
-# =============================================================================
+# Other:
+#   ./switch_defcon.sh status   — Current mode, processes, GPU temps
+# ============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---------------------------------------------------------------------------
-# CLUSTER TOPOLOGY (Ground Truth — matches config.py)
+# Cluster Topology — mirrors config.py (REQUIREMENTS.md Section 1.1)
+# All compute traffic on the 200 Gb/s RoCEv2 fabric; SSH on management LAN.
 # ---------------------------------------------------------------------------
-CAPTAIN_IP="192.168.0.100"
-MUSCLE_IP="192.168.0.104"
-OCULAR_IP="192.168.0.105"
-SOVEREIGN_IP="192.168.0.106"
+CAPTAIN_FABRIC="${FABRIC_CAPTAIN:-10.10.10.1}"
+MUSCLE_FABRIC="${FABRIC_MUSCLE:-10.10.10.2}"
+OCULAR_FABRIC="${FABRIC_OCULAR:-10.10.10.3}"
+SOVEREIGN_FABRIC="${FABRIC_SOVEREIGN:-10.10.10.4}"
 
-ALL_IPS=("$CAPTAIN_IP" "$MUSCLE_IP" "$OCULAR_IP" "$SOVEREIGN_IP")
-NODE_NAMES=("Captain" "Muscle" "Ocular" "Sovereign")
+CAPTAIN_MGMT="${SPARK_01_IP:-192.168.0.100}"
+MUSCLE_MGMT="${SPARK_02_IP:-192.168.0.104}"
+OCULAR_MGMT="${SPARK_03_IP:-192.168.0.105}"
+SOVEREIGN_MGMT="${SPARK_04_IP:-192.168.0.106}"
 
-# Fabric IPs (200G RoCEv2 NDR — compute path only)
-FABRIC_CAPTAIN="10.10.10.2"
-FABRIC_MUSCLE="10.10.10.1"
-FABRIC_OCULAR="10.10.10.3"
-FABRIC_SOVEREIGN="10.10.10.4"
-FABRIC_IPS=("$FABRIC_CAPTAIN" "$FABRIC_MUSCLE" "$FABRIC_OCULAR" "$FABRIC_SOVEREIGN")
+WORKER_FABRIC=("$MUSCLE_FABRIC" "$OCULAR_FABRIC" "$SOVEREIGN_FABRIC")
+WORKER_MGMT=("$MUSCLE_MGMT" "$OCULAR_MGMT" "$SOVEREIGN_MGMT")
+WORKER_NAMES=("Muscle" "Ocular" "Sovereign")
+ALL_MGMT=("$CAPTAIN_MGMT" "${WORKER_MGMT[@]}")
 
-# Inference config
-OLLAMA_PORT=11434
-SWARM_MODEL="qwen2.5:7b"
-HYDRA_MODEL="deepseek-r1:70b"
+# Ports (REQUIREMENTS.md Section 2.3)
+RPC_PORT="${RPC_PORT:-50052}"
+API_PORT="${API_PORT:-8081}"
 
-# TITAN Configuration (llama.cpp RPC — until ARM64 NIM ships for 671B)
-LLAMA_SERVER="$HOME/Fortress-Prime/titan_engine/build/bin/llama-server"
-RPC_SERVER="$HOME/Fortress-Prime/titan_engine/build/bin/rpc-server"
-TITAN_MODEL="/mnt/fortress_nas/models/DeepSeek-R1-Q4_K_M/DeepSeek-R1-Q4_K_M/DeepSeek-R1-Q4_K_M-00001-of-00009.gguf"
-TITAN_PORT=8080
-RPC_PORT=50052
+# Paths
+LLAMA_SRC="${LLAMA_SRC:-$HOME/llama.cpp}"
+LLAMA_BUILD="${LLAMA_SRC}/build"
+LLAMA_BIN="${LLAMA_BUILD}/bin"
 
-# Nginx configs
-NGINX_SWARM_CONF="${SCRIPT_DIR}/nginx/wolfpack_swarm.conf"
+# HYDRA model (DEFCON 3 — 70B via RPC bridge, ~140 GB on NAS)
+HYDRA_MODEL_PATH="${HYDRA_MODEL_PATH:-/mnt/fortress_nas/models/DeepSeek-R1-Distill-Qwen-70B.gguf}"
+HYDRA_CTX="${HYDRA_CTX:-8192}"
+HYDRA_PARALLEL="${HYDRA_PARALLEL:-2}"
+HYDRA_GPU_LAYERS="${HYDRA_GPU_LAYERS:-999}"
 
-# State file
-DEFCON_STATE="${SCRIPT_DIR}/.defcon_state"
+# TITAN model (DEFCON 1 — 671B via RPC bridge, ~377 GB on NAS)
+TITAN_MODEL_PATH="${TITAN_MODEL_PATH:-/mnt/fortress_nas/models/DeepSeek-R1-671B-Q4_K_M.gguf}"
+TITAN_CTX="${TITAN_CTX:-8192}"
+TITAN_PARALLEL="${TITAN_PARALLEL:-1}"
+TITAN_GPU_LAYERS="${TITAN_GPU_LAYERS:-999}"
 
-# ---------------------------------------------------------------------------
-# COLORS
-# ---------------------------------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m'
+SSH_USER="${SSH_USER:-admin}"
+ENV_FILE="${ENV_FILE:-${SCRIPT_DIR}/.env}"
+LOG_DIR="${LOG_DIR:-/tmp}"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
 
-log()  { echo -e "${GREEN}[DEFCON]${NC} $1"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-err()  { echo -e "${RED}[ERROR]${NC} $1"; }
-hdr()  { echo -e "${BOLD}${CYAN}$1${NC}"; }
+# Shared libraries live alongside binaries in LLAMA_BIN.
+# RPC backend (libggml-rpc.so) is dynamically loaded at runtime;
+# without this path the --rpc flag never registers.
+LLAMA_LD="LD_LIBRARY_PATH=${LLAMA_BIN}:\${LD_LIBRARY_PATH:-}"
 
 # ---------------------------------------------------------------------------
-# SSH HELPER
+# Helpers
 # ---------------------------------------------------------------------------
-remote() {
+log()  { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+err()  { log "ERROR: $*" >&2; }
+die()  { err "$@"; exit 1; }
+
+ssh_node() {
     local host="$1"; shift
-    ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes \
-        "admin@${host}" "$@" 2>/dev/null
+    ssh -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no \
+        "${SSH_USER}@${host}" "$@"
 }
 
-on_node() {
-    local ip="$1"; shift
-    if [[ "$ip" == "$CAPTAIN_IP" ]]; then
-        eval "$@"
+gpu_temp_local() {
+    nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null || echo "N/A"
+}
+
+gpu_temp_remote() {
+    ssh_node "$1" \
+        "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null" \
+        || echo "N/A"
+}
+
+check_gpu_safe() {
+    local temp
+    temp=$(gpu_temp_local)
+    if [[ "$temp" != "N/A" ]] && (( temp > 85 )); then
+        die "GPU temperature ${temp}°C exceeds 85°C safety threshold (CONSTITUTION Article VI). Aborting."
+    fi
+}
+
+persist_defcon() {
+    local mode="$1"
+    if [[ -f "$ENV_FILE" ]] && grep -q '^FORTRESS_DEFCON=' "$ENV_FILE" 2>/dev/null; then
+        sed -i "s/^FORTRESS_DEFCON=.*/FORTRESS_DEFCON=${mode}/" "$ENV_FILE"
     else
-        remote "$ip" "$@"
+        echo "FORTRESS_DEFCON=${mode}" >> "$ENV_FILE"
     fi
+    export FORTRESS_DEFCON="$mode"
 }
 
 # ---------------------------------------------------------------------------
-# STATE MANAGEMENT
+# build_llama — Clean-build llama.cpp with RPC + CUDA (CMake)
+# Called automatically by hydra/titan if binaries are missing or stale.
 # ---------------------------------------------------------------------------
-get_current_mode() {
-    [[ -f "$DEFCON_STATE" ]] && cat "$DEFCON_STATE" || echo "UNKNOWN"
-}
+build_llama() {
+    log "=========================================="
+    log " FORTRESS PRIME: BUILDING llama.cpp"
+    log " Flags: GGML_RPC=ON  GGML_CUDA=ON"
+    log "=========================================="
 
-set_mode() {
-    echo "$1" > "$DEFCON_STATE"
-    log "DEFCON state: ${BOLD}$1${NC}"
-}
-
-# ---------------------------------------------------------------------------
-# CLEANUP: Stop TITAN bare-metal processes
-# ---------------------------------------------------------------------------
-stop_titan() {
-    log "Stopping TITAN processes..."
-    for i in "${!ALL_IPS[@]}"; do
-        on_node "${ALL_IPS[$i]}" "pkill -f llama-server 2>/dev/null; pkill -f rpc-server 2>/dev/null" || true
-    done
-    sleep 1
-}
-
-# ---------------------------------------------------------------------------
-# CLEANUP: Stop Ollama on all nodes
-# ---------------------------------------------------------------------------
-stop_ollama() {
-    log "Stopping Ollama on all nodes..."
-    for i in "${!ALL_IPS[@]}"; do
-        local ip="${ALL_IPS[$i]}"
-        local name="${NODE_NAMES[$i]}"
-        on_node "$ip" "systemctl stop ollama 2>/dev/null || pkill -f 'ollama serve' 2>/dev/null" || true
-        log "  ${name}: ${DIM}Ollama stopped${NC}"
-    done
-    sleep 2
-}
-
-# ---------------------------------------------------------------------------
-# HELPER: Ensure Ollama is running on a node
-# ---------------------------------------------------------------------------
-ensure_ollama() {
-    local ip="$1"
-    local name="$2"
-    if curl -sf "http://${ip}:${OLLAMA_PORT}/api/tags" > /dev/null 2>&1; then
-        log "  ${name}: Ollama running"
+    if [[ ! -d "$LLAMA_SRC" ]]; then
+        log "Cloning llama.cpp into ${LLAMA_SRC}..."
+        git clone https://github.com/ggerganov/llama.cpp.git "$LLAMA_SRC"
     else
-        on_node "$ip" "systemctl start ollama 2>/dev/null || nohup ollama serve &>/dev/null &"
-        sleep 3
-        log "  ${name}: Ollama started"
-    fi
-}
-
-# ---------------------------------------------------------------------------
-# HELPER: Check if a model is loaded in Ollama VRAM on a node
-# ---------------------------------------------------------------------------
-is_model_loaded() {
-    local ip="$1"
-    local model="$2"
-    curl -sf "http://${ip}:${OLLAMA_PORT}/api/ps" 2>/dev/null | \
-        python3 -c "
-import sys,json
-try:
-    models = [m['name'] for m in json.load(sys.stdin).get('models',[])]
-    print('YES' if '${model}' in models else 'NO')
-except:
-    print('NO')
-" 2>/dev/null || echo "NO"
-}
-
-# ---------------------------------------------------------------------------
-# HELPER: Check if a model is pulled (downloaded) on a node
-# ---------------------------------------------------------------------------
-is_model_available() {
-    local ip="$1"
-    local model="$2"
-    curl -sf "http://${ip}:${OLLAMA_PORT}/api/tags" 2>/dev/null | \
-        python3 -c "
-import sys,json
-try:
-    models = [m['name'] for m in json.load(sys.stdin).get('models',[])]
-    print('YES' if '${model}' in models else 'NO')
-except:
-    print('NO')
-" 2>/dev/null || echo "NO"
-}
-
-# ===========================================================================
-# SWARM MODE (DEFCON 5) — Production
-# ===========================================================================
-activate_swarm() {
-    hdr "╔═══════════════════════════════════════════════════╗"
-    hdr "║  ACTIVATING DEFCON 5 — SWARM MODE (Production)   ║"
-    hdr "║  Engine: Ollama (qwen2.5:7b) x4 via Nginx LB    ║"
-    hdr "╚═══════════════════════════════════════════════════╝"
-
-    stop_titan
-
-    # Start Ollama on all nodes
-    for i in "${!ALL_IPS[@]}"; do
-        ensure_ollama "${ALL_IPS[$i]}" "${NODE_NAMES[$i]}"
-    done
-
-    # Swap Nginx to SWARM upstreams
-    if [[ -f "$NGINX_SWARM_CONF" ]]; then
-        docker cp "$NGINX_SWARM_CONF" wolfpack-lb:/etc/nginx/conf.d/default.conf 2>/dev/null || true
-        docker exec wolfpack-lb nginx -s reload 2>/dev/null || true
-        log "Nginx LB → SWARM upstreams (:${OLLAMA_PORT})"
+        log "Updating llama.cpp (fast-forward only)..."
+        git -C "$LLAMA_SRC" fetch --all
+        git -C "$LLAMA_SRC" pull --ff-only || log "WARN: pull failed — building from current HEAD"
     fi
 
-    set_mode "SWARM"
+    log "Cleaning previous build directory..."
+    rm -rf "$LLAMA_BUILD"
+    mkdir -p "$LLAMA_BUILD"
 
-    echo ""
-    log "${BOLD}SWARM MODE ACTIVE${NC}"
-    log "  Endpoint:   http://${CAPTAIN_IP}/v1/chat/completions"
-    log "  Embeddings: http://${CAPTAIN_IP}/api/embeddings"
-    log "  Model:      ${SWARM_MODEL} (load-balanced x4)"
-    log "  Throughput:  ~5,000 tasks/min"
+    log "Running CMake configure..."
+    cmake -B "$LLAMA_BUILD" -S "$LLAMA_SRC" \
+        -DGGML_RPC=ON \
+        -DGGML_CUDA=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CUDA_ARCHITECTURES="native"
+
+    local nproc
+    nproc=$(nproc 2>/dev/null || echo 4)
+    log "Building with ${nproc} parallel jobs..."
+    cmake --build "$LLAMA_BUILD" --config Release -j"${nproc}"
+
+    # CMake names the RPC server binary "rpc-server" (not "llama-rpc-server")
+    local server_bin="${LLAMA_BIN}/llama-server"
+    local rpc_bin="${LLAMA_BIN}/rpc-server"
+
+    [[ -f "$server_bin" ]] || die "Build failed: llama-server not found at ${server_bin}"
+    [[ -f "$rpc_bin"    ]] || die "Build failed: rpc-server not found at ${rpc_bin}"
+
+    # RPC backend is a dynamic library — run with cwd=LLAMA_BIN so backend search finds libggml-rpc.so
+    # Capture help output to avoid SIGPIPE when grep -q exits early (pipefail).
+    local help_output
+    help_output=$(cd "${LLAMA_BIN}" && LD_LIBRARY_PATH="${LLAMA_BIN}:${LD_LIBRARY_PATH:-}" "$server_bin" --help 2>&1 || true)
+    if echo "$help_output" | grep -q -- '--rpc'; then
+        log "CONFIRMED: --rpc flag recognized by llama-server (libggml-rpc.so loaded)"
+    else
+        die "llama-server built but --rpc flag NOT recognized. Check that libggml-rpc.so exists in ${LLAMA_BIN}"
+    fi
+
+    log "Binary sizes:"
+    log "  llama-server: $(du -h "$server_bin" | cut -f1)"
+    log "  rpc-server:   $(du -h "$rpc_bin"    | cut -f1)"
+
+    # Collect shared libraries that worker nodes need alongside rpc-server
+    local so_files=()
+    for f in "${LLAMA_BIN}"/*.so; do
+        [[ -f "$f" ]] && so_files+=("$f")
+    done
+
+    log "Distributing rpc-server + shared libraries to worker nodes..."
+    for i in "${!WORKER_MGMT[@]}"; do
+        local host="${WORKER_MGMT[$i]}"
+        local name="${WORKER_NAMES[$i]}"
+        log "  -> ${name} (${host})..."
+        ssh_node "$host" "mkdir -p '${LLAMA_BIN}'" 2>/dev/null || true
+        scp -o ConnectTimeout=5 "$rpc_bin" "${SSH_USER}@${host}:${rpc_bin}"
+        for so in "${so_files[@]}"; do
+            scp -o ConnectTimeout=5 "$so" "${SSH_USER}@${host}:${LLAMA_BIN}/$(basename "$so")"
+        done
+        log "     ${name}: OK"
+    done
+
+    log "=========================================="
+    log " BUILD + DISTRIBUTE COMPLETE"
+    log "=========================================="
 }
 
-# ===========================================================================
-# HYDRA MODE (DEFCON 3) — 4x R1-70B via Ollama (ARM64-native)
-# ===========================================================================
-# NOTE: NVIDIA NIM does not ship ARM64 images for LLMs (as of 2026-02).
-# DGX Spark (GB10 Grace Blackwell) is aarch64. Ollama uses llama.cpp
-# compiled natively on each node. When ARM64 NIM ships, this will update.
 # ---------------------------------------------------------------------------
-activate_hydra() {
-    hdr "╔═══════════════════════════════════════════════════╗"
-    hdr "║  ACTIVATING DEFCON 3 — HYDRA MODE (Assault)      ║"
-    hdr "║  Engine: Ollama (DeepSeek-R1-70B) x4 nodes       ║"
-    hdr "║  Runtime: ARM64-native llama.cpp (GB10 Blackwell) ║"
-    hdr "╚═══════════════════════════════════════════════════╝"
+# ensure_rpc_binaries — Build if binaries are missing or lack --rpc support
+# ---------------------------------------------------------------------------
+ensure_rpc_binaries() {
+    local server_bin="${LLAMA_BIN}/llama-server"
+    local rpc_bin="${LLAMA_BIN}/rpc-server"
 
-    # Stop competing GPU workloads (TITAN)
-    stop_titan
-
-    # ── Ensure Ollama running on all nodes ──
-    log ""
-    for i in "${!ALL_IPS[@]}"; do
-        ensure_ollama "${ALL_IPS[$i]}" "${NODE_NAMES[$i]}"
-    done
-
-    # ── Verify R1-70B is pulled on all nodes ──
-    log ""
-    log "Checking ${HYDRA_MODEL} availability..."
-    local missing=0
-    for i in "${!ALL_IPS[@]}"; do
-        local ip="${ALL_IPS[$i]}"
-        local name="${NODE_NAMES[$i]}"
-        local available
-        available=$(is_model_available "$ip" "$HYDRA_MODEL")
-
-        if [[ "$available" == "YES" ]]; then
-            log "  ${name}: ${GREEN}${HYDRA_MODEL} ready${NC}"
-        else
-            warn "  ${name}: ${HYDRA_MODEL} not found — initiating pull..."
-            on_node "$ip" "nohup ollama pull ${HYDRA_MODEL} > /tmp/ollama-pull-hydra.log 2>&1 &"
-            missing=$((missing + 1))
-        fi
-    done
-
-    if [[ $missing -gt 0 ]]; then
-        warn ""
-        warn "  ${missing} node(s) pulling ${HYDRA_MODEL} (~42.5 GB each)."
-        warn "  Monitor: ssh admin@<ip> tail -f /tmp/ollama-pull-hydra.log"
-        warn "  Re-run './switch_defcon.sh hydra' after pulls complete."
-        echo ""
-        set_mode "HYDRA"
+    if [[ ! -f "$server_bin" ]] || [[ ! -f "$rpc_bin" ]]; then
+        log "Binaries not found — triggering build..."
+        build_llama
         return
     fi
 
-    # ── Pre-load R1-70B into VRAM on every node ──
-    log ""
-    log "Loading ${HYDRA_MODEL} into GPU memory (42.5 GB per node)..."
-    log "  128GB unified memory → ~85 GB headroom after model load"
-    log ""
+    # Run with cwd=LLAMA_BIN so backend search finds libggml-rpc.so
+    local help_output
+    help_output=$(cd "${LLAMA_BIN}" && LD_LIBRARY_PATH="${LLAMA_BIN}:${LD_LIBRARY_PATH:-}" "$server_bin" --help 2>&1 || true)
+    if ! echo "$help_output" | grep -q -- '--rpc'; then
+        log "Existing llama-server lacks --rpc support — rebuilding..."
+        build_llama
+        return
+    fi
 
-    for i in "${!ALL_IPS[@]}"; do
-        local ip="${ALL_IPS[$i]}"
-        local name="${NODE_NAMES[$i]}"
+    log "RPC-enabled binaries already present."
+}
 
-        # Warm-up request to load model; keep_alive=-1 keeps it resident
-        curl -sf "http://${ip}:${OLLAMA_PORT}/api/generate" \
-            -d "{\"model\": \"${HYDRA_MODEL}\", \"prompt\": \"ping\", \"stream\": false, \"options\": {\"num_predict\": 1}, \"keep_alive\": -1}" \
-            > /dev/null 2>&1 &
+# ---------------------------------------------------------------------------
+# stop_all_inference — Kill every inference process across the cluster
+# ---------------------------------------------------------------------------
+stop_all_inference() {
+    log "Stopping all inference processes across cluster..."
+    pkill -f "llama-server" 2>/dev/null || true
+    for host in "${ALL_MGMT[@]}"; do
+        ssh_node "$host" "pkill -f rpc-server 2>/dev/null; \
+                          systemctl stop ollama 2>/dev/null; \
+                          pkill -f ollama 2>/dev/null; true" \
+            || log "WARN: Could not reach ${host} for cleanup (continuing)"
+    done
+    sleep 2
+    log "  All inference processes stopped."
+}
 
-        log "  ${name}: Loading into VRAM..."
+# ---------------------------------------------------------------------------
+# launch_rpc_cluster — Start RPC servers on workers, llama-server on Captain
+#   $1 = model path    $2 = ctx size    $3 = parallel    $4 = gpu layers
+#   $5 = mode label (HYDRA / TITAN)
+# ---------------------------------------------------------------------------
+launch_rpc_cluster() {
+    local model="$1" ctx="$2" par="$3" layers="$4" label="$5"
+
+    # ---- RPC servers on workers ----
+    log "Starting RPC servers on worker nodes (fabric :${RPC_PORT})..."
+    for i in "${!WORKER_MGMT[@]}"; do
+        local mgmt="${WORKER_MGMT[$i]}"
+        local fabric="${WORKER_FABRIC[$i]}"
+        local name="${WORKER_NAMES[$i]}"
+
+        ssh_node "$mgmt" "pkill -f rpc-server 2>/dev/null; true" || true
+        sleep 1
+
+        log "  Starting rpc-server on ${name} (${fabric}:${RPC_PORT})..."
+        ssh_node "$mgmt" "nohup env LD_LIBRARY_PATH='${LLAMA_BIN}' '${LLAMA_BIN}/rpc-server' \
+            --host '${fabric}' \
+            --port '${RPC_PORT}' \
+            > '${LOG_DIR}/rpc-${name,,}.log' 2>&1 &"
+        sleep 2
+
+        if ssh_node "$mgmt" "pgrep -f rpc-server" >/dev/null 2>&1; then
+            log "     ${name}: RUNNING"
+        else
+            err "     ${name}: FAILED — check ${LOG_DIR}/rpc-${name,,}.log on ${mgmt}"
+        fi
     done
 
-    # ── Poll for all 4 heads loaded ──
-    local max_wait=300   # 5 min (70B loads in ~30-60s per node)
-    local interval=10
-    local elapsed=0
-    local healthy=0
+    # ---- llama-server on Captain ----
+    log "Starting llama-server on Captain (${CAPTAIN_FABRIC}:${API_PORT})..."
+    pkill -f llama-server 2>/dev/null || true
+    sleep 1
 
-    while [[ $elapsed -lt $max_wait ]]; do
-        healthy=0
-        for i in "${!ALL_IPS[@]}"; do
-            local loaded
-            loaded=$(is_model_loaded "${ALL_IPS[$i]}" "$HYDRA_MODEL")
-            [[ "$loaded" == "YES" ]] && healthy=$((healthy + 1))
-        done
+    local rpc_targets="${MUSCLE_FABRIC}:${RPC_PORT},${OCULAR_FABRIC}:${RPC_PORT},${SOVEREIGN_FABRIC}:${RPC_PORT}"
 
-        if [[ $healthy -ge 4 ]]; then
-            log "  ${GREEN}ALL 4 HEADS LOADED${NC}"
+    LD_LIBRARY_PATH="${LLAMA_BIN}:${LD_LIBRARY_PATH:-}" \
+    GGML_BACKEND_PATH="${LLAMA_BIN}/libggml-rpc.so" \
+    nohup "${LLAMA_BIN}/llama-server" \
+        --model "$model" \
+        --host "$CAPTAIN_FABRIC" \
+        --port "$API_PORT" \
+        --rpc "${rpc_targets}" \
+        --n-gpu-layers "$layers" \
+        --ctx-size "$ctx" \
+        --parallel "$par" \
+        > "${LOG_DIR}/llama-server.log" 2>&1 &
+
+    local pid=$!
+    log "  llama-server PID: ${pid}"
+    log "  RPC targets: ${rpc_targets}"
+    log "  Waiting for model load and health endpoint..."
+
+    local checks=0 max_checks=180
+    local code
+    while (( checks < max_checks )); do
+        code=$(curl -s -o /dev/null -w "%{http_code}" "http://${CAPTAIN_FABRIC}:${API_PORT}/health" 2>/dev/null || echo "000")
+        if [[ "$code" == "200" || "$code" == "503" ]]; then
             break
         fi
-
-        log "  ${healthy}/4 heads in VRAM (${elapsed}s)..."
-        sleep "$interval"
-        elapsed=$((elapsed + interval))
+        sleep 5
+        checks=$((checks + 1))
+        if (( checks % 12 == 0 )); then
+            log "  Still loading model... (${checks}/${max_checks} checks, $((checks * 5))s elapsed)"
+        fi
     done
 
-    # ── Nginx stays on Ollama upstreams (same port, different model) ──
-    if [[ -f "$NGINX_SWARM_CONF" ]]; then
-        docker cp "$NGINX_SWARM_CONF" wolfpack-lb:/etc/nginx/conf.d/default.conf 2>/dev/null || true
-        docker exec wolfpack-lb nginx -s reload 2>/dev/null || true
-        log "Nginx LB → Ollama upstreams (:${OLLAMA_PORT})"
+    code=$(curl -s -o /dev/null -w "%{http_code}" "http://${CAPTAIN_FABRIC}:${API_PORT}/health" 2>/dev/null || echo "000")
+    if [[ "$code" == "200" || "$code" == "503" ]]; then
+        log "  llama-server HEALTHY at http://${CAPTAIN_FABRIC}:${API_PORT}"
+    else
+        err "  llama-server not responding after $((max_checks * 5))s"
+        err "  Tail the log: tail -f ${LOG_DIR}/llama-server.log"
     fi
 
-    set_mode "HYDRA"
-
-    echo ""
-    log "${BOLD}HYDRA MODE ACTIVE (${healthy}/4 heads loaded)${NC}"
-    log ""
-    for i in "${!ALL_IPS[@]}"; do
-        local ip="${ALL_IPS[$i]}"
-        local name="${NODE_NAMES[$i]}"
-        local status="${RED}LOADING${NC}"
-        local loaded
-        loaded=$(is_model_loaded "$ip" "$HYDRA_MODEL")
-        [[ "$loaded" == "YES" ]] && status="${GREEN}R1-70B LOADED${NC}"
-        log "  ${name} (${ip}): [${status}]"
-    done
-    log ""
-    log "  API:    http://${CAPTAIN_IP}/v1/chat/completions"
-    log "  Model:  ${HYDRA_MODEL} (specify in request body)"
-    log "  LB:    Nginx least_conn across 4 nodes"
-    log ""
-    log "  Test:"
-    log "    curl http://${CAPTAIN_IP}/v1/chat/completions \\"
-    log "      -d '{\"model\":\"${HYDRA_MODEL}\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}'"
-    log ""
-    log "  NOTE: Embeddings still available at http://${CAPTAIN_IP}/api/embeddings"
-
-    if [[ $healthy -lt 4 ]]; then
-        warn "  ${healthy}/4 heads loaded. Others may still be loading."
-        warn "  Check: ./switch_defcon.sh status"
-    fi
+    log "=========================================="
+    log " ${label} MODE ACTIVE"
+    log "  Endpoint : http://${CAPTAIN_FABRIC}:${API_PORT}/v1"
+    log "  Model    : ${model}"
+    log "  RPC      : ${rpc_targets}"
+    log "  Context  : ${ctx} tokens"
+    log "  Parallel : ${par}"
+    log "=========================================="
 }
 
-# ===========================================================================
-# TITAN MODE (DEFCON 1) — 671B via llama.cpp RPC
-# ===========================================================================
-activate_titan() {
-    hdr "╔═══════════════════════════════════════════════════╗"
-    hdr "║  ACTIVATING DEFCON 1 — TITAN MODE (Strategic)    ║"
-    hdr "║  Engine: DeepSeek-R1-671B via llama.cpp RPC      ║"
-    hdr "║  RAM: 460GB pooled across 4 nodes (fabric)       ║"
-    hdr "╚═══════════════════════════════════════════════════╝"
+# ---------------------------------------------------------------------------
+# hydra — DEFCON 3: Build (with RPC) + deploy 70B via RPC bridge
+# ---------------------------------------------------------------------------
+hydra() {
+    log "=========================================="
+    log " FORTRESS PRIME: HYDRA MODE (DEFCON 3)"
+    log " 70B model via RPC bridge across 4 nodes"
+    log "=========================================="
 
-    if [[ ! -f "$TITAN_MODEL" ]]; then
-        err "671B model not found: $TITAN_MODEL"
-        exit 1
-    fi
+    check_gpu_safe
 
-    local snapshot_dir="/mnt/fortress_nas/backups"
-    if [[ -d "$snapshot_dir" ]] && ls "$snapshot_dir"/GOLDEN_STATE_* &>/dev/null; then
-        log "Golden Snapshot verified."
-    else
-        warn "Golden Snapshot not found. Proceeding without rollback point."
-    fi
+    ensure_rpc_binaries
 
-    # Stop everything — TITAN needs all 4 nodes' full RAM
-    stop_titan
-    stop_ollama
+    [[ -f "$HYDRA_MODEL_PATH" ]] || die "Model not found: ${HYDRA_MODEL_PATH} — check NAS mount (/mnt/fortress_nas)."
+
+    stop_all_inference
+    launch_rpc_cluster "$HYDRA_MODEL_PATH" "$HYDRA_CTX" "$HYDRA_PARALLEL" "$HYDRA_GPU_LAYERS" "HYDRA"
+    persist_defcon "HYDRA"
+}
+
+# ---------------------------------------------------------------------------
+# titan — DEFCON 1: Deploy 671B via RPC bridge (binaries must exist)
+# ---------------------------------------------------------------------------
+titan() {
+    log "=========================================="
+    log " FORTRESS PRIME: TITAN MODE (DEFCON 1)"
+    log " DeepSeek-R1-671B across 4 nodes"
+    log "=========================================="
+
+    check_gpu_safe
+
+    ensure_rpc_binaries
+
+    [[ -f "$TITAN_MODEL_PATH" ]] || die "Model not found: ${TITAN_MODEL_PATH} — check NAS mount (/mnt/fortress_nas)."
+
+    stop_all_inference
+    launch_rpc_cluster "$TITAN_MODEL_PATH" "$TITAN_CTX" "$TITAN_PARALLEL" "$TITAN_GPU_LAYERS" "TITAN"
+    persist_defcon "TITAN"
+}
+
+# ---------------------------------------------------------------------------
+# swarm — DEFCON 5: Tear down RPC cluster, restart Ollama
+# ---------------------------------------------------------------------------
+swarm() {
+    log "=========================================="
+    log " FORTRESS PRIME: SWARM MODE (DEFCON 5)"
+    log "=========================================="
+
+    stop_all_inference
+
+    log "Starting Ollama on all nodes..."
+    for host in "${ALL_MGMT[@]}"; do
+        ssh_node "$host" \
+            "systemctl start ollama 2>/dev/null || nohup ollama serve > '${LOG_DIR}/ollama.log' 2>&1 &" \
+            || true
+    done
     sleep 3
 
-    # Launch RPC servers on workers (over 200G fabric)
-    log "Launching RPC servers on fabric network..."
-    for i in 1 2 3; do
-        local ip="${ALL_IPS[$i]}"
-        local name="${NODE_NAMES[$i]}"
-        local fabric="${FABRIC_IPS[$i]}"
+    persist_defcon "SWARM"
 
-        remote "$ip" "nohup ${RPC_SERVER} --host 0.0.0.0 --port ${RPC_PORT} > /tmp/rpc-${name,,}.log 2>&1 &"
-        log "  ${name}: RPC on ${fabric}:${RPC_PORT}"
-    done
-    sleep 3
-
-    local rpc_list="${FABRIC_MUSCLE}:${RPC_PORT},${FABRIC_OCULAR}:${RPC_PORT},${FABRIC_SOVEREIGN}:${RPC_PORT}"
-
-    log "Launching TITAN server on Captain..."
-    nohup ${LLAMA_SERVER} \
-        --model "${TITAN_MODEL}" \
-        --host 0.0.0.0 \
-        --port ${TITAN_PORT} \
-        --rpc "${rpc_list}" \
-        --ctx-size 8192 \
-        --n-gpu-layers 99 \
-        --parallel 1 \
-        --mlock \
-        --flash-attn \
-        > /tmp/titan-captain.log 2>&1 &
-
-    set_mode "TITAN"
-
-    echo ""
-    log "${BOLD}TITAN MODE ACTIVATING${NC}"
-    log "  Endpoint:  http://${FABRIC_CAPTAIN}:${TITAN_PORT}/v1/chat/completions"
-    log "  Model:     DeepSeek-R1-671B (Q4_K_M, 377GB)"
-    log "  Context:   8,192 tokens"
-    log "  Parallel:  1 (single deep query)"
-    log "  RPC:       ${rpc_list}"
-    log ""
-    warn "  Model load: 3-5 min (377GB across 200G fabric)."
-    log "  Monitor: tail -f /tmp/titan-captain.log"
+    log "=========================================="
+    log " SWARM MODE ACTIVE (DEFCON 5)"
+    log "  Nginx LB: http://${CAPTAIN_MGMT}/v1"
+    log "=========================================="
 }
 
-# ===========================================================================
-# STATUS
-# ===========================================================================
-show_status() {
-    local mode
-    mode=$(get_current_mode)
+# ---------------------------------------------------------------------------
+# status — Print cluster health
+# ---------------------------------------------------------------------------
+status() {
+    echo "============================================================"
+    echo "  FORTRESS PRIME — DEFCON STATUS"
+    echo "============================================================"
+
+    local defcon="${FORTRESS_DEFCON:-UNKNOWN}"
+    if [[ -f "$ENV_FILE" ]]; then
+        defcon=$(grep -oP '^FORTRESS_DEFCON=\K.*' "$ENV_FILE" 2>/dev/null || echo "$defcon")
+    fi
 
     echo ""
-    hdr "╔═══════════════════════════════════════════════════╗"
-    hdr "║         FORTRESS PRIME — DEFCON STATUS            ║"
-    hdr "╚═══════════════════════════════════════════════════╝"
-    echo -e "  Mode: ${BOLD}${GREEN}${mode}${NC}"
+    echo "  DEFCON Level : ${defcon}"
     echo ""
 
-    echo -e "  ${BOLD}FLEET:${NC}"
-    for i in "${!ALL_IPS[@]}"; do
-        local ip="${ALL_IPS[$i]}"
-        local name="${NODE_NAMES[$i]}"
-        local engines=""
+    echo "  --- Captain (${CAPTAIN_FABRIC}) ---"
+    echo "    GPU Temp      : $(gpu_temp_local)°C"
+    if pgrep -f "llama-server" >/dev/null 2>&1; then
+        echo "    llama-server   : RUNNING (PID $(pgrep -of llama-server))"
+    else
+        echo "    llama-server   : stopped"
+    fi
+    if pgrep -f "ollama" >/dev/null 2>&1; then
+        echo "    Ollama         : RUNNING"
+    else
+        echo "    Ollama         : stopped"
+    fi
 
-        # Check Ollama
-        if curl -sf "http://${ip}:${OLLAMA_PORT}/api/tags" > /dev/null 2>&1; then
-            # Check what model is loaded
-            local loaded_model
-            loaded_model=$(curl -sf "http://${ip}:${OLLAMA_PORT}/api/ps" 2>/dev/null | \
-                python3 -c "
-import sys,json
-try:
-    models = json.load(sys.stdin).get('models',[])
-    if models:
-        print(models[0]['name'])
-    else:
-        print('idle')
-except:
-    print('?')
-" 2>/dev/null || echo "?")
-            engines+="${GREEN}Ollama${NC}(${loaded_model}) "
+    for i in "${!WORKER_MGMT[@]}"; do
+        local mgmt="${WORKER_MGMT[$i]}"
+        local fabric="${WORKER_FABRIC[$i]}"
+        local name="${WORKER_NAMES[$i]}"
+
+        echo ""
+        echo "  --- ${name} (${fabric}) ---"
+        echo "    GPU Temp      : $(gpu_temp_remote "$mgmt")°C"
+        if ssh_node "$mgmt" "pgrep -f rpc-server" >/dev/null 2>&1; then
+            echo "    rpc-server     : RUNNING on :${RPC_PORT}"
+        else
+            echo "    rpc-server     : stopped"
         fi
-
-        # Check llama-server (TITAN)
-        if curl -sf "http://${ip}:${TITAN_PORT}/health" > /dev/null 2>&1; then
-            engines+="${GREEN}TITAN:${TITAN_PORT}${NC} "
+        if ssh_node "$mgmt" "pgrep -f ollama" >/dev/null 2>&1; then
+            echo "    Ollama         : RUNNING"
+        else
+            echo "    Ollama         : stopped"
         fi
-
-        [[ -z "$engines" ]] && engines="${RED}OFFLINE${NC}"
-        printf "    %-12s (%s): %b\n" "$name" "$ip" "$engines"
     done
 
-    echo ""
-    echo -e "  ${BOLD}SERVICES:${NC}"
-
-    # Qdrant
-    if curl -sf "http://localhost:6333/collections" > /dev/null 2>&1; then
-        local cols
-        cols=$(curl -sf "http://localhost:6333/collections" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('result',{}).get('collections',[])))" 2>/dev/null || echo "?")
-        echo -e "    Qdrant:    ${GREEN}UP (${cols} collections)${NC}"
-    else
-        echo -e "    Qdrant:    ${RED}DOWN${NC}"
-    fi
-
-    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q wolfpack-lb; then
-        echo -e "    Nginx LB:  ${GREEN}UP${NC}"
-    else
-        echo -e "    Nginx LB:  ${RED}DOWN${NC}"
-    fi
-
-    if pg_isready -h "$CAPTAIN_IP" -p 5432 > /dev/null 2>&1; then
-        echo -e "    Postgres:  ${GREEN}UP${NC}"
-    else
-        echo -e "    Postgres:  ${RED}DOWN${NC}"
+    if [[ "$defcon" == "HYDRA" ]] || [[ "$defcon" == "TITAN" ]]; then
+        echo ""
+        if curl -sf "http://${CAPTAIN_FABRIC}:${API_PORT}/health" >/dev/null 2>&1; then
+            echo "  ${defcon} Health : ONLINE — http://${CAPTAIN_FABRIC}:${API_PORT}/v1"
+        else
+            echo "  ${defcon} Health : UNREACHABLE"
+        fi
     fi
 
     echo ""
-    hdr "═══════════════════════════════════════════════════"
+    echo "============================================================"
 }
 
-# ===========================================================================
-# MAIN
-# ===========================================================================
-case "${1:-status}" in
-    swarm|SWARM|5)
-        activate_swarm ;;
-    hydra|HYDRA|3)
-        activate_hydra ;;
-    titan|TITAN|1)
-        activate_titan ;;
-    status|STATUS|st)
-        show_status ;;
+# ---------------------------------------------------------------------------
+# Dispatch
+# ---------------------------------------------------------------------------
+case "${1:-}" in
+    swarm)          swarm ;;
+    hydra)          hydra ;;
+    titan)          titan ;;
+    status)         status ;;
     *)
-        echo ""
-        echo "FORTRESS PRIME — DEFCON Mode Switch"
-        echo ""
         echo "Usage: $0 {swarm|hydra|titan|status}"
         echo ""
-        echo "  swarm  (DEFCON 5) — Ollama qwen2.5:7b x4, Nginx LB"
-        echo "  hydra  (DEFCON 3) — Ollama R1-70B x4, preloaded in VRAM"
-        echo "  titan  (DEFCON 1) — R1-671B pooled via RPC (all 4 nodes)"
-        echo "  status — Fleet health and active model per node"
-        echo ""
-        exit 1 ;;
+        echo "  swarm   DEFCON 5 — Ollama via Nginx LB (production)"
+        echo "  hydra   DEFCON 3 — 70B model via RPC bridge (builds llama.cpp with RPC if needed)"
+        echo "  titan   DEFCON 1 — 671B model via RPC bridge (strategic)"
+        echo "  status  Show DEFCON level, processes, GPU temps"
+        exit 1
+        ;;
 esac
