@@ -134,6 +134,13 @@ LOCAL_AI_GATEWAY = "http://127.0.0.1:8090"
 async def universal_chat(payload: ChatPayload):
     log.info("Universal chat request: provider=%s", payload.provider)
     try:
+        # Debug: bypass backend for "ping" to verify route is reachable
+        if payload.message.strip().lower() == "ping":
+            return {
+                "reply": "pong",
+                "routed_via": "debug",
+                "sovereign_status": "SECURE",
+            }
         if payload.provider == "local":
             # Direct proxy to AI Gateway (OpenAI-compatible); avoids LiteLLM for sovereign path
             model_string = "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
