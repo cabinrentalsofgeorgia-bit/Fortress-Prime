@@ -70,7 +70,9 @@ services:
       --workers 4
       --log-level info
       --access-log
-    env_file: .env
+    env_file:
+      - .env
+      - .env.security
     environment:
       - DB_HOST=host.docker.internal
       - PYTHONPATH=/app

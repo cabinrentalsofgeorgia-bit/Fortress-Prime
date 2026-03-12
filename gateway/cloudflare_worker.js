@@ -4,7 +4,7 @@
  * Implements the JWT Auth Flow from REQUIREMENTS.md Section 2.1.
  *
  * This Worker sits at api.crog-ai.com and handles ALL ingress traffic:
- *   1. JWT verification (HS256 signed by the local gateway)
+ *   1. JWT verification (RS256 signed by the local auth service)
  *   2. Hardware Key binding — only Gary's specific key fingerprint can trigger TITAN
  *   3. Rate limiting (100 req/min default per API key)
  *   4. PII stripping from request logs (Constitution Article I)
@@ -18,7 +18,7 @@
  *   a DEFCON TITAN mode load on the Spark cluster.
  *
  * Environment Variables (set in Cloudflare Worker Settings):
- *   JWT_SECRET            — Same HS256 secret as gateway/auth.py
+ *   JWT_RSA_PUBLIC_KEY    — Base64-encoded PEM public key for RS256 verification
  *   GARY_HW_FINGERPRINT   — SHA-256 fingerprint of Gary's hardware key
  *   TUNNEL_HOSTNAME       — Cloudflare Tunnel hostname (e.g., fortress-tunnel.cfargotunnel.com)
  *   RATE_LIMIT_KV         — KV namespace binding for rate limiting state
@@ -60,39 +60,45 @@ const PII_FIELDS = new Set([
 ]);
 
 // =============================================================================
-// II. JWT VERIFICATION (HS256 — matches gateway/auth.py)
+// II. JWT VERIFICATION (RS256 — matches gateway/auth.py)
 // =============================================================================
 
 /**
- * Verify a JWT token using HS256.
+ * Verify a JWT token using RS256.
  * @param {string} token - The JWT string
- * @param {string} secret - The HS256 secret key
+ * @param {string} publicKeyB64 - Base64-encoded PEM public key
  * @returns {object|null} - Decoded payload or null if invalid
  */
-async function verifyJWT(token, secret) {
+async function verifyJWT(token, publicKeyB64) {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
 
     const [headerB64, payloadB64, signatureB64] = parts;
+    const headerJson = JSON.parse(atob(headerB64.replace(/-/g, '+').replace(/_/g, '/')));
+    if (headerJson.alg !== 'RS256') return null;
 
-    // Import the secret as an HMAC key
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secret);
+    // Decode base64-encoded PEM public key to DER
+    const pem = atob(publicKeyB64);
+    const der = pemToArrayBuffer(pem);
+
+    // Import RSA public key
     const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
+      'spki',
+      der,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
       false,
       ['verify']
     );
+
+    const encoder = new TextEncoder();
 
     // Verify the signature
     const signedContent = encoder.encode(`${headerB64}.${payloadB64}`);
     const signatureBytes = base64UrlDecode(signatureB64);
 
     const valid = await crypto.subtle.verify(
-      'HMAC',
+      'RSASSA-PKCS1-v1_5',
       cryptoKey,
       signatureBytes,
       signedContent
@@ -113,6 +119,14 @@ async function verifyJWT(token, secret) {
   } catch (e) {
     return null;
   }
+}
+
+function pemToArrayBuffer(pem) {
+  const b64 = pem
+    .replace('-----BEGIN PUBLIC KEY-----', '')
+    .replace('-----END PUBLIC KEY-----', '')
+    .replace(/\s+/g, '');
+  return base64UrlDecode(b64.replace(/\+/g, '-').replace(/\//g, '_'));
 }
 
 /**
@@ -284,7 +298,10 @@ export default {
     // --- JWT Verification ---
     let payload = null;
     if (authMethod === 'jwt') {
-      payload = await verifyJWT(token, env.JWT_SECRET);
+      if (!env.JWT_RSA_PUBLIC_KEY) {
+        return jsonResponse(500, { error: 'JWT public key not configured' });
+      }
+      payload = await verifyJWT(token, env.JWT_RSA_PUBLIC_KEY);
       if (!payload) {
         return jsonResponse(401, {
           error: 'Invalid or expired JWT',

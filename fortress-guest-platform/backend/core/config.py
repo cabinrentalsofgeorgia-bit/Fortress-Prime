@@ -1,8 +1,9 @@
 """
 Application configuration using Pydantic Settings
 """
+
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -12,10 +13,39 @@ class Settings(BaseSettings):
     # Database
     database_url: str = Field(default="postgresql+asyncpg://fgp_app:fortress2024@localhost:5432/fortress_guest")
 
-    # JWT
-    jwt_secret_key: str = Field(default="change-me-in-production-fortress-jwt-secret-2024")
-    jwt_algorithm: str = Field(default="HS256")
+    # JWT (Tier-0 hardening): RS256 asymmetric keys.
+    # Keys are expected as base64-encoded PEM strings for env portability.
+    jwt_secret_key: str = Field(default="")
+    jwt_rsa_private_key: str = Field(default="")
+    jwt_rsa_public_key: str = Field(default="")
+    jwt_algorithm: str = Field(default="RS256")
     jwt_expiration_hours: int = Field(default=24)
+
+    @field_validator("jwt_rsa_private_key", "jwt_rsa_public_key", mode="before")
+    @classmethod
+    def _decode_pem_key(cls, v: str) -> str:
+        value = (v or "").strip()
+        if not value:
+            return value
+        if value.startswith("-----BEGIN"):
+            return value
+        try:
+            import base64
+            return base64.b64decode(value).decode("utf-8")
+        except Exception:
+            return value
+
+    @field_validator("jwt_secret_key", mode="before")
+    @classmethod
+    def _compat_jwt_secret(cls, v: str) -> str:
+        # Backward-compat for components that still derive non-auth tokens
+        # from this field (e.g., signing_token.py). Auth now uses RSA keys.
+        return (v or "").strip() or "compat-jwt-secret-not-used-for-auth"
+
+    @field_validator("jwt_algorithm", mode="before")
+    @classmethod
+    def _force_rs256(cls, _v: str) -> str:
+        return "RS256"
     secret_key: str = Field(default="change-me-fortress-secret")
 
     # Command Center
@@ -46,6 +76,12 @@ class Settings(BaseSettings):
     xai_api_key: str = Field(default="")
     xai_model: str = Field(default="grok-3")
 
+    # LiteLLM Gateway — canonical base for chat completions (RAG, vision lane, failover, telemetry)
+    litellm_base_url: str = Field(
+        default="http://127.0.0.1:4000/v1",
+        description="Base URL for LiteLLM gateway; backend appends /chat/completions. FGP_BACKEND_URL is unrelated (Next.js BFF upstream).",
+    )
+
     # Gateway
     gateway_api_url: str = Field(default="http://localhost:8000")
 
@@ -61,6 +97,10 @@ class Settings(BaseSettings):
     embed_base_url: str = Field(default="http://192.168.0.100:11434")
     embed_model: str = Field(default="nomic-embed-text")
     embed_dim: int = Field(default=768)
+    recursive_embed_url: str = Field(
+        default="http://127.0.0.1:8003/v1/embeddings",
+        description="Council DAG embedding endpoint (OpenAI-compatible /v1/embeddings).",
+    )
 
     # Streamline VRS
     streamline_api_url: str = Field(default="")
@@ -88,6 +128,22 @@ class Settings(BaseSettings):
     enable_sentiment_analysis: bool = Field(default=True)
     enable_predictive_analytics: bool = Field(default=False)
     enable_multi_language: bool = Field(default=False)
+
+    # Execution sandbox runtime
+    sandbox_runtime: str = Field(
+        default="docker",
+        description="Execution backend for execute_python: docker|firecracker.",
+    )
+    sandbox_memory_mb: int = Field(default=512)
+    sandbox_vcpu_count: int = Field(default=1)
+    sandbox_firecracker_helper: str = Field(
+        default="",
+        description="Path to helper binary/script that launches Firecracker + jailer per request.",
+    )
+    sandbox_firecracker_bin: str = Field(default="/usr/bin/firecracker")
+    sandbox_jailer_bin: str = Field(default="/usr/bin/jailer")
+    sandbox_kernel_image: str = Field(default="")
+    sandbox_rootfs_image: str = Field(default="")
 
     # Messaging
     max_message_length: int = Field(default=1600)

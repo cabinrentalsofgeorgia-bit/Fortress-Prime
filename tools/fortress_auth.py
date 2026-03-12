@@ -17,12 +17,13 @@ Usage in any FastAPI app:
 
 Auth Flow:
     1. User logs into Command Center (port 9800) → gets JWT cookie
-    2. Other dashboards read the same cookie → verify with shared JWT_SECRET
+    2. Other dashboards read the same cookie → verify with shared RS256 public key
     3. No login page needed on sub-dashboards; redirect to Command Center if not authed
 """
 
 import os
 import logging
+import base64
 from pathlib import Path
 from typing import Optional
 
@@ -44,8 +45,8 @@ log = logging.getLogger("fortress.auth")
 # ══════════════════════════════════════════════════════════════════════════════
 
 BASE_IP = os.getenv("BASE_IP", "192.168.0.100")
-JWT_SECRET = os.getenv("JWT_SECRET", "")
-JWT_ALGORITHM = "HS256"
+JWT_RSA_PUBLIC_KEY = os.getenv("JWT_RSA_PUBLIC_KEY", "")
+JWT_ALGORITHM = "RS256"
 COOKIE_NAME = "fortress_session"
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT == "production"
@@ -78,14 +79,21 @@ def _verify_jwt(token: str) -> dict:
         log.warning("python-jose not installed — auth disabled")
         return {"username": "anonymous", "role": "admin"}
 
-    if not JWT_SECRET:
+    if not JWT_RSA_PUBLIC_KEY:
         if os.getenv("ENVIRONMENT", "production") == "production":
             raise HTTPException(status_code=500, detail="FORTRESS PROTOCOL: Server misconfiguration. Auth cannot be bypassed in production.")
-        log.warning("JWT_SECRET not set — auth disabled (dev only)")
+        log.warning("JWT_RSA_PUBLIC_KEY not set — auth disabled (dev only)")
         return {"username": "anonymous", "role": "viewer"}
 
+    public_key = JWT_RSA_PUBLIC_KEY
+    if not public_key.startswith("-----BEGIN"):
+        try:
+            public_key = base64.b64decode(public_key).decode("utf-8")
+        except Exception:
+            raise HTTPException(status_code=500, detail="Invalid JWT_RSA_PUBLIC_KEY format")
+
     try:
-        return jose_jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return jose_jwt.decode(token, public_key, algorithms=[JWT_ALGORITHM])
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 

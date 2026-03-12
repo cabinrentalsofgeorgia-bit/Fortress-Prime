@@ -25,6 +25,7 @@ Usage in routes:
 import os
 import time
 import logging
+import base64
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -66,9 +67,26 @@ logger = logging.getLogger("gateway.auth")
 # Configuration
 # ---------------------------------------------------------------------------
 
-JWT_SECRET = os.getenv("JWT_SECRET", "")
-JWT_ALGORITHM = "HS256"
+JWT_RSA_PRIVATE_KEY_B64 = os.getenv("JWT_RSA_PRIVATE_KEY", "")
+JWT_RSA_PUBLIC_KEY_B64 = os.getenv("JWT_RSA_PUBLIC_KEY", "")
+JWT_ALGORITHM = "RS256"
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
+
+
+def _decode_pem_key(raw: str) -> str:
+    value = (raw or "").strip()
+    if not value:
+        return ""
+    if value.startswith("-----BEGIN"):
+        return value
+    try:
+        return base64.b64decode(value).decode("utf-8")
+    except Exception:
+        return ""
+
+
+JWT_RSA_PRIVATE_KEY = _decode_pem_key(JWT_RSA_PRIVATE_KEY_B64)
+JWT_RSA_PUBLIC_KEY = _decode_pem_key(JWT_RSA_PUBLIC_KEY_B64)
 
 # Routes that bypass authentication entirely
 PUBLIC_PATHS = {
@@ -105,8 +123,8 @@ def create_access_token(
     expires_delta: Optional[timedelta] = None,
 ) -> str:
     """Create a signed JWT."""
-    if not JWT_SECRET:
-        raise RuntimeError("JWT_SECRET not configured in environment")
+    if not JWT_RSA_PRIVATE_KEY:
+        raise RuntimeError("JWT_RSA_PRIVATE_KEY not configured in environment")
 
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(hours=JWT_EXPIRE_HOURS)
@@ -118,13 +136,15 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(timezone.utc),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, JWT_RSA_PRIVATE_KEY, algorithm=JWT_ALGORITHM)
 
 
 def decode_token(token: str) -> dict:
     """Decode and validate a JWT. Raises HTTPException on failure."""
+    if not JWT_RSA_PUBLIC_KEY:
+        raise HTTPException(status_code=500, detail="JWT_RSA_PUBLIC_KEY not configured")
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_RSA_PUBLIC_KEY, algorithms=[JWT_ALGORITHM])
         return payload
     except JWTError as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")

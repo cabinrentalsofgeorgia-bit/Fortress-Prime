@@ -5,6 +5,7 @@ Authentication & Authorization core
 - FastAPI dependency for protected routes
 """
 from datetime import datetime, timedelta, timezone
+import os
 from typing import Optional
 from uuid import UUID
 
@@ -25,7 +26,8 @@ logger = structlog.get_logger()
 bearer_scheme = HTTPBearer(auto_error=False)
 
 ALGORITHM = settings.jwt_algorithm
-SECRET = settings.jwt_secret_key
+RSA_PRIVATE_KEY = settings.jwt_rsa_private_key
+RSA_PUBLIC_KEY = settings.jwt_rsa_public_key
 
 
 def hash_password(plain: str) -> str:
@@ -45,6 +47,9 @@ def create_access_token(
     email: str,
     expires_delta: Optional[timedelta] = None,
 ) -> str:
+    if not RSA_PRIVATE_KEY:
+        raise RuntimeError("JWT RSA private key is not configured")
+
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(hours=settings.jwt_expiration_hours)
     )
@@ -55,11 +60,23 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(timezone.utc),
     }
-    return jwt.encode(payload, SECRET, algorithm=ALGORITHM)
+    return jwt.encode(payload, RSA_PRIVATE_KEY, algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> dict:
-    return jwt.decode(token, SECRET, algorithms=[ALGORITHM])
+    if not RSA_PUBLIC_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="JWT RSA public key is not configured",
+        )
+    try:
+        return jwt.decode(token, RSA_PUBLIC_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        legacy_secret = (os.getenv("JWT_SECRET_KEY") or settings.jwt_secret_key or "").strip()
+        if not legacy_secret:
+            raise
+        # Backward-compatible fallback for legacy HS256 tokens.
+        return jwt.decode(token, legacy_secret, algorithms=["HS256"])
 
 
 async def get_current_user(
