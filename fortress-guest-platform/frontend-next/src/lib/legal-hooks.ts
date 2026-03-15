@@ -13,7 +13,14 @@ import type {
   DeadlinesResponse,
   CorrespondenceResponse,
   ExtractionQueuedResponse,
+  GraphRefreshResponse,
+  DiscoveryDraftResponse,
+  DiscoveryDraftPacksResponse,
+  DiscoveryDraftPackDetail,
+  CaseGraphSnapshot,
   LegalDeadline,
+  SanctionsAlertsResponse,
+  DepositionKillSheetsResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -23,6 +30,13 @@ const KEYS = {
   correspondence: (slug: string) =>
     ["legal", "correspondence", slug] as const,
   timeline: (slug: string) => ["legal", "timeline", slug] as const,
+  graph: (slug: string) => ["legal", "graph", slug] as const,
+  discoveryPacks: (slug: string) => ["legal", "discovery-packs", slug] as const,
+  discoveryPack: (slug: string, packId: string) =>
+    ["legal", "discovery-pack", slug, packId] as const,
+  sanctionsAlerts: (slug: string) => ["legal", "sanctions", slug] as const,
+  depositionKillSheets: (slug: string) =>
+    ["legal", "deposition-kill-sheets", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -64,6 +78,38 @@ export function useCaseTimeline(slug: string) {
     queryKey: KEYS.timeline(slug),
     queryFn: () =>
       api.get<unknown[]>(`/api/legal/cases/${slug}/timeline`),
+  });
+}
+
+export function useCaseGraph(slug: string) {
+  return useQuery({
+    queryKey: KEYS.graph(slug),
+    queryFn: () => api.get<CaseGraphSnapshot>(`/api/legal/cases/${slug}/graph/snapshot`),
+    enabled: !!slug,
+  });
+}
+
+type DiscoveryPacksHydratedResponse = DiscoveryDraftPacksResponse & {
+  latest_pack: DiscoveryDraftPackDetail | null;
+};
+
+export function useDiscoveryPacks(slug: string) {
+  return useQuery<DiscoveryPacksHydratedResponse>({
+    queryKey: KEYS.discoveryPacks(slug),
+    queryFn: async () => {
+      const packs = await api.get<DiscoveryDraftPacksResponse>(
+        `/api/legal/cases/${slug}/discovery/packs`,
+      );
+      const latest = packs?.packs?.[0];
+      if (!latest?.id) {
+        return { ...packs, latest_pack: null };
+      }
+      const detail = await api.get<DiscoveryDraftPackDetail>(
+        `/api/legal/cases/${slug}/discovery/packs/${latest.id}`,
+      );
+      return { ...packs, latest_pack: detail };
+    },
+    enabled: !!slug,
   });
 }
 
@@ -175,6 +221,68 @@ export function useCreateCorrespondence(slug: string) {
   });
 }
 
+export function useRefreshGraphMutation(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<GraphRefreshResponse>(`/api/legal/cases/${slug}/graph/refresh`),
+    onSuccess: () => {
+      toast.success("Case graph refreshed");
+      qc.invalidateQueries({ queryKey: KEYS.caseDetail(slug) });
+      qc.invalidateQueries({ queryKey: KEYS.timeline(slug) });
+    },
+    onError: (e) => toast.error(`Graph refresh failed: ${e.message}`),
+  });
+}
+
+export function useGenerateDiscoveryDraftPack(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { target_entity: string; max_items?: number }) =>
+      api.post<DiscoveryDraftResponse>(
+        `/api/legal/cases/${slug}/discovery/draft-pack`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Discovery draft pack generated");
+      qc.invalidateQueries({ queryKey: KEYS.discoveryPacks(slug) });
+      qc.invalidateQueries({ queryKey: KEYS.timeline(slug) });
+    },
+    onError: (e) => toast.error(`Discovery generation failed: ${e.message}`),
+  });
+}
+
+export function useDraftDiscoveryMutation(slug: string) {
+  return useGenerateDiscoveryDraftPack(slug);
+}
+
+export function useRunSanctionsSweep(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(`/api/legal/cases/${slug}/sanctions/sweep`),
+    onSuccess: () => {
+      toast.success("Sanctions sweep complete");
+      qc.invalidateQueries({ queryKey: KEYS.sanctionsAlerts(slug) });
+      qc.invalidateQueries({ queryKey: KEYS.timeline(slug) });
+    },
+    onError: (e) => toast.error(`Sanctions sweep failed: ${e.message}`),
+  });
+}
+
+export function useGenerateDepositionKillSheet(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { deponent_entity: string }) =>
+      api.post(`/api/legal/cases/${slug}/deposition/kill-sheet`, body),
+    onSuccess: () => {
+      toast.success("Deposition kill-sheet generated");
+      qc.invalidateQueries({ queryKey: KEYS.depositionKillSheets(slug) });
+      qc.invalidateQueries({ queryKey: KEYS.timeline(slug) });
+    },
+    onError: (e) => toast.error(`Kill-sheet generation failed: ${e.message}`),
+  });
+}
+
 /* ── Correspondence Vault ────────────────────────────────────── */
 
 export function useUpdateCorrespondenceStatus(slug: string) {
@@ -232,6 +340,68 @@ export async function downloadCorrespondence(corrId: number): Promise<void> {
     toast.success(`Downloaded ${filename}`);
   } catch (e) {
     toast.error(`Download error: ${e instanceof Error ? e.message : "Unknown"}`);
+  }
+}
+
+export function useSanctionsAlerts(slug: string) {
+  return useQuery<SanctionsAlertsResponse>({
+    queryKey: KEYS.sanctionsAlerts(slug),
+    queryFn: () =>
+      api.get<SanctionsAlertsResponse>(
+        `/api/legal/cases/${slug}/sanctions/alerts`,
+      ),
+    enabled: !!slug,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useDepositionKillSheets(slug: string) {
+  return useQuery<DepositionKillSheetsResponse>({
+    queryKey: KEYS.depositionKillSheets(slug),
+    queryFn: () =>
+      api.get<DepositionKillSheetsResponse>(
+        `/api/legal/cases/${slug}/deposition/kill-sheets`,
+      ),
+    enabled: !!slug,
+    refetchInterval: 60_000,
+  });
+}
+
+export async function downloadKillSheetMarkdown(
+  caseSlug: string,
+  sheetId: string,
+  suggestedFileName?: string,
+): Promise<void> {
+  try {
+    const res = await fetch(
+      `/api/legal/cases/${caseSlug}/deposition/kill-sheets/${sheetId}/export`,
+      {
+        headers: {
+          Accept: "text/markdown",
+          Authorization: `Bearer ${localStorage.getItem("fgp_token") ?? ""}`,
+        },
+      },
+    );
+    if (!res.ok) {
+      const detail = await res.text().catch(() => res.statusText);
+      toast.error(`Kill-sheet export failed: ${detail}`);
+      return;
+    }
+    const blob = await res.blob();
+    const filename = suggestedFileName || `${caseSlug}_kill_sheet.md`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Downloaded ${filename}`);
+  } catch (e) {
+    toast.error(
+      `Kill-sheet export failed: ${e instanceof Error ? e.message : "Unknown error"}`,
+    );
   }
 }
 

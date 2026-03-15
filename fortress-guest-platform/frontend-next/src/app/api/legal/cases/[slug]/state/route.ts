@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const FGP_BACKEND = process.env.FGP_BACKEND_URL || "http://localhost:8100";
+const FGP_BACKEND = process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
 const SESSION_COOKIE = "fortress_session";
 
 function extractAuth(request: NextRequest): Record<string, string> {

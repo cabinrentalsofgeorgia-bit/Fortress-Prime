@@ -15,19 +15,40 @@ Provides GET endpoints for the Next.js Legal Command Center dashboard:
 Database: fortress_db (read via shared async engine from ediscovery_agent)
 """
 
+import asyncio
 import json
 import os
+import random
 import structlog
+from uuid import UUID
+
+import httpx
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import select, text
 
+from backend.core.database import AsyncSessionLocal
 from backend.services.ediscovery_agent import LegacySession
+from backend.services.legal_extractor import extract_entities
+from backend.services.legal_case_graph import get_case_graph_snapshot, trigger_graph_refresh
+from backend.services.legal_discovery_engine import generate_discovery_pack, validate_discovery_pack
+from backend.services.legal_deposition_engine import (
+    build_cross_exam_funnels,
+    get_deposition_targets,
+    stream_cross_exam_funnels,
+)
+from backend.schemas.legal_schemas import (
+    FunnelUpdateRequest,
+    GraphSnapshotResponse,
+    TargetStatusUpdateRequest,
+)
+from backend.models.legal_deposition import CrossExamFunnel, DepositionTarget
+from backend.models.legal_graph import LegalCase
 
 logger = structlog.get_logger()
 
@@ -41,6 +62,22 @@ def _row_to_dict(row) -> dict:
         if isinstance(v, (date, datetime)):
             d[k] = v.isoformat()
     return d
+
+
+async def _legal_case_table_exists(session) -> bool:
+    result = await session.execute(text("SELECT to_regclass('legal.cases') IS NOT NULL"))
+    return bool(result.scalar())
+
+
+async def _assert_case_exists_if_supported(session, slug: str) -> None:
+    if not await _legal_case_table_exists(session):
+        return
+    case_r = await session.execute(
+        text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
+        {"slug": slug},
+    )
+    if not case_r.fetchone():
+        raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
 
 
 def _compute_days_remaining(critical_date_str: str | None) -> int | None:
@@ -611,25 +648,879 @@ async def patch_war_room_state(slug: str, body: WarRoomStateUpdate):
 # ── Extraction Stub ──────────────────────────────────────────────────
 
 class ExtractionRequest(BaseModel):
-    target: str
+    target: str = Field(..., pattern="^(case|correspondence)$")
     text: Optional[str] = None
     correspondence_id: Optional[int] = None
 
 
+class DiscoveryDraftPackRequest(BaseModel):
+    pack_type: str | None = Field(default=None, pattern="^(interrogatory|rfp|admission)$")
+    item_limit: int = Field(default=5, ge=1, le=25)
+    # Backward-compatible fields for older callers.
+    target_party: str | None = Field(default=None)
+    category: str | None = Field(default=None, pattern="^(interrogatory|rfp|admission)$")
+
+
+class DepositionBuildFunnelRequest(BaseModel):
+    target_name: str = Field(..., min_length=1, max_length=255)
+
+
+@router.get("/cases/{slug}/graph/snapshot", response_model=GraphSnapshotResponse, summary="Get legal case graph snapshot")
+async def get_graph_snapshot(slug: str):
+    async with AsyncSessionLocal() as session:
+        snapshot = await get_case_graph_snapshot(session, case_slug=slug)
+
+    nodes = [
+        {
+            "id": str(node.id),
+            "entity_type": node.entity_type,
+            "label": node.label,
+            "node_metadata": node.node_metadata or {},
+        }
+        for node in snapshot["nodes"]
+    ]
+    edges = [
+        {
+            "id": str(edge.id),
+            "source_node_id": str(edge.source_node_id),
+            "target_node_id": str(edge.target_node_id),
+            "relationship_type": edge.relationship_type,
+            "weight": float(edge.weight or 0.0),
+            "source_ref": edge.source_ref,
+        }
+        for edge in snapshot["edges"]
+    ]
+    return GraphSnapshotResponse(nodes=nodes, edges=edges)
+
+
+async def _refresh_graph_background(case_slug: str) -> None:
+    async with AsyncSessionLocal() as session:
+        try:
+            await trigger_graph_refresh(session, case_slug=case_slug)
+        except Exception as exc:
+            await session.rollback()
+            logger.error("legal_graph_refresh_failed", slug=case_slug, error=str(exc)[:280])
+
+
+@router.post(
+    "/cases/{slug}/graph/refresh",
+    summary="Queue legal case graph refresh",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def refresh_case_graph(slug: str, background_tasks: BackgroundTasks):
+    # Fast-ack pattern: queue refresh so frontend stays responsive.
+    background_tasks.add_task(_refresh_graph_background, slug)
+    return {"status": "refresh_queued", "case_slug": slug}
+
+
+@router.post("/cases/{slug}/discovery/draft-pack", summary="Generate discovery draft pack")
+async def draft_discovery_pack(slug: str, body: DiscoveryDraftPackRequest):
+    async with AsyncSessionLocal() as session:
+        try:
+            resolved_pack_type = body.pack_type or body.category
+            if not resolved_pack_type:
+                raise HTTPException(status_code=422, detail="pack_type is required")
+
+            return await generate_discovery_pack(
+                db=session,
+                case_slug=slug,
+                pack_type=resolved_pack_type,
+                item_limit=body.item_limit,
+            )
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.error("legal_discovery_draft_failed", slug=slug, error=str(exc)[:280])
+            raise HTTPException(status_code=500, detail="Failed to generate discovery draft pack")
+
+
+@router.post("/cases/{slug}/discovery/{pack_id}/validate", summary="Validate Rule 26 proportionality for draft pack")
+async def validate_discovery_draft_pack(slug: str, pack_id: UUID):
+    async with AsyncSessionLocal() as session:
+        try:
+            return await validate_discovery_pack(db=session, pack_id=pack_id)
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.error("legal_discovery_validate_failed", slug=slug, pack_id=str(pack_id), error=str(exc)[:280])
+            raise HTTPException(status_code=500, detail="Failed to validate discovery draft pack")
+
+
+@router.post("/cases/{slug}/deposition/build-funnel", summary="Build graph-driven cross-exam funnels")
+async def build_deposition_funnel(slug: str, body: DepositionBuildFunnelRequest):
+    async with AsyncSessionLocal() as session:
+        try:
+            return await build_cross_exam_funnels(
+                db=session,
+                case_slug=slug,
+                target_name=body.target_name,
+            )
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.error("legal_deposition_build_failed", slug=slug, target=body.target_name, error=str(exc)[:280])
+            raise HTTPException(status_code=500, detail="Failed to build deposition funnel")
+
+
+@router.get("/cases/{slug}/deposition/targets", summary="Get stored deposition targets and funnels")
+async def list_deposition_targets(slug: str):
+    async with AsyncSessionLocal() as session:
+        try:
+            return await get_deposition_targets(db=session, case_slug=slug)
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.error("legal_deposition_targets_failed", slug=slug, error=str(exc)[:280])
+            raise HTTPException(status_code=500, detail="Failed to fetch deposition targets")
+
+
+@router.patch("/cases/{slug}/deposition/funnels/{funnel_id}", summary="Update cross-exam funnel work product")
+async def update_deposition_funnel(slug: str, funnel_id: UUID, body: FunnelUpdateRequest):
+    async with AsyncSessionLocal() as session:
+        try:
+            case_res = await session.execute(select(LegalCase).where(LegalCase.slug == slug))
+            case = case_res.scalar_one_or_none()
+            if not case:
+                raise HTTPException(status_code=404, detail=f"Legal case '{slug}' not found")
+
+            funnel_res = await session.execute(select(CrossExamFunnel).where(CrossExamFunnel.id == funnel_id))
+            funnel = funnel_res.scalar_one_or_none()
+            if not funnel:
+                raise HTTPException(status_code=404, detail=f"Funnel '{funnel_id}' not found")
+
+            target_res = await session.execute(select(DepositionTarget).where(DepositionTarget.id == funnel.target_id))
+            target = target_res.scalar_one_or_none()
+            if not target or target.case_id != case.id:
+                raise HTTPException(status_code=404, detail="Funnel not found for case")
+
+            if body.lock_in_questions is not None:
+                funnel.lock_in_questions = [str(q).strip() for q in body.lock_in_questions if str(q).strip()]
+            if body.strike_script is not None:
+                funnel.strike_script = body.strike_script.strip() or None
+
+            await session.commit()
+            return {
+                "id": str(funnel.id),
+                "target_id": str(funnel.target_id),
+                "contradiction_edge_id": str(funnel.contradiction_edge_id),
+                "topic": funnel.topic,
+                "lock_in_questions": funnel.lock_in_questions or [],
+                "the_strike_document": funnel.the_strike_document,
+                "strike_script": funnel.strike_script,
+                "created_at": funnel.created_at.isoformat() if funnel.created_at else None,
+            }
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.error("legal_deposition_funnel_update_failed", slug=slug, funnel_id=str(funnel_id), error=str(exc)[:280])
+            raise HTTPException(status_code=500, detail="Failed to update deposition funnel")
+
+
+@router.patch("/cases/{slug}/deposition/targets/{target_id}/status", summary="Update deposition target status")
+async def update_deposition_target_status(slug: str, target_id: UUID, body: TargetStatusUpdateRequest):
+    async with AsyncSessionLocal() as session:
+        try:
+            case_res = await session.execute(select(LegalCase).where(LegalCase.slug == slug))
+            case = case_res.scalar_one_or_none()
+            if not case:
+                raise HTTPException(status_code=404, detail=f"Legal case '{slug}' not found")
+
+            target_res = await session.execute(select(DepositionTarget).where(DepositionTarget.id == target_id))
+            target = target_res.scalar_one_or_none()
+            if not target or target.case_id != case.id:
+                raise HTTPException(status_code=404, detail=f"Target '{target_id}' not found for case")
+
+            target.status = body.status
+            await session.commit()
+            return {
+                "id": str(target.id),
+                "case_id": str(target.case_id),
+                "entity_name": target.entity_name,
+                "role": target.role,
+                "status": target.status,
+                "created_at": target.created_at.isoformat() if target.created_at else None,
+            }
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.error("legal_deposition_target_status_update_failed", slug=slug, target_id=str(target_id), error=str(exc)[:280])
+            raise HTTPException(status_code=500, detail="Failed to update deposition target status")
+
+
+@router.get("/cases/{slug}/deposition/stream-funnel", summary="Stream cross-exam funnel generation")
+async def stream_deposition_funnel(slug: str, target_name: str):
+    async def event_stream():
+        async with AsyncSessionLocal() as session:
+            try:
+                async for chunk in stream_cross_exam_funnels(
+                    db=session,
+                    case_slug=slug,
+                    target_name=target_name,
+                ):
+                    yield chunk
+            except HTTPException as exc:
+                await session.rollback()
+                detail = exc.detail if isinstance(exc.detail, str) else "Failed to stream deposition funnel"
+                yield f"event: error\ndata: {json.dumps({'detail': detail})}\n\n"
+                yield 'event: close\ndata: {"status": "error"}\n\n'
+            except Exception as exc:
+                await session.rollback()
+                logger.error("legal_deposition_stream_failed", slug=slug, target=target_name, error=str(exc)[:280])
+                yield 'event: error\ndata: {"detail":"Failed to stream deposition funnel"}\n\n'
+                yield 'event: close\ndata: {"status": "error"}\n\n'
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+async def _run_extraction_job(
+    *,
+    slug: str,
+    case_id: int,
+    target: str,
+    source_text: str,
+    correspondence_id: int | None,
+) -> None:
+    async with LegacySession() as session:
+        await session.execute(
+            text("""
+                UPDATE legal.cases
+                SET extraction_status = 'processing', updated_at = now()
+                WHERE id = :cid
+            """),
+            {"cid": case_id},
+        )
+        await session.commit()
+
+    try:
+        entities, model_used = await extract_entities(
+            source_text=source_text,
+            target=target,
+            case_slug=slug,
+        )
+        entities_json = json.dumps(entities)
+        risk_score = int(entities.get("risk_score", 3) or 3)
+
+        async with LegacySession() as session:
+            await session.execute(
+                text("""
+                    UPDATE legal.cases
+                    SET extraction_status = 'complete',
+                        extracted_entities = CAST(:entities AS jsonb),
+                        risk_score = :risk_score,
+                        updated_at = now()
+                    WHERE id = :cid
+                """),
+                {
+                    "entities": entities_json,
+                    "risk_score": max(1, min(5, risk_score)),
+                    "cid": case_id,
+                },
+            )
+
+            if target == "correspondence" and correspondence_id:
+                await session.execute(
+                    text("""
+                        UPDATE legal.correspondence
+                        SET extracted_entities = CAST(:entities AS jsonb)
+                        WHERE id = :corr_id AND case_id = :cid
+                    """),
+                    {
+                        "entities": entities_json,
+                        "corr_id": correspondence_id,
+                        "cid": case_id,
+                    },
+                )
+
+            await session.commit()
+
+        logger.info(
+            "legal_extraction_complete",
+            slug=slug,
+            target=target,
+            correspondence_id=correspondence_id,
+            model_used=model_used,
+        )
+    except Exception as exc:
+        logger.error(
+            "legal_extraction_failed",
+            slug=slug,
+            target=target,
+            correspondence_id=correspondence_id,
+            error=str(exc)[:280],
+        )
+        async with LegacySession() as session:
+            await session.execute(
+                text("""
+                    UPDATE legal.cases
+                    SET extraction_status = 'failed', updated_at = now()
+                    WHERE id = :cid
+                """),
+                {"cid": case_id},
+            )
+            await session.commit()
+
+
 @router.post("/cases/{slug}/extract", summary="Queue entity extraction")
-async def trigger_extraction(slug: str, body: ExtractionRequest):
+async def trigger_extraction(slug: str, body: ExtractionRequest, background_tasks: BackgroundTasks):
     async with LegacySession() as session:
         case_r = await session.execute(
-            text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
+            text("SELECT id, notes FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
         )
         case_row = case_r.fetchone()
         if not case_row:
             raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
 
-    logger.info("legal_extraction_queued", slug=slug, target=body.target)
+        source_candidates: list[str] = []
+        if body.text and body.text.strip():
+            source_candidates.append(body.text.strip())
+        if case_row.notes and str(case_row.notes).strip():
+            source_candidates.append(str(case_row.notes).strip())
+
+        # Deterministic fallback so extraction can still run when notes are empty.
+        case_context = f"Case Slug: {slug}".strip()
+        if case_context:
+            source_candidates.append(case_context)
+
+        corr_id = body.correspondence_id
+
+        if body.target == "correspondence":
+            if not corr_id:
+                raise HTTPException(status_code=422, detail="correspondence_id is required when target=correspondence")
+            corr_r = await session.execute(
+                text("""
+                    SELECT id, body
+                    FROM legal.correspondence
+                    WHERE id = :corr_id AND case_id = :cid
+                """),
+                {"corr_id": corr_id, "cid": case_row.id},
+            )
+            corr_row = corr_r.fetchone()
+            if not corr_row:
+                raise HTTPException(status_code=404, detail=f"Correspondence {corr_id} not found for case '{slug}'")
+            if corr_row.body and str(corr_row.body).strip():
+                source_candidates.insert(0, str(corr_row.body).strip())
+        else:
+            # Case-level extraction fallback chain:
+            # latest correspondence body -> latest evidence summary.
+            try:
+                latest_corr_r = await session.execute(
+                    text(
+                        """
+                        SELECT body, subject
+                        FROM legal.correspondence
+                        WHERE case_id = :cid
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                        """
+                    ),
+                    {"cid": case_row.id},
+                )
+                latest_corr = latest_corr_r.fetchone()
+                if latest_corr:
+                    corr_text = (latest_corr.body or "").strip()
+                    if corr_text:
+                        source_candidates.insert(0, corr_text)
+                    elif latest_corr.subject and str(latest_corr.subject).strip():
+                        source_candidates.insert(0, str(latest_corr.subject).strip())
+            except Exception:
+                pass
+
+            try:
+                latest_evidence_r = await session.execute(
+                    text(
+                        """
+                        SELECT *
+                        FROM legal.case_evidence
+                        WHERE case_id = :cid
+                        ORDER BY discovered_at DESC
+                        LIMIT 1
+                        """
+                    ),
+                    {"cid": case_row.id},
+                )
+                latest_evidence = latest_evidence_r.fetchone()
+                if latest_evidence:
+                    evidence_row = _row_to_dict(latest_evidence)
+                    evidence_parts = []
+                    summary = evidence_row.get("summary") or evidence_row.get("description") or evidence_row.get("notes")
+                    if summary and str(summary).strip():
+                        evidence_parts.append(str(summary).strip())
+                    content_hash = evidence_row.get("content_hash")
+                    if content_hash and str(content_hash).strip():
+                        evidence_parts.append(f"Evidence Hash: {str(content_hash).strip()}")
+                    if evidence_parts:
+                        source_candidates.append("\n".join(evidence_parts))
+            except Exception:
+                pass
+
+        source_text = "\n\n".join([s for s in source_candidates if s and s.strip()]).strip()
+
+        if not source_text.strip():
+            raise HTTPException(status_code=422, detail="No extraction source text found")
+
+        await session.execute(
+            text("""
+                UPDATE legal.cases
+                SET extraction_status = 'queued', updated_at = now()
+                WHERE id = :cid
+            """),
+            {"cid": case_row.id},
+        )
+        await session.commit()
+
+    background_tasks.add_task(
+        _run_extraction_job,
+        slug=slug,
+        case_id=case_row.id,
+        target=body.target,
+        source_text=source_text,
+        correspondence_id=corr_id,
+    )
+
+    logger.info("legal_extraction_queued", slug=slug, target=body.target, correspondence_id=corr_id)
     return {
+        "queued": True,
+        "status": "queued",
+        "message": "Extraction job accepted",
         "extraction": "queued",
         "target": body.target,
         "id": case_row.id,
     }
+
+
+@router.get("/crm/overview", summary="Legal CRM overview")
+async def crm_overview():
+    async with LegacySession() as session:
+        cases_r = await session.execute(text("""
+            SELECT id, case_slug, case_number, case_name, court, case_type, our_role,
+                   status, critical_date, extraction_status, risk_score,
+                   COALESCE(updated_at, created_at) AS updated_at
+            FROM legal.cases
+            ORDER BY critical_date ASC NULLS LAST, id
+        """))
+        cases = [_row_to_dict(r) for r in cases_r.fetchall()]
+
+        deadlines_r = await session.execute(text("""
+            SELECT d.*, c.case_slug
+            FROM legal.deadlines d
+            JOIN legal.cases c ON c.id = d.case_id
+            ORDER BY d.due_date ASC
+        """))
+        deadlines = [_compute_deadline_fields(_row_to_dict(r)) for r in deadlines_r.fetchall()]
+
+        correspondence_r = await session.execute(text("""
+            SELECT corr.id, corr.case_id, c.case_slug, corr.direction, corr.comm_type,
+                   corr.status, corr.subject, corr.recipient, corr.created_at, corr.sent_at
+            FROM legal.correspondence corr
+            JOIN legal.cases c ON c.id = corr.case_id
+            ORDER BY corr.created_at DESC
+            LIMIT 100
+        """))
+        correspondence = [_row_to_dict(r) for r in correspondence_r.fetchall()]
+
+        actions_r = await session.execute(text("""
+            SELECT a.id, a.case_id, c.case_slug, a.action_type, a.description,
+                   a.status, a.action_date
+            FROM legal.case_actions a
+            JOIN legal.cases c ON c.id = a.case_id
+            ORDER BY a.action_date DESC
+            LIMIT 200
+        """))
+        actions = [_row_to_dict(r) for r in actions_r.fetchall()]
+
+    today = date.today()
+    due_within_7 = 0
+    overdue = 0
+    for d in deadlines:
+        effective = d.get("effective_date") or d.get("due_date")
+        try:
+            dt = date.fromisoformat(str(effective)[:10]) if effective else None
+        except ValueError:
+            dt = None
+        if not dt:
+            continue
+        days = (dt - today).days
+        if days < 0:
+            overdue += 1
+        if days <= 7:
+            due_within_7 += 1
+
+    status_counts: dict[str, int] = {}
+    for c in cases:
+        st = c.get("status") or "unknown"
+        status_counts[st] = status_counts.get(st, 0) + 1
+
+    return {
+        "summary": {
+            "total_cases": len(cases),
+            "overdue_cases": overdue,
+            "due_within_7_days": due_within_7,
+            "status_counts": status_counts,
+        },
+        "cases": cases,
+        "deadlines": deadlines,
+        "correspondence": correspondence,
+        "actions": actions,
+    }
+
+
+@router.get("/health", summary="Legal subsystem health")
+async def legal_health():
+    async with LegacySession() as session:
+        counts = {}
+        for table in ("legal.cases", "legal.deadlines", "legal.correspondence", "legal.case_actions"):
+            result = await session.execute(text(f"SELECT COUNT(*) AS c FROM {table}"))
+            counts[table] = int(result.scalar() or 0)
+
+    return {
+        "status": "ok",
+        "service": "legal_api",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "counts": counts,
+    }
+
+
+HYDRA_SYNTH_URL = (os.getenv("DGX_REASONER_URL") or "http://192.168.0.100/v1").rstrip("/")
+HYDRA_SYNTH_MODEL = os.getenv("DGX_REASONER_MODEL", "deepseek-r1:70b")
+HYDRA_SYNTH_TIMEOUT = httpx.Timeout(connect=10.0, read=40.0, write=10.0, pool=10.0)
+FAST_SYNTH_URL = (os.getenv("DGX_FAST_URL") or os.getenv("DGX_REASONER_URL") or "http://192.168.0.100/v1").rstrip("/")
+FAST_SYNTH_MODEL = "qwen2.5:7b"
+FAST_SYNTH_TIMEOUT = httpx.Timeout(connect=8.0, read=25.0, write=8.0, pool=8.0)
+
+LEGAL_SYNTHESIS_PROMPT = (
+    "You are Fortress Legal Synthesis. Return concise JSON with keys: "
+    "executive_summary (string), immediate_actions (array of strings), "
+    "risk_assessment (string), deadlines (array of {description,due_date})."
+)
+
+
+
+
+class SynthesizeRequest(BaseModel):
+    prompt: str = Field(default="Generate strategic case synthesis")
+
+
+@router.post("/cases/{slug}/synthesize", summary="Generate AI synthesis for a legal case")
+async def synthesize_case(slug: str, body: SynthesizeRequest):
+    async with LegacySession() as session:
+        case_r = await session.execute(text("SELECT * FROM legal.cases WHERE case_slug = :slug"), {"slug": slug})
+        case_row = case_r.fetchone()
+        if not case_row:
+            raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
+
+        corr_r = await session.execute(
+            text("""
+                SELECT id, subject, body, direction, status, created_at
+                FROM legal.correspondence
+                WHERE case_id = :cid
+                ORDER BY created_at DESC
+                LIMIT 20
+            """),
+            {"cid": case_row.id},
+        )
+        correspondence = [_row_to_dict(r) for r in corr_r.fetchall()]
+
+        dl_r = await session.execute(
+            text("""
+                SELECT id, description, due_date, extended_to, status, review_status
+                FROM legal.deadlines
+                WHERE case_id = :cid
+                ORDER BY due_date ASC
+                LIMIT 20
+            """),
+            {"cid": case_row.id},
+        )
+        deadlines = [_compute_deadline_fields(_row_to_dict(r)) for r in dl_r.fetchall()]
+
+        act_r = await session.execute(
+            text("""
+                SELECT id, action_type, description, status, action_date
+                FROM legal.case_actions
+                WHERE case_id = :cid
+                ORDER BY action_date DESC
+                LIMIT 30
+            """),
+            {"cid": case_row.id},
+        )
+        actions = [_row_to_dict(r) for r in act_r.fetchall()]
+
+    raw_case = _row_to_dict(case_row)
+    case_payload = {
+        "case_slug": raw_case.get("case_slug"),
+        "case_number": raw_case.get("case_number"),
+        "case_name": raw_case.get("case_name"),
+        "court": raw_case.get("court"),
+        "status": raw_case.get("status"),
+        "our_role": raw_case.get("our_role"),
+        "risk_score": raw_case.get("risk_score"),
+        "critical_date": raw_case.get("critical_date"),
+        "critical_note": raw_case.get("critical_note"),
+    }
+
+    compact_deadlines = [
+        {
+            "description": d.get("description"),
+            "due_date": d.get("effective_date") or d.get("due_date"),
+            "urgency": d.get("urgency"),
+            "status": d.get("status"),
+        }
+        for d in deadlines[:10]
+    ]
+
+    compact_correspondence = [
+        {
+            "id": c.get("id"),
+            "direction": c.get("direction"),
+            "status": c.get("status"),
+            "subject": c.get("subject"),
+            "created_at": c.get("created_at"),
+            "body_preview": (c.get("body") or "")[:280],
+        }
+        for c in correspondence[:10]
+    ]
+
+    compact_actions = [
+        {
+            "id": a.get("id"),
+            "action_type": a.get("action_type"),
+            "status": a.get("status"),
+            "action_date": a.get("action_date"),
+            "description": (a.get("description") or "")[:220],
+        }
+        for a in actions[:12]
+    ]
+
+    synth_input = {
+        "case": case_payload,
+        "deadlines": compact_deadlines,
+        "correspondence": compact_correspondence,
+        "actions": compact_actions,
+        "operator_prompt": body.prompt,
+    }
+
+    messages = [
+        {"role": "system", "content": LEGAL_SYNTHESIS_PROMPT},
+        {"role": "user", "content": json.dumps(synth_input, ensure_ascii=False)},
+    ]
+
+    async def _call_model(
+        base_url: str,
+        model: str,
+        timeout: httpx.Timeout,
+        attempts: int = 1,
+        base_backoff_s: float = 1.0,
+    ) -> tuple[bool, str]:
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.2,
+            "max_tokens": 700,
+        }
+
+        for attempt in range(1, attempts + 1):
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    r = await client.post(f"{base_url}/chat/completions", json=payload)
+            except httpx.HTTPError as exc:
+                logger.warning(
+                    "legal_synthesize_upstream_error",
+                    slug=slug,
+                    model=model,
+                    attempt=attempt,
+                    attempts=attempts,
+                    error=str(exc)[:240],
+                )
+                r = None
+
+            if r is not None and r.status_code == 200:
+                try:
+                    data = r.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if content:
+                        return True, content
+                except Exception:
+                    pass
+
+            if r is not None and r.status_code != 200:
+                logger.warning(
+                    "legal_synthesize_non200",
+                    slug=slug,
+                    model=model,
+                    attempt=attempt,
+                    attempts=attempts,
+                    status=r.status_code,
+                    body=r.text[:260],
+                )
+
+            if attempt < attempts:
+                backoff = base_backoff_s * (2 ** (attempt - 1)) + random.uniform(0.0, 0.4)
+                await asyncio.sleep(backoff)
+
+        return False, ""
+
+    ok, content = await _call_model(HYDRA_SYNTH_URL, HYDRA_SYNTH_MODEL, HYDRA_SYNTH_TIMEOUT)
+    model_used = HYDRA_SYNTH_MODEL
+    if not ok:
+        ok, content = await _call_model(FAST_SYNTH_URL, FAST_SYNTH_MODEL, FAST_SYNTH_TIMEOUT, attempts=3, base_backoff_s=1.0)
+        model_used = FAST_SYNTH_MODEL
+
+    if not ok:
+        raise HTTPException(status_code=502, detail="Synthesis failed on DGX models (deepseek + qwen)")
+
+    return {
+        "case_slug": slug,
+        "model": model_used,
+        "input": synth_input,
+        "output": content,
+    }
+
+
+# ─── Sanctions Alerts (Phase 2B) ─────────────────────────────────────────
+
+@router.get("/cases/{slug}/sanctions/drafts", summary="List draft sanctions alerts")
+async def get_sanctions_drafts(slug: str):
+    """Return all draft Rule 11 / Spoliation alerts for a case."""
+    from sqlalchemy import text as sa_text
+    async with AsyncSessionLocal() as db:
+        r = await db.execute(
+            sa_text("""
+                SELECT id, case_slug, alert_type, filing_ref,
+                       contradiction_summary, draft_content_ref, status, created_at
+                FROM legal.sanctions_alerts
+                WHERE case_slug = :slug
+                ORDER BY created_at DESC
+            """),
+            {"slug": slug},
+        )
+        alerts = []
+        for row in r.fetchall():
+            d = dict(row._mapping)
+            d["id"] = str(d["id"])
+            if d.get("created_at"):
+                d["created_at"] = str(d["created_at"])
+            alerts.append(d)
+    return {"case_slug": slug, "alerts": alerts, "total": len(alerts)}
+
+
+# ─── Harvey Engine: Master Chronology ─────────────────────────────────
+
+@router.post("/cases/{slug}/chronology/build", summary="Build master chronology from evidence")
+async def build_case_chronology(slug: str, background_tasks: BackgroundTasks):
+    """Trigger chronology extraction (runs against local DGX)."""
+    from backend.services.legal_chronology import build_chronology
+
+    async def _bg():
+        async with AsyncSessionLocal() as db:
+            await build_chronology(db, slug)
+
+    background_tasks.add_task(asyncio.coroutine(_bg) if False else _bg)
+    return {"status": "queued", "case_slug": slug}
+
+
+@router.post("/cases/{slug}/deliberate", summary="Convene the Counsel of 9")
+async def deliberate_case(slug: str):
+    """Run the Counsel of 9 deliberation against the case graph + chronology."""
+    from backend.services.legal_council import run_council_deliberation
+    from backend.services.legal_case_graph import get_case_graph_snapshot
+    from backend.services.legal_chronology import get_chronology
+    import json as _json
+
+    async with AsyncSessionLocal() as db:
+        snapshot = await get_case_graph_snapshot(db, case_slug=slug)
+        timeline = await get_chronology(db, slug)
+
+    nodes = snapshot.get("nodes", [])
+    edges = snapshot.get("edges", [])
+    node_lines = []
+    for n in nodes:
+        label = n.label if hasattr(n, "label") else n.get("label", "?")
+        etype = n.entity_type if hasattr(n, "entity_type") else n.get("entity_type", "?")
+        node_lines.append(f"[{etype}] {label}")
+    edge_lines = []
+    label_by_id = {}
+    for n in nodes:
+        nid = str(n.id if hasattr(n, "id") else n.get("id", "?"))
+        label = n.label if hasattr(n, "label") else n.get("label", "?")
+        label_by_id[nid] = label
+    for e in edges:
+        src = label_by_id.get(str(e.source_node_id if hasattr(e, "source_node_id") else e.get("source_node_id", "?")), "?")
+        tgt = label_by_id.get(str(e.target_node_id if hasattr(e, "target_node_id") else e.get("target_node_id", "?")), "?")
+        rel = e.relationship_type if hasattr(e, "relationship_type") else e.get("relationship_type", "?")
+        edge_lines.append(f"{src} --({rel})--> {tgt}")
+
+    chrono_lines = []
+    for ev in timeline:
+        chrono_lines.append(f"{ev.get('event_date','?')}: {ev.get('event_description','')}")
+
+    case_brief = (
+        f"Case: {slug}\n\n"
+        f"ENTITIES:\n" + "\n".join(node_lines) + "\n\n"
+        f"RELATIONSHIPS:\n" + "\n".join(edge_lines) + "\n\n"
+        f"CHRONOLOGY:\n" + "\n".join(chrono_lines)
+    )
+
+    import uuid as _uuid
+    result = await run_council_deliberation(
+        session_id=str(_uuid.uuid4()),
+        case_brief=case_brief,
+        context=f"Graph: {len(nodes)} entities, {len(edges)} edges. Timeline: {len(timeline)} events.",
+        case_slug=slug,
+        trigger_type="GLASS_DELIBERATE",
+    )
+
+    return result
+
+
+@router.get("/cases/{slug}/chronology", summary="Get master chronology timeline")
+async def get_case_chronology(slug: str):
+    """Return the chronological timeline for a case."""
+    from backend.services.legal_chronology import get_chronology
+    async with AsyncSessionLocal() as db:
+        events = await get_chronology(db, slug)
+    return {"case_slug": slug, "events": events, "total": len(events)}
+
+
+# ─── Jurisprudence Engine (Level 15) ──────────────────────────────
+
+class PrecedentSearchRequest(BaseModel):
+    keywords: list = Field(..., min_length=1)
+
+class AttorneyReconRequest(BaseModel):
+    query: str = Field(..., min_length=2)
+
+
+@router.post("/cases/{slug}/jurisprudence/precedent", summary="Search Georgia precedent")
+async def search_precedent(slug: str, body: PrecedentSearchRequest):
+    from backend.services.legal_jurisprudence import search_georgia_precedent
+    async with AsyncSessionLocal() as db:
+        result = await search_georgia_precedent(body.keywords, db=db)
+    return result.model_dump()
+
+
+@router.post("/cases/{slug}/jurisprudence/attorney-recon", summary="Profile attorney")
+async def attorney_recon(slug: str, body: AttorneyReconRequest):
+    from backend.services.legal_counsel_recon import profile_georgia_attorney
+    async with AsyncSessionLocal() as db:
+        result = await profile_georgia_attorney(body.query, db=db)
+    return result.model_dump()

@@ -24,7 +24,6 @@ import io
 import os
 import structlog
 from datetime import date, datetime, timezone
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse

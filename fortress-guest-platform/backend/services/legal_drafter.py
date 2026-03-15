@@ -13,16 +13,11 @@ import re
 import difflib
 import httpx
 import structlog
-from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from backend.core.config import settings
 from backend.models.damage_claim import DamageClaim
-from backend.models.rental_agreement import RentalAgreement
 from backend.services.prompt_engineer import PIISanitizer
 
 logger = structlog.get_logger(service="legal_drafter")

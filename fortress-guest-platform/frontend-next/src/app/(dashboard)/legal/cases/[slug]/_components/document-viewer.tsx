@@ -77,7 +77,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function hasTextFile(filePath: string | null): boolean {
+function hasTextFile(filePath: string | null | undefined): boolean {
   if (!filePath) return false;
   return filePath.endsWith(".txt") || filePath.endsWith(".md") || filePath.endsWith(".csv");
 }

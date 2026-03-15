@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server";
 
-const FGP_BACKEND = process.env.FGP_BACKEND_URL || "http://localhost:8100";
+const FGP_BACKEND = process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
 const SESSION_COOKIE = "fortress_session";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 /**
  * SSE proxy for Legal Council of 9 deliberation.
@@ -16,9 +20,14 @@ const SESSION_COOKIE = "fortress_session";
 export async function POST(request: NextRequest) {
   const target = `${FGP_BACKEND}/api/legal/council/deliberate`;
 
+  const incomingAuth = request.headers.get("authorization");
+  const incomingCookie = request.headers.get("cookie");
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
+    ...(incomingAuth ? { Authorization: incomingAuth } : {}),
+    ...(incomingCookie ? { Cookie: incomingCookie } : {}),
   };
 
   // Extract auth token from Bearer header or session cookie
@@ -36,7 +45,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Forward cookies + inject fortress_session if needed
-  const rawCookies = request.headers.get("cookie") || "";
+  const rawCookies = incomingCookie || "";
   if (token && !rawCookies.includes(`${SESSION_COOKIE}=`)) {
     headers["Cookie"] = rawCookies
       ? `${rawCookies}; ${SESSION_COOKIE}=${token}`

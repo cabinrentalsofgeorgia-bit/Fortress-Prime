@@ -26,7 +26,7 @@ SSE Event Protocol (text/event-stream):
 import asyncio
 import json
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import psycopg2.extras
 import structlog
@@ -40,7 +40,6 @@ from pydantic import BaseModel, Field
 from backend.services.deliberation_vault import (
     compute_signature,
     get_vault_connection,
-    verify_signature,
 )
 from backend.services.legal_council import (
     get_session,

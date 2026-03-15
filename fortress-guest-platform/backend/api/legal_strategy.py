@@ -17,7 +17,6 @@ SSE Protocol:
 import json
 import os
 import time
-import asyncio
 import structlog
 import httpx
 
@@ -27,19 +26,23 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Any, Optional
 
+from backend.core.config import settings
+
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 logger = structlog.get_logger()
 
 router = APIRouter()
 
+_LITELLM_BASE = getattr(settings, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
+
 ALLOW_CLOUD_LLM = os.getenv("ALLOW_CLOUD_LLM", "false").lower() == "true"
 ANTHROPIC_PROXY = os.getenv("ANTHROPIC_PROXY_URL", "http://localhost:5100/v1")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", "http://192.168.0.100/hydra/v1")
+HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", _LITELLM_BASE)
 HYDRA_MODEL = os.getenv("HYDRA_MODEL", "deepseek-r1:70b")
-SWARM_URL = os.getenv("SWARM_URL", "http://192.168.0.100/v1")
+SWARM_URL = os.getenv("SWARM_URL", _LITELLM_BASE)
 SWARM_MODEL = os.getenv("SWARM_MODEL", "qwen2.5:7b")
 
 HTTPX_TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0)

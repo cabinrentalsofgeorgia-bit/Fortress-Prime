@@ -105,7 +105,7 @@ export function HitlDeadlineQueue({ slug }: { slug: string }) {
   const { data: deadlinesData, isLoading } = useCaseDeadlines(slug);
   const review = useDeadlineReview(slug);
 
-  const deadlines = deadlinesData?.deadlines ?? [];
+  const deadlines = (deadlinesData?.deadlines ?? []) as LegalDeadline[];
   const pending = deadlines.filter((d) => d.review_status === "pending_review");
   const reviewed = deadlines.filter((d) => d.review_status !== "pending_review");
 

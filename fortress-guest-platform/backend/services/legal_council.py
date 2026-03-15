@@ -29,8 +29,7 @@ import logging
 import os
 import re
 import time
-import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -72,14 +71,18 @@ PERSONAS_DIR = os.getenv(
     "/home/admin/Fortress-Prime/personas/legal",
 )
 
+from backend.core.config import settings as _cfg
+
+_LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
+
 ANTHROPIC_PROXY = os.getenv("ANTHROPIC_PROXY_URL", "http://localhost:5100/v1").rstrip("/")
 GEMINI_BASE_URL = os.getenv(
     "GEMINI_BASE_URL",
     "https://generativelanguage.googleapis.com/v1beta/openai",
 ).rstrip("/")
 XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai/v1").rstrip("/")
-HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", "http://192.168.0.100/hydra/v1").rstrip("/")
-SWARM_URL = os.getenv("SWARM_URL", "http://192.168.0.100/v1").rstrip("/")
+HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", _LITELLM_BASE).rstrip("/")
+SWARM_URL = os.getenv("SWARM_URL", _LITELLM_BASE).rstrip("/")
 
 HYDRA_32B_URL = os.getenv("HYDRA_32B_URL", "http://192.168.0.105:11434/v1").rstrip("/")
 HYDRA_120B_URL = os.getenv("HYDRA_120B_URL", "http://192.168.0.106:11434/v1").rstrip("/")
