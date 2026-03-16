@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.FGP_BACKEND_URL || "http://localhost:8100";
+const BACKEND = process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
 
 async function proxy(
   request: NextRequest,
@@ -29,11 +29,21 @@ async function proxy(
 
     const data = await upstream.text();
 
+    const responseHeaders = new Headers({
+      "Content-Type": upstream.headers.get("content-type") || "application/json",
+    });
+
+    const setCookies =
+      typeof upstream.headers.getSetCookie === "function"
+        ? upstream.headers.getSetCookie()
+        : [];
+    for (const sc of setCookies) {
+      responseHeaders.append("Set-Cookie", sc);
+    }
+
     return new NextResponse(data, {
       status: upstream.status,
-      headers: {
-        "Content-Type": upstream.headers.get("content-type") || "application/json",
-      },
+      headers: responseHeaders,
     });
   } catch (err) {
     console.error(`[BFF] ${request.method} /api/auth/${subpath} proxy error:`, err);

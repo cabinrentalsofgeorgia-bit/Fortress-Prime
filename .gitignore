@@ -42,3 +42,4 @@ full_index.txt
 *.key
 *.pem
 id_*
+.e2e-venv/

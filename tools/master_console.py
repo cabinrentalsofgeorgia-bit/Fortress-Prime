@@ -20,11 +20,14 @@ import time
 import json
 import logging
 import secrets
+import hashlib
+import threading
 import requests as http_client
 from pathlib import Path
 from typing import Optional
 from collections import defaultdict
 from datetime import datetime, timedelta
+from uuid import uuid4
 
 from fastapi import FastAPI, Request, HTTPException, Depends, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -34,6 +37,7 @@ from jose import jwt, JWTError
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from api import vrs_operations
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ENVIRONMENT
@@ -141,7 +145,7 @@ ALLOWED_ORIGINS = [
     o.strip()
     for o in os.getenv(
         "CORS_ORIGINS",
-        f"https://crog-ai.com,http://{BASE}:9800,http://localhost:9800",
+        f"https://crog-ai.com,http://{BASE}:9800,http://localhost:9800,http://localhost:3000",
     ).split(",")
     if o.strip()
 ]
@@ -165,6 +169,7 @@ app = FastAPI(
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",
 )
+app.include_router(vrs_operations.router)
 
 app.state.limiter = limiter
 
@@ -262,6 +267,16 @@ class StatusUpdate(BaseModel):
     is_active: bool
 
 
+class DisaggHotReloadRequest(BaseModel):
+    adapter_uri: str = Field(min_length=1, max_length=1024)
+    adapter_sha256: Optional[str] = Field(
+        default=None,
+        pattern=r"^[a-fA-F0-9]{64}$",
+    )
+    model_id: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    rollout_mode: str = Field(default="blue_green", pattern=r"^(blue_green|canary|immediate)$")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTH HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -322,6 +337,156 @@ def _proxy_mutate(method: str, path: str, token: str, body: dict = None):
     if resp.status_code == 204 or not resp.text:
         return {"status": "success"}
     return resp.json()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DISAGG HOT RELOAD — ZERO-DOWNTIME CONTROL PLANE
+# ══════════════════════════════════════════════════════════════════════════════
+
+DISAGG_RELOAD_TOKEN = os.getenv("DISAGG_RELOAD_TOKEN", "")
+DISAGG_RELOAD_HOOK = os.getenv("DISAGG_RELOAD_HOOK", "")
+DISAGG_RELOAD_HOOK_TIMEOUT = int(os.getenv("DISAGG_RELOAD_HOOK_TIMEOUT", "15"))
+
+_HOT_RELOAD_LOCK = threading.Lock()
+_HOT_RELOADS: dict[str, dict] = {}
+_HOT_RELOAD_BY_SHA: dict[str, str] = {}
+_HOT_RELOAD_ACTIVE_ID: Optional[str] = None
+_HOT_RELOAD_ACTIVE_ADAPTER: str = os.getenv("DISAGG_ACTIVE_ADAPTER", "baseline")
+_HOT_RELOAD_PREVIOUS_ADAPTER: Optional[str] = None
+_HOT_RELOAD_TERMINAL = {"done", "failed"}
+
+
+def _utc_iso() -> str:
+    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+
+def _require_reload_token(request: Request):
+    if not DISAGG_RELOAD_TOKEN:
+        raise HTTPException(status_code=503, detail="Reload token is not configured.")
+    token = request.headers.get("x-reload-token", "")
+    if not token or not secrets.compare_digest(token, DISAGG_RELOAD_TOKEN):
+        raise HTTPException(status_code=401, detail="Invalid reload token.")
+
+
+def _record_reload_event(rec: dict, event: str, detail: Optional[str] = None):
+    rec.setdefault("events", []).append(
+        {
+            "event": event,
+            "at": _utc_iso(),
+            "detail": detail,
+        }
+    )
+
+
+def _hash_file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _validate_adapter_artifact(adapter_uri: str, expected_sha: Optional[str]) -> dict:
+    meta = {"adapter_uri": adapter_uri, "path_checked": None, "computed_sha256": None}
+
+    if adapter_uri.startswith("file://"):
+        candidate = Path(adapter_uri[7:])
+    elif adapter_uri.startswith("/"):
+        candidate = Path(adapter_uri)
+    else:
+        # Non-local URI (s3://, nfs://, etc.) — trust external orchestrator to resolve.
+        return meta
+
+    meta["path_checked"] = str(candidate)
+    if not candidate.exists():
+        raise HTTPException(status_code=422, detail=f"Adapter artifact not found: {candidate}")
+
+    if candidate.is_file():
+        computed = _hash_file_sha256(candidate)
+        meta["computed_sha256"] = computed
+        if expected_sha and computed.lower() != expected_sha.lower():
+            raise HTTPException(status_code=422, detail="Adapter SHA256 mismatch.")
+
+    return meta
+
+
+def _trigger_reload_hook(payload: dict):
+    if not DISAGG_RELOAD_HOOK:
+        return
+    try:
+        resp = http_client.post(DISAGG_RELOAD_HOOK, json=payload, timeout=DISAGG_RELOAD_HOOK_TIMEOUT)
+    except http_client.RequestException as exc:
+        raise RuntimeError(f"Reload hook unreachable: {exc}") from exc
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Reload hook rejected request: {resp.status_code} {resp.text[:200]}")
+
+
+def _run_hot_reload(reload_id: str):
+    global _HOT_RELOAD_ACTIVE_ID, _HOT_RELOAD_ACTIVE_ADAPTER, _HOT_RELOAD_PREVIOUS_ADAPTER
+
+    with _HOT_RELOAD_LOCK:
+        rec = _HOT_RELOADS.get(reload_id)
+        if not rec:
+            return
+
+    started_at = time.perf_counter()
+    try:
+        with _HOT_RELOAD_LOCK:
+            rec["status"] = "validating"
+            _record_reload_event(rec, "reload_started")
+
+        validation = _validate_adapter_artifact(rec["adapter_uri"], rec.get("adapter_sha256"))
+
+        with _HOT_RELOAD_LOCK:
+            rec["validation"] = validation
+            rec["status"] = "prewarming"
+            _record_reload_event(rec, "reload_validated")
+
+        # In production this is where standby worker prewarm happens.
+        time.sleep(0.2)
+
+        with _HOT_RELOAD_LOCK:
+            rec["status"] = "switching"
+            _record_reload_event(rec, "reload_switching")
+            old_adapter = _HOT_RELOAD_ACTIVE_ADAPTER
+            _HOT_RELOAD_PREVIOUS_ADAPTER = old_adapter
+
+        hook_payload = {
+            "reload_id": reload_id,
+            "adapter_uri": rec["adapter_uri"],
+            "adapter_sha256": rec.get("adapter_sha256"),
+            "model_id": rec.get("model_id"),
+            "rollout_mode": rec.get("rollout_mode"),
+        }
+        _trigger_reload_hook(hook_payload)
+
+        with _HOT_RELOAD_LOCK:
+            _HOT_RELOAD_ACTIVE_ADAPTER = rec["adapter_uri"]
+            rec["status"] = "done"
+            rec["active_adapter"] = _HOT_RELOAD_ACTIVE_ADAPTER
+            rec["previous_adapter"] = _HOT_RELOAD_PREVIOUS_ADAPTER
+            _record_reload_event(rec, "reload_switched")
+            _record_reload_event(rec, "reload_done")
+            rec["ended_at"] = _utc_iso()
+            rec["duration_ms"] = int((time.perf_counter() - started_at) * 1000)
+            _HOT_RELOAD_ACTIVE_ID = None
+    except Exception as exc:
+        with _HOT_RELOAD_LOCK:
+            rec["status"] = "failed"
+            rec["error"] = str(exc)[:500]
+            rec["ended_at"] = _utc_iso()
+            rec["duration_ms"] = int((time.perf_counter() - started_at) * 1000)
+            # Roll back to previously active adapter state.
+            if _HOT_RELOAD_PREVIOUS_ADAPTER:
+                _HOT_RELOAD_ACTIVE_ADAPTER = _HOT_RELOAD_PREVIOUS_ADAPTER
+            rec["active_adapter"] = _HOT_RELOAD_ACTIVE_ADAPTER
+            rec["previous_adapter"] = _HOT_RELOAD_PREVIOUS_ADAPTER
+            _record_reload_event(rec, "reload_failed", rec["error"])
+            _record_reload_event(rec, "reload_rolled_back", _HOT_RELOAD_ACTIVE_ADAPTER)
+            _HOT_RELOAD_ACTIVE_ID = None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -557,6 +722,92 @@ async def admin_delete_user(user_id: int, request: Request):
     log.warning("admin_delete_user  actor=%s  target_id=%d",
                 admin.get("username"), user_id)  # FIX #6
     return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DISAGG ADMIN — HOT RELOAD ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/disagg/admin/hot-reload", status_code=202)
+async def disagg_hot_reload(request: Request, body: DisaggHotReloadRequest):
+    global _HOT_RELOAD_ACTIVE_ID
+
+    actor = _require_admin(request)
+    _require_reload_token(request)
+
+    with _HOT_RELOAD_LOCK:
+        if body.adapter_sha256:
+            prior_id = _HOT_RELOAD_BY_SHA.get(body.adapter_sha256.lower())
+            if prior_id:
+                prior = _HOT_RELOADS.get(prior_id)
+                if prior:
+                    return {
+                        "status": "already_seen",
+                        "reload_id": prior_id,
+                        "state": prior.get("status"),
+                        "active_adapter": _HOT_RELOAD_ACTIVE_ADAPTER,
+                    }
+
+        if _HOT_RELOAD_ACTIVE_ID:
+            active = _HOT_RELOADS.get(_HOT_RELOAD_ACTIVE_ID, {})
+            if active.get("status") not in _HOT_RELOAD_TERMINAL:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Reload already in progress: {_HOT_RELOAD_ACTIVE_ID}",
+                )
+
+        reload_id = str(uuid4())
+        rec = {
+            "reload_id": reload_id,
+            "status": "queued",
+            "created_at": _utc_iso(),
+            "started_at": None,
+            "ended_at": None,
+            "duration_ms": None,
+            "adapter_uri": body.adapter_uri,
+            "adapter_sha256": body.adapter_sha256.lower() if body.adapter_sha256 else None,
+            "model_id": body.model_id,
+            "rollout_mode": body.rollout_mode,
+            "active_adapter": _HOT_RELOAD_ACTIVE_ADAPTER,
+            "previous_adapter": _HOT_RELOAD_PREVIOUS_ADAPTER,
+            "validation": {},
+            "events": [],
+            "error": None,
+            "requested_by": actor.get("username"),
+        }
+        _record_reload_event(rec, "reload_queued")
+        _HOT_RELOADS[reload_id] = rec
+        if rec["adapter_sha256"]:
+            _HOT_RELOAD_BY_SHA[rec["adapter_sha256"]] = reload_id
+        _HOT_RELOAD_ACTIVE_ID = reload_id
+        rec["started_at"] = _utc_iso()
+
+    worker = threading.Thread(target=_run_hot_reload, args=(reload_id,), daemon=True)
+    worker.start()
+
+    return {
+        "status": "queued",
+        "reload_id": reload_id,
+        "state_url": f"/api/disagg/admin/hot-reload/{reload_id}",
+        "active_adapter": _HOT_RELOAD_ACTIVE_ADAPTER,
+    }
+
+
+@app.get("/api/disagg/admin/hot-reload/{reload_id}")
+async def disagg_hot_reload_status(reload_id: str, request: Request):
+    _require_admin(request)
+    _require_reload_token(request)
+
+    with _HOT_RELOAD_LOCK:
+        rec = _HOT_RELOADS.get(reload_id)
+        if not rec:
+            raise HTTPException(status_code=404, detail="Reload id not found.")
+        return {
+            **rec,
+            "cluster_active_adapter": _HOT_RELOAD_ACTIVE_ADAPTER,
+            "cluster_previous_adapter": _HOT_RELOAD_PREVIOUS_ADAPTER,
+            "cluster_reload_in_progress": _HOT_RELOAD_ACTIVE_ID,
+        }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
