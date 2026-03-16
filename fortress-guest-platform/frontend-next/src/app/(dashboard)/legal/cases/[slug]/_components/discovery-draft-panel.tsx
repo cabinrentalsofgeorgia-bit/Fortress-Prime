@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { HiveMindEditor } from "./hive-mind-editor";
+
 type DiscoveryDraftPanelProps = {
   slug: string;
 };
@@ -26,6 +28,16 @@ export function DiscoveryDraftPanel({ slug }: DiscoveryDraftPanelProps) {
   const [isDrafting, setIsDrafting] = useState<boolean>(false);
   const [draftResult, setDraftResult] = useState<DiscoveryDraftResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const updateDraftItemContent = (index: number, content: string) => {
+    setDraftResult((prev) => {
+      if (!prev || !Array.isArray(prev.items)) return prev;
+      const nextItems = [...prev.items];
+      const existing = nextItems[index] || {};
+      nextItems[index] = { ...existing, content };
+      return { ...prev, items: nextItems };
+    });
+  };
 
   const handleDraftGeneration = async () => {
     const safeCap = Math.max(1, Math.min(25, Number.isFinite(cap) ? cap : 25));
@@ -144,10 +156,15 @@ export function DiscoveryDraftPanel({ slug }: DiscoveryDraftPanelProps) {
                   <span>{item.category ?? "interrogatory"}</span>
                   <span>Target: {item.target_entity ?? "Opposing Party"}</span>
                 </div>
-                <p className="text-sm text-gray-200">{item.content ?? "(empty item)"}</p>
                 <div className="mt-2 text-xs text-blue-400 font-mono">
                   [Relevance: {(item.relevance_score ?? 1).toFixed(2)}] {item.justification ?? item.rationale ?? "Graph-derived draft."}
                 </div>
+                <HiveMindEditor
+                  caseSlug={slug}
+                  moduleType={`discovery_${(item.category ?? "interrogatory").toLowerCase()}`}
+                  initialText={item.content ?? ""}
+                  onFinalize={(finalText) => updateDraftItemContent(idx, finalText)}
+                />
               </div>
             ))}
           </div>

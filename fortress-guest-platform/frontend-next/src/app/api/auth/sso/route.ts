@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND = process.env.FGP_BACKEND_URL || "http://localhost:8100";
+const BACKEND = process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
 
 export async function POST(request: NextRequest) {
   try {

@@ -13,12 +13,12 @@ export interface StaffUser {
 
 export interface LoginResponse {
   access_token: string;
-  token_type?: string;
+  token_type: string;
   user: StaffUser;
 }
 
-export async function login(username: string, password: string): Promise<LoginResponse> {
-  const res = await api.post<LoginResponse>("/api/auth/login", { username, password });
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const res = await api.post<LoginResponse>("/api/auth/login", { email, password });
   setToken(res.access_token);
   return res;
 }

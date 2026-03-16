@@ -3,7 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Mountain, Loader2, AlertCircle } from "lucide-react";
-import { isAuthenticated, storeUser } from "@/lib/auth";
+import { fetchMe, isAuthenticated, storeUser } from "@/lib/auth";
 import { setToken } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const router = useRouter();
   const setUser = useAppStore((s) => s.setUser);
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -26,26 +26,27 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Unified login via Next BFF.
-      const loginRes = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        credentials: "include",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
-      if (!loginRes.ok) {
-        const data = await loginRes.json().catch(() => null);
-        throw new Error(data?.detail || "Invalid credentials");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        const raw = data?.detail ?? data?.error ?? data?.message ?? "Invalid credentials";
+        const msg = typeof raw === "string" ? raw : JSON.stringify(raw);
+        throw new Error(msg);
       }
 
-      const data = await loginRes.json();
+      const data = await res.json();
       setToken(data.access_token);
-      storeUser(data.user);
-      setUser(data.user);
+      const verifiedUser = await fetchMe();
+      storeUser(verifiedUser);
+      setUser(verifiedUser);
 
       router.replace("/");
     } catch (err) {
@@ -84,21 +85,21 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <label
-              htmlFor="username"
+              htmlFor="email"
               className="text-sm font-medium text-foreground"
             >
-              Username
+              Email
             </label>
             <input
-              id="username"
-              type="text"
-              autoComplete="username"
+              id="email"
+              type="email"
+              autoComplete="email"
               required
               autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="Enter your username"
+              placeholder="you@example.com"
             />
           </div>
 

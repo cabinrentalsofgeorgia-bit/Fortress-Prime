@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: letter;
+    margin: 1in 0.85in;
+    @top-center {
+      content: "Property Management Agreement — {{ property_name }}";
+      font-size: 9px;
+      color: #888;
+    }
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9px;
+      color: #888;
+    }
+  }
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.65;
+    color: #1a1a2e;
+  }
+  h1 {
+    font-size: 22px;
+    color: #0f172a;
+    text-align: center;
+    border-bottom: 2px solid #2563eb;
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-size: 14px;
+    color: #1e293b;
+    margin-top: 28px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .header-block {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header-block .company {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+  }
+  .header-block .subtitle {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 4px 0 0 0;
+  }
+  .parties-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+  }
+  .parties-table td {
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    font-size: 11px;
+  }
+  .parties-table .label {
+    background: #f1f5f9;
+    font-weight: 600;
+    width: 35%;
+    color: #334155;
+  }
+  .financial-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+  }
+  .financial-table th {
+    background: #0f172a;
+    color: #fff;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 11px;
+  }
+  .financial-table td {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+  }
+  .financial-table tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+  .clause {
+    margin-bottom: 12px;
+    text-align: justify;
+  }
+  .sig-block {
+    margin-top: 48px;
+    padding: 24px;
+    border: 2px solid #2563eb;
+    border-radius: 8px;
+    background: #f8fafc;
+    page-break-inside: avoid;
+  }
+  .sig-block h3 {
+    color: #2563eb;
+    margin: 0 0 16px 0;
+    font-size: 13px;
+  }
+  .sig-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+  }
+  .sig-line {
+    width: 45%;
+  }
+  .sig-line hr {
+    border: none;
+    border-top: 1px solid #333;
+    margin-top: 40px;
+  }
+  .sig-line p {
+    font-size: 10px;
+    color: #666;
+    margin: 4px 0 0 0;
+  }
+  .effective-banner {
+    background: #2563eb;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 13px;
+    margin: 20px 0;
+  }
+  .notice {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #92400e;
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="header-block">
+  <p class="company">Cabin Rentals of Georgia, LLC</p>
+  <p class="subtitle">Exclusive Property Management Services &bull; Blue Ridge, Georgia</p>
+</div>
+
+<h1>Property Management Agreement</h1>
+
+<div class="effective-banner">
+  Effective Date: {{ effective_date }} &mdash; Term: {{ term_years }} Year{{ 's' if term_years|int > 1 else '' }}
+</div>
+
+<h2>Article I &mdash; Parties</h2>
+
+<table class="parties-table">
+  <tr>
+    <td class="label">Property Owner ("Owner")</td>
+    <td>{{ owner_name }}</td>
+  </tr>
+  <tr>
+    <td class="label">Owner Email</td>
+    <td>{{ owner_email }}</td>
+  </tr>
+  <tr>
+    <td class="label">Owner Phone</td>
+    <td>{{ owner_phone }}</td>
+  </tr>
+  <tr>
+    <td class="label">Management Company ("Manager")</td>
+    <td>Cabin Rentals of Georgia, LLC</td>
+  </tr>
+  <tr>
+    <td class="label">Manager Address</td>
+    <td>Blue Ridge, Georgia 30513</td>
+  </tr>
+</table>
+
+<h2>Article II &mdash; Property</h2>
+
+<table class="parties-table">
+  <tr>
+    <td class="label">Property Name</td>
+    <td>{{ property_name }}</td>
+  </tr>
+  <tr>
+    <td class="label">Property Address</td>
+    <td>{{ property_address }}</td>
+  </tr>
+  <tr>
+    <td class="label">Bedrooms / Bathrooms</td>
+    <td>{{ bedrooms }} BR / {{ bathrooms }} BA</td>
+  </tr>
+  <tr>
+    <td class="label">Maximum Occupancy</td>
+    <td>{{ max_guests }} guests</td>
+  </tr>
+</table>
+
+<h2>Article III &mdash; Recitals</h2>
+
+<p class="clause">
+  WHEREAS, Owner is the legal owner of the above-described property and desires to
+  engage a professional property management company to market, rent, and manage the
+  Property as a short-term vacation rental; and
+</p>
+<p class="clause">
+  WHEREAS, Manager is a licensed property management company operating in the State
+  of Georgia with expertise in luxury cabin rental management, guest services,
+  maintenance coordination, and revenue optimization; and
+</p>
+<p class="clause">
+  NOW, THEREFORE, in consideration of the mutual covenants and agreements herein, and
+  for other good and valuable consideration, the receipt and sufficiency of which are
+  hereby acknowledged, the Parties agree as follows:
+</p>
+
+<h2>Article IV &mdash; Term</h2>
+
+<p class="clause">
+  This Agreement shall commence on the Effective Date stated above and shall continue
+  for a period of <strong>{{ term_years }} year{{ 's' if term_years|int > 1 else '' }}</strong>,
+  unless earlier terminated in accordance with Article X of this Agreement. This
+  Agreement shall automatically renew for successive one-year periods unless either
+  Party provides written notice of non-renewal at least sixty (60) days prior to the
+  expiration of the then-current term.
+</p>
+
+<h2>Article V &mdash; Duties of Manager</h2>
+
+<p class="clause">Manager agrees to perform the following duties on behalf of Owner:</p>
+<ol style="font-size:12px;line-height:1.6;">
+  <li>List and market the Property on approved online travel agencies (OTAs), the Manager's direct booking website, and other distribution channels.</li>
+  <li>Screen, accept, and manage all guest reservations.</li>
+  <li>Collect all rental payments, security deposits, cleaning fees, and applicable taxes.</li>
+  <li>Coordinate professional cleaning and property inspections between guest stays.</li>
+  <li>Manage routine maintenance and emergency repairs, subject to the maintenance authorization limits set forth in Article VIII.</li>
+  <li>Provide 24/7 guest communication and concierge services.</li>
+  <li>Furnish monthly owner statements detailing gross revenue, deductions, and net remittance.</li>
+  <li>Manage all guest reviews, damage claims, and dispute resolution.</li>
+  <li>Maintain appropriate insurance coverage documentation and compliance with local regulations.</li>
+</ol>
+
+<h2>Article VI &mdash; Revenue Split</h2>
+
+<table class="financial-table">
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Owner Share</th>
+      <th>Manager Share</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Net Rental Revenue (after taxes and fees)</td>
+      <td><strong>{{ owner_pct }}%</strong></td>
+      <td><strong>{{ pm_pct }}%</strong></td>
+    </tr>
+    <tr>
+      <td>Cleaning Fees</td>
+      <td colspan="2">Retained by Manager to cover cleaning operations</td>
+    </tr>
+    <tr>
+      <td>Pet Fees</td>
+      <td colspan="2">Retained by Manager for additional cleaning and wear</td>
+    </tr>
+    <tr>
+      <td>Damage Waiver Fees</td>
+      <td colspan="2">Retained by Manager; applied to damage claim resolution</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="clause">
+  The commission base for the {{ owner_pct }}/{{ pm_pct }} split is calculated as:
+  base nightly rate &times; number of nights, plus any additional guest fees. Taxes,
+  cleaning fees, and damage waiver fees are excluded from the commission base.
+  Owner's share is remitted via ACH transfer within five (5) business days of guest
+  checkout, subject to the Manager's minimum payout threshold.
+</p>
+
+{% if nightly_rate_range %}
+<div class="notice">
+  Current published nightly rates for this property range from {{ nightly_rate_range }},
+  subject to seasonal adjustments and dynamic pricing optimization by Manager.
+</div>
+{% endif %}
+
+<h2>Article VII &mdash; Trust Account</h2>
+
+<p class="clause">
+  All guest payments shall be deposited into a segregated trust account maintained by
+  Manager in accordance with Georgia law (O.C.G.A. &sect; 43-40-20). Owner funds,
+  operating funds, escrow funds, and security deposits are maintained separately.
+  Owner may view trust account balances, transaction history, and monthly statements
+  at any time through the Owner Portal.
+</p>
+
+<h2>Article VIII &mdash; Maintenance &amp; Capital Expenditures</h2>
+
+<p class="clause">
+  Manager is authorized to perform or contract routine maintenance and emergency
+  repairs without prior Owner approval for any single expenditure up to
+  <strong>$500.00</strong>. For non-emergency expenditures exceeding this threshold,
+  Manager shall obtain Owner's written approval prior to incurring the expense.
+</p>
+
+<p class="clause">
+  All owner-charged maintenance and capital expenditures are subject to a
+  <strong>{{ capex_markup_pct }}%</strong> coordination and oversight fee, which covers
+  Manager's vendor sourcing, scheduling, quality inspection, and project management
+  services. This markup is disclosed on all owner statements and is included in the
+  total charge presented to Owner.
+</p>
+
+<h2>Article IX &mdash; Insurance &amp; Liability</h2>
+
+<p class="clause">
+  Owner shall maintain, at Owner's sole expense, a comprehensive homeowner's
+  insurance policy with a vacation rental or short-term rental endorsement, naming
+  Cabin Rentals of Georgia, LLC as an additional insured party. The policy shall
+  provide minimum coverage of $1,000,000 per occurrence for general liability.
+  Owner shall provide a copy of the declarations page to Manager within thirty (30)
+  days of execution of this Agreement and upon each renewal.
+</p>
+<p class="clause">
+  Manager shall maintain commercial general liability insurance and workers'
+  compensation insurance as required by Georgia law. Manager shall not be liable
+  for damage caused by guests, acts of God, or conditions pre-existing this Agreement.
+</p>
+
+<h2>Article X &mdash; Termination</h2>
+
+<p class="clause">
+  Either Party may terminate this Agreement for any reason by providing ninety (90)
+  days' written notice to the other Party. Upon termination:
+</p>
+<ol style="font-size:12px;line-height:1.6;">
+  <li>All existing reservations with check-in dates within the notice period shall be honored, and Manager shall retain its management fee for those reservations.</li>
+  <li>Manager shall remit all Owner funds held in trust within thirty (30) days of the final guest checkout.</li>
+  <li>Owner shall reimburse Manager for any outstanding vendor invoices incurred on Owner's behalf prior to the termination date.</li>
+  <li>Manager shall provide Owner with all access codes, vendor contacts, and operational documentation for the Property.</li>
+</ol>
+
+<p class="clause">
+  In the event of a material breach by either Party, the non-breaching Party may
+  terminate this Agreement upon thirty (30) days' written notice, provided the
+  breaching Party fails to cure such breach within said notice period.
+</p>
+
+<h2>Article XI &mdash; Governing Law</h2>
+
+<p class="clause">
+  This Agreement shall be governed by and construed in accordance with the laws of
+  the State of Georgia, without regard to its conflict-of-laws principles. Any
+  dispute arising under this Agreement shall first be submitted to non-binding
+  mediation in Fannin County, Georgia. If mediation is unsuccessful, either Party
+  may pursue remedies in the Superior Court of Fannin County, Georgia.
+</p>
+
+<h2>Article XII &mdash; Entire Agreement</h2>
+
+<p class="clause">
+  This Agreement constitutes the entire agreement between the Parties with respect
+  to the subject matter hereof and supersedes all prior negotiations, representations,
+  warranties, commitments, and agreements between the Parties, whether written or
+  oral. This Agreement may not be amended or modified except by a written instrument
+  executed by both Parties.
+</p>
+
+<p class="clause">
+  IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective
+  Date first written above.
+</p>
+
+<div class="sig-block">
+  <h3>Signatures</h3>
+  <table style="width:100%;border:none;">
+    <tr style="border:none;">
+      <td style="border:none;width:48%;vertical-align:bottom;padding-top:48px;">
+        <hr style="border:none;border-top:1px solid #333;">
+        <p>{{ owner_name }} — Property Owner</p>
+        <p>Date: _______________</p>
+      </td>
+      <td style="border:none;width:4%;"></td>
+      <td style="border:none;width:48%;vertical-align:bottom;padding-top:48px;">
+        <hr style="border:none;border-top:1px solid #333;">
+        <p>Cabin Rentals of Georgia, LLC — Manager</p>
+        <p>Date: _______________</p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>

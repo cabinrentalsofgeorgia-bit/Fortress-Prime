@@ -1,7 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8100";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function resolveBase(path: string): string {
-  if (path === "/api" || path.startsWith("/api/")) return "";
+  if (path.startsWith("/api/")) return "";
   return API_BASE;
 }
 
@@ -46,9 +46,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(fetchOpts.headers as Record<string, string>),
   };
+  if (fetchOpts.body && !(fetchOpts.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -61,11 +63,20 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   });
 
   if (res.status === 401) {
+    const detail = await res
+      .json()
+      .then((d) => d?.detail || "Unauthorized")
+      .catch(() => "Unauthorized");
     clearToken();
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.dispatchEvent(
+        new CustomEvent("fortress:auth-expired", {
+          detail: { path, message: detail },
+        }),
+      );
+      window.location.href = "/login?expired=1";
     }
-    throw new ApiError(401, "Unauthorized");
+    throw new ApiError(401, detail);
   }
 
   if (!res.ok) {
@@ -91,6 +102,20 @@ export const api = {
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
 
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  hunter: {
+    queue: <T>(status = "pending_review", limit = 50) =>
+      request<T>("/api/hunter/queue", {
+        method: "GET",
+        params: { status_filter: status, limit },
+      }),
+    metrics: <T>() => request<T>("/api/hunter/metrics", { method: "GET" }),
+    activity: <T>(limit = 20) =>
+      request<T>("/api/hunter/activity", {
+        method: "GET",
+        params: { limit },
+      }),
+  },
 };
 
 export { getToken, setToken, clearToken, ApiError, API_BASE };
