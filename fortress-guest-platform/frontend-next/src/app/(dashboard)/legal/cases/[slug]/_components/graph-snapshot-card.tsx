@@ -1,108 +1,122 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
 
-type GraphNode = {
+interface GraphNode {
   id: string;
+  entity_name: string;
   entity_type: string;
-  label: string;
-  node_metadata: Record<string, unknown>;
-};
+  pressure_score: number;
+}
 
-type GraphEdge = {
+interface GraphEdge {
   id: string;
   source_node_id: string;
   target_node_id: string;
   relationship_type: string;
-  weight: number;
-  source_ref?: string | null;
-};
+  confidence_weight: number;
+}
 
-type GraphSnapshotCardProps = {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  isLoading: boolean;
-  error: string | null;
-  onNodeClick?: (node: GraphNode) => void;
-};
+export function GraphSnapshotCard({ caseSlug }: { caseSlug: string }) {
+  const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [edges, setEdges] = useState<GraphEdge[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-const ENTITY_COLORS: Record<string, string> = {
-  person: "text-blue-400 border-blue-500/30",
-  company: "text-purple-400 border-purple-500/30",
-  document: "text-emerald-400 border-emerald-500/30",
-  claim: "text-red-400 border-red-500/30",
-};
+  const fetchSnapshot = async () => {
+    try {
+      const res = await fetch(`/api/legal/cases/${caseSlug}/graph/snapshot`);
+      if (!res.ok) throw new Error("Failed to fetch graph snapshot");
+      const data = await res.json();
+      setNodes(Array.isArray(data?.nodes) ? data.nodes : []);
+      setEdges(Array.isArray(data?.edges) ? data.edges : []);
+    } catch (error) {
+      console.error("[GRAPH] Snapshot sync failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-export function GraphSnapshotCard({ nodes, edges, isLoading, error, onNodeClick }: GraphSnapshotCardProps) {
-  const nodeLabelById = new Map(nodes.map((n) => [n.id, n.label]));
+  useEffect(() => {
+    void fetchSnapshot();
+  }, [caseSlug]);
+
+  const triggerRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetch(`/api/legal/cases/${caseSlug}/graph/refresh`, { method: "POST" });
+      // For MVP: simple delayed pull after refresh request.
+      setTimeout(() => {
+        void fetchSnapshot();
+      }, 2000);
+    } catch (error) {
+      console.error("[GRAPH] Refresh trigger failed:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-gray-400 font-mono text-sm animate-pulse">Rendering Tactical Map...</div>;
+  }
+
+  const topTargets = [...nodes].sort((a, b) => b.pressure_score - a.pressure_score);
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-zinc-100">Entity Graph Pressure Map</p>
-        <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
-          {nodes.length} {nodes.length === 1 ? "Entity" : "Entities"} &middot; {edges.length} {edges.length === 1 ? "Edge" : "Edges"}
-        </Badge>
+    <div className="bg-gray-900 border border-blue-900/50 rounded-lg p-6 mt-6">
+      <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
+        <h3 className="text-blue-500 font-bold uppercase tracking-widest flex items-center gap-2">
+          Entity Graph Snapshot
+        </h3>
+        <button
+          onClick={triggerRefresh}
+          disabled={isRefreshing}
+          className="bg-blue-900/50 hover:bg-blue-800 text-blue-200 text-xs font-mono py-1 px-3 rounded transition-colors disabled:opacity-50"
+        >
+          {isRefreshing ? "Swarm Rebuilding..." : "Force Map Refresh"}
+        </button>
       </div>
 
-      {isLoading && <p className="text-xs text-zinc-400">Loading graph snapshot...</p>}
-
-      {error ? (
-        <p className="text-xs text-red-400">{error}</p>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {nodes.map((node) => (
-              <button
-                key={node.id}
-                type="button"
-                onClick={() => onNodeClick?.(node)}
-                className="rounded-md border border-zinc-800 bg-zinc-900/70 px-3 py-2 flex items-center justify-between gap-2 text-left transition hover:ring-2 hover:ring-red-500 hover:cursor-crosshair"
-              >
-                <span className="text-xs text-zinc-100 truncate">{node.label}</span>
-                <Badge
-                  variant="outline"
-                  className={`text-[10px] uppercase tracking-wide ${ENTITY_COLORS[node.entity_type] ?? "text-zinc-400 border-zinc-600"}`}
-                >
-                  {node.entity_type}
-                </Badge>
-              </button>
-            ))}
-            {nodes.length === 0 && !isLoading && (
-              <p className="text-xs text-zinc-400 col-span-full">No graph entities yet. Run &quot;Recalculate Graph Topology&quot; to extract.</p>
-            )}
-          </div>
-
-          {edges.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-zinc-300">Contradiction / Edge Ledger</p>
-              {edges.map((edge) => {
-                const strengthClass =
-                  edge.weight >= 0.85
-                    ? "border-red-500/30"
-                    : edge.weight >= 0.7
-                      ? "border-amber-500/30"
-                      : "border-zinc-800";
-                return (
-                  <div key={edge.id} className={`rounded-md border ${strengthClass} bg-zinc-900/60 p-2`}>
-                    <p className="text-xs text-zinc-100">
-                      [{nodeLabelById.get(edge.source_node_id) ?? edge.source_node_id}]
-                      {" → "}
-                      <span className="text-amber-300">({edge.relationship_type})</span>
-                      {" → "}
-                      [{nodeLabelById.get(edge.target_node_id) ?? edge.target_node_id}]
-                    </p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] text-zinc-500">weight: {edge.weight.toFixed(2)}</span>
-                      <span className="text-[10px] text-zinc-400">ref: {edge.source_ref ?? "n/a"}</span>
-                    </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h4 className="text-gray-400 font-bold text-xs uppercase mb-3">Identified Targets</h4>
+          <div className="space-y-2">
+            {topTargets.map((node) => (
+              <div key={node.id} className="bg-gray-800 p-3 rounded border border-gray-700 flex justify-between items-center">
+                <div>
+                  <div className="text-gray-200 text-sm font-bold">{node.entity_name}</div>
+                  <div className="text-gray-500 text-xs font-mono uppercase">{node.entity_type}</div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-xl font-bold ${node.pressure_score > 70 ? "text-red-500" : "text-blue-400"}`}>
+                    {node.pressure_score}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
+                  <div className="text-gray-600 text-[10px] uppercase font-mono">Pressure</div>
+                </div>
+              </div>
+            ))}
+            {nodes.length === 0 && <div className="text-gray-600 text-sm font-mono">No entities mapped.</div>}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-gray-400 font-bold text-xs uppercase mb-3">Tactical Relationships</h4>
+          <div className="space-y-2">
+            {edges.map((edge) => {
+              const source = nodes.find((n) => n.id === edge.source_node_id)?.entity_name || "Unknown";
+              const target = nodes.find((n) => n.id === edge.target_node_id)?.entity_name || "Unknown";
+              return (
+                <div key={edge.id} className="bg-gray-800/50 p-2 rounded border border-gray-700/50 text-sm">
+                  <span className="text-blue-300">{source}</span>
+                  <span className="text-gray-500 mx-2 text-xs font-mono">[{edge.relationship_type}]</span>
+                  <span className="text-amber-500">{target}</span>
+                </div>
+              );
+            })}
+            {edges.length === 0 && <div className="text-gray-600 text-sm font-mono">No relationships established.</div>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

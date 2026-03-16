@@ -17,13 +17,60 @@ from backend.models.legal_base import LegalBase
 class CaseStatement(LegalBase):
     __tablename__ = "case_statements"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     case_slug = Column(String(255), nullable=False, index=True)
     entity_name = Column(Text, nullable=False, index=True)
     quote_text = Column(Text, nullable=False)
     source_ref = Column(Text, nullable=True)
     doc_id = Column(Text, nullable=True)
     stated_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class CaseGraphNode(LegalBase):
+    __tablename__ = "case_graph_nodes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    case_slug = Column(String(255), nullable=False, index=True)
+    entity_name = Column(Text, nullable=False)
+    entity_type = Column(String(64), nullable=False, index=True)  # plaintiff|defendant|witness|counsel|company|court
+    pressure_score = Column(Integer, nullable=False, default=0)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class CaseGraphEdge(LegalBase):
+    __tablename__ = "case_graph_edges"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    case_slug = Column(String(255), nullable=False, index=True)
+    source_node_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("legal.case_graph_nodes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    target_node_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("legal.case_graph_nodes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    relationship_type = Column(String(128), nullable=False)
+    confidence_weight = Column(Integer, nullable=False, default=100)
+    source_statement_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("legal.case_statements.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

@@ -95,7 +95,7 @@ export function HiveMindEditor({
           disabled={isSubmitting}
           className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-emerald-700 hover:bg-emerald-600 text-white rounded transition-colors disabled:opacity-50"
         >
-          {isSubmitting ? "Syncing..." : "Approve & File"}
+          {isSubmitting ? "Syncing..." : "Approve & Sync"}
         </button>
       </div>
     </div>
