@@ -141,7 +141,7 @@ ALLOWED_ORIGINS = [
     o.strip()
     for o in os.getenv(
         "CORS_ORIGINS",
-        f"https://crog-ai.com,http://{BASE}:9800,http://localhost:9800",
+        f"https://crog-ai.com,http://{BASE}:9800,http://localhost:9800,http://localhost:3000",
     ).split(",")
     if o.strip()
 ]

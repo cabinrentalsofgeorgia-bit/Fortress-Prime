@@ -26,14 +26,9 @@ async function proxy(
       headers,
       body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.text(),
     });
-
-    const data = await upstream.text();
-
-    return new NextResponse(data, {
+    return new NextResponse(upstream.body, {
       status: upstream.status,
-      headers: {
-        "Content-Type": upstream.headers.get("content-type") || "application/json",
-      },
+      headers: upstream.headers,
     });
   } catch (err) {
     console.error(`[BFF] ${request.method} /api/auth/${subpath} proxy error:`, err);
@@ -46,3 +41,4 @@ export const POST = proxy;
 export const PUT = proxy;
 export const PATCH = proxy;
 export const DELETE = proxy;
+export const OPTIONS = proxy;

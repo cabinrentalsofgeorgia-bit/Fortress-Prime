@@ -1,9 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8100";
 
-const BFF_PREFIXES = ["/api/auth", "/api/email-intake", "/api/legal", "/api/intelligence"];
-
 function resolveBase(path: string): string {
-  if (BFF_PREFIXES.some((p) => path.startsWith(p))) return "";
+  if (path === "/api" || path.startsWith("/api/")) return "";
   return API_BASE;
 }
 
@@ -55,7 +53,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...fetchOpts, headers, redirect: "follow" });
+  const res = await fetch(url, {
+    ...fetchOpts,
+    headers,
+    credentials: "include",
+    redirect: "follow",
+  });
 
   if (res.status === 401) {
     clearToken();

@@ -26,50 +26,26 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Step 1: Authenticate against master console → get gateway JWT
-      const gwRes = await fetch("/api/login", {
+      // Unified login via Next BFF.
+      const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
 
-      if (!gwRes.ok) {
-        const data = await gwRes.json().catch(() => null);
+      if (!loginRes.ok) {
+        const data = await loginRes.json().catch(() => null);
         throw new Error(data?.detail || "Invalid credentials");
       }
 
-      const gwData = await gwRes.json();
-      const gatewayToken = gwData.access_token;
-
-      // Step 2: Exchange gateway JWT for a local FGP token via SSO
-      const ssoRes = await fetch("/api/auth/sso", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gateway_token: gatewayToken }),
-      });
-
-      if (ssoRes.ok) {
-        const ssoData = await ssoRes.json();
-        setToken(ssoData.access_token);
-        storeUser(ssoData.user);
-        setUser(ssoData.user);
-      } else {
-        // Fallback: use gateway token directly
-        setToken(gatewayToken);
-        const user = {
-          id: gwData.username,
-          email: `${gwData.username}@fortress.local`,
-          first_name: gwData.username,
-          last_name: "",
-          role: gwData.role || "admin",
-          is_active: true,
-        };
-        storeUser(user);
-        setUser(user);
-      }
+      const data = await loginRes.json();
+      setToken(data.access_token);
+      storeUser(data.user);
+      setUser(data.user);
 
       router.replace("/");
     } catch (err) {
