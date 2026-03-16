@@ -39,7 +39,6 @@ from backend.core.database import AsyncSessionLocal
 from backend.services.ediscovery_agent import LegacySession
 from backend.services.legal_extractor import extract_entities
 from backend.services.legal_case_graph import (
-    HiveMindFeedback,
     get_case_graph_snapshot,
     trigger_graph_refresh,
 )

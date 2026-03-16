@@ -2,6 +2,7 @@
 Async database engine, session factory, and FastAPI dependency.
 """
 import structlog
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -46,8 +47,14 @@ async def get_db():
 
 async def init_db():
     """Create tables if they don't exist (development convenience)."""
+    # Ensure legal model metadata is registered before create_all.
+    from backend.models.legal_base import LegalBase
+    from backend.models import legal_graph, legal_phase2  # noqa: F401
+
     async with async_engine.begin() as conn:
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS legal"))
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(LegalBase.metadata.create_all)
     logger.info("database_tables_ensured")
 
 

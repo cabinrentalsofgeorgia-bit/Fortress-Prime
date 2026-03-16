@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import and_
 
+from backend.core.config import settings
 from backend.models.legal_discovery import DiscoveryDraftItem, DiscoveryDraftPack
 from backend.models.legal import DiscoveryDraftPack as DiscoveryDraftPackV2
 from backend.models.legal import DiscoveryDraftItem as DiscoveryDraftItemV2
@@ -33,7 +34,7 @@ from backend.services.legal_hive_mind import get_approved_exemplars, inject_exem
 
 logger = logging.getLogger(__name__)
 
-RULE_26_MAX_ITEMS = 25
+RULE_26_MAX_ITEMS = max(1, int(settings.LEGAL_DISCOVERY_MAX_ITEMS))
 DISCOVERY_CHAT_URL = os.getenv("LEGAL_DISCOVERY_CHAT_URL", "http://192.168.0.100/v1/chat/completions")
 DISCOVERY_CHAT_MODEL = os.getenv("LEGAL_DISCOVERY_CHAT_MODEL", "qwen2.5:7b")
 
@@ -43,6 +44,21 @@ PACK_TYPE_TO_RULE_TYPE = {
     "rfp": "rfp_cap",
     "admission": "admission_cap",
 }
+
+
+def _proportionality_mode() -> str:
+    mode = str(settings.LEGAL_PROPORTIONALITY_MODE or "strict").strip().lower()
+    return "advisory" if mode == "advisory" else "strict"
+
+
+def _resolve_item_limit(requested: int, jurisdiction_cap: int | None) -> int:
+    if _proportionality_mode() == "advisory":
+        return max(int(requested), 1)
+    return max(min(
+        int(requested),
+        jurisdiction_cap if jurisdiction_cap is not None else RULE_26_MAX_ITEMS,
+        RULE_26_MAX_ITEMS,
+    ), 1)
 
 
 async def _get_jurisdiction_cap(
@@ -71,17 +87,32 @@ def _graph_summary_text(snapshot: dict) -> str:
     if not nodes and not edges:
         return "No graph entities or edges are present."
 
-    node_label_by_id = {str(node.id): node.label for node in nodes}
+    def _get(node: object, key: str, default=None):
+        if isinstance(node, dict):
+            return node.get(key, default)
+        return getattr(node, key, default)
+
+    node_label_by_id = {str(_get(node, "id")): str(_get(node, "label") or _get(node, "entity_name") or "") for node in nodes}
     node_lines = [
-        f"- {node.label} [{node.entity_type}] metadata={json.dumps(node.node_metadata or {}, ensure_ascii=True)}"
+        f"- {str(_get(node, 'label') or _get(node, 'entity_name') or '')} "
+        f"[{str(_get(node, 'entity_type') or 'unknown')}] "
+        f"metadata={json.dumps(_get(node, 'node_metadata') or _get(node, 'metadata') or {}, ensure_ascii=True)}"
         for node in nodes
     ]
     edge_lines = []
     for edge in edges:
-        source_label = node_label_by_id.get(str(edge.source_node_id), str(edge.source_node_id))
-        target_label = node_label_by_id.get(str(edge.target_node_id), str(edge.target_node_id))
+        source_node_id = str(_get(edge, "source_node_id") or "")
+        target_node_id = str(_get(edge, "target_node_id") or "")
+        source_label = node_label_by_id.get(source_node_id, source_node_id)
+        target_label = node_label_by_id.get(target_node_id, target_node_id)
+        edge_weight = _get(edge, "weight")
+        if edge_weight is None:
+            confidence_weight = _get(edge, "confidence_weight")
+            edge_weight = (float(confidence_weight) / 100.0) if confidence_weight is not None else 0.0
         edge_lines.append(
-            f"- {source_label} -> ({edge.relationship_type}, weight={float(edge.weight or 0.0):.2f}) -> {target_label}; source_ref={edge.source_ref or 'n/a'}"
+            f"- {source_label} -> ({str(_get(edge, 'relationship_type') or 'related')}, "
+            f"weight={float(edge_weight or 0.0):.2f}) -> {target_label}; "
+            f"source_ref={str(_get(edge, 'source_ref') or 'n/a')}"
         )
 
     return (
@@ -97,9 +128,13 @@ def _extract_opposing_pii(snapshot: dict) -> dict:
     pii: dict = {}
     nodes = list(snapshot.get("nodes") or [])
     for node in nodes:
-        meta = node.node_metadata if hasattr(node, "node_metadata") else (node.get("metadata") or {})
+        if isinstance(node, dict):
+            meta = (node.get("node_metadata") or node.get("metadata") or {})
+            label = str(node.get("label") or node.get("entity_name") or "").strip()
+        else:
+            meta = getattr(node, "node_metadata", {}) or getattr(node, "metadata", {}) or {}
+            label = str(getattr(node, "label", "") or getattr(node, "entity_name", "")).strip()
         role = str(meta.get("role", "")).lower()
-        label = str(node.label if hasattr(node, "label") else node.get("label", "")).strip()
         if not label:
             continue
         if "opposing" in role or "counsel" in role or "claimant" in role or "plaintiff" in role:
@@ -172,6 +207,8 @@ async def generate_discovery_pack(
 ) -> dict:
     allowed_pack_types = {"interrogatory", "rfp", "admission"}
     normalized_pack_type = (pack_type or "").strip().lower()
+    if "foia" in normalized_pack_type and not settings.LEGAL_DISCOVERY_FOIA_ENABLED:
+        raise HTTPException(status_code=403, detail="FOIA discovery is disabled by policy")
     if normalized_pack_type not in allowed_pack_types:
         raise HTTPException(status_code=422, detail=f"Invalid pack_type '{pack_type}'")
     if item_limit < 1:
@@ -183,12 +220,7 @@ async def generate_discovery_pack(
         raise HTTPException(status_code=404, detail=f"Legal case '{case_slug}' not found")
 
     jurisdiction_cap = await _get_jurisdiction_cap(db, legal_case.court, normalized_pack_type)
-    effective_cap = min(
-        int(item_limit),
-        jurisdiction_cap if jurisdiction_cap is not None else RULE_26_MAX_ITEMS,
-        RULE_26_MAX_ITEMS,
-    )
-    limited_count = max(effective_cap, 1)
+    limited_count = _resolve_item_limit(item_limit, jurisdiction_cap)
 
     graph_snapshot = await get_case_graph_snapshot(db, case_slug=case_slug)
     graph_summary = _graph_summary_text(graph_snapshot)
@@ -267,6 +299,7 @@ async def generate_discovery_pack(
         "status": "draft",
         "items_generated": len(draft_items),
         "item_limit": limited_count,
+        "proportionality_mode": _proportionality_mode(),
         "items": draft_items,
         "inference_source": result.source,
         "breaker_state": result.breaker_state,
@@ -285,15 +318,19 @@ async def validate_discovery_pack(db: AsyncSession, pack_id: UUID) -> dict:
         select(DiscoveryDraftItem).where(DiscoveryDraftItem.pack_id == pack.id).order_by(DiscoveryDraftItem.item_number.asc())
     )
     items = list(items_res.scalars().all())
-    is_proportional = len(items) <= RULE_26_MAX_ITEMS
+    mode = _proportionality_mode()
+    within_rule_limit = len(items) <= RULE_26_MAX_ITEMS
+    is_proportional = within_rule_limit if mode == "strict" else True
     for item in items:
-        item.proportionality_flag = is_proportional
+        item.proportionality_flag = within_rule_limit
 
     await db.commit()
     return {
         "pack_id": str(pack.id),
         "items_count": len(items),
         "rule_26_limit": RULE_26_MAX_ITEMS,
+        "proportionality_mode": mode,
+        "rule_26_within_limit": within_rule_limit,
         "proportionality_passed": is_proportional,
     }
 
@@ -327,6 +364,11 @@ class LegalDiscoveryEngine:
             raise HTTPException(status_code=422, detail="target_entity is required")
         if max_items < 1 or max_items > 100:
             raise HTTPException(status_code=422, detail="max_items must be between 1 and 100")
+        if not settings.LEGAL_DISCOVERY_FOIA_ENABLED and "foia" in target_entity.lower():
+            raise HTTPException(status_code=403, detail="FOIA discovery is disabled by policy")
+
+        mode = _proportionality_mode()
+        effective_max_items = min(max_items, RULE_26_MAX_ITEMS) if mode == "strict" else max_items
 
         graph_snapshot = await LegalCaseGraphBuilder.get_graph_snapshot(case_slug=case_slug, db=db)
         nodes = graph_snapshot.get("nodes", [])
@@ -362,14 +404,14 @@ class LegalDiscoveryEngine:
                 "and taxonomy of these perfect examples.\n\n"
                 f"### PERFECT EXEMPLARS ###\n{exemplars_text}\n\n"
                 "### YOUR TASK ###\n"
-                f"Based on the case graph rationale: {rationale_hint}, generate exactly {max_items} "
+                f"Based on the case graph rationale: {rationale_hint}, generate exactly {effective_max_items} "
                 f"new INTERROGATORY/RFP items targeting {target_entity}. "
                 'Output strict JSON: {"items": [{"category": "...", "content": "...", "rationale": "..."}]}.'
             )
         else:
             system_prompt = (
                 f"You are a Tier 1 corporate defense litigator in Georgia. Analyze the provided Case Graph. "
-                f"Generate exactly {max_items} highly specific Interrogatories and Requests for Production "
+                f"Generate exactly {effective_max_items} highly specific Interrogatories and Requests for Production "
                 f"targeting {target_entity}. Do not use boilerplate. Base every question on the edges and "
                 f"contradictions in the graph. Output strict JSON: "
                 f'{{"items": [{{"category": "...", "content": "...", "rationale": "..."}}]}}.'
@@ -379,7 +421,7 @@ class LegalDiscoveryEngine:
             "Case graph JSON:\n"
             f"{json.dumps(graph_context, ensure_ascii=True, default=str)}\n\n"
             f"Target entity: {target_entity}\n"
-            f"Required item count: {max_items}\n"
+            f"Required item count: {effective_max_items}\n"
             "Only return strict JSON."
         )
 
@@ -409,14 +451,14 @@ class LegalDiscoveryEngine:
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Invalid discovery model response: {str(exc)[:180]}") from exc
 
-        parsed_items = LegalDiscoveryEngine._parse_items_payload(content=content, max_items=max_items)
-        if len(parsed_items) < max_items:
+        parsed_items = LegalDiscoveryEngine._parse_items_payload(content=content, max_items=effective_max_items)
+        if len(parsed_items) < effective_max_items:
             parsed_items.extend(
                 LegalDiscoveryEngine._fallback_items_from_edges(
                     edges=edges,
                     target_entity=target_entity,
                     start_sequence=len(parsed_items) + 1,
-                    needed=max_items - len(parsed_items),
+                    needed=effective_max_items - len(parsed_items),
                 )
             )
 
@@ -432,7 +474,7 @@ class LegalDiscoveryEngine:
         await db.flush()
 
         created_items: list[dict] = []
-        for idx, item in enumerate(parsed_items[:max_items], start=1):
+        for idx, item in enumerate(parsed_items[:effective_max_items], start=1):
             category = str(item.get("category", "INTERROGATORY")).upper()
             if category not in {"INTERROGATORY", "RFP", "ADMISSION"}:
                 category = "INTERROGATORY"
@@ -465,6 +507,8 @@ class LegalDiscoveryEngine:
             "target_entity": target_entity,
             "status": "DRAFT",
             "items_generated": len(created_items),
+            "proportionality_mode": mode,
+            "item_limit": effective_max_items,
             "items": created_items,
             "model": DISCOVERY_CHAT_MODEL,
         }
