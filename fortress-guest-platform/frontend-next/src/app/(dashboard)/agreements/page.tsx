@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -30,9 +30,33 @@ import {
   XCircle,
   FileText,
   Loader2,
+  type LucideIcon,
 } from "lucide-react";
 
-const statusColor: Record<string, string> = {
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+type AgreementStatus = "draft" | "sent" | "viewed" | "signed" | "expired" | "cancelled";
+type AgreementSummary = {
+  id: string;
+  guest_name?: string | null;
+  property_name?: string | null;
+  agreement_type?: string | null;
+  status: AgreementStatus;
+  sent_at?: string | null;
+  signed_at?: string | null;
+  pdf_url?: string | null;
+  signer_name?: string | null;
+  signer_email?: string | null;
+  signature_type?: string | null;
+  signer_ip_address?: string | null;
+  consent_recorded?: boolean | null;
+  agreement_url?: string | null;
+  view_count?: number | null;
+  reminder_count?: number | null;
+  created_at?: string | null;
+  expires_at?: string | null;
+};
+
+const statusColor: Record<AgreementStatus, BadgeVariant> = {
   draft: "outline",
   sent: "secondary",
   viewed: "default",
@@ -41,7 +65,7 @@ const statusColor: Record<string, string> = {
   cancelled: "outline",
 };
 
-const statusIcon: Record<string, any> = {
+const statusIcon: Record<AgreementStatus, LucideIcon> = {
   draft: FileText,
   sent: Send,
   viewed: Eye,
@@ -53,24 +77,19 @@ const statusIcon: Record<string, any> = {
 export default function AgreementsPage() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<string>("all");
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<AgreementSummary | null>(null);
 
   const { data: dashboard } = useQuery({
     queryKey: ["agreements-dashboard"],
     queryFn: () => api.get<{ total: number; by_status: Record<string, number>; expiring_soon: number }>("/api/agreements/dashboard"),
   });
 
-  const { data: agreements = [], isLoading } = useQuery<any[]>({
+  const { data: agreements = [], isLoading } = useQuery<AgreementSummary[]>({
     queryKey: ["agreements", filter],
     queryFn: () =>
-      api.get<any[]>(
+      api.get<AgreementSummary[]>(
         `/api/agreements${filter !== "all" ? `?status=${filter}` : ""}`
       ),
-  });
-
-  const { data: templates = [] } = useQuery({
-    queryKey: ["agreement-templates"],
-    queryFn: () => api.get("/api/agreements/templates"),
   });
 
   const sendMut = useMutation({
@@ -165,7 +184,7 @@ export default function AgreementsPage() {
                     </td>
                   </tr>
                 ) : (
-                  agreements.map((a: any) => {
+                  agreements.map((a) => {
                     const Icon = statusIcon[a.status] ?? FileText;
                     return (
                       <tr
@@ -179,7 +198,7 @@ export default function AgreementsPage() {
                           {a.agreement_type?.replace(/_/g, " ") ?? "—"}
                         </td>
                         <td className="p-3">
-                          <Badge variant={statusColor[a.status] as any ?? "outline"} className="gap-1">
+                          <Badge variant={statusColor[a.status] ?? "outline"} className="gap-1">
                             <Icon className="h-3 w-3" />
                             {a.status}
                           </Badge>
@@ -245,7 +264,7 @@ export default function AgreementsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Status</p>
-                  <Badge variant={statusColor[selected.status] as any ?? "outline"}>
+                  <Badge variant={statusColor[selected.status] ?? "outline"}>
                     {selected.status}
                   </Badge>
                 </div>

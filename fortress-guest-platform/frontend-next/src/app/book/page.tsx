@@ -275,7 +275,7 @@ export default function BookPage() {
               </p>
               <Badge className="text-lg px-4 py-2">{confirmation.confirmation_code}</Badge>
               <p className="text-sm text-muted-foreground">
-                A confirmation email has been sent. You'll receive access details before your arrival.
+                A confirmation email has been sent. You&apos;ll receive access details before your arrival.
               </p>
               <Button variant="outline" onClick={() => setStep("search")}>Book Another Cabin</Button>
             </CardContent>

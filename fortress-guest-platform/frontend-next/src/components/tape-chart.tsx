@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,12 +42,6 @@ export function TapeChart({ properties, reservations, onSelectReservation }: Tap
   });
 
   const daysToShow = 30;
-  const viewEnd = useMemo(() => {
-    const d = new Date(viewStart);
-    d.setDate(d.getDate() + daysToShow);
-    return d;
-  }, [viewStart]);
-
   const today = startOfDay(new Date());
 
   const days = useMemo(() => {

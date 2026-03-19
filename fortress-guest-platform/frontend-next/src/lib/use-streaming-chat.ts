@@ -347,7 +347,7 @@ export function useStreamingChat(opts: UseStreamingChatOptions = {}) {
         abortRef.current = null;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [state.messages, state.isStreaming, endpoint, model, maxTokens, temperature, systemPrompt]
   );
 

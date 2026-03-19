@@ -137,7 +137,7 @@ export default function ContractManagementPanel({
   const [sendEmail, setSendEmail] = useState("");
   const [sendDays, setSendDays] = useState("7");
 
-  const contracts = contractsData?.contracts ?? [];
+  const contracts = useMemo(() => contractsData?.contracts ?? [], [contractsData]);
 
   const stats = useMemo(() => {
     const total = contracts.length;

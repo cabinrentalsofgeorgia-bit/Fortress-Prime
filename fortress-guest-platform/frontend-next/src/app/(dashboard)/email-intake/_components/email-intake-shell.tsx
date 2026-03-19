@@ -11,7 +11,6 @@ import type {
   EmailIntakeEscalationListResponse,
   EmailIntakeEscalationItem,
   EmailIntakeQuarantineResponse,
-  EmailIntakeQuarantineItem,
   EmailIntakeRulesResponse,
   EmailIntakeLearningResponse,
   EmailIntakeHealthResponse,

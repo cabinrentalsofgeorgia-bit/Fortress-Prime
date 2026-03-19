@@ -33,7 +33,6 @@ import {
   Loader2,
   Zap,
   ArrowRight,
-  Percent,
   PiggyBank,
   MousePointerClick,
   Eye,
@@ -42,7 +41,6 @@ import {
 
 interface DirectBookingEngineProps {
   propertyId: string;
-  propertyName?: string;
 }
 
 const PRESET_STOPS = [0, 2, 5, 10];
@@ -50,7 +48,6 @@ const OTA_FEE_PCT = 15;
 
 export default function DirectBookingEngine({
   propertyId,
-  propertyName,
 }: DirectBookingEngineProps) {
   const { data: prefs, isLoading: prefsLoading } =
     useMarketingPreferences(propertyId);

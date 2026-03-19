@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useWorkOrders, useCreateWorkOrder, useUpdateWorkOrder, useProperties } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,21 +30,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Wrench,
   Plus,
   Clock,
   CheckCircle,
   AlertTriangle,
-  ArrowRight,
-  Calendar,
   Home,
-  User,
   Search,
 } from "lucide-react";
 import { KanbanSkeleton } from "@/components/skeletons";
 import type { WorkOrder } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 const COLUMNS = [
   { id: "open", label: "Open", icon: AlertTriangle, color: "text-orange-500" },
@@ -68,7 +63,7 @@ export default function WorkOrdersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedWo, setSelectedWo] = useState<WorkOrder | null>(null);
   const [filterPriority, setFilterPriority] = useState("all");
-  const [filterProperty, setFilterProperty] = useState("all");
+  const [filterProperty] = useState("all");
 
   const propMap = new Map((properties ?? []).map((p) => [p.id, p.name]));
 

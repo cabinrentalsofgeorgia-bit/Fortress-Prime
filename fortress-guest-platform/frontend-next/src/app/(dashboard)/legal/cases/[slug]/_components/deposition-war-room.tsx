@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -115,7 +115,7 @@ export function DepositionWarRoomModal({
     });
   }, [edges, nodeLabelById, targetNode?.label]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     sourceRef.current?.close();
     sourceRef.current = null;
     setIsStreaming(false);
@@ -126,7 +126,7 @@ export function DepositionWarRoomModal({
     setEditableStrikeScript("");
     setTargetStatus("drafting");
     onClose();
-  };
+  }, [onClose]);
 
   const commitEditsToVault = async () => {
     if (!parsedFunnel?.id) {
@@ -349,7 +349,7 @@ export function DepositionWarRoomModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+  }, [handleDismiss, isOpen]);
 
   if (!isOpen || !targetNode) return null;
 

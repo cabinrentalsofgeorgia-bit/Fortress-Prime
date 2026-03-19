@@ -5,7 +5,6 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Brain,
@@ -117,9 +116,9 @@ export default function AiInsightsPage() {
                     <Brain className="h-10 w-10 mx-auto mb-3 opacity-30" />
                     <p>Ask anything about your business</p>
                     <div className="mt-3 space-y-1">
-                      <p className="text-xs">"What's my revenue this month?"</p>
-                      <p className="text-xs">"Which property has the most cancellations?"</p>
-                      <p className="text-xs">"How does February compare to January?"</p>
+                      <p className="text-xs">&ldquo;What&apos;s my revenue this month?&rdquo;</p>
+                      <p className="text-xs">&ldquo;Which property has the most cancellations?&rdquo;</p>
+                      <p className="text-xs">&ldquo;How does February compare to January?&rdquo;</p>
                     </div>
                   </div>
                 )}

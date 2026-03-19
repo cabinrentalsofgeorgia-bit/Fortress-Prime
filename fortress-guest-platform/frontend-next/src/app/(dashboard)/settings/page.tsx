@@ -35,7 +35,6 @@ import {
   Shield,
   Bell,
   Palette,
-  UserPlus,
   CheckCircle,
   XCircle,
   RefreshCw,
@@ -83,7 +82,7 @@ const NOTIFICATION_PREFS = [
 
 export default function SettingsPage() {
   const { data: streamline, isLoading: streamlineLoading } = useStreamlineStatus();
-  const { data: channelStatus } = useChannelStatus();
+  useChannelStatus();
   const [features, setFeatures] = useState<Record<string, boolean>>(
     Object.fromEntries(FEATURE_FLAGS.map((f) => [f.id, f.default])),
   );

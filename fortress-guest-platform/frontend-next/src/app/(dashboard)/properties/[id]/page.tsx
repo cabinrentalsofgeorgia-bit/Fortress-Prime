@@ -4,12 +4,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   useProperty, useUpdateProperty, useReservations, useWorkOrders,
-  usePropertyUtilities, useServiceTypes, useCreateUtility, useUpdateUtility,
+  usePropertyUtilities, useServiceTypes, useCreateUtility,
   useDeleteUtility, useAddReading, useUtilityCostAnalytics,
 } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,7 +53,6 @@ import {
   Pencil,
   DollarSign,
   TrendingUp,
-  BookOpen,
   Plug,
   Droplets,
   Flame,
@@ -65,7 +64,6 @@ import {
   Zap,
 } from "lucide-react";
 import { DetailSkeleton } from "@/components/skeletons";
-import { toast } from "sonner";
 
 export default function PropertyDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -80,7 +78,6 @@ export default function PropertyDetailPage() {
   const { data: utilities } = usePropertyUtilities(id);
   const { data: serviceTypes } = useServiceTypes();
   const createUtility = useCreateUtility();
-  const updateUtility = useUpdateUtility();
   const deleteUtility = useDeleteUtility();
   const addReading = useAddReading();
   const [addServiceOpen, setAddServiceOpen] = useState(false);
@@ -101,10 +98,6 @@ export default function PropertyDetailPage() {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     })
     .reduce((s, r) => s + (r.total_amount ?? 0), 0);
-
-  const occupiedNights = propReservations.filter(
-    (r) => r.status === "checked_in" || r.status === "confirmed",
-  ).length;
 
   if (isLoading) return <DetailSkeleton />;
   if (!property) {

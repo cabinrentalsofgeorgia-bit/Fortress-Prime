@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Building2, Bed, Bath, Users } from "lucide-react";
+import { Bed, Bath, Users } from "lucide-react";
 import { CardGridSkeleton } from "@/components/skeletons";
 
 export default function PropertiesPage() {

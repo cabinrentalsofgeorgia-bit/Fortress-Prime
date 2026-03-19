@@ -12,7 +12,6 @@ import {
   useOnboardOwner,
   useAdminMarketingBudgets,
   type FleetProperty,
-  type PendingCapexItem,
   type CapitalCallResult,
   type OnboardOwnerPayload,
   type OnboardOwnerResponse,

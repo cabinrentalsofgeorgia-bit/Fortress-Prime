@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useHousekeepingToday,
   useHousekeepingWeek,
-  useProperties,
   useDepartingToday,
   useAssignCleaner,
   useCompleteTurnover,
   useAutoScheduleHousekeeping,
-  useLinenRequirements,
 } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,16 +22,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   ClipboardList,
   Home,
@@ -41,8 +32,6 @@ import {
   User,
   Clock,
   CheckCircle,
-  AlertCircle,
-  Camera,
   Sparkles,
   ArrowRight,
   ArrowLeft,
@@ -54,13 +43,8 @@ import {
   ChefHat,
   Sofa,
   TreePine,
-  Gamepad2,
   DoorOpen,
-  Thermometer,
   Lock,
-  Trash2,
-  Package,
-  Eye,
   AlertTriangle,
   Zap,
   Loader2,
@@ -245,7 +229,6 @@ export default function HousekeepingPage() {
   const { data: todayData, isLoading: todayLoading } = useHousekeepingToday();
   const { data: weekData } = useHousekeepingWeek();
   const { data: departing } = useDepartingToday();
-  const { data: properties } = useProperties();
   const assignCleaner = useAssignCleaner();
   const completeTurnover = useCompleteTurnover();
   const autoSchedule = useAutoScheduleHousekeeping();
@@ -280,27 +263,29 @@ export default function HousekeepingPage() {
           scheduled_date: new Date().toISOString().split("T")[0],
         }));
 
-    setTasks(
-      rawTasks.map((t) => ({
-        id: t.id,
-        property: t.property_name ?? "Property",
-        propertyId: t.property_id,
-        status: t.status,
-        assignedTo: t.assigned_to ?? "Unassigned",
-        checkoutTime: t.scheduled_time ?? "11:00 AM",
-        nextCheckIn: "4:00 PM",
-        estimatedMinutes: t.estimated_minutes ?? 150,
-        scheduledDate: t.scheduled_date ?? new Date().toISOString().split("T")[0],
-        checkedItems: {},
-        notes: "",
-        damageFlags: [],
-        startedAt: null,
-      })),
-    );
+    const syncId = setTimeout(() => {
+      setTasks(
+        rawTasks.map((t) => ({
+          id: t.id,
+          property: t.property_name ?? "Property",
+          propertyId: t.property_id,
+          status: t.status,
+          assignedTo: t.assigned_to ?? "Unassigned",
+          checkoutTime: t.scheduled_time ?? "11:00 AM",
+          nextCheckIn: "4:00 PM",
+          estimatedMinutes: t.estimated_minutes ?? 150,
+          scheduledDate: t.scheduled_date ?? new Date().toISOString().split("T")[0],
+          checkedItems: {},
+          notes: "",
+          damageFlags: [],
+          startedAt: null,
+        })),
+      );
+    }, 0);
+    return () => clearTimeout(syncId);
   }, [todayData, departing]);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) ?? null;
-  const selectedIdx = tasks.findIndex((t) => t.id === selectedTaskId);
 
   const totalChecklistItems = ROOM_ZONES.reduce((s, z) => s + z.items.length, 0);
   const checkedCount = selectedTask
@@ -915,13 +900,12 @@ export default function HousekeepingPage() {
 }
 
 function TimerDisplay({ startedAt, estimated }: { startedAt: number; estimated: number }) {
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(() => Math.floor((Date.now() - startedAt) / 60000));
 
   useEffect(() => {
     const iv = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startedAt) / 60000));
     }, 30000);
-    setElapsed(Math.floor((Date.now() - startedAt) / 60000));
     return () => clearInterval(iv);
   }, [startedAt]);
 

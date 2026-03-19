@@ -24,7 +24,6 @@ import {
 import {
   ShoppingBag,
   Plus,
-  DollarSign,
   Clock,
   Package,
   Flame,

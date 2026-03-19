@@ -125,7 +125,7 @@ export default function OwnerPortalPage() {
   const dashboard = dashboardRaw as DashboardData | undefined;
   const { data: statementsRaw } = useOwnerStatements(ownerId);
   const statements = statementsRaw as StatementRow[] | undefined;
-  const { data: reservations } = useOwnerReservations(ownerId);
+  useOwnerReservations(ownerId);
   const { data: workOrders } = useWorkOrders();
   const { data: balancesRaw } = useOwnerBalances(ownerId);
   const balances = balancesRaw as BalancesData | undefined;

@@ -108,7 +108,7 @@ export function CounselThreatMatrix({ slug }: { slug: string }) {
         {!result && !loading && (
           <div className="text-center py-8 text-muted-foreground text-xs">
             <Eye className="h-8 w-8 mx-auto mb-2 opacity-30" />
-            Click "Convene the Counsel" to run 9 parallel legal personas against the case evidence.
+            Click &ldquo;Convene the Counsel&rdquo; to run 9 parallel legal personas against the case evidence.
           </div>
         )}
 

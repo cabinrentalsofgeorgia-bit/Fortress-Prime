@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { BookOpen, Loader2, Scale, Search, User } from "lucide-react";
+import { BookOpen, Loader2, Search, User } from "lucide-react";
 import { toast } from "sonner";
 
 interface CasePrecedent {

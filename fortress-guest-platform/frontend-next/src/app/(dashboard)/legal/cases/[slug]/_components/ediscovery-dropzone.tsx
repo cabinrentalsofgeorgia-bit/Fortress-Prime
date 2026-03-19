@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Archive, CheckCircle, Clock, Loader2, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -58,9 +57,14 @@ export function EdiscoveryDropzone({ slug }: EdiscoveryDropzoneProps) {
   }, [slug]);
 
   useEffect(() => {
-    loadDocs();
+    const initialLoad = setTimeout(() => {
+      void loadDocs();
+    }, 0);
     const interval = setInterval(loadDocs, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialLoad);
+      clearInterval(interval);
+    };
   }, [loadDocs]);
 
   async function uploadFiles(files: FileList | File[]) {
@@ -85,7 +89,7 @@ export function EdiscoveryDropzone({ slug }: EdiscoveryDropzoneProps) {
         } else {
           uploaded++;
         }
-      } catch (err) {
+      } catch {
         toast.error(`Upload error: ${file.name}`);
       }
     }

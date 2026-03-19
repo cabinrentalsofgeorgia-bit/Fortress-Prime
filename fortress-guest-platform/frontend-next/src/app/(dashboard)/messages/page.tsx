@@ -27,8 +27,6 @@ import {
   Home,
   Search,
   FileText,
-  ChevronRight,
-  Clock,
   CheckCheck,
   Check,
 } from "lucide-react";
@@ -97,8 +95,15 @@ export default function MessagesPage() {
   const sortedMessages = [...(messages ?? [])].sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
-
-  let lastDate = "";
+  const datedMessages = sortedMessages.map((msg, index) => {
+    const msgDate = new Date(msg.created_at).toLocaleDateString();
+    const previousDate =
+      index > 0 ? new Date(sortedMessages[index - 1].created_at).toLocaleDateString() : null;
+    return {
+      ...msg,
+      showDate: index === 0 || msgDate !== previousDate,
+    };
+  });
 
   return (
     <div className="flex h-[calc(100vh-8rem)] rounded-lg border overflow-hidden">
@@ -223,16 +228,10 @@ export default function MessagesPage() {
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3 max-w-3xl mx-auto">
-                {sortedMessages.map((msg) => {
-                  const msgDate = new Date(msg.created_at).toLocaleDateString();
-                  let showDate = false;
-                  if (msgDate !== lastDate) {
-                    lastDate = msgDate;
-                    showDate = true;
-                  }
+                {datedMessages.map((msg) => {
                   return (
                     <div key={msg.id}>
-                      {showDate && (
+                      {msg.showDate && (
                         <div className="flex items-center gap-3 my-4">
                           <Separator className="flex-1" />
                           <span className="text-[10px] text-muted-foreground shrink-0">

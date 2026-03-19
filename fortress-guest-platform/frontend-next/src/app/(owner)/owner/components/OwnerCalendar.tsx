@@ -72,11 +72,6 @@ export function OwnerCalendar({ propertyId }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const daysToShow = 30;
-  const viewEndStr = useMemo(() => {
-    const d = new Date(viewStart);
-    d.setDate(d.getDate() + daysToShow);
-    return toISO(d);
-  }, [viewStart]);
 
   const { data: calendar, isLoading } = useOwnerCalendar(propertyId);
   const yieldLoss = useCalculateYieldLoss(propertyId);

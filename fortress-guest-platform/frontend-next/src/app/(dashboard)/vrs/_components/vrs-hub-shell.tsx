@@ -45,11 +45,11 @@ export function VrsHubShell() {
   const { data: telemetry } = useSystemTelemetry();
   const { data: moduleMaturity } = useModuleMaturity();
   const defconMutation = useSetDefcon();
-  const { data: properties, isLoading: propertiesLoading } = useVrsProperties();
-  const { data: reservations, isLoading: reservationsLoading } = useVrsReservations();
+  const { isLoading: propertiesLoading } = useVrsProperties();
+  const { isLoading: reservationsLoading } = useVrsReservations();
   const { data: arrivals, isLoading: arrivalsLoading } = useVrsArrivingToday();
   const { data: departures, isLoading: departuresLoading } = useVrsDepartingToday();
-  const { data: guests, isLoading: guestsLoading } = useVrsGuests();
+  const { isLoading: guestsLoading } = useVrsGuests();
   const { data: messageStats, isLoading: messageStatsLoading } = useVrsMessageStats();
   const { data: dashboardStats, isLoading: dashboardStatsLoading } = useVrsDashboardStats();
 
@@ -62,14 +62,7 @@ export function VrsHubShell() {
     messageStatsLoading ||
     dashboardStatsLoading;
 
-  const lastUpdated = useMemo(() => new Date().toLocaleTimeString(), [
-    properties?.length,
-    reservations?.length,
-    arrivals?.length,
-    departures?.length,
-    guests?.length,
-    messageStats?.total_messages,
-  ]);
+  const lastUpdated = new Date().toLocaleTimeString();
 
   const requiredLaunchPhrase = defconTarget ? `ENGAGE ${defconTarget}` : "";
   const isLaunchAuthorized = confirmInput.trim() === requiredLaunchPhrase;

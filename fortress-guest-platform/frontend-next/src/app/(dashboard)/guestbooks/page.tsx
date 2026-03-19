@@ -6,11 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -26,9 +23,7 @@ import {
 } from "@/components/ui/select";
 import {
   BookOpen,
-  Plus,
   QrCode,
-  ExternalLink,
   Wifi,
   KeyRound,
   Car,
@@ -37,7 +32,6 @@ import {
   Mountain,
   Phone,
   FileText,
-  Link2,
   Copy,
   Eye,
 } from "lucide-react";
@@ -54,9 +48,8 @@ interface GuestbookSection {
 
 export default function GuestbooksPage() {
   const { data: properties, isLoading: propsLoading } = useProperties();
-  const { data: guestbooks } = useGuestbooks();
+  useGuestbooks();
   const [selectedProperty, setSelectedProperty] = useState<string>("");
-  const [editorOpen, setEditorOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [sections, setSections] = useState<GuestbookSection[]>([
     { id: "welcome", title: "Welcome Message", icon: <BookOpen className="h-4 w-4" />, content: "Welcome to {property_name}! We're thrilled to have you as our guest." },

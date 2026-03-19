@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ export function MasterTimeline({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(false);
   const [building, setBuilding] = useState(false);
 
-  const fetchTimeline = async () => {
+  const fetchTimeline = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.get<{ events: TimelineEvent[] }>(
@@ -56,11 +56,11 @@ export function MasterTimeline({ slug }: { slug: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug]);
 
   useEffect(() => {
-    fetchTimeline();
-  }, [slug]);
+    void fetchTimeline();
+  }, [fetchTimeline]);
 
   const handleBuild = async () => {
     setBuilding(true);
@@ -72,7 +72,7 @@ export function MasterTimeline({ slug }: { slug: string }) {
         fetchTimeline();
         setBuilding(false);
       }, 90_000);
-    } catch (e) {
+    } catch {
       toast.error("Chronology build failed");
       setBuilding(false);
     }
@@ -122,7 +122,7 @@ export function MasterTimeline({ slug }: { slug: string }) {
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-xs">
-            No timeline events yet. Click "Build Timeline" to extract from evidence.
+            No timeline events yet. Click &ldquo;Build Timeline&rdquo; to extract from evidence.
           </div>
         ) : (
           <div className="relative ml-3 space-y-0">

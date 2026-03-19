@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Mail, Plus, Radio, ShieldCheck } from "lucide-react";
+import { Mail, Plus, ShieldCheck } from "lucide-react";
 
 interface Sensor {
   id: string;

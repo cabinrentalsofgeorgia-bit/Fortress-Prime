@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Building, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,18 +18,20 @@ export default function OwnerLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [ownerProfile, setOwnerProfile] = useState<OwnerProfile | null>(null);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("fgp_owner_profile");
-    if (raw) {
-      try {
-        setOwnerProfile(JSON.parse(raw));
-      } catch {
-        /* corrupted profile data is non-fatal */
-      }
+  const [ownerProfile] = useState<OwnerProfile | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
     }
-  }, []);
+    const raw = localStorage.getItem("fgp_owner_profile");
+    if (!raw) {
+      return null;
+    }
+    try {
+      return JSON.parse(raw) as OwnerProfile;
+    } catch {
+      return null;
+    }
+  });
 
   const handleSignOut = async () => {
     try {

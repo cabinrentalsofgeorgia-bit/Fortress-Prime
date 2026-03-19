@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 
 const QUICK_LINKS = [
+  { href: "/vrs/quotes", label: "Manual Quotes", sub: "Generate checkout links", icon: "💵" },
   { href: "/properties", label: "Properties", sub: "Manage all cabins", icon: "🏠" },
   { href: "/reservations", label: "Reservations", sub: "Calendar & bookings", icon: "📅" },
   { href: "/guests", label: "Guest CRM", sub: "360° guest profiles", icon: "👤" },

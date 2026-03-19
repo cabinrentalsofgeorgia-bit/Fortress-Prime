@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface SanctionsTripwirePanelProps {
   caseSlug: string;
@@ -21,7 +21,7 @@ export function SanctionsTripwirePanel({ caseSlug }: SanctionsTripwirePanelProps
   const [isSweeping, setIsSweeping] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
     try {
       const response = await fetch(`/api/legal/cases/${caseSlug}/sanctions/alerts`, {
         headers: { "Content-Type": "application/json" },
@@ -37,13 +37,13 @@ export function SanctionsTripwirePanel({ caseSlug }: SanctionsTripwirePanelProps
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [caseSlug]);
 
   useEffect(() => {
     setIsLoading(true);
     setError(null);
     void fetchAlerts();
-  }, [caseSlug]);
+  }, [fetchAlerts]);
 
   const handleForceSweep = async () => {
     setIsSweeping(true);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, FileText, Pencil, Trash2, Eye, Loader2 } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Loader2 } from "lucide-react";
 
 const VARIABLES = [
   "guest_name", "guest_email", "guest_phone", "guest_address",
@@ -55,6 +55,10 @@ interface TemplateForm {
   send_days_before_checkin: number;
 }
 
+interface AgreementTemplateRecord extends TemplateForm {
+  id: string;
+}
+
 const emptyForm: TemplateForm = {
   name: "",
   description: "",
@@ -68,13 +72,13 @@ const emptyForm: TemplateForm = {
 
 export default function AgreementTemplatesPage() {
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<AgreementTemplateRecord | "new" | null>(null);
   const [form, setForm] = useState<TemplateForm>(emptyForm);
   const [preview, setPreview] = useState(false);
 
-  const { data: templates = [], isLoading } = useQuery<any[]>({
+  const { data: templates = [], isLoading } = useQuery<AgreementTemplateRecord[]>({
     queryKey: ["agreement-templates"],
-    queryFn: () => api.get<any[]>("/api/agreements/templates"),
+    queryFn: () => api.get<AgreementTemplateRecord[]>("/api/agreements/templates"),
   });
 
   const createMut = useMutation({
@@ -108,7 +112,7 @@ export default function AgreementTemplatesPage() {
     setEditing("new");
   }
 
-  function openEdit(t: any) {
+  function openEdit(t: AgreementTemplateRecord) {
     setForm({
       name: t.name,
       description: t.description || "",
@@ -170,7 +174,7 @@ export default function AgreementTemplatesPage() {
             </CardContent>
           </Card>
         ) : (
-          templates.map((t: any) => (
+          templates.map((t) => (
             <Card key={t.id}>
               <CardContent className="flex items-center justify-between py-4 px-5">
                 <div className="flex items-center gap-4">

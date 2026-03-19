@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Scale, ChevronRight, AlertTriangle, Clock } from "lucide-react";
+import { Scale, ChevronRight, Clock } from "lucide-react";
 import { useLegalCases } from "@/lib/legal-hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

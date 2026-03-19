@@ -13,7 +13,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   Workflow,
   Zap,
-  Activity,
   Layers,
   Plus,
   Mail,
@@ -32,7 +31,7 @@ import { TemplateGrid } from "./_components/template-grid";
 
 export default function AutomationsPage() {
   const { data: rules = [] } = useAutomationRules();
-  const { data: events = [] } = useAutomationEvents(50);
+  useAutomationEvents(50);
   const { data: queueStatus } = useQueueStatus();
   const { data: templates = [] } = useTemplateLibrary();
 

@@ -95,14 +95,14 @@ export function DeparturesCard({ reservations }: Props) {
 
       <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent className="sm:max-w-lg overflow-y-auto">
-          {selected && <DepartureDetail reservation={selected} onClose={() => setSelected(null)} />}
+          {selected && <DepartureDetail reservation={selected} />}
         </SheetContent>
       </Sheet>
     </>
   );
 }
 
-function DepartureDetail({ reservation: r, onClose }: { reservation: Reservation; onClose: () => void }) {
+function DepartureDetail({ reservation: r }: { reservation: Reservation }) {
   const guestName = r.guest_name ?? `${r.guest?.first_name ?? ""} ${r.guest?.last_name ?? ""}`;
   const propertyName = r.property_name ?? r.property?.name ?? "Unknown Property";
   const phone = r.guest_phone ?? r.guest?.phone_number;

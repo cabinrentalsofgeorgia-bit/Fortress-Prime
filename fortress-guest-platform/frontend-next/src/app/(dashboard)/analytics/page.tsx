@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useDashboardStats, useProperties, useReservations } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,10 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  BarChart3,
-  TrendingUp,
-  Bot,
-  DollarSign,
   Download,
   Link2,
   CalendarDays,
   Home,
-  Users,
 } from "lucide-react";
 import {
   BarChart,
@@ -66,7 +61,7 @@ export default function AnalyticsPage() {
   const { data: reservations } = useReservations();
   const [range, setRange] = useState("30d");
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
   const rangeStart = useMemo(() => {
     switch (range) {
       case "7d": return subtractDays(now, 7);
@@ -75,14 +70,14 @@ export default function AnalyticsPage() {
       case "365d": return subtractDays(now, 365);
       default: return subtractDays(now, 30);
     }
-  }, [range]);
+  }, [now, range]);
 
   const filteredRes = useMemo(() =>
     (reservations ?? []).filter((r) => {
       const ci = new Date(r.check_in_date);
       return ci >= rangeStart && ci <= now;
     }),
-  [reservations, rangeStart],
+  [now, rangeStart, reservations],
   );
 
   const totalRevenue = filteredRes.reduce((s, r) => s + (r.total_amount ?? 0), 0);
@@ -160,7 +155,7 @@ export default function AnalyticsPage() {
       });
       return row;
     });
-  }, [properties, filteredRes]);
+  }, [filteredRes, now, properties]);
 
   function exportCsv() {
     const header = "Property,Bookings,Revenue\n";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, FormProvider, Controller } from "react-hook-form";
+import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,8 +76,7 @@ export function AutomationForm({
   const testRule = useTestRule();
 
   const methods = useForm<AutomationFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(AutomationFormSchema) as any,
+    resolver: zodResolver(AutomationFormSchema),
     defaultValues: EMPTY_FORM,
   });
 
@@ -86,11 +85,10 @@ export function AutomationForm({
     handleSubmit,
     control,
     reset,
-    watch,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = methods;
 
-  const targetEntity = watch("target_entity");
+  const targetEntity = useWatch({ control, name: "target_entity" });
 
   useEffect(() => {
     if (editingRule) {

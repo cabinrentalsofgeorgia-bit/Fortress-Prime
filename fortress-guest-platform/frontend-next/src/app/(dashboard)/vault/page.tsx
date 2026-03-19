@@ -47,7 +47,7 @@ function relevanceBadge(score: number) {
   return <Badge variant="secondary">{score.toFixed(3)}</Badge>;
 }
 
-function downloadCSV(results: VaultHit[], query: string) {
+function downloadCSV(results: VaultHit[]) {
   const header = "Relevance,Date,Sender,Subject,Preview,Source File,Chunk\n";
   const rows = results.map((r) => {
     const esc = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
@@ -122,7 +122,7 @@ export default function VaultPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => downloadCSV(results.results, results.query)}
+            onClick={() => downloadCSV(results.results)}
           >
             <Download className="h-4 w-4 mr-2" />
             Export CSV ({results.total_results})
@@ -315,7 +315,6 @@ export default function VaultPage() {
                         <ResultRow
                           key={`${hit.source_file}-${hit.chunk_index}`}
                           hit={hit}
-                          idx={idx}
                           expanded={expandedIdx === idx}
                           onToggle={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
                         />
@@ -336,12 +335,10 @@ export default function VaultPage() {
 
 function ResultRow({
   hit,
-  idx,
   expanded,
   onToggle,
 }: {
   hit: VaultHit;
-  idx: number;
   expanded: boolean;
   onToggle: () => void;
 }) {

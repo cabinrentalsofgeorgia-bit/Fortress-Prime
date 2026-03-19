@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormContext, Controller } from "react-hook-form";
+import { Controller, useFormContext, type Control, type UseFormRegister } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,7 +101,10 @@ function EmailFields() {
   );
 }
 
-function TaskFields({ control, register }: { control: any; register: any }) {
+type AutomationControl = Control<AutomationFormValues>;
+type AutomationRegister = UseFormRegister<AutomationFormValues>;
+
+function TaskFields({ control, register }: { control: AutomationControl; register: AutomationRegister }) {
   return (
     <div className="pt-3 border-t space-y-3">
       <p className="text-xs text-muted-foreground">
@@ -148,7 +151,7 @@ function TaskFields({ control, register }: { control: any; register: any }) {
   );
 }
 
-function NotifyFields({ register }: { register: any }) {
+function NotifyFields({ register }: { register: AutomationRegister }) {
   return (
     <div className="pt-3 border-t space-y-3">
       <p className="text-xs text-muted-foreground">

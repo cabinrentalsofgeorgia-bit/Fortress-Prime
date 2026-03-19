@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useCaseGraph,
@@ -45,7 +45,7 @@ import { JurisprudenceRadar } from "./jurisprudence-radar";
 import { DocumentViewer } from "./document-viewer";
 import { ExtractionPanel } from "./extraction-panel";
 import { HitlDeadlineQueue } from "./hitl-deadline-queue";
-import type { CaseGraphSnapshot, ExtractionStatus } from "@/lib/legal-types";
+import type { ExtractionStatus } from "@/lib/legal-types";
 
 type GraphNode = {
   id: string;
@@ -255,11 +255,6 @@ export function CaseDetailShell({ slug }: { slug: string }) {
     : syncedCount;
   const radarEdges = Array.isArray(caseGraphQuery.data?.edges)
     ? caseGraphQuery.data.edges.filter((edge) =>
-        String(edge.relationship_type ?? "").toLowerCase().includes("contradict"),
-      ).length
-    : 0;
-  const contradictionEdges = Array.isArray(graphSnapshot.edges)
-    ? graphSnapshot.edges.filter((edge) =>
         String(edge.relationship_type ?? "").toLowerCase().includes("contradict"),
       ).length
     : 0;

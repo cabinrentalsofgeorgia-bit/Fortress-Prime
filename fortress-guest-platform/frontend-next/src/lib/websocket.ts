@@ -97,7 +97,9 @@ export function useWebSocket() {
     wsRef.current = ws;
   }, [qc]);
 
-  connectRef.current = connect;
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => {
     connect();
