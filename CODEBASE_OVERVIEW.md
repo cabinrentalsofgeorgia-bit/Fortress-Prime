@@ -243,6 +243,35 @@ python titan_brain.py
 python ~/fortress-prime/src/find_intel.py
 ```
 
+### Synology Vault (Nightly Database Backups)
+```bash
+# Manual run (host-native PostgreSQL 16)
+/home/admin/Fortress-Prime/scripts/backup_db.sh
+
+# Cron schedule (daily at 02:00)
+0 2 * * * /home/admin/Fortress-Prime/scripts/backup_db.sh >> /home/admin/Fortress-Prime/backups/backup_db.log 2>&1
+
+# Local backup output
+/home/admin/Fortress-Prime/backups/
+
+# NAS backup output
+/mnt/fortress_nas/backups/
+```
+
+**Backup behavior:**
+- Dumps `fortress_db` and `fortress_guest` as timestamped `.sql.gz`.
+- Verifies gzip integrity before NAS copy.
+- Keeps rolling 7-day retention for both local and NAS backup files.
+
+**Restore pattern (plain SQL dumps):**
+```bash
+# Create destination database
+sudo -u postgres createdb fortress_guest_restore_probe
+
+# Restore from gzip archive
+gunzip -c /home/admin/Fortress-Prime/backups/fortress_guest_YYYY-MM-DD_HH-MM.sql.gz | sudo -u postgres psql -d fortress_guest_restore_probe
+```
+
 ---
 
 ## 🔐 Configuration

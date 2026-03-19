@@ -30,6 +30,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  TrendingUp,
   Users,
   Wrench,
 } from "lucide-react";
@@ -82,6 +83,12 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
       { label: "Guestbooks", href: "/guestbooks", icon: Inbox },
       { label: "Legal", href: "/legal", icon: Gavel },
       { label: "Owner Portal", href: "/owner", icon: Users },
+    ],
+  },
+  {
+    heading: "Growth",
+    items: [
+      { label: "Growth Deck", href: "/growth", icon: TrendingUp },
     ],
   },
   {

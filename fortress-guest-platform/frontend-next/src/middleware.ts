@@ -3,16 +3,6 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const host = request.nextUrl.host.toLowerCase();
-
-  const enforceCanonical = (process.env.ENFORCE_CANONICAL_HOST ?? "true").toLowerCase() === "true";
-  const canonicalAppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://crog-ai.com";
-  const isLocalHost = host.startsWith("127.0.0.1") || host.startsWith("localhost");
-
-  if (enforceCanonical && isLocalHost && pathname.startsWith("/vrs/hunter")) {
-    const target = new URL(`${canonicalAppUrl}${pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(target);
-  }
 
   if (
     pathname.startsWith("/owner") &&
@@ -30,5 +20,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/owner/:path*", "/owner", "/vrs/hunter"],
+  matcher: ["/owner/:path*", "/owner"],
 };
