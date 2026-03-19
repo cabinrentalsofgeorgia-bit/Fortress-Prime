@@ -13,14 +13,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
+from backend.models.property import Property
 from backend.models.vrs_quotes import GuestQuote, GuestQuoteStatus
 
 
 router = APIRouter()
+LEGACY_PROPERTY_MAP = {
+    "14": "f66def25-6b88-4a72-a023-efa575281a59",
+}
 
 
 class GuestQuoteGenerateRequest(BaseModel):
-    property_id: UUID | None = None
+    property_id: str | UUID | None = None
     guest_name: str | None = None
     guest_email: str | None = None
     guest_phone: str | None = None
@@ -36,11 +40,55 @@ class GuestQuoteGenerateRequest(BaseModel):
     target_keyword: str | None = None
 
 
+async def resolve_quote_property(
+    requested_property_id: str | UUID | None,
+    db: AsyncSession,
+) -> tuple[Property, str]:
+    if requested_property_id is None:
+        raise HTTPException(status_code=400, detail="property_id is required")
+
+    raw_property_id = str(requested_property_id).strip()
+    if not raw_property_id:
+        raise HTTPException(status_code=400, detail="property_id is required")
+
+    resolved_identifier = LEGACY_PROPERTY_MAP.get(raw_property_id, raw_property_id)
+
+    property_uuid = None
+    try:
+        property_uuid = UUID(resolved_identifier)
+    except ValueError:
+        pass
+
+    property_record = None
+    if property_uuid is not None:
+        result = await db.execute(select(Property).where(Property.id == property_uuid))
+        property_record = result.scalar_one_or_none()
+
+    if property_record is None:
+        result = await db.execute(
+            select(Property).where(Property.streamline_property_id == resolved_identifier)
+        )
+        property_record = result.scalar_one_or_none()
+
+    if property_record is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Property '{raw_property_id}' not found. "
+                "Expected a mapped legacy ID, property UUID, or Streamline property ID."
+            ),
+        )
+
+    return property_record, raw_property_id
+
+
 @router.post("/generate")
 async def generate_guest_quote(
     payload: GuestQuoteGenerateRequest,
     db: AsyncSession = Depends(get_db),
 ):
+    property_record, requested_property_id = await resolve_quote_property(payload.property_id, db)
+
     nights = None
     if payload.check_in and payload.check_out:
         nights = (payload.check_out - payload.check_in).days
@@ -50,8 +98,8 @@ async def generate_guest_quote(
     total_amount = payload.base_rent + payload.taxes + payload.fees
 
     quote = GuestQuote(
-        target_property_id=str(payload.property_id) if payload.property_id else "",
-        property_id=payload.property_id,
+        target_property_id=str(property_record.id),
+        property_id=property_record.id,
         guest_name=payload.guest_name,
         guest_email=payload.guest_email,
         guest_phone=payload.guest_phone,
@@ -75,6 +123,12 @@ async def generate_guest_quote(
             "taxes": str(payload.taxes),
             "fees": str(payload.fees),
             "total": str(total_amount),
+        },
+        source_snapshot={
+            "requested_property_id": requested_property_id,
+            "resolved_property_id": str(property_record.id),
+            "resolved_property_name": property_record.name,
+            "legacy_id_mapped": requested_property_id in LEGACY_PROPERTY_MAP,
         },
     )
     db.add(quote)
