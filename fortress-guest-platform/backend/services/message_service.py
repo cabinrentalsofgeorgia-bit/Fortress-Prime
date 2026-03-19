@@ -2,15 +2,15 @@
 Message Service - Advanced conversation threading and management
 BETTER THAN: All competitors (unified threading + AI classification)
 """
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional, Dict, cast
 from uuid import UUID, uuid4
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import structlog
 
-from backend.models import ApprovalStatus, Message, Guest, Reservation
+from backend.models import ApprovalStatus, Message, Guest, Reservation, Property
 from backend.core.config import settings
 from backend.integrations.twilio_client import TwilioClient
 
@@ -137,15 +137,155 @@ class MessageService:
         )
         return draft
 
+    async def get_pending_outbound_drafts(self) -> List[Dict]:
+        guest_name = func.nullif(
+            func.trim(
+                func.concat(
+                    func.coalesce(Guest.first_name, ""),
+                    " ",
+                    func.coalesce(Guest.last_name, ""),
+                )
+            ),
+            "",
+        )
+        stmt = (
+            select(
+                Message.id.label("message_id"),
+                Message.guest_id,
+                Message.reservation_id,
+                Reservation.property_id.label("property_id"),
+                guest_name.label("guest_name"),
+                Property.name.label("property_name"),
+                Reservation.confirmation_code.label("reservation_confirmation_code"),
+                Message.phone_to.label("recipient_phone"),
+                Message.body,
+                Message.agent_reasoning,
+                Message.created_at,
+                Message.approval_status,
+            )
+            .outerjoin(Guest, Message.guest_id == Guest.id)
+            .outerjoin(Reservation, Message.reservation_id == Reservation.id)
+            .outerjoin(Property, Reservation.property_id == Property.id)
+            .where(
+                Message.direction == "outbound",
+                Message.approval_status == ApprovalStatus.pending_approval,
+            )
+            .order_by(Message.created_at.asc())
+        )
+        result = await self.db.execute(stmt)
+        return [dict(row._mapping) for row in result.all()]
+
+    async def get_draft_context_by_id(self, message_id: UUID) -> Optional[Dict]:
+        guest_name = func.nullif(
+            func.trim(
+                func.concat(
+                    func.coalesce(Guest.first_name, ""),
+                    " ",
+                    func.coalesce(Guest.last_name, ""),
+                )
+            ),
+            "",
+        )
+        stmt = (
+            select(
+                Message.id.label("message_id"),
+                Message.guest_id,
+                Message.reservation_id,
+                Reservation.property_id.label("property_id"),
+                guest_name.label("guest_name"),
+                Property.name.label("property_name"),
+                Reservation.confirmation_code.label("reservation_confirmation_code"),
+                Message.phone_to.label("recipient_phone"),
+                Message.body,
+                Message.agent_reasoning,
+                Message.created_at,
+                Message.approval_status,
+            )
+            .outerjoin(Guest, Message.guest_id == Guest.id)
+            .outerjoin(Reservation, Message.reservation_id == Reservation.id)
+            .outerjoin(Property, Reservation.property_id == Property.id)
+            .where(Message.id == message_id, Message.direction == "outbound")
+        )
+        result = await self.db.execute(stmt)
+        row = result.first()
+        return dict(row._mapping) if row else None
+
+    async def execute_approval_and_dispatch(
+        self, message_id: UUID, reviewer_id: UUID
+    ) -> Dict:
+        stmt = select(Message).where(Message.id == message_id).with_for_update()
+        result = await self.db.execute(stmt)
+        message = result.scalar_one_or_none()
+
+        if not message:
+            raise ValueError("Message not found.")
+        message_direction = cast(str, message.direction)
+        if message_direction != "outbound":
+            raise ValueError("Only outbound messages can be approved for dispatch.")
+        message_approval_status = cast(str, message.approval_status)
+        if self._approval_value(message_approval_status) != ApprovalStatus.pending_approval.value:
+            raise ValueError(
+                f"Cannot approve message with status: {self._approval_value(message_approval_status)}"
+            )
+
+        setattr(message, "approval_status", ApprovalStatus.approved.value)
+        setattr(message, "reviewed_by", reviewer_id)
+        setattr(message, "reviewed_at", datetime.now(timezone.utc))
+
+        await self.db.commit()
+        await self.db.refresh(message)
+
+        dispatched = await self.dispatch_message(message)
+
+        return {
+            "message_id": dispatched.id,
+            "status": self._approval_value(cast(str, dispatched.approval_status)),
+            "action_timestamp": dispatched.reviewed_at,
+            "reviewer_id": reviewer_id,
+            "dispatch_sid": dispatched.external_id,
+        }
+
+    async def execute_rejection(self, message_id: UUID, reviewer_id: UUID) -> Dict:
+        stmt = select(Message).where(Message.id == message_id).with_for_update()
+        result = await self.db.execute(stmt)
+        message = result.scalar_one_or_none()
+
+        if not message:
+            raise ValueError("Message not found.")
+        message_direction = cast(str, message.direction)
+        if message_direction != "outbound":
+            raise ValueError("Only outbound messages can be rejected from this queue.")
+        message_approval_status = cast(str, message.approval_status)
+        if self._approval_value(message_approval_status) != ApprovalStatus.pending_approval.value:
+            raise ValueError(
+                f"Cannot reject message with status: {self._approval_value(message_approval_status)}"
+            )
+
+        setattr(message, "approval_status", ApprovalStatus.rejected.value)
+        setattr(message, "reviewed_by", reviewer_id)
+        setattr(message, "reviewed_at", datetime.now(timezone.utc))
+
+        await self.db.commit()
+        await self.db.refresh(message)
+
+        return {
+            "message_id": message.id,
+            "status": self._approval_value(cast(str, message.approval_status)),
+            "action_timestamp": message.reviewed_at,
+            "reviewer_id": reviewer_id,
+            "dispatch_sid": None,
+        }
+
     async def dispatch_message(self, message: Message) -> Message:
-        approval_status = self._approval_value(message.approval_status)
+        approval_status = self._approval_value(cast(str, message.approval_status))
         if approval_status != ApprovalStatus.approved.value:
             raise PermissionError(
                 f"Message {message.id} is not approved for dispatch: {approval_status}"
             )
 
         log = self.log.bind(trace_id=str(message.trace_id), message_id=str(message.id))
-        log.info("dispatching_sms", to_phone=message.phone_to, body_length=len(message.body or ""))
+        body_text = cast(str, message.body) if message.body is not None else ""
+        log.info("dispatching_sms", to_phone=message.phone_to, body_length=len(body_text))
 
         try:
             result = await self.twilio.send_sms(
@@ -154,13 +294,17 @@ class MessageService:
             )
             safe_result = self._serialize_provider_payload(result)
 
-            message.external_id = result.get("sid", "")
-            message.status = "sent"
-            message.sent_at = datetime.utcnow()
-            message.provider = "twilio"
-            message.cost_amount = float(result["price"]) if result.get("price") else None
-            message.num_segments = int(result.get("num_segments") or 1)
-            message.extra_data = safe_result
+            setattr(message, "external_id", result.get("sid", ""))
+            setattr(message, "status", "sent")
+            setattr(message, "sent_at", datetime.utcnow())
+            setattr(message, "provider", "twilio")
+            setattr(
+                message,
+                "cost_amount",
+                float(result["price"]) if result.get("price") else None,
+            )
+            setattr(message, "num_segments", int(result.get("num_segments") or 1))
+            setattr(message, "extra_data", safe_result)
 
             await self.db.commit()
             await self.db.refresh(message)
@@ -168,8 +312,8 @@ class MessageService:
             return message
         except Exception as e:
             log.error("sms_send_failed", error=str(e))
-            message.status = "failed"
-            message.error_message = str(e)
+            setattr(message, "status", "failed")
+            setattr(message, "error_message", str(e))
             await self.db.commit()
             await self.db.refresh(message)
             raise

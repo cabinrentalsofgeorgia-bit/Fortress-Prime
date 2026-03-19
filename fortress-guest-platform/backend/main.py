@@ -24,7 +24,7 @@ from backend.api import guests, messages, reservations, properties, workorders, 
 from backend.api import integrations as integrations_api
 from backend.api import booking, housekeeping, channels, agent
 from backend.api import portal as portal_api
-from backend.api import review_queue, email_bridge, damage_claims
+from backend.api import review_queue, email_bridge, damage_claims, outbound_drafts
 from backend.api import tenants as tenants_api
 from backend.api import owner_portal
 from backend.api import direct_booking as direct_booking_api
@@ -376,6 +376,7 @@ app.include_router(properties.router, prefix="/api/properties", tags=["Propertie
 app.include_router(reservations.router, prefix="/api/reservations", tags=["Reservations"])
 app.include_router(guests.router, prefix="/api/guests", tags=["Guests"])
 app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
+app.include_router(outbound_drafts.router)
 app.include_router(workorders.router, prefix="/api/work-orders", tags=["Work Orders"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])

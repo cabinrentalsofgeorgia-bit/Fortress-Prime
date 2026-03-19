@@ -53,6 +53,8 @@ class Message(Base):
         index=True,
     )
     agent_reasoning = Column(Text)
+    reviewed_by = Column(UUID(as_uuid=True))
+    reviewed_at = Column(TIMESTAMP(timezone=True))
     
     # AI Response
     is_auto_response = Column(Boolean, default=False)

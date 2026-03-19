@@ -52,3 +52,18 @@ CREATE INDEX IF NOT EXISTS ix_messages_approval_status ON public.messages (appro
 ```
 
 The learning outcome is that code-first schema management on this host still needs explicit SQL for live tables, and strict HITL enforcement must live at the Twilio wrapper boundary so no downstream agent can fire raw text payloads around the database gate.
+
+### Entry 004 - 2026-03-19 - Outbound Draft Review Interface
+- **Objective:** Expose backend review endpoints so authenticated staff can list, inspect, approve, or reject `pending_approval` outbound drafts before Twilio dispatch.
+- **Execution:** Updated `fortress-guest-platform/backend/models/message.py`; `fortress-guest-platform/backend/services/message_service.py`; `fortress-guest-platform/backend/main.py`; created `fortress-guest-platform/backend/schemas/message_review.py`; created `fortress-guest-platform/backend/api/outbound_drafts.py`; created `fortress-guest-platform/backend/scripts/alter_messages_reviewer.sql`.
+- **Friction:** The repo’s `Message` model does not include `property_id`, and `Guest` stores names as `first_name` plus `last_name`, so the review payload had to derive `property_id` from the joined `Reservation` and build `guest_name` on the query side. The reviewer-column migration needed explicit SQL because `Base.metadata.create_all()` cannot alter existing tables. A narrowed `pyright` pass over the touched review files dropped to `11` remaining errors, all in older `message_service.py` ORM typing paths outside the new outbound-draft review methods. `python3 -m compileall fortress-guest-platform/backend` passed, and `python3 fortress-guest-platform/backend/scripts/verify_god_heads.py` passed.
+- **Resolution:** Added `reviewed_by` and `reviewed_at` to the `messages` table and model, created a flattened async review schema, implemented a dedicated `api/outbound_drafts.py` router, and added async service methods that use joined selects plus `FOR UPDATE` row locking for approve/reject actions. Executed the reviewer migration directly on Postgres:
+
+```sql
+ALTER TABLE public.messages
+    ADD COLUMN IF NOT EXISTS reviewed_by UUID;
+ALTER TABLE public.messages
+    ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+```
+
+The learning outcome is that the Human viewport should consume a flattened query contract from the backend, while approval state, reviewer metadata, and Twilio dispatch remain centralized in the message service to preserve the HITL choke point.
