@@ -108,3 +108,52 @@ The system MUST propose one architectural optimization per week targeting:
 - Cost reduction in NAS storage or compute utilization.
 
 Log proposals to `public.system_post_mortems` with `severity = 'info'` and `component = 'weekly_optimization'`.
+
+## 4. THE GODHEAD PROTOCOL (Strict Execution Pipeline)
+
+Every task — feature, fix, refactor, or config change — MUST pass through all four gates in order. Skipping a gate is a protocol violation.
+
+### STEP 1 — Architect (Domain Verification)
+
+Before writing any code, verify:
+- Which domain is affected: `cabin-rentals-of-georgia.com` (public storefront) vs `crog-ai.com` (internal command center).
+- That the change complies with the Sovereign Stack requirements in `REQUIREMENTS.md` and `CONSTITUTION.md`.
+- That no cloud-persistence or PII-leak patterns are introduced (Prime Directive check).
+
+If the request crosses domain boundaries or violates sovereignty, STOP and escalate to the Human.
+
+### STEP 2 — Forge (Strictly-Typed Implementation)
+
+Write code that satisfies these constraints:
+- All Python code uses type hints on every function signature.
+- All data crossing module boundaries uses Pydantic models with `Field(...)` constraints.
+- All TypeScript code compiles under `strict` mode with zero `any` escapes.
+- Follow the Strangler Fig Pattern: new capability = new agent, never patch legacy bridges.
+
+### STEP 3 — Crucible (Mandatory Local Verification)
+
+You MUST run these checks locally and confirm zero errors before proceeding to Step 4. Do NOT skip verification.
+
+**Frontend (Next.js):**
+```bash
+cd fortress-guest-platform/frontend-next && npx tsc --noEmit && npm run build
+```
+
+**Backend (FastAPI):**
+```bash
+cd fortress-guest-platform && python -m backend.scripts.verify_build
+```
+
+**Routing sanity:** Verify that no redirect or rewrite targets a route that does not exist. Check `next.config.ts`, middleware files, and any `redirect()` calls in page components.
+
+If ANY check produces an error, fix it before moving to Step 4. Do not commit broken code.
+
+### STEP 4 — Gateway (Staging-Only Commit)
+
+After Step 3 passes with zero errors:
+- You are authorized to `git add` and `git commit`.
+- All commits MUST be pushed to a **staging branch** (e.g. `staging/*` or `feature/*`), NEVER directly to `main`.
+- Vercel will generate a private preview URL from the staging branch. Verify the preview before requesting a merge to `main`.
+- Direct pushes to `main` require explicit Human (Gary) authorization.
+
+**Forbidden:** `git push origin main` without Human sign-off. This is a fireable offense for the agent.
