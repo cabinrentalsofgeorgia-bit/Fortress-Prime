@@ -69,6 +69,12 @@ All data crossing module boundaries MUST use Pydantic models with:
 All new multi-step agent workflows MUST use LangGraph `StateGraph`:
 - Define a `TypedDict` state class.
 - Include an `audit_trail` field in state.
+- Define **Node 5: The Chronicler** as the commit-gate historian for the workflow.
+- Before **Node 4 (Gateway)** is permitted to commit any code, Node 5 MUST append an entry to `docs/intelligence/agent_telemetry.md`.
+- Every Node 5 ledger entry MUST include these fields: `Objective`, `Execution`, `Friction`, `Resolution`.
+- `Execution` MUST list every modified file.
+- `Friction` MUST capture any errors surfaced by Node 3 (The Crucible) during local validation.
+- `Resolution` MUST record how the friction was solved or what the system learned if no code fix was required.
 - Terminal node MUST write to the Audit Ledger (Constitution Article III).
 
 ### Self-Healing Reflection Loop
