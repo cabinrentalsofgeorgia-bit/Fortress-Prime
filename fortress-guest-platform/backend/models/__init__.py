@@ -26,10 +26,12 @@ from backend.models.vrs_quotes import GuestQuote, GuestQuoteStatus
 from backend.models.blocked_day import BlockedDay
 from backend.models.template import EmailTemplate
 from backend.models.message_queue import MessageQueue
+from backend.models.seo_patch import SeoPatchQueue
+from backend.models.citation_audit import CitationRecord
 from backend.models.concierge_queue import ConciergeQueue
 from backend.models.property_knowledge import PropertyKnowledge
 from backend.vrs.domain.automations import VRSRuleEngine, AutomationEvent
-from backend.services.housekeeping_service import HousekeepingTask
+# from backend.services.housekeeping_service import HousekeepingTask
 from backend.models.iot_device import DigitalTwin, DeviceEvent
 from backend.models.verses import VersesProduct
 from backend.models.hunter import HunterQueueEntry, HunterRun
@@ -64,7 +66,7 @@ __all__ = [
     "ScheduledMessage",
     # Operations
     "WorkOrder",
-    "HousekeepingTask",
+    # "HousekeepingTask",
     # Guest Experience
     "GuestbookGuide",
     "Extra",
@@ -101,6 +103,10 @@ __all__ = [
     "EmailTemplate",
     # Copilot Queue
     "MessageQueue",
+    # SEO Queue
+    "SeoPatchQueue",
+    # Local SEO Citation Audits
+    "CitationRecord",
     # Concierge queue / RAG memory
     "ConciergeQueue",
     "PropertyKnowledge",

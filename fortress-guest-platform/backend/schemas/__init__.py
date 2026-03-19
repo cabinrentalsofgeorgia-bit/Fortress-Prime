@@ -14,6 +14,8 @@ from backend.schemas.legal_schemas import (
     GraphNodeResponse,
     GraphEdgeResponse,
     GraphSnapshotResponse,
+    FunnelUpdateRequest,
+    TargetStatusUpdateRequest,
 )
 
 __all__ = [
@@ -30,4 +32,6 @@ __all__ = [
     "GraphNodeResponse",
     "GraphEdgeResponse",
     "GraphSnapshotResponse",
+    "FunnelUpdateRequest",
+    "TargetStatusUpdateRequest",
 ]

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = Field(default="postgresql+asyncpg://fgp_app:fortress2024@localhost:5432/fortress_guest")
+    swarm_api_key: str = Field(default="")
 
     # JWT (Tier-0 hardening): RS256 asymmetric keys.
     # Keys are expected as base64-encoded PEM strings for env portability.

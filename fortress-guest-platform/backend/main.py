@@ -66,6 +66,7 @@ from backend.api import legal_sanctions as legal_sanctions_api
 from backend.api import legal_deposition as legal_deposition_api
 from backend.api import legal_agent as legal_agent_api
 from backend.api import verses as verses_api
+from backend.api import seo_patches as seo_patches_api
 from backend.api import wealth as wealth_api
 from backend.api import reservation_webhooks
 from backend.api import contracts as contracts_api
@@ -132,6 +133,10 @@ PUBLIC_PATH_PREFIXES = (
     "/api/agreements/public/",
     "/api/direct-booking/availability",
     "/api/direct-booking/properties",
+    "/api/seo-patches/live/",
+    "/api/quotes/",
+    "/api/seo-patches/proposals",
+    "/api/seo-patches/bulk-proposals",
     "/api/checkout/",
     "/api/copilot-queue/",
     "/api/vrs/automations/",
@@ -424,6 +429,7 @@ app.include_router(legal_sanctions_api.router, prefix="/api/legal", tags=["Legal
 app.include_router(legal_deposition_api.router, prefix="/api/legal", tags=["Legal Deposition"])
 app.include_router(legal_agent_api.router, prefix="/api/legal", tags=["Legal Agent"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
+app.include_router(seo_patches_api.router, prefix="/api/seo-patches", tags=["SEO Patches"])
 app.include_router(wealth_api.router, prefix="/api/wealth", tags=["Wealth & Development"])
 app.include_router(reservation_webhooks.router, prefix="/api/webhooks", tags=["Reservation Webhooks"])
 app.include_router(dispute_webhooks.router, prefix="/api/webhooks", tags=["Dispute Webhooks"])

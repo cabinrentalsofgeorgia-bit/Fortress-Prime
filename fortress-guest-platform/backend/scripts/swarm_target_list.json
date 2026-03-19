@@ -1,0 +1,387 @@
+{
+  "source_blueprint": "/home/admin/.cursor/worktrees/Fortress-Prime__SSH__captain_/yyy/fortress-guest-platform/backend/scripts/drupal_granular_blueprint.json",
+  "summary": {
+    "total_nodes": 2514,
+    "tier1_candidates_isolated": 45,
+    "tier1_matched_properties": 14,
+    "tier1_unmatched_candidates": 31,
+    "tier2_signal_count": 52,
+    "db_cross_reference_status": "ok"
+  },
+  "db_cross_reference_error": null,
+  "tier2_signals": [
+    "about-blue-ridge-ga",
+    "blue-ridge",
+    "blue-ridge-activities",
+    "blue-ridge-cabins",
+    "blue-ridge-experience",
+    "blue-ridge-ga-activities",
+    "blue-ridge-luxury",
+    "blue-ridge-luxury-cabins",
+    "blue-ridge-memories",
+    "blue-ridge-property-management",
+    "blue-ridge-things-to-do",
+    "cabins-all-blue-ridge-luxury",
+    "cabins-all-blue-ridge-riverfront",
+    "cabins-all-mountain-view",
+    "cabins-all-pet-friendly",
+    "cabins-all-river-cabins",
+    "cabins-all-river-front",
+    "cabins-all-riverfront",
+    "cabins-amenities-game-room",
+    "cabins-amenities-pet-friendly",
+    "cabins-with-hot-tubs",
+    "creek-riverfront-cabins",
+    "downtown",
+    "family",
+    "family-fun",
+    "family-reunion",
+    "hot-tub",
+    "https-www-cabin-rentals-of-georgia-com-about-blue-ridge-ga",
+    "https-www-cabin-rentals-of-georgia-com-amenities-hot-tub",
+    "https-www-cabin-rentals-of-georgia-com-amenities-motorcycle-friendly",
+    "https-www-cabin-rentals-of-georgia-com-blue-ridge-georgia-activities",
+    "https-www-cabin-rentals-of-georgia-com-cabins-all-river-front",
+    "https-www-cabin-rentals-of-georgia-com-cabins-all-river-view",
+    "https-www-cabin-rentals-of-georgia-com-cabins-amenities-game-room",
+    "https-www-cabin-rentals-of-georgia-com-cabins-amenities-hot-tub",
+    "https-www-cabin-rentals-of-georgia-com-cabins-amenities-motorcycle-friendly",
+    "lake-blue-ridge",
+    "luxury",
+    "mountain-biking",
+    "mountain-view",
+    "mountain-view-cabins",
+    "pet-friendly",
+    "pet-friendly-cabins",
+    "river-front",
+    "river-view",
+    "river-view-cabins",
+    "riverfront",
+    "riverfront-cabins",
+    "romantic",
+    "toccoa-river",
+    "toccoa-river-luxury-cabin-rentals",
+    "waterfront"
+  ],
+  "targets": [
+    {
+      "property_id": "19e8c40d-ed32-4e7f-a667-a0e98de5345a",
+      "slug": "above-the-timberline",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/above-the-timberline"
+    },
+    {
+      "property_id": "06859d6b-5645-4070-895f-e9eb316c08e9",
+      "slug": "aska-escape-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/aska-escape-lodge"
+    },
+    {
+      "property_id": "e1eefc66-58d8-44ab-87ce-e1fc9f874fa1",
+      "slug": "blue-ridge-lake-sanctuary",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/blue-ridge-lake-sanctuary"
+    },
+    {
+      "property_id": "caf908a9-5ef0-431a-88f1-43a0b51ea364",
+      "slug": "chase-mountain-dreams",
+      "target_keyword": "luxury cabin chase mountain dreams blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/chase-mountain-dreams"
+    },
+    {
+      "property_id": "51c3193a-d15b-45a1-aa24-068087f46828",
+      "slug": "cohutta-sunset",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/cohutta-sunset"
+    },
+    {
+      "property_id": "f956cf7b-8ed1-4976-9d37-b837d123e426",
+      "slug": "creekside-green",
+      "target_keyword": "luxury cabin creekside green blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/cherry-log/creekside-green"
+    },
+    {
+      "property_id": "1781fd69-a7e3-4df6-9216-c6152c9c19b6",
+      "slug": "fallen-timber-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/fallen-timber-lodge"
+    },
+    {
+      "property_id": "b644c2a8-a821-420d-951b-b18ff0a255d7",
+      "slug": "high-hopes",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/high-hopes"
+    },
+    {
+      "property_id": "dac6503b-b3a6-41ad-8b1b-cdcf622bd4d1",
+      "slug": "restoration-luxury",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/restoration-luxury"
+    },
+    {
+      "property_id": "6d8c4b24-34a5-453e-bd25-3bf76cb3eb63",
+      "slug": "riverview-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/riverview-lodge"
+    },
+    {
+      "property_id": "bbaf962d-b98b-46d8-91cb-3a7f8beea72d",
+      "slug": "skyfall",
+      "target_keyword": "luxury cabin skyfall blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/morganton/skyfall"
+    },
+    {
+      "property_id": "f66def25-6b88-4a72-a023-efa575281a59",
+      "slug": "the-rivers-edge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/the-rivers-edge"
+    },
+    {
+      "property_id": "099f273a-6d2b-4eeb-9474-80fd89c18071",
+      "slug": "cherokee-sunrise-noontootla-creek",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/cherokee-sunrise-noontootla-creek",
+      "semantic_matched_slug": "cherokee-sunrise-on-noontootla-creek"
+    },
+    {
+      "property_id": "bdef1b0d-8c7c-4126-a9d9-249b3d6b2621",
+      "slug": "serendipity-noontootla-creek",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/serendipity-noontootla-creek",
+      "semantic_matched_slug": "serendipity-on-noontootla-creek"
+    }
+  ],
+  "unmatched_candidates": [
+    {
+      "property_id": null,
+      "slug": "above-it-all-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/above-it-all-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "all-inspired-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/all-inspired-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "awesome-retreat",
+      "target_keyword": "luxury cabin awesome retreat blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/morganton/awesome-retreat"
+    },
+    {
+      "property_id": null,
+      "slug": "blue-ridge-bliss",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/blue-ridge-bliss"
+    },
+    {
+      "property_id": null,
+      "slug": "blue-ridge-lake-retreat",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/blue-ridge-lake-retreat"
+    },
+    {
+      "property_id": null,
+      "slug": "blue-ridge-lakewalk",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/blue-ridge-lakewalk"
+    },
+    {
+      "property_id": null,
+      "slug": "blue-ridge-town-retreat",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/blue-ridge-town-retreat"
+    },
+    {
+      "property_id": null,
+      "slug": "celtic-clouds",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/celtic-clouds"
+    },
+    {
+      "property_id": null,
+      "slug": "creekside-bend",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/creekside-bend"
+    },
+    {
+      "property_id": null,
+      "slug": "forever-joy",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/forever-joy"
+    },
+    {
+      "property_id": null,
+      "slug": "happy-ours-lodge",
+      "target_keyword": "luxury cabin happy ours lodge blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/happy-ours-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "hawks-ridge",
+      "target_keyword": "luxury cabin hawks ridge blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/mineral-bluff/hawks-ridge"
+    },
+    {
+      "property_id": null,
+      "slug": "hemlock-hideaway",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/hemlock-hideaway"
+    },
+    {
+      "property_id": null,
+      "slug": "hidden-laurel-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/hidden-laurel-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "lazy-creek-retreat",
+      "target_keyword": "luxury cabin lazy creek retreat blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/morganton/lazy-creek-retreat"
+    },
+    {
+      "property_id": null,
+      "slug": "moonlight-serenade",
+      "target_keyword": "luxury cabin moonlight serenade blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/moonlight-serenade"
+    },
+    {
+      "property_id": null,
+      "slug": "mountain-hideaway",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/mountain-hideaway"
+    },
+    {
+      "property_id": null,
+      "slug": "our-true-blue",
+      "target_keyword": "luxury cabin our true blue blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/our-true-blue"
+    },
+    {
+      "property_id": null,
+      "slug": "outlaw-ridge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/outlaw-ridge"
+    },
+    {
+      "property_id": null,
+      "slug": "peace-heaven",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/peace-heaven"
+    },
+    {
+      "property_id": null,
+      "slug": "rainey-day-hideaway",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/rainey-day-hideaway"
+    },
+    {
+      "property_id": null,
+      "slug": "river-dreams-lodge",
+      "target_keyword": "luxury cabin river dreams lodge blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/mineral-bluff/river-dreams-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "river-heights-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/river-heights-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "river-ridge-lodge",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/river-ridge-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "rivers-song",
+      "target_keyword": "luxury cabin rivers song blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/mccayesville/rivers-song"
+    },
+    {
+      "property_id": null,
+      "slug": "rolling-river-cabin",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/rolling-river-cabin"
+    },
+    {
+      "property_id": null,
+      "slug": "sanctuary",
+      "target_keyword": "luxury cabin sanctuary blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/morganton/sanctuary"
+    },
+    {
+      "property_id": null,
+      "slug": "stonybrook-lodge",
+      "target_keyword": "luxury cabin stonybrook lodge blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/mccayesville/stonybrook-lodge"
+    },
+    {
+      "property_id": null,
+      "slug": "the-great-getaway",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/the-great-getaway"
+    },
+    {
+      "property_id": null,
+      "slug": "toccoa-tails",
+      "target_keyword": "luxury cabin toccoa tails blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/mineral-bluff/toccoa-tails"
+    },
+    {
+      "property_id": null,
+      "slug": "wooded-bliss",
+      "target_keyword": "luxury cabin blue ridge",
+      "source_type": "cabin",
+      "source_alias": "cabin/blue-ridge/wooded-bliss"
+    }
+  ]
+}
