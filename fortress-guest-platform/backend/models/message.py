@@ -1,13 +1,20 @@
 """
 Message models - SMS communication tracking
 """
+import enum
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, Boolean, Integer, DECIMAL, Text, TIMESTAMP, ForeignKey, ARRAY, Time
+from sqlalchemy import Column, String, Boolean, Integer, DECIMAL, Text, TIMESTAMP, ForeignKey, ARRAY, Time, Enum as SqlEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from backend.core.database import Base
+
+
+class ApprovalStatus(str, enum.Enum):
+    pending_approval = "pending_approval"
+    approved = "approved"
+    rejected = "rejected"
 
 
 class Message(Base):
@@ -36,7 +43,16 @@ class Message(Base):
     
     # Status
     status = Column(String(50), nullable=False, default="sent")
-    # queued, sent, delivered, failed, received
+    # draft, queued, sent, delivered, failed, received
+
+    # HITL approval gate
+    approval_status = Column(
+        SqlEnum(ApprovalStatus, name="message_approval_status"),
+        nullable=False,
+        default=ApprovalStatus.approved,
+        index=True,
+    )
+    agent_reasoning = Column(Text)
     
     # AI Response
     is_auto_response = Column(Boolean, default=False)

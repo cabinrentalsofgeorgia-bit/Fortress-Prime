@@ -42,6 +42,25 @@ class LifecycleEngine:
         self.db = db
         self.message_service = MessageService(db)
         self.log = logger.bind(service="lifecycle_engine")
+
+    async def _draft_lifecycle_message(
+        self,
+        *,
+        reservation: Reservation,
+        body: str,
+        automation_key: str,
+        reasoning: str,
+    ) -> Message:
+        guest = reservation.guest
+        return await self.message_service.create_draft_sms(
+            to_phone=guest.phone_number,
+            body=body,
+            guest_id=guest.id,
+            reservation_id=reservation.id,
+            agent_reasoning=reasoning,
+            ai_confidence=0.95,
+            intent=automation_key,
+        )
     
     async def process_all_lifecycle_events(self) -> Dict:
         """
@@ -115,13 +134,14 @@ class LifecycleEngine:
                     f"- Cabin Rentals of Georgia"
                 )
 
-                await self.message_service.send_sms(
-                    to_phone=guest.phone_number,
+                await self._draft_lifecycle_message(
+                    reservation=res,
                     body=body,
-                    guest_id=guest.id,
-                    reservation_id=res.id,
-                    is_auto_response=True,
-                    ai_confidence=0.95,
+                    automation_key="pre_arrival_7d",
+                    reasoning=(
+                        f"Drafted Welcome SMS because Reservation #{res.confirmation_code} "
+                        f"is 7 days from check-in and still confirmed."
+                    ),
                 )
 
                 res.digital_guide_sent = True
@@ -156,13 +176,14 @@ class LifecycleEngine:
                     f"Your access code will arrive tomorrow. See you soon!"
                 )
 
-                await self.message_service.send_sms(
-                    to_phone=guest.phone_number,
+                await self._draft_lifecycle_message(
+                    reservation=res,
                     body=body,
-                    guest_id=guest.id,
-                    reservation_id=res.id,
-                    is_auto_response=True,
-                    ai_confidence=0.95,
+                    automation_key="pre_arrival_3d",
+                    reasoning=(
+                        f"Drafted Reminder SMS because Reservation #{res.confirmation_code} "
+                        f"is 3 days from check-in and still confirmed."
+                    ),
                 )
 
                 res.pre_arrival_sent = True
@@ -198,13 +219,14 @@ class LifecycleEngine:
                     f"Safe travels! We're here if you need anything. 🏔️"
                 )
 
-                await self.message_service.send_sms(
-                    to_phone=guest.phone_number,
+                await self._draft_lifecycle_message(
+                    reservation=res,
                     body=body,
-                    guest_id=guest.id,
-                    reservation_id=res.id,
-                    is_auto_response=True,
-                    ai_confidence=0.95,
+                    automation_key="pre_arrival_1d",
+                    reasoning=(
+                        f"Drafted Access Info SMS because Reservation #{res.confirmation_code} "
+                        f"is 1 day from check-in and access details are due."
+                    ),
                 )
 
                 res.access_info_sent = True
@@ -249,13 +271,14 @@ class LifecycleEngine:
                     f"Enjoy the mountain air! 🏔️"
                 )
 
-                await self.message_service.send_sms(
-                    to_phone=guest.phone_number,
+                await self._draft_lifecycle_message(
+                    reservation=res,
                     body=body,
-                    guest_id=guest.id,
-                    reservation_id=res.id,
-                    is_auto_response=True,
-                    ai_confidence=0.95,
+                    automation_key="mid_stay_checkin",
+                    reasoning=(
+                        f"Drafted Mid-Stay Check-In SMS because Reservation #{res.confirmation_code} "
+                        f"has been checked in for 2 days."
+                    ),
                 )
 
                 res.mid_stay_checkin_sent = True
@@ -301,13 +324,14 @@ class LifecycleEngine:
                     f"reply with a rating 1-5 ⭐"
                 )
 
-                await self.message_service.send_sms(
-                    to_phone=guest.phone_number,
+                await self._draft_lifecycle_message(
+                    reservation=res,
                     body=body,
-                    guest_id=guest.id,
-                    reservation_id=res.id,
-                    is_auto_response=True,
-                    ai_confidence=0.95,
+                    automation_key="checkout_reminder",
+                    reasoning=(
+                        f"Drafted Checkout Reminder SMS because Reservation #{res.confirmation_code} "
+                        f"checks out today."
+                    ),
                 )
 
                 res.checkout_reminder_sent = True
@@ -351,13 +375,14 @@ class LifecycleEngine:
                     f"We'd love to host you again! 🏔️"
                 )
 
-                await self.message_service.send_sms(
-                    to_phone=guest.phone_number,
+                await self._draft_lifecycle_message(
+                    reservation=res,
                     body=body,
-                    guest_id=guest.id,
-                    reservation_id=res.id,
-                    is_auto_response=True,
-                    ai_confidence=0.95,
+                    automation_key="post_stay_followup",
+                    reasoning=(
+                        f"Drafted Post-Stay Follow-Up SMS because Reservation #{res.confirmation_code} "
+                        f"checked out 2 days ago."
+                    ),
                 )
 
                 res.post_stay_followup_sent = True

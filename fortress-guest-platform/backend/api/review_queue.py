@@ -21,9 +21,8 @@ from sqlalchemy.orm import selectinload
 import structlog
 
 from backend.core.database import get_db
-from backend.models import AgentResponseQueue, Message, Guest
+from backend.models import AgentResponseQueue, ApprovalStatus, Message, Guest
 from backend.services.message_service import MessageService
-from backend.integrations.twilio_client import TwilioClient
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -298,8 +297,7 @@ async def _send_response(
         raise HTTPException(400, "Original inbound message not found")
 
     to_phone = inbound.phone_from
-    twilio = TwilioClient()
-    service = MessageService(db, twilio)
+    service = MessageService(db)
 
     sent_msg = await service.send_sms(
         to_phone=to_phone,
@@ -308,6 +306,11 @@ async def _send_response(
         reservation_id=entry.reservation_id,
         is_auto_response=False,
         ai_confidence=entry.confidence,
+        approval_status=ApprovalStatus.approved,
+        agent_reasoning=(
+            f"Approved review-queue response for queue entry {entry.id} "
+            f"covering inbound message {entry.message_id}."
+        ),
     )
 
     # Mark the inbound message as reviewed

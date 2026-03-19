@@ -20,3 +20,35 @@ Node 5, The Chronicler, MUST append an entry before Node 4 is allowed to commit 
 - **Execution:** Created `docs/intelligence/agent_telemetry.md`; updated `.cursor/rules/002-sovereign-constitution.mdc`.
 - **Friction:** `git checkout main` was blocked because `main` is already checked out in another worktree. The first Crucible attempt also failed because `eslint` was unavailable before installing frontend dependencies. After `npm ci`, `npm run lint` surfaced existing repo-wide frontend issues outside this change set, including `@typescript-eslint/no-explicit-any`, `react-hooks/set-state-in-effect`, `react/no-unescaped-entities`, `@next/next/no-html-link-for-pages`, and `react-hooks/refs`. `npm run build` completed successfully.
 - **Resolution:** Branched directly from `main` into `infra/agent-telemetry` inside this worktree, bootstrapped the frontend with `npm ci`, and treated the lint errors as pre-existing Crucible findings rather than telemetry-regression defects because this change only touched documentation and rules. The learning outcome is that Node 5 should record both environment bootstrap issues and unrelated validation debt before Node 4 commits.
+
+### Entry 003 - 2026-03-19 - HITL Cognitive Wiring
+- **Objective:** Wire a strict Human-In-The-Loop state machine into backend guest messaging so the AI can draft and queue outbound SMS but cannot dispatch to Twilio without explicit approval.
+- **Execution:** Updated `fortress-guest-platform/backend/models/message.py`; `fortress-guest-platform/backend/models/__init__.py`; `fortress-guest-platform/backend/integrations/twilio_client.py`; `fortress-guest-platform/backend/services/message_service.py`; `fortress-guest-platform/backend/services/lifecycle_engine.py`; `fortress-guest-platform/backend/services/scheduler_service.py`; `fortress-guest-platform/backend/services/operations_service.py`; `fortress-guest-platform/backend/services/housekeeping_agent.py`; `fortress-guest-platform/backend/services/agentic_orchestrator.py`; `fortress-guest-platform/backend/api/webhooks.py`; `fortress-guest-platform/backend/api/messages.py`; `fortress-guest-platform/backend/api/review_queue.py`; `fortress-guest-platform/backend/api/damage_claims.py`; created `fortress-guest-platform/backend/scripts/alter_messages_hitl.sql`.
+- **Friction:** `Base.metadata.create_all()` could not mutate the existing PostgreSQL `messages` table, so the new HITL columns required a raw migration. The first migration attempt failed because the default `fgp_app` password in backend config did not authenticate against the host Postgres instance. A full-backend `pyright` pass reported 1449 existing errors, and a narrowed pass over the touched files still reported 274 errors concentrated in pre-existing SQLAlchemy typing debt across `api/damage_claims.py`, `api/messages.py`, `api/review_queue.py`, and `api/webhooks.py`. `python3 -m compileall fortress-guest-platform/backend` passed, and `python3 fortress-guest-platform/backend/scripts/verify_god_heads.py` passed.
+- **Resolution:** Enforced the choke point by changing `TwilioClient.send_sms()` to require a persisted `Message` object whose `approval_status` is `approved`, then rerouted automated guest messaging to `MessageService.create_draft_sms()` so lifecycle and orchestrator flows now stop at `pending_approval`. Preserved data with an inline Postgres migration executed as the local database superuser:
+
+```sql
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type
+        WHERE typname = 'message_approval_status'
+    ) THEN
+        CREATE TYPE message_approval_status AS ENUM (
+            'pending_approval',
+            'approved',
+            'rejected'
+        );
+    END IF;
+END
+$$;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS approval_status message_approval_status;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS agent_reasoning TEXT;
+UPDATE public.messages SET approval_status = 'approved' WHERE approval_status IS NULL;
+ALTER TABLE public.messages ALTER COLUMN approval_status SET DEFAULT 'approved';
+ALTER TABLE public.messages ALTER COLUMN approval_status SET NOT NULL;
+CREATE INDEX IF NOT EXISTS ix_messages_approval_status ON public.messages (approval_status);
+```
+
+The learning outcome is that code-first schema management on this host still needs explicit SQL for live tables, and strict HITL enforcement must live at the Twilio wrapper boundary so no downstream agent can fire raw text payloads around the database gate.

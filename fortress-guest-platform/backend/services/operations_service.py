@@ -18,8 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from backend.core.config import settings
+from backend.models import ApprovalStatus
 from backend.models import WorkOrder, Property, Guest
-from backend.integrations.twilio_client import TwilioClient
+from backend.services.message_service import MessageService
 
 logger = structlog.get_logger()
 
@@ -38,7 +39,7 @@ class OperationsService:
     
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.twilio = TwilioClient()
+        self.message_service = MessageService(db)
         self.log = logger.bind(service="operations")
     
     async def create_work_order(
@@ -128,13 +129,20 @@ class OperationsService:
                 prop_name = prop.name if prop else "your cabin"
                 
                 try:
-                    await self.twilio.send_sms(
-                        to=guest.phone_number,
+                    await self.message_service.send_sms(
+                        to_phone=guest.phone_number,
                         body=(
                             f"Good news! The issue you reported at {prop_name} "
                             f"has been resolved. ✅\n\n"
                             f"{resolution_notes or 'Please let us know if you need anything else!'}"
-                        )
+                        ),
+                        guest_id=guest.id,
+                        reservation_id=work_order.reservation_id,
+                        approval_status=ApprovalStatus.approved,
+                        agent_reasoning=(
+                            f"Approved guest resolution SMS for Work Order {work_order.ticket_number} "
+                            f"after status changed to completed."
+                        ),
                     )
                 except Exception as e:
                     self.log.error("guest_notification_failed", error=str(e))
@@ -203,15 +211,20 @@ class OperationsService:
         prop_name = prop.name if prop else "Unknown"
         
         try:
-            await self.twilio.send_sms(
-                to=settings.staff_notification_phone,
+            await self.message_service.send_sms(
+                to_phone=settings.staff_notification_phone,
                 body=(
                     f"🚨 {work_order.priority.upper()} Work Order\n\n"
                     f"Property: {prop_name}\n"
                     f"Issue: {work_order.title[:100]}\n"
                     f"Category: {work_order.category}\n"
                     f"Ticket: {work_order.ticket_number}"
-                )
+                ),
+                reservation_id=work_order.reservation_id,
+                approval_status=ApprovalStatus.approved,
+                agent_reasoning=(
+                    f"Approved staff alert SMS for urgent Work Order {work_order.ticket_number}."
+                ),
             )
             self.log.info("staff_notified", ticket=work_order.ticket_number)
         except Exception as e:
@@ -223,15 +236,21 @@ class OperationsService:
         prop_name = prop.name if prop else "your cabin"
         
         try:
-            await self.twilio.send_sms(
-                to=guest.phone_number,
+            await self.message_service.send_sms(
+                to_phone=guest.phone_number,
                 body=(
                     f"Hi {guest.first_name or 'there'}! We received your report "
                     f"about an issue at {prop_name}. 📋\n\n"
                     f"Ticket: {work_order.ticket_number}\n"
                     f"Priority: {work_order.priority.capitalize()}\n\n"
                     f"Our team is on it! We'll keep you updated."
-                )
+                ),
+                guest_id=guest.id,
+                reservation_id=work_order.reservation_id,
+                approval_status=ApprovalStatus.approved,
+                agent_reasoning=(
+                    f"Approved guest acknowledgment SMS for Work Order {work_order.ticket_number}."
+                ),
             )
         except Exception as e:
             self.log.error("guest_acknowledgment_failed", error=str(e))

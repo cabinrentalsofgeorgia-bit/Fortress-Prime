@@ -82,17 +82,19 @@ class SchedulerService:
                 scheduled_msg.status = "processing"
                 await self.db.commit()
 
-                message = await self.message_service.send_sms(
+                message = await self.message_service.create_draft_sms(
                     to_phone=scheduled_msg.phone_to,
                     body=scheduled_msg.body,
                     guest_id=scheduled_msg.guest_id,
                     reservation_id=scheduled_msg.reservation_id,
-                    is_auto_response=True,
+                    agent_reasoning=(
+                        f"Drafted scheduled SMS from ScheduledMessage #{scheduled_msg.id} "
+                        f"because its send window opened at {scheduled_msg.scheduled_for.isoformat()}."
+                    ),
                     ai_confidence=0.90,
                 )
 
-                scheduled_msg.status = "sent"
-                scheduled_msg.sent_at = now
+                scheduled_msg.status = "drafted"
                 scheduled_msg.message_id = message.id
 
                 if scheduled_msg.template_id:

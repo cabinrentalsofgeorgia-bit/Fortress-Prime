@@ -469,9 +469,20 @@ async def send_claim_response(
     response_text = claim.final_response or claim.legal_draft
 
     if via in ("sms", "both") and guest.phone_number:
+        from backend.models import ApprovalStatus
         from backend.services.message_service import MessageService
-        svc = MessageService()
-        await svc.send_sms(guest.phone_number, response_text[:1600])
+
+        svc = MessageService(db)
+        await svc.send_sms(
+            to_phone=guest.phone_number,
+            body=response_text[:1600],
+            guest_id=guest.id,
+            reservation_id=claim.reservation_id,
+            approval_status=ApprovalStatus.approved,
+            agent_reasoning=(
+                f"Approved damage-claim SMS dispatch for claim {claim.claim_number}."
+            ),
+        )
 
     claim.sent_at = datetime.utcnow()
     claim.sent_via = via

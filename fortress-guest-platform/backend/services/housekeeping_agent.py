@@ -19,11 +19,13 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models import ApprovalStatus
 from backend.models.property import Property
 from backend.models.reservation import Reservation
 from backend.models.guest import Guest
 from backend.models.staff import StaffUser
 from backend.services.housekeeping_service import HousekeepingTask
+from backend.services.message_service import MessageService
 
 logger = structlog.get_logger()
 
@@ -218,11 +220,16 @@ async def dispatch_turnover(
     sms_sent = False
     if evaluation.get("assigned_phone") and evaluation.get("dispatch_message"):
         try:
-            from backend.integrations.twilio_client import TwilioClient
-            twilio = TwilioClient()
-            await twilio.send_sms(
-                to=evaluation["assigned_phone"],
+            message_service = MessageService(db)
+            await message_service.send_sms(
+                to_phone=evaluation["assigned_phone"],
                 body=evaluation["dispatch_message"],
+                reservation_id=reservation_id,
+                approval_status=ApprovalStatus.approved,
+                agent_reasoning=(
+                    f"Approved cleaner dispatch SMS for housekeeping task {task.id} "
+                    f"at {evaluation['property_name']}."
+                ),
             )
             sms_sent = True
             logger.info(

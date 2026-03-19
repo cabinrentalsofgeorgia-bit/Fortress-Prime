@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import structlog
 
-from backend.models import Message, Guest, Reservation
+from backend.models import ApprovalStatus, Message, Guest, Reservation
 from backend.core.config import settings
 from backend.integrations.twilio_client import TwilioClient
 
@@ -33,6 +33,146 @@ class MessageService:
         self.db = db
         self.twilio = twilio_client or TwilioClient()
         self.log = logger.bind(service="message_service")
+
+    @staticmethod
+    def _normalize_phone_number(phone_number: str) -> str:
+        import re
+
+        clean_phone = re.sub(r"[^\d+]", "", phone_number or "")
+        if clean_phone and not clean_phone.startswith("+"):
+            if len(clean_phone) == 10:
+                clean_phone = "+1" + clean_phone
+            elif len(clean_phone) == 11 and clean_phone.startswith("1"):
+                clean_phone = "+" + clean_phone
+        return clean_phone
+
+    @staticmethod
+    def _serialize_provider_payload(result: Optional[Dict]) -> Dict:
+        safe_result: Dict = {}
+        for k, v in (result or {}).items():
+            if isinstance(v, datetime):
+                safe_result[k] = v.isoformat()
+            elif hasattr(v, "isoformat"):
+                safe_result[k] = v.isoformat()
+            else:
+                try:
+                    import json
+
+                    json.dumps(v)
+                    safe_result[k] = v
+                except (TypeError, ValueError):
+                    safe_result[k] = str(v)
+        return safe_result
+
+    @staticmethod
+    def _approval_value(status: ApprovalStatus | str) -> str:
+        return status.value if isinstance(status, ApprovalStatus) else str(status)
+
+    async def _create_outbound_message(
+        self,
+        *,
+        to_phone: str,
+        body: str,
+        guest_id: Optional[UUID] = None,
+        reservation_id: Optional[UUID] = None,
+        is_auto_response: bool = False,
+        ai_confidence: Optional[float] = None,
+        approval_status: ApprovalStatus | str = ApprovalStatus.pending_approval,
+        agent_reasoning: Optional[str] = None,
+        intent: Optional[str] = None,
+        requires_human_review: bool = False,
+        status: str = "queued",
+    ) -> Message:
+        message = Message(
+            direction="outbound",
+            phone_from=settings.twilio_phone_number,
+            phone_to=self._normalize_phone_number(to_phone),
+            body=body,
+            status=status,
+            guest_id=guest_id,
+            reservation_id=reservation_id,
+            is_auto_response=is_auto_response,
+            ai_confidence=ai_confidence,
+            approval_status=self._approval_value(approval_status),
+            agent_reasoning=agent_reasoning,
+            intent=intent,
+            requires_human_review=requires_human_review,
+            provider="twilio",
+            trace_id=uuid4(),
+        )
+        self.db.add(message)
+        await self.db.commit()
+        await self.db.refresh(message)
+        return message
+
+    async def create_draft_sms(
+        self,
+        *,
+        to_phone: str,
+        body: str,
+        guest_id: Optional[UUID] = None,
+        reservation_id: Optional[UUID] = None,
+        agent_reasoning: str,
+        ai_confidence: Optional[float] = None,
+        intent: Optional[str] = None,
+    ) -> Message:
+        draft = await self._create_outbound_message(
+            to_phone=to_phone,
+            body=body,
+            guest_id=guest_id,
+            reservation_id=reservation_id,
+            is_auto_response=True,
+            ai_confidence=ai_confidence,
+            approval_status=ApprovalStatus.pending_approval,
+            agent_reasoning=agent_reasoning,
+            intent=intent,
+            requires_human_review=True,
+            status="draft",
+        )
+        self.log.info(
+            "sms_draft_created",
+            message_id=str(draft.id),
+            reservation_id=str(reservation_id) if reservation_id else None,
+            guest_id=str(guest_id) if guest_id else None,
+        )
+        return draft
+
+    async def dispatch_message(self, message: Message) -> Message:
+        approval_status = self._approval_value(message.approval_status)
+        if approval_status != ApprovalStatus.approved.value:
+            raise PermissionError(
+                f"Message {message.id} is not approved for dispatch: {approval_status}"
+            )
+
+        log = self.log.bind(trace_id=str(message.trace_id), message_id=str(message.id))
+        log.info("dispatching_sms", to_phone=message.phone_to, body_length=len(message.body or ""))
+
+        try:
+            result = await self.twilio.send_sms(
+                message=message,
+                status_callback=f"{settings.twilio_status_callback_url}",
+            )
+            safe_result = self._serialize_provider_payload(result)
+
+            message.external_id = result.get("sid", "")
+            message.status = "sent"
+            message.sent_at = datetime.utcnow()
+            message.provider = "twilio"
+            message.cost_amount = float(result["price"]) if result.get("price") else None
+            message.num_segments = int(result.get("num_segments") or 1)
+            message.extra_data = safe_result
+
+            await self.db.commit()
+            await self.db.refresh(message)
+            log.info("sms_sent_successfully")
+            return message
+        except Exception as e:
+            log.error("sms_send_failed", error=str(e))
+            message.status = "failed"
+            message.error_message = str(e)
+            await self.db.commit()
+            await self.db.refresh(message)
+            raise
     
     async def send_sms(
         self,
@@ -42,6 +182,9 @@ class MessageService:
         reservation_id: Optional[UUID] = None,
         is_auto_response: bool = False,
         ai_confidence: Optional[float] = None,
+        approval_status: ApprovalStatus | str = ApprovalStatus.pending_approval,
+        agent_reasoning: Optional[str] = None,
+        intent: Optional[str] = None,
     ) -> Message:
         """
         Send SMS with full tracking
@@ -52,92 +195,27 @@ class MessageService:
         - Delivery status webhooks
         - Retry logic with exponential backoff
         """
-        trace_id = uuid4()
-
-        # Rule 6: Sanitize phone number to strict E.164
-        import re
-        clean_phone = re.sub(r"[^\d+]", "", to_phone or "")
-        if clean_phone and not clean_phone.startswith("+"):
-            if len(clean_phone) == 10:
-                clean_phone = "+1" + clean_phone
-            elif len(clean_phone) == 11 and clean_phone.startswith("1"):
-                clean_phone = "+" + clean_phone
-        to_phone = clean_phone
-
-        log = self.log.bind(trace_id=str(trace_id), to_phone=to_phone)
-        log.info("sending_sms", body_length=len(body))
-        
-        # Send via Twilio
-        try:
-            result = await self.twilio.send_sms(
-                to=to_phone,
-                body=body,
-                status_callback=f"{settings.twilio_status_callback_url}"
+        approval_value = self._approval_value(approval_status)
+        if approval_value != ApprovalStatus.approved.value:
+            raise PermissionError(
+                "Immediate SMS dispatch requires approval_status='approved'. "
+                "Use create_draft_sms() for AI-authored drafts."
             )
-            
-            # Sanitize Twilio result for JSONB storage (Rule 6: datetime objects crash JSON serialization)
-            safe_result = {}
-            for k, v in (result or {}).items():
-                if isinstance(v, datetime):
-                    safe_result[k] = v.isoformat()
-                elif hasattr(v, 'isoformat'):
-                    safe_result[k] = v.isoformat()
-                else:
-                    try:
-                        import json
-                        json.dumps(v)
-                        safe_result[k] = v
-                    except (TypeError, ValueError):
-                        safe_result[k] = str(v)
 
-            # Create message record
-            message = Message(
-                external_id=result.get('sid', ''),
-                direction="outbound",
-                phone_from=settings.twilio_phone_number,
-                phone_to=to_phone,
-                body=body,
-                status="sent",
-                sent_at=datetime.utcnow(),
-                guest_id=guest_id,
-                reservation_id=reservation_id,
-                is_auto_response=is_auto_response,
-                ai_confidence=ai_confidence,
-                provider="twilio",
-                cost_amount=float(result['price']) if result.get('price') else None,
-                num_segments=int(result.get('num_segments') or 1),
-                trace_id=trace_id,
-                extra_data=safe_result,
-            )
-            
-            self.db.add(message)
-            await self.db.commit()
-            await self.db.refresh(message)
-            
-            log.info("sms_sent_successfully", message_id=str(message.id))
-            
-            return message
-            
-        except Exception as e:
-            log.error("sms_send_failed", error=str(e))
-            
-            # Create failed message record
-            message = Message(
-                direction="outbound",
-                phone_from=settings.twilio_phone_number,
-                phone_to=to_phone,
-                body=body,
-                status="failed",
-                error_message=str(e),
-                guest_id=guest_id,
-                reservation_id=reservation_id,
-                trace_id=trace_id,
-            )
-            
-            self.db.add(message)
-            await self.db.commit()
-            
-            raise
+        message = await self._create_outbound_message(
+            to_phone=to_phone,
+            body=body,
+            guest_id=guest_id,
+            reservation_id=reservation_id,
+            is_auto_response=is_auto_response,
+            ai_confidence=ai_confidence,
+            approval_status=ApprovalStatus.approved,
+            agent_reasoning=agent_reasoning,
+            intent=intent,
+            requires_human_review=False,
+            status="queued",
+        )
+        return await self.dispatch_message(message)
     
     async def receive_sms(
         self,

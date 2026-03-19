@@ -19,7 +19,7 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.websocket import emit_new_message
 from backend.services.message_service import MessageService
-from backend.models import Message
+from backend.models import ApprovalStatus, Message
 
 _log = logging.getLogger("messages_api")
 
@@ -108,6 +108,8 @@ async def send_message(
             body=request.body,
             guest_id=request.guest_id,
             reservation_id=request.reservation_id,
+            approval_status=ApprovalStatus.approved,
+            agent_reasoning="Approved manual SMS dispatch from Messages API.",
         )
 
         try:
@@ -340,6 +342,8 @@ async def bulk_send_messages(
                 body=msg_request.body,
                 guest_id=msg_request.guest_id,
                 reservation_id=msg_request.reservation_id,
+                approval_status=ApprovalStatus.approved,
+                agent_reasoning="Approved bulk SMS dispatch from Messages API.",
             )
             results.append({
                 "to": msg_request.to_phone,

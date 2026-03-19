@@ -44,6 +44,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.models import (
+    ApprovalStatus,
     Message,
     Guest,
     Reservation,
@@ -52,8 +53,8 @@ from backend.models import (
     StaffUser,
 )
 from backend.core.config import settings
-from backend.integrations.twilio_client import TwilioClient
 from backend.services.knowledge_retriever import semantic_search, format_context
+from backend.services.message_service import MessageService
 from backend.services.dgx_tools import (
     get_anthropic_tools,
     get_openai_tools,
@@ -376,7 +377,6 @@ class AgenticOrchestrator:
 
     def __init__(self):
         self.log = logger.bind(service="agentic_orchestrator")
-        self.twilio = TwilioClient()
 
     # ──────────────────────────────────────────────────────────────────────
     #  1. process_incoming_message  — THE MAIN DECISION LOOP
@@ -1115,7 +1115,16 @@ class AgenticOrchestrator:
 
         for phone in phones_to_notify:
             try:
-                await self.twilio.send_sms(to=phone, body=alert_body)
+                service = MessageService(db)
+                await service.send_sms(
+                    to_phone=phone,
+                    body=alert_body,
+                    approval_status=ApprovalStatus.approved,
+                    agent_reasoning=(
+                        f"Approved staff escalation SMS for inbound message {message.id} "
+                        f"with priority {priority}."
+                    ),
+                )
                 notified_count += 1
             except Exception as exc:
                 log.error("staff_notification_failed", phone=phone, error=str(exc))
@@ -1979,52 +1988,20 @@ class AgenticOrchestrator:
         body: str,
         automation_type: str,
     ) -> Message:
-        """Send an automated SMS and persist the Message record."""
-        trace_id = uuid4()
-
-        try:
-            result = await self.twilio.send_sms(
-                to=guest.phone_number,
-                body=body,
-                status_callback=settings.twilio_status_callback_url or None,
-            )
-            status = "sent"
-            external_id = result.get("sid")
-            error_msg = None
-        except Exception as exc:
-            status = "failed"
-            external_id = None
-            error_msg = str(exc)
-            self.log.error(
-                "automated_sms_failed",
-                automation=automation_type,
-                guest_id=str(guest.id),
-                error=str(exc),
-            )
-
-        msg = Message(
-            external_id=external_id,
-            direction="outbound",
-            phone_from=settings.twilio_phone_number,
-            phone_to=guest.phone_number,
+        """Create an approved-blocked draft SMS for human review."""
+        service = MessageService(db)
+        return await service.create_draft_sms(
+            to_phone=guest.phone_number,
             body=body,
-            status=status,
-            sent_at=datetime.utcnow() if status == "sent" else None,
             guest_id=guest.id,
             reservation_id=reservation.id,
-            is_auto_response=True,
+            agent_reasoning=(
+                f"Drafted {automation_type} SMS because reservation {reservation.confirmation_code} "
+                f"matched the automated guest lifecycle trigger."
+            ),
             ai_confidence=0.95,
             intent=automation_type,
-            provider="twilio",
-            trace_id=trace_id,
-            error_message=error_msg,
         )
-        db.add(msg)
-
-        # Update guest message count
-        guest.total_messages_sent = (guest.total_messages_sent or 0) + 1
-
-        return msg
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

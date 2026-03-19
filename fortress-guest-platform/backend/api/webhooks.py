@@ -238,16 +238,39 @@ async def handle_incoming_sms(
 
         # ── 4. Act on the decision ──
         if decision.should_auto_send and decision.response_text:
-            sent_msg = await service.send_sms(
+            draft = await service.create_draft_sms(
                 to_phone=from_phone,
                 body=decision.response_text,
                 guest_id=guest.id if guest else None,
                 reservation_id=message.reservation_id,
-                is_auto_response=True,
+                agent_reasoning=(
+                    f"Drafted AI reply for inbound message {message.id} after "
+                    f"AgenticOrchestrator classified action '{decision.action}'."
+                ),
                 ai_confidence=decision.confidence,
+                intent=decision.intent.value if decision.intent else None,
             )
+            queue_entry = AgentResponseQueue(
+                message_id=message.id,
+                guest_id=guest.id if guest else None,
+                reservation_id=message.reservation_id,
+                intent=decision.intent.value if decision.intent else None,
+                sentiment_label=decision.sentiment.label if decision.sentiment else None,
+                sentiment_score=decision.sentiment.score if decision.sentiment else None,
+                urgency_level=decision.sentiment.urgency_level if decision.sentiment else 0,
+                proposed_response=decision.response_text,
+                confidence=decision.confidence,
+                action=decision.action,
+                escalation_reason="HITL enforced: AI auto-send blocked pending human approval",
+                decision_metadata={
+                    **(decision.metadata or {}),
+                    "blocked_auto_send": True,
+                    "draft_message_id": str(draft.id),
+                },
+            )
+            db.add(queue_entry)
             log.info(
-                "auto_reply_sent",
+                "auto_reply_drafted_for_review",
                 confidence=round(decision.confidence, 3),
                 action=decision.action,
             )

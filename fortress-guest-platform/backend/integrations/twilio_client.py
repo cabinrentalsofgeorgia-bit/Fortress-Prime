@@ -16,6 +16,7 @@ from tenacity import (
 )
 
 from backend.core.config import settings
+from backend.models.message import ApprovalStatus, Message
 
 logger = structlog.get_logger()
 
@@ -47,8 +48,7 @@ class TwilioClient:
     )
     async def send_sms(
         self,
-        to: str,
-        body: str,
+        message: Message,
         media_urls: Optional[List[str]] = None,
         status_callback: Optional[str] = None,
         max_price: Optional[float] = None
@@ -62,7 +62,27 @@ class TwilioClient:
         - Delivery tracking
         - Media support (MMS)
         """
-        self.log.info("sending_twilio_sms", to=to, body_length=len(body))
+        approval_status = (
+            message.approval_status.value
+            if isinstance(message.approval_status, ApprovalStatus)
+            else str(message.approval_status)
+        )
+        if approval_status != ApprovalStatus.approved.value:
+            raise PermissionError(
+                f"Twilio dispatch blocked for message {message.id}: approval_status={approval_status}"
+            )
+
+        if message.direction != "outbound":
+            raise ValueError(f"Twilio dispatch requires outbound messages, got {message.direction}")
+
+        to = message.phone_to
+        body = message.body
+        self.log.info(
+            "sending_twilio_sms",
+            message_id=str(message.id),
+            to=to,
+            body_length=len(body),
+        )
         
         try:
             # Prepare message parameters
@@ -261,7 +281,7 @@ class TwilioClient:
     
     async def send_bulk_sms(
         self,
-        recipients: List[Dict],  # [{"to": "+1...", "body": "..."}]
+        messages: List[Message],
         max_parallel: int = 10
     ) -> List[Dict]:
         """
@@ -272,52 +292,50 @@ class TwilioClient:
         - Rate limit protection
         - Batch results
         """
-        self.log.info("sending_bulk_sms", count=len(recipients))
+        self.log.info("sending_bulk_sms", count=len(messages))
         
         results = []
         
         # Process in batches to avoid rate limits
-        for i in range(0, len(recipients), max_parallel):
-            batch = recipients[i:i + max_parallel]
+        for i in range(0, len(messages), max_parallel):
+            batch = messages[i:i + max_parallel]
             
             # Send batch in parallel
             tasks = [
                 self.send_sms(
-                    to=r["to"],
-                    body=r["body"],
-                    status_callback=r.get("status_callback")
+                    message=msg
                 )
-                for r in batch
+                for msg in batch
             ]
             
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
             
             # Process results
-            for recipient, result in zip(batch, batch_results):
+            for queued_message, result in zip(batch, batch_results):
                 if isinstance(result, Exception):
                     results.append({
-                        "to": recipient["to"],
+                        "to": queued_message.phone_to,
                         "success": False,
                         "error": str(result)
                     })
                 else:
                     results.append({
-                        "to": recipient["to"],
+                        "to": queued_message.phone_to,
                         "success": True,
                         "sid": result["sid"],
                         "status": result["status"]
                     })
             
             # Rate limit: wait between batches
-            if i + max_parallel < len(recipients):
+            if i + max_parallel < len(messages):
                 await asyncio.sleep(1)
         
         success_count = sum(1 for r in results if r["success"])
         self.log.info(
             "bulk_sms_complete",
-            total=len(recipients),
+            total=len(messages),
             success=success_count,
-            failed=len(recipients) - success_count
+            failed=len(messages) - success_count
         )
         
         return results

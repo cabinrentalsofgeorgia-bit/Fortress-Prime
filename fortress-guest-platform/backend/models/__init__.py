@@ -5,7 +5,7 @@ Enterprise-grade vacation rental management system
 from backend.models.guest import Guest
 from backend.models.property import Property
 from backend.models.reservation import Reservation
-from backend.models.message import Message, MessageTemplate, ScheduledMessage
+from backend.models.message import ApprovalStatus, Message, MessageTemplate, ScheduledMessage
 from backend.models.workorder import WorkOrder
 from backend.models.guestbook import GuestbookGuide, Extra, ExtraOrder
 from backend.models.analytics import AnalyticsEvent
@@ -62,6 +62,7 @@ __all__ = [
     "Reservation",
     # Communication
     "Message",
+    "ApprovalStatus",
     "MessageTemplate",
     "ScheduledMessage",
     # Operations
