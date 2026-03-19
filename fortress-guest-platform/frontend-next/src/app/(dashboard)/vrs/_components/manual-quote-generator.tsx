@@ -37,6 +37,11 @@ type QuoteResponse = {
   pricing_source: string;
 };
 
+type QuoteDispatchResponse = {
+  status: string;
+  guest_email: string;
+};
+
 const DEFAULT_GUEST_COUNT = "2";
 
 function buildDefaultDate(daysFromNow: number) {
@@ -61,6 +66,8 @@ export function ManualQuoteGenerator() {
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [guestEmail, setGuestEmail] = useState("");
+  const [isSendingQuote, setIsSendingQuote] = useState(false);
 
   const sortedProperties = useMemo(
     () => [...(properties ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
@@ -128,6 +135,39 @@ export function ManualQuoteGenerator() {
       toast.success("Checkout link copied");
     } catch {
       toast.error("Failed to copy checkout link");
+    }
+  };
+
+  const handleSendQuote = async () => {
+    if (!quote) {
+      return;
+    }
+
+    if (!guestEmail.trim()) {
+      toast.error("Enter a guest email address before dispatching the quote.");
+      return;
+    }
+
+    setIsSendingQuote(true);
+    try {
+      const absoluteUrl = new URL(quote.checkout_url, window.location.origin).toString();
+      await api.post<QuoteDispatchResponse>("/api/quotes/send", {
+        guest_email: guestEmail.trim(),
+        property_name: quote.property_name,
+        total_amount: quote.total_amount,
+        checkout_url: absoluteUrl,
+      });
+      toast.success(`Quote emailed to ${guestEmail.trim()}`);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to send quote email.";
+      toast.error(message);
+    } finally {
+      setIsSendingQuote(false);
     }
   };
 
@@ -272,10 +312,32 @@ export function ManualQuoteGenerator() {
             )}
           </CardContent>
           <CardFooter className="border-t">
-            <Button type="button" variant="outline" disabled={!quote} onClick={handleCopyCheckoutLink}>
-              <Copy className="h-4 w-4" />
-              Copy Checkout Link
-            </Button>
+            <div className="flex w-full flex-col gap-3">
+              <Button type="button" variant="outline" disabled={!quote} onClick={handleCopyCheckoutLink}>
+                <Copy className="h-4 w-4" />
+                Copy Checkout Link
+              </Button>
+
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                <Input
+                  type="email"
+                  placeholder="Guest Email Address"
+                  value={guestEmail}
+                  onChange={(event) => setGuestEmail(event.target.value)}
+                  disabled={!quote || isSendingQuote}
+                />
+                <Button type="button" disabled={!quote || isSendingQuote || !guestEmail.trim()} onClick={handleSendQuote}>
+                  {isSendingQuote ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending Quote...
+                    </>
+                  ) : (
+                    "Send Quote to Guest"
+                  )}
+                </Button>
+              </div>
+            </div>
           </CardFooter>
         </Card>
       </div>
