@@ -43,3 +43,4 @@ full_index.txt
 *.pem
 id_*
 .e2e-venv/
+.vercel
