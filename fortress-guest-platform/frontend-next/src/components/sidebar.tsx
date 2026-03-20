@@ -30,6 +30,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  TrendingUp,
   Users,
   Wrench,
 } from "lucide-react";
@@ -44,7 +45,7 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
   {
     heading: "Overview",
     items: [
-      { label: "Dashboard", href: "/", icon: Home },
+      { label: "Dashboard", href: "/command", icon: Home },
       { label: "Analytics", href: "/analytics", icon: BarChart3 },
     ],
   },
@@ -66,6 +67,7 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
     items: [
       { label: "AI Engine", href: "/ai-engine", icon: Brain },
       { label: "Intelligence", href: "/intelligence", icon: Sparkles },
+      { label: "God Head Queue", href: "/seo/review", icon: Sparkles },
       { label: "Market Canary", href: "/intelligence/market-shadow", icon: LineChart },
       { label: "Dispatch Radar", href: "/vrs/dispatch", icon: Radio },
       { label: "Reactivation Hunter", href: "/vrs/hunter", icon: Crosshair },
@@ -82,6 +84,12 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
       { label: "Guestbooks", href: "/guestbooks", icon: Inbox },
       { label: "Legal", href: "/legal", icon: Gavel },
       { label: "Owner Portal", href: "/owner", icon: Users },
+    ],
+  },
+  {
+    heading: "Growth",
+    items: [
+      { label: "Growth Deck", href: "/growth", icon: TrendingUp },
     ],
   },
   {
@@ -110,7 +118,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className="flex h-16 items-center justify-between border-b px-4">
         {!collapsed && (
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/command" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
               F
             </div>
@@ -144,8 +152,8 @@ export function Sidebar() {
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const active =
-                  item.href === "/"
-                    ? pathname === "/"
+                  item.href === "/command"
+                    ? pathname === "/command"
                     : pathname.startsWith(item.href);
                 const linkClasses = cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",

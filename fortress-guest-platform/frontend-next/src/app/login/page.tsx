@@ -19,11 +19,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && isStorefrontHost(window.location.hostname)) {
-      router.replace("/book");
+      router.replace("/");
       return;
     }
 
-    if (isAuthenticated()) router.replace("/");
+    if (isAuthenticated()) router.replace("/command");
   }, [router]);
 
   async function handleSubmit(e: FormEvent) {
@@ -54,7 +54,7 @@ export default function LoginPage() {
       storeUser(verifiedUser);
       setUser(verifiedUser);
 
-      router.replace("/");
+      router.replace("/command");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

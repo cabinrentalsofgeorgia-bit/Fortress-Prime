@@ -21,7 +21,7 @@ export default function CommandCenterPage() {
               Fortress Prime
             </CardTitle>
             <CardDescription>
-              God Mode — live Swarm telemetry, treasury dashboard, and Iron Dome
+              God Mode - live Swarm telemetry, treasury dashboard, and Iron Dome
               ledger. Real-time Redpanda event stream.
             </CardDescription>
           </CardHeader>

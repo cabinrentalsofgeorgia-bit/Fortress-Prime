@@ -31,7 +31,7 @@ export default function DashboardError({
       </div>
       <div className="flex gap-3">
         <Button onClick={reset}>Try again</Button>
-        <Button variant="outline" onClick={() => (window.location.href = "/")}>
+        <Button variant="outline" onClick={() => (window.location.href = "/command")}>
           Go to Dashboard
         </Button>
       </div>

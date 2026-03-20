@@ -4,17 +4,23 @@ Allows guests to search, quote, book, and pay without OTA commissions.
 """
 
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from backend.core.database import get_db
 from backend.integrations.stripe_payments import StripePayments
+from backend.models.guest import Guest
+from backend.models.property import Property
+from backend.services.openshell_audit import record_audit_event
+from backend.services.reservation_engine import ReservationEngine
 
 router = APIRouter()
 stripe_payments = StripePayments()
+reservation_engine = ReservationEngine()
 
 
 # ── Request/Response Models ──
@@ -66,46 +72,52 @@ async def check_availability(
     if (co - ci).days > 30:
         raise HTTPException(400, "Maximum stay is 30 nights")
 
-    nights = (co - ci).days
-
-    result = await db.execute(
-        text("""
-            SELECT p.id, p.name, p.slug, p.property_type, p.bedrooms,
-                   p.bathrooms, p.max_guests, p.address
-            FROM properties p
-            WHERE p.is_active = true
-            AND p.max_guests >= :guests
-            AND p.id NOT IN (
-                SELECT DISTINCT r.property_id
-                FROM reservations r
-                WHERE r.status IN ('confirmed', 'checked_in')
-                AND r.check_in_date < :check_out
-                AND r.check_out_date > :check_in
-            )
-            ORDER BY p.name
-        """),
-        {"guests": guests, "check_in": ci, "check_out": co},
-    )
+    properties = (
+        await db.execute(
+            select(Property)
+            .where(Property.is_active.is_(True))
+            .where(Property.max_guests >= guests)
+            .order_by(Property.name.asc())
+        )
+    ).scalars().all()
 
     available = []
-    for row in result.fetchall():
-        p = dict(row._mapping)
-        base_rate = 250
-        cleaning_fee = 150
-        service_fee = round(base_rate * nights * 0.03)
-        tax = round(base_rate * nights * 0.08)
-        total = base_rate * nights + cleaning_fee + service_fee + tax
+    for prop in properties:
+        is_available = await reservation_engine.get_availability(db, prop.id, ci, co)
+        if not is_available:
+            continue
+        pricing = await reservation_engine.calculate_pricing(db, prop.id, ci, co, guests=guests)
+        available.append(
+            {
+                "id": str(prop.id),
+                "name": prop.name,
+                "slug": prop.slug,
+                "property_type": prop.property_type,
+                "bedrooms": prop.bedrooms,
+                "bathrooms": float(prop.bathrooms) if prop.bathrooms is not None else None,
+                "max_guests": prop.max_guests,
+                "address": prop.address,
+                "pricing": pricing,
+            }
+        )
 
-        p["pricing"] = {
-            "nightly_rate": base_rate,
-            "nights": nights,
-            "subtotal": base_rate * nights,
-            "cleaning_fee": cleaning_fee,
-            "service_fee": service_fee,
-            "tax": tax,
-            "total": total,
-        }
-        available.append(p)
+    await record_audit_event(
+        action="reservation.availability.read",
+        resource_type="reservation",
+        purpose="direct_booking",
+        tool_name="direct_booking_check_availability",
+        model_route="tool",
+        outcome="success",
+        request_id=None,
+        metadata_json={
+            "check_in": check_in,
+            "check_out": check_out,
+            "guests": guests,
+            "pets": pets,
+            "result_count": len(available),
+        },
+        db=db,
+    )
 
     return {"check_in": check_in, "check_out": check_out, "guests": guests, "results": available}
 
@@ -116,7 +128,7 @@ async def get_booking_property(slug: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         text("""
             SELECT id, name, slug, property_type, bedrooms, bathrooms,
-                   max_guests, address, parking_instructions
+                   max_guests, address, parking_instructions, streamline_property_id
             FROM properties
             WHERE slug = :slug AND is_active = true
         """),
@@ -133,39 +145,29 @@ async def generate_quote(body: AvailabilityQuery, property_id: str, db: AsyncSes
     """Generate a detailed price quote for a specific property and dates."""
     ci = date.fromisoformat(body.check_in)
     co = date.fromisoformat(body.check_out)
-    nights = (co - ci).days
-
-    result = await db.execute(
-        text("SELECT * FROM properties WHERE id = :id AND is_active = true"),
-        {"id": property_id},
-    )
-    prop = result.fetchone()
+    prop = await db.get(Property, property_id)
     if not prop:
         raise HTTPException(404, "Property not found")
-
-    base_rate = 250
-    cleaning_fee = 150
+    pricing = await reservation_engine.calculate_pricing(db, prop.id, ci, co, guests=body.guests)
     pet_fee = 50 if body.pets else 0
-    subtotal = base_rate * nights
-    tax = round(subtotal * 0.08)
-    service_fee = round(subtotal * 0.03)
-    total = subtotal + cleaning_fee + pet_fee + tax + service_fee
+    total = float(pricing["total"]) + pet_fee
 
     return {
         "property_id": property_id,
-        "property_name": prop._mapping["name"],
+        "property_name": prop.name,
         "check_in": body.check_in,
         "check_out": body.check_out,
-        "nights": nights,
+        "nights": pricing["nights"],
         "guests": body.guests,
         "breakdown": {
-            "nightly_rate": base_rate,
-            "subtotal": subtotal,
-            "cleaning_fee": cleaning_fee,
+            "nightly_rate": pricing["base_rate"],
+            "subtotal": pricing["subtotal"],
+            "cleaning_fee": 0,
             "pet_fee": pet_fee,
-            "service_fee": service_fee,
-            "tax": tax,
+            "service_fee": 0,
+            "tax": 0,
             "total": total,
+            "nightly_breakdown": pricing["nightly_breakdown"],
         },
     }
 
@@ -178,91 +180,82 @@ async def create_booking(body: BookingRequest, db: AsyncSession = Depends(get_db
     """
     ci = date.fromisoformat(body.check_in)
     co = date.fromisoformat(body.check_out)
-    nights = (co - ci).days
-
-    prop = await db.execute(
-        text("SELECT * FROM properties WHERE id = :id AND is_active = true"),
-        {"id": body.property_id},
-    )
-    p = prop.fetchone()
-    if not p:
+    prop = await db.get(Property, body.property_id)
+    if not prop or not prop.is_active:
         raise HTTPException(404, "Property not found")
 
-    conflict = await db.execute(
-        text("""
-            SELECT id FROM reservations
-            WHERE property_id = :pid AND status IN ('confirmed', 'checked_in')
-            AND check_in_date < :co AND check_out_date > :ci
-        """),
-        {"pid": body.property_id, "ci": ci, "co": co},
-    )
-    if conflict.fetchone():
+    if not await reservation_engine.get_availability(db, prop.id, ci, co):
         raise HTTPException(409, "Property is not available for these dates")
 
-    base_rate = 250
-    total = base_rate * nights + 150 + round(base_rate * nights * 0.08) + round(base_rate * nights * 0.03)
+    guest = (
+        await db.execute(select(Guest).where(Guest.phone_number == body.guest_phone))
+    ).scalar_one_or_none()
+    if guest is None:
+        guest = Guest(
+            phone_number=body.guest_phone,
+            email=body.guest_email,
+            first_name=body.guest_first_name,
+            last_name=body.guest_last_name,
+        )
+        db.add(guest)
+        await db.flush()
+    else:
+        guest.email = body.guest_email
+        guest.first_name = body.guest_first_name
+        guest.last_name = body.guest_last_name
+
+    pricing = await reservation_engine.calculate_pricing(db, prop.id, ci, co, guests=body.num_guests)
+    total = Decimal(str(pricing["total"]))
     total_cents = int(total * 100)
 
-    guest_result = await db.execute(
-        text("""
-            INSERT INTO guests (phone_number, email, first_name, last_name)
-            VALUES (:phone, :email, :first, :last)
-            ON CONFLICT (phone_number) DO UPDATE SET
-                email = EXCLUDED.email,
-                first_name = EXCLUDED.first_name,
-                last_name = EXCLUDED.last_name
-            RETURNING id
-        """),
+    reservation = await reservation_engine.create_reservation(
+        db,
         {
-            "phone": body.guest_phone,
-            "email": body.guest_email,
-            "first": body.guest_first_name,
-            "last": body.guest_last_name,
+            "guest_id": guest.id,
+            "property_id": prop.id,
+            "check_in_date": ci,
+            "check_out_date": co,
+            "num_guests": body.num_guests,
+            "booking_source": "direct",
+            "total_amount": total,
+            "internal_notes": body.special_requests,
         },
     )
-    guest_id = str(guest_result.fetchone()._mapping["id"])
-
-    import uuid
-    confirmation_code = f"FGP-{uuid.uuid4().hex[:8].upper()}"
-
-    res_result = await db.execute(
-        text("""
-            INSERT INTO reservations (
-                confirmation_code, guest_id, property_id,
-                check_in_date, check_out_date, num_guests,
-                status, booking_source, total_amount, special_requests
-            ) VALUES (
-                :code, :guest_id, :property_id,
-                :ci, :co, :guests,
-                'confirmed', 'direct', :total, :requests
-            )
-            RETURNING id
-        """),
-        {
-            "code": confirmation_code,
-            "guest_id": guest_id,
-            "property_id": body.property_id,
-            "ci": ci, "co": co,
-            "guests": body.num_guests,
-            "total": total,
-            "requests": body.special_requests,
-        },
-    )
-    reservation_id = str(res_result.fetchone()._mapping["id"])
+    reservation.status = "pending_payment"
+    reservation.special_requests = body.special_requests
     await db.commit()
 
     payment = await stripe_payments.create_payment_intent(
         amount_cents=total_cents,
-        reservation_id=reservation_id,
+        reservation_id=str(reservation.id),
         guest_email=body.guest_email,
         guest_name=f"{body.guest_first_name} {body.guest_last_name}",
-        property_name=p._mapping["name"],
+        property_name=prop.name,
+    )
+
+    await record_audit_event(
+        action="reservation.booking.create",
+        resource_type="reservation",
+        resource_id=str(reservation.id),
+        purpose="direct_booking",
+        tool_name="direct_booking_create",
+        redaction_status="contains_pii_local_only",
+        model_route="tool",
+        outcome="success",
+        metadata_json={
+            "property_id": str(prop.id),
+            "guest_phone": body.guest_phone[-4:],
+            "check_in": body.check_in,
+            "check_out": body.check_out,
+            "status": reservation.status,
+            "total_amount": str(total),
+        },
     )
 
     return {
-        "reservation_id": reservation_id,
-        "confirmation_code": confirmation_code,
-        "total_amount": total,
+        "reservation_id": str(reservation.id),
+        "confirmation_code": reservation.confirmation_code,
+        "total_amount": float(total),
         "payment": payment,
     }
 

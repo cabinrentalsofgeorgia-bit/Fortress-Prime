@@ -61,7 +61,7 @@ function SSOContent() {
         setToken(data.access_token);
         storeUser(data.user);
         setUser(data.user);
-        router.replace("/");
+        router.replace("/command");
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "SSO authentication failed"
@@ -80,7 +80,7 @@ function SSOContent() {
           <h2 className="text-lg font-semibold">Authentication Failed</h2>
           <p className="text-sm text-muted-foreground">{error}</p>
           <Link
-            href="/"
+            href="/command"
             className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Return to Command Center

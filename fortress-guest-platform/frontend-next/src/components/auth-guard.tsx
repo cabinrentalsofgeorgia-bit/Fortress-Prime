@@ -15,7 +15,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined" && isStorefrontHost(window.location.hostname)) {
-      router.replace("/book");
+      router.replace("/");
       return;
     }
 
