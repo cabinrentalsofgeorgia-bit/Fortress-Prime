@@ -6,6 +6,7 @@ import { isAuthenticated, fetchMe, storeUser } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
 import { Mountain, Loader2 } from "lucide-react";
 import { clearToken } from "@/lib/api";
+import { isStorefrontHost } from "@/lib/domain-boundaries";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -13,6 +14,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && isStorefrontHost(window.location.hostname)) {
+      router.replace("/book");
+      return;
+    }
+
     if (!isAuthenticated()) {
       router.replace("/login");
       return;

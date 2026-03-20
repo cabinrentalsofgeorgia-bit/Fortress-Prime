@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mountain, Loader2, AlertCircle } from "lucide-react";
 import { fetchMe, isAuthenticated, storeUser } from "@/lib/auth";
 import { setToken } from "@/lib/api";
+import { isStorefrontHost } from "@/lib/domain-boundaries";
 import { useAppStore } from "@/lib/store";
 
 export default function LoginPage() {
@@ -17,6 +18,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && isStorefrontHost(window.location.hostname)) {
+      router.replace("/book");
+      return;
+    }
+
     if (isAuthenticated()) router.replace("/");
   }, [router]);
 

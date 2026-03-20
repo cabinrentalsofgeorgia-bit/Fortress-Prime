@@ -1,3 +1,5 @@
+import { isStorefrontHost } from "@/lib/domain-boundaries";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function resolveBase(path: string): string {
@@ -30,6 +32,11 @@ function setToken(token: string) {
 
 function clearToken() {
   localStorage.removeItem("fgp_token");
+}
+
+function shouldRedirectToStaffLogin(pathname: string, host: string): boolean {
+  if (isStorefrontHost(host)) return false;
+  return !pathname.startsWith("/login");
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -68,7 +75,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       .then((d) => d?.detail || "Unauthorized")
       .catch(() => "Unauthorized");
     clearToken();
-    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+    if (
+      typeof window !== "undefined" &&
+      shouldRedirectToStaffLogin(window.location.pathname, window.location.hostname)
+    ) {
       window.dispatchEvent(
         new CustomEvent("fortress:auth-expired", {
           detail: { path, message: detail },
