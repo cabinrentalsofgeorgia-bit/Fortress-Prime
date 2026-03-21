@@ -26,7 +26,7 @@ from backend.models.vrs_quotes import GuestQuote, GuestQuoteStatus
 from backend.models.blocked_day import BlockedDay
 from backend.models.template import EmailTemplate
 from backend.models.message_queue import MessageQueue
-from backend.models.seo_patch import SeoPatchQueue
+from backend.models.seo_patch import SeoPatchQueue, SEORubric, SEOPatch
 from backend.models.citation_audit import CitationRecord
 from backend.models.concierge_queue import ConciergeQueue
 from backend.models.property_knowledge import PropertyKnowledge
@@ -41,6 +41,11 @@ from backend.models.legal_deposition import DepositionTarget, CrossExamFunnel
 from backend.models.legal_phase2 import CaseStatement, SanctionsAlert, JurisdictionRule, HiveMindFeedbackEvent, PrivilegeLog, AiAuditLedger
 from backend.models.treasury import YieldSimulation, YieldOverride, SeoRankSnapshot, OtaMicroUpdate
 from backend.models.intelligence_distillation import DistillationQueue, DistillationStatus
+from backend.models.openshell_audit import OpenShellAuditLog
+from backend.models.seo_redirect import SeoRedirect
+from backend.models.seo_redirect_remap import SeoRedirectRemapQueue
+from backend.models.async_job import AsyncJobRun
+from backend.models.vrs_add_on import VRSAddOn, VRSAddOnPricingModel, VRSAddOnScope
 from backend.models.legal import (
     LegalEntity,
     CaseEvidence,
@@ -105,6 +110,8 @@ __all__ = [
     "MessageQueue",
     # SEO Queue
     "SeoPatchQueue",
+    "SEORubric",
+    "SEOPatch",
     # Local SEO Citation Audits
     "CitationRecord",
     # Concierge queue / RAG memory
@@ -155,4 +162,11 @@ __all__ = [
     # Intelligence Distillation
     "DistillationQueue",
     "DistillationStatus",
+    "OpenShellAuditLog",
+    "SeoRedirect",
+    "SeoRedirectRemapQueue",
+    "AsyncJobRun",
+    "VRSAddOn",
+    "VRSAddOnPricingModel",
+    "VRSAddOnScope",
 ]
