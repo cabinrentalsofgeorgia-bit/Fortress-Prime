@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -19,8 +20,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-const FGP_BACKEND = process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
 
 export const revalidate = 300;
 
@@ -100,8 +99,19 @@ function adjacentMonth(year: number, month: number, delta: number) {
   };
 }
 
+async function storefrontOrigin() {
+  const incoming = await headers();
+  const host = incoming.get("x-forwarded-host") || incoming.get("host");
+  const proto = incoming.get("x-forwarded-proto") || "https";
+  if (!host) {
+    throw new Error("Missing host header for storefront availability fetch");
+  }
+  return `${proto}://${host}`;
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${FGP_BACKEND}${path}`, {
+  const origin = await storefrontOrigin();
+  const response = await fetch(`${origin}${path}`, {
     next: { revalidate },
   });
   if (!response.ok) {
