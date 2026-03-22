@@ -27,7 +27,7 @@ export const AutomationFormSchema = z.object({
   }),
   action_type: z.enum(["send_email_template", "create_task", "notify_staff"]),
   action_payload: z.record(z.string(), z.any()),
-  is_active: z.boolean().default(true),
+  is_active: z.boolean().default(false),
 });
 
 export type AutomationFormValues = z.input<typeof AutomationFormSchema>;

@@ -65,7 +65,7 @@ const EMPTY_FORM: AutomationFormValues = {
   conditions: { operator: "AND", rules: [] },
   action_type: "send_email_template",
   action_payload: {},
-  is_active: true,
+  is_active: false,
 };
 
 interface AutomationFormProps {
@@ -114,7 +114,7 @@ export function AutomationForm({
         },
         action_type: editingRule.action_type as AutomationFormValues["action_type"],
         action_payload: editingRule.action_payload ?? {},
-        is_active: editingRule.is_active,
+        is_active: editingRule.is_active ?? false,
       });
     } else {
       reset(EMPTY_FORM);
@@ -303,7 +303,7 @@ export function AutomationForm({
                 name="is_active"
                 render={({ field }) => (
                   <Switch
-                    checked={field.value}
+                    checked={field.value ?? false}
                     onCheckedChange={field.onChange}
                   />
                 )}
