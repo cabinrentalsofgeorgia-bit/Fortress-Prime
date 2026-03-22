@@ -30,7 +30,8 @@ export const AutomationFormSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export type AutomationFormValues = z.infer<typeof AutomationFormSchema>;
+export type AutomationFormValues = z.input<typeof AutomationFormSchema>;
+export type AutomationFormSubmitValues = z.output<typeof AutomationFormSchema>;
 export type ConditionRule = z.infer<typeof ConditionRuleSchema>;
 
 export { SendEmailPayloadSchema, CreateTaskPayloadSchema };

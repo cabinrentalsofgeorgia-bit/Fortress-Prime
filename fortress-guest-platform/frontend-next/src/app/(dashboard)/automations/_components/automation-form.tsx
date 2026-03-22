@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
+import {
+  Controller,
+  FormProvider,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +31,10 @@ import { Separator } from "@/components/ui/separator";
 import { Save, FlaskConical, Loader2 } from "lucide-react";
 import { useCreateRule, useUpdateRule, useTestRule } from "@/lib/hooks";
 import { AutomationFormSchema } from "@/lib/schemas/automations";
-import type { AutomationFormValues } from "@/lib/schemas/automations";
+import type {
+  AutomationFormSubmitValues,
+  AutomationFormValues,
+} from "@/lib/schemas/automations";
 import type { AutomationRule } from "@/lib/types";
 import { ConditionBuilder } from "./condition-builder";
 import { ActionPayloadFields } from "./action-payload-fields";
@@ -75,7 +83,7 @@ export function AutomationForm({
   const updateRule = useUpdateRule();
   const testRule = useTestRule();
 
-  const methods = useForm<AutomationFormValues>({
+  const methods = useForm<AutomationFormValues, undefined, AutomationFormSubmitValues>({
     resolver: zodResolver(AutomationFormSchema),
     defaultValues: EMPTY_FORM,
   });
@@ -113,7 +121,7 @@ export function AutomationForm({
     }
   }, [editingRule, reset]);
 
-  function onSubmit(data: AutomationFormValues) {
+  function onSubmit(data: AutomationFormSubmitValues) {
     const payload = {
       ...data,
       conditions: {
