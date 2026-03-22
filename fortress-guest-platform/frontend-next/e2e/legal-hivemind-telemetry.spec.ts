@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginAsE2EStaff } from "./helpers/auth";
 
 test.describe("Hive Mind telemetry editor", () => {
   test.use({ storageState: undefined });
@@ -6,22 +7,9 @@ test.describe("Hive Mind telemetry editor", () => {
   test("syncs counsel edits and shows telemetry pulse", async ({ page, baseURL }) => {
     test.setTimeout(240_000);
 
-    const email = process.env.E2E_LOGIN_EMAIL || "vrs.operator+live@crog-ai.com";
-    const password = process.env.E2E_LOGIN_PASSWORD || "Fortress!2026Reset#";
     const caseSlug = process.env.E2E_CASE_SLUG || "fish-trap-suv2026000013";
 
-    const loginResponse = await page.request.post(`${baseURL}/api/auth/login`, {
-      data: { email, password },
-      headers: { "Content-Type": "application/json" },
-    });
-    expect(loginResponse.status()).toBe(200);
-
-    const loginJson = await loginResponse.json();
-    expect(loginJson).toHaveProperty("access_token");
-
-    await page.addInitScript((token) => {
-      localStorage.setItem("fgp_token", token as string);
-    }, loginJson.access_token);
+    await loginAsE2EStaff(page, baseURL);
 
     await page.goto(`${baseURL}/legal/cases/${caseSlug}`, {
       waitUntil: "domcontentloaded",
@@ -45,6 +33,17 @@ test.describe("Hive Mind telemetry editor", () => {
               justification: "Mocked draft item for deterministic Hive Mind telemetry test.",
             },
           ],
+        }),
+      });
+    });
+
+    await page.route(/\/api\/legal\/cases\/[^/]+\/feedback\/telemetry$/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          status: "ok",
+          synced: true,
         }),
       });
     });
