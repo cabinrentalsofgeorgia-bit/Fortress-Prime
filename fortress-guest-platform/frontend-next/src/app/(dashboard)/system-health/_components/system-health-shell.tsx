@@ -11,7 +11,6 @@ import { DatabaseStats } from "./database-stats";
 import { EmailSensorGrid } from "./email-sensor-grid";
 import { StreamlineSyncButton } from "./streamline-sync-button";
 import { InfrastructureRadar } from "./infrastructure-radar";
-import { ShadowMonitorCard } from "./shadow-monitor-card";
 import {
   Activity,
   AlertTriangle,
@@ -197,8 +196,6 @@ export function SystemHealthShell() {
           variant={kpis.avgRam >= 90 ? "danger" : kpis.avgRam >= 75 ? "warning" : "default"}
         />
       </div>
-
-      <ShadowMonitorCard />
 
       {/* Node cards -- 2x2 grid */}
       <div>
