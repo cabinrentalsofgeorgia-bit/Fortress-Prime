@@ -1,0 +1,158 @@
+name: Playwright Sovereign Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: playwright-sovereign-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright-e2e:
+    name: playwright-e2e
+    runs-on: [self-hosted, linux, spark-head]
+    timeout-minutes: 45
+    env:
+      POSTGRES_API_URI: ${{ secrets.POSTGRES_API_URI }}
+      POSTGRES_ADMIN_URI: ${{ secrets.POSTGRES_ADMIN_URI }}
+      SWARM_API_KEY: ${{ secrets.SWARM_API_KEY }}
+      INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
+      JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
+      JWT_RSA_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY }}
+      AUDIT_LOG_SIGNING_KEY: ${{ secrets.AUDIT_LOG_SIGNING_KEY }}
+      FGP_BACKEND_URL: http://127.0.0.1:8100
+      E2E_BACKEND_URL: http://127.0.0.1:8100
+      E2E_BASE_URL: http://127.0.0.1:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+      BOOTSTRAP_ADMIN_PASSWORD: FortressPrime2026!
+      BOOTSTRAP_ADMIN_CONFIRM_PASSWORD: FortressPrime2026!
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: fortress-guest-platform/frontend-next/package-lock.json
+
+      - name: Assert sovereign secrets are present
+        run: |
+          missing=0
+          for key in POSTGRES_API_URI POSTGRES_ADMIN_URI SWARM_API_KEY JWT_RSA_PRIVATE_KEY JWT_RSA_PUBLIC_KEY AUDIT_LOG_SIGNING_KEY; do
+            if [[ -z "${!key}" ]]; then
+              echo "::error::$key is required for the Playwright sovereign gate"
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Install backend dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        working-directory: fortress-guest-platform/frontend-next
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: fortress-guest-platform/frontend-next
+        run: npx playwright install chromium
+
+      - name: Start sovereign backend
+        working-directory: fortress-guest-platform
+        run: |
+          source "$GITHUB_WORKSPACE/.venv/bin/activate"
+          nohup python run.py > "$RUNNER_TEMP/fgp-backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/fgp-backend.pid"
+
+      - name: Wait for backend readiness
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8100/docs > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Backend did not become ready on 127.0.0.1:8100"
+          exit 1
+
+      - name: Seed deterministic CI admin
+        working-directory: fortress-guest-platform
+        run: |
+          source "$GITHUB_WORKSPACE/.venv/bin/activate"
+          python backend/scripts/seed_master_admin.py
+
+      - name: Start Next.js storefront
+        working-directory: fortress-guest-platform/frontend-next
+        run: |
+          nohup npx next dev --hostname 127.0.0.1 --port 3000 > "$RUNNER_TEMP/fgp-frontend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/fgp-frontend.pid"
+
+      - name: Wait for storefront readiness
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:3000 > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Storefront did not become ready on 127.0.0.1:3000"
+          exit 1
+
+      - name: Run Playwright sovereign gate
+        working-directory: fortress-guest-platform/frontend-next
+        run: npx playwright test --reporter=list --retries=0
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: fortress-guest-platform/frontend-next/playwright-report
+          if-no-files-found: ignore
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: fortress-guest-platform/frontend-next/test-results
+          if-no-files-found: ignore
+
+      - name: Upload sovereign gate logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sovereign-gate-logs
+          path: |
+            ${{ runner.temp }}/fgp-backend.log
+            ${{ runner.temp }}/fgp-frontend.log
+          if-no-files-found: ignore
+
+      - name: Stop sovereign services
+        if: always()
+        run: |
+          if [[ -f "$RUNNER_TEMP/fgp-frontend.pid" ]]; then
+            kill "$(cat "$RUNNER_TEMP/fgp-frontend.pid")" || true
+          fi
+          if [[ -f "$RUNNER_TEMP/fgp-backend.pid" ]]; then
+            kill "$(cat "$RUNNER_TEMP/fgp-backend.pid")" || true
+          fi

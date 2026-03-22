@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginAsE2EStaff } from "./helpers/auth";
 
 test.describe("Sanctions Tripwire Panel", () => {
   test.use({ storageState: undefined });
@@ -6,22 +7,32 @@ test.describe("Sanctions Tripwire Panel", () => {
   test("renders tripwire header and pre-computed alerts", async ({ page, baseURL }) => {
     test.setTimeout(180_000);
 
-    const email = process.env.E2E_LOGIN_EMAIL || "vrs.operator+live@crog-ai.com";
-    const password = process.env.E2E_LOGIN_PASSWORD || "Fortress!2026Reset#";
     const caseSlug = process.env.E2E_CASE_SLUG || "fish-trap-suv2026000013";
 
-    const loginResponse = await page.request.post(`${baseURL}/api/auth/login`, {
-      data: { email, password },
-      headers: { "Content-Type": "application/json" },
+    await loginAsE2EStaff(page, baseURL);
+
+    await page.route(/\/api\/legal\/cases\/[^/]+\/sanctions\/alerts$/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          alerts: [
+            {
+              title: "Detected Contradiction",
+              contradiction: "Timeline mismatch between maintenance dispatch and incident statement.",
+            },
+            {
+              title: "Detected Contradiction",
+              contradiction: "Guest contact log conflicts with claimed notice window.",
+            },
+            {
+              title: "Detected Contradiction",
+              contradiction: "Photographic evidence sequence diverges from filing chronology.",
+            },
+          ],
+        }),
+      });
     });
-    expect(loginResponse.status()).toBe(200);
-
-    const loginJson = await loginResponse.json();
-    expect(loginJson).toHaveProperty("access_token");
-
-    await page.addInitScript((token) => {
-      localStorage.setItem("fgp_token", token as string);
-    }, loginJson.access_token);
 
     const alertsResponsePromise = page.waitForResponse(
       (response) =>
