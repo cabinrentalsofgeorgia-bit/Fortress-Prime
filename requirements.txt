@@ -45,3 +45,4 @@ jinja2
 markdown2
 qdrant-client
 numpy
+python-multipart
