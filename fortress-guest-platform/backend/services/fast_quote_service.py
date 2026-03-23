@@ -15,6 +15,7 @@ from uuid import UUID
 
 import structlog
 from sqlalchemy import and_, func, select, text
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.blocked_day import BlockedDay
@@ -62,18 +63,30 @@ def _property_lock_key(property_id: UUID) -> int:
     return unsigned_64 if unsigned_64 < (1 << 63) else unsigned_64 - (1 << 64)
 
 
+def _missing_runtime_table(exc: ProgrammingError) -> bool:
+    message = str(getattr(exc, "orig", exc)).lower()
+    return "does not exist" in message or "undefinedtable" in message
+
+
 async def expire_stale_holds(db: AsyncSession) -> int:
     """Mark active holds past expires_at as expired. Returns rows updated."""
     now = utc_now()
-    result = await db.execute(
-        text("""
-            UPDATE reservation_holds
-            SET status = 'expired', updated_at = NOW()
-            WHERE status = 'active' AND expires_at < :now
-        """),
-        {"now": now},
-    )
-    return result.rowcount or 0
+    try:
+        result = await db.execute(
+            text("""
+                UPDATE reservation_holds
+                SET status = 'expired', updated_at = NOW()
+                WHERE status = 'active' AND expires_at < :now
+            """),
+            {"now": now},
+        )
+        return result.rowcount or 0
+    except ProgrammingError as exc:
+        if not _missing_runtime_table(exc):
+            raise
+        logger.warning("fast_quote_reservation_holds_table_missing")
+        await db.rollback()
+        return 0
 
 
 async def has_blocked_day_conflict(
@@ -93,7 +106,14 @@ async def has_blocked_day_conflict(
             )
         )
     )
-    n = (await db.execute(stmt)).scalar_one()
+    try:
+        n = (await db.execute(stmt)).scalar_one()
+    except ProgrammingError as exc:
+        if not _missing_runtime_table(exc):
+            raise
+        logger.warning("fast_quote_blocked_days_table_missing")
+        await db.rollback()
+        return False
     return int(n) > 0
 
 
@@ -113,7 +133,14 @@ async def has_reservation_conflict(
     stmt = select(func.count()).select_from(Reservation).where(and_(*conds))
     if exclude_reservation_id is not None:
         stmt = stmt.where(Reservation.id != exclude_reservation_id)
-    n = (await db.execute(stmt)).scalar_one()
+    try:
+        n = (await db.execute(stmt)).scalar_one()
+    except ProgrammingError as exc:
+        if not _missing_runtime_table(exc):
+            raise
+        logger.warning("fast_quote_reservations_table_missing")
+        await db.rollback()
+        return False
     return int(n) > 0
 
 
@@ -135,7 +162,14 @@ async def has_active_hold_conflict(
     stmt = select(func.count()).select_from(ReservationHold).where(and_(*conds))
     if exclude_hold_id is not None:
         stmt = stmt.where(ReservationHold.id != exclude_hold_id)
-    n = (await db.execute(stmt)).scalar_one()
+    try:
+        n = (await db.execute(stmt)).scalar_one()
+    except ProgrammingError as exc:
+        if not _missing_runtime_table(exc):
+            raise
+        logger.warning("fast_quote_reservation_holds_table_missing")
+        await db.rollback()
+        return False
     return int(n) > 0
 
 

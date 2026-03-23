@@ -46,11 +46,7 @@ from sqlalchemy import select
 
 from backend.core.database import AsyncSessionLocal, Base, async_engine, close_db
 from backend.core.security import hash_password
-from backend.models.blocked_day import BlockedDay
-from backend.models.guest import Guest
 from backend.models.property import Property
-from backend.models.reservation import Reservation
-from backend.models.reservation_hold import ReservationHold
 from backend.models.media import PropertyImage
 from backend.models.staff import StaffRole, StaffUser
 
@@ -158,10 +154,6 @@ async def seed_master_admin() -> int:
             [
                 Property.__table__,
                 PropertyImage.__table__,
-                Guest.__table__,
-                Reservation.__table__,
-                ReservationHold.__table__,
-                BlockedDay.__table__,
             ]
         )
 
