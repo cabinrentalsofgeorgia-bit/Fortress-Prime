@@ -36,42 +36,96 @@ export type QuoteActionState =
     };
 
 const FGP_BACKEND_URL = process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
-const INTERNAL_API_KEY =
-  process.env.INTERNAL_API_KEY || process.env.SWARM_API_KEY || "";
 
 function buildUrl(path: string): string {
   return `${FGP_BACKEND_URL.replace(/\/$/, "")}${path}`;
 }
 
-export async function getFastQuote(payload: QuoteRequestType): Promise<QuoteActionState> {
-  if (!INTERNAL_API_KEY) {
-    return {
-      ok: false,
-      quote: null,
-      error: "Internal quote auth is not configured.",
-    };
+type DirectBookingQuoteResponse = {
+  property_id: string;
+  property_name: string;
+  nights: number;
+  guests: number;
+  pricing_source: string;
+  breakdown: {
+    nightly_rate: number;
+    subtotal: number;
+    cleaning_fee: number;
+    pet_fee: number;
+    service_fee: number;
+    tax: number;
+    total: number;
+    nightly_breakdown: Array<{ date: string; rate: number }>;
+  };
+};
+
+function mapQuoteResponse(response: DirectBookingQuoteResponse): QuoteResponseType {
+  const lineItems: QuoteLineItemType[] = [
+    {
+      description: `${response.nights} night stay @ $${response.breakdown.nightly_rate.toFixed(2)} / night`,
+      amount: response.breakdown.subtotal,
+      type: "rent",
+    },
+  ];
+
+  if (response.breakdown.cleaning_fee > 0) {
+    lineItems.push({
+      description: "Cleaning Fee",
+      amount: response.breakdown.cleaning_fee,
+      type: "fee",
+    });
   }
 
-  const response = await fetch(buildUrl("/api/quote"), {
+  if (response.breakdown.service_fee > 0) {
+    lineItems.push({
+      description: "Service Fee",
+      amount: response.breakdown.service_fee,
+      type: "fee",
+    });
+  }
+
+  if (response.breakdown.pet_fee > 0) {
+    lineItems.push({
+      description: "Pet Fee",
+      amount: response.breakdown.pet_fee,
+      type: "fee",
+    });
+  }
+
+  if (response.breakdown.tax > 0) {
+    lineItems.push({
+      description: "Tax",
+      amount: response.breakdown.tax,
+      type: "tax",
+    });
+  }
+
+  return {
+    property_id: response.property_id,
+    currency: "USD",
+    line_items: lineItems,
+    total_amount: response.breakdown.total,
+    is_bookable: true,
+  };
+}
+
+export async function getFastQuote(payload: QuoteRequestType): Promise<QuoteActionState> {
+  const response = await fetch(buildUrl(`/api/direct-booking/quote?property_id=${encodeURIComponent(payload.propertyId)}`), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${INTERNAL_API_KEY}`,
-      "X-Swarm-Token": INTERNAL_API_KEY,
     },
     cache: "no-store",
     body: JSON.stringify({
-      property_id: payload.propertyId,
       check_in: payload.checkIn,
       check_out: payload.checkOut,
-      adults: payload.adults,
-      children: payload.children,
-      pets: payload.pets,
+      guests: payload.adults + payload.children,
+      pets: payload.pets > 0,
     }),
   });
 
   const data = (await response.json().catch(() => null)) as
-    | QuoteResponseType
+    | DirectBookingQuoteResponse
     | { detail?: string }
     | null;
 
@@ -85,14 +139,7 @@ export async function getFastQuote(payload: QuoteRequestType): Promise<QuoteActi
     };
   }
 
-  const quote = data as QuoteResponseType;
-  if (!quote.is_bookable) {
-    return {
-      ok: false,
-      quote,
-      error: "Selected party exceeds the cabin occupancy limit.",
-    };
-  }
+  const quote = mapQuoteResponse(data as DirectBookingQuoteResponse);
 
   return {
     ok: true,

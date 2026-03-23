@@ -11,6 +11,7 @@ export async function loginAsE2EStaff(page: Page, baseURL: string | undefined): 
   if (!baseURL) {
     throw new Error("Playwright baseURL is required for E2E staff login.");
   }
+  const cookieDomain = new URL(baseURL).hostname;
 
   const email = process.env.E2E_LOGIN_EMAIL || DEFAULT_E2E_EMAIL;
   const password = process.env.E2E_LOGIN_PASSWORD || DEFAULT_E2E_PASSWORD;
@@ -29,7 +30,7 @@ export async function loginAsE2EStaff(page: Page, baseURL: string | undefined): 
     {
       name: "fortress_session",
       value: loginJson.access_token,
-      url: baseURL,
+      domain: cookieDomain,
       path: "/",
       httpOnly: true,
       secure: false,
