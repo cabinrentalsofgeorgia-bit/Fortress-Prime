@@ -138,6 +138,42 @@ async def seed_ci_storefront_fixture(session: AsyncSessionLocal) -> None:
     print(f"[seed] ci storefront fixture reconciled slug={fixture.slug} id={fixture.id}")
 
 
+async def ensure_master_admin(session: AsyncSessionLocal) -> tuple[StaffUser, bool]:
+    result = await session.execute(
+        select(StaffUser).where(StaffUser.email == ADMIN_EMAIL.lower())
+    )
+    existing_user = result.scalar_one_or_none()
+
+    if existing_user is not None:
+        existing_user.password_hash = hash_password(ADMIN_PASSWORD)
+        existing_user.first_name = ADMIN_FIRST_NAME
+        existing_user.last_name = ADMIN_LAST_NAME
+        existing_user.role = StaffRole.SUPER_ADMIN
+        existing_user.permissions = build_admin_permissions()
+        existing_user.is_active = True
+        existing_user.notification_email = ADMIN_EMAIL.lower()
+        existing_user.notify_urgent = True
+        existing_user.notify_workorders = True
+        await session.flush()
+        return existing_user, False
+
+    user = StaffUser(
+        email=ADMIN_EMAIL.lower(),
+        password_hash=hash_password(ADMIN_PASSWORD),
+        first_name=ADMIN_FIRST_NAME,
+        last_name=ADMIN_LAST_NAME,
+        role=StaffRole.SUPER_ADMIN,
+        permissions=build_admin_permissions(),
+        is_active=True,
+        notification_email=ADMIN_EMAIL.lower(),
+        notify_urgent=True,
+        notify_workorders=True,
+    )
+    session.add(user)
+    await session.flush()
+    return user, True
+
+
 async def seed_master_admin() -> int:
     if not os.getenv("POSTGRES_API_URI", "").strip():
         if not LOADED_ENV_FILES:
@@ -166,50 +202,19 @@ async def seed_master_admin() -> int:
         )
 
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(StaffUser).where(StaffUser.email == ADMIN_EMAIL.lower())
-        )
-        existing_user = result.scalar_one_or_none()
-
-        if existing_user is not None:
-            existing_user.password_hash = hash_password(ADMIN_PASSWORD)
-            existing_user.first_name = ADMIN_FIRST_NAME
-            existing_user.last_name = ADMIN_LAST_NAME
-            existing_user.role = StaffRole.SUPER_ADMIN
-            existing_user.permissions = build_admin_permissions()
-            existing_user.is_active = True
-            existing_user.notification_email = ADMIN_EMAIL.lower()
-            existing_user.notify_urgent = True
-            existing_user.notify_workorders = True
-            await seed_ci_storefront_fixture(session)
-            await session.commit()
-            print(
-                "[seed] master admin reconciled "
-                f"(id={existing_user.id}, role={existing_user.role}, active={existing_user.is_active})"
-            )
-            return 0
-
-        user = StaffUser(
-            email=ADMIN_EMAIL.lower(),
-            password_hash=hash_password(ADMIN_PASSWORD),
-            first_name=ADMIN_FIRST_NAME,
-            last_name=ADMIN_LAST_NAME,
-            role=StaffRole.SUPER_ADMIN,
-            permissions=build_admin_permissions(),
-            is_active=True,
-            notification_email=ADMIN_EMAIL.lower(),
-            notify_urgent=True,
-            notify_workorders=True,
-        )
-        session.add(user)
+        user, created = await ensure_master_admin(session)
         await seed_ci_storefront_fixture(session)
         await session.commit()
         await session.refresh(user)
 
-        print("[seed] master admin created successfully")
-        print(
-            f"[seed] user_id={user.id} email={user.email} role={user.role} active={user.is_active}"
-        )
+        if created:
+            print("[seed] master admin created successfully")
+        else:
+            print(
+                "[seed] master admin reconciled "
+                f"(id={user.id}, role={user.role}, active={user.is_active})"
+            )
+        print(f"[seed] user_id={user.id} email={user.email} role={user.role} active={user.is_active}")
         return 0
 
 
