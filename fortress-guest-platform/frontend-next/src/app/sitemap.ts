@@ -15,7 +15,7 @@ function getBaseUrl(): string {
 }
 
 async function getLiveSlugs(): Promise<string[]> {
-  const res = await fetch(`${getBaseUrl()}/api/seo-patches/live/property-slugs`, {
+  const res = await fetch(`${getBaseUrl()}/api/seo/live/property-slugs`, {
     next: { revalidate: 300 },
   });
   if (!res.ok) return [];
@@ -26,23 +26,34 @@ async function getLiveSlugs(): Promise<string[]> {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getBaseUrl();
-  const slugs = await getLiveSlugs();
   const now = new Date();
-
-  const cabinEntries: MetadataRoute.Sitemap = slugs.map((slug) => ({
-    url: `${baseUrl}/cabins/${slug}`,
-    lastModified: now,
-    changeFrequency: "weekly",
-    priority: 0.9,
-  }));
-
-  return [
-    {
-      url: `${baseUrl}/`,
+  try {
+    const slugs = await getLiveSlugs();
+    const cabinEntries: MetadataRoute.Sitemap = slugs.map((slug) => ({
+      url: `${baseUrl}/cabins/${slug}`,
       lastModified: now,
       changeFrequency: "weekly",
-      priority: 0.5,
-    },
-    ...cabinEntries,
-  ];
+      priority: 0.9,
+    }));
+
+    return [
+      {
+        url: `${baseUrl}/`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.5,
+      },
+      ...cabinEntries,
+    ];
+  } catch (error) {
+    console.warn("[CI WARNING] Sitemap fetch failed during build. Falling back to static root.", error);
+    return [
+      {
+        url: `${baseUrl}/`,
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 1,
+      },
+    ];
+  }
 }
