@@ -3,28 +3,14 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 const CABIN_SLUG = "aska-escape-lodge";
 const BACKEND_URL = process.env.E2E_BACKEND_URL || process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
 const SEARCH_GUESTS = 2;
-const SEARCH_LOOKAHEAD_DAYS = 120;
 const SEARCH_START_OFFSET_DAYS = 14;
 const NIGHT_COUNT = 3;
 
-type AvailabilityPricing = {
-  nightly_rate: number;
-  nights: number;
-  subtotal: number;
-  cleaning_fee: number;
-  service_fee: number;
-  tax: number;
-  total: number;
-};
-
-type AvailabilityProperty = {
+type PropertyPayload = {
   id: string;
+  name: string;
   slug: string;
-  pricing: AvailabilityPricing;
-};
-
-type AvailabilityResponse = {
-  results: AvailabilityProperty[];
+  max_guests: number;
 };
 
 type AvailableStay = {
@@ -40,39 +26,22 @@ function parseCurrency(amount: string): number {
 async function findAvailableStay(request: APIRequestContext): Promise<AvailableStay> {
   const startDate = new Date();
   startDate.setUTCDate(startDate.getUTCDate() + SEARCH_START_OFFSET_DAYS);
+  const checkOutDate = new Date(startDate);
+  checkOutDate.setUTCDate(checkOutDate.getUTCDate() + NIGHT_COUNT);
 
-  for (let offset = 0; offset < SEARCH_LOOKAHEAD_DAYS; offset += 1) {
-    const checkInDate = new Date(startDate);
-    checkInDate.setUTCDate(startDate.getUTCDate() + offset);
+  const propertyResponse = await request.get(
+    `${BACKEND_URL}/api/direct-booking/property/${CABIN_SLUG}`,
+  );
+  expect(propertyResponse.ok(), `fixture property lookup failed for ${CABIN_SLUG}`).toBeTruthy();
 
-    const checkOutDate = new Date(checkInDate);
-    checkOutDate.setUTCDate(checkInDate.getUTCDate() + NIGHT_COUNT);
+  const property = (await propertyResponse.json()) as PropertyPayload;
+  expect(property.slug).toBe(CABIN_SLUG);
 
-    const checkIn = checkInDate.toISOString().slice(0, 10);
-    const checkOut = checkOutDate.toISOString().slice(0, 10);
-
-    const response = await request.get(`${BACKEND_URL}/api/direct-booking/availability`, {
-      params: {
-        check_in: checkIn,
-        check_out: checkOut,
-        guests: String(SEARCH_GUESTS),
-      },
-    });
-
-    expect(response.ok(), `availability search failed for ${checkIn} -> ${checkOut}`).toBeTruthy();
-
-    const payload = (await response.json()) as AvailabilityResponse;
-    const match = payload.results.find((property) => property.slug === CABIN_SLUG);
-    if (match) {
-      return {
-        propertyId: match.id,
-        checkIn,
-        checkOut,
-      };
-    }
-  }
-
-  throw new Error(`No ${NIGHT_COUNT}-night availability found for ${CABIN_SLUG} within ${SEARCH_LOOKAHEAD_DAYS} days.`);
+  return {
+    propertyId: property.id,
+    checkIn: startDate.toISOString().slice(0, 10),
+    checkOut: checkOutDate.toISOString().slice(0, 10),
+  };
 }
 
 test.describe("Guest booking critical path", () => {
