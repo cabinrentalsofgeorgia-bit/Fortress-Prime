@@ -8,6 +8,9 @@ export async function loginAsE2EStaff(page: Page, baseURL: string | undefined): 
     throw new Error("Playwright baseURL is required for E2E staff login.");
   }
 
+  page.on("console", (msg) => console.log(`[PLAYWRIGHT BROWSER]: ${msg.text()}`));
+  page.on("pageerror", (error) => console.log(`[PLAYWRIGHT CRASH]: ${error.message}`));
+
   const email = process.env.E2E_LOGIN_EMAIL || DEFAULT_E2E_EMAIL;
   const password = process.env.E2E_LOGIN_PASSWORD || DEFAULT_E2E_PASSWORD;
 

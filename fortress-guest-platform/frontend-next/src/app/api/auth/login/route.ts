@@ -80,9 +80,12 @@ export async function POST(request: NextRequest) {
                 access_token: fgpToken,
                 user: ssoData.user,
               };
+              const ciOverride = process.env.CI === "true";
               const isSecure =
-                request.headers.get("x-forwarded-proto") === "https" ||
-                request.nextUrl.protocol === "https:";
+                !ciOverride && (
+                  request.headers.get("x-forwarded-proto") === "https" ||
+                  request.nextUrl.protocol === "https:"
+                );
 
               const resp = NextResponse.json(responseBody);
               if (fgpToken) {
@@ -138,9 +141,12 @@ export async function POST(request: NextRequest) {
       const fgpData = await fgpRes.json();
       console.log("[BFF] Login success via direct FGP");
 
+      const ciOverride = process.env.CI === "true";
       const isSecure =
-        request.headers.get("x-forwarded-proto") === "https" ||
-        request.nextUrl.protocol === "https:";
+        !ciOverride && (
+          request.headers.get("x-forwarded-proto") === "https" ||
+          request.nextUrl.protocol === "https:"
+        );
 
       const resp = NextResponse.json({
         access_token: fgpData.access_token,
