@@ -1,17 +1,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
-const REVALIDATION_SECRET = process.env.EDGE_REVALIDATION_SECRET ?? "";
-
-function hasValidBearerToken(authHeader: string | null): boolean {
-  if (!REVALIDATION_SECRET) {
-    return false;
-  }
-
-  const expected = `Bearer ${REVALIDATION_SECRET}`;
-  return authHeader === expected;
-}
-
 function collectUniqueStrings(values: unknown): string[] {
   if (!Array.isArray(values)) {
     return [];
@@ -25,28 +14,19 @@ function collectUniqueStrings(values: unknown): string[] {
 }
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
+  const rawSecret = process.env.EDGE_REVALIDATION_SECRET || "";
+  const expectedSecret = rawSecret.trim();
 
-  if (!REVALIDATION_SECRET) {
-    return NextResponse.json({ error: "Revalidation token not configured" }, { status: 503 });
-  }
+  const authHeader = request.headers.get("authorization") || "";
+  const providedToken = authHeader.startsWith("Bearer ")
+    ? authHeader.substring(7).trim()
+    : "";
 
-  if (!hasValidBearerToken(authHeader)) {
-    const expectedSecret = process.env.EDGE_REVALIDATION_SECRET;
-    const providedToken = authHeader?.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : "NONE";
-    const expectedPrefix = expectedSecret
-      ? expectedSecret.substring(0, 4)
-      : "UNDEFINED";
-    const providedPrefix = providedToken !== "NONE"
-      ? providedToken.substring(0, 4)
-      : "NONE";
-
+  if (!expectedSecret || providedToken !== expectedSecret) {
     console.error(
-      `[AUTH SHIELD] Rejecting payload. Expected prefix: ${expectedPrefix}*** | Provided prefix: ${providedPrefix}***`,
+      `[AUTH SHIELD] Rejecting payload. Expected Length: ${expectedSecret.length}, Provided Length: ${providedToken.length}`,
     );
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 });
   }
 
   let slug = "";
