@@ -64,6 +64,14 @@ class Property(Base):
     work_orders = relationship("WorkOrder", back_populates="prop")
     guestbook_guides = relationship("GuestbookGuide", back_populates="prop")
     default_housekeeper = relationship("StaffUser", foreign_keys=[default_housekeeper_id])
+    tax_links = relationship("PropertyTax", back_populates="property", cascade="all, delete-orphan")
+    fee_links = relationship("PropertyFee", back_populates="property", cascade="all, delete-orphan")
+    images = relationship(
+        "PropertyImage",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        order_by="PropertyImage.display_order",
+    )
     
     def __repr__(self) -> str:
         return f"<Property {self.name}>"
