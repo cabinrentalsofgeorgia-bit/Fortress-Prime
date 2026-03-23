@@ -11,6 +11,24 @@ test.describe("Hive Mind telemetry editor", () => {
 
     await loginAsE2EStaff(page, baseURL);
 
+    // Intercept the initial case detail fetch to render the UI shell
+    await page.route(new RegExp(`/api/legal/cases/${caseSlug}$`), async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: "mock-case-123",
+            slug: caseSlug,
+            title: "CI Deterministic Case",
+            status: "active",
+          }),
+        });
+      } else {
+        await route.fallback();
+      }
+    });
+
     await page.goto(`${baseURL}/legal/cases/${caseSlug}`, {
       waitUntil: "domcontentloaded",
     });
