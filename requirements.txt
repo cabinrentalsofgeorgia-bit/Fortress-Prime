@@ -37,3 +37,11 @@ email-validator
 aiokafka
 
 stripe
+pydantic-settings
+python-jose[cryptography]
+tenacity
+aiohttp
+jinja2
+markdown2
+qdrant-client
+numpy
