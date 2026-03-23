@@ -12,7 +12,8 @@ import structlog
 
 logger = structlog.get_logger()
 
-PDF_DIR = Path(os.getenv("PDF_STORAGE_DIR", "/home/admin/Fortress-Prime/fortress-guest-platform/storage/agreements"))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PDF_DIR = Path(os.getenv("PDF_STORAGE_DIR", str(PROJECT_ROOT / "storage" / "agreements")))
 PDF_DIR.mkdir(parents=True, exist_ok=True)
 
 

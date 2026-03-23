@@ -2,23 +2,30 @@
 Legal Tactical Strike Router — offensive litigation maneuvers
 through the Resilient Router with PII sanitization.
 """
+from pathlib import Path
+from uuid import uuid4
+
 import structlog
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
+from arq.connections import ArqRedis
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from backend.core.database import AsyncSessionLocal
+from backend.core.queue import get_arq_pool
+from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 from backend.services.ai_router import execute_resilient_inference
 from backend.services.legal_case_graph import get_case_graph_snapshot
 from backend.services.legal_search_engine import synthesize_historic_search
 from backend.services.legal_sanctions_tripwire import detect_material_contradictions
 from backend.services.legal_deposition_prep import generate_kill_sheet
 from backend.services.legal_evidence_ingestion import ingest_document_to_graph
-from backend.services.legal_ediscovery import process_vault_upload
 
 logger = structlog.get_logger()
 
 router = APIRouter()
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+UPLOAD_SPOOL_DIR = PROJECT_ROOT / "storage" / "async_jobs" / "legal_vault_uploads"
 
 STRIKE_TYPES = {"deposition_kill_sheet", "sanctions_tripwire", "proportional_discovery"}
 
@@ -169,16 +176,12 @@ async def ingest_evidence_text(slug: str, body: EvidenceIngestRequest):
     return result
 
 
-async def _bg_process_upload(case_slug: str, file_bytes: bytes, file_name: str, mime_type: str):
-    async with AsyncSessionLocal() as db:
-        await process_vault_upload(db, case_slug, file_bytes, file_name, mime_type)
-
-
 @router.post("/cases/{slug}/vault/upload", summary="Upload file to E-Discovery Vault")
 async def upload_vault_file(
     slug: str,
-    background_tasks: BackgroundTasks,
+    request: Request,
     file: UploadFile = File(...),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
 ):
     file_bytes = await file.read()
     if len(file_bytes) == 0:
@@ -188,10 +191,36 @@ async def upload_vault_file(
 
     mime = file.content_type or "application/octet-stream"
     fname = file.filename or "unknown"
+    UPLOAD_SPOOL_DIR.mkdir(parents=True, exist_ok=True)
+    spool_path = UPLOAD_SPOOL_DIR / f"{uuid4().hex}_{fname.replace('/', '_')}"
+    spool_path.write_bytes(file_bytes)
 
-    background_tasks.add_task(_bg_process_upload, slug, file_bytes, fname, mime)
+    async with AsyncSessionLocal() as db:
+        job = await enqueue_async_job(
+            db,
+            worker_name="process_legal_vault_upload_job",
+            job_name="process_legal_vault_upload",
+            payload={
+                "case_slug": slug,
+                "spool_path": str(spool_path),
+                "file_name": fname,
+                "mime_type": mime,
+            },
+            requested_by=extract_request_actor(
+                request.headers.get("x-user-id"),
+                request.headers.get("x-user-email"),
+            ),
+            tenant_id=getattr(request.state, "tenant_id", None),
+            request_id=request.headers.get("x-request-id"),
+            redis=arq_redis,
+        )
 
-    return {"status": "queued", "file_name": fname, "size_bytes": len(file_bytes)}
+    return {
+        "status": "queued",
+        "file_name": fname,
+        "size_bytes": len(file_bytes),
+        "job_id": str(job.id),
+    }
 
 
 @router.get("/cases/{slug}/vault/documents", summary="List vault documents for case")

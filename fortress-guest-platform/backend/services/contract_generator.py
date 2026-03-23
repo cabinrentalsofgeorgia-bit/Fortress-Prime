@@ -18,9 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(service="contract_generator")
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 CONTRACT_STORAGE = Path(
-    os.getenv("CONTRACT_STORAGE_DIR", "/home/admin/Fortress-Prime/fortress-guest-platform/storage/contracts")
+    os.getenv("CONTRACT_STORAGE_DIR", str(PROJECT_ROOT / "storage" / "contracts"))
 )
 CONTRACT_STORAGE.mkdir(parents=True, exist_ok=True)
 
