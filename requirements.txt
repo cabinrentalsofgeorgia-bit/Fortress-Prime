@@ -46,3 +46,4 @@ markdown2
 qdrant-client
 numpy
 python-multipart
+python-docx
