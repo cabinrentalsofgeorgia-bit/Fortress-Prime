@@ -68,7 +68,6 @@ class Property(Base):
         "PropertyImage",
         back_populates="property",
         cascade="all, delete-orphan",
-        order_by="PropertyImage.display_order",
     )
     
     def __repr__(self) -> str:
