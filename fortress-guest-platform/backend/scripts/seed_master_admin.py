@@ -70,10 +70,15 @@ async def seed_master_admin() -> int:
             )
         raise RuntimeError("POSTGRES_API_URI is not set after loading .env files.")
 
-    # CI uses a disposable Postgres service. Ensure the core auth table exists
-    # before querying so the deterministic admin bootstrap can run on a blank DB.
+    # CI uses a disposable Postgres service. Ensure only the core auth table
+    # exists before querying so we do not pull in unrelated schema namespaces.
     async with async_engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+        await connection.run_sync(
+            lambda sync_conn: Base.metadata.create_all(
+                sync_conn,
+                tables=[StaffUser.__table__],
+            )
+        )
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
