@@ -29,13 +29,18 @@ export async function loginAsE2EStaff(page: Page, baseURL: string | undefined): 
     {
       name: "fortress_session",
       value: loginJson.access_token,
-      domain: "127.0.0.1",
+      url: baseURL,
       path: "/",
       httpOnly: true,
       secure: false,
       sameSite: "Lax",
     },
   ]);
+
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  await page.evaluate((token) => {
+    localStorage.setItem("fgp_token", token as string);
+  }, loginJson.access_token);
 
   await page.addInitScript((token) => {
     localStorage.setItem("fgp_token", token as string);
