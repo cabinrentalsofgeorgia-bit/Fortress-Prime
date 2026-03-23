@@ -42,7 +42,7 @@ LOADED_ENV_FILES = load_environment()
 
 from sqlalchemy import select
 
-from backend.core.database import AsyncSessionLocal, close_db
+from backend.core.database import AsyncSessionLocal, Base, async_engine, close_db
 from backend.core.security import hash_password
 from backend.models.staff import StaffRole, StaffUser
 
@@ -69,6 +69,11 @@ async def seed_master_admin() -> int:
                 "POSTGRES_API_URI is not set and no environment files were loaded."
             )
         raise RuntimeError("POSTGRES_API_URI is not set after loading .env files.")
+
+    # CI uses a disposable Postgres service. Ensure the core auth table exists
+    # before querying so the deterministic admin bootstrap can run on a blank DB.
+    async with async_engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
