@@ -44,9 +44,25 @@ test.describe("Sanctions Tripwire Panel", () => {
       { timeout: 120_000 },
     );
 
-    // Intercept the initial case detail fetch to render the UI shell
-    await page.route(new RegExp(`/api/legal/cases/${caseSlug}$`), async (route) => {
-      if (route.request().method() === "GET") {
+    // PRECISION MOCK: Route by strict pathname, completely ignoring query strings.
+    await page.route(`**/api/legal/cases/${caseSlug}**`, async (route) => {
+      const requestUrl = new URL(route.request().url());
+
+      // Let the specific sanctions alert mock above own its dedicated request.
+      if (
+        requestUrl.pathname.includes("/discovery/draft-pack") ||
+        requestUrl.pathname.includes("/feedback/telemetry") ||
+        requestUrl.pathname.includes("/sanctions/alerts")
+      ) {
+        await route.fallback();
+        return;
+      }
+
+      // Exact match for the base case shell, tolerant of query params and trailing slash.
+      if (
+        requestUrl.pathname === `/api/legal/cases/${caseSlug}` ||
+        requestUrl.pathname === `/api/legal/cases/${caseSlug}/`
+      ) {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -73,9 +89,26 @@ test.describe("Sanctions Tripwire Panel", () => {
             evidence: [],
           }),
         });
-      } else {
-        await route.fallback();
+        return;
       }
+
+      // Swallow other case-scoped widget requests so shell rendering stays deterministic.
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          nodes: [],
+          edges: [],
+          packs: [],
+          count: 0,
+          latest_pack: null,
+          alerts: [],
+          total: 0,
+          kill_sheets: [],
+          items: [],
+          status: "mocked",
+        }),
+      });
     });
 
     await page.goto(`${baseURL}/legal/cases/${caseSlug}`, {
