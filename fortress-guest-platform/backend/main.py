@@ -43,16 +43,13 @@ from backend.api import invites as invites_api
 from backend.api import agreements as agreements_api
 from backend.api import payments as payments_api
 from backend.api import quotes as quotes_api
-from backend.api import vrs_add_ons as vrs_add_ons_api
 from backend.api import vrs_quotes as vrs_quotes_api
-from backend.api import fast_quote as fast_quote_api
 from backend.api import leads as leads_api
 from backend.api import vrs_operations as vrs_operations_api
 from backend.api import checkout as checkout_api
 from backend.api import templates as templates_api
 from backend.api import copilot_queue as copilot_queue_api
 from backend.api import admin as admin_api
-from backend.api import pricing as pricing_api
 from backend.api import rule_engine as rule_engine_api
 from backend.api import intelligence as intelligence_api
 from backend.api import vault as vault_api
@@ -85,23 +82,7 @@ from backend.api import concierge as concierge_api
 from backend.api import dispatch as dispatch_api
 from backend.api import internal_deck as internal_deck_api
 from backend.api import disagg_admin as disagg_admin_api
-from backend.api import openshell_tools as openshell_tools_api
-from backend.api import openshell_audit as openshell_audit_api
-from backend.api import seo_audit as seo_audit_api
-from backend.api import seo_remaps as seo_remaps_api
-from backend.api import history_restore as history_restore_api
-from backend.api import async_jobs as async_jobs_api
-from backend.api import swarm_financial as swarm_financial_api
-from backend.api import swarm_trust as swarm_trust_api
-from backend.api import staff as staff_api
-from backend.api import chat as chat_api
-from backend.api import media as media_api
-from backend.api import guest_portal as guest_portal_router
-from backend.api import communications as communications_api
-from backend.api import telemetry as telemetry_api
-from backend.api import content as content_api
 from backend.core.tenant import TenantMiddleware
-from backend.core.queue import create_arq_pool
 
 # Configure structured logging
 structlog.configure(
@@ -125,7 +106,6 @@ logger = structlog.get_logger()
 # Background task tracking (for watchdog)
 # ---------------------------------------------------------------------------
 _bg_task_heartbeats: dict[str, float] = {}
-FAST_QUOTE_INTERNAL_PATHS = frozenset({"/api/quote", "/api/quotes/calculate"})
 
 
 class GlobalAuthMiddleware(BaseHTTPMiddleware):
@@ -147,43 +127,6 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         auth_header = request.headers.get("authorization", "")
-        swarm_header = request.headers.get("x-swarm-token", "")
-
-        if path in FAST_QUOTE_INTERNAL_PATHS:
-            from backend.core.security import decode_token
-            from backend.core.security_swarm import verify_swarm_token
-
-            bearer_token = auth_header[7:] if auth_header.startswith("Bearer ") else ""
-
-            if swarm_header:
-                try:
-                    await verify_swarm_token(swarm_header)
-                    return await call_next(request)
-                except Exception:
-                    pass
-
-            if bearer_token:
-                try:
-                    payload = decode_token(bearer_token)
-                    if payload.get("sub"):
-                        return await call_next(request)
-                except Exception:
-                    try:
-                        await verify_swarm_token(bearer_token)
-                        return await call_next(request)
-                    except Exception:
-                        pass
-
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "type": "https://fortress/errors/auth",
-                    "title": "Authentication Required",
-                    "status": 401,
-                    "detail": "Missing or invalid Bearer token or X-Swarm-Token",
-                    "instance": path,
-                },
-            )
 
         if not auth_header.startswith("Bearer "):
             return JSONResponse(
@@ -269,13 +212,6 @@ async def lifespan(app: FastAPI):
         logger.info("database_initialized")
     except Exception as e:
         logger.warning("database_init_skipped", error=str(e), note="App will run without DB - configure DATABASE_URL")
-
-    app.state.arq_pool = None
-    try:
-        app.state.arq_pool = await create_arq_pool()
-        logger.info("arq_pool_initialized", queue_name=settings.arq_queue_name)
-    except Exception as e:
-        logger.warning("arq_pool_init_failed", error=str(e)[:300])
 
     async def _deferred_kb_sync_enqueue():
         await asyncio.sleep(5)
@@ -416,9 +352,7 @@ app.include_router(invites_api.router, prefix="/api/invites", tags=["Invites"])
 app.include_router(agreements_api.router, prefix="/api/agreements", tags=["Agreements"])
 app.include_router(payments_api.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(quotes_api.router, prefix="/api/quotes", tags=["Quotes"])
-app.include_router(vrs_add_ons_api.router, prefix="/api/quotes", tags=["VRS Add-Ons"])
 app.include_router(vrs_quotes_api.router, prefix="/api/quotes", tags=["Sovereign Quotes"])
-app.include_router(fast_quote_api.router, tags=["Fast Quote"])
 app.include_router(leads_api.router, prefix="/api/leads", tags=["Leads"])
 app.include_router(vrs_operations_api.router, prefix="/api/vrs", tags=["VRS Operations"])
 app.include_router(checkout_api.router, prefix="/api/checkout", tags=["Checkout Gateway"])
@@ -427,7 +361,6 @@ app.include_router(copilot_queue_api.router, prefix="/api/copilot-queue", tags=[
 app.include_router(stripe_webhooks.router, prefix="/api/webhooks", tags=["Stripe Webhooks"])
 app.include_router(stripe_connect_webhooks.router, prefix="/api/webhooks", tags=["Stripe Connect Webhooks"])
 app.include_router(admin_api.router, prefix="/api/admin", tags=["Admin"])
-app.include_router(pricing_api.router, prefix="/api/pricing", tags=["Pricing Overrides"])
 app.include_router(rule_engine_api.router, prefix="/api/rules", tags=["Rule Engine"])
 app.include_router(intelligence_api.router, prefix="/api/intelligence", tags=["Intelligence"])
 app.include_router(vault_api.router, prefix="/api/vault", tags=["E-Discovery Vault"])
@@ -445,8 +378,7 @@ app.include_router(legal_sanctions_api.router, prefix="/api/legal", tags=["Legal
 app.include_router(legal_deposition_api.router, prefix="/api/legal", tags=["Legal Deposition"])
 app.include_router(legal_agent_api.router, prefix="/api/legal", tags=["Legal Agent"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
-app.include_router(seo_patches_api.router, prefix="/api/seo", tags=["SEO Patches"])
-app.include_router(seo_patches_api.router, prefix="/api/seo-patches", tags=["SEO Patches Compatibility"])
+app.include_router(seo_patches_api.router, prefix="/api/seo-patches", tags=["SEO Patches"])
 app.include_router(wealth_api.router, prefix="/api/wealth", tags=["Wealth & Development"])
 app.include_router(reservation_webhooks.router, prefix="/api/webhooks", tags=["Reservation Webhooks"])
 app.include_router(dispute_webhooks.router, prefix="/api/webhooks", tags=["Dispute Webhooks"])
@@ -461,21 +393,6 @@ app.include_router(concierge_api.router, tags=["Concierge"])
 app.include_router(dispatch_api.router, prefix="/api/dispatch", tags=["Autonomous Dispatch"])
 app.include_router(internal_deck_api.router, prefix="/api/internal", tags=["Internal Deck"])
 app.include_router(disagg_admin_api.router, prefix="/api/disagg/admin", tags=["Disagg Admin"])
-app.include_router(openshell_tools_api.router, tags=["OpenShell Tools v1"])
-app.include_router(openshell_audit_api.router, prefix="/api/openshell/audit", tags=["OpenShell Audit"])
-app.include_router(seo_audit_api.router, tags=["SEO Audit Queue"])
-app.include_router(seo_remaps_api.router, prefix="/api/seo-remaps", tags=["SEO Redirect Remaps"])
-app.include_router(history_restore_api.router, tags=["Historical Archive Restore"])
-app.include_router(async_jobs_api.router, tags=["Async Jobs"])
-app.include_router(swarm_financial_api.router, prefix="/api/swarm/financial", tags=["Swarm Financial"])
-app.include_router(swarm_trust_api.router, prefix="/api/swarm", tags=["Swarm Trust Governance"])
-app.include_router(staff_api.router, prefix="/api/staff", tags=["Staff Management"])
-app.include_router(chat_api.router, tags=["Concierge Chat"])
-app.include_router(media_api.router, prefix="/api/media", tags=["Media"])
-app.include_router(guest_portal_router.router, prefix="/api/guest", tags=["Sovereign Guest Portal"])
-app.include_router(communications_api.router, prefix="/api/webhooks", tags=["Communications"])
-app.include_router(telemetry_api.router, prefix="/api/telemetry", tags=["Telemetry"])
-app.include_router(content_api.router, prefix="/api/content", tags=["Content"])
 
 
 # ---------------------------------------------------------------------------
