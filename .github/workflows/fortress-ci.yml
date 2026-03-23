@@ -39,6 +39,7 @@ jobs:
       JWT_RSA_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY }}
       AUDIT_LOG_SIGNING_KEY: ${{ secrets.AUDIT_LOG_SIGNING_KEY }}
       EDGE_REVALIDATION_SECRET: ${{ secrets.EDGE_REVALIDATION_SECRET }}
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/fortress_ci
       FGP_BACKEND_URL: http://127.0.0.1:8100
       E2E_BACKEND_URL: http://127.0.0.1:8100
       E2E_BASE_URL: http://127.0.0.1:3000
