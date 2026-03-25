@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildBackendUrl } from "@/lib/server/backend-url";
 
-const HEALTH_BACKEND = process.env.HEALTH_BACKEND_URL || "http://127.0.0.1:9876/api/health";
+const HEALTH_BACKEND = process.env.HEALTH_BACKEND_URL || buildBackendUrl("/api/system/health");
 
 export async function GET(request: NextRequest) {
   const cookie = request.cookies.get("fortress_session")?.value;
@@ -11,6 +12,7 @@ export async function GET(request: NextRequest) {
   };
   if (cookie) {
     headers["Cookie"] = `fortress_session=${cookie}`;
+    headers["Authorization"] = `Bearer ${cookie}`;
   }
   if (authHeader) {
     headers["Authorization"] = authHeader;

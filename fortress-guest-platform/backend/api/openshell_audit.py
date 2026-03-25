@@ -38,6 +38,7 @@ class OpenShellAuditOut(BaseModel):
 class ShadowAuditTraceOut(BaseModel):
     trace_id: str
     quote_id: Optional[str]
+    request_id: Optional[str]
     created_at: str
     drift_status: str
     legacy_total: float
@@ -46,6 +47,8 @@ class ShadowAuditTraceOut(BaseModel):
     tax_delta: float
     base_rate_drift_pct: float
     hmac_signature: Optional[str]
+    async_job_href: Optional[str]
+    audit_log_href: str
 
 
 class ShadowAuditSummaryOut(BaseModel):
@@ -76,6 +79,36 @@ class HistoricalRecoverySummaryOut(BaseModel):
     signature_health_pct: float
     top_recovered_slugs: list[HistoricalRecoverySlugOut]
     top_soft_landed_slugs: list[HistoricalRecoverySlugOut]
+
+
+class ShadowSeoTraceOut(BaseModel):
+    trace_id: str
+    page_path: str
+    property_slug: str | None
+    observed_at: str
+    status: str
+    legacy_score: float
+    sovereign_score: float
+    uplift_pct_points: float
+    legacy_rank: int | None
+    legacy_traffic: float | None
+    keyword: str | None
+
+
+class ShadowSeoSummaryOut(BaseModel):
+    status: str
+    source: str
+    snapshot_path: str | None = None
+    observed_count: int
+    superior_count: int
+    parity_count: int
+    trailing_count: int
+    missing_sovereign_count: int
+    avg_legacy_score: float
+    avg_sovereign_score: float
+    avg_uplift_pct_points: float
+    last_observed_at: str | None = None
+    recent_traces: list[ShadowSeoTraceOut]
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -111,12 +144,14 @@ def summarize_shadow_audits(
 
     for row in rows[:10]:
         meta = row.metadata_json or {}
+        request_id = getattr(row, "request_id", None)
         legacy_total = _to_float(meta.get("legacy_total"))
         sovereign_total = _to_float(meta.get("sovereign_total"))
         total_drift_pct = _total_drift_pct(legacy_total, sovereign_total)
         trace = ShadowAuditTraceOut(
             trace_id=str(meta.get("trace_id") or row.resource_id or row.id),
             quote_id=str(meta.get("quote_id")) if meta.get("quote_id") else None,
+            request_id=request_id,
             created_at=row.created_at.isoformat(),
             drift_status=str(meta.get("drift_status") or "UNKNOWN"),
             legacy_total=legacy_total,
@@ -125,6 +160,12 @@ def summarize_shadow_audits(
             tax_delta=round(_to_float(meta.get("tax_delta")), 4),
             base_rate_drift_pct=round(_to_float(meta.get("base_rate_drift_pct")), 4),
             hmac_signature=str(meta.get("hmac_signature")) if meta.get("hmac_signature") else None,
+            async_job_href=f"/api/async/jobs/{request_id}" if request_id else None,
+            audit_log_href=(
+                f"/api/openshell/audit/log?resource_type=shadow_quote_audit&request_id={request_id}"
+                if request_id
+                else f"/api/openshell/audit/log?resource_type=shadow_quote_audit&resource_id={str(meta.get('trace_id') or row.resource_id or row.id)}"
+            ),
         )
         traces.append(trace)
 
@@ -228,12 +269,95 @@ def summarize_historical_recovery(
     )
 
 
+def summarize_shadow_seo_audits(rows: list[OpenShellAuditLog]) -> ShadowSeoSummaryOut:
+    superior_count = 0
+    parity_count = 0
+    trailing_count = 0
+    missing_sovereign_count = 0
+    legacy_scores: list[float] = []
+    sovereign_scores: list[float] = []
+    uplift_values: list[float] = []
+    recent_traces: list[ShadowSeoTraceOut] = []
+    last_observed_at: str | None = None
+    snapshot_path: str | None = None
+
+    for index, row in enumerate(rows):
+        meta = row.metadata_json or {}
+        status = str(meta.get("status") or "unknown")
+        legacy_score = round(_to_float(meta.get("legacy_score")), 2)
+        sovereign_score = round(_to_float(meta.get("sovereign_score")), 2)
+        uplift_pct_points = round(_to_float(meta.get("uplift_pct_points")), 2)
+        observed_at = str(meta.get("observed_at") or row.created_at.isoformat())
+        if index == 0:
+            last_observed_at = observed_at
+            snapshot_path = str(meta.get("snapshot_path")) if meta.get("snapshot_path") else None
+
+        legacy_scores.append(legacy_score)
+        sovereign_scores.append(sovereign_score)
+        uplift_values.append(uplift_pct_points)
+
+        if status == "superior":
+            superior_count += 1
+        elif status == "parity":
+            parity_count += 1
+        elif status == "trailing":
+            trailing_count += 1
+        elif status == "missing_sovereign":
+            missing_sovereign_count += 1
+
+        if index < 10:
+            recent_traces.append(
+                ShadowSeoTraceOut(
+                    trace_id=str(meta.get("trace_id") or row.resource_id or row.id),
+                    page_path=str(meta.get("page_path") or ""),
+                    property_slug=str(meta.get("property_slug")) if meta.get("property_slug") else None,
+                    observed_at=observed_at,
+                    status=status,
+                    legacy_score=legacy_score,
+                    sovereign_score=sovereign_score,
+                    uplift_pct_points=uplift_pct_points,
+                    legacy_rank=int(meta.get("legacy_rank")) if meta.get("legacy_rank") is not None else None,
+                    legacy_traffic=_to_float(meta.get("legacy_traffic"), default=None),
+                    keyword=str(meta.get("keyword")) if meta.get("keyword") else None,
+                )
+            )
+
+    total = len(rows)
+    if total == 0:
+        status = "cold_start"
+    elif missing_sovereign_count == total:
+        status = "no_sovereign"
+    elif trailing_count > 0:
+        status = "trailing"
+    elif superior_count > 0:
+        status = "observing"
+    else:
+        status = "parity"
+
+    return ShadowSeoSummaryOut(
+        status=status,
+        source="semrush",
+        snapshot_path=snapshot_path,
+        observed_count=total,
+        superior_count=superior_count,
+        parity_count=parity_count,
+        trailing_count=trailing_count,
+        missing_sovereign_count=missing_sovereign_count,
+        avg_legacy_score=round(sum(legacy_scores) / total, 2) if total else 0.0,
+        avg_sovereign_score=round(sum(sovereign_scores) / total, 2) if total else 0.0,
+        avg_uplift_pct_points=round(sum(uplift_values) / total, 2) if total else 0.0,
+        last_observed_at=last_observed_at,
+        recent_traces=recent_traces,
+    )
+
+
 @router.get("/log", response_model=list[OpenShellAuditOut])
 async def list_openshell_audit_log(
     limit: int = Query(default=100, ge=1, le=500),
     resource_type: str | None = Query(default=None),
     resource_id: str | None = Query(default=None),
     action: str | None = Query(default=None),
+    request_id: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(OpenShellAuditLog).order_by(desc(OpenShellAuditLog.created_at)).limit(limit)
@@ -243,6 +367,8 @@ async def list_openshell_audit_log(
         stmt = stmt.where(OpenShellAuditLog.resource_id == resource_id.strip())
     if action:
         stmt = stmt.where(OpenShellAuditLog.action == action.strip())
+    if request_id:
+        stmt = stmt.where(OpenShellAuditLog.request_id == request_id.strip())
     rows = (await db.execute(stmt)).scalars().all()
 
     return [
@@ -287,7 +413,7 @@ async def get_historical_recovery_summary(
     hours: int = Query(default=24, ge=1, le=24 * 30),
     db: AsyncSession = Depends(get_db),
 ):
-    window_start = datetime.now(timezone.utc) - timedelta(hours=hours)
+    window_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
     rows = (
         await db.execute(
             select(OpenShellAuditLog)
@@ -298,3 +424,19 @@ async def get_historical_recovery_summary(
     ).scalars().all()
 
     return summarize_historical_recovery(rows, window_hours=hours)
+
+
+@router.get("/shadow-seo-summary", response_model=ShadowSeoSummaryOut)
+async def get_shadow_seo_summary(
+    db: AsyncSession = Depends(get_db),
+):
+    rows = (
+        await db.execute(
+            select(OpenShellAuditLog)
+            .where(OpenShellAuditLog.resource_type == "shadow_seo_audit")
+            .order_by(desc(OpenShellAuditLog.created_at))
+            .limit(100)
+        )
+    ).scalars().all()
+
+    return summarize_shadow_seo_audits(rows)

@@ -52,6 +52,8 @@ from backend.api import copilot_queue as copilot_queue_api
 from backend.api import admin as admin_api
 from backend.api import rule_engine as rule_engine_api
 from backend.api import intelligence as intelligence_api
+from backend.api import intelligence_feed as intelligence_feed_api
+from backend.api import intelligence_projection as intelligence_projection_api
 from backend.api import vault as vault_api
 from backend.api import legal_council as legal_council_api
 from backend.api import ediscovery as ediscovery_api
@@ -75,13 +77,22 @@ from backend.api import dispute_webhooks
 from backend.api import disputes as disputes_api
 from backend.api import system_sensors as system_sensors_api
 from backend.api import system_health as system_health_api
+from backend.api import system_nodes as system_nodes_api
 from backend.api import vrs_health as vrs_health_api
 from backend.api import vrs_treasury as vrs_treasury_api
 from backend.api import hunter as hunter_api
 from backend.api import concierge as concierge_api
-from backend.api import dispatch as dispatch_api
+from backend.api import dispatch as contact_form
 from backend.api import internal_deck as internal_deck_api
+from backend.api import redirect_vanguard_admin as redirect_vanguard_admin_api
+from backend.api import storefront_concierge as storefront_concierge_api
+from backend.api import storefront_intent as storefront_intent_api
 from backend.api import disagg_admin as disagg_admin_api
+from backend.api import telemetry as telemetry_api
+from backend.api import command_c2 as command_c2_api
+from backend.api import sovereign_pulse as sovereign_pulse_api
+from backend.api import funnel_hq as funnel_hq_api
+from backend.api import openshell_audit as openshell_audit_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -201,6 +212,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
+    app.state.arq_pool = getattr(app.state, "arq_pool", None)
     logger.info(
         "starting_fortress_guest_platform",
         environment=settings.environment,
@@ -298,6 +310,7 @@ app.add_middleware(
     allow_origins=[
         "https://crog-ai.com",
         "https://www.crog-ai.com",
+        "https://api.cabin-rentals-of-georgia.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -363,6 +376,12 @@ app.include_router(stripe_connect_webhooks.router, prefix="/api/webhooks", tags=
 app.include_router(admin_api.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(rule_engine_api.router, prefix="/api/rules", tags=["Rule Engine"])
 app.include_router(intelligence_api.router, prefix="/api/intelligence", tags=["Intelligence"])
+app.include_router(intelligence_feed_api.router, prefix="/api/intelligence/feed", tags=["Intelligence Feed"])
+app.include_router(
+    intelligence_projection_api.router,
+    prefix="/api/intelligence/projection",
+    tags=["Intelligence Projection"],
+)
 app.include_router(vault_api.router, prefix="/api/vault", tags=["E-Discovery Vault"])
 app.include_router(legal_council_api.router, prefix="/api/legal", tags=["Legal Council"])
 app.include_router(ediscovery_api.router, prefix="/api/legal", tags=["E-Discovery"])
@@ -378,7 +397,13 @@ app.include_router(legal_sanctions_api.router, prefix="/api/legal", tags=["Legal
 app.include_router(legal_deposition_api.router, prefix="/api/legal", tags=["Legal Deposition"])
 app.include_router(legal_agent_api.router, prefix="/api/legal", tags=["Legal Agent"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
-app.include_router(seo_patches_api.router, prefix="/api/seo-patches", tags=["SEO Patches"])
+app.include_router(seo_patches_api.router, prefix="/api/seo", tags=["SEO"])
+app.include_router(
+    seo_patches_api.router,
+    prefix="/api/seo-patches",
+    tags=["SEO Compatibility"],
+    include_in_schema=False,
+)
 app.include_router(wealth_api.router, prefix="/api/wealth", tags=["Wealth & Development"])
 app.include_router(reservation_webhooks.router, prefix="/api/webhooks", tags=["Reservation Webhooks"])
 app.include_router(dispute_webhooks.router, prefix="/api/webhooks", tags=["Dispute Webhooks"])
@@ -386,13 +411,22 @@ app.include_router(contracts_api.router, prefix="/api/admin/contracts", tags=["M
 app.include_router(disputes_api.router, prefix="/api/admin/disputes", tags=["Dispute Exception Desk"])
 app.include_router(system_sensors_api.router, prefix="/api/system/sensors", tags=["System Sensors"])
 app.include_router(system_health_api.router, prefix="/api/system/health", tags=["System Health Hardware"])
+app.include_router(system_nodes_api.router, prefix="/api/system/nodes", tags=["System Nodes"])
 app.include_router(vrs_health_api.router, tags=["VRS Health"])
 app.include_router(vrs_treasury_api.router, prefix="/api/vrs/treasury", tags=["OTA Warfare"])
 app.include_router(hunter_api.router, prefix="/api", tags=["Reactivation Hunter"])
 app.include_router(concierge_api.router, tags=["Concierge"])
-app.include_router(dispatch_api.router, prefix="/api/dispatch", tags=["Autonomous Dispatch"])
+app.include_router(contact_form.router, prefix="/api/dispatch", tags=["Autonomous Dispatch"])
 app.include_router(internal_deck_api.router, prefix="/api/internal", tags=["Internal Deck"])
+app.include_router(redirect_vanguard_admin_api.router, prefix="/api/internal", tags=["Redirect Vanguard"])
+app.include_router(storefront_intent_api.router, prefix="/api/storefront/intent", tags=["Storefront Intent"])
+app.include_router(storefront_concierge_api.router, prefix="/api/storefront/concierge", tags=["Storefront Concierge"])
 app.include_router(disagg_admin_api.router, prefix="/api/disagg/admin", tags=["Disagg Admin"])
+app.include_router(telemetry_api.router, prefix="/api/telemetry", tags=["Telemetry"])
+app.include_router(command_c2_api.router, prefix="/api/telemetry", tags=["Command C2"])
+app.include_router(sovereign_pulse_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
+app.include_router(funnel_hq_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
+app.include_router(openshell_audit_api.router, prefix="/api/openshell/audit", tags=["OpenShell Audit"])
 
 
 # ---------------------------------------------------------------------------

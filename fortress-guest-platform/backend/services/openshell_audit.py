@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import structlog
@@ -20,6 +20,32 @@ from backend.core.database import AsyncSessionLocal
 from backend.models.openshell_audit import OpenShellAuditLog
 
 logger = structlog.get_logger(service="openshell_audit")
+
+
+def _utcnow_db_naive() -> datetime:
+    """
+    Store UTC timestamps as naive datetimes for compatibility with the current
+    Postgres audit column definition (`TIMESTAMP` without timezone).
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _iso_utc(value: datetime) -> str:
+    if value.tzinfo is None:
+        return value.isoformat(timespec="seconds") + "Z"
+    return value.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _normalize_metadata(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return _iso_utc(value)
+    if isinstance(value, dict):
+        return {str(key): _normalize_metadata(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalize_metadata(item) for item in value]
+    if isinstance(value, tuple):
+        return [_normalize_metadata(item) for item in value]
+    return value
 
 
 def _canonical_json(payload: dict[str, Any]) -> str:
@@ -62,7 +88,8 @@ async def _write_audit_row(
     request_id: Optional[str],
     metadata_json: dict[str, Any],
 ) -> OpenShellAuditLog:
-    created_at = datetime.utcnow()
+    created_at = _utcnow_db_naive()
+    normalized_metadata = _normalize_metadata(metadata_json)
     payload = {
         "actor_id": actor_id,
         "actor_email": actor_email,
@@ -75,12 +102,12 @@ async def _write_audit_row(
         "model_route": model_route,
         "outcome": outcome,
         "request_id": request_id,
-        "metadata_json": metadata_json,
-        "created_at": created_at.isoformat(timespec="seconds"),
+        "metadata_json": normalized_metadata,
+        "created_at": _iso_utc(created_at),
     }
     payload_hash = _sha256(_canonical_json(payload))
     prev_hash = await _latest_entry_hash(db)
-    entry_hash = _sha256(f"{payload_hash}:{prev_hash or ''}:{created_at.isoformat(timespec='seconds')}")
+    entry_hash = _sha256(f"{payload_hash}:{prev_hash or ''}:{_iso_utc(created_at)}")
     signature = _sign(entry_hash)
 
     row = OpenShellAuditLog(
@@ -95,7 +122,7 @@ async def _write_audit_row(
         model_route=model_route,
         outcome=outcome,
         request_id=request_id,
-        metadata_json=metadata_json,
+        metadata_json=normalized_metadata,
         payload_hash=payload_hash,
         prev_hash=prev_hash,
         entry_hash=entry_hash,
