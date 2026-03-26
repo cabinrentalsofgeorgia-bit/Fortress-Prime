@@ -153,8 +153,6 @@ export function CaseDetailShell({ slug }: { slug: string }) {
   const generateDiscoveryPack = useGenerateDiscoveryDraftPack(slug);
   const qc = useQueryClient();
   const [graphSnapshot, setGraphSnapshot] = useState<GraphSnapshot>({ nodes: [], edges: [] });
-  const [graphError, setGraphError] = useState<string | null>(null);
-  const [isGraphLoading, setIsGraphLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [refreshBaseline, setRefreshBaseline] = useState<string>("");
   const [activeTargetNode, setActiveTargetNode] = useState<GraphNode | null>(null);
@@ -181,8 +179,6 @@ export function CaseDetailShell({ slug }: { slug: string }) {
   useEffect(() => {
     let cancelled = false;
     const loadSnapshot = async () => {
-      setIsGraphLoading(true);
-      setGraphError(null);
       try {
         const snapshot = await api.get<GraphSnapshot>(`/api/legal/cases/${slug}/graph/snapshot`);
         if (cancelled) return;
@@ -190,12 +186,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
           nodes: Array.isArray(snapshot?.nodes) ? snapshot.nodes : [],
           edges: Array.isArray(snapshot?.edges) ? snapshot.edges : [],
         });
-      } catch (err) {
-        if (cancelled) return;
-        setGraphError(err instanceof Error ? err.message : "Unable to load graph snapshot");
-      } finally {
-        if (!cancelled) setIsGraphLoading(false);
-      }
+      } catch { /* non-blocking for shell */ }
     };
     loadSnapshot();
     return () => { cancelled = true; };
@@ -266,7 +257,6 @@ export function CaseDetailShell({ slug }: { slug: string }) {
   const latestKillSheet = killSheetsQuery.data?.kill_sheets?.[0] ?? null;
 
   const handleGraphRefresh = async () => {
-    setGraphError(null);
     try {
       const response = await api.post<{ status: string; case_slug: string }>(
         `/api/legal/cases/${slug}/graph/refresh`,
@@ -279,11 +269,6 @@ export function CaseDetailShell({ slug }: { slug: string }) {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to queue graph refresh");
     }
-  };
-
-  const handleNodeTarget = (node: GraphNode) => {
-    setActiveTargetNode(node);
-    setIsWarRoomOpen(true);
   };
 
   return (
@@ -371,22 +356,14 @@ export function CaseDetailShell({ slug }: { slug: string }) {
           <div className="grid gap-4 lg:grid-cols-2">
             <MasterTimeline slug={slug} />
             <div className="space-y-4">
-              <GraphSnapshotCard
-                nodes={graphSnapshot.nodes}
-                edges={graphSnapshot.edges}
-                isLoading={isGraphLoading}
-                error={graphError}
-                onNodeClick={handleNodeTarget}
-              />
+              <GraphSnapshotCard caseSlug={slug} />
             </div>
           </div>
 
           <EvidenceUpload slug={slug} onIngested={() => {
-            setIsGraphLoading(true);
             api.get<GraphSnapshot>(`/api/legal/cases/${slug}/graph/snapshot`)
               .then((s) => setGraphSnapshot({ nodes: Array.isArray(s?.nodes) ? s.nodes : [], edges: Array.isArray(s?.edges) ? s.edges : [] }))
-              .catch(() => {})
-              .finally(() => setIsGraphLoading(false));
+              .catch(() => {});
           }} />
 
           <DocumentViewer legalCase={c} slug={slug} />

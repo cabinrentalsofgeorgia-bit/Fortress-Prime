@@ -19,10 +19,12 @@ from uuid import UUID, uuid4
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.config import settings
 from backend.models.legal_graph import CaseGraphEdge, CaseGraphNode, LegalCase
 from backend.services.ai_router import execute_resilient_inference
 
 logger = structlog.get_logger()
+MAX_GRAPH_NODES = max(1, int(settings.LEGAL_GRAPH_MAX_NODES))
 
 EXTRACTOR_SYSTEM_PROMPT = (
     "You are a Tier 0 Legal Evidence Extractor. Read the provided document chunk. "
@@ -230,7 +232,18 @@ async def ingest_document_to_graph(
         label_to_id[n.label] = n.id
 
     nodes_created = 0
+    existing_count = len(label_to_id)
+    remaining_node_budget = max(MAX_GRAPH_NODES - existing_count, 0)
+    if remaining_node_budget == 0:
+        logger.warning(
+            "evidence_ingestion_node_limit_reached",
+            case_slug=case_slug,
+            existing_nodes=existing_count,
+            limit=MAX_GRAPH_NODES,
+        )
     for node in all_nodes:
+        if remaining_node_budget <= 0:
+            break
         label = str(node.get("label", "")).strip()
         if not label or label in label_to_id:
             continue
@@ -246,6 +259,7 @@ async def ingest_document_to_graph(
         await db.flush()
         label_to_id[label] = new_node.id
         nodes_created += 1
+        remaining_node_budget -= 1
 
     edges_created = 0
     for edge in all_edges:

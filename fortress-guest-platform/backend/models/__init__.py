@@ -38,7 +38,16 @@ from backend.models.hunter import HunterQueueEntry, HunterRun
 from backend.models.legal_graph import LegalCase, CaseGraphNode, CaseGraphEdge
 from backend.models.legal_discovery import DiscoveryDraftPack, DiscoveryDraftItem
 from backend.models.legal_deposition import DepositionTarget, CrossExamFunnel
-from backend.models.legal_phase2 import CaseStatement, SanctionsAlert, JurisdictionRule, HiveMindFeedbackEvent, PrivilegeLog, AiAuditLedger
+from backend.models.legal_phase2 import (
+    CaseStatement,
+    CaseGraphNode as CaseGraphNodePhase2,
+    CaseGraphEdge as CaseGraphEdgePhase2,
+    SanctionsAlert,
+    JurisdictionRule,
+    HiveMindFeedbackEvent,
+    PrivilegeLog,
+    AiAuditLedger,
+)
 from backend.models.treasury import YieldSimulation, YieldOverride, SeoRankSnapshot, OtaMicroUpdate
 from backend.models.intelligence_distillation import DistillationQueue, DistillationStatus
 from backend.models.openshell_audit import OpenShellAuditLog
@@ -138,6 +147,8 @@ __all__ = [
     "CrossExamFunnel",
     # Legal Phase 2
     "CaseStatement",
+    "CaseGraphNodePhase2",
+    "CaseGraphEdgePhase2",
     "SanctionsAlert",
     "JurisdictionRule",
     "HiveMindFeedbackEvent",
