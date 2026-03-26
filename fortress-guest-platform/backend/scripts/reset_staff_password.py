@@ -38,10 +38,18 @@ for env_file in (REPO_ROOT / ".env", PROJECT_ROOT / ".env", REPO_ROOT / ".env.se
         load_dotenv(env_file, override=True)
 
 
-async def _run(email: str, plain: str) -> None:
+async def _run(
+    email: str,
+    plain: str,
+    *,
+    create_if_missing: bool,
+    first_name: str,
+    last_name: str,
+    role_value: str,
+) -> int:
     from backend.core.database import close_db, get_session_factory
     from backend.core.security import hash_password
-    from backend.models.staff import StaffUser
+    from backend.models.staff import StaffRole, StaffUser
 
     try:
         factory = get_session_factory()
@@ -49,11 +57,40 @@ async def _run(email: str, plain: str) -> None:
             result = await db.execute(select(StaffUser).where(StaffUser.email == email.lower()))
             user = result.scalar_one_or_none()
             if user is None:
-                print(f"No staff_users row for email={email!r}", file=sys.stderr)
-                sys.exit(1)
+                if not create_if_missing:
+                    print(f"No staff_users row for email={email!r}", file=sys.stderr)
+                    print(
+                        "Hint: re-run with --create-if-missing (and optional --first-name / --last-name / --role).",
+                        file=sys.stderr,
+                    )
+                    return 1
+                try:
+                    role = StaffRole(role_value.strip().lower())
+                except ValueError:
+                    print(
+                        f"Invalid --role {role_value!r}; use one of: "
+                        f"{', '.join(r.value for r in StaffRole)}",
+                        file=sys.stderr,
+                    )
+                    return 1
+                user = StaffUser(
+                    email=email.lower(),
+                    password_hash=hash_password(plain),
+                    first_name=first_name.strip() or "Staff",
+                    last_name=last_name.strip() or "User",
+                    role=role,
+                    is_active=True,
+                )
+                db.add(user)
+                await db.commit()
+                await db.refresh(user)
+                print(f"Created staff user id={user.id} email={user.email!r} role={user.role.value}")
+                return 0
+
             user.password_hash = hash_password(plain)
             await db.commit()
             print(f"Password updated for staff user id={user.id} email={user.email!r}")
+            return 0
     finally:
         await close_db()
 
@@ -66,6 +103,18 @@ def main() -> None:
         type=int,
         default=8,
         help="Minimum password length (default 8).",
+    )
+    parser.add_argument(
+        "--create-if-missing",
+        action="store_true",
+        help="If no row exists for --email, insert a new staff_users row (break-glass).",
+    )
+    parser.add_argument("--first-name", default="Admin", help="With --create-if-missing (default Admin).")
+    parser.add_argument("--last-name", default="User", help="With --create-if-missing (default User).")
+    parser.add_argument(
+        "--role",
+        default="super_admin",
+        help="With --create-if-missing (default super_admin).",
     )
     args = parser.parse_args()
     email = args.email.strip()
@@ -83,7 +132,17 @@ def main() -> None:
         print(f"Password must be at least {args.min_length} characters.", file=sys.stderr)
         sys.exit(1)
 
-    asyncio.run(_run(email, plain))
+    code = asyncio.run(
+        _run(
+            email,
+            plain,
+            create_if_missing=args.create_if_missing,
+            first_name=args.first_name,
+            last_name=args.last_name,
+            role_value=args.role,
+        )
+    )
+    raise SystemExit(code)
 
 
 if __name__ == "__main__":
