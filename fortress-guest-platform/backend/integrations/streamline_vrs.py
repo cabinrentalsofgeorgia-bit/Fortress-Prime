@@ -40,6 +40,15 @@ Available API Methods (confirmed working 2026-02-20):
     - GetWorkOrders              → Maintenance work orders
     - GetBlockedDaysForUnit      → Availability/bookings calendar
 
+  STRIKE 19 (OPTIONAL — ACCOUNT-SPECIFIC):
+    - Configured RPC via STREAMLINE_SOVEREIGN_BRIDGE_HOLD_METHOD pushes a sovereign checkout
+      hold to Streamline using :meth:`StreamlineVRS.push_sovereign_hold_block` (deferred on
+      circuit OPEN). Method name and params require Streamline approval for your token.
+
+  STRIKE 20 (OPTIONAL — ACCOUNT-SPECIFIC):
+    - After webhook settlement (hold → reservation), STREAMLINE_SOVEREIGN_BRIDGE_RESERVATION_METHOD
+      can notify Streamline via :meth:`StreamlineVRS.dispatch_sovereign_write_rpc`.
+
   SYSTEM:
     - RenewExpiredToken          → Rotate API credentials
 
@@ -54,7 +63,7 @@ Token auto-renewal is handled transparently.
 
 import asyncio
 import re
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Dict, List, Optional, Any
 from decimal import Decimal
 
@@ -69,6 +78,7 @@ from tenacity import (
 
 from backend.core.config import settings
 from backend.integrations.circuit_breaker import streamline_breaker, CircuitOpenError
+from backend.services.property_availability_cache import build_property_availability_snapshot
 from backend.integrations.rate_limiter import streamline_limiter
 
 logger = structlog.get_logger()
@@ -94,6 +104,10 @@ class StreamlineRateLimitError(StreamlineVRSError):
     pass
 
 
+# Strict per-request HTTP bounds; each RPC uses ``async with httpx.AsyncClient`` to avoid CLOSE_WAIT leaks.
+STREAMLINE_HTTP_TIMEOUT = httpx.Timeout(15.0, connect=5.0)
+
+
 class StreamlineVRS:
     """
     Async Streamline VRS JSON-RPC API client.
@@ -108,29 +122,30 @@ class StreamlineVRS:
         self.token_secret = settings.streamline_api_secret
         self.sync_interval = settings.streamline_sync_interval
         self.log = logger.bind(service="streamline_vrs")
-        self._client: Optional[httpx.AsyncClient] = None
         self._last_sync: Dict[str, datetime] = {}
         self._token_expires: Optional[date] = None
+
+    @staticmethod
+    def _probe_enabled(method: str) -> bool:
+        return method in {"GetPropertyRates", "GetBlockedDaysForUnit"}
+
+    @staticmethod
+    def _redact_probe_params(params: Dict[str, Any]) -> Dict[str, Any]:
+        redacted: Dict[str, Any] = {}
+        for key, value in params.items():
+            if key in {"token_key", "token_secret"}:
+                redacted[key] = "[redacted]"
+            else:
+                redacted[key] = value
+        return redacted
 
     @property
     def is_configured(self) -> bool:
         """Check if Streamline credentials are set."""
         return bool(self.token_key and self.token_secret)
 
-    async def _get_client(self) -> httpx.AsyncClient:
-        """Lazy-init HTTP client with connection pooling."""
-        if self._client is None or self._client.is_closed:
-            self._client = httpx.AsyncClient(
-                timeout=httpx.Timeout(30.0, connect=10.0),
-                follow_redirects=True,
-            )
-        return self._client
-
-    async def close(self):
-        """Close the HTTP client gracefully."""
-        if self._client and not self._client.is_closed:
-            await self._client.aclose()
-            self._client = None
+    async def close(self) -> None:
+        """Compatibility hook; each Streamline RPC uses a short-lived ``AsyncClient``."""
 
     # ================================================================
     # CORE RPC CALLER (Circuit Breaker + Retry)
@@ -199,7 +214,9 @@ class StreamlineVRS:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type((httpx.HTTPError, StreamlineRateLimitError)),
+        retry=retry_if_exception_type(
+            (httpx.HTTPError, httpx.TimeoutException, StreamlineRateLimitError)
+        ),
         reraise=True,
     )
     async def _raw_call(self, method: str, extra_params: Optional[Dict] = None) -> Any:
@@ -233,44 +250,79 @@ class StreamlineVRS:
             "params": params,
         }
 
-        client = await self._get_client()
-        resp = await client.post(self.api_url, json=payload)
+        if self._probe_enabled(method):
+            self.log.info(
+                "streamline_rpc_probe_request",
+                method=method,
+                api_url=self.api_url,
+                params=self._redact_probe_params(params),
+                param_types={key: type(value).__name__ for key, value in params.items()},
+            )
 
-        if resp.status_code == 429:
-            raise StreamlineRateLimitError("Rate limited")
-        if resp.status_code != 200:
-            raise StreamlineVRSError(f"HTTP {resp.status_code}: {resp.text[:200]}")
-
-        data = resp.json()
-
-        # Check for Streamline error codes
-        if "status" in data and isinstance(data["status"], dict):
-            code = data["status"].get("code", "")
-            desc = data["status"].get("description", "")
-
-            if code == "E0015":
-                # Token expired — try to renew
-                self.log.warning("token_expired_renewing", method=method)
-                await self._renew_token()
-                # Retry with new token
-                params["token_key"] = self.token_key
-                params["token_secret"] = self.token_secret
-                payload["params"] = params
+        async with httpx.AsyncClient(
+            timeout=STREAMLINE_HTTP_TIMEOUT,
+            follow_redirects=True,
+        ) as client:
+            try:
                 resp = await client.post(self.api_url, json=payload)
-                data = resp.json()
-                if "status" in data:
-                    raise StreamlineAuthError(f"Auth failed after renewal: {data['status']}")
+            except httpx.TimeoutException as exc:
+                self.log.warning(
+                    "streamline_rpc_timeout",
+                    method=method,
+                    error=str(exc),
+                )
+                raise
 
-            elif code == "E0014":
-                raise StreamlineMethodNotAllowed(f"{method}: {desc}")
-            elif code.startswith("E"):
-                raise StreamlineVRSError(f"{method} error {code}: {desc}")
+            if self._probe_enabled(method):
+                self.log.info(
+                    "streamline_rpc_probe_response_raw",
+                    method=method,
+                    status_code=resp.status_code,
+                    raw_text=resp.text,
+                )
 
-        return data.get("data", data)
+            if resp.status_code == 429:
+                raise StreamlineRateLimitError("Rate limited")
+            if resp.status_code != 200:
+                raise StreamlineVRSError(f"HTTP {resp.status_code}: {resp.text[:200]}")
+
+            data = resp.json()
+
+            # Check for Streamline error codes
+            if "status" in data and isinstance(data["status"], dict):
+                code = data["status"].get("code", "")
+                desc = data["status"].get("description", "")
+
+                if code == "E0015":
+                    # Token expired — try to renew (separate short-lived client)
+                    self.log.warning("token_expired_renewing", method=method)
+                    await self._renew_token()
+                    params["token_key"] = self.token_key
+                    params["token_secret"] = self.token_secret
+                    payload["params"] = params
+                    try:
+                        resp = await client.post(self.api_url, json=payload)
+                    except httpx.TimeoutException as exc:
+                        self.log.warning(
+                            "streamline_rpc_timeout",
+                            method=method,
+                            phase="after_token_renewal",
+                            error=str(exc),
+                        )
+                        raise
+                    data = resp.json()
+                    if "status" in data:
+                        raise StreamlineAuthError(f"Auth failed after renewal: {data['status']}")
+
+                elif code == "E0014":
+                    raise StreamlineMethodNotAllowed(f"{method}: {desc}")
+                elif code.startswith("E"):
+                    raise StreamlineVRSError(f"{method} error {code}: {desc}")
+
+            return data.get("data", data)
 
     async def _renew_token(self):
         """Renew expired API token and update in-memory credentials."""
-        client = await self._get_client()
         payload = {
             "methodName": "RenewExpiredToken",
             "params": {
@@ -278,7 +330,15 @@ class StreamlineVRS:
                 "token_secret": self.token_secret,
             },
         }
-        resp = await client.post(self.api_url, json=payload)
+        async with httpx.AsyncClient(
+            timeout=STREAMLINE_HTTP_TIMEOUT,
+            follow_redirects=True,
+        ) as client:
+            try:
+                resp = await client.post(self.api_url, json=payload)
+            except httpx.TimeoutException as exc:
+                self.log.warning("streamline_token_renew_timeout", error=str(exc))
+                raise
         data = resp.json()
 
         new_data = data.get("data", {})
@@ -433,22 +493,54 @@ class StreamlineVRS:
         Fetch rate card, fees, and tax structure for a property.
         RPC Method: GetPropertyRates
         """
+        self.log.info(
+            "streamline_property_rates_callsite",
+            unit_id=unit_id,
+            unit_id_type=type(unit_id).__name__,
+        )
         try:
             data = await self._call("GetPropertyRates", {"unit_id": str(unit_id)})
-            if not isinstance(data, dict):
+            rates: List[Dict[str, Any]] = []
+            fees: List[Dict[str, Any]] = []
+            taxes: List[Dict[str, Any]] = []
+            payload_shape = type(data).__name__
+
+            if isinstance(data, list):
+                payload_shape = "daily_rate_list"
+                for row in data:
+                    if not isinstance(row, dict):
+                        continue
+                    rate_date = row.get("date")
+                    nightly_rate = row.get("rate")
+                    if not rate_date or nightly_rate in (None, ""):
+                        continue
+                    rates.append(
+                        {
+                            "name": row.get("season", "") or "streamline_daily_rate",
+                            "startdate": rate_date,
+                            "enddate": rate_date,
+                            "price_nightly": nightly_rate,
+                            "price_weekly": None,
+                            "price_monthly": None,
+                            "minimum_days": row.get("minStay"),
+                            "booked": row.get("booked"),
+                            "change_over": row.get("changeOver"),
+                        }
+                    )
+            elif isinstance(data, dict):
+                rates = data.get("rate", [])
+                if isinstance(rates, dict):
+                    rates = [rates]
+
+                fees = data.get("fee", [])
+                if isinstance(fees, dict):
+                    fees = [fees]
+
+                taxes = data.get("tax", [])
+                if isinstance(taxes, dict):
+                    taxes = [taxes]
+            else:
                 return {}
-
-            rates = data.get("rate", [])
-            if isinstance(rates, dict):
-                rates = [rates]
-
-            fees = data.get("fee", [])
-            if isinstance(fees, dict):
-                fees = [fees]
-
-            taxes = data.get("tax", [])
-            if isinstance(taxes, dict):
-                taxes = [taxes]
 
             rate_card = {
                 "rates": [
@@ -460,6 +552,8 @@ class StreamlineVRS:
                         "weekly": r.get("price_weekly"),
                         "monthly": r.get("price_monthly"),
                         "min_nights": r.get("minimum_days"),
+                        "booked": r.get("booked"),
+                        "change_over": r.get("change_over"),
                     }
                     for r in rates
                 ],
@@ -480,13 +574,18 @@ class StreamlineVRS:
                     }
                     for t in taxes
                 ],
+                "payload_shape": payload_shape,
                 "synced_at": datetime.utcnow().isoformat(),
             }
 
-            self.log.info("property_rates_fetched", unit_id=unit_id,
-                          rates=len(rate_card["rates"]),
-                          fees=len(rate_card["fees"]),
-                          taxes=len(rate_card["taxes"]))
+            self.log.info(
+                "property_rates_fetched",
+                unit_id=unit_id,
+                payload_shape=payload_shape,
+                rates=len(rate_card["rates"]),
+                fees=len(rate_card["fees"]),
+                taxes=len(rate_card["taxes"]),
+            )
             return rate_card
 
         except StreamlineMethodNotAllowed:
@@ -517,6 +616,16 @@ class StreamlineVRS:
         if not end_date:
             end_date = date.today() + timedelta(days=365)
 
+        self.log.info(
+            "streamline_blocked_days_callsite",
+            unit_id=unit_id,
+            unit_id_type=type(unit_id).__name__,
+            start_date=str(start_date),
+            start_date_type=type(start_date).__name__,
+            end_date=str(end_date),
+            end_date_type=type(end_date).__name__,
+        )
+
         data = await self._call("GetBlockedDaysForUnit", {
             "unit_id": str(unit_id),
             "startdate": start_date.strftime("%m/%d/%Y"),
@@ -524,22 +633,143 @@ class StreamlineVRS:
         })
 
         blocked = []
+        raw_blocked: Any = []
         if isinstance(data, dict):
-            raw_blocked = data.get("blocked_days", {}).get("blocked", [])
-            if isinstance(raw_blocked, dict):
-                raw_blocked = [raw_blocked]
-            for b in raw_blocked:
-                blocked.append({
-                    "confirmation_id": b.get("confirmation_id"),
-                    "start_date": self._parse_streamline_date(b.get("startdate")),
-                    "end_date": self._parse_streamline_date(b.get("enddate")),
-                    "checkout_date": self._parse_streamline_date(b.get("checkout")),
-                    "type_name": b.get("type_name", ""),
-                    "type_description": b.get("type_description", ""),
-                })
+            blocked_days = data.get("blocked_days", [])
+            if isinstance(blocked_days, dict):
+                raw_blocked = blocked_days.get("blocked", [])
+            elif isinstance(blocked_days, list):
+                raw_blocked = blocked_days
+            else:
+                raw_blocked = []
+        elif isinstance(data, list):
+            raw_blocked = data
+
+        if isinstance(raw_blocked, dict):
+            raw_blocked = [raw_blocked]
+
+        for b in raw_blocked:
+            if not isinstance(b, dict):
+                continue
+            blocked.append({
+                "confirmation_id": b.get("confirmation_id"),
+                "start_date": self._parse_streamline_date(b.get("startdate")),
+                "end_date": self._parse_streamline_date(b.get("enddate")),
+                "checkout_date": self._parse_streamline_date(b.get("checkout")),
+                "type_name": b.get("type_name", ""),
+                "type_description": b.get("type_description", ""),
+            })
 
         self.log.info("blocked_days_fetched", unit_id=unit_id, count=len(blocked))
         return blocked
+
+    async def dispatch_sovereign_write_rpc(
+        self,
+        rpc_method: str,
+        extra_params: Dict[str, Any],
+        *,
+        log_name: str = "sovereign_bridge_write",
+        log_context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Shared write path for Strike 19/20 optional Streamline RPC (deferred on circuit OPEN).
+
+        Does not raise for E0014 / general RPC errors; returns a structured dict for callers.
+        """
+        method = (rpc_method or "").strip()
+        if not self.is_configured or not method:
+            return {"ok": False, "skipped": True, "reason": "not_configured_or_method_empty"}
+
+        ctx = {"bridge_kind": log_name, **(log_context or {})}
+        try:
+            data = await self._call_with_deferred_write(method, extra_params)
+            if isinstance(data, dict) and data.get("_deferred"):
+                return {"ok": True, "deferred": True, "method": method}
+            return {"ok": True, "deferred": False, "method": method, "data": data}
+        except StreamlineMethodNotAllowed as exc:
+            self.log.warning(
+                "sovereign_bridge_write_method_denied",
+                method=method,
+                error=str(exc),
+                **ctx,
+            )
+            return {"ok": False, "skipped": True, "reason": "method_not_allowed", "error": str(exc)}
+        except StreamlineVRSError as exc:
+            self.log.warning(
+                "sovereign_bridge_write_rpc_error",
+                method=method,
+                error=str(exc),
+                **ctx,
+            )
+            return {"ok": False, "skipped": False, "reason": "rpc_error", "error": str(exc)}
+
+    async def replay_queued_rpc_payload(
+        self,
+        queued_body: Optional[Dict[str, Any]] = None,
+        *,
+        payload: Optional[Dict[str, Any]] = None,
+        method_override: Optional[str] = None,
+    ) -> Any:
+        """
+        Replay a full JSON-RPC body from ``deferred_api_writes`` using **current** Streamline tokens.
+
+        Strips stale ``token_key`` / ``token_secret`` from stored params so rotation does not require
+        re-queuing. Routes through the circuit breaker like normal writes.
+
+        Pass either ``queued_body`` (positional) or keyword ``payload``. ``method_override`` replaces
+        ``methodName`` when the row's ``method`` column is authoritative.
+        """
+        body = queued_body if queued_body is not None else payload
+        if not isinstance(body, dict):
+            raise StreamlineVRSError("payload required and must be a dict")
+        merged: Dict[str, Any] = dict(body)
+        if method_override and str(method_override).strip():
+            merged["methodName"] = str(method_override).strip()
+        if not self.is_configured:
+            raise StreamlineVRSError("Streamline not configured")
+        method = str(merged.get("methodName") or "").strip()
+        raw_params = merged.get("params")
+        if not method or not isinstance(raw_params, dict):
+            raise StreamlineVRSError("Invalid deferred RPC payload shape")
+        extra_params = {
+            k: v
+            for k, v in raw_params.items()
+            if k not in ("token_key", "token_secret")
+        }
+        return await streamline_breaker.call(self._raw_call, method, extra_params)
+
+    async def push_sovereign_hold_block(
+        self,
+        unit_id: int,
+        check_in: date,
+        check_out: date,
+        *,
+        note: str = "SOVEREIGN_CHECKOUT_IN_PROGRESS",
+        hold_duration_minutes: int = 15,
+        rpc_method: str,
+    ) -> Dict[str, Any]:
+        """
+        Strike 19 — optional write bridge: notify Streamline of an in-progress sovereign hold.
+
+        ``rpc_method`` is the Streamline ``methodName`` (varies by API tier). Params use the
+        same date style as ``GetBlockedDaysForUnit``. On circuit OPEN, the payload is deferred
+        for replay via :meth:`_call_with_deferred_write`.
+
+        Returns a small result dict (never raises for method-not-allowed — callers log and continue).
+        """
+        extra_params: Dict[str, Any] = {
+            "unit_id": str(unit_id),
+            "startdate": check_in.strftime("%m/%d/%Y"),
+            "enddate": check_out.strftime("%m/%d/%Y"),
+            "notes": note,
+            "hold_duration_minutes": str(int(hold_duration_minutes)),
+        }
+        return await self.dispatch_sovereign_write_rpc(
+            rpc_method,
+            extra_params,
+            log_name="sovereign_bridge_hold",
+            log_context={"unit_id": unit_id},
+        )
 
     # ================================================================
     # WORK ORDERS
@@ -1174,6 +1404,78 @@ class StreamlineVRS:
     # DATABASE SYNC ENGINE
     # ================================================================
 
+    async def sync_property_availability(self, db) -> Dict[str, Any]:
+        """Refresh the local Property.availability cache from Streamline."""
+        from sqlalchemy import select
+
+        from backend.models import Property
+
+        if not self.is_configured:
+            return {"status": "skipped", "reason": "Streamline VRS not configured"}
+
+        summary = {
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "synced": 0,
+            "skipped": 0,
+            "bookings_found": 0,
+            "errors": [],
+        }
+        remote_properties = await self.fetch_properties()
+        streamline_ids = [
+            str(property_row.get("streamline_property_id") or "").strip()
+            for property_row in remote_properties
+            if property_row.get("streamline_property_id")
+        ]
+        if not streamline_ids:
+            return summary
+
+        local_properties = (
+            await db.execute(
+                select(Property).where(Property.streamline_property_id.in_(streamline_ids))
+            )
+        ).scalars().all()
+        properties_by_streamline_id = {
+            str(property_record.streamline_property_id): property_record
+            for property_record in local_properties
+            if property_record.streamline_property_id
+        }
+
+        cache_generated_at = datetime.now(timezone.utc)
+        cache_updated = False
+        for remote_property in remote_properties:
+            streamline_property_id = str(
+                remote_property.get("streamline_property_id") or ""
+            ).strip()
+            if not streamline_property_id:
+                continue
+            local_property = properties_by_streamline_id.get(streamline_property_id)
+            if local_property is None:
+                summary["skipped"] += 1
+                continue
+
+            try:
+                blocked_ranges = await self.fetch_blocked_days(int(streamline_property_id))
+                local_property.availability = build_property_availability_snapshot(
+                    property_id=str(local_property.id),
+                    property_slug=local_property.slug,
+                    blocked_ranges=blocked_ranges,
+                    generated_at=cache_generated_at,
+                )
+                summary["synced"] += 1
+                summary["bookings_found"] += len(blocked_ranges)
+                cache_updated = True
+            except StreamlineMethodNotAllowed:
+                summary["errors"].append("Availability sync is not enabled for this Streamline token")
+                break
+            except Exception as exc:
+                summary["errors"].append(
+                    f"Availability {remote_property.get('name')}: {exc}"
+                )
+
+        if cache_updated:
+            await db.commit()
+        return summary
+
     async def sync_all(self, db) -> Dict[str, Any]:
         """
         Full sync: Streamline VRS -> FGP database.
@@ -1204,6 +1506,7 @@ class StreamlineVRS:
             # ---- Phase 1: Sync Properties ----
             self.log.info("sync_phase_1_properties")
             remote_properties = await self.fetch_properties()
+            reindex_property_ids: set[str] = set()
 
             from sqlalchemy import select
 
@@ -1218,6 +1521,7 @@ class StreamlineVRS:
                     existing = result.scalar_one_or_none()
 
                     if existing:
+                        property_changed = False
                         # Update mutable fields
                         for field in [
                             "name", "max_guests", "address",
@@ -1225,35 +1529,46 @@ class StreamlineVRS:
                             "is_active",
                         ]:
                             val = rp.get(field)
-                            if val is not None:
+                            if val is not None and getattr(existing, field) != val:
                                 setattr(existing, field, val)
+                                property_changed = True
 
                         # Enrich with detail call
                         try:
                             detail = await self.fetch_property_detail(int(sl_id))
                             if detail.get("bedrooms_number"):
-                                existing.bedrooms = int(detail["bedrooms_number"])
+                                bedrooms_value = int(detail["bedrooms_number"])
+                                if existing.bedrooms != bedrooms_value:
+                                    existing.bedrooms = bedrooms_value
+                                    property_changed = True
                             if detail.get("bathrooms_number"):
-                                existing.bathrooms = float(detail["bathrooms_number"])
+                                bathrooms_value = float(detail["bathrooms_number"])
+                                if existing.bathrooms != bathrooms_value:
+                                    existing.bathrooms = bathrooms_value
+                                    property_changed = True
                         except Exception:
                             pass
 
                         # Sync rate card (fees, taxes, seasonal rates)
                         try:
                             rc = await self.fetch_property_rates(int(sl_id))
-                            if rc:
+                            if rc and existing.rate_card != rc:
                                 existing.rate_card = rc
+                                property_changed = True
                         except Exception:
                             pass
 
                         # Sync amenities from Streamline
                         try:
                             amenity_list = await self.fetch_property_amenities(int(sl_id))
-                            if amenity_list:
+                            if amenity_list and existing.amenities != amenity_list:
                                 existing.amenities = amenity_list
+                                property_changed = True
                         except Exception as ae:
                             self.log.warning("property_amenities_error", unit_id=sl_id, error=str(ae)[:120])
 
+                        if property_changed:
+                            reindex_property_ids.add(str(existing.id))
                         summary["properties"]["updated"] += 1
                     else:
                         # Enrich before creating
@@ -1291,6 +1606,8 @@ class StreamlineVRS:
                             amenities=amenities_data,
                         )
                         db.add(prop)
+                        await db.flush()
+                        reindex_property_ids.add(str(prop.id))
                         summary["properties"]["created"] += 1
 
                 except Exception as e:
@@ -1298,6 +1615,26 @@ class StreamlineVRS:
                     summary["errors"].append(f"Property {rp.get('name')}: {e}")
 
             await db.commit()
+
+            summary["knowledge_reindex"] = {"enqueued": 0, "errors": 0}
+            if reindex_property_ids:
+                try:
+                    from backend.core.queue import create_arq_pool
+
+                    arq_pool = await create_arq_pool()
+                    try:
+                        for property_id in sorted(reindex_property_ids):
+                            await arq_pool.enqueue_job(
+                                "reindex_property_knowledge",
+                                property_id,
+                                _queue_name=settings.arq_queue_name,
+                            )
+                        summary["knowledge_reindex"]["enqueued"] = len(reindex_property_ids)
+                    finally:
+                        await arq_pool.aclose()
+                except Exception as reindex_exc:
+                    self.log.warning("knowledge_reindex_enqueue_error", error=str(reindex_exc)[:300])
+                    summary["knowledge_reindex"] = {"enqueued": 0, "errors": len(reindex_property_ids)}
 
             # ---- Phase 2: Sync Reservations + Guests ----
             self.log.info("sync_phase_2_reservations")
@@ -1555,6 +1892,12 @@ class StreamlineVRS:
                                 "cc": str(b.get("confirmation_id") or "")[:50] or None,
                             },
                         )
+                    local_prop.availability = build_property_availability_snapshot(
+                        property_id=str(local_prop.id),
+                        property_slug=local_prop.slug,
+                        blocked_ranges=blocked,
+                        generated_at=datetime.now(timezone.utc),
+                    )
                     await db.commit()
                     summary["availability"]["synced"] += 1
                     summary["availability"]["bookings_found"] += len(blocked)
@@ -1785,6 +2128,7 @@ class StreamlineVRS:
             # (closes the Phase 2/6 ordering gap)
             self.log.info("sync_phase_6_5_revenue_reconciliation")
             try:
+                await db.commit()
                 recon_query = await db.execute(
                     text("""
                         SELECT r.confirmation_code,
@@ -2097,9 +2441,20 @@ class StreamlineVRS:
         # ---- Phase 10: Vectorize newly synced records into Qdrant ----
         self.log.info("sync_phase_10_vectorization")
         try:
-            from backend.workers.vectorizer import vectorize_new_records
-            vec_summary = await vectorize_new_records(db)
-            summary["vectorization"] = vec_summary
+            from backend.core.database import AsyncSessionLocal
+            from backend.services.async_jobs import enqueue_async_job
+
+            async with AsyncSessionLocal() as queue_session:
+                vector_job = await enqueue_async_job(
+                    queue_session,
+                    worker_name="vectorize_new_records_job",
+                    job_name="vectorize_new_records",
+                    payload={"trigger": "streamline_sync"},
+                    requested_by="streamline_sync",
+                    tenant_id=None,
+                    request_id=None,
+                )
+            summary["vectorization"] = {"enqueued_job_id": str(vector_job.id)}
         except Exception as e:
             self.log.warning("vectorization_phase_error", error=str(e))
             summary["vectorization"] = {"error": str(e)}
@@ -2135,20 +2490,27 @@ class StreamlineVRS:
         self, db, entity_type: str, entity_id: str,
         event_type: str, previous_state: dict, current_state: dict,
     ):
-        """Log the entity change and publish to the Redis event bus for async rule evaluation."""
+        """Persist automation audit + ARQ publish only after Postgres is clean.
+
+        Commits the caller's sync transaction first so ARQ/Kafka never runs while the
+        main session holds uncommitted rows (avoids idle-in-transaction during I/O).
+        """
         try:
+            await db.commit()
+        except Exception as exc:
+            self.log.error(
+                "emit_sync_event_parent_commit_failed",
+                error=str(exc),
+                entity=entity_type,
+                entity_id=entity_id,
+            )
+            await db.rollback()
+            raise
+
+        try:
+            from backend.core.database import get_session_factory
             from backend.vrs.domain.automations import AutomationEvent, StreamlineEventPayload
             from backend.vrs.infrastructure.event_bus import publish_vrs_event
-
-            event_row = AutomationEvent(
-                entity_type=entity_type,
-                entity_id=entity_id,
-                event_type=event_type,
-                previous_state=previous_state,
-                current_state=current_state,
-            )
-            db.add(event_row)
-            await db.flush()
 
             payload = StreamlineEventPayload(
                 entity_type=entity_type,
@@ -2157,6 +2519,19 @@ class StreamlineVRS:
                 previous_state=previous_state,
                 current_state=current_state,
             )
+
+            factory = get_session_factory()
+            async with factory() as event_db:
+                event_row = AutomationEvent(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    event_type=event_type,
+                    previous_state=previous_state,
+                    current_state=current_state,
+                )
+                event_db.add(event_row)
+                await event_db.commit()
+
             await publish_vrs_event(payload)
         except Exception as exc:
             self.log.warning("rule_engine_emit_failed", error=str(exc), entity=entity_type)
@@ -2423,3 +2798,7 @@ class StreamlineVRS:
                 k: v.isoformat() for k, v in self._last_sync.items()
             },
         }
+
+
+# Shared client for workers and reconciliation (one connection pool per process).
+streamline_vrs = StreamlineVRS()
