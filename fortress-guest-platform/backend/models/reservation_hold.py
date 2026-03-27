@@ -41,6 +41,12 @@ class ReservationHold(Base):
         nullable=True,
         index=True,
     )
+    converted_reservation_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("reservations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     session_id = Column(String(255), nullable=False, index=True)
     check_in_date = Column(Date, nullable=False)
     check_out_date = Column(Date, nullable=False)

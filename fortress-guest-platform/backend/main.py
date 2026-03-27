@@ -78,6 +78,8 @@ from backend.api import disputes as disputes_api
 from backend.api import system_sensors as system_sensors_api
 from backend.api import system_health as system_health_api
 from backend.api import system_nodes as system_nodes_api
+from backend.api import system_dashboard as system_dashboard_api
+from backend.api import ops as ops_api
 from backend.api import vrs_health as vrs_health_api
 from backend.api import vrs_treasury as vrs_treasury_api
 from backend.api import hunter as hunter_api
@@ -257,28 +259,12 @@ async def lifespan(app: FastAPI):
 
     kb_sync_task = asyncio.create_task(_deferred_kb_sync_enqueue())
 
-    from backend.integrations.streamline_vrs import StreamlineVRS
-    from backend.core.database import AsyncSessionLocal
-    vrs = StreamlineVRS()
-    sync_task = None
-    if vrs.is_configured:
-        async def _run_sync():
-            while True:
-                try:
-                    async with AsyncSessionLocal() as db:
-                        await vrs.sync_all(db)
-                except Exception as e:
-                    logger.error("streamline_sync_error", error=str(e)[:500])
-                await asyncio.sleep(settings.streamline_sync_interval)
-        sync_task = asyncio.create_task(_run_sync())
-        logger.info("streamline_background_sync_started", interval=settings.streamline_sync_interval)
-    else:
-        logger.warning("streamline_not_configured")
+    # Streamline full sync (sync_all) runs in a dedicated process:
+    # systemd fortress-sync-worker → python -m backend.sync
+    logger.info("streamline_full_sync_delegated_to_sync_worker")
 
     yield
 
-    if sync_task:
-        sync_task.cancel()
     kb_sync_task.cancel()
     if app.state.arq_pool is not None:
         await app.state.arq_pool.aclose()
@@ -412,6 +398,8 @@ app.include_router(disputes_api.router, prefix="/api/admin/disputes", tags=["Dis
 app.include_router(system_sensors_api.router, prefix="/api/system/sensors", tags=["System Sensors"])
 app.include_router(system_health_api.router, prefix="/api/system/health", tags=["System Health Hardware"])
 app.include_router(system_nodes_api.router, prefix="/api/system/nodes", tags=["System Nodes"])
+app.include_router(system_dashboard_api.router, prefix="/api/system", tags=["Staff Dashboard Aggregate"])
+app.include_router(ops_api.router, prefix="/api")
 app.include_router(vrs_health_api.router, tags=["VRS Health"])
 app.include_router(vrs_treasury_api.router, prefix="/api/vrs/treasury", tags=["OTA Warfare"])
 app.include_router(hunter_api.router, prefix="/api", tags=["Reactivation Hunter"])
@@ -432,7 +420,7 @@ app.include_router(openshell_audit_api.router, prefix="/api/openshell/audit", ta
 # ---------------------------------------------------------------------------
 # Static files / Frontend fallback
 # ---------------------------------------------------------------------------
-_frontend_dist = Path(__file__).resolve().parent.parent / "frontend-next" / "out"
+_frontend_dist = Path(__file__).resolve().parent.parent / "apps" / "storefront" / "out"
 if _frontend_dist.is_dir():
     app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
 

@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, Enum as SQLEnum, String, Text
+from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from backend.core.database import Base
@@ -26,6 +26,12 @@ class DistillationQueue(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     source_module = Column(String(120), nullable=False, index=True)
     source_ref = Column(String(255), nullable=False, index=True)
+    source_intelligence_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("intelligence_ledger.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     input_payload = Column(JSONB, nullable=False, default=dict)
     output_payload = Column(JSONB, nullable=False, default=dict)
     status = Column(
