@@ -1,25 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { memo, useEffect, useRef, useState } from "react";
 import { Terminal as TerminalIcon } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { api, ApiError } from "@/lib/api";
+import { getToken } from "@/lib/api";
 
 type MatrixDispatchResponse = {
   task_id?: string;
   status?: string;
   action_log?: string[];
   result_payload?: Record<string, unknown>;
+  sandbox_name?: string;
+  execution_path?: string;
+  log?: string;
+  error?: string;
+  details?: string;
   [key: string]: unknown;
 };
 
 function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError) {
-    return `${error.status}: ${error.message}`;
-  }
   if (error instanceof Error) {
     return error.message;
   }
@@ -58,8 +59,18 @@ function parseSignal(actionLog: string[] | undefined, prefix: string, fallback: 
   return value ? value.slice(prefix.length) : fallback;
 }
 
-export function MatrixTerminal() {
+function parseStreamError(responseText: string): string {
+  try {
+    const parsed = JSON.parse(responseText) as { detail?: string; title?: string };
+    return parsed.detail || parsed.title || responseText;
+  } catch {
+    return responseText || "Manual matrix dispatch failed";
+  }
+}
+
+export const MatrixTerminal = memo(function MatrixTerminal() {
   const [input, setInput] = useState(DEFAULT_INPUT);
+  const [isExecuting, setIsExecuting] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([
     {
       timestamp: timestamp(),
@@ -73,69 +84,123 @@ export function MatrixTerminal() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  const dispatch = useMutation({
-    mutationFn: (payload: Record<string, unknown>) =>
-      api.post<MatrixDispatchResponse>("/api/agent/dispatch", payload),
-    onSuccess: (result) => {
-      const executionPath = parseSignal(result.action_log, "execution_path=", "unknown");
-      const sandboxName = parseSignal(result.action_log, "sandbox_name=", "Matrix");
-      const nextLogs: LogEntry[] = [
-        {
-          timestamp: timestamp(),
-          text: `[SUCCESS] Node: ${sandboxName} | Path: ${executionPath}`,
-          type: "success",
-        },
-      ];
-      const draftBody = String(result.result_payload?.draft_body ?? "").trim();
-      if (draftBody) {
-        nextLogs.push({
-          timestamp: timestamp(),
-          text: `PAYLOAD:\n${draftBody}`,
-          type: "info",
-        });
-      }
-      setLogs((current) => [...current, ...nextLogs]);
-    },
-    onError: (error) => {
-      setLogs((current) => [
-        ...current,
-        {
-          timestamp: timestamp(),
-          text: `[FATAL] ${errorMessage(error, "Manual matrix dispatch failed")}`,
-          type: "error",
-        },
-      ]);
-    },
-  });
-
-  async function handleDispatch(): Promise<void> {
-    if (!input.trim()) return;
-
+  function appendLog(entry: Omit<LogEntry, "timestamp">): void {
     setLogs((current) => [
       ...current,
       {
         timestamp: timestamp(),
-        text: `> ${input}`,
-        type: "command",
+        ...entry,
       },
     ]);
+  }
+
+  function handleStreamEvent(event: MatrixDispatchResponse): void {
+    if (event.log) {
+      appendLog({ text: event.log, type: "info" });
+    }
+
+    if (event.error) {
+      const details = event.details ? `: ${event.details}` : "";
+      throw new Error(`${event.error}${details}`);
+    }
+
+    if (event.status === "success") {
+      const executionPath =
+        typeof event.execution_path === "string"
+          ? event.execution_path
+          : parseSignal(event.action_log, "execution_path=", "unknown");
+      const sandboxName =
+        typeof event.sandbox_name === "string"
+          ? event.sandbox_name
+          : parseSignal(event.action_log, "sandbox_name=", "Matrix");
+      appendLog({
+        text: `[SUCCESS] Node: ${sandboxName} | Path: ${executionPath}`,
+        type: "success",
+      });
+
+      const draftBody = String(event.result_payload?.draft_body ?? "").trim();
+      if (draftBody) {
+        appendLog({
+          text: `PAYLOAD:\n${draftBody}`,
+          type: "info",
+        });
+      }
+    }
+  }
+
+  async function handleDispatch(): Promise<void> {
+    if (!input.trim()) return;
+
+    appendLog({ text: `> ${input}`, type: "command" });
+    setIsExecuting(true);
 
     try {
       const parsed = JSON.parse(input) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new Error("Directive must be a JSON object.");
       }
-      await dispatch.mutateAsync(parsed as Record<string, unknown>);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Invalid JSON payload";
-      setLogs((current) => [
-        ...current,
-        {
-          timestamp: timestamp(),
-          text: `[FATAL] ${message}`,
-          type: "error",
+      const token = getToken();
+      const response = await fetch("/api/agent/dispatch/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-      ]);
+        credentials: "include",
+        body: JSON.stringify(parsed),
+      });
+
+      if (!response.ok) {
+        throw new Error(parseStreamError(await response.text()));
+      }
+
+      if (!response.body) {
+        throw new Error("No readable stream available from Matrix.");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const block = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          const payload = block
+            .split("\n")
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trim())
+            .join("\n");
+
+          if (payload) {
+            handleStreamEvent(JSON.parse(payload) as MatrixDispatchResponse);
+          }
+
+          boundary = buffer.indexOf("\n\n");
+        }
+      }
+
+      const trailingPayload = buffer
+        .split("\n")
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .join("\n");
+      if (trailingPayload) {
+        handleStreamEvent(JSON.parse(trailingPayload) as MatrixDispatchResponse);
+      }
+    } catch (error) {
+      appendLog({
+        text: `[FATAL] ${errorMessage(error, "Invalid JSON payload")}`,
+        type: "error",
+      });
+    } finally {
+      setIsExecuting(false);
     }
   }
 
@@ -173,7 +238,7 @@ export function MatrixTerminal() {
         <Textarea
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          disabled={dispatch.isPending}
+          disabled={isExecuting}
           rows={3}
           className="min-h-[76px] flex-1 rounded-none border-zinc-700 bg-[#050505] font-mono text-xs text-white focus-visible:ring-cyan-400 disabled:opacity-50"
           placeholder='{"intent":"draft_recovery_email","target_node":"auto"}'
@@ -183,12 +248,12 @@ export function MatrixTerminal() {
           onClick={() => {
             void handleDispatch();
           }}
-          disabled={dispatch.isPending}
+          disabled={isExecuting}
           className="whitespace-nowrap bg-cyan-400 px-6 py-2 font-bold text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {dispatch.isPending ? "TRANSMITTING..." : "EXECUTE"}
+          {isExecuting ? "TRANSMITTING..." : "EXECUTE"}
         </button>
       </div>
     </div>
   );
-}
+});

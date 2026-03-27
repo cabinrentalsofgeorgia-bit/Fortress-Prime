@@ -37,6 +37,11 @@ export function buildSystemHealthWsUrl(token: string): string | null {
   }
 
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const { hostname, port } = window.location;
+  if ((hostname === "127.0.0.1" || hostname === "localhost") && port === "3001") {
+    return `${proto}//${hostname}:8100/api/telemetry/ws/system-health?token=${encodeURIComponent(t)}`;
+  }
+
   return `${proto}//${window.location.host}/api/telemetry/ws/system-health?token=${encodeURIComponent(t)}`;
 }
 

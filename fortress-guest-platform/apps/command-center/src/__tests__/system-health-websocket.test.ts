@@ -29,4 +29,12 @@ describe("buildSystemHealthWsUrl", () => {
     const u = buildSystemHealthWsUrl("tok");
     expect(u).toBe("wss://staging-api.crog-ai.com/api/telemetry/ws/system-health?token=tok");
   });
+
+  it("uses the backend port during local standalone sweeps", () => {
+    vi.stubGlobal("window", {
+      location: { origin: "http://127.0.0.1:3001", protocol: "http:", host: "127.0.0.1:3001", hostname: "127.0.0.1", port: "3001" },
+    });
+    const u = buildSystemHealthWsUrl("tok");
+    expect(u).toBe("ws://127.0.0.1:8100/api/telemetry/ws/system-health?token=tok");
+  });
 });

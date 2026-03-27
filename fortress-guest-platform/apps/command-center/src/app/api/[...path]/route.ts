@@ -135,13 +135,14 @@ async function proxy(
   try {
     const hasBody = !["GET", "HEAD"].includes(request.method);
     const body = hasBody ? await request.arrayBuffer() : undefined;
+    const expectsEventStream = (request.headers.get("accept") || "").includes("text/event-stream");
 
     const res = await fetch(target, {
       method: request.method,
       headers,
       body: body && body.byteLength > 0 ? Buffer.from(body) : undefined,
       redirect: "follow",
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(expectsEventStream ? 180_000 : 60_000),
     });
 
     const status = res.status;
@@ -177,10 +178,20 @@ async function proxy(
     const cacheControl = res.headers.get("cache-control");
     if (cacheControl) responseHeaders.set("Cache-Control", cacheControl);
 
+    const isEventStream = contentType.includes("text/event-stream");
     const isBinary =
       contentType.includes("pdf") ||
       contentType.includes("octet-stream") ||
       contentType.includes("image/");
+
+    if (isEventStream) {
+      responseHeaders.set("Cache-Control", "no-cache");
+      responseHeaders.set("X-Accel-Buffering", "no");
+      return new NextResponse(res.body, {
+        status,
+        headers: responseHeaders,
+      });
+    }
 
     const responseBody =
       status === 204 || status === 304
