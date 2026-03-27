@@ -59,7 +59,94 @@ class GuestManagementService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.log = logger.bind(service="guest_management")
-    
+
+    def _guest_total_stays(self, guest: Guest) -> int:
+        return int((guest.total_stays or guest.lifetime_stays or 0))
+
+    def _guest_lifetime_revenue(self, guest: Guest) -> float:
+        return float(guest.lifetime_revenue or 0)
+
+    def _guest_last_stay_date(self, guest: Guest) -> date | None:
+        return guest.last_stay_date
+
+    def _guest_value_score(self, guest: Guest) -> int:
+        stored = guest.value_score
+        if stored is not None:
+            return int(stored)
+        return self._derive_value_score(
+            stays=self._guest_total_stays(guest),
+            revenue=self._guest_lifetime_revenue(guest),
+            average_rating=guest.average_rating,
+        )
+
+    def _guest_risk_score(self, guest: Guest) -> int:
+        stored = guest.risk_score
+        if stored is not None:
+            return int(stored)
+        return self._derive_risk_score(
+            verification_status=guest.verification_status,
+            has_phone=bool(guest.phone_number),
+            is_blacklisted=guest.is_blacklisted,
+        )
+
+    def _guest_full_address(self, guest: Guest) -> str | None:
+        full_address = guest.full_address
+        if full_address:
+            return str(full_address)
+        parts = [
+            str(guest.address_line1 or "").strip(),
+            str(guest.city or "").strip(),
+            str(guest.state or "").strip(),
+            str(guest.postal_code or "").strip(),
+        ]
+        rendered = ", ".join(part for part in parts if part)
+        return rendered or None
+
+    def _guest_is_repeat(self, guest: Guest) -> bool:
+        return guest.is_repeat_guest
+
+    @staticmethod
+    def _derive_value_score(
+        *,
+        stays: int,
+        revenue: float,
+        average_rating: Decimal | float | None,
+    ) -> int:
+        score = 20
+        score += min(30, stays * 8)
+        score += min(35, int(revenue / 500))
+        if average_rating is not None:
+            score += min(15, int(float(average_rating) * 3))
+        return max(0, min(100, score))
+
+    @staticmethod
+    def _derive_risk_score(
+        *,
+        verification_status: str | None,
+        has_phone: bool,
+        is_blacklisted: bool,
+    ) -> int:
+        if is_blacklisted:
+            return 100
+        score = 10
+        if (verification_status or "unverified") != "verified":
+            score += 15
+        if not has_phone:
+            score += 10
+        return max(0, min(100, score))
+
+    @staticmethod
+    def _derive_loyalty_tier(*, stays: int, revenue: float) -> str:
+        if stays >= 20 or revenue >= 50000:
+            return "diamond"
+        if stays >= 10 or revenue >= 25000:
+            return "platinum"
+        if stays >= 5 or revenue >= 10000:
+            return "gold"
+        if stays >= 2 or revenue >= 3000:
+            return "silver"
+        return "bronze"
+
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # 360° GUEST PROFILE
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -98,7 +185,7 @@ class GuestManagementService:
                 "phone_secondary": guest.phone_number_secondary,
                 "email": guest.email,
                 "email_secondary": guest.email_secondary,
-                "address": guest.full_address,
+                "address": self._guest_full_address(guest),
                 "date_of_birth": str(guest.date_of_birth) if guest.date_of_birth else None,
                 "language": guest.language_preference,
                 "timezone": guest.timezone,
@@ -137,13 +224,13 @@ class GuestManagementService:
                 "points": guest.loyalty_points,
                 "lifetime_stays": guest.lifetime_stays,
                 "lifetime_nights": guest.lifetime_nights,
-                "lifetime_revenue": float(guest.lifetime_revenue or 0),
+                "lifetime_revenue": self._guest_lifetime_revenue(guest),
                 "enrolled_at": str(guest.loyalty_enrolled_at) if guest.loyalty_enrolled_at else None,
                 "next_tier": self._get_next_tier_info(guest),
             },
             "scoring": {
-                "value_score": guest.value_score,
-                "risk_score": guest.risk_score,
+                "value_score": self._guest_value_score(guest),
+                "risk_score": self._guest_risk_score(guest),
                 "satisfaction_score": guest.satisfaction_score,
                 "is_vip": guest.is_vip,
                 "is_blacklisted": guest.is_blacklisted,
@@ -171,7 +258,7 @@ class GuestManagementService:
             "work_orders": work_orders,
             "recent_activity": activities,
             "flags": {
-                "is_repeat": guest.is_repeat_guest,
+                "is_repeat": self._guest_is_repeat(guest),
                 "is_vip": guest.is_vip,
                 "is_verified": guest.is_verified,
                 "is_blacklisted": guest.is_blacklisted,
@@ -198,9 +285,7 @@ class GuestManagementService:
         res_stats = await self.db.execute(
             select(
                 func.count(Reservation.id).label("total_stays"),
-                func.sum(
-                    func.extract("day", Reservation.check_out_date - Reservation.check_in_date)
-                ).label("total_nights"),
+                func.sum(Reservation.check_out_date - Reservation.check_in_date).label("total_nights"),
                 func.coalesce(func.sum(Reservation.total_amount), 0).label("total_revenue"),
                 func.avg(Reservation.guest_rating).label("avg_rating"),
                 func.max(Reservation.check_out_date).label("last_stay"),
@@ -212,18 +297,35 @@ class GuestManagementService:
         row = res_stats.first()
         
         # Update lifetime stats
-        guest.lifetime_stays = row.total_stays or 0
-        guest.lifetime_nights = int(row.total_nights or 0)
-        guest.lifetime_revenue = Decimal(str(row.total_revenue or 0))
-        guest.total_stays = row.total_stays or 0
-        guest.average_rating = row.avg_rating
-        guest.last_stay_date = row.last_stay
+        total_stays = int(row.total_stays or 0)
+        total_nights = int(row.total_nights or 0)
+        total_revenue = float(row.total_revenue or 0)
+        average_rating = row.avg_rating
+        last_stay = row.last_stay
+
+        guest.lifetime_stays = total_stays
+        guest.lifetime_nights = total_nights
+        guest.lifetime_revenue = Decimal(str(total_revenue))
+        guest.total_stays = total_stays
+        guest.average_rating = average_rating
+        guest.last_stay_date = last_stay
         
         # Calculate scores
         old_tier = guest.loyalty_tier
-        guest.value_score = guest.calculate_value_score()
-        guest.risk_score = guest.calculate_risk_score()
-        guest.loyalty_tier = guest.calculate_loyalty_tier()
+        value_score = self._derive_value_score(
+            stays=total_stays,
+            revenue=total_revenue,
+            average_rating=average_rating,
+        )
+        risk_score = self._derive_risk_score(
+            verification_status=guest.verification_status,
+            has_phone=bool(guest.phone_number),
+            is_blacklisted=guest.is_blacklisted,
+        )
+        loyalty_tier = self._derive_loyalty_tier(stays=total_stays, revenue=total_revenue)
+        guest.value_score = value_score
+        guest.risk_score = risk_score
+        guest.loyalty_tier = loyalty_tier
         
         # Calculate satisfaction score from surveys
         survey_result = await self.db.execute(
@@ -235,29 +337,29 @@ class GuestManagementService:
         )
         avg_survey = survey_result.scalar()
         if avg_survey:
-            guest.satisfaction_score = int(float(avg_survey) * 20)  # Convert 5-point to 100
+            guest.satisfaction_score = int(float(avg_survey) * 20)
         
         # Track tier change
-        if old_tier != guest.loyalty_tier:
+        if old_tier != loyalty_tier:
             await self._log_activity(
                 guest_id=guest_id,
                 activity_type="loyalty_tier_changed",
                 category="loyalty",
-                title=f"Loyalty tier upgraded: {old_tier} → {guest.loyalty_tier}",
-                metadata={"old_tier": old_tier, "new_tier": guest.loyalty_tier},
+                title=f"Loyalty tier upgraded: {old_tier} → {loyalty_tier}",
+                metadata={"old_tier": old_tier, "new_tier": loyalty_tier},
                 importance="high",
             )
         
         await self.db.commit()
         
         return {
-            "value_score": guest.value_score,
-            "risk_score": guest.risk_score,
+            "value_score": value_score,
+            "risk_score": risk_score,
             "satisfaction_score": guest.satisfaction_score,
-            "loyalty_tier": guest.loyalty_tier,
-            "lifetime_stays": guest.lifetime_stays,
-            "lifetime_nights": guest.lifetime_nights,
-            "lifetime_revenue": float(guest.lifetime_revenue),
+            "loyalty_tier": loyalty_tier,
+            "lifetime_stays": total_stays,
+            "lifetime_nights": total_nights,
+            "lifetime_revenue": total_revenue,
         }
     
     async def batch_recalculate_scores(self) -> Dict:
@@ -564,9 +666,13 @@ class GuestManagementService:
             "email": g.email,
             "loyalty_tier": g.loyalty_tier,
             "lifetime_stays": g.lifetime_stays,
-            "lifetime_revenue": float(g.lifetime_revenue or 0),
-            "value_score": g.value_score,
-            "last_stay_date": str(g.last_stay_date) if g.last_stay_date else None,
+            "lifetime_revenue": self._guest_lifetime_revenue(g),
+            "value_score": self._guest_value_score(g),
+            "last_stay_date": (
+                str(self._guest_last_stay_date(g))
+                if self._guest_last_stay_date(g)
+                else None
+            ),
             "tags": g.tags or [],
             "opt_in_sms": g.opt_in_sms,
             "opt_in_email": g.opt_in_email,
@@ -699,7 +805,7 @@ class GuestManagementService:
         # Update risk score based on manager review
         guest = await self.db.get(Guest, guest_id)
         if guest and overall_rating <= 2:
-            guest.risk_score = min(100, (guest.risk_score or 10) + 15)
+            guest.risk_score = min(100, self._guest_risk_score(guest) + 15)
             guest.requires_supervision = True
         
         await self._log_activity(
@@ -985,7 +1091,11 @@ class GuestManagementService:
         guest.is_blacklisted = False
         guest.blacklist_reason = None
         guest.blacklisted_at = None
-        guest.risk_score = guest.calculate_risk_score()
+        guest.risk_score = self._derive_risk_score(
+            verification_status=guest.verification_status,
+            has_phone=bool(guest.phone_number),
+            is_blacklisted=False,
+        )
         
         await self._log_activity(
             guest_id=guest_id,
@@ -1094,13 +1204,14 @@ class GuestManagementService:
             .order_by(desc(Guest.lifetime_revenue))
             .limit(10)
         )
+        top_guest_rows = top_result.scalars().all()
         top_guests = [{
             "id": str(g.id),
             "name": g.full_name,
-            "revenue": float(g.lifetime_revenue or 0),
+            "revenue": self._guest_lifetime_revenue(g),
             "stays": g.lifetime_stays,
             "tier": g.loyalty_tier,
-        } for g in top_result.scalars().all()]
+        } for g in top_guest_rows]
         
         return {
             "total_guests": total_guests,
@@ -1348,7 +1459,7 @@ class GuestManagementService:
         """Calculate what's needed for next loyalty tier"""
         tier = guest.loyalty_tier or "bronze"
         stays = guest.lifetime_stays or 0
-        revenue = float(guest.lifetime_revenue or 0)
+        revenue = self._guest_lifetime_revenue(guest)
         
         tiers = {
             "bronze": {"next": "silver", "stays_needed": 2, "revenue_needed": 3000},
