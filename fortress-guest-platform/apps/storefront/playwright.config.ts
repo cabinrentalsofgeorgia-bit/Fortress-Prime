@@ -10,7 +10,7 @@ const DEFAULT_STORAGE_STATE = existsSync(QA_STORAGE_STATE_PATH)
 
 export default defineConfig({
   testDir: ".",
-  testMatch: ["tests/e2e/**/*.spec.ts", "e2e/**/*.spec.ts"],
+  testMatch: ["tests/e2e/**/*.spec.ts"],
   globalSetup: "./playwright/global-setup.ts",
   timeout: 30_000,
   expect: { timeout: 10_000 },

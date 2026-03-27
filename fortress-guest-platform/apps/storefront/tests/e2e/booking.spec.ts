@@ -95,7 +95,7 @@ test.describe("Guest booking critical path", () => {
 
     await expect(page).toHaveURL(
       new RegExp(
-        `/book\\?propertyId=${stay.propertyId}&checkIn=${stay.checkIn}&checkOut=${stay.checkOut}&guests=${SEARCH_GUESTS}&pets=0`,
+        `/book\\?propertyId=${stay.propertyId}&checkIn=${stay.checkIn}&checkOut=${stay.checkOut}&guests=${SEARCH_GUESTS}&adults=${SEARCH_GUESTS}&children=0&pets=0`,
       ),
     );
     await expect(page.getByRole("heading", { name: /direct booking checkout/i })).toBeVisible();
