@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends
+import structlog
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,9 +19,15 @@ from backend.api.openshell_audit import (
     summarize_historical_recovery,
     summarize_shadow_audits,
 )
+from backend.api.command_c2 import build_pulse_response
+from backend.api.system_health import build_system_health_payload
 from backend.core.config import settings
-from backend.core.database import get_db
-from backend.core.security import RoleChecker
+from backend.core.database import get_db, get_session_factory
+from backend.core.security import (
+    RoleChecker,
+    load_staff_user_from_token_string,
+    staff_allowed_for_system_health_stream,
+)
 from backend.models.async_job import AsyncJobRun
 from backend.models.intelligence_ledger import IntelligenceLedgerEntry
 from backend.models.recovery_parity_comparison import RecoveryParityComparison
@@ -36,6 +44,8 @@ from backend.services.intelligence_projection import (
     load_scout_alpha_metrics,
 )
 from backend.services.seo_shadow_observer import observe_semrush_parity
+
+logger = structlog.get_logger()
 
 router = APIRouter()
 orchestrator = AgenticOrchestrator()
@@ -1168,3 +1178,47 @@ async def trigger_semrush_parity_observation(
     db: AsyncSession = Depends(get_db),
 ) -> ShadowSeoSummaryOut:
     return await observe_semrush_parity(db, persist_audit=True)
+
+
+# ---------------------------------------------------------------------------
+# WebSocket: 1 Hz system health stream for Command Center (same payload as REST)
+# ---------------------------------------------------------------------------
+_SYSTEM_HEALTH_WS_INTERVAL_SEC = 1.0
+
+
+@router.websocket("/ws/system-health")
+async def system_health_telemetry_websocket(websocket: WebSocket) -> None:
+    """Stream `build_system_health_payload` JSON at 1 Hz; requires `?token=<JWT>`."""
+    token = (websocket.query_params.get("token") or "").strip()
+    await websocket.accept()
+
+    factory = get_session_factory()
+    async with factory() as db:
+        user = await load_staff_user_from_token_string(db, token)
+        allowed = user is not None and staff_allowed_for_system_health_stream(user)
+
+    if not allowed or user is None:
+        logger.warning("system_health_ws_rejected", reason="auth_or_role")
+        await websocket.close(code=1008)
+        return
+
+    logger.info("system_health_ws_connected", user_id=str(user.id))
+    try:
+        while True:
+            async with factory() as db:
+                payload = await build_system_health_payload(db)
+            pulse = await build_pulse_response()
+            payload = {
+                **payload,
+                "pulse": pulse.model_dump(mode="json"),
+            }
+            await websocket.send_json(payload)
+            await asyncio.sleep(_SYSTEM_HEALTH_WS_INTERVAL_SEC)
+    except WebSocketDisconnect:
+        logger.info("system_health_ws_disconnected")
+    except Exception as exc:
+        logger.error("system_health_ws_error", error=str(exc))
+        try:
+            await websocket.close(code=1011)
+        except Exception:
+            pass

@@ -491,10 +491,18 @@ async def run_shadow_audit(
     remote_closer_url: str | None = None,
     timeout_seconds: float = 20.0,
     tolerance: str | Decimal = Decimal("0.01"),
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     metadata = metadata or {}
     target_audit_path = Path(audit_path) if audit_path else DEFAULT_AUDIT_PATH
     tolerance_decimal = Decimal(str(tolerance)).quantize(TWO_PLACES)
+
+    if not settings.agentic_system_active:
+        return {
+            "status": "inactive",
+            "detail": "Shadow Parallel observation is disabled by AGENTIC_SYSTEM_ACTIVE.",
+            "audit_path": str(target_audit_path),
+        }
 
     try:
         request = normalize_request(payload)
@@ -531,6 +539,7 @@ async def run_shadow_audit(
             tool_name="run_shadow_audit",
             model_route="local_cluster",
             outcome="success" if comparison.drift_status != "CRITICAL_MISMATCH" else "error",
+            request_id=request_id,
             metadata_json={
                 "trace_id": comparison.trace_id,
                 "quote_id": str(metadata.get("quote_id", "")),

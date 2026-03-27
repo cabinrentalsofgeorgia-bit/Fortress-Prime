@@ -4,24 +4,40 @@ ARQ worker entrypoints for the Fortress asynchronous engine.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 import logging
 import os
 from pathlib import Path
+import pickle
 import traceback
 from typing import Any
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 
 from backend.core.config import settings
 from backend.core.council_stream import create_council_redis, publish_council_event
 from backend.core.database import AsyncSessionLocal
-from backend.core.queue import get_arq_redis_settings
+from backend.integrations.streamline_vrs import StreamlineVRS
+from backend.core.queue import create_arq_pool, get_arq_redis_settings
 from backend.models.async_job import AsyncJobRun
-from backend.services.async_jobs import mark_job_failed, mark_job_running, mark_job_succeeded
+from backend.services.async_jobs import (
+    count_jobs_by_status,
+    enqueue_async_job,
+    mark_job_failed,
+    mark_job_running,
+    mark_job_succeeded,
+    utcnow,
+)
+from backend.services.scout_action_router import research_scout_action_router
+from backend.services.research_scout import ResearchScoutService
 from backend.services.seo_deploy_consumer import SEODeployWorker
 from backend.services.seo_grading_service import SEOGradingWorker
+from backend.services.reconciliation_janitor import reconciliation_janitor
+from backend.services.seo_shadow_observer import observe_semrush_parity
 from backend.services.seo_rewrite_swarm import SEORewriteSwarmWorker
+from backend.services.worker_hardening import enforce_sovereign_boundary
+from backend.tasks.legacy_refactor_tasks import refactor_legacy_html_task
 from backend.tasks.media_tasks import ingest_property_media
 from backend.vrs.application.rule_engine import RuleEngine
 from backend.vrs.domain.automations import StreamlineEventPayload, VRSRuleEngine
@@ -30,10 +46,25 @@ from backend.vrs.infrastructure.seo_event_bus import create_seo_event_redis
 logger = structlog.get_logger(service="arq_worker")
 boot_logger = logging.getLogger("arq.worker")
 APP_ROOT = Path(__file__).resolve().parents[2]
+research_scout_service = ResearchScoutService()
 SEO_CONSUMER_SPECS = (
     ("seo_grading_worker", "seo_grading_task", "seo_grading_task", SEOGradingWorker, "SEO_GRADING_CONSUMER_ENABLED"),
     ("seo_rewrite_worker", "seo_rewrite_task", "seo_rewrite_task", SEORewriteSwarmWorker, "SEO_REWRITE_CONSUMER_ENABLED"),
     ("seo_deploy_worker", "seo_deploy_task", "seo_deploy_task", SEODeployWorker, "SEO_DEPLOY_CONSUMER_ENABLED"),
+)
+REQUIRED_ARQ_FUNCTION_NAMES = (
+    "process_streamline_event_job",
+    "run_concierge_shadow_draft_job",
+    "run_hunter_queue_sweep_job",
+    "run_hunter_execute_job",
+    "run_hunter_recovery_draft_job",
+)
+WATCHDOG_OBSERVED_JOB_NAMES = (
+    "process_streamline_event",
+    "concierge_shadow_draft_cycle",
+    "hunter_queue_sweep",
+    "hunter_execute",
+    "hunter_recovery_draft",
 )
 
 
@@ -58,8 +89,241 @@ def _enabled_seo_consumer_specs() -> tuple[tuple[str, str, str, type[Any], str],
     return tuple(spec for spec in SEO_CONSUMER_SPECS if _env_flag_enabled(spec[4]))
 
 
+def _registered_worker_function_names() -> tuple[str, ...]:
+    seen: list[str] = []
+    for fn in WorkerSettings.functions:
+        name = getattr(fn, "__name__", "").strip()
+        if name:
+            seen.append(name)
+    return tuple(seen)
+
+
+def _validate_worker_registry() -> None:
+    names = _registered_worker_function_names()
+    missing = sorted(set(REQUIRED_ARQ_FUNCTION_NAMES) - set(names))
+    duplicates = sorted(name for name in set(names) if names.count(name) > 1)
+    if missing or duplicates:
+        logger.error(
+            "arq_worker_registry_invalid",
+            missing=missing,
+            duplicates=duplicates,
+            registered=list(names),
+        )
+        raise RuntimeError(
+            f"ARQ worker registry invalid: missing={missing or 'none'} duplicates={duplicates or 'none'}"
+        )
+    logger.info("arq_worker_registry_validated", required=list(REQUIRED_ARQ_FUNCTION_NAMES))
+
+
+def _timestamp_ms_to_utc(value: Any) -> datetime | None:
+    if value in (None, ""):
+        return None
+    try:
+        milliseconds = int(value)
+    except (TypeError, ValueError):
+        return None
+    return datetime.fromtimestamp(milliseconds / 1000, tz=timezone.utc)
+
+
+def _normalize_arq_result_payload(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if value is None:
+        return {}
+    return {"value": str(value)}
+
+
+async def _reconcile_jobs_from_arq_results(db, jobs: list[AsyncJobRun], redis) -> int:
+    reconciled = 0
+    if not jobs:
+        return reconciled
+
+    from uuid import UUID
+
+    from backend.services.hunter_service import mark_hunter_candidate_failed, mark_hunter_recovery_op_retry
+
+    for job in jobs:
+        job_id = str(job.arq_job_id or job.id)
+        raw_result = await redis.get(f"arq:result:{job_id}")
+        if not raw_result:
+            continue
+        try:
+            result_data = pickle.loads(raw_result)
+        except Exception as exc:
+            logger.warning(
+                "async_job_watchdog_result_decode_failed",
+                job_id=job_id,
+                job_name=job.job_name,
+                error=str(exc)[:400],
+            )
+            continue
+
+        attempts = max(1, int(result_data.get("t") or job.attempts or 0))
+        started_at = _timestamp_ms_to_utc(result_data.get("st"))
+        finished_at = _timestamp_ms_to_utc(result_data.get("ft")) or utcnow()
+        if started_at is not None and job.started_at is None:
+            job.started_at = started_at
+
+        if bool(result_data.get("s")):
+            job.status = "succeeded"
+            job.result_json = _normalize_arq_result_payload(result_data.get("r"))
+            job.error_text = None
+        else:
+            if job.job_name == "hunter_execute":
+                session_fp = str((job.payload_json or {}).get("session_fp") or "").strip().lower()
+                if session_fp:
+                    await mark_hunter_candidate_failed(db, session_fp=session_fp, error_text=str(result_data.get("r")))
+            if job.job_name == "hunter_recovery_draft":
+                recovery_op_id = str((job.payload_json or {}).get("recovery_op_id") or "").strip()
+                if recovery_op_id:
+                    try:
+                        await mark_hunter_recovery_op_retry(
+                            db,
+                            recovery_op_id=UUID(recovery_op_id),
+                            request_id=job_id,
+                            error_text=str(result_data.get("r")),
+                        )
+                    except Exception:
+                        logger.warning(
+                            "hunter_recovery_retry_mark_failed",
+                            job_id=job_id,
+                            recovery_op_id=recovery_op_id,
+                        )
+            job.status = "failed"
+            job.result_json = {}
+            job.error_text = str(result_data.get("r"))[:4000]
+
+        job.attempts = attempts
+        job.finished_at = finished_at
+        reconciled += 1
+
+    if reconciled:
+        await db.commit()
+    return reconciled
+
+
+async def _load_stale_async_jobs(db) -> list[AsyncJobRun]:
+    current_time = utcnow()
+    queued_cutoff = current_time - timedelta(seconds=max(60, int(settings.async_job_stale_queued_seconds)))
+    running_cutoff = current_time - timedelta(seconds=max(120, int(settings.async_job_stale_running_seconds)))
+
+    stmt = (
+        select(AsyncJobRun)
+        .where(AsyncJobRun.job_name.in_(WATCHDOG_OBSERVED_JOB_NAMES))
+        .where(
+            or_(
+                and_(
+                    AsyncJobRun.status == "queued",
+                    AsyncJobRun.created_at <= queued_cutoff,
+                ),
+                and_(
+                    AsyncJobRun.status == "running",
+                    AsyncJobRun.started_at.is_not(None),
+                    AsyncJobRun.started_at <= running_cutoff,
+                ),
+            )
+        )
+        .order_by(AsyncJobRun.created_at.asc())
+        .limit(50)
+    )
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def _repair_stale_async_jobs(db, jobs: list[AsyncJobRun]) -> int:
+    repaired = 0
+    if not jobs:
+        return repaired
+
+    from uuid import UUID
+
+    from backend.services.hunter_service import mark_hunter_candidate_failed, mark_hunter_recovery_op_retry
+
+    for job in jobs:
+        if job.job_name != "hunter_execute":
+            if job.job_name != "hunter_recovery_draft":
+                continue
+            recovery_op_id = str((job.payload_json or {}).get("recovery_op_id") or "").strip()
+            if not recovery_op_id:
+                continue
+            reason = f"watchdog_recovered_stale_{job.status}"
+            try:
+                await mark_hunter_recovery_op_retry(
+                    db,
+                    recovery_op_id=UUID(recovery_op_id),
+                    request_id=str(job.id),
+                    error_text=reason,
+                )
+            except Exception:
+                logger.warning(
+                    "hunter_recovery_watchdog_mark_failed",
+                    job_id=str(job.id),
+                    recovery_op_id=recovery_op_id,
+                )
+            await mark_job_failed(db, job, reason, attempts=max(1, int(job.attempts or 0)))
+            repaired += 1
+            continue
+        session_fp = str((job.payload_json or {}).get("session_fp") or "").strip().lower()
+        if not session_fp:
+            continue
+        reason = f"watchdog_recovered_stale_{job.status}"
+        await mark_hunter_candidate_failed(db, session_fp=session_fp, error_text=reason)
+        await mark_job_failed(db, job, reason, attempts=max(1, int(job.attempts or 0)))
+        repaired += 1
+    return repaired
+
+
+async def _run_async_job_watchdog_once() -> None:
+    async with AsyncSessionLocal() as db:
+        pool = await create_arq_pool()
+        try:
+            stale_jobs = await _load_stale_async_jobs(db)
+            if not stale_jobs:
+                return
+            reconciled = await _reconcile_jobs_from_arq_results(db, stale_jobs, pool)
+            if reconciled:
+                logger.info("async_job_watchdog_reconciled_results", reconciled_count=reconciled)
+                stale_jobs = await _load_stale_async_jobs(db)
+                if not stale_jobs:
+                    return
+            logger.error(
+                "async_job_watchdog_stale_jobs_detected",
+                count=len(stale_jobs),
+                jobs=[
+                    {
+                        "id": str(job.id),
+                        "job_name": job.job_name,
+                        "status": job.status,
+                        "request_id": job.request_id,
+                    }
+                    for job in stale_jobs
+                ],
+            )
+            repaired = await _repair_stale_async_jobs(db, stale_jobs)
+            logger.warning(
+                "async_job_watchdog_completed",
+                stale_count=len(stale_jobs),
+                repaired_count=repaired,
+            )
+        finally:
+            await pool.aclose()
+
+
+async def _async_job_watchdog_loop() -> None:
+    interval = max(30, int(settings.async_job_watchdog_interval_seconds))
+    while True:
+        try:
+            await _run_async_job_watchdog_once()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("async_job_watchdog_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
 async def startup(ctx: dict[str, Any]) -> None:
     ctx["app_root"] = APP_ROOT
+    await enforce_sovereign_boundary()
+    _validate_worker_registry()
     boot_logger.info("========================================")
     boot_logger.info("ARQ WORKER BOOT SEQUENCE INITIATED")
     boot_logger.info("========================================")
@@ -72,32 +336,169 @@ async def startup(ctx: dict[str, Any]) -> None:
         if not consumer_specs:
             logger.info("seo_swarm_consumers_disabled")
             boot_logger.info("SEO Swarm Consumers disabled for this worker.")
-            return
+        else:
+            boot_logger.info("Initializing SEO Swarm Consumers...")
+            redis_client = await create_seo_event_redis()
+            ctx["seo_redis"] = redis_client
 
-        boot_logger.info("Initializing SEO Swarm Consumers...")
-        redis_client = await create_seo_event_redis()
-        ctx["seo_redis"] = redis_client
+            enabled_task_names: list[str] = []
+            for worker_key, task_key, task_name, worker_cls, _flag_name in consumer_specs:
+                worker = worker_cls(redis_client)
+                ctx[worker_key] = worker
+                task = asyncio.create_task(worker.start(), name=task_name)
+                ctx[task_key] = task
+                task.add_done_callback(
+                    lambda completed_task, current_task_name=task_name: _log_background_task_result(
+                        current_task_name,
+                        completed_task,
+                    ),
+                )
+                enabled_task_names.append(task_name)
 
-        enabled_task_names: list[str] = []
-        for worker_key, task_key, task_name, worker_cls, _flag_name in consumer_specs:
-            worker = worker_cls(redis_client)
-            ctx[worker_key] = worker
-            task = asyncio.create_task(worker.start(), name=task_name)
-            ctx[task_key] = task
-            task.add_done_callback(
-                lambda completed_task, current_task_name=task_name: _log_background_task_result(
-                    current_task_name,
-                    completed_task,
-                ),
-            )
-            enabled_task_names.append(task_name)
-
-        logger.info("seo_swarm_consumers_started", consumers=enabled_task_names)
-        boot_logger.info("SUCCESS: seo_swarm_consumers_started (%s)", ", ".join(enabled_task_names))
+            logger.info("seo_swarm_consumers_started", consumers=enabled_task_names)
+            boot_logger.info("SUCCESS: seo_swarm_consumers_started (%s)", ", ".join(enabled_task_names))
     except Exception as exc:
         logger.warning("seo_swarm_consumers_init_failed", error=str(exc)[:300])
         boot_logger.error("FATAL: seo_swarm_consumers_init_failed")
         boot_logger.error(traceback.format_exc())
+
+    if settings.semrush_shadow_observer_enabled:
+        observer_task = asyncio.create_task(
+            _semrush_shadow_observer_loop(),
+            name="semrush_shadow_observer_task",
+        )
+        ctx["semrush_shadow_observer_task"] = observer_task
+        observer_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "semrush_shadow_observer_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "semrush_shadow_observer_started",
+            interval_seconds=settings.semrush_shadow_observer_interval_seconds,
+        )
+    else:
+        logger.info("semrush_shadow_observer_disabled")
+
+    if settings.deferred_api_reconciliation_enabled:
+        recon_task = asyncio.create_task(
+            _deferred_api_reconciliation_loop(),
+            name="deferred_api_reconciliation_task",
+        )
+        ctx["deferred_api_reconciliation_task"] = recon_task
+        recon_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "deferred_api_reconciliation_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "deferred_api_reconciliation_started",
+            interval_seconds=settings.deferred_api_reconciliation_interval_seconds,
+        )
+    else:
+        logger.info("deferred_api_reconciliation_disabled")
+
+    if settings.research_scout_enabled:
+        scout_task = asyncio.create_task(
+            _research_scout_loop(),
+            name="research_scout_task",
+        )
+        ctx["research_scout_task"] = scout_task
+        scout_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "research_scout_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "research_scout_started",
+            interval_seconds=settings.research_scout_interval_seconds,
+            market=settings.research_scout_market,
+        )
+    else:
+        logger.info("research_scout_disabled")
+
+    if settings.concierge_shadow_draft_enabled:
+        concierge_task = asyncio.create_task(
+            _concierge_shadow_draft_loop(),
+            name="concierge_shadow_draft_task",
+        )
+        ctx["concierge_shadow_draft_task"] = concierge_task
+        concierge_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "concierge_shadow_draft_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "concierge_shadow_draft_started",
+            interval_seconds=settings.concierge_shadow_draft_interval_seconds,
+        )
+    else:
+        logger.info("concierge_shadow_draft_disabled")
+
+    if settings.hunter_queue_sweep_enabled:
+        hunter_task = asyncio.create_task(
+            _hunter_queue_sweep_loop(),
+            name="hunter_queue_sweep_task",
+        )
+        ctx["hunter_queue_sweep_task"] = hunter_task
+        hunter_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "hunter_queue_sweep_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "hunter_queue_sweep_started",
+            interval_seconds=settings.hunter_queue_sweep_interval_seconds,
+        )
+    else:
+        logger.info("hunter_queue_sweep_disabled")
+
+    if settings.async_job_watchdog_enabled:
+        watchdog_task = asyncio.create_task(
+            _async_job_watchdog_loop(),
+            name="async_job_watchdog_task",
+        )
+        ctx["async_job_watchdog_task"] = watchdog_task
+        watchdog_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "async_job_watchdog_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "async_job_watchdog_started",
+            interval_seconds=settings.async_job_watchdog_interval_seconds,
+            stale_queued_seconds=settings.async_job_stale_queued_seconds,
+            stale_running_seconds=settings.async_job_stale_running_seconds,
+        )
+    else:
+        logger.info("async_job_watchdog_disabled")
+
+    streamline_vrs = StreamlineVRS()
+    if streamline_vrs.is_configured:
+        ctx["streamline_vrs"] = streamline_vrs
+        availability_task = asyncio.create_task(
+            _streamline_availability_sync_loop(streamline_vrs),
+            name="streamline_availability_sync_task",
+        )
+        ctx["streamline_availability_sync_task"] = availability_task
+        availability_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "streamline_availability_sync_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "streamline_availability_sync_started",
+            interval_seconds=max(300, int(settings.streamline_sync_interval)),
+        )
+    else:
+        logger.info("streamline_availability_sync_disabled", reason="streamline_not_configured")
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
@@ -116,6 +517,280 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     redis_client = ctx.get("seo_redis")
     if redis_client is not None:
         await redis_client.aclose()
+
+    observer_task = ctx.get("semrush_shadow_observer_task")
+    if observer_task is not None:
+        observer_task.cancel()
+        await asyncio.gather(observer_task, return_exceptions=True)
+
+    recon_task = ctx.get("deferred_api_reconciliation_task")
+    if recon_task is not None:
+        recon_task.cancel()
+        await asyncio.gather(recon_task, return_exceptions=True)
+
+    scout_task = ctx.get("research_scout_task")
+    if scout_task is not None:
+        scout_task.cancel()
+        await asyncio.gather(scout_task, return_exceptions=True)
+
+    concierge_task = ctx.get("concierge_shadow_draft_task")
+    if concierge_task is not None:
+        concierge_task.cancel()
+        await asyncio.gather(concierge_task, return_exceptions=True)
+
+    hunter_task = ctx.get("hunter_queue_sweep_task")
+    if hunter_task is not None:
+        hunter_task.cancel()
+        await asyncio.gather(hunter_task, return_exceptions=True)
+
+    watchdog_task = ctx.get("async_job_watchdog_task")
+    if watchdog_task is not None:
+        watchdog_task.cancel()
+        await asyncio.gather(watchdog_task, return_exceptions=True)
+
+    availability_task = ctx.get("streamline_availability_sync_task")
+    if availability_task is not None:
+        availability_task.cancel()
+        await asyncio.gather(availability_task, return_exceptions=True)
+
+    streamline_vrs = ctx.get("streamline_vrs")
+    if streamline_vrs is not None:
+        await streamline_vrs.close()
+
+
+async def _enqueue_semrush_shadow_observation_if_idle() -> None:
+    if not settings.agentic_system_active:
+        logger.info("semrush_shadow_observer_skip", reason="agentic_system_inactive")
+        return
+
+    async with AsyncSessionLocal() as db:
+        queued = await count_jobs_by_status(
+            db,
+            status="queued",
+            job_name="seo_parity_observation",
+        )
+        running = await count_jobs_by_status(
+            db,
+            status="running",
+            job_name="seo_parity_observation",
+        )
+        if queued > 0 or running > 0:
+            logger.info(
+                "semrush_shadow_observer_skip",
+                reason="job_already_in_flight",
+                queued=queued,
+                running=running,
+            )
+            return
+
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_seo_parity_observation_job",
+            job_name="seo_parity_observation",
+            payload={},
+            requested_by="system_shadow_parallel",
+            tenant_id=None,
+            request_id="semrush-shadow-observer",
+        )
+        logger.info("semrush_shadow_observer_enqueued", job_id=str(job.id))
+
+
+async def _semrush_shadow_observer_loop() -> None:
+    interval = max(60, int(settings.semrush_shadow_observer_interval_seconds))
+    while True:
+        try:
+            await _enqueue_semrush_shadow_observation_if_idle()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("semrush_shadow_observer_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
+async def _deferred_api_reconciliation_loop() -> None:
+    interval = max(30, int(settings.deferred_api_reconciliation_interval_seconds))
+    while True:
+        try:
+            n = await reconciliation_janitor.sweep_deferred_writes()
+            if n:
+                logger.info("deferred_api_reconciliation_sweep_done", rows_touched=n)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("deferred_api_reconciliation_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
+async def _enqueue_research_scout_if_idle() -> None:
+    if not settings.agentic_system_active:
+        logger.info("research_scout_skip", reason="agentic_system_inactive")
+        return
+
+    async with AsyncSessionLocal() as db:
+        queued = await count_jobs_by_status(
+            db,
+            status="queued",
+            job_name="research_scout_cycle",
+        )
+        running = await count_jobs_by_status(
+            db,
+            status="running",
+            job_name="research_scout_cycle",
+        )
+        if queued > 0 or running > 0:
+            logger.info(
+                "research_scout_skip",
+                reason="job_already_in_flight",
+                queued=queued,
+                running=running,
+            )
+            return
+
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_research_scout_job",
+            job_name="research_scout_cycle",
+            payload={"market": settings.research_scout_market},
+            requested_by="system_research_scout",
+            tenant_id=None,
+            request_id="research-scout-observer",
+        )
+        logger.info("research_scout_enqueued", job_id=str(job.id))
+
+
+async def _research_scout_loop() -> None:
+    interval = max(3600, int(settings.research_scout_interval_seconds))
+    while True:
+        try:
+            await _enqueue_research_scout_if_idle()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("research_scout_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
+async def _enqueue_concierge_shadow_draft_if_idle() -> None:
+    if not settings.agentic_system_active:
+        logger.info("concierge_shadow_draft_skip", reason="agentic_system_inactive")
+        return
+    if not settings.concierge_shadow_draft_enabled:
+        logger.info("concierge_shadow_draft_skip", reason="feature_disabled")
+        return
+
+    async with AsyncSessionLocal() as db:
+        queued = await count_jobs_by_status(
+            db,
+            status="queued",
+            job_name="concierge_shadow_draft_cycle",
+        )
+        running = await count_jobs_by_status(
+            db,
+            status="running",
+            job_name="concierge_shadow_draft_cycle",
+        )
+        if queued > 0 or running > 0:
+            logger.info(
+                "concierge_shadow_draft_skip",
+                reason="job_already_in_flight",
+                queued=queued,
+                running=running,
+            )
+            return
+
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_concierge_shadow_draft_job",
+            job_name="concierge_shadow_draft_cycle",
+            payload={},
+            requested_by="system_concierge_shadow_draft",
+            tenant_id=None,
+            request_id="concierge-shadow-draft-observer",
+        )
+        logger.info("concierge_shadow_draft_enqueued", job_id=str(job.id))
+
+
+async def _concierge_shadow_draft_loop() -> None:
+    interval = max(300, int(settings.concierge_shadow_draft_interval_seconds))
+    while True:
+        try:
+            await _enqueue_concierge_shadow_draft_if_idle()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("concierge_shadow_draft_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
+async def _enqueue_hunter_queue_sweep_if_idle() -> None:
+    if not settings.agentic_system_active:
+        logger.info("hunter_queue_sweep_skip", reason="agentic_system_inactive")
+        return
+    if not settings.hunter_queue_sweep_enabled:
+        logger.info("hunter_queue_sweep_skip", reason="feature_disabled")
+        return
+
+    async with AsyncSessionLocal() as db:
+        queued = await count_jobs_by_status(
+            db,
+            status="queued",
+            job_name="hunter_queue_sweep",
+        )
+        running = await count_jobs_by_status(
+            db,
+            status="running",
+            job_name="hunter_queue_sweep",
+        )
+        if queued > 0 or running > 0:
+            logger.info(
+                "hunter_queue_sweep_skip",
+                reason="job_already_in_flight",
+                queued=queued,
+                running=running,
+            )
+            return
+
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_hunter_queue_sweep_job",
+            job_name="hunter_queue_sweep",
+            payload={},
+            requested_by="system_hunter_queue_sweep",
+            tenant_id=None,
+            request_id="hunter-queue-sweep-observer",
+        )
+        logger.info("hunter_queue_sweep_enqueued", job_id=str(job.id))
+
+
+async def _hunter_queue_sweep_loop() -> None:
+    interval = max(300, int(settings.hunter_queue_sweep_interval_seconds))
+    while True:
+        try:
+            await _enqueue_hunter_queue_sweep_if_idle()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("hunter_queue_sweep_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
+async def _streamline_availability_sync_loop(streamline_vrs: StreamlineVRS) -> None:
+    interval = max(300, int(settings.streamline_sync_interval))
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                summary = await streamline_vrs.sync_property_availability(db)
+                logger.info(
+                    "streamline_availability_sync_complete",
+                    synced=summary.get("synced"),
+                    skipped=summary.get("skipped"),
+                    bookings_found=summary.get("bookings_found"),
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("streamline_availability_sync_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
 
 
 async def _load_job(job_id: str) -> AsyncJobRun:
@@ -257,8 +932,140 @@ async def run_shadow_audit_job(ctx: dict[str, Any], job_id: str) -> dict[str, An
             remote_closer_url=payload.get("remote_closer_url"),
             timeout_seconds=float(payload.get("timeout_seconds") or 20.0),
             tolerance=payload.get("tolerance") or "0.01",
+            request_id=str(job.id),
         )
         return {"shadow_audit": result}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_seo_parity_observation_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        summary = await observe_semrush_parity(db, persist_audit=True, request_id=str(job.id))
+        return {"seo_parity": summary.model_dump()}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_research_scout_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        summary = await research_scout_service.run_cycle(db, scout_run_key=str(job.id))
+        actions = await research_scout_action_router.route_inserted_findings(
+            db,
+            inserted_entry_ids=list(summary.get("inserted_entry_ids") or []),
+        )
+        summary["actions"] = actions
+        return {"research_scout": summary}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_concierge_shadow_draft_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    from uuid import UUID
+
+    from backend.services.concierge_recovery_parity import run_concierge_shadow_draft_cycle
+    from backend.services.hunter_service import execute_hunter_candidate, mark_hunter_candidate_failed
+
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        payload = job.payload_json or {}
+        try:
+            run_uuid = UUID(str(job.id))
+        except ValueError:
+            run_uuid = None
+        session_fp = str(payload.get("session_fp") or "").strip().lower()
+        if session_fp:
+            try:
+                summary = await execute_hunter_candidate(
+                    db,
+                    session_fp=session_fp,
+                    async_job_run_id=run_uuid,
+                )
+            except Exception as exc:
+                await mark_hunter_candidate_failed(db, session_fp=session_fp, error_text=str(exc))
+                raise
+            return {"hunter_execute": summary}
+        summary = await run_concierge_shadow_draft_cycle(
+            db,
+            async_job_run_id=run_uuid,
+            request_id=str(job.id),
+        )
+        return {"concierge_recovery_parity": summary}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_hunter_queue_sweep_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    from backend.services.hunter_service import sweep_hunter_queue
+
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        summary = await sweep_hunter_queue(
+            db,
+            candidate_limit=settings.hunter_queue_candidate_limit,
+            trigger=str(job.job_name or "scheduled"),
+        )
+        return {"hunter_queue_sweep": summary}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_hunter_execute_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    from uuid import UUID
+
+    from backend.services.hunter_service import execute_hunter_candidate, mark_hunter_candidate_failed
+
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        payload = job.payload_json or {}
+        session_fp = str(payload.get("session_fp") or "").strip().lower()
+        if not session_fp:
+            raise RuntimeError("hunter_execute requires session_fp")
+        try:
+            run_uuid = UUID(str(job.id))
+        except ValueError:
+            run_uuid = None
+        try:
+            summary = await execute_hunter_candidate(
+                db,
+                session_fp=session_fp,
+                async_job_run_id=run_uuid,
+            )
+        except Exception as exc:
+            await mark_hunter_candidate_failed(db, session_fp=session_fp, error_text=str(exc))
+            raise
+        return {"hunter_execute": summary}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_hunter_recovery_draft_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    from uuid import UUID
+
+    from backend.services.hunter_service import execute_hunter_recovery_draft, mark_hunter_recovery_op_retry
+
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        payload = job.payload_json or {}
+        recovery_op_id = str(payload.get("recovery_op_id") or "").strip()
+        if not recovery_op_id:
+            raise RuntimeError("hunter_recovery_draft requires recovery_op_id")
+        try:
+            recovery_uuid = UUID(recovery_op_id)
+        except ValueError as exc:
+            raise RuntimeError(f"Invalid hunter recovery op id: {recovery_op_id}") from exc
+        try:
+            summary = await execute_hunter_recovery_draft(
+                db,
+                recovery_op_id=recovery_uuid,
+                draft_context=payload.get("draft_context") if isinstance(payload.get("draft_context"), dict) else None,
+                request_id=str(job.id),
+            )
+        except Exception as exc:
+            await mark_hunter_recovery_op_retry(
+                db,
+                recovery_op_id=recovery_uuid,
+                request_id=str(job.id),
+                error_text=str(exc),
+            )
+            raise
+        return {"hunter_recovery_draft": summary}
 
     return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
 
@@ -692,6 +1499,12 @@ class WorkerSettings:
         vectorize_new_records_job,
         rebuild_history_index_job,
         run_shadow_audit_job,
+        run_seo_parity_observation_job,
+        run_research_scout_job,
+        run_concierge_shadow_draft_job,
+        run_hunter_queue_sweep_job,
+        run_hunter_execute_job,
+        run_hunter_recovery_draft_job,
         run_contract_ingestion_job,
         run_legal_graph_refresh_job,
         run_legal_extraction_job,
@@ -706,6 +1519,7 @@ class WorkerSettings:
         run_seo_fallback_swarm_job,
         run_seo_remap_grading_job,
         run_deep_entity_swarm_job,
+        refactor_legacy_html_task,
         ingest_property_media,
     ]
     redis_settings = get_arq_redis_settings()
