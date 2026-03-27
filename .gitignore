@@ -61,6 +61,7 @@ training_data/
 fortress-guest-platform/backend/artifacts/
 fortress-guest-platform/backend/data/
 fortress-guest-platform/apps/storefront/artifacts/
+fortress-guest-platform/apps/command-center/artifacts/
 fortress-guest-platform/backend/scripts/archive_seo_bulk_payloads.*
 fortress-guest-platform/backend/scripts/drupal_granular_blueprint_*.json
 fortress-guest-platform/backend/scripts/orphan_report.json
