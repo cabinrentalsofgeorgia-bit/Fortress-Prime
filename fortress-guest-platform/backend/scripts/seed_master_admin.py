@@ -44,7 +44,7 @@ LOADED_ENV_FILES = load_environment()
 
 from sqlalchemy import select
 
-from backend.core.database import AsyncSessionLocal, Base, async_engine, close_db
+from backend.core.database import AsyncSessionLocal, Base, close_db, get_async_engine
 from backend.core.security import hash_password
 from backend.models.property import Property
 from backend.models.media import PropertyImage
@@ -193,7 +193,7 @@ async def seed_master_admin() -> int:
             ]
         )
 
-    async with async_engine.begin() as connection:
+    async with get_async_engine().begin() as connection:
         await connection.run_sync(
             lambda sync_conn: Base.metadata.create_all(
                 sync_conn,
