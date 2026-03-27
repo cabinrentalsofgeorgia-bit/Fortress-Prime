@@ -19,6 +19,7 @@ from typing import Optional
 from backend.core.config import settings
 from backend.models.damage_claim import DamageClaim
 from backend.services.prompt_engineer import PIISanitizer
+from backend.services.swarm_service import submit_chat_completion
 
 logger = structlog.get_logger(service="legal_drafter")
 
@@ -228,13 +229,12 @@ async def _call_llm(system: str, user: str) -> tuple[str, str]:
             except Exception as e:
                 logger.warning("ollama_attempt_failed", model=model_name, error=str(e))
 
-    if settings.openai_api_key:
-        try:
-            result = await _openai_chat(system, user)
-            if result:
-                return result, settings.openai_model
-        except Exception as e:
-            logger.warning("openai_failed", error=str(e))
+    try:
+        result = await _openai_chat(system, user)
+        if result:
+            return result, settings.openai_model
+    except Exception as e:
+        logger.warning("gateway_frontier_failed", error=str(e))
 
     return (
         "[DRAFT GENERATION FAILED — LLM unavailable. Please draft manually based on the damage report above.]",
@@ -267,21 +267,18 @@ async def _openai_chat(system: str, user: str) -> Optional[str]:
     clean_system = sanitizer.sanitize(system)
     clean_user = sanitizer.sanitize(user)
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-            json={
-                "model": settings.openai_model,
-                "messages": [
-                    {"role": "system", "content": clean_system},
-                    {"role": "user", "content": clean_user},
-                ],
-                "temperature": 0.4,
-                "max_tokens": 2048,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        raw_response = data["choices"][0]["message"]["content"].strip()
-        return sanitizer.rehydrate(raw_response)
+    response = await submit_chat_completion(
+        prompt=clean_user,
+        model=settings.openai_model,
+        system_message=clean_system,
+        timeout_s=120.0,
+        extra_payload={
+            "temperature": 0.4,
+            "max_tokens": 2048,
+        },
+    )
+    choices = response.get("choices") or []
+    if not choices:
+        return None
+    raw_response = ((choices[0] or {}).get("message") or {}).get("content", "").strip()
+    return sanitizer.rehydrate(raw_response)
