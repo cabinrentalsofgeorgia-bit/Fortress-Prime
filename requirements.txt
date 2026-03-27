@@ -29,5 +29,6 @@ fastapi
 asyncpg
 bcrypt
 python-jose[cryptography]
+aiokafka
 twilio>=9.0.0
 stripe
