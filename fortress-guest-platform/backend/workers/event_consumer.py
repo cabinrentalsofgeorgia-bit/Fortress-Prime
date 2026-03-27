@@ -23,6 +23,12 @@ Environment
 - Qdrant + embeddings: ``qdrant_url``, ``embed_base_url``, ``embed_model`` (see ``vector_db``).
 
 SSL verification toward NemoClaw follows ``NEMOCLAW_ORCHESTRATOR_VERIFY_SSL`` (see ``api/agent.py``).
+
+Kafka commits
+-------------
+``enable_auto_commit=False``. Offsets commit only after NemoClaw HTTP success (when enabled) and
+``ai_insights`` UPSERT. Any unhandled failure stops the process without committing so the message
+is redelivered after restart.
 """
 
 from __future__ import annotations
@@ -41,7 +47,9 @@ import httpx
 import structlog
 from aiokafka import AIOKafkaConsumer
 from aiokafka.errors import KafkaError
+from aiokafka.structs import OffsetAndMetadata, TopicPartition
 from qdrant_client.http import models as qmodels
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from tenacity import (
     before_sleep_log,
     retry,
@@ -51,9 +59,11 @@ from tenacity import (
 )
 
 from backend.core.config import settings
+from backend.core.database import AsyncSessionLocal
 from backend.core.event_publisher import REDPANDA_BROKER
 from backend.core.qdrant import COLLECTION_NAME
 from backend.core.vector_db import embed_text_sync, get_qdrant_client
+from backend.models.ai_insight import AiInsight
 
 logger = structlog.get_logger(service="event_consumer")
 _stdlib_log = logging.getLogger(__name__)
@@ -107,6 +117,52 @@ def _nemoclaw_headers() -> dict[str, str]:
     if key:
         headers["x-api-key"] = key
     return headers
+
+
+def _reference_id_from_event(payload: dict[str, Any]) -> str:
+    for key in ("confirmation_code", "property_id", "reservation_id"):
+        val = payload.get(key)
+        if val is not None and str(val).strip():
+            return str(val).strip()[:255]
+    return "unknown"
+
+
+def _insight_payload_from_nemoclaw(body: dict[str, Any]) -> dict[str, Any]:
+    rp = body.get("result_payload")
+    return dict(rp) if isinstance(rp, dict) else {}
+
+
+async def _commit_kafka_offset(consumer: AIOKafkaConsumer, msg: Any) -> None:
+    tp = TopicPartition(msg.topic, msg.partition)
+    await consumer.commit({tp: OffsetAndMetadata(msg.offset + 1, "")})
+
+
+async def _persist_ai_insight(
+    *,
+    task_id: str,
+    event_type: str,
+    reference_id: str,
+    nemoclaw_body: dict[str, Any],
+) -> None:
+    insight_payload = _insight_payload_from_nemoclaw(nemoclaw_body)
+    stmt = pg_insert(AiInsight).values(
+        id=uuid.uuid4(),
+        task_id=task_id.strip()[:255],
+        event_type=event_type.strip()[:128],
+        reference_id=reference_id.strip()[:255],
+        insight_payload=insight_payload,
+    )
+    stmt = stmt.on_conflict_do_update(
+        constraint="uq_ai_insights_task_id",
+        set_={
+            "insight_payload": stmt.excluded.insight_payload,
+            "event_type": stmt.excluded.event_type,
+            "reference_id": stmt.excluded.reference_id,
+        },
+    )
+    async with AsyncSessionLocal() as session:
+        await session.execute(stmt)
+        await session.commit()
 
 
 def _nemoclaw_verify_ssl(base_url: str) -> bool:
@@ -221,7 +277,8 @@ def _build_directive(
     payload: dict[str, Any],
     qdrant_snippets: list[str],
 ) -> dict[str, Any]:
-    task_id = f"evt-{topic}-{partition}-{offset}-{uuid.uuid4().hex[:8]}"
+    # Stable per Kafka record so redelivery + ai_insights UPSERT stay idempotent.
+    task_id = f"evt-{topic}-{partition}-{offset}"
     key_hint = key.decode("utf-8", errors="replace") if key else ""
     property_id = _extract_property_id(payload)
     confirmation = _extract_confirmation(payload)
@@ -280,7 +337,7 @@ async def _dispatch_to_nemoclaw_with_retry(
     return body if isinstance(body, dict) else {"_parsed": body}
 
 
-async def _dispatch_nemoclaw(directive: dict[str, Any]) -> None:
+async def _dispatch_nemoclaw(directive: dict[str, Any]) -> dict[str, Any]:
     url = _nemoclaw_execute_url()
     verify = _nemoclaw_verify_ssl(url)
     headers = _nemoclaw_headers()
@@ -291,16 +348,16 @@ async def _dispatch_nemoclaw(directive: dict[str, Any]) -> None:
         task_id=directive.get("task_id"),
         nemoclaw_status=body.get("status") if isinstance(body, dict) else None,
     )
+    return body
 
 
-async def handle_record(
-    *,
-    topic: str,
-    partition: int,
-    offset: int,
-    key: bytes | None,
-    value: dict[str, Any],
-) -> None:
+async def handle_record(consumer: AIOKafkaConsumer, msg: Any) -> None:
+    value = msg.value
+    topic = msg.topic
+    partition = msg.partition
+    offset = msg.offset
+    key = msg.key
+
     property_id = _extract_property_id(value)
     confirmation = _extract_confirmation(value)
 
@@ -332,16 +389,24 @@ async def handle_record(
 
     if not _dispatch_nemoclaw_enabled():
         logger.info("event_consumer_nemoclaw_skipped", task_id=directive["task_id"])
+        await _commit_kafka_offset(consumer, msg)
         return
 
-    try:
-        await _dispatch_nemoclaw(directive)
-    except Exception as exc:
-        logger.error(
-            "event_consumer_nemoclaw_failed",
-            task_id=directive["task_id"],
-            error=str(exc)[:400],
-        )
+    nemoclaw_body = await _dispatch_nemoclaw(directive)
+    await _persist_ai_insight(
+        task_id=str(directive["task_id"]),
+        event_type=topic,
+        reference_id=_reference_id_from_event(value),
+        nemoclaw_body=nemoclaw_body,
+    )
+    await _commit_kafka_offset(consumer, msg)
+    logger.info(
+        "event_consumer_kafka_committed",
+        topic=topic,
+        partition=partition,
+        offset=offset,
+        task_id=directive["task_id"],
+    )
 
 
 async def run_consumer_loop(stop: asyncio.Event) -> None:
@@ -354,7 +419,7 @@ async def run_consumer_loop(stop: asyncio.Event) -> None:
         *topics,
         bootstrap_servers=bootstrap,
         group_id=_group_id(),
-        enable_auto_commit=True,
+        enable_auto_commit=False,
         auto_offset_reset=_auto_offset(),
         value_deserializer=lambda b: json.loads(b.decode("utf-8")),
     )
@@ -382,27 +447,15 @@ async def run_consumer_loop(stop: asyncio.Event) -> None:
 
             for tp, batch in result.items():
                 for msg in batch:
-                    try:
-                        if not isinstance(msg.value, dict):
-                            logger.warning(
-                                "event_consumer_skip_non_object",
-                                topic=msg.topic,
-                                offset=msg.offset,
-                            )
-                            continue
-                        await handle_record(
+                    if not isinstance(msg.value, dict):
+                        logger.warning(
+                            "event_consumer_skip_non_object",
                             topic=msg.topic,
-                            partition=msg.partition,
                             offset=msg.offset,
-                            key=msg.key,
-                            value=msg.value,
                         )
-                    except Exception:
-                        logger.exception(
-                            "event_consumer_message_failed",
-                            topic=getattr(msg, "topic", ""),
-                            offset=getattr(msg, "offset", -1),
-                        )
+                        await _commit_kafka_offset(consumer, msg)
+                        continue
+                    await handle_record(consumer, msg)
     finally:
         await consumer.stop()
         logger.info("event_consumer_stopped")

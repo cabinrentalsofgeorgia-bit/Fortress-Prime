@@ -42,6 +42,7 @@ from backend.api import auth as auth_api
 from backend.api import invites as invites_api
 from backend.api import agreements as agreements_api
 from backend.api import payments as payments_api
+from backend.api import fast_quote as fast_quote_api
 from backend.api import quotes as quotes_api
 from backend.api import vrs_quotes as vrs_quotes_api
 from backend.api import leads as leads_api
@@ -50,6 +51,7 @@ from backend.api import checkout as checkout_api
 from backend.api import templates as templates_api
 from backend.api import copilot_queue as copilot_queue_api
 from backend.api import admin as admin_api
+from backend.api import admin_insights as admin_insights_api
 from backend.api import rule_engine as rule_engine_api
 from backend.api import intelligence as intelligence_api
 from backend.api import intelligence_feed as intelligence_feed_api
@@ -350,6 +352,8 @@ app.include_router(utilities_api.router, prefix="/api/utilities", tags=["Utiliti
 app.include_router(invites_api.router, prefix="/api/invites", tags=["Invites"])
 app.include_router(agreements_api.router, prefix="/api/agreements", tags=["Agreements"])
 app.include_router(payments_api.router, prefix="/api/payments", tags=["Payments"])
+# Before /api/quotes/{quote_id} so POST /api/quotes/calculate is not swallowed as a UUID path.
+app.include_router(fast_quote_api.router, tags=["Fast Quote"])
 app.include_router(quotes_api.router, prefix="/api/quotes", tags=["Quotes"])
 app.include_router(vrs_quotes_api.router, prefix="/api/quotes", tags=["Sovereign Quotes"])
 app.include_router(leads_api.router, prefix="/api/leads", tags=["Leads"])
@@ -360,6 +364,7 @@ app.include_router(copilot_queue_api.router, prefix="/api/copilot-queue", tags=[
 app.include_router(stripe_webhooks.router, prefix="/api/webhooks", tags=["Stripe Webhooks"])
 app.include_router(stripe_connect_webhooks.router, prefix="/api/webhooks", tags=["Stripe Connect Webhooks"])
 app.include_router(admin_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_insights_api.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(rule_engine_api.router, prefix="/api/rules", tags=["Rule Engine"])
 app.include_router(intelligence_api.router, prefix="/api/intelligence", tags=["Intelligence"])
 app.include_router(intelligence_feed_api.router, prefix="/api/intelligence/feed", tags=["Intelligence Feed"])

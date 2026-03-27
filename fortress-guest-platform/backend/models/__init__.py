@@ -17,6 +17,7 @@ from backend.models.guest_survey import GuestSurvey, SurveyTemplate
 from backend.models.rental_agreement import RentalAgreement, AgreementTemplate
 from backend.models.guest_activity import GuestActivity
 from backend.models.agent_queue import AgentResponseQueue
+from backend.models.ai_insight import AiInsight
 from backend.models.damage_claim import DamageClaim
 from backend.models.property_utility import PropertyUtility, UtilityReading
 from backend.models.staff_invite import StaffInvite
@@ -127,6 +128,7 @@ __all__ = [
     "GuestActivity",
     # AI Agent
     "AgentResponseQueue",
+    "AiInsight",
     # Damage / Legal
     "DamageClaim",
     # Utilities / Services
