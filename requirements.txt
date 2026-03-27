@@ -28,5 +28,6 @@ structlog
 fastapi
 asyncpg
 bcrypt
+python-jose[cryptography]
 twilio>=9.0.0
 stripe
