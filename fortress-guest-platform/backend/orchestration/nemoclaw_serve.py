@@ -162,10 +162,12 @@ def _default_openshell_bin() -> str:
 
 
 def _default_openshell_profile_dir() -> str:
-    return (
-        os.getenv("NEMOCLAW_OPENSHELL_PROFILE_DIR")
-        or f"/home/admin/.config/openshell/gateways/{OPEN_SHELL_GATEWAY_NAME}"
-    ).strip()
+    """TLS + profile layout produced by tools/cluster/propagate_openshell.sh."""
+    override = (os.getenv("NEMOCLAW_OPENSHELL_PROFILE_DIR") or "").strip()
+    if override:
+        return override
+    home = Path(os.getenv("HOME", "/home/admin"))
+    return str(home / ".openshell" / "profiles" / OPEN_SHELL_GATEWAY_NAME)
 
 
 def _openshell_env() -> dict[str, str]:
@@ -174,19 +176,6 @@ def _openshell_env() -> dict[str, str]:
     env.setdefault("OPENSHELL_GATEWAY", OPEN_SHELL_GATEWAY_NAME)
     env.setdefault("PATH", "/home/admin/.local/bin:/usr/local/bin:/usr/bin:/bin")
     return env
-
-
-def _openshell_profile_ready(profile_dir: str) -> bool:
-    profile_path = Path(profile_dir)
-    if not profile_path.exists():
-        return False
-    required_files = (
-        profile_path / "metadata.json",
-        profile_path / "mtls" / "ca.crt",
-        profile_path / "mtls" / "tls.crt",
-        profile_path / "mtls" / "tls.key",
-    )
-    return all(path.exists() for path in required_files)
 
 
 def _trunc_text(value: str, max_len: int) -> str:
@@ -315,6 +304,57 @@ def _call_local_llm(base_url, api_key, model, system_prompt, user_prompt):
     return text
 
 
+def _guest_concierge_prompts(res_data, snippets):
+    system_prompt = (
+        "You are the elite AI Guest Concierge for Cabin Rentals of Georgia, a luxury property management company. "
+        "Your objective is to draft pre-arrival communications based strictly on the provided property rules and reservation details.\n\n"
+        "CRITICAL BOUNDARIES:\n"
+        "1. NEVER invent access codes, Wi-Fi passwords, or policies. If a detail is missing from the snippets, omit it or note it for staff.\n"
+        "2. Maintain a warm, high-end, and professional tone.\n"
+        "3. You must output ONLY valid JSON matching this exact schema: "
+        '{"draft_email": "string", "draft_sms": "string", "internal_staff_notes": "string"}\n'
+        "Use the exact key names draft_email, draft_sms, internal_staff_notes."
+    )
+    user_prompt = (
+        "Reservation Details:\n"
+        + json.dumps(res_data, indent=2, default=str)
+        + "\n\nProperty Context (Qdrant snippets; authoritative for on-property facts):\n"
+        + json.dumps(snippets, indent=2, default=str)
+    )
+    return system_prompt, user_prompt
+
+
+def _call_local_llm_json(base_url, api_key, model, system_prompt, user_prompt):
+    request_body = json.dumps(
+        {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2048,
+            "stream": False,
+            "response_format": {"type": "json_object"},
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        base_url.rstrip("/") + "/chat/completions",
+        data=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + api_key,
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        response_data = json.loads(response.read().decode("utf-8"))
+    text = _extract_message_text(response_data)
+    if not text:
+        raise RuntimeError("local llm returned empty concierge JSON")
+    return text
+
+
 try:
     payload = json.loads(%r)
     task_id = payload["task_id"]
@@ -369,6 +409,71 @@ try:
         result_payload["draft_body"] = draft_body
         action_log.append("draft_chars=" + str(len(draft_body)))
 
+    elif intent == "guest_concierge":
+        res_data = context_payload.get("reservation")
+        if not isinstance(res_data, dict):
+            res_data = {}
+        snippets = context_payload.get("snippets")
+        if not isinstance(snippets, list):
+            snippets = []
+        system_prompt, user_prompt = _guest_concierge_prompts(res_data, snippets)
+        try:
+            raw_content = _call_local_llm_json(
+                chat_base_url,
+                chat_api_key,
+                chat_model,
+                system_prompt,
+                user_prompt,
+            )
+        except Exception as json_mode_exc:
+            fallback_body = json.dumps(
+                {
+                    "model": chat_model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 2048,
+                    "stream": False,
+                }
+            ).encode("utf-8")
+            request = urllib.request.Request(
+                chat_base_url.rstrip("/") + "/chat/completions",
+                data=fallback_body,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + chat_api_key,
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=120) as response:
+                response_data = json.loads(response.read().decode("utf-8"))
+            raw_content = _extract_message_text(response_data)
+            if not raw_content:
+                raise json_mode_exc
+            action_log.append("concierge_json_mode_fallback=1")
+        try:
+            parsed_json = json.loads(raw_content)
+        except json.JSONDecodeError:
+            result_payload = {
+                "error": "Failed to parse JSON",
+                "raw": raw_content[:4000],
+            }
+        else:
+            if not isinstance(parsed_json, dict):
+                result_payload = {
+                    "error": "LLM JSON was not an object",
+                    "raw": raw_content[:4000],
+                }
+            else:
+                result_payload = {
+                    "draft_email": str(parsed_json.get("draft_email") or ""),
+                    "draft_sms": str(parsed_json.get("draft_sms") or ""),
+                    "internal_staff_notes": str(parsed_json.get("internal_staff_notes") or ""),
+                }
+                action_log.append("concierge_fields_ok=1")
+
     print(json.dumps({
         "task_id": task_id,
         "status": "success",
@@ -398,28 +503,32 @@ class NemoClawWorker:
         self.gateway_timeout_s = float(os.getenv("NEMOCLAW_GATEWAY_TIMEOUT_S", "20"))
         self.openshell_bin = _default_openshell_bin()
         self.openshell_profile_dir = _default_openshell_profile_dir()
-        self.openshell_enabled = Path(self.openshell_bin).exists() and _openshell_profile_ready(self.openshell_profile_dir)
-        if self.openshell_enabled:
+        openshell_bin_path = Path(self.openshell_bin)
+        openshell_key_path = Path(self.openshell_profile_dir) / "client.key"
+        if openshell_bin_path.is_file() and openshell_key_path.is_file():
+            self.openshell_enabled = True
             logger.info(
-                "nemoclaw_worker_openshell_armed",
-                extra={
-                    "pinned_node_ip": self.pinned_node_ip,
-                    "worker_label": self.worker_label,
-                    "openshell_bin": self.openshell_bin,
-                    "openshell_profile_dir": self.openshell_profile_dir,
-                },
+                "[Nemoclaw] OpenShell local lane ARMED on worker %s.",
+                self.pinned_node_ip,
             )
         else:
+            self.openshell_enabled = False
+            logger.warning(
+                "[Nemoclaw] OpenShell missing or unconfigured on %s. "
+                "Falling back to LiteLLM over the network.",
+                self.pinned_node_ip,
+            )
+        if not self.openshell_enabled:
             logger.warning(
                 "nemoclaw_worker_openshell_missing",
                 extra={
                     "pinned_node_ip": self.pinned_node_ip,
                     "worker_label": self.worker_label,
                     "openshell_bin": self.openshell_bin,
-                    "openshell_bin_exists": Path(self.openshell_bin).exists(),
+                    "openshell_bin_exists": openshell_bin_path.is_file(),
                     "openshell_profile_dir": self.openshell_profile_dir,
                     "openshell_profile_dir_exists": Path(self.openshell_profile_dir).exists(),
-                    "openshell_profile_ready": _openshell_profile_ready(self.openshell_profile_dir),
+                    "openshell_client_key_exists": openshell_key_path.is_file(),
                 },
             )
         self.openshell_timeout_s = float(os.getenv("NEMOCLAW_OPENSHELL_TIMEOUT_S", "300"))
@@ -864,8 +973,11 @@ class NemoClawWorker:
             self.pinned_node_ip,
             directive.task_id,
         )
-        if directive.intent == "draft_recovery_email":
-            logger.error("Worker-local recovery fallback has been removed; inference.local is required.")
+        if directive.intent in {"draft_recovery_email", "guest_concierge"}:
+            logger.error(
+                "Worker-local fallback for intent=%s has been removed; inference.local is required.",
+                directive.intent,
+            )
         else:
             logger.error("LiteLLM fallback is explicitly disabled to protect Head Node memory.")
         raise RuntimeError(

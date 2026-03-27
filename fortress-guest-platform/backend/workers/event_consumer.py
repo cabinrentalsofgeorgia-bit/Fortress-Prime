@@ -283,19 +283,9 @@ def _build_directive(
     property_id = _extract_property_id(payload)
     confirmation = _extract_confirmation(payload)
 
-    intent = (
-        "You are the sovereign concierge brain for Cabin Rentals of Georgia. "
-        "Using ONLY the context provided (event payload + knowledge snippets), "
-        "produce a concise welcome and pre-arrival brief for staff to send or adapt. "
-        "Include: tone (warm, premium), check-in reminders if dates are present, "
-        "and any property-specific rules from snippets. "
-        "Do not invent policies, fees, or amenities not supported by the context. "
-        "Output plain text suitable for email or SMS follow-up — no JSON, no markdown headings."
-    )
-
     return {
         "task_id": task_id,
-        "intent": intent,
+        "intent": "guest_concierge",
         "context_payload": {
             "source": "kafka_event_consumer",
             "kafka_topic": topic,
@@ -304,8 +294,8 @@ def _build_directive(
             "kafka_key": key_hint,
             "property_id": property_id,
             "confirmation_code": confirmation,
-            "event_payload": payload,
-            "qdrant_snippets": qdrant_snippets,
+            "reservation": payload,
+            "snippets": qdrant_snippets,
             "qdrant_collection": COLLECTION_NAME,
         },
     }
