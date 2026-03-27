@@ -98,6 +98,7 @@ Internet --> Cloudflare Worker (api.crog-ai.com)
 - External developers receive an **API Key**, NOT cluster credentials.
 - All public endpoints serve "Finished Intelligence" — derived data, never raw records.
 - The Cloudflare Tunnel is the ONLY authorized ingress path from the public internet.
+- The MikroTik router provides split-horizon DNS for `crog-ai.com` on the management LAN so local Command Center traffic resolves directly to Captain at `192.168.0.100` instead of hairpinning through Cloudflare.
 
 ### 2.2 Hybrid Orchestration (Dual-Brain Routing)
 
@@ -144,6 +145,82 @@ else:
 | Ollama          | All nodes (:11434)     | (stopped)              | 11434 | HTTP     |
 | llama.cpp API   | (stopped)              | Captain (10.10.10.2)   | 8080  | HTTP     |
 | RPC Server      | (stopped)              | All nodes (10.10.10.x) | 50052 | RPC      |
+
+### 2.4 Direct Booking & Stripe Reconciliation (Hardened Handshake)
+
+Guest checkout MUST reconcile **client confirmation** (`POST /api/direct-booking/confirm-hold`) and **Stripe** (`payment_intent.succeeded` on both `/api/direct-booking/webhooks/stripe` and `/api/webhooks/stripe`) as a **single race-safe finalization**:
+
+| Rule | Implementation |
+|------|----------------|
+| **Idempotency anchor** | `reservation_holds.id` (API field `hold_id`). Duplicate finalization with the same hold MUST NOT create a second reservation. |
+| **Row lock** | `SELECT … FOR UPDATE` on the matching `reservation_holds` row before any conversion logic. |
+| **Shared logic** | `ReservationFinalizationService` in `fortress-guest-platform/backend/services/reservation_finalization_service.py` — both HTTP confirm and webhooks call into it via `booking_hold_service`. |
+| **Webhook glue** | PaymentIntent metadata MUST include `hold_id` (and `source=direct_booking_hold`). Stripe create uses idempotency key `fortress_direct_hold_{hold_uuid}`. |
+| **Persistence** | After successful conversion, `reservation_holds.converted_reservation_id` references the created `reservations` row (Alembic `b2c8e1f4a9d0`). |
+| **Client contract** | Successful `confirm-hold` responses MAY include `already_processed: true` when the webhook (or a prior confirm) already finalized the hold; HTTP status remains **200**. |
+
+**Deploy:** Run `alembic upgrade head` in the API environment after pulling migrations.
+
+### 2.5 Sovereign Pulse (Command Center)
+
+Internal staff UI (**crog-ai.com** only) exposes **`GET /api/telemetry/sovereign-pulse`** (staff JWT) aggregating:
+
+- **DGX strip:** same bare-metal node telemetry as System Health (client polls via Next BFF).
+- **Handshake convergence:** active holds, 24h conversions, direct reservations, orphan-risk holds (expired + PI), and `converted_reservation_id` coverage.
+- **Tribunal:** `seo_patches` queue counts; `pending_human` rows scored vs `SEO_GODHEAD_MIN_SCORE` (default **0.95**); recent queue table for the re-extraction fleet.
+
+Dashboard route: **`/command/sovereign-pulse`**. Includes **Funnel HQ** (§2.8). Does not replace storefront or public analytics.
+
+### 2.6 Strike 8 — Redirect Vanguard (Storefront Edge)
+
+Public storefront (**cabin-rentals-of-georgia.com**) MAY be fronted by a **Cloudflare Worker** that implements the Strangler Fig **Switchman**:
+
+| Rule | Implementation |
+|------|----------------|
+| **Sovereign-ready** | If `/cabins/{slug}` and KV contains key `slug` (lowercase), **proxy** to **SOVEREIGN_ORIGIN** (e.g. Vercel); browser URL stays on the apex domain. |
+| **Legacy path** | All requests **not** strangled (unknown slug or non-cabin paths) **proxy** to **DRUPAL_ORIGIN** so unmigrated pages and **legacy 301 continuity** (incl. 4,530 Drupal redirects) remain authoritative. |
+| **KV registry** | Workers KV namespace bound as `DEPLOYED_SLUGS`; keys written by DGX via **`CLOUDFLARE_API_TOKEN`** (no per-request Postgres). |
+| **Ledger hook** | On successful SEO deploy (`seo_deploy_consumer` after revalidate), **upsert** slug to KV. Optional **`POST /api/internal/redirect-vanguard/kv/full-sync`** (Super Admin) rebuilds KV from `seo_patches.status = deployed`. |
+
+**Artifacts:** `gateway/redirect-vanguard-worker.mjs`, `gateway/wrangler.redirect-vanguard.toml`, `docs/architecture/redirect-vanguard.md`.
+
+**Internal domain** (**crog-ai.com**) MUST NOT use this Worker for staff traffic (doctrine: domain separation).
+
+### 2.7 Sovereign Intent Lane (Strike 9 — Compliant Subset)
+
+Coarse, **consented** storefront signals only — **no** pre-submit PII capture or silent fingerprint→identity stitching.
+
+| Surface | Path |
+|--------|------|
+| **Ledger** | Postgres `storefront_intent_events` (HMAC session fingerprint, event type, optional `property_slug`, sanitized `meta`). |
+| **Ingest** | `POST /api/storefront/intent/event` (public; also proxied by Next `/api/storefront/intent/event`). |
+| **Nudge** | `GET /api/storefront/intent/nudge?session_id=…` — eligibility from consent + rolling score window. |
+| **UI** | `SovereignNudge` on storefront layout — opt-in banner, then optional modal. |
+
+**Policy:** `docs/architecture/sovereign-intent-engine-boundaries.md`. Recovery SMS/email remains **Twilio** / existing mail, **opt-in** or **transactional** only.
+
+**Identity bridge:** (a) **Hold path:** When `/book` succeeds, the browser MAY send `intent_session_id` (same UUID as the intent lane). The API writes `funnel_hold_started` plus `storefront_session_guest_links`. (b) **Strike 11 — Concierge path:** After explicit **opt-in** on `/book`, `POST /api/storefront/concierge/resolve` links the same session UUID to an existing or newly created `guests` row — **no** silent / non-consented stitching.
+
+### 2.8 Strike 10 — Funnel Heatmap & Recovery HQ
+
+| Surface | Path |
+|--------|------|
+| **Aggregator** | `backend/services/funnel_analytics_service.py` — rolling window rollups over `storefront_intent_events`. |
+| **Staff API** | `GET /api/telemetry/funnel-hq` (staff JWT) — funnel edges (retention / leakage) + **Recovery HQ** rows (high intent, no hold, stale). |
+| **UI** | `/command/sovereign-pulse` — Funnel heatmap + **Recovery HQ** (guest email/phone/name when linked, drop-off stage, **Enticement Forge** modal for SMS preview). |
+| **Schema** | `storefront_session_guest_links` (Alembic `e7f1a2b3c4d5`) links `session_fp` → `guests.id` after hold creation. |
+
+### 2.9 Strike 11 — Sovereign Concierge & Enticer Swarm
+
+| Surface | Path |
+|--------|------|
+| **Resolve API** | `POST /api/storefront/concierge/resolve` (public; Next BFF `/api/storefront/concierge/resolve`) — requires `consent_recovery_contact: true`, `session_id`, email and/or phone; `flow` = `save_quote` or `booking_field_blur`. |
+| **Ledger** | `storefront_session_guest_links.source = concierge_resolve`; intent event `concierge_identity_resolved`. |
+| **UI** | `/book` — **Sovereign Concierge** card (opt-in checkbox, **Save quote & enable recovery**), plus debounced resolve on email/phone **blur** when opted in. |
+| **Enticer** | `backend/services/enticer_swarm_service.py` + `backend/scripts/run_enticer_swarm_worker.py` — **Strike 17** live SMS only when `CONCIERGE_RECOVERY_SMS_ENABLED=true` **and** `CONCIERGE_STRIKE_ENABLED=true`, cohort allowlists (`CONCIERGE_STRIKE_ALLOWED_GUEST_IDS`, `CONCIERGE_STRIKE_ALLOWED_PROPERTY_SLUGS`, `CONCIERGE_STRIKE_ALLOWED_LOYALTY_TIERS`; at least one dimension non-empty), and by default `AGENTIC_SYSTEM_ACTIVE=true` (`CONCIERGE_STRIKE_REQUIRE_AGENTIC_SYSTEM_ACTIVE`). Cooldown `CONCIERGE_RECOVERY_SMS_COOLDOWN_HOURS` (default 168), template `CONCIERGE_RECOVERY_SMS_BODY_TEMPLATE` (`{book_url}`, `{first_name}`), link `CONCIERGE_STOREFRONT_BOOK_URL`. OpenShell: `concierge_strike17` (skip/send/fail). |
+| **Dispatch audit** | `concierge_recovery_dispatches` (Alembic `f9b2c3d4e5a6`) — idempotency / ops review. |
+
+**Twilio:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` in backend `.env` (existing integration).
 
 ---
 
