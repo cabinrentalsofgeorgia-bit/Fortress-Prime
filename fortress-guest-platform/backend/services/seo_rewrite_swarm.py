@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 from typing import Any
 from uuid import UUID, uuid4
@@ -40,6 +41,8 @@ SYSTEM_PROMPT = (
     "Honor all rubric constraints exactly. Do not include markdown or commentary."
 )
 
+_TRAILING_COMMA_RE = re.compile(r",(\s*[}\]])")
+
 
 def _extract_message_content(response: dict[str, Any]) -> str:
     choices = response.get("choices") or []
@@ -58,12 +61,66 @@ def _extract_message_content(response: dict[str, Any]) -> str:
     return ""
 
 
-def _extract_json_object(raw_text: str) -> dict[str, Any]:
-    start = raw_text.find("{")
-    end = raw_text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
+def _sanitize_model_text(raw_text: str) -> str:
+    text = (raw_text or "").strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines:
+            lines = lines[1:]
+        while lines and lines[-1].strip().startswith("```"):
+            lines.pop()
+        text = "\n".join(lines).strip()
+
+    json_prefix_match = re.match(r"^(json|JSON)\s*", text)
+    if json_prefix_match:
+        text = text[json_prefix_match.end() :].lstrip(": \n\t")
+
+    return text
+
+
+def _extract_balanced_json_object(raw_text: str) -> str:
+    text = _sanitize_model_text(raw_text)
+    start = text.find("{")
+    if start == -1:
         raise ValueError("No JSON object found in rewrite output")
-    parsed = json.loads(raw_text[start : end + 1])
+
+    depth = 0
+    in_string = False
+    escape = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+
+    raise ValueError("No complete JSON object found in rewrite output")
+
+
+def _repair_json_text(candidate: str) -> str:
+    repaired = candidate.replace("\u201c", '"').replace("\u201d", '"')
+    repaired = repaired.replace("\u2018", "'").replace("\u2019", "'")
+    return _TRAILING_COMMA_RE.sub(r"\1", repaired)
+
+
+def _extract_json_object(raw_text: str) -> dict[str, Any]:
+    candidate = _extract_balanced_json_object(raw_text)
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        parsed = json.loads(_repair_json_text(candidate))
     if not isinstance(parsed, dict):
         raise ValueError("Rewrite output must be a JSON object")
     return parsed

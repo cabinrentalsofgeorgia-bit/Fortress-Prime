@@ -25,8 +25,8 @@ from backend.scripts.generate_seo_migration_map import _discover_next_routes
 from backend.vrs.infrastructure.seo_event_bus import SEOEventBus, create_seo_event_redis
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FRONTEND_APP_DIR = REPO_ROOT / "frontend-next" / "src" / "app"
-LEGACY_REDIRECTS_PATH = REPO_ROOT / "frontend-next" / "src" / "data" / "legacy-redirects.ts"
+FRONTEND_APP_DIR = REPO_ROOT / "apps" / "storefront" / "src" / "app"
+LEGACY_REDIRECTS_PATH = REPO_ROOT / "apps" / "storefront" / "src" / "data" / "legacy-redirects.ts"
 DEFAULT_PREVIEW_PATH = (
     REPO_ROOT / "backend" / "data" / "async_jobs" / "emergency-brake-20260320T152318Z" / "safety_first_remap_preview.json"
 )

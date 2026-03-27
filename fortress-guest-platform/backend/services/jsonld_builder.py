@@ -194,8 +194,14 @@ def _resolve_canonical_url(property_data: dict[str, Any], patch_data: dict[str, 
 
 def _resolve_images(property_data: dict[str, Any], patch_data: dict[str, Any]) -> list[str]:
     storefront_base_url = _resolve_storefront_base_url(property_data, patch_data)
-    raw_images = property_data.get("images") or property_data.get("media") or []
     images: list[str] = []
+    hero_image_url = _clean_text(
+        property_data.get("hero_image_url")
+        or patch_data.get("hero_image_url")
+    )
+    if hero_image_url:
+        images.append(_absolute_url(hero_image_url, storefront_base_url))
+    raw_images = property_data.get("images") or property_data.get("media") or []
     if isinstance(raw_images, list):
         for item in raw_images:
             raw_url: str | None
