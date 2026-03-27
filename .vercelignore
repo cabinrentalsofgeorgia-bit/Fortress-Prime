@@ -18,5 +18,8 @@
 /*.log
 /fortress-guest-platform/.uv-venv
 /fortress-guest-platform/venv
-/fortress-guest-platform/frontend-next/node_modules
-/fortress-guest-platform/frontend-next/.next
+/fortress-guest-platform/node_modules
+/fortress-guest-platform/apps/storefront/node_modules
+/fortress-guest-platform/apps/storefront/.next
+/fortress-guest-platform/apps/command-center/node_modules
+/fortress-guest-platform/apps/command-center/.next

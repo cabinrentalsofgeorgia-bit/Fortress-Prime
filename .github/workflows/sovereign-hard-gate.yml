@@ -1,0 +1,26 @@
+name: Sovereign Hard Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  hard-gate:
+    # This gate is intended for the Spark head node runner.
+    runs-on: [self-hosted, linux, spark-head]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run sovereign hard gate
+        env:
+          NODES: "192.168.0.104 192.168.0.100 192.168.0.101 192.168.0.102"
+          THRESHOLD_MBPS: "200000"
+        run: |
+          chmod +x tools/cluster/run_hard_gate.sh
+          chmod +x tools/cluster/focused_smoke.sh
+          chmod +x tools/cluster/nvidia_fabric_health_monitor.sh
+          tools/cluster/run_hard_gate.sh

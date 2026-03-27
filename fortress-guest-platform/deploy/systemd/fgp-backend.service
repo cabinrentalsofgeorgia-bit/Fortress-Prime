@@ -1,0 +1,19 @@
+[Unit]
+Description=Fortress Guest Platform Backend
+After=network.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+EnvironmentFile=/home/admin/Fortress-Prime/fortress-guest-platform/.env
+EnvironmentFile=/home/admin/Fortress-Prime/.env.security
+ExecStart=/home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python /home/admin/Fortress-Prime/fortress-guest-platform/run.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+MemoryMax=8G
+CPUWeight=100
+
+[Install]
+WantedBy=multi-user.target

@@ -1,19 +1,23 @@
 [Unit]
-Description=Fortress Guest Platform Frontend
-After=network.target
+Description=Fortress Guest Platform Frontend (Command Center on :3001)
+After=network-online.target fortress-backend.service
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=admin
-WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform/frontend-next
-ExecStart=/home/admin/.nvm/versions/node/v20.20.0/bin/node /home/admin/Fortress-Prime/fortress-guest-platform/frontend-next/.next/standalone/server.js
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center
+ExecStart=/home/admin/.nvm/versions/node/v20.20.0/bin/node server.js
 Restart=always
 RestartSec=5
 Environment=PATH=/home/admin/.nvm/versions/node/v20.20.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-Environment=PORT=3000
+Environment=PORT=3001
 Environment=HOSTNAME=0.0.0.0
+Environment=APP_MODE=command_center
+Environment=NEXT_PUBLIC_SITE_TYPE=sovereign_glass
 Environment=FGP_BACKEND_URL=http://127.0.0.1:8100
 Environment=COMMAND_CENTER_URL=http://127.0.0.1:9800
+Environment=NEXT_PUBLIC_APP_URL=https://crog-ai.com
 Environment=NEXT_PUBLIC_API_URL=
 MemoryMax=4G
 CPUWeight=100

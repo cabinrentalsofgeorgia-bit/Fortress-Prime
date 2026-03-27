@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: fortress-guest-platform/frontend-next/package-lock.json
+          cache-dependency-path: fortress-guest-platform/package-lock.json
 
       - name: Assert sovereign secrets are present
         run: |
@@ -69,11 +69,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install frontend dependencies
-        working-directory: fortress-guest-platform/frontend-next
+        working-directory: fortress-guest-platform
         run: npm ci
 
       - name: Install Playwright Chromium
-        working-directory: fortress-guest-platform/frontend-next
+        working-directory: fortress-guest-platform/apps/storefront
         run: npx playwright install chromium
 
       - name: Start sovereign backend
@@ -101,7 +101,7 @@ jobs:
           python backend/scripts/seed_master_admin.py
 
       - name: Start Next.js storefront
-        working-directory: fortress-guest-platform/frontend-next
+        working-directory: fortress-guest-platform/apps/storefront
         run: |
           nohup npx next dev --hostname 127.0.0.1 --port 3000 > "$RUNNER_TEMP/fgp-frontend.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/fgp-frontend.pid"
@@ -118,7 +118,7 @@ jobs:
           exit 1
 
       - name: Run Playwright sovereign gate
-        working-directory: fortress-guest-platform/frontend-next
+        working-directory: fortress-guest-platform/apps/storefront
         run: npx playwright test --reporter=list --retries=0
 
       - name: Upload Playwright report
@@ -126,7 +126,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: fortress-guest-platform/frontend-next/playwright-report
+          path: fortress-guest-platform/apps/storefront/playwright-report
           if-no-files-found: ignore
 
       - name: Upload Playwright test results
@@ -134,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
-          path: fortress-guest-platform/frontend-next/test-results
+          path: fortress-guest-platform/apps/storefront/test-results
           if-no-files-found: ignore
 
       - name: Upload sovereign gate logs

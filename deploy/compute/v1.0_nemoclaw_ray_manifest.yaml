@@ -1,0 +1,212 @@
+apiVersion: fortress.prime/v1alpha1
+kind: NemoClawRayManifest
+metadata:
+  name: v1.0_nemoclaw_ray_manifest
+  version: "1.0"
+  objective: ray-governed-nemoclaw
+  owner: spark-node-2
+  description: >
+    Canonical deployment contract for running NemoClaw under the Fortress Prime
+    Ray matrix. Orchestration authority remains singular on spark-node-2 while
+    heavy execution fans out across Ray-managed DGX workers on the sovereign LAN.
+
+spec:
+  cluster:
+    control_plane:
+      node_id: spark-node-2
+      host: 192.168.0.100
+      ray_role: head
+      services:
+        ray_unit: fortress-ray-head.service
+        health_gate_command: tools/cluster/check_ray_cluster_health.sh
+        bootstrap_command: tools/cluster/bootstrap_nemoclaw_leader.sh
+      endpoints:
+        ray_head_address: 192.168.0.100:6390
+        ray_dashboard_url: http://192.168.0.100:8265
+        nemoclaw_orchestrator_base_url: http://192.168.0.100:8000
+        openshell_gateway_health_url: http://127.0.0.1:8080/health
+        nemoclaw_local_dashboard_url: http://127.0.0.1:18789
+      authority:
+        client_boundary: fortress-guest-platform/backend/core/config.py::Settings.nemoclaw_orchestrator_url
+        public_ingress: prohibited
+        leadership_failover: manual_after_validation
+    workers:
+      - node_id: spark-node-1
+        host: 192.168.0.104
+        ray_role: worker
+        ray_unit: fortress-ray-worker.service
+        placement_role: librarian_sandbox
+        current_capabilities:
+          - openshell_sandbox
+          - readonly_postgres_context
+          - ray_worker_gpu
+      - node_id: spark-3
+        host: 192.168.0.105
+        ray_role: worker
+        ray_unit: fortress-ray-worker.service
+        placement_role: ocular_inference
+        current_capabilities:
+          - ray_worker_gpu
+          - dgx_ocular_url
+      - node_id: spark-4
+        host: 192.168.0.106
+        ray_role: worker
+        ray_unit: fortress-ray-worker.service
+        placement_role: memory_inference
+        current_capabilities:
+          - ray_worker_gpu
+          - dgx_memory_url
+    baseline:
+      expected_alive_nodes:
+        - 192.168.0.100
+        - 192.168.0.104
+        - 192.168.0.105
+        - 192.168.0.106
+      expected_total_cpu: 80
+      expected_total_gpu: 4
+      verification_command: tools/cluster/check_ray_cluster_health.sh
+
+  deployment:
+    scheduler: ray_systemd
+    topology: single_head_multi_worker
+    supervision:
+      ray_runtime: systemd
+      nemoclaw_rollout: operator_bootstrapped_then_ray_governed
+      ad_hoc_terminal_launches: prohibited
+    placement:
+      alpha_orchestrator:
+        node_id: spark-node-2
+        host: 192.168.0.100
+        execution_mode: head_pinned
+        ray_strategy: named_actor_or_serve_app
+        min_resources:
+          cpu: 4
+          gpu: 1
+      librarian_sandbox:
+        node_id: spark-node-1
+        host: 192.168.0.104
+        execution_mode: worker_pinned
+        ray_strategy: placement_group_member
+        min_resources:
+          cpu: 20
+          gpu: 1
+      ocular_support:
+        node_id: spark-3
+        host: 192.168.0.105
+        execution_mode: worker_pinned
+        ray_strategy: placement_group_member
+        min_resources:
+          cpu: 20
+          gpu: 1
+      memory_support:
+        node_id: spark-4
+        host: 192.168.0.106
+        execution_mode: worker_pinned
+        ray_strategy: placement_group_member
+        min_resources:
+          cpu: 20
+          gpu: 1
+
+  runtime_contract:
+    bootstrap:
+      installer_source: https://nvidia.com/nemoclaw.sh
+      required_env:
+        - NVIDIA_API_KEY
+      bootstrap_host: 192.168.0.100
+      bootstrap_health_expectations:
+        - GET http://127.0.0.1:8080/health returns status OK
+        - HEAD http://127.0.0.1:18789 returns 200
+    ingress:
+      local_only_ports:
+        - 8080
+        - 18789
+        - 8000
+        - 6390
+        - 8265
+      public_tunnel_exposure: forbidden
+      client_resolution:
+        - all callers use nemoclaw_orchestrator_url
+        - callers must not hardcode worker identity
+    execution:
+      control_plane: config_driven_single_endpoint
+      worker_fanout: ray_actor_dispatch
+      queue_choreography:
+        - postgres_authoritative_state
+        - redis_reference_envelopes_only
+        - no_raw_sensitive_payloads_in_queue_messages
+
+  data_planes:
+    postgres:
+      authority: primary_state_store
+      access_modes:
+        alpha_orchestrator: workflow_state_and_audit
+        librarian_sandbox: readonly_context
+    redis:
+      authority: swarm_choreography
+      queue_policy:
+        - reference_payloads_only
+        - bounded_retries
+        - DLQ_required
+    nas:
+      authority: heavy_artifacts_and_history
+      access_policy:
+        - mounts_remain_local_only
+        - sandbox_mounts_are_readonly
+    inference:
+      local_endpoints:
+        ocular: http://192.168.0.105:8000/v1
+        memory: http://192.168.0.106:8000/v1
+      frontier_consensus: masked_payloads_only
+
+  security:
+    zero_trust:
+      - no public orchestration ports
+      - cloudflare_tunnels_only_for_approved_public_ingress
+      - machine_to_machine_swarm_auth_uses_X-Swarm-Token_or_stricter
+    sovereignty:
+      - guest_pii_stays_on_local_hardware
+      - financial_and_legal_payloads_stay_local
+      - external_evaluators_receive_masked_derived_artifacts_only
+
+  rollout:
+    strategy: single_leader_ray_governed_canary
+    phases:
+      - name: preflight_ray_matrix
+        command: tools/cluster/check_ray_cluster_health.sh
+        expected: pass_with_100_104_105_106_alive
+      - name: bootstrap_nemoclaw_leader
+        command: NVIDIA_API_KEY=... tools/cluster/bootstrap_nemoclaw_leader.sh
+        expected:
+          - 127.0.0.1:8080 health passes
+          - 127.0.0.1:18789 dashboard responds
+      - name: bind_alpha_orchestrator_to_ray
+        expected:
+          - head pinned to 192.168.0.100
+          - worker fanout uses Ray placement, not terminal sessions
+          - no worker address hardcoding in callers
+      - name: validate_client_boundary
+        expected:
+          - nemoclaw_orchestrator_url remains authoritative
+          - tests/agent_smoke.http and internal callers target http://192.168.0.100:8000, not raw workers
+      - name: canary_task_execution
+        expected:
+          - one masked low-risk task executes end-to-end
+          - audit trail persists in authoritative stores
+      - name: production_cutover
+        expected:
+          - NemoClaw workload runs under Ray governance
+          - health script remains green
+
+  hard_gates:
+    - name: four_node_ray_matrix
+      command: tools/cluster/check_ray_cluster_health.sh
+      required: true
+    - name: leader_nemoclaw_prereq
+      command: test -n "$NVIDIA_API_KEY"
+      required: true
+    - name: no_public_orchestrator_ingress
+      type: policy
+      required: true
+    - name: config_driven_client_boundary
+      setting: fortress-guest-platform/backend/core/config.py::Settings.nemoclaw_orchestrator_url
+      required: true
