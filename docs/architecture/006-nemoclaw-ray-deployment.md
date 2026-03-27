@@ -51,33 +51,59 @@ The contract fixes these deployment truths:
 
 ## Rollout Sequence
 
-### Deployment rollout sequence (decentralized execution)
+### Strict Rollout Sequence
 
-To ensure worker-local OpenShell lanes are armed before Ray Serve replicas start failing over to head inference, execute in this strict order:
+To deploy Nemoclaw updates across the Ray worker matrix and ensure the local execution lanes are active, you must execute this sequence precisely from the `.100` command node:
 
-1. **Ray matrix verification:** `./tools/cluster/check_ray_cluster_health.sh`  
-   Ensure `192.168.0.100`, `192.168.0.104`, `192.168.0.105`, and `192.168.0.106` are healthy and Ray reports them `ALIVE`.
+1. `./tools/cluster/check_ray_cluster_health.sh`
+2. `./tools/cluster/propagate_openshell.sh`
+3. `./tools/cluster/launch_nemoclaw.sh`
+4. `curl http://192.168.0.100:8000/health`
 
-2. **NemoClaw leader (head only):** `./tools/cluster/bootstrap_nemoclaw_leader.sh`  
-   Run when installing or refreshing the leader on `192.168.0.100` (requires `NVIDIA_API_KEY` as documented in that script).
+**Verification Post-Rollout:**
 
-3. **Worker propagation:** `./tools/cluster/propagate_openshell.sh`  
-   On each worker (`.104`, `.105`, `.106`), re-extracts OpenShell client TLS from the local k3s secret `openshell-client-tls`, refreshes `~/.config/openshell/gateways/nemoclaw/mtls/`, verifies `openshell status -g nemoclaw`, and warms the `my-assistant` sandbox.  
-   Do not deploy Serve before this step if you expect all workers to report `openshell_enabled: true` in health.
+- Ensure the health endpoint returns `openshell_enabled: true` for `.104`, `.105`, and `.106`.
+- Repeatedly probe `POST http://192.168.0.100:8000/api/agent/execute` to verify `execution_path=openshell_cli` is utilized by all three workers. Do not rely on LiteLLM fallback unless the local lane critically fails.
 
-4. **Serve redeployment:** `./tools/cluster/launch_nemoclaw.sh`  
-   Materializes the FastAPI orchestrator on the Ray head and distributes pinned worker replicas.
+### Additional operator steps
 
-5. **Health verification:** `curl -s http://192.168.0.100:8000/health`  
-   Confirm each worker target lists `openshell_enabled: true` after propagation.
+- **NemoClaw leader (head only):** `./tools/cluster/bootstrap_nemoclaw_leader.sh` — run when installing or refreshing the leader on `192.168.0.100` (requires `NVIDIA_API_KEY` as documented in that script). This is not part of every rolling propagation but is required for fresh head installs.
 
-6. **Canary:** Run a masked low-risk `POST /api/agent/execute` and confirm `execution_path=openshell_cli` when the round-robin lands on each worker.
+- **Propagation details:** `propagate_openshell.sh` writes k3s secret `openshell-client-tls` material to `~/.openshell/profiles/nemoclaw/` (`client.crt`, `client.key`), verifies `openshell status -g nemoclaw`, and runs `openshell sandbox warm my-assistant`. Ray Serve workers detect the local lane via `openshell` binary + `client.key` (see `nemoclaw_serve.py`).
 
 ### Operational notes
 
 - Bind Alpha Orchestrator execution to Ray governance: the router stays head-pinned on `.100`; heavy execution fans out through Ray placement.
 - Keep the client boundary stable: callers use `Settings.nemoclaw_orchestrator_url` from `fortress-guest-platform/backend/core/config.py`, which resolves to the Ray Serve ingress on `.100:8000`.
 - Throttling or disabling the head-node LiteLLM fallback is a **follow-up** only after all three workers are confirmed on the local OpenShell lane.
+
+## Operational Runbook
+
+### NemoClaw intent, prompt, and sandbox changes
+
+Any change to **NemoClaw execution semantics**—including new or altered **`intent`** branches, **system/user prompts**, or the **OpenShell embedded sandbox script** in `fortress-guest-platform/backend/orchestration/nemoclaw_serve.py`—is baked into the Ray Serve deployment. The Kafka **event consumer** continues to POST directives to that orchestrator; it does not hot-reload orchestrator code.
+
+**Required sequence after such changes** (from the `192.168.0.100` command node, repo root):
+
+1. **Redeploy the Ray matrix (NemoClaw on Ray Serve):**
+   ```bash
+   cd /home/admin/Fortress-Prime
+   ./tools/cluster/launch_nemoclaw.sh
+   ```
+   Wait until the rollout health check shows workers **`.104`**, **`.105`**, and **`.106`** green (and `curl -s http://192.168.0.100:8000/health` reflects `openshell_enabled: true` per worker as expected).
+
+2. **Cycle the event consumer** so in-flight workers and logging align with the new orchestrator revision and any matching backend expectations:
+   ```bash
+   sudo systemctl restart fortress-event-consumer.service
+   ```
+
+3. **Verify telemetry** (optional but recommended during cutover):
+   ```bash
+   sudo journalctl -t fortress-event-consumer -f
+   ```
+   Produce a synthetic `reservation.confirmed` (or your staging equivalent) and confirm logs show the consumer dispatching to NemoClaw and persisting structured results.
+
+**Broader rollouts** (OpenShell TLS, worker binaries, or Ray cluster issues) still follow the **Strict Rollout Sequence** in this document—`check_ray_cluster_health.sh`, `propagate_openshell.sh`, then `launch_nemoclaw.sh`—before the consumer restart above.
 
 ## OpenShell Worker IaC
 
@@ -126,7 +152,7 @@ Ray may retain a historical `DEAD` node record after a worker restart. The healt
 
 The Kubernetes YAML for the `openshell` namespace, `openshell-client-tls` secret, and related workloads is **not** checked into this repository. If a DGX Spark worker is reprovisioned or loses k3s state, operators must rebuild the sidecar from a surviving node (typically `192.168.0.104`) or from an offline backup of the export tarball.
 
-The Ray automation in [`tools/cluster/propagate_openshell.sh`](../../tools/cluster/propagate_openshell.sh) assumes a **Docker** container on each worker named `openshell-cluster-nemoclaw-<LAN-last-octet>` (e.g. `openshell-cluster-nemoclaw-105` on `192.168.0.105`). Mutate exported manifests so names and labels match that convention on the target host.
+The canonical [`tools/cluster/propagate_openshell.sh`](../../tools/cluster/propagate_openshell.sh) uses **host** `sudo k3s kubectl` to read `openshell-client-tls`. Some recovery flows still use a **Docker** sidecar named `openshell-cluster-nemoclaw-<LAN-last-octet>`; see provision scripts if your worker only exposes kubectl inside that container.
 
 ### 1. Binary mirror (global path)
 
