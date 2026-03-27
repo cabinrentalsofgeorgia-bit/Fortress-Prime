@@ -30,5 +30,6 @@ asyncpg
 bcrypt
 python-jose[cryptography]
 aiokafka
+email-validator
 twilio>=9.0.0
 stripe
