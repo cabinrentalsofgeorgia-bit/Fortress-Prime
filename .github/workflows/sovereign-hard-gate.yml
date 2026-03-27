@@ -96,7 +96,7 @@ jobs:
         working-directory: fortress-guest-platform
         run: |
           source "$GITHUB_WORKSPACE/.venv/bin/activate"
-          alembic upgrade head
+          python -m alembic upgrade head
 
       - name: Generate HITL keypair
         run: |
