@@ -22,6 +22,7 @@ import structlog
 import httpx
 
 from backend.core.config import settings
+from backend.services.swarm_service import submit_message_completion
 
 logger = structlog.get_logger()
 
@@ -212,7 +213,7 @@ HORSEMEN = {
     "anthropic": {
         "name": "Anthropic (Claude Opus 4.6)",
         "protocol": "anthropic",
-        "api_key_attr": "anthropic_api_key",
+        "api_key_attr": "litellm_master_key",
         "model_attr": "anthropic_model",
         "base_url": None,
         "timeout": 120,
@@ -220,25 +221,25 @@ HORSEMEN = {
     "gemini": {
         "name": "Google Gemini 3.1 Pro",
         "protocol": "openai_compat",
-        "api_key_attr": "gemini_api_key",
+        "api_key_attr": "litellm_master_key",
         "model_attr": "gemini_model",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "base_url": None,
         "timeout": 60,
     },
     "xai": {
         "name": "xAI Grok 4.1",
         "protocol": "openai_compat",
-        "api_key_attr": "xai_api_key",
+        "api_key_attr": "litellm_master_key",
         "model_attr": "xai_model",
-        "base_url": "https://api.x.ai/v1",
+        "base_url": None,
         "timeout": 60,
     },
     "openai": {
         "name": "OpenAI GPT-4o",
         "protocol": "openai_compat",
-        "api_key_attr": "openai_api_key",
+        "api_key_attr": "litellm_master_key",
         "model_attr": "openai_model",
-        "base_url": "https://api.openai.com/v1",
+        "base_url": None,
         "timeout": 60,
     },
 }
@@ -378,36 +379,21 @@ async def _call_anthropic(
     temperature: float,
     timeout: int,
 ) -> Optional[str]:
-    """Call Anthropic Claude via the native anthropic SDK."""
-    try:
-        from anthropic import AsyncAnthropic
-    except ImportError:
-        logger.warning("anthropic_sdk_not_installed")
-        return None
-
-    system_text = ""
-    user_messages = []
-    for m in messages:
-        if m["role"] == "system":
-            system_text = m["content"]
-        else:
-            user_messages.append(m)
-
-    client = AsyncAnthropic(api_key=api_key, timeout=timeout)
-    try:
-        kwargs: Dict = {
-            "model": model,
+    """Call Anthropic model aliases through the local LiteLLM gateway."""
+    del api_key
+    response = await submit_message_completion(
+        messages=messages,
+        model=model,
+        timeout_s=float(timeout),
+        extra_payload={
             "max_tokens": max_tokens,
             "temperature": temperature,
-            "messages": user_messages,
-        }
-        if system_text:
-            kwargs["system"] = system_text
-
-        resp = await client.messages.create(**kwargs)
-        return resp.content[0].text.strip() if resp.content else None
-    finally:
-        await client.close()
+        },
+    )
+    choices = response.get("choices") or []
+    if not choices:
+        return None
+    return ((choices[0] or {}).get("message") or {}).get("content", "").strip() or None
 
 
 async def _call_openai_compat(
@@ -419,25 +405,22 @@ async def _call_openai_compat(
     temperature: float,
     timeout: int,
 ) -> Optional[str]:
-    """Call any OpenAI-compatible endpoint (OpenAI, xAI, Gemini)."""
-    url = f"{base_url.rstrip('/')}/chat/completions"
-    async with httpx.AsyncClient(timeout=float(timeout)) as client:
-        resp = await client.post(
-            url,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": model,
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"].strip()
+    """Call frontier aliases through the local LiteLLM gateway."""
+    del api_key
+    del base_url
+    response = await submit_message_completion(
+        messages=messages,
+        model=model,
+        timeout_s=float(timeout),
+        extra_payload={
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        },
+    )
+    choices = response.get("choices") or []
+    if not choices:
+        return None
+    return ((choices[0] or {}).get("message") or {}).get("content", "").strip()
 
 
 class AIEngine:
@@ -452,7 +435,7 @@ class AIEngine:
 
     def __init__(self):
         self.log = logger.bind(service="ai_engine")
-        self.openai_available = bool(settings.openai_api_key)
+        self.openai_available = bool(settings.litellm_master_key)
         self.ollama_available = bool(settings.use_local_llm and settings.ollama_base_url)
         self.council_available = any(
             getattr(settings, h["api_key_attr"], "") for h in HORSEMEN.values()
@@ -1067,9 +1050,9 @@ Sentiment: {sentiment}"""
         max_tokens: int = 200,
         temperature: float = 0.7,
     ) -> str:
-        """Call OpenAI API."""
-        if not settings.openai_api_key:
-            raise ValueError("No LLM available (Ollama down + OpenAI key not set)")
+        """Call the LiteLLM frontier lane."""
+        if not settings.litellm_master_key:
+            raise ValueError("No LLM available (Ollama down + LiteLLM key not set)")
 
         messages = []
         if system_message:
@@ -1079,20 +1062,16 @@ Sentiment: {sentiment}"""
         elif user_message:
             messages.append({"role": "user", "content": user_message})
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {settings.openai_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": settings.openai_model,
-                    "messages": messages,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data["choices"][0]["message"]["content"].strip()
+        response = await submit_message_completion(
+            messages=messages,
+            model=settings.openai_model,
+            timeout_s=30.0,
+            extra_payload={
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            },
+        )
+        choices = response.get("choices") or []
+        if not choices:
+            return ""
+        return ((choices[0] or {}).get("message") or {}).get("content", "").strip()

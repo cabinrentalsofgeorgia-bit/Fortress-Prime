@@ -18,6 +18,7 @@ import httpx
 import structlog
 
 from backend.core.config import settings
+from backend.services.swarm_service import submit_message_completion
 
 logger = structlog.get_logger(service="agentic_sales")
 
@@ -222,14 +223,13 @@ async def draft_quote_email(
             except Exception as e:
                 logger.warning("ollama_sales_attempt_failed", model=model_name, error=str(e))
 
-    if settings.openai_api_key:
-        try:
-            result = await _openai_chat(messages)
-            if result and len(result) > 50:
-                logger.info("sales_email_generated", model=settings.openai_model, length=len(result))
-                return result, settings.openai_model
-        except Exception as e:
-            logger.warning("openai_sales_failed", error=str(e))
+    try:
+        result = await _openai_chat(messages)
+        if result and len(result) > 50:
+            logger.info("sales_email_generated", model=settings.openai_model, length=len(result))
+            return result, settings.openai_model
+    except Exception as e:
+        logger.warning("gateway_sales_failed", error=str(e))
 
     logger.error(
         "all_llm_providers_failed_for_sales_email",
@@ -281,17 +281,16 @@ async def _ollama_chat(model: str, messages: List[Dict[str, str]]) -> Optional[s
 
 
 async def _openai_chat(messages: List[Dict[str, str]]) -> Optional[str]:
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-            json={
-                "model": settings.openai_model,
-                "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 2048,
-            },
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"].strip()
+    response = await submit_message_completion(
+        messages=messages,
+        model=settings.openai_model,
+        timeout_s=60.0,
+        extra_payload={
+            "temperature": 0.7,
+            "max_tokens": 2048,
+        },
+    )
+    choices = response.get("choices") or []
+    if not choices:
+        return None
+    return ((choices[0] or {}).get("message") or {}).get("content", "").strip()

@@ -29,18 +29,21 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from arq.connections import ArqRedis
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from backend.api.checkout import _build_quote_data_for_docs, _send_post_payment_docs
+from backend.api.checkout import _build_quote_data_for_docs
 from backend.core.database import get_db
 from backend.core.event_publisher import EventPublisher
+from backend.core.queue import get_arq_pool
 from backend.models.lead import Lead
 from backend.models.quote import Quote, QuoteOption
+from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 
 logger = structlog.get_logger(service="admin_api")
 
@@ -108,8 +111,9 @@ async def list_pending_payments(db: AsyncSession = Depends(get_db)):
 @router.post("/payments/{quote_id}/verify", response_model=VerifyResponse)
 async def verify_payment(
     quote_id: UUID,
-    background_tasks: BackgroundTasks,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
 ):
     """
     Verify that manual funds (Zelle/Crypto) have been received.
@@ -146,12 +150,34 @@ async def verify_payment(
     ))
 
     guest_email = lead.email if lead else None
+    post_payment_job_id = None
     if guest_email:
         quote_data = _build_quote_data_for_docs(
             quote, lead, list(quote.options), grand_total,
         )
-        background_tasks.add_task(_send_post_payment_docs, guest_email, quote_data)
-        logger.info("verify_post_payment_docs_queued", quote_id=str(quote_id), to=guest_email)
+        post_payment_job = await enqueue_async_job(
+            db,
+            worker_name="dispatch_post_payment_docs_job",
+            job_name="dispatch_post_payment_docs",
+            payload={
+                "guest_email": guest_email,
+                "quote_data": quote_data,
+            },
+            requested_by=extract_request_actor(
+                request.headers.get("x-user-id"),
+                request.headers.get("x-user-email"),
+            ),
+            tenant_id=getattr(request.state, "tenant_id", None),
+            request_id=request.headers.get("x-request-id"),
+            redis=arq_redis,
+        )
+        post_payment_job_id = str(post_payment_job.id)
+        logger.info(
+            "verify_post_payment_docs_queued",
+            quote_id=str(quote_id),
+            to=guest_email,
+            job_id=post_payment_job_id,
+        )
     else:
         logger.warning("verify_no_email_for_docs", quote_id=str(quote_id))
 
@@ -167,7 +193,11 @@ async def verify_payment(
         success=True,
         quote_id=str(quote_id),
         status="paid",
-        message="Funds verified. Receipt and agreement dispatched to guest.",
+        message=(
+            "Funds verified. Receipt and agreement dispatched to guest."
+            if post_payment_job_id
+            else "Funds verified. No guest email was available for document dispatch."
+        ),
     )
 
 
@@ -1272,8 +1302,9 @@ def _run_contract_ingestion(nas_path: str, owner_id: str):
 @router.post("/onboard-owner")
 async def onboard_owner(
     req: OnboardOwnerRequest,
-    background_tasks: BackgroundTasks,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
 ) -> Dict[str, Any]:
     """
     Monolithic owner onboarding transaction.
@@ -1427,13 +1458,26 @@ async def onboard_owner(
 
         # ── 7. Background: contract ingestion ────────────────────
         contract_ingested = False
+        contract_ingestion_job_id = None
         if req.contract_nas_path:
-            background_tasks.add_task(
-                _run_contract_ingestion,
-                req.contract_nas_path,
-                req.sl_owner_id,
+            contract_job = await enqueue_async_job(
+                db,
+                worker_name="run_contract_ingestion_job",
+                job_name="run_contract_ingestion",
+                payload={
+                    "nas_path": req.contract_nas_path,
+                    "owner_id": req.sl_owner_id,
+                },
+                requested_by=extract_request_actor(
+                    request.headers.get("x-user-id"),
+                    request.headers.get("x-user-email"),
+                ),
+                tenant_id=getattr(request.state, "tenant_id", None),
+                request_id=request.headers.get("x-request-id"),
+                redis=arq_redis,
             )
             contract_ingested = True
+            contract_ingestion_job_id = str(contract_job.id)
 
         return {
             "status": "onboarded",
@@ -1445,6 +1489,7 @@ async def onboard_owner(
             "trust_accounts_created": len(properties_seeded),
             "sub_ledger_accounts": sub_ledger_accounts,
             "contract_ingested": contract_ingested,
+            "contract_ingestion_job_id": contract_ingestion_job_id,
             "magic_link_url": login_url,
         }
 

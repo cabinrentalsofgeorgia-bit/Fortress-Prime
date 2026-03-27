@@ -55,7 +55,6 @@ from backend.core.config import settings
 from backend.integrations.twilio_client import TwilioClient
 from backend.services.knowledge_retriever import semantic_search, format_context
 from backend.services.dgx_tools import (
-    get_anthropic_tools,
     get_openai_tools,
     execute_tool_call,
 )
@@ -635,7 +634,7 @@ class AgenticOrchestrator:
         max_rounds: int,
     ) -> Optional[str]:
         """Execute the tool-calling loop for a single provider."""
-        api_key = getattr(settings, f"{provider_name}_api_key", "")
+        api_key = str(settings.litellm_master_key or "").strip()
         if not api_key:
             return None
 
@@ -659,54 +658,16 @@ class AgenticOrchestrator:
         db: AsyncSession,
         max_rounds: int,
     ) -> Optional[str]:
-        """Anthropic-native tool calling loop with multi-turn tool execution."""
-        try:
-            from anthropic import AsyncAnthropic
-        except ImportError:
-            self.log.warning("anthropic_sdk_missing")
-            return None
-
-        client = AsyncAnthropic(api_key=api_key, timeout=120)
-        messages = [{"role": "user", "content": user_message}]
-        tools = get_anthropic_tools()
-
-        try:
-            for _round in range(max_rounds):
-                resp = await client.messages.create(
-                    model=model,
-                    max_tokens=2048,
-                    system=system_message,
-                    tools=tools,
-                    messages=messages,
-                )
-
-                if resp.stop_reason == "end_turn" or resp.stop_reason != "tool_use":
-                    text_parts = [b.text for b in resp.content if hasattr(b, "text")]
-                    return " ".join(text_parts).strip() if text_parts else None
-
-                tool_results = []
-                for block in resp.content:
-                    if block.type == "tool_use":
-                        self.log.info(
-                            "board_tool_call",
-                            provider="anthropic",
-                            tool=block.name,
-                            round=_round + 1,
-                        )
-                        output = await execute_tool_call(block.name, block.input, db=db)
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": output[:8000],
-                        })
-
-                messages.append({"role": "assistant", "content": resp.content})
-                messages.append({"role": "user", "content": tool_results})
-
-            text_parts = [b.text for b in resp.content if hasattr(b, "text")]
-            return " ".join(text_parts).strip() if text_parts else None
-        finally:
-            await client.close()
+        """Anthropic aliases also route through the local LiteLLM tool lane."""
+        return await self._openai_compat_tool_loop(
+            "anthropic",
+            api_key,
+            model,
+            user_message,
+            system_message,
+            db,
+            max_rounds,
+        )
 
     async def _openai_compat_tool_loop(
         self,
@@ -718,15 +679,12 @@ class AgenticOrchestrator:
         db: AsyncSession,
         max_rounds: int,
     ) -> Optional[str]:
-        """OpenAI-compatible tool calling loop (OpenAI, xAI, Gemini)."""
+        """OpenAI-compatible tool calling loop routed through LiteLLM."""
         import json as _json
 
-        base_urls = {
-            "openai": "https://api.openai.com/v1",
-            "xai": "https://api.x.ai/v1",
-            "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        }
-        base_url = base_urls.get(provider_name, "https://api.openai.com/v1")
+        base_url = str(settings.litellm_base_url or "").strip().rstrip("/")
+        if not base_url:
+            return None
         url = f"{base_url.rstrip('/')}/chat/completions"
         tools = get_openai_tools()
 

@@ -4,15 +4,31 @@ BETTER THAN: RueBaRue (dynamic content, personalization, upsells, AI-enhanced)
 """
 from typing import List, Optional
 from uuid import UUID
+from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from pydantic import BaseModel
 
+from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.queue import get_arq_pool
 from backend.models import GuestbookGuide, Extra
 
 router = APIRouter()
+
+
+async def _enqueue_property_knowledge_reindex(
+    redis: ArqRedis,
+    property_id: UUID | None,
+) -> None:
+    if property_id is None:
+        return
+    await redis.enqueue_job(
+        "reindex_property_knowledge",
+        str(property_id),
+        _queue_name=settings.arq_queue_name,
+    )
 
 
 # ============================================================
@@ -58,6 +74,17 @@ class GuideCreate(BaseModel):
     icon: Optional[str] = None
     display_order: int = 0
     is_visible: bool = True
+    property_id: Optional[UUID] = None
+
+
+class GuideUpdate(BaseModel):
+    title: Optional[str] = None
+    guide_type: Optional[str] = None
+    category: Optional[str] = None
+    content: Optional[str] = None
+    icon: Optional[str] = None
+    display_order: Optional[int] = None
+    is_visible: Optional[bool] = None
     property_id: Optional[UUID] = None
 
 
@@ -127,7 +154,11 @@ async def get_guide(guide_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=GuideResponse, status_code=201)
-async def create_guide(data: GuideCreate, db: AsyncSession = Depends(get_db)):
+async def create_guide(
+    data: GuideCreate,
+    db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
+):
     """Create a new guestbook guide"""
     slug = data.title.lower().replace(" ", "-").replace("'", "")
     guide = GuestbookGuide(
@@ -142,9 +173,56 @@ async def create_guide(data: GuideCreate, db: AsyncSession = Depends(get_db)):
         property_id=data.property_id,
     )
     db.add(guide)
-    await db.flush()
+    await db.commit()
     await db.refresh(guide)
+    await _enqueue_property_knowledge_reindex(arq_redis, guide.property_id)
     return GuideResponse.model_validate(guide)
+
+
+@router.put("/{guide_id}", response_model=GuideResponse)
+async def update_guide(
+    guide_id: UUID,
+    body: GuideUpdate,
+    db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
+):
+    """Update an existing guestbook guide."""
+    guide = await db.get(GuestbookGuide, guide_id)
+    if not guide:
+        raise HTTPException(status_code=404, detail="Guide not found")
+
+    original_property_id = guide.property_id
+    updates = body.model_dump(exclude_unset=True)
+    if "title" in updates and isinstance(updates["title"], str):
+        updates["slug"] = updates["title"].lower().replace(" ", "-").replace("'", "")
+
+    for field, value in updates.items():
+        setattr(guide, field, value)
+
+    await db.commit()
+    await db.refresh(guide)
+    await _enqueue_property_knowledge_reindex(arq_redis, original_property_id)
+    if guide.property_id != original_property_id:
+        await _enqueue_property_knowledge_reindex(arq_redis, guide.property_id)
+    return GuideResponse.model_validate(guide)
+
+
+@router.delete("/{guide_id}", status_code=204)
+async def delete_guide(
+    guide_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
+):
+    """Delete a guestbook guide and refresh affected property knowledge."""
+    guide = await db.get(GuestbookGuide, guide_id)
+    if not guide:
+        raise HTTPException(status_code=404, detail="Guide not found")
+
+    property_id = guide.property_id
+    await db.delete(guide)
+    await db.commit()
+    await _enqueue_property_knowledge_reindex(arq_redis, property_id)
+    return None
 
 
 @router.post("/{guide_id}/view")

@@ -5,8 +5,12 @@ Pipeline:
   Twilio POST → parse → store message → AgenticOrchestrator decides →
   auto-send (high confidence) OR queue for human review.
 """
+import json
 from datetime import date
+from datetime import timedelta
 import re
+import uuid
+import httpx
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import Response
 from sqlalchemy import or_, select
@@ -19,7 +23,11 @@ from backend.core.database import get_db
 from backend.core.websocket import emit_new_message, emit_review_queue_item
 from backend.services.message_service import MessageService
 from backend.services.agentic_orchestrator import AgenticOrchestrator
+from backend.services.ai_router import execute_resilient_inference
 from backend.integrations.twilio_client import TwilioClient
+from backend.services.openshell_audit import record_audit_event
+from backend.services.swarm_service import submit_chat_completion
+from backend.api.openshell_tools import get_properties_availability_data
 from backend.models import (
     Guest,
     Reservation,
@@ -61,6 +69,262 @@ def _infer_categories(body: str) -> list[str]:
     if any(k in text for k in ("check out", "check-out", "checkout", "departure")):
         categories.append("check_out")
     return categories
+
+
+def _is_booking_inquiry_text(body: str) -> bool:
+    text = (body or "").lower()
+    terms = (
+        "availability",
+        "available",
+        "book",
+        "booking",
+        "dates",
+        "check in",
+        "check-in",
+        "check out",
+        "check-out",
+        "next weekend",
+        "this weekend",
+    )
+    return any(t in text for t in terms)
+
+
+def _extract_iso_dates(body: str) -> tuple[str | None, str | None]:
+    matches = re.findall(r"\b(20\d{2}-\d{2}-\d{2})\b", body or "")
+    if len(matches) >= 2:
+        return matches[0], matches[1]
+    return None, None
+
+
+def _extract_swarm_draft_text(response_data: dict) -> str | None:
+    direct_text = (response_data.get("draft_response") or "").strip()
+    if direct_text:
+        return direct_text
+
+    result = response_data.get("result")
+    if isinstance(result, dict):
+        response_data = result
+
+    choices = response_data.get("choices") or []
+    if not choices:
+        return None
+
+    message = (choices[0] or {}).get("message") or {}
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip() or None
+    if isinstance(content, list):
+        text_parts = [
+            (part.get("text") or "").strip()
+            for part in content
+            if isinstance(part, dict) and part.get("type") == "text"
+        ]
+        joined = "\n".join(part for part in text_parts if part)
+        return joined.strip() or None
+    return None
+
+
+async def _run_nemoclaw_inbound_loop(
+    *,
+    request: Request,
+    db: AsyncSession,
+    message,
+    guest,
+    reservation,
+    body: str,
+) -> dict:
+    today = date.today()
+    check_in, check_out = _extract_iso_dates(body)
+    if not check_in or not check_out:
+        check_in = (today + timedelta(days=7)).isoformat()
+        check_out = (today + timedelta(days=9)).isoformat()
+
+    availability = await get_properties_availability_data(
+        db=db,
+        check_in=check_in,
+        check_out=check_out,
+        guests=2,
+    )
+    available_rows = [r for r in availability.results if r.available]
+    top_rows = available_rows[:5]
+
+    inferred = await execute_resilient_inference(
+        prompt=(
+            "Classify this inbound SMS for reservation workflow and extract intent.\n"
+            f"Message: {body}\n"
+            "Return a concise one-line decision."
+        ),
+        task_type="reasoning",
+        source_module="webhooks_nemoclaw_inbound",
+        db=db,
+        request_id=request.headers.get("x-request-id"),
+        timeout_s=6,
+    )
+
+    draft_text = None
+    orchestrator_source = "local_fallback"
+    orchestrator_error = None
+    if settings.inbound_agentic_loop_enabled:
+        payload = {
+            "message_id": str(message.id),
+            "guest_id": str(guest.id) if guest else None,
+            "reservation_id": str(reservation.id) if reservation else None,
+            "guest_phone": message.phone_from,
+            "message_body": body,
+            "availability": [
+                {
+                    "property_id": row.property_id,
+                    "property_name": row.property_name,
+                    "slug": row.slug,
+                    "pricing": row.pricing,
+                }
+                for row in top_rows
+            ],
+            "signal": inferred.text,
+            "mode": "pending_approval",
+        }
+        prompt = (
+            "Draft a concise, professional SMS reply for a guest booking inquiry. "
+            "Use only the facts in the provided context. "
+            "Do not claim a booking is confirmed. "
+            "If inventory exists, mention one strong option and the estimated total if available. "
+            "End by noting that a human is reviewing the request now. "
+            "Return only the SMS body.\n\n"
+            f"Webhook context JSON:\n{json.dumps(payload, default=str, indent=2)}"
+        )
+        system_message = (
+            "You are Fortress Prime's concierge draft engine. "
+            "Write clear guest-facing SMS responses under 500 characters. "
+            "Be accurate, calm, and operationally safe."
+        )
+        try:
+            response_data = await submit_chat_completion(
+                prompt=prompt,
+                system_message=system_message,
+                model=settings.dgx_ocular_model or settings.ollama_fast_model,
+                timeout_s=20.0,
+                extra_payload={"temperature": 0.2},
+            )
+            draft_text = _extract_swarm_draft_text(response_data)
+            if draft_text:
+                orchestrator_source = settings.orchestrator_source or "spark_node_2_leader"
+            else:
+                orchestrator_error = "empty_swarm_response"
+                logger.warning(
+                    "nemoclaw_empty_response",
+                    message_id=str(message.id),
+                    guest_id=str(guest.id) if guest else None,
+                )
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code if exc.response else "unknown"
+            orchestrator_error = f"http_{status_code}"
+            logger.warning(
+                "nemoclaw_http_error",
+                status_code=status_code,
+                message_id=str(message.id),
+                guest_id=str(guest.id) if guest else None,
+            )
+        except httpx.TimeoutException:
+            orchestrator_error = "timeout"
+            logger.warning(
+                "nemoclaw_timeout",
+                message_id=str(message.id),
+                guest_id=str(guest.id) if guest else None,
+            )
+        except Exception as exc:  # noqa: BLE001
+            orchestrator_error = str(exc)[:200]
+            logger.warning(
+                "nemoclaw_call_failed",
+                error=orchestrator_error,
+                message_id=str(message.id),
+                guest_id=str(guest.id) if guest else None,
+            )
+
+    if not draft_text:
+        if top_rows:
+            first = top_rows[0]
+            price_hint = (first.pricing or {}).get("total") or "N/A"
+            draft_text = (
+                f"Thanks for reaching out! I found availability for {first.property_name} "
+                f"from {check_in} to {check_out}. Estimated total is {price_hint}. "
+                "Please review and approve this draft before we send booking details."
+            )
+        else:
+            draft_text = (
+                f"Thanks for checking with us. I could not find open inventory from {check_in} to {check_out}. "
+                "Please review and approve this draft before we offer alternate dates."
+            )
+
+    queue_entry = AgentResponseQueue(
+        message_id=message.id,
+        guest_id=guest.id if guest else None,
+        reservation_id=reservation.id if reservation else None,
+        intent="booking_inquiry",
+        sentiment_label="neutral",
+        urgency_level=1,
+        proposed_response=draft_text[:1800],
+        confidence=0.91,
+        action="pending_approval_draft",
+        escalation_reason="Inbound agentic loop requires human approval",
+        status="pending",
+        decision_metadata={
+            "pipeline": "inbound_agentic_loop",
+            "orchestrator_source": orchestrator_source,
+            "orchestrator_error": orchestrator_error,
+            "ai_router_signal": inferred.text[:500] if inferred.text else "",
+            "check_in": check_in,
+            "check_out": check_out,
+            "availability_count": len(available_rows),
+            "tool_used": "GET /api/v1/properties/availability",
+            "approval_state": "pending_approval",
+        },
+    )
+    db.add(queue_entry)
+    message.requires_human_review = True
+    await db.flush()
+
+    await record_audit_event(
+        actor_id=str(guest.id) if guest else None,
+        action="inbound.agentic_loop.draft_created",
+        resource_type="review_queue",
+        resource_id=str(queue_entry.id),
+        purpose="gary_in_the_loop",
+        tool_name="inbound_agentic_loop",
+        redaction_status="not_applicable",
+        model_route=orchestrator_source,
+        outcome="success",
+        request_id=request.headers.get("x-request-id"),
+        metadata_json={
+            "message_id": str(message.id),
+            "availability_count": len(available_rows),
+            "check_in": check_in,
+            "check_out": check_out,
+        },
+        db=db,
+    )
+
+    try:
+        await emit_review_queue_item(
+            {
+                "id": str(queue_entry.id),
+                "status": queue_entry.status,
+                "intent": queue_entry.intent,
+                "confidence": queue_entry.confidence,
+                "action": queue_entry.action,
+                "proposed_response": queue_entry.proposed_response[:240],
+                "message_id": str(message.id),
+                "guest_name": f"{guest.first_name or ''} {guest.last_name or ''}".strip() if guest else None,
+                "created_at": str(queue_entry.created_at) if queue_entry.created_at else None,
+            }
+        )
+    except Exception:
+        pass
+
+    return {
+        "queued": True,
+        "queue_id": str(queue_entry.id),
+        "orchestrator_source": orchestrator_source,
+    }
 
 
 def _validate_twilio_signature(request: Request, form_data: dict[str, str]) -> bool:
@@ -200,6 +464,23 @@ async def handle_incoming_sms(
             reservation = res_q.scalar_one_or_none()
             if reservation:
                 message.reservation_id = reservation.id
+
+        # ── 2.5 Inbound Agentic Loop (Gary-in-the-loop hard gate) ──
+        if _is_booking_inquiry_text(body):
+            loop_result = await _run_nemoclaw_inbound_loop(
+                request=request,
+                db=db,
+                message=message,
+                guest=guest,
+                reservation=reservation,
+                body=body,
+            )
+            await db.commit()
+            log.info("inbound_agentic_loop_queued", **loop_result)
+            return Response(
+                content='<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+                media_type="application/xml",
+            )
 
         # ── 3. Run AgenticOrchestrator ──
         orchestrator = AgenticOrchestrator()

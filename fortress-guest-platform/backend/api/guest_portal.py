@@ -221,7 +221,6 @@ async def mint_guest_portal_link(
     token = create_guest_token(str(reservation.id), expires_delta=GUEST_PORTAL_LINK_TTL)
     expires_at = datetime.now(timezone.utc) + GUEST_PORTAL_LINK_TTL
     storefront_base = settings.storefront_base_url.rstrip("/")
-    local_base = "http://127.0.0.1:3000"
     token_query = f"/itinerary?token={token}"
 
     return GuestPortalAdminLinkPayload(
@@ -234,5 +233,5 @@ async def mint_guest_portal_link(
         expires_at=expires_at.isoformat(),
         token=token,
         portal_url=f"{storefront_base}{token_query}",
-        local_portal_url=f"{local_base}{token_query}",
+        local_portal_url=f"{storefront_base}{token_query}",
     )

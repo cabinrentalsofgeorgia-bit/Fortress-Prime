@@ -31,8 +31,8 @@ def _require_admin(request: Request) -> dict:
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Bearer token")
     payload = decode_token(auth[7:])
-    if payload.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if payload.get("role") != "super_admin":
+        raise HTTPException(status_code=403, detail="Super-admin access required")
     return payload
 
 
@@ -79,7 +79,7 @@ async def disagg_hot_reload(request: Request, body: DisaggHotReloadRequest):
             "adapter_sha256": body.adapter_sha256,
             "model_id": body.model_id,
             "rollout_mode": body.rollout_mode,
-            "requested_by": actor.get("email") or actor.get("sub") or "admin",
+            "requested_by": actor.get("email") or actor.get("sub") or "super_admin",
             "queued_at": _utc_iso(),
             "completed_at": _utc_iso(),
         }
