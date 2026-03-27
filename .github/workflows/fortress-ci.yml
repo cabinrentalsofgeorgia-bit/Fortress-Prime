@@ -20,26 +20,26 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: fortress_ci
+          POSTGRES_DB: fortress_shadow
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d fortress_ci"
+          --health-cmd "pg_isready -U postgres -d fortress_shadow"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     env:
-      POSTGRES_API_URI: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/fortress_ci
-      POSTGRES_ADMIN_URI: postgresql://postgres:postgres@127.0.0.1:5432/fortress_ci
+      POSTGRES_API_URI: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/fortress_shadow
+      POSTGRES_ADMIN_URI: postgresql://postgres:postgres@127.0.0.1:5432/fortress_shadow
       SWARM_API_KEY: ${{ secrets.SWARM_API_KEY }}
       INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
       JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
       JWT_RSA_PUBLIC_KEY: ${{ secrets.JWT_RSA_PUBLIC_KEY }}
       AUDIT_LOG_SIGNING_KEY: ${{ secrets.AUDIT_LOG_SIGNING_KEY }}
       EDGE_REVALIDATION_SECRET: ${{ secrets.EDGE_REVALIDATION_SECRET }}
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/fortress_ci
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/fortress_shadow
       FGP_BACKEND_URL: http://127.0.0.1:8100
       E2E_BACKEND_URL: http://127.0.0.1:8100
       E2E_BASE_URL: http://127.0.0.1:3000
