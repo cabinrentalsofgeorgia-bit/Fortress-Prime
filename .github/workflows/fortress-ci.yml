@@ -31,8 +31,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      POSTGRES_API_URI: ${{ secrets.POSTGRES_API_URI }}
-      POSTGRES_ADMIN_URI: ${{ secrets.POSTGRES_ADMIN_URI }}
+      POSTGRES_API_URI: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/fortress_ci
+      POSTGRES_ADMIN_URI: postgresql://postgres:postgres@127.0.0.1:5432/fortress_ci
       SWARM_API_KEY: ${{ secrets.SWARM_API_KEY }}
       INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
       JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
