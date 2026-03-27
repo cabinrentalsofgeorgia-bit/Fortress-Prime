@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
+import AiInsightWidget from "@/components/AiInsightWidget";
 
 /* ── Folio Type Contracts (mirrors backend Pydantic schemas) ────── */
 
@@ -377,6 +378,12 @@ export function FolioSheet({ reservationId, open, onOpenChange }: FolioSheetProp
                   {stay?.special_requests && <p className="col-span-2 text-zinc-300 italic">&ldquo;{stay.special_requests}&rdquo;</p>}
                 </div>
               </section>
+
+              {stay?.confirmation_code ? (
+                <section className="rounded-xl overflow-hidden">
+                  <AiInsightWidget referenceId={stay.confirmation_code} />
+                </section>
+              ) : null}
 
               {/* Agreement Card */}
               {folio.agreement && (
