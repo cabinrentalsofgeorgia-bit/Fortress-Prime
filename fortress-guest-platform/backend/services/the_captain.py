@@ -40,6 +40,7 @@ from backend.core.config import settings
 from backend.core.database import AsyncSessionLocal
 from backend.models.reservation import Reservation
 from backend.models.property import Property
+from backend.services.swarm_service import submit_chat_completion
 
 logger = structlog.get_logger(service="the_captain")
 
@@ -231,27 +232,24 @@ Classify this email now."""
     except Exception as e:
         logger.debug("captain_triage_local_failed", error=str(e)[:100])
 
-    # Tier 2: OpenAI fallback
-    if not raw and settings.openai_api_key:
+    # Tier 2: LiteLLM gateway fallback
+    if not raw:
         try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                    json={
-                        "model": settings.openai_model,
-                        "messages": [
-                            {"role": "system", "content": TRIAGE_SYSTEM_PROMPT},
-                            {"role": "user", "content": prompt},
-                        ],
-                        "temperature": 0.1,
-                        "max_tokens": 256,
-                    },
-                )
-                if resp.status_code == 200:
-                    raw = resp.json()["choices"][0]["message"]["content"].strip()
+            response = await submit_chat_completion(
+                prompt=prompt,
+                model=settings.openai_model,
+                system_message=TRIAGE_SYSTEM_PROMPT,
+                timeout_s=30.0,
+                extra_payload={
+                    "temperature": 0.1,
+                    "max_tokens": 256,
+                },
+            )
+            choices = response.get("choices") or []
+            if choices:
+                raw = ((choices[0] or {}).get("message") or {}).get("content", "").strip()
         except Exception as e:
-            logger.debug("captain_triage_openai_failed", error=str(e)[:100])
+            logger.debug("captain_triage_gateway_failed", error=str(e)[:100])
 
     if not raw:
         return None
