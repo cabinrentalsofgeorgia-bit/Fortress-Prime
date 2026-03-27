@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "511",
+  "original_slug": "/testimonial/amazing-weekend-blue-ridge",
+  "content_body": "<p>Our family vacation to the mountains was amazing! Cool at night and breezy during the day, clear blue sky! We brought along our first grandbaby and it was great.&nbsp;Thank you so much! Such a beautiful home.&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing weekend in Blue Ridge",
+  "archive_slug": "amazing-weekend-blue-ridge",
+  "archive_path": "/reviews/archive/amazing-weekend-blue-ridge",
+  "source_ref": "node/511",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "f2d45d7ffe3bd7f71387c94b6895293dbe7a879828ff2db4341a4bf58e14ad5c"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1493",
+  "original_slug": "/testimonial/the-best-relaxing-time",
+  "content_body": "<p>We had the best relaxing time. The cabin is nice, clean, and just like the pictures show. We will come back soon!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The Best Relaxing Time",
+  "archive_slug": "the-best-relaxing-time",
+  "archive_path": "/reviews/archive/the-best-relaxing-time",
+  "source_ref": "node/1493",
+  "hmac_signature": "42d5e99d60dcd119b38cf0d13e6830c24ca260c100a998d182ff9973cf02a9a6"
+}

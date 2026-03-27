@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1810",
+  "original_slug": "/testimonial/very-special-property",
+  "content_body": "<p>Thank you CRG. Your property does not disappoint. This is a beautiful home in a spectacular setting. You made our girls weekend so easy and relaxing. This property is very special!!!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Special Property",
+  "archive_slug": "very-special-property",
+  "archive_path": "/reviews/archive/very-special-property",
+  "source_ref": "node/1810",
+  "hmac_signature": "35b57fea0340e7062ef671ca1016bbbf0961ed3db705d0c1723fabbff682d6ec"
+}

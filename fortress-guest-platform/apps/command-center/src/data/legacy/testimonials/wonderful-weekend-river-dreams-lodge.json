@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1025",
+  "original_slug": "/testimonial/wonderful-weekend-river-dreams-lodge",
+  "content_body": "<p>&nbsp;Thanks you for such a wonderful weekend! We loved it here and will definltely be back! The view, hot tub and firepit were our favorite!&nbsp;</p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Wonderful Weekend at A River of Dreams Lodge",
+  "archive_slug": "wonderful-weekend-river-dreams-lodge",
+  "archive_path": "/reviews/archive/wonderful-weekend-river-dreams-lodge",
+  "source_ref": "node/1025",
+  "related_property_slug": "river-dreams-lodge",
+  "related_property_path": "/cabins/river-dreams-lodge",
+  "related_property_title": "A River Of Dreams Lodge",
+  "hmac_signature": "a2bf842a61546a4fe00d220f0787e0991a949d39e7c923bbb1a20b31dd144274"
+}

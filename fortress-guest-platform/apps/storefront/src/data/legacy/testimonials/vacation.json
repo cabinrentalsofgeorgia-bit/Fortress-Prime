@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1373",
+  "original_slug": "/testimonial/vacation",
+  "content_body": "<p>Great weather! We enjoyed white water rafting&nbsp;and highly recommend downtown Blue Ridge!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Vacation :)",
+  "archive_slug": "vacation",
+  "archive_path": "/reviews/archive/vacation",
+  "source_ref": "node/1373",
+  "hmac_signature": "574de2a1d9d671f3ff99dbafe09cabebdc8e859a8c4ea8b74e89e10dd3ff45d3"
+}

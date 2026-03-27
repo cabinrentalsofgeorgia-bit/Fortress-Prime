@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2037",
+  "original_slug": "/testimonial/very-nice-2",
+  "content_body": "<p>We went to Blue Ridge as part of an annual spring break trip with our grandchildren. We booked last minute and had to take what was available. The cabin we rented was very nice. Beds were comfortable and it was very clean.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Nice",
+  "archive_slug": "very-nice-2",
+  "archive_path": "/reviews/archive/very-nice-2",
+  "source_ref": "node/2037",
+  "hmac_signature": "1004d99c60c92353643212080e864eed8f74f7bf3de81de2ad8ef24a69d335a2"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1771",
+  "original_slug": "/testimonial/very-nice-1",
+  "content_body": "<p>Beautiful property with every need taken care of, even coffee in the cabinet and popcorn in the media room. Don&#39;t forget your water shoes though. The river is full of rocks to the point that you can&#39;t walk without them. Very nice.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Nice",
+  "archive_slug": "very-nice-1",
+  "archive_path": "/reviews/archive/very-nice-1",
+  "source_ref": "node/1771",
+  "hmac_signature": "c0e755a9a1e79890712ea56ee917d5661b6326471a750c58f746b93093334a57"
+}

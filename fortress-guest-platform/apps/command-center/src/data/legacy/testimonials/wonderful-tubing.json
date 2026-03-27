@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1360",
+  "original_slug": "/testimonial/wonderful-tubing",
+  "content_body": "<p>Wonderful tubing for family&mdash;it&#39;s best to start at the gazebo at the bottom and pick up down the river at the rapids. It takes about 1 hour to float down.</p>\r\n\r\n<p>Good fishing upstream at the first bridge. We caught (and released) about 4 small trout a day.</p>\r\n\r\n<p>Restaurants in Blue Ridge are great.&nbsp;</p>",
+  "category_tags": [
+    "Tubing-Kayaking"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Tubing",
+  "archive_slug": "wonderful-tubing",
+  "archive_path": "/reviews/archive/wonderful-tubing",
+  "source_ref": "node/1360",
+  "hmac_signature": "7a3b181f271fa98756688ce135cdd9b28e49a0c0fab232f3599ec35860b9ada2"
+}

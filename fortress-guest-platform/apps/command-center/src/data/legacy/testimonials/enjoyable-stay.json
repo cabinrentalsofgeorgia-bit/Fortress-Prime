@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1086",
+  "original_slug": "/testimonial/enjoyable-stay",
+  "content_body": "<p>We really enjoyed our stay in this cabin. The view was beautiful, and the cabin had plenty of space and upgrades. We will be back again.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Enjoyable Stay",
+  "archive_slug": "enjoyable-stay",
+  "archive_path": "/reviews/archive/enjoyable-stay",
+  "source_ref": "node/1086",
+  "hmac_signature": "d30cc7ae4a442de8e16beadcfb7f141ccfc371505f629a12f47869822476cf3f"
+}

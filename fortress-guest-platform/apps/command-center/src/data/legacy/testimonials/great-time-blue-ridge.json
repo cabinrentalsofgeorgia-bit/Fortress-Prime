@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "115",
+  "original_slug": "/testimonial/great-time-blue-ridge",
+  "content_body": "<p>&nbsp;This place is great;&nbsp;very pleasant to be in this area;&nbsp;friendly people everywhere. Everything was more than expected.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time in Blue Ridge",
+  "archive_slug": "great-time-blue-ridge",
+  "archive_path": "/reviews/archive/great-time-blue-ridge",
+  "source_ref": "node/115",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "69944bcb0d037f38245e2f5125641d55b9416afd9c882f29f8366d41772345b8"
+}

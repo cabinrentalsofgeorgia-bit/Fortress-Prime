@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "2484",
+  "original_slug": "/testimonial/the-perfect-honeymoon-location",
+  "content_body": "<p>We came here for our honeymoon and we couldn&#39;t have asked for a better place to stay. Our favorite spots were: Three Sisters Fudge, Toccoa Riverside Restaurant, Taste of Amish, The Swinging Bridge, and all the shops in Blue Ridge. We will be back!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Cohutta Wilderness",
+    "Ellijay",
+    "Morganton"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The Perfect Honeymoon Location",
+  "archive_slug": "the-perfect-honeymoon-location",
+  "archive_path": "/reviews/archive/the-perfect-honeymoon-location",
+  "source_ref": "node/2484",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "8249c649b205b9a701362347bce89817c48c10ac32ba8b656eafbe133af5b87f"
+}

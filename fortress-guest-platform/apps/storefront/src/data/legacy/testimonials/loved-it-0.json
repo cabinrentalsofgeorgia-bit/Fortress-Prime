@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1232",
+  "original_slug": "/testimonial/loved-it-0",
+  "content_body": "<p>Very nice cabin!!! Very relaxing! We loved the hot tub, views, and snow over the weekend! This was our first weekend away together&nbsp;and we loved it!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Loved It!",
+  "archive_slug": "loved-it-0",
+  "archive_path": "/reviews/archive/loved-it-0",
+  "source_ref": "node/1232",
+  "hmac_signature": "985906e891272876352c92b3df7f5e6075ddff365f8ca41a282d332509a31784"
+}

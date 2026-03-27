@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2466",
+  "original_slug": "/testimonial/we-love-blue-ridge",
+  "content_body": "<p>It rained a lot by we still had a wonderful time. The cabin is beautiful, the town was awesome, and the food was great. This is the first of many trips. We are in love with Blue Ridge!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "We Love Blue Ridge!",
+  "archive_slug": "we-love-blue-ridge",
+  "archive_path": "/reviews/archive/we-love-blue-ridge",
+  "source_ref": "node/2466",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "62515b25f0ae4bf5b6e0785ecafee9291672ea403d32bf81bd4247052085ac54"
+}

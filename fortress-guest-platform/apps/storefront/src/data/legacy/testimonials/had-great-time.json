@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2579",
+  "original_slug": "/testimonial/had-great-time",
+  "content_body": "<p>Thank you for letting us stay in your beautiful cabin. We had a great time and would to stay here again!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Had a Great Time",
+  "archive_slug": "had-great-time",
+  "archive_path": "/reviews/archive/had-great-time",
+  "source_ref": "node/2579",
+  "hmac_signature": "2c2dabdff3add78344e020728fa5a368612eba674326375352f7e372ad211a11"
+}

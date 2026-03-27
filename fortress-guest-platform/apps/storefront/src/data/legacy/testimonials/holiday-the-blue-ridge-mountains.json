@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "788",
+  "original_slug": "/testimonial/holiday-the-blue-ridge-mountains",
+  "content_body": "<p>The cabin is&nbsp;beautiful and clean. We had a wonderful Holiday!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Holiday in the Blue Ridge Mountains",
+  "archive_slug": "holiday-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/holiday-the-blue-ridge-mountains",
+  "source_ref": "node/788",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "98c1ccb5e3e118ae9340907eb18fdab4046f3b3fc5a641a2e2ece1f98b509236"
+}

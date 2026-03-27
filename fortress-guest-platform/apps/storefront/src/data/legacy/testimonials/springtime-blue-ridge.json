@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2785",
+  "original_slug": "/testimonial/springtime-blue-ridge",
+  "content_body": "<p>Thank you so very much for the fun cabin to stay in! The view was absolutely beautiful!! Every morning we sat out there with our coffee and it was just the best. The rooms were cozy and the porches were amazing. Than you for letting us stay in this wonderful house ~ The Schulers</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge",
+    "Spring"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Springtime in Blue Ridge",
+  "archive_slug": "springtime-blue-ridge",
+  "archive_path": "/reviews/archive/springtime-blue-ridge",
+  "source_ref": "node/2785",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "da9e0615577591a7fa3a7aa35f8e6ca051caee478cc96be83e19bbd45ea76e71"
+}

@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "42",
+  "original_slug": "/testimonial/home-away-from-home-blue-ridge",
+  "content_body": "<p>I really enjoyed the cabin. It felt like home away from home. It was very warm and beautiful. Thanks. It doesn&#39;t get any better than this!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Home Away from Home in Blue Ridge",
+  "archive_slug": "home-away-from-home-blue-ridge",
+  "archive_path": "/reviews/archive/home-away-from-home-blue-ridge",
+  "source_ref": "node/42",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "c3d67c3d8be9a987ed45204e8e118de6b9ebdf7f00fb7b4e2e33e4198d7a7e15"
+}

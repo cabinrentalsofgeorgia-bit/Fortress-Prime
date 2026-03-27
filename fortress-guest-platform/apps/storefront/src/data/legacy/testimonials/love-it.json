@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1754",
+  "original_slug": "/testimonial/love-it",
+  "content_body": "<p>We love it. We will be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Love It!",
+  "archive_slug": "love-it",
+  "archive_path": "/reviews/archive/love-it",
+  "source_ref": "node/1754",
+  "hmac_signature": "5672297fb19dfdb5d0d858e7e24001ee3671baa5daa43b37b1379c9d3bc5ae40"
+}

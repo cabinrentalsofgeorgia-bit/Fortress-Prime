@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1397",
+  "original_slug": "/testimonial/family-vacation-0",
+  "content_body": "<p>We went horseback riding, tubing down the Toccoa, and white water rafting along the Ocoee. We met wonderful people at Blanche Manor, Toccoa River Adventures, Quest Adventures, and Blue Ridge Auto.</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Family Vacation",
+  "archive_slug": "family-vacation-0",
+  "archive_path": "/reviews/archive/family-vacation-0",
+  "source_ref": "node/1397",
+  "hmac_signature": "3cc03a7b048691407adb8039e353ee8e7d49c5fe22b4c90b516a54c1435c9793"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "880",
+  "original_slug": "/testimonial/very-enjoyable",
+  "content_body": "<p>We enjoyed our stay at &quot;Time Flies,&quot; and plan to use your service in the future when deciding on a North Georgia Vacation. The cabin on the river brought our family lots of great memories. Thank you again!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Enjoyable!",
+  "archive_slug": "very-enjoyable",
+  "archive_path": "/reviews/archive/very-enjoyable",
+  "source_ref": "node/880",
+  "hmac_signature": "9e7d6388aa2d784885798b1d7f25b71ef641a36abaab411676c961839d1d189e"
+}

@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1961",
+  "original_slug": "/testimonial/beautiful-memories",
+  "content_body": "<p>Thank you for letting us stay in your beautiful home during the holidays. We really enjoyed the cabin and waking up to the beautiful sceneries of the Blue Ridge Mountains. The home was very comfortable and very well stocked. We had a lot of fun playing with the board games and the pool table. I brought my two college-aged daughters and a friend and they all really enjoyed the cabin and the town of Blue Ridge. We also visited Rock City and the town of Helen. Can&#39;t wait to come up there in the summertime and try white water rafting and the fishing. Thank you again for some beautiful memories.</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Memories",
+  "archive_slug": "beautiful-memories",
+  "archive_path": "/reviews/archive/beautiful-memories",
+  "source_ref": "node/1961",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "153516f51d5da2a287085e94dcfaf58c16b7cc6bd611b7eebd25461025d15d01"
+}

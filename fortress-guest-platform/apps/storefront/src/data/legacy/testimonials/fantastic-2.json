@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1723",
+  "original_slug": "/testimonial/fantastic-2",
+  "content_body": "<p>Fantastic vacation! This place was wonderful. We will be back very soon.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fantastic!",
+  "archive_slug": "fantastic-2",
+  "archive_path": "/reviews/archive/fantastic-2",
+  "source_ref": "node/1723",
+  "hmac_signature": "47017e9a6d3827bcab11c54a8a3ed84a9b269bc5bf43ff09b87e5800f3a8c885"
+}

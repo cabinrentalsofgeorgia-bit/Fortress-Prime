@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "1171",
+  "original_slug": "/testimonial/terrific-location-the-river",
+  "content_body": "<p>Location was terrific and the cabin had all the amenities anyone can need. The weather turned a bit cold for two nights, and the fire places really came in handy. It was great to see the Blue Ridge train pass right behind the cabin along the river. The hot tub was enjoyable every night while looking at the stars and the roaring fire in the outdoor fireplace. Beds were very comfortable and the bathrooms were very spacious. I definitely would recommend this cabin and hope to visit again soon. Thanks for making this last minute get-away a special time for us.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Ellijay",
+    "Morganton",
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Terrific Location on the River",
+  "archive_slug": "terrific-location-the-river",
+  "archive_path": "/reviews/archive/terrific-location-the-river",
+  "source_ref": "node/1171",
+  "related_property_slug": "rolling-river-cabin",
+  "related_property_path": "/cabins/rolling-river-cabin",
+  "related_property_title": "A Rolling River Cabin",
+  "hmac_signature": "12f9800cc5f2b893b5d941c9741ffd8ee3b18406aebece916266fb32d831ecbe"
+}

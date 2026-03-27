@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "2389",
+  "original_slug": "/testimonial/our-favorite-cabin-ever",
+  "content_body": "<p>Hands down our favorite cabin ever! The location and space is perfect. My husband and I came here for a getaway, and we plan to come again with friends and/or family. We loved Down By The River!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Our Favorite Cabin Ever!",
+  "archive_slug": "our-favorite-cabin-ever",
+  "archive_path": "/reviews/archive/our-favorite-cabin-ever",
+  "source_ref": "node/2389",
+  "related_property_slug": "our-true-blue",
+  "related_property_path": "/cabins/our-true-blue",
+  "related_property_title": "Our True Blue",
+  "hmac_signature": "858aba80c6043c89f817eac643f56444233ff2ff616063b5d888a8ce957789d1"
+}

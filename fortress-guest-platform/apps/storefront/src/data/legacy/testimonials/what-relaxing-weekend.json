@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1991",
+  "original_slug": "/testimonial/what-relaxing-weekend",
+  "content_body": "<p>Thank you! What a wonderful and relaxing weekend. ~The Tuckers</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "What a Relaxing Weekend!",
+  "archive_slug": "what-relaxing-weekend",
+  "archive_path": "/reviews/archive/what-relaxing-weekend",
+  "source_ref": "node/1991",
+  "hmac_signature": "e5d38cb3a16492a27769e3c5203f311b63fb13c3978ce4766e38ed806f09fd43"
+}

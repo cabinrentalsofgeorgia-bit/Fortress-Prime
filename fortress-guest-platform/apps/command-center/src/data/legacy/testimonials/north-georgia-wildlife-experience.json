@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "125",
+  "original_slug": "/testimonial/north-georgia-wildlife-experience",
+  "content_body": "<p>We had a great time in Paradise Found. Late in the afternoon on the first day we arrived, just when it started to get dark, we saw our first wildlife. It was a gray fox that came across the driveway. The next morning we saw deer on the gravel road up on the hill from the cabin. We went into Blue Ridge and looked in the shops that were there and we ate at the steakhouse. We spent most of our time here at the cabin enjoying the quietness, the hot tub and the view. We will be back to stay in another one of your cabins as soon as we can get another chance. We also enjoyed the ping pong and pool table. Also enjoyed the sauna too.</p>",
+  "category_tags": [
+    "Blue Ridge Experience",
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "North Georgia Wildlife Experience",
+  "archive_slug": "north-georgia-wildlife-experience",
+  "archive_path": "/reviews/archive/north-georgia-wildlife-experience",
+  "source_ref": "node/125",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "c5059c5cfb8df8ffc16f63cce62e610268c333e12c08eda3883971f2d6bfb2db"
+}

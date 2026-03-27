@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "180",
+  "original_slug": "/testimonial/best-family-vacation-ever-blue-ridge-georgia",
+  "content_body": "<p>This property and location were awesome and the area provides such great diversity of activities. Best family vacation we have had in sometime. We are already discussing plans for perhaps two weeks next year.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Best Family Vacation Ever in Blue Ridge, Georgia",
+  "archive_slug": "best-family-vacation-ever-blue-ridge-georgia",
+  "archive_path": "/reviews/archive/best-family-vacation-ever-blue-ridge-georgia",
+  "source_ref": "node/180",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "c073bedbff82989d06cc4c7866963fc6ea5b511d1b7afaa112a43749b11cc720"
+}

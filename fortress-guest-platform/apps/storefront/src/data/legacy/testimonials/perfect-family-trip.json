@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "2414",
+  "original_slug": "/testimonial/perfect-family-trip",
+  "content_body": "<p>Our family had a wonderful time. The cabin and the view are beautiful. A perfect Memorial day and end of the school year trip. We cannot wait to come back. Thank you for a wonderful cabin and family trip!</p>",
+  "category_tags": [
+    "Family Fun",
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Perfect Family Trip!",
+  "archive_slug": "perfect-family-trip",
+  "archive_path": "/reviews/archive/perfect-family-trip",
+  "source_ref": "node/2414",
+  "hmac_signature": "eeab57144874b581cd4897d72ef565e6aa56aa9abdb6d3d6f974181102671aed"
+}

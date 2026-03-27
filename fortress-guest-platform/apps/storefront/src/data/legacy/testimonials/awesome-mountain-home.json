@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1174",
+  "original_slug": "/testimonial/awesome-mountain-home",
+  "content_body": "<p>This home is beautiful and very clean&mdash;we had a wonderful weekend and plan to return soon!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Mountain Home!",
+  "archive_slug": "awesome-mountain-home",
+  "archive_path": "/reviews/archive/awesome-mountain-home",
+  "source_ref": "node/1174",
+  "hmac_signature": "d06090bef489085dc05033ecaa08dd60de9e13a39f821e41789f481b56791659"
+}

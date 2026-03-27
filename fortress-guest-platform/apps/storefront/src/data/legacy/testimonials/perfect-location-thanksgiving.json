@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "2851",
+  "original_slug": "/testimonial/perfect-location-thanksgiving",
+  "content_body": "<p>What an awesome, well-appointed cabin! We had a wonderful Thanksgiving with our family and we can&#39;t wait to come back again. See you next time, Serendipity! P.S. Love the bidet in the master!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Cohutta Wilderness",
+    "Ellijay",
+    "Morganton"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Perfect Location for Thanksgiving!",
+  "archive_slug": "perfect-location-thanksgiving",
+  "archive_path": "/reviews/archive/perfect-location-thanksgiving",
+  "source_ref": "node/2851",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "db833eeb8c709350f416411bda8dd2aff267a3b32b147fab3d3977c6660adcbd"
+}

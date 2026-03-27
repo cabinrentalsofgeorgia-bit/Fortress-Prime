@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1985",
+  "original_slug": "/testimonial/wonderful-time-12",
+  "content_body": "<p>We enjoyed our wonderful and relaxing time in the Hiwassee cabin. We got a much needed rest in your comfortable beds and we ate great food on your grill. ~The Smiths</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Wonderful Time",
+  "archive_slug": "wonderful-time-12",
+  "archive_path": "/reviews/archive/wonderful-time-12",
+  "source_ref": "node/1985",
+  "hmac_signature": "3e8b2a3c325a6571dd88d613aaf84299c0d8f340146cbaf8b4b3f6b4bce691a6"
+}

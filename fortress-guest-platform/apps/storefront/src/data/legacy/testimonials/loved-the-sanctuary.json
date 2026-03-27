@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "2686",
+  "original_slug": "/testimonial/loved-the-sanctuary",
+  "content_body": "<p>This cabin was exquisite&hellip; Definitely felt like we were in someone&rsquo;s home with all the antique furnishings and attention to detail&hellip; Beautiful view of Lake Blue Ridge. Quality property! We will definitely stay there again.&nbsp;Thank you for hosting us!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Loved the Sanctuary!",
+  "archive_slug": "loved-the-sanctuary",
+  "archive_path": "/reviews/archive/loved-the-sanctuary",
+  "source_ref": "node/2686",
+  "related_property_slug": "sanctuary",
+  "related_property_path": "/cabins/sanctuary",
+  "related_property_title": "Sanctuary",
+  "hmac_signature": "d5d2d8d4824b24b22e631d168c162be0289dd32e9cae6afd7e6effe218645eae"
+}

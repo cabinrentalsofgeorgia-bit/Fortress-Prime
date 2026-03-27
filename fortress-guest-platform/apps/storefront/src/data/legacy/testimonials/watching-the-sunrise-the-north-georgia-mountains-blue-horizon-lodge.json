@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "1031",
+  "original_slug": "/testimonial/watching-the-sunrise-the-north-georgia-mountains-blue-horizon-lodge",
+  "content_body": "<p>My wife and I came to this wonderful place for three nights while attending a gathering of over 75 professional Santas riding the Blue Ridge Railway. We particularly enjoyed just sitting on the porch and watching the sunrise each morning.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge",
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Watching the Sunrise in the North Georgia Mountains at Blue Horizon Lodge",
+  "archive_slug": "watching-the-sunrise-the-north-georgia-mountains-blue-horizon-lodge",
+  "archive_path": "/reviews/archive/watching-the-sunrise-the-north-georgia-mountains-blue-horizon-lodge",
+  "source_ref": "node/1031",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "0aec029dc70c5e39b470e3c655fc8e571cf9d34c62f49e77cf626accc46703bf"
+}

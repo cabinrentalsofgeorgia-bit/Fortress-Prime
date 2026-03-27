@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2015",
+  "original_slug": "/testimonial/the-perfect-getaway",
+  "content_body": "<p>The perfect weekend getaway. Relaxing and first class all the way. Already looking at calendar for return trip. ~Bob and Cathy</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The Perfect Getaway",
+  "archive_slug": "the-perfect-getaway",
+  "archive_path": "/reviews/archive/the-perfect-getaway",
+  "source_ref": "node/2015",
+  "hmac_signature": "6e9e0b39764d8b6c4db7b2a660f8f946f83cfe8227d2d0b0ac01d084d6d38924"
+}

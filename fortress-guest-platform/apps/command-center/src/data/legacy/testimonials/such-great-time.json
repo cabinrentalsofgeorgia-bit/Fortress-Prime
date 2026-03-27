@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1530",
+  "original_slug": "/testimonial/such-great-time",
+  "content_body": "<p>We had a great time at Skydance! Beautiful cabin and loved the views!!! The well-stocked kitchen was a nice bonus! Will be back next year for sure. Thanks again for such a lovely weekend getaway.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Such A Great Time!",
+  "archive_slug": "such-great-time",
+  "archive_path": "/reviews/archive/such-great-time",
+  "source_ref": "node/1530",
+  "hmac_signature": "681d6e2806738034d89b15233e4af45686a08c094d76351f39303d846fc82bbc"
+}

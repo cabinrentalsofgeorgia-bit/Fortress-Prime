@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1647",
+  "original_slug": "/testimonial/amazing-5",
+  "content_body": "<p>Our stay here was amazing! One of the most relaxing vacations that we have had. Lots of great family time to spend doing puzzles, playing pool, cards, sitting by the fire...Definitely will do this again. Thanks for sharing your beautiful cabin!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing!",
+  "archive_slug": "amazing-5",
+  "archive_path": "/reviews/archive/amazing-5",
+  "source_ref": "node/1647",
+  "hmac_signature": "d9965a32007935213baa3955a1901f2c33a3501e6e06400f362cca136d926689"
+}

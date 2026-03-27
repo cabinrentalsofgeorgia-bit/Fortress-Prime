@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1293",
+  "original_slug": "/testimonial/great-mini-vacation",
+  "content_body": "<p>Beautiful house&mdash;lots of warm and cozy places to hang out and rest. Had a great mini-vacation. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Mini-Vacation",
+  "archive_slug": "great-mini-vacation",
+  "archive_path": "/reviews/archive/great-mini-vacation",
+  "source_ref": "node/1293",
+  "hmac_signature": "a848075adf437d010c5d73a9f9b7f11c09d5def346492b1626d6570f6fcfc915"
+}

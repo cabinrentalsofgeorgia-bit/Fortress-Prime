@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1320",
+  "original_slug": "/testimonial/we-loved-it",
+  "content_body": "<p>Thanks for the great cabin! We loved it!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "We Loved It!",
+  "archive_slug": "we-loved-it",
+  "archive_path": "/reviews/archive/we-loved-it",
+  "source_ref": "node/1320",
+  "hmac_signature": "9a29fe928910c5234a90f136b662d7e4c43603d0c8a51823e8d5ed67a34471c5"
+}

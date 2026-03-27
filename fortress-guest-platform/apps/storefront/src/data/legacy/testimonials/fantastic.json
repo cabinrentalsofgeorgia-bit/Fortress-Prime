@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1159",
+  "original_slug": "/testimonial/fantastic",
+  "content_body": "<p>The house was fantastic! Everything was as described and more! I really enjoyed my&nbsp;stay there!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fantastic!",
+  "archive_slug": "fantastic",
+  "archive_path": "/reviews/archive/fantastic",
+  "source_ref": "node/1159",
+  "hmac_signature": "4a3e07422eefec4203f562bc889f4e381cec14b88f2c994cc7a0a0939e400874"
+}

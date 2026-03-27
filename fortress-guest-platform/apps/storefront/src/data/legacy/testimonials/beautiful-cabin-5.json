@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1615",
+  "original_slug": "/testimonial/beautiful-cabin-5",
+  "content_body": "<p>Beautiful cabin! Had a great time. Used the hot tub and it was awesome. Would like to come back this summer.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Cabin!",
+  "archive_slug": "beautiful-cabin-5",
+  "archive_path": "/reviews/archive/beautiful-cabin-5",
+  "source_ref": "node/1615",
+  "hmac_signature": "a231a6c9265d0027efe9e7b274f1d22b9d20d314dedd4fa5dfce1e2f388ee0ed"
+}

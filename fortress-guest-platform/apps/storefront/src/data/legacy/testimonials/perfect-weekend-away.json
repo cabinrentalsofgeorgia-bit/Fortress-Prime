@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3192",
+  "original_slug": "/testimonial/perfect-weekend-away",
+  "content_body": "<p>A beautiful, peaceful and relaxing cabin in the mountains. We thoroughly enjoyed ourselves. Wildlife all around you makes this cabin a special place.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Perfect Weekend Away",
+  "archive_slug": "perfect-weekend-away",
+  "archive_path": "/reviews/archive/perfect-weekend-away",
+  "source_ref": "node/3192",
+  "hmac_signature": "c5a32cdf993bd05758417f89e21a589a5328212aaec862623addd97507ad8ea6"
+}

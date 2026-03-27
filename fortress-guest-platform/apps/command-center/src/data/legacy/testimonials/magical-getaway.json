@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3022",
+  "original_slug": "/testimonial/magical-getaway",
+  "content_body": "<p>This was the most perfect getaway! So peaceful. So serene.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "A Magical Getaway",
+  "archive_slug": "magical-getaway",
+  "archive_path": "/reviews/archive/magical-getaway",
+  "source_ref": "node/3022",
+  "hmac_signature": "afc4dbcd427d4a8515c6f85e61e057d12dd8e36c99706eb3a3528a84875db9f8"
+}

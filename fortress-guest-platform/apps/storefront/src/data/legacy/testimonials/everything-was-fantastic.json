@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1820",
+  "original_slug": "/testimonial/everything-was-fantastic",
+  "content_body": "<p>Our second stay here this year. Once again everything was fantastic. See you in the spring!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Everything Was Fantastic",
+  "archive_slug": "everything-was-fantastic",
+  "archive_path": "/reviews/archive/everything-was-fantastic",
+  "source_ref": "node/1820",
+  "hmac_signature": "57d44d638fa6aafcb043fdc6ad41a8e1e4f9fd89bef8d53e6c39658eaba43f22"
+}

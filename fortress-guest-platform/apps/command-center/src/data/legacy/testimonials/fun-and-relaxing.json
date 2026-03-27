@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2323",
+  "original_slug": "/testimonial/fun-and-relaxing",
+  "content_body": "<p>What a property! Fun and relaxing. Blue Ridge is pretty cool. Great house for multiple families! ~ The Owens</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fun And Relaxing",
+  "archive_slug": "fun-and-relaxing",
+  "archive_path": "/reviews/archive/fun-and-relaxing",
+  "source_ref": "node/2323",
+  "hmac_signature": "39d49b6f0e5bdc34334082660e92f3f357620fd58c9a1f7e3a2f6fb957b62fc6"
+}

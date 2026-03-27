@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1178",
+  "original_slug": "/testimonial/awesome-cabin-the-river",
+  "content_body": "<p>Beautiful cabin! Fully equipped, this cabin had everything we needed! They even had the heat turned up and the&nbsp;lights on for us when we arrived. Just steps away from the river and easy to find. We had a wonderful weekend!</p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Cabin by the River",
+  "archive_slug": "awesome-cabin-the-river",
+  "archive_path": "/reviews/archive/awesome-cabin-the-river",
+  "source_ref": "node/1178",
+  "related_property_slug": "awesome-retreat",
+  "related_property_path": "/cabins/awesome-retreat",
+  "related_property_title": "Awesome Retreat",
+  "hmac_signature": "7a1cdcb5673c7f34eb9a640505ba35bf042d171544939873744c7782d00f1faf"
+}

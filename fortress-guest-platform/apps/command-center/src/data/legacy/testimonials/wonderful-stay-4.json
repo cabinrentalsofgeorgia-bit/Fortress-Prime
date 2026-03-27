@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3187",
+  "original_slug": "/testimonial/wonderful-stay-4",
+  "content_body": "<p>We had a great time in an amazing cabin. The host has been very helpful before, during and after our visit.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Wonderful Stay",
+  "archive_slug": "wonderful-stay-4",
+  "archive_path": "/reviews/archive/wonderful-stay-4",
+  "source_ref": "node/3187",
+  "hmac_signature": "4a3a4c23e4c9a2302fb72f7d51cc3eb3c7fa2187d519c80f49da7d2fd2250424"
+}

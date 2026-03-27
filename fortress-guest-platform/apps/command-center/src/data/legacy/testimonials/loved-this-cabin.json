@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1548",
+  "original_slug": "/testimonial/loved-this-cabin",
+  "content_body": "<p>We absolutely loved this cabin!!! I cannot wait to come back. The cabin was perfect and super cozy!!!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Loved This Cabin!",
+  "archive_slug": "loved-this-cabin",
+  "archive_path": "/reviews/archive/loved-this-cabin",
+  "source_ref": "node/1548",
+  "hmac_signature": "aff0efbe8b56b8889434d10faa0ba7cb89912b64120fa806a77e21688a1ac45b"
+}

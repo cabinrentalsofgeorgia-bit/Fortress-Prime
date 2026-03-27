@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "3227",
+  "original_slug": "/testimonial/perfect-large-family",
+  "content_body": "<p>Everything was great. We had nine people in our group and yet had plenty of room. We would recommend your cabin to anyone looking for a nice vacation. Everything was clean and neat. It was great to have enough beds for all of us. The kids enjoyed all of the available room to play.</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Perfect for a Large Family",
+  "archive_slug": "perfect-large-family",
+  "archive_path": "/reviews/archive/perfect-large-family",
+  "source_ref": "node/3227",
+  "hmac_signature": "b74fbd69f4a0bd27f3ec722af7e4ef1d26ea28d5ec89a110c0eabe645a9b28bc"
+}

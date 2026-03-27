@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2441",
+  "original_slug": "/testimonial/magical-vacation",
+  "content_body": "<p>What a memorable week this was! Despite some rain, it was truly a magical vacation with a beautiful home and a lovely town to vist daily. This was truly a source of special memories.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Magical Vacation",
+  "archive_slug": "magical-vacation",
+  "archive_path": "/reviews/archive/magical-vacation",
+  "source_ref": "node/2441",
+  "hmac_signature": "642d4bceb21f51e728f68542042b72b55eecf3c55d7222f9019216ff374a6028"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "878",
+  "original_slug": "/testimonial/this-great",
+  "content_body": "<p>We had a wonderful time. This is great! You thought of everything. Thank you for your dream.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "This is GREAT!",
+  "archive_slug": "this-great",
+  "archive_path": "/reviews/archive/this-great",
+  "source_ref": "node/878",
+  "hmac_signature": "738641c05776401b180ca1d76e8c793ce465041ddaaadf2cd469ee321d1816de"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1121",
+  "original_slug": "/testimonial/weekend-getaway",
+  "content_body": "<p>I rented the Skydance cabin with a few friends for a weekend getaway. The cabin itself was beautiful: the fireplace, hot tub, grill, and sleeping arrangements were all fantastic, and everything was incredibly clean.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Weekend Getaway",
+  "archive_slug": "weekend-getaway",
+  "archive_path": "/reviews/archive/weekend-getaway",
+  "source_ref": "node/1121",
+  "hmac_signature": "516efe12b46f6e52d724ec8cc5d2db23777e6ff9337ad87eda57ec5fa4048952"
+}

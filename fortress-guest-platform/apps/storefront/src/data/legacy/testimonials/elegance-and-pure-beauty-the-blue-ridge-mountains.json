@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "183",
+  "original_slug": "/testimonial/elegance-and-pure-beauty-the-blue-ridge-mountains",
+  "content_body": "<p>This is a wonderful home. We had a beautiful time gathering around the fireplaces. I love the elegant look that every room has to offer. The kitchen was very well equipped! We would love to return in the future!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Elegance and Pure Beauty in the Blue Ridge Mountains",
+  "archive_slug": "elegance-and-pure-beauty-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/elegance-and-pure-beauty-the-blue-ridge-mountains",
+  "source_ref": "node/183",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "d3815e178485e5f6caba5f9d43e790089af841734d49090b35b02514db26e4bf"
+}

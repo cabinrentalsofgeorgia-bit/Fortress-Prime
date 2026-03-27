@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2170",
+  "original_slug": "/testimonial/amazing-property",
+  "content_body": "<p>We really enjoyed our stay in Blue Ridge. The cabin was very cozy and met the needs and expectations of our winter retreat. We had a good time walking by the river and relaxing... the view&nbsp;is&nbsp;stunning! Amazing property!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Property!",
+  "archive_slug": "amazing-property",
+  "archive_path": "/reviews/archive/amazing-property",
+  "source_ref": "node/2170",
+  "hmac_signature": "f44dcd645a4b6e8013167f415a24316a2d20ba30e1982ca3aa84a017163594e9"
+}

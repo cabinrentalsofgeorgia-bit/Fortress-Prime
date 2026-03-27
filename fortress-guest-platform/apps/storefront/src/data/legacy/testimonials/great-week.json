@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1515",
+  "original_slug": "/testimonial/great-week",
+  "content_body": "<p>What a great week for my husband and I. The cabin is beautiful, as well as the views. The area has always been a favorite for our family. Thanks so much!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Week",
+  "archive_slug": "great-week",
+  "archive_path": "/reviews/archive/great-week",
+  "source_ref": "node/1515",
+  "hmac_signature": "c3652227e892aff510614db7fac399d10380e3c06fbd0593997df1f8c4323b58"
+}

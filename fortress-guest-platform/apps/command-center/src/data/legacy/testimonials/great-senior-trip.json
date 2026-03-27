@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1697",
+  "original_slug": "/testimonial/great-senior-trip",
+  "content_body": "<p>Cabin was beautiful&mdash;one of the best senior trips ever!&nbsp;Can&#39;t wait to come back</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Senior Trip!",
+  "archive_slug": "great-senior-trip",
+  "archive_path": "/reviews/archive/great-senior-trip",
+  "source_ref": "node/1697",
+  "hmac_signature": "c115db74a7eb68ab78353216becac75b16eb326e7c0e475e9ce695445c9d4778"
+}

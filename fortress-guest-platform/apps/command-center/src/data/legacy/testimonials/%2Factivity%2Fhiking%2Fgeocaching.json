@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "290",
+  "original_slug": "/activity/hiking/geocaching",
+  "content_body": "<p><a href=\"https://www.geocaching.com\">Geocaching</a> is an adventure game for GPS users, who can use the location coordinates given online to find the caches.</p>\r\n\r\n<p>You will find a treasure or visitor log in the caches and are asked to leave a little fascinating something for the next visitors.</p>\r\n\r\n<p>Type in our zip code, 30513, to find the local caches and begin your treasure hunt!</p>\r\n\r\n<p>You will hike some great paths that are off the beaten trail around Blue Ridge, and learn about some fascinating history where some caches are located.</p>\r\n\r\n<p>A fun adventure for families!</p>",
+  "category_tags": [],
+  "node_type": "activity",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T16:34:34Z",
+  "legacy_type": "page",
+  "title": "Geocaching",
+  "archive_slug": "geocaching",
+  "archive_path": "/reviews/archive/geocaching",
+  "source_ref": "node/290",
+  "legacy_created_at": 1368467955,
+  "legacy_updated_at": 1737843749,
+  "legacy_author_id": "4",
+  "legacy_language": "und",
+  "hmac_signature": "0304a41ac39b54dc066537503e3fe01f03d4b1f01a8e16bcec786cd20a7c6150"
+}

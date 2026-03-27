@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1367",
+  "original_slug": "/testimonial/great-time-0",
+  "content_body": "<p>We had a great time! The cabin was well stocked with everything we might need. Thanks for making it such a nice place to stay!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time!",
+  "archive_slug": "great-time-0",
+  "archive_path": "/reviews/archive/great-time-0",
+  "source_ref": "node/1367",
+  "hmac_signature": "fd368d95f1dd2afde820aad08801857ec4608869f31599462fb6c49c3197eaae"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1705",
+  "original_slug": "/testimonial/simply-awesome",
+  "content_body": "<p>So clean and has literally everything we need. Great family trip and wedding anniversary on very short notice! This place is just simply awesome. The weather was perfect, and the kids loved it.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Simply Awesome",
+  "archive_slug": "simply-awesome",
+  "archive_path": "/reviews/archive/simply-awesome",
+  "source_ref": "node/1705",
+  "hmac_signature": "eb725b94e499a490d6c70847c8d228b459732201f9ebd4d6a76daf1fdebe776b"
+}

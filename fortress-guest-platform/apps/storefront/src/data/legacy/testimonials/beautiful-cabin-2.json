@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1524",
+  "original_slug": "/testimonial/beautiful-cabin-2",
+  "content_body": "<p>A beautiful cabin with&nbsp;everything&nbsp;you could need, including salt and pepper, and even a hair dryer. A great place to relax and unwind, or to go and experience the Ocoee River.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Cabin",
+  "archive_slug": "beautiful-cabin-2",
+  "archive_path": "/reviews/archive/beautiful-cabin-2",
+  "source_ref": "node/1524",
+  "hmac_signature": "f05ad946bcb7ef7a1eded4d67518b06d00d6993ebaaf0a90cc3063fe7c228e71"
+}

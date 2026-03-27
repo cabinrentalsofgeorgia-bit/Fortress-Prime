@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1361",
+  "original_slug": "/testimonial/fun-vacation",
+  "content_body": "<p>Such a FUN vacation, with 90-95-degree weather! We went whitewater rafting along the Ocoee at Rolling Thunder, kayaking on the Toccoa, and enjoyed downtown Blue Ridge (Blue Ridge BBQ was amazing!). We also enjoyed pool, poker, and the Jacuzzi hot tub at the cabin. We loved everything about this trip!</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "FUN Vacation!",
+  "archive_slug": "fun-vacation",
+  "archive_path": "/reviews/archive/fun-vacation",
+  "source_ref": "node/1361",
+  "hmac_signature": "63facd3d4f565a27d4c69697d2d9561511667a91c445ad9909b1ed820deae67b"
+}

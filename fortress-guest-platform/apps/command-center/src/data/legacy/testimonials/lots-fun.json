@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1717",
+  "original_slug": "/testimonial/lots-fun",
+  "content_body": "<p>This is an awesome cabin. We had lots of fun, and we definitely recommend this cabin to anyone.&nbsp;</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Lots of Fun",
+  "archive_slug": "lots-fun",
+  "archive_path": "/reviews/archive/lots-fun",
+  "source_ref": "node/1717",
+  "hmac_signature": "2297939e418036e66e315622902cc85b2b07c066e0bacb68096ae0ee6946172b"
+}

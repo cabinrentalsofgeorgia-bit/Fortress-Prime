@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "215",
+  "original_slug": "/testimonial/great-experience-north-georgia",
+  "content_body": "<p>Awesome! We rented a boat on Lake Blue Ridge, caught some fish for dinner, fished the river (before 5:30 when the dam lets out), caught some trout, went panning for gold in Dahlonega and Helen, and listened for the train. Great weather. My two boys loved it! We are from Rochester, MI and would love to come back some day!</p>",
+  "category_tags": [
+    "Blue Ridge Experience",
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Experience in North Georgia!",
+  "archive_slug": "great-experience-north-georgia",
+  "archive_path": "/reviews/archive/great-experience-north-georgia",
+  "source_ref": "node/215",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "8a5bd84d1aceb92d1f6b3199e426affea5fa42e79f19a8997776966e98a835e7"
+}

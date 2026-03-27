@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1131",
+  "original_slug": "/testimonial/dreamy-view",
+  "content_body": "<p>Beautiful cabin with a dreamy view. We had a wonderful stay and definitely plan to return again.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Dreamy View",
+  "archive_slug": "dreamy-view",
+  "archive_path": "/reviews/archive/dreamy-view",
+  "source_ref": "node/1131",
+  "hmac_signature": "a0c3dc1c49c0d7833b9eefcaf20445e3487d1e001a8bc6f9b85a135e55728651"
+}

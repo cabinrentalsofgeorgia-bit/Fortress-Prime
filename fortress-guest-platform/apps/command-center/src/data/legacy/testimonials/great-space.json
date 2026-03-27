@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1946",
+  "original_slug": "/testimonial/great-space",
+  "content_body": "<p>Great space. We enjoyed the open space and great views. Thanks for everything!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Space",
+  "archive_slug": "great-space",
+  "archive_path": "/reviews/archive/great-space",
+  "source_ref": "node/1946",
+  "hmac_signature": "91c539b0f361b3bf530df5b943c78bed925a2e5b65119c99763b68a965ab74bb"
+}

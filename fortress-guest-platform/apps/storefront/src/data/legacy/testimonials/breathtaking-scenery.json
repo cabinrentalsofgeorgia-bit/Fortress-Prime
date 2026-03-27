@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1193",
+  "original_slug": "/testimonial/breathtaking-scenery",
+  "content_body": "<p>Much needed relaxing weekend for some tired moms. Weather was perfect, the cabin met our expectations, and the scenery was breathtaking!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Breathtaking Scenery",
+  "archive_slug": "breathtaking-scenery",
+  "archive_path": "/reviews/archive/breathtaking-scenery",
+  "source_ref": "node/1193",
+  "hmac_signature": "006e1ea8642b707daf1eba09237d341343e7f2d0d5e62b93230dde411ca096ad"
+}

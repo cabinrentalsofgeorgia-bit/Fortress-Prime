@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1591",
+  "original_slug": "/testimonial/highly-recommended",
+  "content_body": "<p>This is a super amazing house with a great location on the lake! The check-in process was easy and uneventful. We enjoyed our stay here and will miss the walks to the lake. Highly recommended!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Highly Recommended!",
+  "archive_slug": "highly-recommended",
+  "archive_path": "/reviews/archive/highly-recommended",
+  "source_ref": "node/1591",
+  "hmac_signature": "2df18d6a3b8ec6f6a6c59cfa3ceddfa0f8ee9882fe9acd6958f694a8c968cd83"
+}

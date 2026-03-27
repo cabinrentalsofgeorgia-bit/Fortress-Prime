@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "953",
+  "original_slug": "/testimonial/amazing-trip-to-blue-ridge-georgia",
+  "content_body": "<p>What an amazing trip we had! The cabin was perfect! Hearing the river flow beliw us was so calming!! Beautiful scenery and town. Whitewater rafting was great! Ziplining and tubing down the Toccoa!! Had a wonderful trip!! Thanks!!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Trip To Blue Ridge, Georgia",
+  "archive_slug": "amazing-trip-to-blue-ridge-georgia",
+  "archive_path": "/reviews/archive/amazing-trip-to-blue-ridge-georgia",
+  "source_ref": "node/953",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "134da796345eb8a4a29602501dc694cb23514ad0bc0664fb7b875023c433d800"
+}

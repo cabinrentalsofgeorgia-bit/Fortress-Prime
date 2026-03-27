@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "2030",
+  "original_slug": "/testimonial/cabin-was-awesome",
+  "content_body": "<p>Went to Blue Ridge for kids spring break. The cabin was awesome!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Cabin Was Awesome!",
+  "archive_slug": "cabin-was-awesome",
+  "archive_path": "/reviews/archive/cabin-was-awesome",
+  "source_ref": "node/2030",
+  "related_property_slug": "awesome-retreat",
+  "related_property_path": "/cabins/awesome-retreat",
+  "related_property_title": "Awesome Retreat",
+  "hmac_signature": "c33459714118a9b42667919e23b17bf44c48bda96d7ad172491c42dbf209a0ae"
+}

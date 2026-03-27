@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "795",
+  "original_slug": "/testimonial/getaway-to-blue-ridge",
+  "content_body": "<p>Thanks for a wonderful and much-needed getaway! &nbsp;This place is magical! &nbsp;The cabin was beautiful and was everything we needed. &nbsp;By far the most awesome weekend ever!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Getaway to Blue Ridge",
+  "archive_slug": "getaway-to-blue-ridge",
+  "archive_path": "/reviews/archive/getaway-to-blue-ridge",
+  "source_ref": "node/795",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "53243b042b3c02d79dd500f4134f90943ec221846f0cf18c1636916fb299a39e"
+}

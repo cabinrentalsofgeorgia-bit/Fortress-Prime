@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1650",
+  "original_slug": "/testimonial/bff-trip",
+  "content_body": "<p>We went shopping and&nbsp;took lots of pics. Drank and played games. Made great memories and laughed&nbsp;a lot. LOVE the Porch! Thanks!</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "BFF Trip!",
+  "archive_slug": "bff-trip",
+  "archive_path": "/reviews/archive/bff-trip",
+  "source_ref": "node/1650",
+  "hmac_signature": "0e3a226da0b4b4f9cd1a14ce79dc5f0cecae10240f848241d6730ca5bf33f78c"
+}

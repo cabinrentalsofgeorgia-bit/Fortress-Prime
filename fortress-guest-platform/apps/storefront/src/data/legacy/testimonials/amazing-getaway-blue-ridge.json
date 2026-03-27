@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2879",
+  "original_slug": "/testimonial/amazing-getaway-blue-ridge",
+  "content_body": "<p>Our stay at Above it All was absolutely beyond amazing! We celebrated a 50th birthday and we couldn&#39;t have asked for a better place! The cabin was fantastic, views were just stunningly beautiful! Check in was super simple! I would definitely recommend this cabin to everyone!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing Getaway in Blue Ridge!",
+  "archive_slug": "amazing-getaway-blue-ridge",
+  "archive_path": "/reviews/archive/amazing-getaway-blue-ridge",
+  "source_ref": "node/2879",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "8430e5273bb5aa2fcbfcef4514026c1c9d6de10993cb94fbd5ed1c79ff55648c"
+}

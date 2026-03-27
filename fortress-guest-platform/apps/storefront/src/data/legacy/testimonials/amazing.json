@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1122",
+  "original_slug": "/testimonial/amazing",
+  "content_body": "<p>My wife and I have stayed at four different cabins and all have been amazing! We recently stayed in Sanctuary, and the view of the surrounding area was amazing. We also enjoyed the fireplaces in the living and bedroom spaces. The hot tub was just steps from the living room and&nbsp;looked out at the incredible scenery. The kitchen had everything you could possibly need for cooking. The town of Blue Ridge is a wonderful place to explore and has some really fantastic restaurants. We&#39;ve already booked our next cabin!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing!",
+  "archive_slug": "amazing",
+  "archive_path": "/reviews/archive/amazing",
+  "source_ref": "node/1122",
+  "hmac_signature": "37a7f12e699d8a65ff67342406dd6b834f7b563115ddd1b408ccc3b0b58630fa"
+}

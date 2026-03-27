@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "777",
+  "original_slug": "/testimonial/luxury-blue-ridge-cabin-walking-distance-to-toccoa-riverside-restaurant",
+  "content_body": "<p>&nbsp;We had a very nice stay. The cabin was very nice and met our needs. Loved the walking distance to Toccoa Riverside Resturant!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge",
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Luxury Blue Ridge Cabin is Walking Distance to Toccoa Riverside Restaurant!",
+  "archive_slug": "luxury-blue-ridge-cabin-walking-distance-to-toccoa-riverside-restaurant",
+  "archive_path": "/reviews/archive/luxury-blue-ridge-cabin-walking-distance-to-toccoa-riverside-restaurant",
+  "source_ref": "node/777",
+  "related_property_slug": "rolling-river-cabin",
+  "related_property_path": "/cabins/rolling-river-cabin",
+  "related_property_title": "A Rolling River Cabin",
+  "hmac_signature": "50171d52d915d57351b275a15e2bd3a1fe948cfd09e62aa3b7d5780fbab5ccce"
+}

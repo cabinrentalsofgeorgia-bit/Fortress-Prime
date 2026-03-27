@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1676",
+  "original_slug": "/testimonial/amazing-weekend",
+  "content_body": "<p>We had an amazing weekend here. Absolutely loved the house, the bed,&nbsp;the view, and the fireplace. It was a romantic Valentine&#39;s&nbsp;weekend. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Weekend",
+  "archive_slug": "amazing-weekend",
+  "archive_path": "/reviews/archive/amazing-weekend",
+  "source_ref": "node/1676",
+  "hmac_signature": "ae78c6e0ce0d13cc1375ff3a850cb72e6d5ea0765181c49fa7dfb9e31136b8ec"
+}

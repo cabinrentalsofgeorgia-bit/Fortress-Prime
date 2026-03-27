@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2528",
+  "original_slug": "/testimonial/beautiful-mountain-views",
+  "content_body": "<p>A relaxing stay with beautiful mountain views!</p>\r\n\r\n<div>&nbsp;</div>",
+  "category_tags": [
+    "Mountain View"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Mountain Views",
+  "archive_slug": "beautiful-mountain-views",
+  "archive_path": "/reviews/archive/beautiful-mountain-views",
+  "source_ref": "node/2528",
+  "hmac_signature": "1a110a014e04c44fef4cfa05c591602a500a95a0f84ce4cf994bb776617f6b99"
+}

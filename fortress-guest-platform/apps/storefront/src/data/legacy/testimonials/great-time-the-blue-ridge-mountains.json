@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "68",
+  "original_slug": "/testimonial/great-time-the-blue-ridge-mountains",
+  "content_body": "<p>Gorgeous house. We enjoyed our stay. We went hiking, whitewater rafting and visited&nbsp;a few of the local shops in town. Tried fishing as well - no luck - but had fun.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time in the Blue Ridge Mountains",
+  "archive_slug": "great-time-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/great-time-the-blue-ridge-mountains",
+  "source_ref": "node/68",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "05bd50b9a192775b41d54060153b775934adc97b46b6d16f12540380fa1c62ec"
+}

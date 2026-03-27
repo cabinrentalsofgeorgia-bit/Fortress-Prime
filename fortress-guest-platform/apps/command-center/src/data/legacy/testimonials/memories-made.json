@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3066",
+  "original_slug": "/testimonial/memories-made",
+  "content_body": "<p>Getting to hang here with my siblings was a pretty awesome experience! Lots of memories and remembered. Thank you!</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Memories Made",
+  "archive_slug": "memories-made",
+  "archive_path": "/reviews/archive/memories-made",
+  "source_ref": "node/3066",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "b4300ac50907f07d49a8c87b70a6cdd2424dc9f4d0a3180f2b75bde581626c67"
+}

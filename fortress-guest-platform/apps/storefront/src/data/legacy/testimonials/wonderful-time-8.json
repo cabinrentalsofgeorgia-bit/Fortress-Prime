@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1812",
+  "original_slug": "/testimonial/wonderful-time-8",
+  "content_body": "<p>Had a wonderful time at the cabin! Plenty of room for everyone and still cozy. Already excited about coming back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Time!",
+  "archive_slug": "wonderful-time-8",
+  "archive_path": "/reviews/archive/wonderful-time-8",
+  "source_ref": "node/1812",
+  "hmac_signature": "d16f51f805e30a8d5e81acc17dd31ce3bc5ca650c3b9f3d330cbc69061044c63"
+}

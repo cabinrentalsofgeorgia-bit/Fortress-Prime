@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "739",
+  "original_slug": "/testimonial/slice-heaven-blue-ridge",
+  "content_body": "<p>&nbsp;Gorgeous property and lovely home. Thank you for sharing your slice of heaven!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Slice of Heaven in Blue Ridge",
+  "archive_slug": "slice-heaven-blue-ridge",
+  "archive_path": "/reviews/archive/slice-heaven-blue-ridge",
+  "source_ref": "node/739",
+  "related_property_slug": "peace-heaven",
+  "related_property_path": "/cabins/peace-heaven",
+  "related_property_title": "Peace of Heaven",
+  "hmac_signature": "2350d65e03404456dc372f311072f887c8fa9ed53ebdf028bda8f2a4847a7a3f"
+}

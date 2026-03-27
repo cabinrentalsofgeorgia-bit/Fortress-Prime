@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1463",
+  "original_slug": "/testimonial/best-experience-yet",
+  "content_body": "<p>Best experience yet, and we&#39;ve been doing this for several years now. Will definitely return. Communications were great from CRG. Love the App on Android. Cabin was in perfect shape. If it wasn&#39;t for the bowl of corks on the kitchen table going back years, we would have thought we were one of the first visitors! Our best view yet. Will be difficult not to return to the same cabin next time. Thank you.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Best Experience Yet",
+  "archive_slug": "best-experience-yet",
+  "archive_path": "/reviews/archive/best-experience-yet",
+  "source_ref": "node/1463",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "da7c033e3e16b45f7be59828d7ee6b924bd9a0f2b64adca5f7bda829b5caea34"
+}

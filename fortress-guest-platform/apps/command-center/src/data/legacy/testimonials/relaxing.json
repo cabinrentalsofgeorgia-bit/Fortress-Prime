@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1448",
+  "original_slug": "/testimonial/relaxing",
+  "content_body": "<p>Very nice cabin! The rolling river has a relaxing sound.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Relaxing",
+  "archive_slug": "relaxing",
+  "archive_path": "/reviews/archive/relaxing",
+  "source_ref": "node/1448",
+  "hmac_signature": "6e711e33a20f055f100e51cf3f32c53f158b817de9baf2644c32a1f3c272d831"
+}

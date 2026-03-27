@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2022",
+  "original_slug": "/testimonial/cabin-was-excellent",
+  "content_body": "<p>We enjoyed our time in Blue Ridge. The cabin was excellent. We have no complaints with our stay, only compliments. Thank you.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Cabin Was Excellent",
+  "archive_slug": "cabin-was-excellent",
+  "archive_path": "/reviews/archive/cabin-was-excellent",
+  "source_ref": "node/2022",
+  "hmac_signature": "5c230fa87c03e3627f5004c7f5769715935855b34dada1b4ba86741e35300df9"
+}

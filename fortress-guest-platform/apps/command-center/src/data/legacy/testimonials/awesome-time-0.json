@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1545",
+  "original_slug": "/testimonial/awesome-time-0",
+  "content_body": "<p>Awesome time! Drinking, &quot;Jacuzzi time,&quot; fishing...WOW! Shooting stars, truffle butter...mmmm.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Time!",
+  "archive_slug": "awesome-time-0",
+  "archive_path": "/reviews/archive/awesome-time-0",
+  "source_ref": "node/1545",
+  "hmac_signature": "b9df9887a2ed8c6150aaebfca130512f90fa5319dd79d3474e8fc8ca87a5a563"
+}

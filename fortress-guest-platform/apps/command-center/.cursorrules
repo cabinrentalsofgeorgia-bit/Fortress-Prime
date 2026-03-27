@@ -1,0 +1,16 @@
+# FORTRESS PRIME CONSTITUTION & SYSTEM ARCHITECTURE
+
+## 1. Domain Topology (Never Cross the Streams)
+* **PUBLIC DOMAIN (`cabin-rentals-of-georgia.com`):** This is the public, guest-facing storefront. It handles SEO, cabin listings, and the `crog-vrs` checkout flow.
+* **INTERNAL DOMAIN (`crog-ai.com`):** This is the Command Center. It is strictly for internal staff (Gary, Taylor) and AI Agent operations. It houses the `/(dashboard)` routes, Growth tracking, and backend management.
+* **RULE:** Never redirect public traffic to the internal domain. Never expose Command Center routes to the public domain.
+
+## 2. Infrastructure Standards (The Sovereign Stack)
+* **Frontend:** Next.js (deployed on Vercel). Must maintain zero linting errors.
+* **Backend:** FastAPI running on a local, bare-metal NVIDIA DGX Spark node (`192.168.0.100`).
+* **Database:** PostgreSQL running host-native on the DGX node (Backed up nightly to Synology NAS).
+* **Communication:** Frontend talks to Backend via Cloudflare Tunnels (Zero inbound UFW ports open).
+
+## 3. Operational Directives
+* **No "Hack Jobs":** Do not generate fake UI or mock data unless explicitly ordered to build a skeleton. If a backend pipeline is required, state the requirement before building the frontend component.
+* **Preserve SEO:** Any changes to public routing must account for the 4,530 legacy Drupal redirects mapped in `drupal_granular_blueprint.json`.

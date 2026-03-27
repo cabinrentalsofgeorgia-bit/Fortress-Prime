@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "1864",
+  "original_slug": "/testimonial/outlaw-ridge-always-great",
+  "content_body": "<p>Awesome!! Came here a few times in the past. Outlaw Ridge is always great!!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Outlaw Ridge is Always Great!",
+  "archive_slug": "outlaw-ridge-always-great",
+  "archive_path": "/reviews/archive/outlaw-ridge-always-great",
+  "source_ref": "node/1864",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "106ce833b21ed7ade8a726f819038e4470eb3148702204b8fa992a3c66e1883e"
+}

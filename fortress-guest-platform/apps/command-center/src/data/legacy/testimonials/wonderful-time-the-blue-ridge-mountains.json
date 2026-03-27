@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "965",
+  "original_slug": "/testimonial/wonderful-time-the-blue-ridge-mountains",
+  "content_body": "<p>We had a GREAT trip to Majestic Lake cabin. We played in the mountains and by the lake where our cousins stayed. The house is gorgeous and very comfortable. &nbsp;We had a wonderful week!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Time In The Blue Ridge Mountains",
+  "archive_slug": "wonderful-time-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/wonderful-time-the-blue-ridge-mountains",
+  "source_ref": "node/965",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "400b9d60b66d8d6cb5713da5495f0dc5f89ee61c66f2651ccdb3b0d1b645045e"
+}

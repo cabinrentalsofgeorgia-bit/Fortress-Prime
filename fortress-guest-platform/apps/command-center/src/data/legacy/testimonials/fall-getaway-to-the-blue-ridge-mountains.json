@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "1047",
+  "original_slug": "/testimonial/fall-getaway-to-the-blue-ridge-mountains",
+  "content_body": "<p>&nbsp;The cabin is absolutely beautiful! We had an amazing time there. We will defintely visit again and will highly recommend Serendipity to our family and friends.&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Fall",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Fall Getaway to the Blue Ridge Mountains",
+  "archive_slug": "fall-getaway-to-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/fall-getaway-to-the-blue-ridge-mountains",
+  "source_ref": "node/1047",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "f1c8b0e91825bf4271bc129c84686b5c690d98f8ad65231b22f69f576f2a33b4"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2634",
+  "original_slug": "/testimonial/amazing-10",
+  "content_body": "<p>Loved the property and how easy it was to check-in and check-out. Great location with around a 10 min drive from town.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing!",
+  "archive_slug": "amazing-10",
+  "archive_path": "/reviews/archive/amazing-10",
+  "source_ref": "node/2634",
+  "hmac_signature": "03952e616684b064fa30503d98b07e48cb47b25a039117a0492090bd4b6a01d1"
+}

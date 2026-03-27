@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1500",
+  "original_slug": "/testimonial/beautiful-2",
+  "content_body": "<p>Beautiful home and amenities!!! Both the exterior and interior of the home is well maintained, great party porch and fabulous kitchen and waterfall shower! The views were magnificent, although we had several rainy days with low clouds.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful",
+  "archive_slug": "beautiful-2",
+  "archive_path": "/reviews/archive/beautiful-2",
+  "source_ref": "node/1500",
+  "hmac_signature": "1c24ed7ee40ff54d541f7ee3982437f93d54f9d0596a1280dddcac0b48e6c13b"
+}

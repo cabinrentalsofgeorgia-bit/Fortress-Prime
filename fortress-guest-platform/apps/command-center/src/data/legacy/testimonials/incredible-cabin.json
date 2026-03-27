@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1130",
+  "original_slug": "/testimonial/incredible-cabin",
+  "content_body": "<p>The cabin is incredible. I have enjoyed this weekend greatly.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Incredible Cabin",
+  "archive_slug": "incredible-cabin",
+  "archive_path": "/reviews/archive/incredible-cabin",
+  "source_ref": "node/1130",
+  "hmac_signature": "f560a572a05f87cb0f47b85a4aaf39825ae3dc0f1ee17d46755ac908da3fb435"
+}

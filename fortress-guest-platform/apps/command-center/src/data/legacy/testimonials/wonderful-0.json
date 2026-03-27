@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1454",
+  "original_slug": "/testimonial/wonderful-0",
+  "content_body": "<p>We had a <u>wonderful</u> time at your cabin. Thank you. The views and the amenities were wonderful. We&#39;ll be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful!",
+  "archive_slug": "wonderful-0",
+  "archive_path": "/reviews/archive/wonderful-0",
+  "source_ref": "node/1454",
+  "hmac_signature": "4e1a40132faed9e9b5a3500fe808a06e2c36527130845785b0003b64387fcfe9"
+}

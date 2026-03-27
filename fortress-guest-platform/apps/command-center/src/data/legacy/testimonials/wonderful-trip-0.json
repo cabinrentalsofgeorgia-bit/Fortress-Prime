@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1738",
+  "original_slug": "/testimonial/wonderful-trip-0",
+  "content_body": "<p>Thanks for a wonderful trip! This is such an amazing cabin! So quiet and tranquil. Loved it! Such a blessing!</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Trip",
+  "archive_slug": "wonderful-trip-0",
+  "archive_path": "/reviews/archive/wonderful-trip-0",
+  "source_ref": "node/1738",
+  "hmac_signature": "0031677003f6e3c95927aa95c8b4d20f04a436bb4d62424a916c6707104ec3f8"
+}

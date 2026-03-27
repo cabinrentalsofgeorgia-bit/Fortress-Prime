@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "2495",
+  "original_slug": "/testimonial/awesome-cabin-1",
+  "content_body": "<p>Awesome place! I had an agent reach out to me via text which is super convenient since I work during the day. The cabin itself was super comfy and homey. The decor was amazing and very clean. I will be back soon!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Cabin!",
+  "archive_slug": "awesome-cabin-1",
+  "archive_path": "/reviews/archive/awesome-cabin-1",
+  "source_ref": "node/2495",
+  "related_property_slug": "awesome-retreat",
+  "related_property_path": "/cabins/awesome-retreat",
+  "related_property_title": "Awesome Retreat",
+  "hmac_signature": "b65a4f7c72761c5912da1043666b8ea1bfeca96cbfcb3d434a241944f0a05c76"
+}

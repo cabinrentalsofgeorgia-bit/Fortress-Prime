@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "888",
+  "original_slug": "/testimonial/relaxing-cabin-and-quality-time-with-family",
+  "content_body": "<p>Had a relaxing time spending qualilty time with family, fishing, tubing, hiking. Loved all the fresh fruit from the local orchards and produce stands. The cabin is dreamy!</p><p><br /></p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Relaxing Cabin and Quality Time with Family!",
+  "archive_slug": "relaxing-cabin-and-quality-time-with-family",
+  "archive_path": "/reviews/archive/relaxing-cabin-and-quality-time-with-family",
+  "source_ref": "node/888",
+  "hmac_signature": "e716395738f87c9f13a7a100b831aad50a7654d955b5623401b5da88746af4b4"
+}

@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1821",
+  "original_slug": "/testimonial/excellent-experience",
+  "content_body": "<p>We had such an excellent experience in the Arcadia cabin this week. It was immaculate upon arrival and beautifully decorated for the fall season. We are used to staying at five star hotels, and we were so pleased with the cabin and the staff. On our way home we were already planning our next trip, and we will absolutely be utilizing CROG when we come back.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Excellent Experience",
+  "archive_slug": "excellent-experience",
+  "archive_path": "/reviews/archive/excellent-experience",
+  "source_ref": "node/1821",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "5f1fee0cd4a597ad7d259e4a609238c83cf121c153d251398f1281b9ee5a132b"
+}

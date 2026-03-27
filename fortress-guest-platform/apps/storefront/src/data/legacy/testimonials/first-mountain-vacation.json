@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1477",
+  "original_slug": "/testimonial/first-mountain-vacation",
+  "content_body": "<p>We came from Barbados for a wedding that took place at the Millrace Farm. We had a wonderful time. It&#39;s the first time we vacationed in the mountaints or stayed next to a river. Thanks for a wonderful time.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "First Mountain Vacation",
+  "archive_slug": "first-mountain-vacation",
+  "archive_path": "/reviews/archive/first-mountain-vacation",
+  "source_ref": "node/1477",
+  "hmac_signature": "53f9bf522c6d78bc08f6921567e486623da5ab1a7f4dd9e288e5d37621037437"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2034",
+  "original_slug": "/testimonial/fantastic-3",
+  "content_body": "<p>Our stay was FANTASTIC! &nbsp;Everyone only complained about the stay not being long enough. I would go back in a heartbeat! &nbsp;As a matter of fact, I truly hope we do!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fantastic!",
+  "archive_slug": "fantastic-3",
+  "archive_path": "/reviews/archive/fantastic-3",
+  "source_ref": "node/2034",
+  "hmac_signature": "bc9ea3c52ae860e7d196ae66a61d7bebe98367babc0bb382974e48037a46b685"
+}

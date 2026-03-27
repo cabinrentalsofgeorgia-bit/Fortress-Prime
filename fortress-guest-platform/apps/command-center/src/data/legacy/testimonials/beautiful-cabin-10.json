@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2497",
+  "original_slug": "/testimonial/beautiful-cabin-10",
+  "content_body": "<p>Blue Horizon is exactly as advertised. A beautiful cabin with great views, and very convenient to Blue Ridge and the Copper Basin.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Cabin",
+  "archive_slug": "beautiful-cabin-10",
+  "archive_path": "/reviews/archive/beautiful-cabin-10",
+  "source_ref": "node/2497",
+  "hmac_signature": "0b62ca62362441d1eed31e4da43863ca1bf8d888196351bada7e6ec3d8b2ec70"
+}

@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2807",
+  "original_slug": "/testimonial/high-hopes-had-all-the-nice-touches",
+  "content_body": "<p>This cabin is the best. We had the best time replenishing our batteries and letting our hair down and relaxing. We had great conversations and cooked wonderful meals. This beautiful cabin had all the nice touches. We will most definitely come back!</p>",
+  "category_tags": [
+    "High Speed Internet"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "High Hopes Had All the Nice Touches!",
+  "archive_slug": "high-hopes-had-all-the-nice-touches",
+  "archive_path": "/reviews/archive/high-hopes-had-all-the-nice-touches",
+  "source_ref": "node/2807",
+  "related_property_slug": "high-hopes",
+  "related_property_path": "/cabins/high-hopes",
+  "related_property_title": "High Hopes",
+  "hmac_signature": "4494c0fb51c3bc9095c9767abe645918d8b610dba9371f202745012abb901694"
+}

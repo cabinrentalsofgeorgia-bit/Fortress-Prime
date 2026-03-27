@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1570",
+  "original_slug": "/testimonial/awesome-trip",
+  "content_body": "<p>What an awesome trip! Can&#39;t wait till next year&#39;s vacation!</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Trip!",
+  "archive_slug": "awesome-trip",
+  "archive_path": "/reviews/archive/awesome-trip",
+  "source_ref": "node/1570",
+  "hmac_signature": "c191c1884adc2873beb232737dba00e211a542370e87a78eb74afdf3ee60f5b7"
+}

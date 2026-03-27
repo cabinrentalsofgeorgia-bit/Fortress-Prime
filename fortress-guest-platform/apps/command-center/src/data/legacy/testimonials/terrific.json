@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1499",
+  "original_slug": "/testimonial/terrific",
+  "content_body": "<p>Terrific experience. Our cabin exceeded our expectations.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Terrific",
+  "archive_slug": "terrific",
+  "archive_path": "/reviews/archive/terrific",
+  "source_ref": "node/1499",
+  "hmac_signature": "0ecbdc3455d0c12e238673fe12ef227416fd2a63f8d4584dddcee1832d13a0a1"
+}

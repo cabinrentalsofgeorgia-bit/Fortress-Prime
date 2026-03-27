@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1303",
+  "original_slug": "/testimonial/elegant-yet-rural",
+  "content_body": "<p>The cabin is wonderful. We really enjoyed our stay in such an elegant, yet rural setting. The owners have put a lot of effort into their property and it shows that they want their guests to have a good time.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Elegant, Yet Rural",
+  "archive_slug": "elegant-yet-rural",
+  "archive_path": "/reviews/archive/elegant-yet-rural",
+  "source_ref": "node/1303",
+  "hmac_signature": "fe17938fcfe55a642825a444afbddc810df704a5d2c19618ace33411b801286c"
+}

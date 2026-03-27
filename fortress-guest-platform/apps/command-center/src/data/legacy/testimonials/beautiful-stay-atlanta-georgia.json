@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "544",
+  "original_slug": "/testimonial/beautiful-stay-atlanta-georgia",
+  "content_body": "<p>Thank you so much for the opportunity to stay here at this beautiful home. The peace of Heaven is in this place. Bless you.</p>",
+  "category_tags": [
+    "Atlanta"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Stay in Atlanta Georgia",
+  "archive_slug": "beautiful-stay-atlanta-georgia",
+  "archive_path": "/reviews/archive/beautiful-stay-atlanta-georgia",
+  "source_ref": "node/544",
+  "hmac_signature": "56d86a6e329da5eb6f6ef15fad9433144219e07bc8b0668d81bf1b316902132f"
+}

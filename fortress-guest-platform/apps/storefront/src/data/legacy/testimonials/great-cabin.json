@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1415",
+  "original_slug": "/testimonial/great-cabin",
+  "content_body": "<p>Great cabin! Great view! Had a wonderful time!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Cabin",
+  "archive_slug": "great-cabin",
+  "archive_path": "/reviews/archive/great-cabin",
+  "source_ref": "node/1415",
+  "hmac_signature": "78cbfadc0b30b606ae054d2aced93d76fc1b0e707f5ccb2c4fecc8854548023f"
+}

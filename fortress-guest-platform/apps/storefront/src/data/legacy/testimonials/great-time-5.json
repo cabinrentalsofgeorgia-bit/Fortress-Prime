@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1457",
+  "original_slug": "/testimonial/great-time-5",
+  "content_body": "<p>Had a great time. Cabin was bigger than expected. Beautiful. Will be back.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time",
+  "archive_slug": "great-time-5",
+  "archive_path": "/reviews/archive/great-time-5",
+  "source_ref": "node/1457",
+  "hmac_signature": "def51d4cb6317294d8e67a0cc0ea43cc8fa605b215ce29adb7b482338d5c2f7a"
+}

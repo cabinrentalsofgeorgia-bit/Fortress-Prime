@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1657",
+  "original_slug": "/testimonial/great-stay-0",
+  "content_body": "<p>Great stay! Love this place&mdash;cozy, comfortable, clean. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Stay!",
+  "archive_slug": "great-stay-0",
+  "archive_path": "/reviews/archive/great-stay-0",
+  "source_ref": "node/1657",
+  "hmac_signature": "8bdf161e2304fae07c6d7fa13305be498db852c84e1e0e35f1d833df6957faec"
+}

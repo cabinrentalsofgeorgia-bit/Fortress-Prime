@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2247",
+  "original_slug": "/testimonial/made-wonderful-memories",
+  "content_body": "<p>Beautiful cabin! We made wonderful memories.&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Made Wonderful Memories",
+  "archive_slug": "made-wonderful-memories",
+  "archive_path": "/reviews/archive/made-wonderful-memories",
+  "source_ref": "node/2247",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "a368871066497459b5b61105d5e581a575c4998ea4f9d7a571979a8758aaa780"
+}

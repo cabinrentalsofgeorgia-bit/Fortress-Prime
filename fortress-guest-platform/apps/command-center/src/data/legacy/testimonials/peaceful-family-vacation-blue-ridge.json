@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "112",
+  "original_slug": "/testimonial/peaceful-family-vacation-blue-ridge",
+  "content_body": "<p>Probably the best cabin I&nbsp;have stayed in so far. Prices were a little&nbsp;steep but worth every penny. You truly get what you pay for. Also, I&#39;ll be coming back this summer.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Peaceful Family Vacation in Blue Ridge",
+  "archive_slug": "peaceful-family-vacation-blue-ridge",
+  "archive_path": "/reviews/archive/peaceful-family-vacation-blue-ridge",
+  "source_ref": "node/112",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "a168d510bad791043f277fb393f26262b0d071ab9098bc877212d045f42101fa"
+}

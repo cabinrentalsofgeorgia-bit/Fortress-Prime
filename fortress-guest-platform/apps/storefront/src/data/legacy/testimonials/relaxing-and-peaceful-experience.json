@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1412",
+  "original_slug": "/testimonial/relaxing-and-peaceful-experience",
+  "content_body": "<p>This was my second stay at the Sanctuary, and once again it did not disappoint! It was truly a relaxing and peaceful experience, and I can&#39;t wait to visit again.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Relaxing and Peaceful Experience",
+  "archive_slug": "relaxing-and-peaceful-experience",
+  "archive_path": "/reviews/archive/relaxing-and-peaceful-experience",
+  "source_ref": "node/1412",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "54cc07dad67e8cee8b3109baff02a17d8ce6822bd915b72290b61d92ad2d4d28"
+}

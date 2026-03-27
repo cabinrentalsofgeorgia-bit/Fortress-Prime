@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1428",
+  "original_slug": "/testimonial/great-time-2",
+  "content_body": "<p>The cabin was lovely, and the river is so relaxing. We really had a great time. It had basically everything you need, and it was very clean. Thanks so much!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time",
+  "archive_slug": "great-time-2",
+  "archive_path": "/reviews/archive/great-time-2",
+  "source_ref": "node/1428",
+  "hmac_signature": "8929a34234b0b28a0228452443fb388f89cfd921d6dcc5f09fa30c0764a56f85"
+}

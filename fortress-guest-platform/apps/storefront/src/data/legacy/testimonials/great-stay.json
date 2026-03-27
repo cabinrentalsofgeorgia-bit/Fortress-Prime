@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1465",
+  "original_slug": "/testimonial/great-stay",
+  "content_body": "<p>My husband and I had a great, relaxing stay. Loved sitting outside to take in the view. Having a screen upstairs allowed us to enjoy the evening outside. It was a great stay!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Stay",
+  "archive_slug": "great-stay",
+  "archive_path": "/reviews/archive/great-stay",
+  "source_ref": "node/1465",
+  "hmac_signature": "5c94f8651598e225b646dccc8f1185a922f181a80dfc9f900cd8c52a392bfc87"
+}

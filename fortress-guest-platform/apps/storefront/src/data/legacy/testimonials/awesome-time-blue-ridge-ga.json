@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "760",
+  "original_slug": "/testimonial/awesome-time-blue-ridge-ga",
+  "content_body": "<p>&nbsp;We had an awesome time. The cabin was amazing!!!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Time in Blue Ridge, GA",
+  "archive_slug": "awesome-time-blue-ridge-ga",
+  "archive_path": "/reviews/archive/awesome-time-blue-ridge-ga",
+  "source_ref": "node/760",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "e05222637eae52b0cd380c34bed4c850e3b0f64d6a4fee55d7ada296e6030f96"
+}

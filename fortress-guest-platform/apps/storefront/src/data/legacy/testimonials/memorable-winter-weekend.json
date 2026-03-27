@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1242",
+  "original_slug": "/testimonial/memorable-winter-weekend",
+  "content_body": "<p>Just wanted to chime in and tell you how impressed we were with Riverview Lodge this last weekend. It was a memorable winter weekend. Also, thanks again for helping us through the treachery of the iced road mountain adventure to reunite our crew! We&#39;ll definitely be looking to you guys again for our rental needs!</p>",
+  "category_tags": [
+    "Winter"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Memorable Winter Weekend",
+  "archive_slug": "memorable-winter-weekend",
+  "archive_path": "/reviews/archive/memorable-winter-weekend",
+  "source_ref": "node/1242",
+  "hmac_signature": "adaee5c8d75575f9b7a528cd63429b92253e8eba588113581aea4400f850de33"
+}

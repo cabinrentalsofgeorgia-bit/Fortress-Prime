@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2003",
+  "original_slug": "/testimonial/home-away-home",
+  "content_body": "<p>Wonderful home away from home for our family to get away, recharge, and reconnect. The river added&nbsp;to the overall ambiance! Thank you for providing this place to enjoy the mountain environment! ~The Escardo Family</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Home Away Home!",
+  "archive_slug": "home-away-home",
+  "archive_path": "/reviews/archive/home-away-home",
+  "source_ref": "node/2003",
+  "hmac_signature": "0f927a3db9d2f51653c58f0a87effa54aa9042ef7146fa639f1e0281043e5c06"
+}

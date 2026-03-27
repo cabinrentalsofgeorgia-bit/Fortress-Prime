@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2665",
+  "original_slug": "/testimonial/best-family-vacation-ever",
+  "content_body": "<p>The Rustic Elegance was truly amazing. The amenities, view and accommodations were spectacular. As our 10 year old said, &ldquo;best family vacation ever&rdquo;. We will surely be back!</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "\"Best Family Vacation Ever\"",
+  "archive_slug": "best-family-vacation-ever",
+  "archive_path": "/reviews/archive/best-family-vacation-ever",
+  "source_ref": "node/2665",
+  "hmac_signature": "35b6c143a22bab7795b1bcf139496e762a82fe0cf7b7a929d44d61fa9efd1d94"
+}

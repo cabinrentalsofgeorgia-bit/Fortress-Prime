@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1075",
+  "original_slug": "/testimonial/quiet-getaway",
+  "content_body": "<p>This cabin was very nice, and everything about it was beautiful. It had a great view and great scenery.&nbsp;<span style=\"line-height:1.538em\">I would recommend this to anyone just trying to get away for a little piece and quite.</span></p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Quiet Getaway",
+  "archive_slug": "quiet-getaway",
+  "archive_path": "/reviews/archive/quiet-getaway",
+  "source_ref": "node/1075",
+  "hmac_signature": "d97ddf07adcc45d383431619bff5ae3b912b5fe2fef17a98df367cba0aa9ce33"
+}

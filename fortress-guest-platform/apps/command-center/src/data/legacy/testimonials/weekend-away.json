@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3190",
+  "original_slug": "/testimonial/weekend-away",
+  "content_body": "<p>We loved the cabin having both access to the creek and the pond. We really enjoyed spending time with our Dog Houdini and having quality family time!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "A Weekend Away",
+  "archive_slug": "weekend-away",
+  "archive_path": "/reviews/archive/weekend-away",
+  "source_ref": "node/3190",
+  "hmac_signature": "953237a668704988d2c2896c4b8d70331d864c901cc3304a0b01eaae73e34c55"
+}

@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "759",
+  "original_slug": "/testimonial/luxury-blue-ridge-cabin-recommended-to-all",
+  "content_body": "<p>&nbsp;We had a wonderful stay, except for the weather. The cabin is very nice and the view is beautiful. It was clean and well appointed. We had a great stay and would recommend it to anyone.&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Luxury Blue Ridge Cabin Recommended to All",
+  "archive_slug": "luxury-blue-ridge-cabin-recommended-to-all",
+  "archive_path": "/reviews/archive/luxury-blue-ridge-cabin-recommended-to-all",
+  "source_ref": "node/759",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "bc6e699bdb540c038cab91732c33d29c995cb8cb89a1a8f63b49754c74f83512"
+}

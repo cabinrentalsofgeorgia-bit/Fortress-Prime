@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "44",
+  "original_slug": "/testimonial/honeymoon-blue-ridge-ga",
+  "content_body": "<p>The cabin is amazing. It was a great stop during&nbsp;our honeymoon. Looking forward to family vacations in the future.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Honeymoon in Blue Ridge, GA",
+  "archive_slug": "honeymoon-blue-ridge-ga",
+  "archive_path": "/reviews/archive/honeymoon-blue-ridge-ga",
+  "source_ref": "node/44",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "0b5d917da86aee91573c50e11e4a6337d097cdc28f13137a75d7f4a4c9e9613d"
+}

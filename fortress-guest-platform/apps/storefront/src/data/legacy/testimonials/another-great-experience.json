@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1639",
+  "original_slug": "/testimonial/another-great-experience",
+  "content_body": "<p>Once again another great experience! This was our fourth visit, and we will come back again and again. The cabin is always beautiful, and the mountain views are always breathtaking!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Another Great Experience!",
+  "archive_slug": "another-great-experience",
+  "archive_path": "/reviews/archive/another-great-experience",
+  "source_ref": "node/1639",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "97ed80a348f9ca0577fcf11d99d15df489d03d95213be3833224be294fb4737c"
+}

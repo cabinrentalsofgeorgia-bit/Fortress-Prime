@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2829",
+  "original_slug": "/testimonial/high-end-blue-ridge-cabin",
+  "content_body": "<p>Our stay was great! We enjoyed all the high-end furnishings and the outdoor living spaces. We will be back!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "High-End Blue Ridge Cabin",
+  "archive_slug": "high-end-blue-ridge-cabin",
+  "archive_path": "/reviews/archive/high-end-blue-ridge-cabin",
+  "source_ref": "node/2829",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "ba24809dbdc7b88cc234429cca2f0a275d348dd8bee869e542e5dfbcace0165f"
+}

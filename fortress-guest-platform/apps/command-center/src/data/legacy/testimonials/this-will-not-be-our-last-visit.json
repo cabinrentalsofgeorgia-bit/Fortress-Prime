@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3016",
+  "original_slug": "/testimonial/this-will-not-be-our-last-visit",
+  "content_body": "<p>This was our first time staying and will not be our last! We had a perfect weekend getaway!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "This Will Not Be Our Last Visit!",
+  "archive_slug": "this-will-not-be-our-last-visit",
+  "archive_path": "/reviews/archive/this-will-not-be-our-last-visit",
+  "source_ref": "node/3016",
+  "hmac_signature": "f4b092a967090c38bec1de669dd0eb63bd13c4d011e3f49bc31afaaaf321cd13"
+}

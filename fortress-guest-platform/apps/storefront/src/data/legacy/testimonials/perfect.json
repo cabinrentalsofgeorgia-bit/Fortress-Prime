@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1229",
+  "original_slug": "/testimonial/perfect",
+  "content_body": "<p>Everything is perfect!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Perfect!",
+  "archive_slug": "perfect",
+  "archive_path": "/reviews/archive/perfect",
+  "source_ref": "node/1229",
+  "hmac_signature": "3ca45c95f4037db17eef5d79deb4fa92dcded2bd6374364644321498c6dad57e"
+}

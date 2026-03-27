@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1298",
+  "original_slug": "/testimonial/wow",
+  "content_body": "<p>Wow! What a beautiful cabin with outstanding views! We really enjoyed our time at Arcadia down to the beautiful furnishings. We also enjoyed our time in Blue Ridge. (Lake Blue Ridge is gorgeous!) We looked forward to some down time back a the cabin. Thanks again!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wow!",
+  "archive_slug": "wow",
+  "archive_path": "/reviews/archive/wow",
+  "source_ref": "node/1298",
+  "hmac_signature": "70ec06af4882e3f30d34fc5e72dce0a553ff89fcbe51d6c8ef26493b079a4010"
+}

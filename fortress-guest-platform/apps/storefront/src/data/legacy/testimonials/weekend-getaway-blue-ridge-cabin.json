@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2721",
+  "original_slug": "/testimonial/weekend-getaway-blue-ridge-cabin",
+  "content_body": "<p>We had a nice weekend in Blue Ridge at the cabin. There was plenty of space for us to spread out in the house. Plenty of cookware. It was quite enjoyable.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Weekend Getaway in a Blue Ridge Cabin",
+  "archive_slug": "weekend-getaway-blue-ridge-cabin",
+  "archive_path": "/reviews/archive/weekend-getaway-blue-ridge-cabin",
+  "source_ref": "node/2721",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "a5d3acfd6fedad6bbfa1a128f14405546a2a4951a18cd93c316db07c42f7fbd5"
+}

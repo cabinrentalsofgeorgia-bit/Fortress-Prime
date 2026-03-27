@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "563",
+  "original_slug": "/testimonial/wonderful-time-atlanta-and-blue-ridge",
+  "content_body": "<p>Our party of eleven had the most wonderful time tubing, hiking, visit to the Aquarium, Coca-Cola, Stone Mountain - it was all&nbsp;great! For the first&nbsp;time no alarms, no wake-up calls -&nbsp;just nice. We saw a baby black bear, and 3 turkeys. Great, great, great!!</p>",
+  "category_tags": [
+    "Atlanta",
+    "Blue Ridge",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Time in Atlanta and Blue Ridge",
+  "archive_slug": "wonderful-time-atlanta-and-blue-ridge",
+  "archive_path": "/reviews/archive/wonderful-time-atlanta-and-blue-ridge",
+  "source_ref": "node/563",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "44bb34db47fe6a61c4da6bb5d4b612c60f5f36c291aeabe8f02515804d299bfa"
+}

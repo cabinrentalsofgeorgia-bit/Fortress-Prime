@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2846",
+  "original_slug": "/testimonial/reconnecting-blue-ridge",
+  "content_body": "<p>Thank you so much! It was great reconnecting from Colorado to Alabama to Florida with our extended family!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Reconnecting in Blue Ridge",
+  "archive_slug": "reconnecting-blue-ridge",
+  "archive_path": "/reviews/archive/reconnecting-blue-ridge",
+  "source_ref": "node/2846",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "51a2bd76c0d8a5d235d10ed16a7f74f24f509196256df4361fcbe40564c8a06f"
+}

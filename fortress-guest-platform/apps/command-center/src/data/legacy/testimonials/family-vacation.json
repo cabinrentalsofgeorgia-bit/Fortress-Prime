@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "871",
+  "original_slug": "/testimonial/family-vacation",
+  "content_body": "<p>I loved this cabin. It was very nice.&nbsp;My family and I will be making this an every year event!</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Family Vacation",
+  "archive_slug": "family-vacation",
+  "archive_path": "/reviews/archive/family-vacation",
+  "source_ref": "node/871",
+  "hmac_signature": "71cf10efb7691b29baa3475e30d90f7440582f19a8b744bff31e72847ede5684"
+}

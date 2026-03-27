@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1394",
+  "original_slug": "/testimonial/awesome-0",
+  "content_body": "<p>Awesome view and cabin!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome!",
+  "archive_slug": "awesome-0",
+  "archive_path": "/reviews/archive/awesome-0",
+  "source_ref": "node/1394",
+  "hmac_signature": "18b58e6753a7a483506f878ef9d44f583b476a74c8fb2308ff65206a193a22f0"
+}

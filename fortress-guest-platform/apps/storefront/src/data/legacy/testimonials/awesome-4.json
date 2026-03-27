@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1959",
+  "original_slug": "/testimonial/awesome-4",
+  "content_body": "<p>Awesome! We truly enjoyed our visit. We will return.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome!",
+  "archive_slug": "awesome-4",
+  "archive_path": "/reviews/archive/awesome-4",
+  "source_ref": "node/1959",
+  "hmac_signature": "5f5c0e4b3c6822802c08dfc77edb305990f6597a5816d2bd28184440e727710a"
+}

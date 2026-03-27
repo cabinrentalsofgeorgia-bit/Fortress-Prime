@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1824",
+  "original_slug": "/testimonial/fantastic-property",
+  "content_body": "<p>Thanks for a great weekend! Fantastic property and beautiful view!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fantastic Property!",
+  "archive_slug": "fantastic-property",
+  "archive_path": "/reviews/archive/fantastic-property",
+  "source_ref": "node/1824",
+  "hmac_signature": "81dcde276b9f839d92d833f3c36e553f33cc8416b9ccdebdc40c11fdd45332cf"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1903",
+  "original_slug": "/testimonial/great-stay-4",
+  "content_body": "<p>We had a great stay! We fished, we swam and toured the parks and national forests! The kids really enjoyed the game room. If we visit this area again, we will definitely rent this cabin again! - The Pierces&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Stay",
+  "archive_slug": "great-stay-4",
+  "archive_path": "/reviews/archive/great-stay-4",
+  "source_ref": "node/1903",
+  "hmac_signature": "db0407b9be986c5cd076b1c4deb8785919644d1a5d77561f85e4f1d133a221b1"
+}

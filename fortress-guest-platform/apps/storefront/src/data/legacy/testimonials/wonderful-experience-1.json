@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2546",
+  "original_slug": "/testimonial/wonderful-experience-1",
+  "content_body": "<p>Cabin Rentals of GA made our weekend trip to Blue Ridge so enjoyable. From the beginning of our cabin search to check out it was a wonderful experience. Will certainly use them for our next get away. I was so impressed with their prompt communication!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Experience",
+  "archive_slug": "wonderful-experience-1",
+  "archive_path": "/reviews/archive/wonderful-experience-1",
+  "source_ref": "node/2546",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "96e27c33bc24e0e8cb2812168933f065cb057414b8772417374233a532ef9a9c"
+}

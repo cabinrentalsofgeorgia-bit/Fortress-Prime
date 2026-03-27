@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2810",
+  "original_slug": "/testimonial/lovely-home-memories-made",
+  "content_body": "<p>What a lovely home with gorgeous views. We especially enjoyed sitting outside by the fire pit and soaking in the hot tub after a long hike. A fun time with lots of memories - thank you!</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Lovely Home, Memories Made!",
+  "archive_slug": "lovely-home-memories-made",
+  "archive_path": "/reviews/archive/lovely-home-memories-made",
+  "source_ref": "node/2810",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "fbced327cb81395c00de5623464748619bd09276150440b98063a338122bff3b"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "905",
+  "original_slug": "/testimonial/more-than-expected",
+  "content_body": "<p>This cabin is great! I am already planning my next trip to the mountains. I look forward to staying at the other properties. This was more than expected.</p><p><br /></p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "More Than Expected!",
+  "archive_slug": "more-than-expected",
+  "archive_path": "/reviews/archive/more-than-expected",
+  "source_ref": "node/905",
+  "hmac_signature": "6faa57dd02ce794574267504fbe3309eb67d92aa0ed387db900b6b1797e29718"
+}

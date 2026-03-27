@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "192",
+  "original_slug": "/testimonial/family-christmas-the-north-georgia-blue-ridge-mountains",
+  "content_body": "<p>Celtic Clouds provided the ideal setting for our family Christmas. The view is gorgeous, and the house is rustic, warm, and friendly. Our time here generated memories that will last a lifetime. Thank you!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge",
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Family Christmas in the North Georgia Blue Ridge Mountains",
+  "archive_slug": "family-christmas-the-north-georgia-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/family-christmas-the-north-georgia-blue-ridge-mountains",
+  "source_ref": "node/192",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "39b94d93cc42823fe3d450577eca080bc10c1a99ca63f3fb0ba5489964a04fc0"
+}

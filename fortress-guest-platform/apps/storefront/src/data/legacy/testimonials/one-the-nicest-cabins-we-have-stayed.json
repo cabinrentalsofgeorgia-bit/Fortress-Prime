@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1760",
+  "original_slug": "/testimonial/one-the-nicest-cabins-we-have-stayed",
+  "content_body": "<p>This weekend was one of the most relaxing weekends we have had. Such beautiful views&mdash;one of the nicest cabins we have ever stayed in. We will be back in the fall.</p>",
+  "category_tags": [
+    "Blue Ridge Cabins"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "One of the Nicest Cabins We Have Stayed In",
+  "archive_slug": "one-the-nicest-cabins-we-have-stayed",
+  "archive_path": "/reviews/archive/one-the-nicest-cabins-we-have-stayed",
+  "source_ref": "node/1760",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "d7ed47593def8cd5b1d924310fe905fc5da34d4ea2e3b8bb5d13159b8efe3e49"
+}

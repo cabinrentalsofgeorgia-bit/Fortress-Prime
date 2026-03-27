@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1118",
+  "original_slug": "/testimonial/amazing-home",
+  "content_body": "<p>Urban Retreat was an amazing home and great location being in the midtown/downtown area. I would absolutely stay once again or recommend this home.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Home",
+  "archive_slug": "amazing-home",
+  "archive_path": "/reviews/archive/amazing-home",
+  "source_ref": "node/1118",
+  "hmac_signature": "1bb68c22d396fc33a6ab751c187d52fc3ad19cfd099fd7bcd6325bfc9b209214"
+}

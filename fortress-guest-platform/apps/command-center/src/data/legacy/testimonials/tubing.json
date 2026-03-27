@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1449",
+  "original_slug": "/testimonial/tubing",
+  "content_body": "<p>My best moment was when we went tubing down the river.</p>",
+  "category_tags": [
+    "Tubing-Kayaking"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Tubing",
+  "archive_slug": "tubing",
+  "archive_path": "/reviews/archive/tubing",
+  "source_ref": "node/1449",
+  "hmac_signature": "82507a3dbac724b5cb2477251d7a8f3664f2142b07f9c21abbfc52aaae31840e"
+}

@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2129",
+  "original_slug": "/testimonial/our-new-family-tradition",
+  "content_body": "<p>This place delivered! It was exactly what was expected and more. Very quiet and beautiful. We will be returning year after year as a new family tradition.</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Our New Family Tradition!",
+  "archive_slug": "our-new-family-tradition",
+  "archive_path": "/reviews/archive/our-new-family-tradition",
+  "source_ref": "node/2129",
+  "hmac_signature": "80ea42904b72f831acca08b2898e614d93be2865aa84367de49b9b06c5dd67a1"
+}

@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1431",
+  "original_slug": "/testimonial/spectacular-experience",
+  "content_body": "<p>The cabin was amazing. Very spectacular experience. We loved all the amenities. Would definitely come again. Thank you so much!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Spectacular Experience",
+  "archive_slug": "spectacular-experience",
+  "archive_path": "/reviews/archive/spectacular-experience",
+  "source_ref": "node/1431",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "fd59ca073dc324589caed9af6c3128ac32fce873ba12db2a96776b3c42a8a92c"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2218",
+  "original_slug": "/testimonial/lovely-0",
+  "content_body": "<p>The cabin is lovely and everything was in place. Thank you for having us, and we will be back in the summer! This was the best cabin we have ever rented.&nbsp;~ The Schmitts</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Lovely!",
+  "archive_slug": "lovely-0",
+  "archive_path": "/reviews/archive/lovely-0",
+  "source_ref": "node/2218",
+  "hmac_signature": "29179c06268bfc9f9878530535c3d55483df29a84a4c496422cbc94bc1b09222"
+}

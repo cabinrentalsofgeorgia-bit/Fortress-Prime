@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2378",
+  "original_slug": "/testimonial/amazing-sunsets",
+  "content_body": "<p>This was a beautiful home for our retreat. The lake view, especially during sunset, is amazing. Hope to be back!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Sunsets!",
+  "archive_slug": "amazing-sunsets",
+  "archive_path": "/reviews/archive/amazing-sunsets",
+  "source_ref": "node/2378",
+  "hmac_signature": "27d535942d56c299322fdf3753e8a639f2cfc7ccb4e8d56a8a2e6eb4594faae4"
+}

@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2722",
+  "original_slug": "/testimonial/blue-ridge-getaway",
+  "content_body": "<p>The cabin was clean and very conveinent to Downtown Blue Ridge and local restuarants. It&#39;s always nice when everything is on the same level other than the few steps on porch. We are both 50+ and it was a great place for me and my sister to catch up and enjoy Blue Ridge and other quaint towns and shops. We will definately be back to this cabin again!<br />\r\n\t&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Blue Ridge Getaway",
+  "archive_slug": "blue-ridge-getaway",
+  "archive_path": "/reviews/archive/blue-ridge-getaway",
+  "source_ref": "node/2722",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "7f1ce27d6b50935348104875926bceec8a17049a033372438489bdac6493c980"
+}

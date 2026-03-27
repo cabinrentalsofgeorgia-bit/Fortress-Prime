@@ -1,0 +1,18 @@
+{
+  "legacy_node_id": "915",
+  "original_slug": "/testimonial/so-many-fun-activities",
+  "content_body": "<p>This was a beautiful vacation with a fantastic view, beautiful home, and lots of fun activities! Thanks so much for this great place.</p>",
+  "category_tags": [
+    "Family Fun",
+    "Seasonal Activities",
+    "Tubing-Kayaking"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "So Many Fun Activities!",
+  "archive_slug": "so-many-fun-activities",
+  "archive_path": "/reviews/archive/so-many-fun-activities",
+  "source_ref": "node/915",
+  "hmac_signature": "75b41aaab527fe95bf0befa60ff9dfd61eb77b4db7ee0e8e58d6057d50edde03"
+}

@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1167",
+  "original_slug": "/testimonial/wonderful-cabin-with-beautiful-view-lake-and-mountains",
+  "content_body": "<p>Majestic Lake is a wonderful cabin with beautiful long range mountain and lake views. The cabin was very clean and well kept. It has a well-equipped kitchen and cozy den. The swing and porch rockers are perfect for resting and relaxing. The owner/manager was quick to respond to questions. It was a lovely time!</p>",
+  "category_tags": [
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Cabin with Beautiful View of Lake and Mountains",
+  "archive_slug": "wonderful-cabin-with-beautiful-view-lake-and-mountains",
+  "archive_path": "/reviews/archive/wonderful-cabin-with-beautiful-view-lake-and-mountains",
+  "source_ref": "node/1167",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "51fa1d8ab8fef8d61ed8b10215dab13ea53ec55726258b33d888bcd9207b79c8"
+}

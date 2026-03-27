@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1404",
+  "original_slug": "/testimonial/great-home",
+  "content_body": "<p>This is a great home to come and relax. Each area of the home is decorated and comfortable. Games in room downstairs. My group had a wonderful time even though it was a short stay. You and the family will love it.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Home",
+  "archive_slug": "great-home",
+  "archive_path": "/reviews/archive/great-home",
+  "source_ref": "node/1404",
+  "hmac_signature": "ee66382f1f42cba31a790f7fdd82e7f5b94319b8acb1fdfa11ecfb9aee736b88"
+}

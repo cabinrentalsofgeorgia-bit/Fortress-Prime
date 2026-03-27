@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "949",
+  "original_slug": "/testimonial/fun-memories-the-blue-ridge-mountains",
+  "content_body": "<p>Great time in this specious beautiful home. While in Blue Ridge for &quot; Tri The Mountain&quot; triathlon, fun memories were made together.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Memories",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fun Memories In The Blue Ridge Mountains",
+  "archive_slug": "fun-memories-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/fun-memories-the-blue-ridge-mountains",
+  "source_ref": "node/949",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "1d99ff841abf1adcba3480fe130c69c1f331661c3e254e52db33664495cb5f46"
+}

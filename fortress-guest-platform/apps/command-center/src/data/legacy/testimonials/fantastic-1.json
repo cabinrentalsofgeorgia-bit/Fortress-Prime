@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1541",
+  "original_slug": "/testimonial/fantastic-1",
+  "content_body": "<p>Arcadia was fantastic! Will consider again for our next trip to the mountains. As clean a cabin as I have ever stayed. Wonderful furnishings and decor.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fantastic!",
+  "archive_slug": "fantastic-1",
+  "archive_path": "/reviews/archive/fantastic-1",
+  "source_ref": "node/1541",
+  "hmac_signature": "87d69baae23590386202b764bfa32193f0081433d3e7341c17e6f78fe54ba30d"
+}

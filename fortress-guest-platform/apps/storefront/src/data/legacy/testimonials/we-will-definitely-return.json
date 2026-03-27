@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2204",
+  "original_slug": "/testimonial/we-will-definitely-return",
+  "content_body": "<p>Our stay here was amazing!!! The cabin is absolutely beautiful! We will defintely be returning here soon!! Back to Atlanta we go... :(</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "We Will Definitely Return!",
+  "archive_slug": "we-will-definitely-return",
+  "archive_path": "/reviews/archive/we-will-definitely-return",
+  "source_ref": "node/2204",
+  "hmac_signature": "ec26316d8bc8d176396da4b4635a887f81c24105c8616f0767abfdaa8b298162"
+}

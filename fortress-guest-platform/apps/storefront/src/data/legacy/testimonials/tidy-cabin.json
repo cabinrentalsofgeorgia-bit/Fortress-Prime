@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1104",
+  "original_slug": "/testimonial/tidy-cabin",
+  "content_body": "<p>Everything was great. The cabin was clean and neat.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Tidy Cabin",
+  "archive_slug": "tidy-cabin",
+  "archive_path": "/reviews/archive/tidy-cabin",
+  "source_ref": "node/1104",
+  "hmac_signature": "e18cb5c1dbbd1de44af7752a20e6e454587291f289ff423eb0da21c2788418a6"
+}

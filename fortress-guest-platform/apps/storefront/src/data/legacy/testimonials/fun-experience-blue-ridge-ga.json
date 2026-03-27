@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "100",
+  "original_slug": "/testimonial/fun-experience-blue-ridge-ga",
+  "content_body": "<p>Thank you for a great weekend getaway! We actually had a chance to relax! Our boys loved the hot tub and walking in the creek with their mud boots! The Activities book is very handy! The Swinging Bridge was awesome! Although we were skeptical about the 4-mile gravel road, it made for a great adventure. We are already planning a summer trip to do some swimming and tubing. We will be back!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Experience",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fun Experience in Blue Ridge, GA",
+  "archive_slug": "fun-experience-blue-ridge-ga",
+  "archive_path": "/reviews/archive/fun-experience-blue-ridge-ga",
+  "source_ref": "node/100",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "f0a5772f2c18116013239477e6664ac160541655166a2db0635a8aed626ca923"
+}

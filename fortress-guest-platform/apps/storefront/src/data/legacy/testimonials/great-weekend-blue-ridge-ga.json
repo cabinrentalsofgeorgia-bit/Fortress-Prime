@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "731",
+  "original_slug": "/testimonial/great-weekend-blue-ridge-ga",
+  "content_body": "<p>&nbsp;Thanks for a great cabin and weekend! We all had a blast!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Weekend in Blue Ridge, GA",
+  "archive_slug": "great-weekend-blue-ridge-ga",
+  "archive_path": "/reviews/archive/great-weekend-blue-ridge-ga",
+  "source_ref": "node/731",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "729145c502a37d35c2b79bce0f51c027be516debecc5e63dcdee79e9e464b5ae"
+}

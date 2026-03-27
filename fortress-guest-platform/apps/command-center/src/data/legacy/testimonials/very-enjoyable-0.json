@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2377",
+  "original_slug": "/testimonial/very-enjoyable-0",
+  "content_body": "<p>My family and I very much enjoyed our stay. We loved the view from the back porch as well as&nbsp;the cozy furniture. Thank you!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Enjoyable",
+  "archive_slug": "very-enjoyable-0",
+  "archive_path": "/reviews/archive/very-enjoyable-0",
+  "source_ref": "node/2377",
+  "hmac_signature": "8a36a9ba63536b5102e72b3d52d88fc49c8f3eef199c6ccb4a6a8692c1604299"
+}

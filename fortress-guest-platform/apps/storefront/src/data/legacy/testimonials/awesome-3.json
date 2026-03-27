@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1811",
+  "original_slug": "/testimonial/awesome-3",
+  "content_body": "<p>AWESOME time with family. It was everything we wished it&#39;d be. Loved our home away from home!!!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "AWESOME",
+  "archive_slug": "awesome-3",
+  "archive_path": "/reviews/archive/awesome-3",
+  "source_ref": "node/1811",
+  "hmac_signature": "e7fc9e9e4ebf0b8a04b1a8e5dfeb5c9e3000272f4c6dd0ae0c9578392dc90c49"
+}

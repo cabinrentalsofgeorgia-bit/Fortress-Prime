@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1482",
+  "original_slug": "/testimonial/very-relaxing",
+  "content_body": "<p>Loved our stay at Blue Horizon Lodge. Very relaxing!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Relaxing!",
+  "archive_slug": "very-relaxing",
+  "archive_path": "/reviews/archive/very-relaxing",
+  "source_ref": "node/1482",
+  "hmac_signature": "7dedd25c562881c5f7f6f604fd62c169591dc0f6fbc7311ac7cea51e56b7c054"
+}

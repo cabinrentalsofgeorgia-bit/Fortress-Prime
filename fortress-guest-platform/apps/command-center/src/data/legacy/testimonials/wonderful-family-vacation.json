@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2831",
+  "original_slug": "/testimonial/wonderful-family-vacation",
+  "content_body": "<p>Our family had a wonderful vacation. We went to Consolidated Gold Mines in Dahlonega and took a tour of the cave &amp; mined for gold and gemstones. Then we rode the Blue Ridge Scenic Railway. We had a campfire, roasted s&#39;mores, and enjoyed family time together. We hiked Fall Branch Falls and saw its beauty. We enjoyed our time in the mountains and staying in this cabin!</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "A Wonderful Family Vacation",
+  "archive_slug": "wonderful-family-vacation",
+  "archive_path": "/reviews/archive/wonderful-family-vacation",
+  "source_ref": "node/2831",
+  "hmac_signature": "c5dd806f487b931c8aa5ad917ce1ac96a6927747cca1e1fa2a58e993da37487c"
+}

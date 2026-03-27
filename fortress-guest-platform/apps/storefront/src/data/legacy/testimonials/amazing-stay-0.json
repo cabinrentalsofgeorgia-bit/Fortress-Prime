@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1450",
+  "original_slug": "/testimonial/amazing-stay-0",
+  "content_body": "<p>We had a amazing stay. Coffee by the creek each morning is the proper way to start your day. The cabin was beautiful &amp; cozy. Very peaceful &amp; quiet as well. Smores by the fire each night was such a treat. Looking forward to our next stay here!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Stay",
+  "archive_slug": "amazing-stay-0",
+  "archive_path": "/reviews/archive/amazing-stay-0",
+  "source_ref": "node/1450",
+  "hmac_signature": "e719abb4813f925bdc520ae266bd7a929babe107356b818ca7fe6023bcc8c056"
+}

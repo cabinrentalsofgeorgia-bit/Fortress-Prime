@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2035",
+  "original_slug": "/testimonial/awesome-experience",
+  "content_body": "<p>We visited Blue Ridge to go wine tasting at the different wineries in the area. The cabin Aska Adventure Outpost that we stayed in was awesome! The scenery and peaceful atmosphere only added to the awesome experience.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Experience",
+  "archive_slug": "awesome-experience",
+  "archive_path": "/reviews/archive/awesome-experience",
+  "source_ref": "node/2035",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "e5f405460c88893d6dcc5c6035efdd09979c7af292cbfb375c50f4fcb78656ba"
+}

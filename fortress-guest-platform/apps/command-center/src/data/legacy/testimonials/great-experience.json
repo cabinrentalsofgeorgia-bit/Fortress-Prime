@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2467",
+  "original_slug": "/testimonial/great-experience",
+  "content_body": "<p>We have traveled the world, but sometime you have to treasure your own state which is Georgia. :) This was the first time we rented a cabin and both the area and cabin gave us a great experience. I had so much fun and I will be back! Everything was so nice, we loved the place!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Experience!",
+  "archive_slug": "great-experience",
+  "archive_path": "/reviews/archive/great-experience",
+  "source_ref": "node/2467",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "270e13c2dae6d505dc232a961619fbdbad63cfe1dd43edcb05ee99e1fbc2f235"
+}

@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "2373",
+  "original_slug": "/testimonial/our-second-stay-outlaw-ridge",
+  "content_body": "<p>This is our second time at this cabin and both times have been fabulous. We will be back again! ~ West Palm Crew</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Our Second Stay at Outlaw Ridge",
+  "archive_slug": "our-second-stay-outlaw-ridge",
+  "archive_path": "/reviews/archive/our-second-stay-outlaw-ridge",
+  "source_ref": "node/2373",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "45d6b6d557fc123870ae1c1b5f5994f2a701d132720469c1698e7ac32622ce8a"
+}

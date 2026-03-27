@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "805",
+  "original_slug": "/testimonial/great-experience-blue-ridge-georgia",
+  "content_body": "<p>Me &amp; my wife had a great time!!!&nbsp; We loved it &amp; will be back soon. Thanks</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Experience",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Experience In Blue Ridge, Georgia",
+  "archive_slug": "great-experience-blue-ridge-georgia",
+  "archive_path": "/reviews/archive/great-experience-blue-ridge-georgia",
+  "source_ref": "node/805",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "d6a3a864ce5349464920b95ebe136261ed07e147e4625575cd0f7a6dfabd99a8"
+}

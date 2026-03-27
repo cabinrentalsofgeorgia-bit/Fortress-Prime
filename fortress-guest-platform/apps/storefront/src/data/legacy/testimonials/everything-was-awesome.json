@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2388",
+  "original_slug": "/testimonial/everything-was-awesome",
+  "content_body": "<p>Thank you so much for allowing us to stay in your fabulous moutain home. The views, the house, everything was just awesome! We thoroughly enjoyed our visit!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Everything Was Awesome!",
+  "archive_slug": "everything-was-awesome",
+  "archive_path": "/reviews/archive/everything-was-awesome",
+  "source_ref": "node/2388",
+  "hmac_signature": "04f26f36238591b0374d211a3975066ebc054c170f4096b51d9af515e4f43696"
+}

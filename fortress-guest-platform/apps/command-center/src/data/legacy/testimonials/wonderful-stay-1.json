@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1623",
+  "original_slug": "/testimonial/wonderful-stay-1",
+  "content_body": "<p>We had such a wonderful stay at Time Flies. The cabin was perfectly decorated, the bed was extremely comfortable, and the view of the river was beautiful and serene. We sat outside one evening by the fire and listened to music on the surround sound system in the house. Quite lovely. Thank you.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Stay",
+  "archive_slug": "wonderful-stay-1",
+  "archive_path": "/reviews/archive/wonderful-stay-1",
+  "source_ref": "node/1623",
+  "hmac_signature": "6d5c1fd7fc0e5aec7e741bbb1873c1f649ea9e09bf61f42455ad662f1614e184"
+}

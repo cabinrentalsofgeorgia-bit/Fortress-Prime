@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2802",
+  "original_slug": "/testimonial/fab-five-visit-1",
+  "content_body": "<p>From the foggy mountain view in the morning to the beautiful sunsets in the evening, this was the perfect place for a Fab Five retreat. Rooms and bathrooms for everyone - a perfectly stocked kitchen - everything was wonderful. Thank you so much!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Fab Five Visit #1!",
+  "archive_slug": "fab-five-visit-1",
+  "archive_path": "/reviews/archive/fab-five-visit-1",
+  "source_ref": "node/2802",
+  "hmac_signature": "3eb26e318a5c653e8ddfc12aa82d2f46bc1fe251a959efd4f960f0e261607437"
+}

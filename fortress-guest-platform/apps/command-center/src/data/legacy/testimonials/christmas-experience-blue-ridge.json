@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "767",
+  "original_slug": "/testimonial/christmas-experience-blue-ridge",
+  "content_body": "<p>&nbsp;We had a wonderful time spending it with family. We played games, went for walks, went horseback riding, and a few of us went and rode a tank that crushed cars!&nbsp;It was a great family vacation and Christmas together!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Experience",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Christmas Experience in Blue Ridge",
+  "archive_slug": "christmas-experience-blue-ridge",
+  "archive_path": "/reviews/archive/christmas-experience-blue-ridge",
+  "source_ref": "node/767",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "140665825cc1b88e864889b1256fd543d6d51524858e0a6cfbd36800e2d0dd54"
+}

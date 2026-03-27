@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2009",
+  "original_slug": "/testimonial/handcrafted-masterpiece",
+  "content_body": "<p>What a handcrafted masterpiece! No expense spared on this place.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Handcrafted Masterpiece!",
+  "archive_slug": "handcrafted-masterpiece",
+  "archive_path": "/reviews/archive/handcrafted-masterpiece",
+  "source_ref": "node/2009",
+  "hmac_signature": "8088cd9471b0b2d315ea075e4b47a0805d7dd86e8c8b8445d539eadc0428930e"
+}

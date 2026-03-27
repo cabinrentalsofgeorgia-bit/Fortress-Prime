@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1299",
+  "original_slug": "/testimonial/great-holiday",
+  "content_body": "<p>Loved the views, decorations, etc. Perfect weather&mdash;great holiday!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Holiday",
+  "archive_slug": "great-holiday",
+  "archive_path": "/reviews/archive/great-holiday",
+  "source_ref": "node/1299",
+  "hmac_signature": "edbefab10282ad8738663bac24f76355dced0737caccad3745523089fe64572c"
+}

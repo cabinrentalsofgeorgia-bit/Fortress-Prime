@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1411",
+  "original_slug": "/testimonial/wonderful-house",
+  "content_body": "<p>What a wonderful house! We loved the layout and especially the deck. It is located close to the river, yet very secluded.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful House!",
+  "archive_slug": "wonderful-house",
+  "archive_path": "/reviews/archive/wonderful-house",
+  "source_ref": "node/1411",
+  "hmac_signature": "025d79a4fbf3a4d4052d575a982be7e426e29ffae6278f8c338b926dfce3f40d"
+}

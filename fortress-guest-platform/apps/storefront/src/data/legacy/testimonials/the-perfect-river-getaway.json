@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2059",
+  "original_slug": "/testimonial/the-perfect-river-getaway",
+  "content_body": "<p>This was the perfect cabin for a perfect weekend getaway on the river. Thank you for all the comforts and the view!&nbsp;</p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The Perfect River Getaway!",
+  "archive_slug": "the-perfect-river-getaway",
+  "archive_path": "/reviews/archive/the-perfect-river-getaway",
+  "source_ref": "node/2059",
+  "hmac_signature": "72b7c1743b237cf8ccd8a340769a2862fe5b964afd1d026b56d04516e52cd538"
+}

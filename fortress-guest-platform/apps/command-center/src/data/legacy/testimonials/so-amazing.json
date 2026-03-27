@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2177",
+  "original_slug": "/testimonial/so-amazing",
+  "content_body": "<p>This cabin is amazing! My family spent the weekend here to relax and it was so sweet and cute! The view is gorgeous and my family through the waterfall shower was so cool! Thank you so much! Love, the Mixon Family</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "So amazing!",
+  "archive_slug": "so-amazing",
+  "archive_path": "/reviews/archive/so-amazing",
+  "source_ref": "node/2177",
+  "hmac_signature": "e8b45072dd86e06c4670b48952331e6cf2c958102139d197a6afb6c8ba3bf8a4"
+}

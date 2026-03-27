@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "79",
+  "original_slug": "/testimonial/wonderful-stay-sanctuary",
+  "content_body": "<p>Love, Love, Love this cabin. We really loved our stay. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Stay in Sanctuary",
+  "archive_slug": "wonderful-stay-sanctuary",
+  "archive_path": "/reviews/archive/wonderful-stay-sanctuary",
+  "source_ref": "node/79",
+  "related_property_slug": "sanctuary",
+  "related_property_path": "/cabins/sanctuary",
+  "related_property_title": "Sanctuary",
+  "hmac_signature": "95edc6a45277489d27e7e0f39be4ab2c65fccda0e9dff01ba84a9a056107397e"
+}

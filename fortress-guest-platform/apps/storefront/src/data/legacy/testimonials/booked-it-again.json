@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2582",
+  "original_slug": "/testimonial/booked-it-again",
+  "content_body": "<p>We loved our stay here so much a few months ago, that we booked it AGAIN for this MLK weekend! Our stay was just as wonderful, if not better as town was less crowded! We hope to come again soon!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Booked it AGAIN!",
+  "archive_slug": "booked-it-again",
+  "archive_path": "/reviews/archive/booked-it-again",
+  "source_ref": "node/2582",
+  "hmac_signature": "b15f7d41d9b65527e08da7a93b635db6717e964c4117b8a35df6ec47c614ba5f"
+}

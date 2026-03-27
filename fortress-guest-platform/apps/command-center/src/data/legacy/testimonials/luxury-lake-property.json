@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2612",
+  "original_slug": "/testimonial/luxury-lake-property",
+  "content_body": "<p>We had an amazing time especially because the host was like a personal concierge and offered a verbal tour of the area. He even allowed us to go fishing on one of his other properties. Super amazing and luxurious property. We will definitely be back!</p>",
+  "category_tags": [
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Luxury Lake Property",
+  "archive_slug": "luxury-lake-property",
+  "archive_path": "/reviews/archive/luxury-lake-property",
+  "source_ref": "node/2612",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "d823db69fa3bdc6371750a4a07e053900afa6f770df3a5bcd305cd45a9f61f2c"
+}

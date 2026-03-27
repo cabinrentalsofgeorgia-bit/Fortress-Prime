@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3147",
+  "original_slug": "/testimonial/incredible-experience",
+  "content_body": "<p>Some family and friends stayed at Creekside Green and it was amazing! The cabin itself was spacious and beautiful, but the outside, views, and overall area was incredible! We loved making fires, s&#39;mores, exploring the creek and so much more! While the prices were high, it was so worth it for what you get. We woke up to a group of deer in the front of our cabin. It was so surreal. Definitely would rent again! Thank you!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Incredible Experience!",
+  "archive_slug": "incredible-experience",
+  "archive_path": "/reviews/archive/incredible-experience",
+  "source_ref": "node/3147",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "7c714aeb3338be4d058460fe2a3cda647975e72ca7dd25b0a09acc5ed2d00b08"
+}

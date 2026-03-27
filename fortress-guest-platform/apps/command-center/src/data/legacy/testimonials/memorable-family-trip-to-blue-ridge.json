@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2723",
+  "original_slug": "/testimonial/memorable-family-trip-to-blue-ridge",
+  "content_body": "<p>Came up to Blue Ridge with the family and stayed in this beautiful cabin. The location and the cabin itself could not have been more perfect. Thank you for such a memorable family trip!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Memorable Family Trip to Blue Ridge",
+  "archive_slug": "memorable-family-trip-to-blue-ridge",
+  "archive_path": "/reviews/archive/memorable-family-trip-to-blue-ridge",
+  "source_ref": "node/2723",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "156de8d2b6a43c75f6c39b6ee61f305d77c83440f94bcb5f7d41d90108b21b78"
+}

@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2668",
+  "original_slug": "/testimonial/first-cabin-trip",
+  "content_body": "<p>Our first cabin trip, and by far the BEST! Amazing cabin. We are already planning the next trip.</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "First Cabin Trip",
+  "archive_slug": "first-cabin-trip",
+  "archive_path": "/reviews/archive/first-cabin-trip",
+  "source_ref": "node/2668",
+  "hmac_signature": "370665ab7941e686df2e4a4fc4d6222bad3a092bc44db6a35d3cb7e99ca82b6d"
+}

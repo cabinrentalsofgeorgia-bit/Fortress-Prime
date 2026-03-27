@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1098",
+  "original_slug": "/testimonial/we-loved-our-trip",
+  "content_body": "<p>We loved our trip to this cabin! The upper balcony was beautiful, and we had plenty of space.</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "We Loved Our Trip!",
+  "archive_slug": "we-loved-our-trip",
+  "archive_path": "/reviews/archive/we-loved-our-trip",
+  "source_ref": "node/1098",
+  "hmac_signature": "83fad1e744e411467910be6797e3c2f6fdb2833e624a5285da681a3ea3661bf9"
+}

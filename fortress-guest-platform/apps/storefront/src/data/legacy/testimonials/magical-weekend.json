@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3030",
+  "original_slug": "/testimonial/magical-weekend",
+  "content_body": "<p>Thank you for sharing your beautiful mountain getaway with us. What a magical weekend we had - couldn&#39;t have asked for a better way to spend a birthday! We will definitely be back!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "A Magical Weekend",
+  "archive_slug": "magical-weekend",
+  "archive_path": "/reviews/archive/magical-weekend",
+  "source_ref": "node/3030",
+  "hmac_signature": "a1a829b4cdc6b2b885a1c4cc0ae15dbf6acce217014af1291029cdc40068b325"
+}

@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2042",
+  "original_slug": "/testimonial/beautiful-memories-0",
+  "content_body": "<p>Our stay was great!!! Beautiful cabins. We came to celebrate two birthdays and now have memories we can share for the rest of our lives. - The Ellingtons &amp; The Bembrys&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Memories",
+  "archive_slug": "beautiful-memories-0",
+  "archive_path": "/reviews/archive/beautiful-memories-0",
+  "source_ref": "node/2042",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "5914d16b664ecb91c78d2cb883a67efff758e6a61f4f94f22e8e9450d46faf58"
+}

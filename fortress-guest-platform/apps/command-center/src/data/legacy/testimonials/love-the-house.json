@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1782",
+  "original_slug": "/testimonial/love-the-house",
+  "content_body": "<p>We love the house! The view is amazing!!! We really enjoyed staying at the cabin.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Love The House!",
+  "archive_slug": "love-the-house",
+  "archive_path": "/reviews/archive/love-the-house",
+  "source_ref": "node/1782",
+  "hmac_signature": "28659dcc481958e8f7e123bdaaf5b5faa905c8872742bed9799a44b6b1ab41df"
+}

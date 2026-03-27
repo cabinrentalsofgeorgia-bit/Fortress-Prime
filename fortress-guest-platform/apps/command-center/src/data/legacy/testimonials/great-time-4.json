@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1440",
+  "original_slug": "/testimonial/great-time-4",
+  "content_body": "<p>Absolutely loved the view and the spaciousness. Lots of room to spread out. Road graders came just in time! Had a great time at the beach and on the river. Something for everyone.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time",
+  "archive_slug": "great-time-4",
+  "archive_path": "/reviews/archive/great-time-4",
+  "source_ref": "node/1440",
+  "hmac_signature": "96566b26c666c72835a4a0b9dc5f7fbe66c404b3c2804dfbaade09e84956e2bb"
+}

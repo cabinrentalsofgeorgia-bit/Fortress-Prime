@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "71",
+  "original_slug": "/testimonial/relaxing-getaway-to-the-blue-ridge-mountains",
+  "content_body": "<p>&nbsp;Really enjoyed our visit. &nbsp;The cabin is beautiful and cozy. Will visit again!! Very relaxing trip!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Relaxing Getaway to the Blue Ridge Mountains",
+  "archive_slug": "relaxing-getaway-to-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/relaxing-getaway-to-the-blue-ridge-mountains",
+  "source_ref": "node/71",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "9c85262fe699d6a6f74a4c85944e400d6091df63d5b2b648ac093d5f7fd371bb"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1517",
+  "original_slug": "/testimonial/wow-0",
+  "content_body": "<p>Wow! This is a nice quiet cabin. We love the water, style, and&nbsp;peace at this place.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wow!",
+  "archive_slug": "wow-0",
+  "archive_path": "/reviews/archive/wow-0",
+  "source_ref": "node/1517",
+  "hmac_signature": "3e903004bc8bc1e4a1e4d4bea33c537227e6cac59779947d933c587f275e498e"
+}

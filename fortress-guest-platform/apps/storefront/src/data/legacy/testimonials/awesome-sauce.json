@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2148",
+  "original_slug": "/testimonial/awesome-sauce",
+  "content_body": "<p>&ldquo;AWESOMESAUCE!!! Thank you for allowing us to stay in your place. &nbsp;The vacay was definitely needed. The memories we made, we will always cherish. &nbsp;We love you all and may God Bless Us All!&quot;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "AWESOME-SAUCE!!!",
+  "archive_slug": "awesome-sauce",
+  "archive_path": "/reviews/archive/awesome-sauce",
+  "source_ref": "node/2148",
+  "hmac_signature": "9e9a4eb5506532b3838765ffd7403a20da836fd148d9ec7db18d02cad36a89b5"
+}

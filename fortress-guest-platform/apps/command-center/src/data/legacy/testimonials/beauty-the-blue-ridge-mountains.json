@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "45",
+  "original_slug": "/testimonial/beauty-the-blue-ridge-mountains",
+  "content_body": "<p>We had a blast and loved the cabin and&nbsp;Blue Ridge. Enjoyed the homey-ness of the town. Not touristy!!! We drove for miles taking in it&#39;s beauty.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beauty in the Blue Ridge Mountains",
+  "archive_slug": "beauty-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/beauty-the-blue-ridge-mountains",
+  "source_ref": "node/45",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "d00b246d8952effdd0a15467c91c66db1118d40705145997120daa31bc6f4251"
+}

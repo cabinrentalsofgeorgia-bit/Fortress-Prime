@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "842",
+  "original_slug": "/testimonial/amazing-weekend-experience-celtic-clouds",
+  "content_body": "<p>&nbsp;Our weekend stay was an amazing experience! It was joyful and memorable. This experience will be shared among our friends and family&nbsp;and we will be looking forward to returning in the near future. Thank you so much for having us!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "An Amazing Weekend Experience at Celtic Clouds",
+  "archive_slug": "amazing-weekend-experience-celtic-clouds",
+  "archive_path": "/reviews/archive/amazing-weekend-experience-celtic-clouds",
+  "source_ref": "node/842",
+  "related_property_slug": "celtic-clouds",
+  "related_property_path": "/cabins/celtic-clouds",
+  "related_property_title": "Celtic Clouds",
+  "hmac_signature": "51990ac2ca9bca6564509f168965bcf01696dbabe0aaddf3491c55c1c8ec832c"
+}

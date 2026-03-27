@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "64",
+  "original_slug": "/testimonial/awesome-family-vacation-blue-ridge",
+  "content_body": "<p>Tubing was awesome!! We got stuck on rocks, but it was very fun! We met a very enthusiastic dog at the tubing place, and he played catch with us. The cabin was wonderful!! It was great to wake up to the wonderful view and go to sleep to the sound of nature!! We loved walking down to the river picking blackberries along the way. Yum!!!!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Family Vacation in Blue Ridge",
+  "archive_slug": "awesome-family-vacation-blue-ridge",
+  "archive_path": "/reviews/archive/awesome-family-vacation-blue-ridge",
+  "source_ref": "node/64",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "01e2eca7f638a77f2e6272627c8b41ceb291d01070c3978d89b4b05e1abb998a"
+}

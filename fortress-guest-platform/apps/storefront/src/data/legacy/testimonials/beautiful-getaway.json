@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2008",
+  "original_slug": "/testimonial/beautiful-getaway",
+  "content_body": "<div><span style=\"font-size:13.008px\">Enjoyed a beautiful weekend in this beautiful cabin. Beautiful getaway from the everyday hustle and bustle.</span></div>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Getaway",
+  "archive_slug": "beautiful-getaway",
+  "archive_path": "/reviews/archive/beautiful-getaway",
+  "source_ref": "node/2008",
+  "hmac_signature": "c07c014a0c7908cb92de9108ca22dc36eb864d8af501ab79f789d69169d28d9c"
+}

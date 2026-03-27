@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2892",
+  "original_slug": "/testimonial/this-blue-ridge-cabin-the-perfect-location",
+  "content_body": "<p>Cabin is in a great location! Quiet neighborhood and close to everything. We had a great time!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Ellijay",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "This Blue Ridge Cabin Is In the Perfect Location!",
+  "archive_slug": "this-blue-ridge-cabin-the-perfect-location",
+  "archive_path": "/reviews/archive/this-blue-ridge-cabin-the-perfect-location",
+  "source_ref": "node/2892",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "99ec25aa62e13bee9f6527b18d35ea08b65d23b2ab39c9ee072355da899c8c50"
+}

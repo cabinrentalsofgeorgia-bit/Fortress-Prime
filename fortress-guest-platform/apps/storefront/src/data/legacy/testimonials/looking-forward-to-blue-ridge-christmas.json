@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2731",
+  "original_slug": "/testimonial/looking-forward-to-blue-ridge-christmas",
+  "content_body": "<p>Cabin was awesome! We already booked it again to spend Christmas in Blue Ridge ~</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Looking Forward to a Blue Ridge Christmas",
+  "archive_slug": "looking-forward-to-blue-ridge-christmas",
+  "archive_path": "/reviews/archive/looking-forward-to-blue-ridge-christmas",
+  "source_ref": "node/2731",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "8df28b950e5acc42a063051923ad0880c30701588a3ff84d8e55bd52a23d0664"
+}

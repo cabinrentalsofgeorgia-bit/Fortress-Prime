@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1157",
+  "original_slug": "/testimonial/wonderful-property",
+  "content_body": "<p>We were in Atlanta for our daughters wedding. The home was perfect for our needs. It is furnished beautifully, and we loved the area it is located in. We were able to walk to a variety of restaurants, as well as to several parks!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Property",
+  "archive_slug": "wonderful-property",
+  "archive_path": "/reviews/archive/wonderful-property",
+  "source_ref": "node/1157",
+  "hmac_signature": "7a6f72c346f2880c3bff1b51a376d8370e1781bb6406348fd15638164ae41699"
+}

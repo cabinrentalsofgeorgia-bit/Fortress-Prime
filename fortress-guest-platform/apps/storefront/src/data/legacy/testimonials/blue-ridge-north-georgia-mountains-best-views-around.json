@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "369",
+  "original_slug": "/testimonial/blue-ridge-north-georgia-mountains-best-views-around",
+  "content_body": "<p>Great family vacation spot ~ beautiful setting, good fishing ~ and the best views around ~ We&#39;ll be back!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge",
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Blue Ridge North Georgia Mountains ~ Best Views Around!",
+  "archive_slug": "blue-ridge-north-georgia-mountains-best-views-around",
+  "archive_path": "/reviews/archive/blue-ridge-north-georgia-mountains-best-views-around",
+  "source_ref": "node/369",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "05951ab53b266c1d42dc13a158500bed7ef95a185d18fafcc29426ca0a732188"
+}

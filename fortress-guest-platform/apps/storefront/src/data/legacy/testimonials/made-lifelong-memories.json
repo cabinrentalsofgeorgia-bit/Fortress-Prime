@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1187",
+  "original_slug": "/testimonial/made-lifelong-memories",
+  "content_body": "<p>Beautiful cabin in the Blue Ridge Mountains! We had a great time, made lifelong memories, and really enjoyed our visit. Thank you!</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Made Lifelong Memories",
+  "archive_slug": "made-lifelong-memories",
+  "archive_path": "/reviews/archive/made-lifelong-memories",
+  "source_ref": "node/1187",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "4c59cb4878744cfd6e10e91e555789f20e37d352bd6281a895b096693250ca4e"
+}

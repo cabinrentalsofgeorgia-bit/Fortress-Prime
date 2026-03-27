@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2398",
+  "original_slug": "/testimonial/beautiful-view",
+  "content_body": "<p>Nice cabin. Property has a beautiful view. Clean and well taken care of.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful View!",
+  "archive_slug": "beautiful-view",
+  "archive_path": "/reviews/archive/beautiful-view",
+  "source_ref": "node/2398",
+  "hmac_signature": "607d61192c14206d1da28cbc857b02ef23d28ee16153ef06a8bffdac93b3d3b9"
+}

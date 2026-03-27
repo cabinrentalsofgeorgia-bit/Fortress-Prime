@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "875",
+  "original_slug": "/testimonial/lovely-place-and-beautiful-view-the-toccoa-river",
+  "content_body": "<p>What a great vacation! Lovely place and beautiful view of the river. The cabin had everything we needed!</p><p><br /></p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Lovely Place and Beautiful View of the Toccoa River",
+  "archive_slug": "lovely-place-and-beautiful-view-the-toccoa-river",
+  "archive_path": "/reviews/archive/lovely-place-and-beautiful-view-the-toccoa-river",
+  "source_ref": "node/875",
+  "hmac_signature": "4e6379359969f71d49d28996a3662cd984eb30ae0a82a65c1dbb6eb9c1f6a029"
+}

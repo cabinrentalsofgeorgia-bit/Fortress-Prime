@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "47",
+  "original_slug": "/testimonial/wifes-birthday-getaway-blue-ridge",
+  "content_body": "<p>Had an absolutely wonderful time treating my wife for her birthday to this beautiful cabin. My wish is to own one myself one day.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wife's Birthday Getaway in Blue Ridge",
+  "archive_slug": "wifes-birthday-getaway-blue-ridge",
+  "archive_path": "/reviews/archive/wifes-birthday-getaway-blue-ridge",
+  "source_ref": "node/47",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "2a18f94d2e32efd1c5053b6068680c17559737f3fc895f6ce2498a910f358794"
+}

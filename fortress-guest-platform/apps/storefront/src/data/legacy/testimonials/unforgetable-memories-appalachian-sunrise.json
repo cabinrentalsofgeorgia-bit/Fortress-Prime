@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1048",
+  "original_slug": "/testimonial/unforgetable-memories-appalachian-sunrise",
+  "content_body": "<p>&nbsp;Our family had a very exciting time in the Appalachian Sunrise. We are taking with us unforgettable memories of our lifetime. We intend to come back in the future.</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Unforgetable Memories at Appalachian Sunrise",
+  "archive_slug": "unforgetable-memories-appalachian-sunrise",
+  "archive_path": "/reviews/archive/unforgetable-memories-appalachian-sunrise",
+  "source_ref": "node/1048",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "c8dabb0b2de88730b61e14b76e107f97fedeaeab8d6b0bf71a767a4043ac3e8b"
+}

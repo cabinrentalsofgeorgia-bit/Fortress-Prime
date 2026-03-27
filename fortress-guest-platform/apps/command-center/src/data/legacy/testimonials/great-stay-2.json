@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1708",
+  "original_slug": "/testimonial/great-stay-2",
+  "content_body": "<p>We had a great stay. The house was clean, beautifully decorated and had amazing views. Loved all the deck space too.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Great Stay",
+  "archive_slug": "great-stay-2",
+  "archive_path": "/reviews/archive/great-stay-2",
+  "source_ref": "node/1708",
+  "hmac_signature": "dea43aaeb0368bf37253da0d1bc09d888c4589844c97397d3bdfbc6ce1de8b2d"
+}

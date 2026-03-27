@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "211",
+  "original_slug": "/testimonial/annual-retreat-blue-ridge-along-the-toccoa-river",
+  "content_body": "<p>Thank you for a great weekend in the mountains! Our group of friends get together every year for an annual retreat and this is the best cabin we&#39;ve stayed in yet! The snowfall made the views even more beautiful! Thank you for accommodating us at such late notice.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge",
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Annual Retreat in Blue Ridge along the Toccoa River",
+  "archive_slug": "annual-retreat-blue-ridge-along-the-toccoa-river",
+  "archive_path": "/reviews/archive/annual-retreat-blue-ridge-along-the-toccoa-river",
+  "source_ref": "node/211",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "d3ef6860fcd028729abd0b898b5539f1eda87d852ead8f0422ce5118999024d1"
+}

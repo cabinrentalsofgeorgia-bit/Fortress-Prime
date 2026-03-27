@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1339",
+  "original_slug": "/testimonial/awesome",
+  "content_body": "<p>Awesome!!! Came here a few times in the past, and Outlaw Ridge is always great!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome!",
+  "archive_slug": "awesome",
+  "archive_path": "/reviews/archive/awesome",
+  "source_ref": "node/1339",
+  "hmac_signature": "cee36a7afbdda6d4794bddcb9f4e9e3bd250c59afc29c481fac985564c8d1857"
+}

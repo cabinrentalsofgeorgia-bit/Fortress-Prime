@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1573",
+  "original_slug": "/testimonial/loved-it-2",
+  "content_body": "<p>Great floor plan, ample space, and great access to house. Loved it and had a wonderful time.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Loved It",
+  "archive_slug": "loved-it-2",
+  "archive_path": "/reviews/archive/loved-it-2",
+  "source_ref": "node/1573",
+  "hmac_signature": "50977fff364ab0f1dd2c8afc20b785327c7ebac186f37ef02d4957a4b4e31508"
+}

@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "885",
+  "original_slug": "/testimonial/fantastic-time-riverview-lodge",
+  "content_body": "<p>It was a fantastic time as usual! I think this cabin gets more beautiful each time I stay!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fantastic Time at Riverview Lodge!",
+  "archive_slug": "fantastic-time-riverview-lodge",
+  "archive_path": "/reviews/archive/fantastic-time-riverview-lodge",
+  "source_ref": "node/885",
+  "related_property_slug": "riverview-lodge",
+  "related_property_path": "/cabins/riverview-lodge",
+  "related_property_title": "Riverview Lodge",
+  "hmac_signature": "f9fe1dde4ca5f51b1649bda1cd6a1edfef06f20ceae99c0a6adc5d796c50efb1"
+}

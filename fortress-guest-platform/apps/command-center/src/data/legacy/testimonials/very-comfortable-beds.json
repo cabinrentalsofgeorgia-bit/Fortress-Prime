@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1987",
+  "original_slug": "/testimonial/very-comfortable-beds",
+  "content_body": "<p>We really enjoyed your cabin. Beautiful scenery and very comfortable beds, I might add. Thank you!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Comfortable Beds!",
+  "archive_slug": "very-comfortable-beds",
+  "archive_path": "/reviews/archive/very-comfortable-beds",
+  "source_ref": "node/1987",
+  "hmac_signature": "83a7ee5c0592c61cd0bce25f3f66cc267e732784975cddcdf99fb90a5429a3fa"
+}
