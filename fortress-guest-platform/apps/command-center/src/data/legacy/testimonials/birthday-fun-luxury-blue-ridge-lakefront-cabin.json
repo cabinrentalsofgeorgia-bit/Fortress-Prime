@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "774",
+  "original_slug": "/testimonial/birthday-fun-luxury-blue-ridge-lakefront-cabin",
+  "content_body": "<p>&nbsp;This was such a great place to have my 40th birthday!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Birthday Fun at Luxury Blue Ridge Lakefront Cabin",
+  "archive_slug": "birthday-fun-luxury-blue-ridge-lakefront-cabin",
+  "archive_path": "/reviews/archive/birthday-fun-luxury-blue-ridge-lakefront-cabin",
+  "source_ref": "node/774",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "729bee4b7eed00c60a2e68653376ee7b3ed65e9f482b58fc88af63582721f760"
+}

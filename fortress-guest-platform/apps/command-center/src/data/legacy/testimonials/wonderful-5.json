@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1972",
+  "original_slug": "/testimonial/wonderful-5",
+  "content_body": "<p>Our stay at the Outlaw Ridge cabin was wonderful. The cabin was nice and spacious. The view was amazing. We shared the cabin with 4 other couples who all said they enjoyed the cabin as well.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful",
+  "archive_slug": "wonderful-5",
+  "archive_path": "/reviews/archive/wonderful-5",
+  "source_ref": "node/1972",
+  "hmac_signature": "be6c1a7a9e257ea989afae78fc1e25189e3ad3787a97863bcbfeaf7f8a719833"
+}

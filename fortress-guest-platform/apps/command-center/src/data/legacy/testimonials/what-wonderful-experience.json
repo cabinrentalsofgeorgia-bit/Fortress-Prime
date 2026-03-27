@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2427",
+  "original_slug": "/testimonial/what-wonderful-experience",
+  "content_body": "<p>Great experience with great people!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "What a Wonderful Experience!",
+  "archive_slug": "what-wonderful-experience",
+  "archive_path": "/reviews/archive/what-wonderful-experience",
+  "source_ref": "node/2427",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "7db612b88984a560e1d751b94aca09c775e50b3478d6f132bb893854c1950289"
+}

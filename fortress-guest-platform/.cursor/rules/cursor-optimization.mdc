@@ -1,0 +1,9 @@
+---
+description: Fortress Prime Cursor usage and file conventions
+alwaysApply: true
+---
+
+# Cursor Optimization
+
+- Only read files explicitly tagged with `@` or directly related to the active file import tree.
+- Do not output an entire file for a small change. Use `// ... existing code ...` for unchanged regions.

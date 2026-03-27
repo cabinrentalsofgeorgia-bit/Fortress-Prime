@@ -1,0 +1,194 @@
+apiVersion: fortress.prime/v1alpha1
+kind: RevenueManifest
+metadata:
+  name: v1.0_revenue_manifest
+  version: "1.0"
+  objective: revenue-first
+  owner: spark-node-2
+  description: >
+    Restricted V1 quote pipeline for CROG-VRS. Revenue path only:
+    classify intent, pull read-only pricing, apply deterministic tax,
+    sign the quote, and hand off to payment.
+
+spec:
+  cluster:
+    orchestrator:
+      node_id: spark-node-2
+      host: 192.168.0.100
+      role: closer
+      responsibilities:
+        - classify inbound intent
+        - apply Fortress Prime sales logic
+        - call deterministic tax service
+        - sign quote payloads with HMAC chain-of-custody
+        - emit signed event records
+    sandbox_workers:
+      - node_id: spark-node-1
+        host: 192.168.0.104
+        role: librarian
+        runtime: openshell_sandbox
+        responsibilities:
+          - query PostgreSQL 16 through a read-only socket
+          - return availability and raw quote context
+          - refuse guest financial history access
+    shared_inference:
+      mode: planned_not_required_for_v1
+      note: >
+        Revenue V1 does not require distributed 120B inference to activate the
+        quote engine. Keep the narrow local-first lane until cluster capacity and
+        fabric validation are stable.
+
+  routing:
+    classifier:
+      mode: restricted
+      labels:
+        sales_quote:
+          routes_to: closer_build_signed_quote
+          examples:
+            - "Need a quote for May 23 to May 26."
+            - "How much is Bear Creek Lodge for 8 guests?"
+        maintenance_request:
+          routes_to: maintenance_queue_only
+          examples:
+            - "The hot tub is not heating."
+            - "We have a leak in the upstairs bath."
+
+  agents:
+    librarian:
+      enabled: true
+      leader: false
+      execution_node: spark-node-1
+      tool_definition_ref: fortress-guest-platform/contracts/revenue-tools-v1.json#/tools/0
+      sandbox_policy:
+        postgres_profile: readonly
+        allow_network: false
+        allow_tool_spawning: false
+        blocked_sql_verbs:
+          - INSERT
+          - UPDATE
+          - DELETE
+          - ALTER
+          - DROP
+          - TRUNCATE
+    closer:
+      enabled: true
+      leader: true
+      execution_node: spark-node-2
+      tool_definition_ref: fortress-guest-platform/contracts/revenue-tools-v1.json#/tools/1
+      orchestration_policy:
+        require_librarian_result: true
+        require_tax_service: true
+        require_hmac_signature: true
+        allow_child_spawning: false
+    accounting:
+      enabled: false
+      mode: payment_link_stub
+      note: >
+        Accounting stays behind the payment-link handoff in V1 so we can move
+        revenue without opening the full ledger pipeline yet.
+    concierge:
+      enabled: false
+      note: Concierge spawning remains disabled until quote integrity is proven.
+
+  tools:
+    contracts_file: fortress-guest-platform/contracts/revenue-tools-v1.json
+    deterministic_services:
+      tax_service:
+        name: deterministic_fannin_tax_v1
+        module: backend.services.revenue_chain_of_custody
+        function: calculate_fannin_county_tax
+        rule:
+          percentage_rate: "0.06"
+          nightly_fee: "5.00"
+          description: 6% of raw total plus $5.00 per booked night
+      chain_of_custody:
+        name: quote_chain_of_custody_v1
+        module: backend.services.revenue_chain_of_custody
+        function: build_signed_quote_record
+        canonical_payload_fields:
+          - quote_id
+          - raw_total
+          - tax_total
+          - timestamp
+        signature:
+          algorithm: hmac-sha256
+          secret_ref: nim://fortress/spark-secret
+          fallback_env: AUDIT_LOG_SIGNING_KEY
+          rotation_days: 30
+
+  data_planes:
+    postgres:
+      version: "16"
+      access_modes:
+        librarian: readonly
+        closer: quote_records_and_audit_only
+      denied_resources:
+        - guest_financial_history
+        - schema_mutation
+    audit:
+      mode: append_only
+      signed_event_record: true
+      purpose: sovereign_ground_truth
+
+  execution_flow:
+    - step: classify_intent
+      owner: spark-node-2
+      output: route_label
+    - step: fetch_raw_quote_context
+      owner: spark-node-1
+      tool: librarian_get_base_rate
+      output: raw_total
+    - step: apply_deterministic_tax
+      owner: spark-node-2
+      service: deterministic_fannin_tax_v1
+      output: tax_total
+    - step: sign_quote_payload
+      owner: spark-node-2
+      service: quote_chain_of_custody_v1
+      output: hmac_sig
+    - step: payment_link_handoff
+      owner: spark-node-2
+      mode: accounting_stub
+
+  hard_gates:
+    - name: fabric_check
+      command: ping -s 9000 192.168.0.104
+      expected: node_1_reachable_with_jumbo_frame_payload
+      required: true
+    - name: sandbox_heartbeat
+      command: openshell status --node spark-1
+      expected: runtime_active
+      required: true
+    - name: routing_verification
+      type: mock_payload_test
+      cases:
+        - input: "Need a quote for a wedding weekend."
+          expect_route: sales_quote
+        - input: "The HVAC is broken in the cabin."
+          expect_route: maintenance_request
+      required: true
+    - name: database_jailbreak_test
+      type: sandbox_policy_test
+      action: attempt_DROP_TABLE_inside_librarian_sandbox
+      expected: denied
+      required: true
+
+  rollout:
+    strategy: single_path_canary
+    phases:
+      - name: dry_run
+        description: Generate signed quotes without sending payment links.
+      - name: payment_link_live
+        description: Enable payment-link handoff for approved quotes only.
+      - name: accounting_follow_on
+        description: Enable ledger-aware accounting after revenue V1 stabilizes.
+
+  success_metrics:
+    - name: quote_signature_rate
+      target: "100%"
+    - name: tax_mismatch_rate
+      target: "0%"
+    - name: classifier_misroute_rate
+      target: "<1%"
+    - name: concierge_spawns
+      target: "0"

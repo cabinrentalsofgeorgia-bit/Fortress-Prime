@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "2125",
+  "original_slug": "/testimonial/our-family-has-such-great-memories-here",
+  "content_body": "<p>Our 2nd visit to this cabin.&nbsp;Our family has such great memories here!&nbsp;The kids left some rocks in the yard!&nbsp;ENJOY! We Love it here!</p>",
+  "category_tags": [
+    "Blue Ridge Memories",
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Our family has such great memories here!",
+  "archive_slug": "our-family-has-such-great-memories-here",
+  "archive_path": "/reviews/archive/our-family-has-such-great-memories-here",
+  "source_ref": "node/2125",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "55aaab9e9b126f88e343440b9be1adf90057f9d8d2a08d9449773bfacf36e494"
+}

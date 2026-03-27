@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1544",
+  "original_slug": "/testimonial/fun-and-relaxing-weekend",
+  "content_body": "<p>We met a group of friends at the cabin for a fun and relaxing weekend! We took turns cooking and enjoyed delicious food and catching up. The river and view were beautiful. We played cards and games and watched UGA beat Auburn and just enjoyed each other&#39;s company. We had an awesome weekend! We are not looking forward to going home and back to reality.</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fun and Relaxing Weekend",
+  "archive_slug": "fun-and-relaxing-weekend",
+  "archive_path": "/reviews/archive/fun-and-relaxing-weekend",
+  "source_ref": "node/1544",
+  "hmac_signature": "4f52fe30247e58b33d78ae56c12591f85bde4ee7cff3fdf31d960e38f7663a44"
+}

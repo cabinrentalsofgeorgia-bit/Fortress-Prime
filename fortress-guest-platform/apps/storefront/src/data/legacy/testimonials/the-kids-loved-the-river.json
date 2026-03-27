@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1993",
+  "original_slug": "/testimonial/the-kids-loved-the-river",
+  "content_body": "<p>Stayed over New Years weekend. Very clean. Kids loved the river. Will definitely be back in the summer!&nbsp;</p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The Kids Loved the River!",
+  "archive_slug": "the-kids-loved-the-river",
+  "archive_path": "/reviews/archive/the-kids-loved-the-river",
+  "source_ref": "node/1993",
+  "hmac_signature": "301264ffeed6bd2beef14f7cbbb46a8b88ed25eec0c7508562ee5f82b2be162a"
+}

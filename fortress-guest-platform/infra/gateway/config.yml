@@ -1,0 +1,15 @@
+# Staff UI (Next.js Command Center) must use port 3001. Do NOT point crog-ai.com at :8100
+# (FastAPI) or browsers will see OpenAPI/JSON instead of /login.
+tunnel: ${CLOUDFLARE_TUNNEL_ID}
+credentials-file: /etc/cloudflared/${CLOUDFLARE_TUNNEL_ID}.json
+
+ingress:
+  - hostname: www.crog-ai.com
+    service: http://127.0.0.1:3001
+  - hostname: crog-ai.com
+    service: http://127.0.0.1:3001
+  - hostname: staging.cabin-rentals-of-georgia.com
+    service: http://127.0.0.1:3000
+  - hostname: api.cabin-rentals-of-georgia.com
+    service: http://127.0.0.1:8100
+  - service: http_status:404

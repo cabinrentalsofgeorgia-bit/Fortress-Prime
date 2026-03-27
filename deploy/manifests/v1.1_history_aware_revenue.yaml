@@ -1,0 +1,32 @@
+version: "v1.1"
+profile: "history-aware-revenue"
+
+agents:
+  - name: "Librarian"
+    execution_node: "spark-node-1"
+    capabilities:
+      - "sql_query_execution"
+      - "historical_vector_search"
+    tools:
+      - "GET /api/v1/history/analytics"
+    mounts:
+      - source: "/opt/fortress/data/history"
+        target: "/mnt/history"
+        mode: "ro"
+
+  - name: "Closer"
+    execution_node: "spark-node-2"
+    logic_profile: "Fortress-Prime-Strategic-Pricing"
+    constraints:
+      - "legacy_base_rate_input: OPTIONAL"
+      - "history_bias_weight: 0.85"
+      - "independent_pricing: ENABLED"
+
+telemetry:
+  dashboard_metrics:
+    - name: "opportunity_gap"
+      description: "Difference between legacy quote and history-aware sovereign quote."
+      formula: "sovereign_quote_total - legacy_quote_total"
+      display:
+        label: "Opportunity Gap"
+        format: "currency_delta"

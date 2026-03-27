@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2000",
+  "original_slug": "/testimonial/coolest-cabin-ever",
+  "content_body": "<p>I had a great weekend with my parents! I had a great time fishing, shooting my bow and arrow, playing putt-putt, mining for gems and mineral, and sleeping in a bunk for the first time EVER! I really want to come back for another fantastic getaway from the city. Coolest cabin ever! ~The Youngest Member of the Nabors Family</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Coolest Cabin Ever!",
+  "archive_slug": "coolest-cabin-ever",
+  "archive_path": "/reviews/archive/coolest-cabin-ever",
+  "source_ref": "node/2000",
+  "hmac_signature": "363cbbdf22bfe35800fde7cdfd3998c50639bf5c45837cde0e98c6e9e723257d"
+}

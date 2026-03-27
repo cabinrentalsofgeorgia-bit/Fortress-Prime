@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "877",
+  "original_slug": "/testimonial/such-great-place",
+  "content_body": "<p>I had a wonderful vacation, only too short. Such a great place. I&#39;ll be back again!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Such A Great Place",
+  "archive_slug": "such-great-place",
+  "archive_path": "/reviews/archive/such-great-place",
+  "source_ref": "node/877",
+  "hmac_signature": "7f650d99509934a1534eb317c706405c8de8fedb253bd6b90b182909c78fcea1"
+}

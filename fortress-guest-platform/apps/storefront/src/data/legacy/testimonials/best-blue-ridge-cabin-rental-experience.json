@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2819",
+  "original_slug": "/testimonial/best-blue-ridge-cabin-rental-experience",
+  "content_body": "<p>This house is amazing. It is well laid out for a large number of people. It was also the best stocked kitchen of any rental I have stayed in. They truly have thought of every detail. Thanks for such incredible customer service.&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Experience",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Best Blue Ridge Cabin Rental Experience",
+  "archive_slug": "best-blue-ridge-cabin-rental-experience",
+  "archive_path": "/reviews/archive/best-blue-ridge-cabin-rental-experience",
+  "source_ref": "node/2819",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "f7d6a735408e075b4330cbee68cf541751766e84ff945b92f6f9a5fa0ff6fc57"
+}

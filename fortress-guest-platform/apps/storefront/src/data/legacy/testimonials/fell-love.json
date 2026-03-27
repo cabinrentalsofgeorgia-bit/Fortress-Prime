@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1910",
+  "original_slug": "/testimonial/fell-love",
+  "content_body": "<p>This getaway was awesome. Everything was perfect. Not only did I fall in love with the cabin but I fell in love with my baby all over again! We will be back! - The Millers&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fell in Love",
+  "archive_slug": "fell-love",
+  "archive_path": "/reviews/archive/fell-love",
+  "source_ref": "node/1910",
+  "hmac_signature": "cf01c70680eff6ecff6a9ce3d7fab18d9a1f374198a91872318ab0f7a38e735a"
+}

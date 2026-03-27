@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "2424",
+  "original_slug": "/testimonial/perfect-birthday-location",
+  "content_body": "<p>The perfect birthday backdrop! Kudos for thinking of everything! We will definitely be back! Thank you.&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Cohutta Wilderness",
+    "Ellijay",
+    "Morganton"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Perfect Birthday Location",
+  "archive_slug": "perfect-birthday-location",
+  "archive_path": "/reviews/archive/perfect-birthday-location",
+  "source_ref": "node/2424",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "21745c7c6d728f1d879524ac963a7b61dbcdc170a8cccaa8817ae7f0e785fe4f"
+}

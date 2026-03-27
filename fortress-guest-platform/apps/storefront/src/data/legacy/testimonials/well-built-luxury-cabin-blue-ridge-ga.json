@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "76",
+  "original_slug": "/testimonial/well-built-luxury-cabin-blue-ridge-ga",
+  "content_body": "<p>Well designed cabin, great subcontractor workmanship - especially your trim carpenter, interior decor is great. I was a custom home builder in Atlanta so I can speak with some degree of authority - you did a great job. Will return!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Well-Built Luxury Cabin in Blue Ridge, GA",
+  "archive_slug": "well-built-luxury-cabin-blue-ridge-ga",
+  "archive_path": "/reviews/archive/well-built-luxury-cabin-blue-ridge-ga",
+  "source_ref": "node/76",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "167e2491e40d9d89903ed37637576e7a17440222418357f0f8c21dafeaed0d6c"
+}

@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1219",
+  "original_slug": "/testimonial/memorable-trip",
+  "content_body": "<p>This cabin is everything we could&#39;ve wished for. It&#39;s decorated so beautifully and made us feel at home. We hated to leave! Thank you for a most memorable trip! God bless!</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Memorable Trip",
+  "archive_slug": "memorable-trip",
+  "archive_path": "/reviews/archive/memorable-trip",
+  "source_ref": "node/1219",
+  "hmac_signature": "d7cfaed13fd20bed08db6d4aeb362f918b383ecc4c7d43c01ca7747d3cb3b260"
+}

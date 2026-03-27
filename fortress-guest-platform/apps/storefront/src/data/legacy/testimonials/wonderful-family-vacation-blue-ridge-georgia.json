@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "49",
+  "original_slug": "/testimonial/wonderful-family-vacation-blue-ridge-georgia",
+  "content_body": "<p>The house is beautiful! We had a very good time. Blue Ridge has a lot of very nice people. We went white water rafting, hiking, tubing, went out on Lake Blue Ridge for the day after renting a boat from the marina. The days were warm and cool at night and early morning. We really enjoyed our vacation. Thank You.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Family Vacation in Blue Ridge, Georgia",
+  "archive_slug": "wonderful-family-vacation-blue-ridge-georgia",
+  "archive_path": "/reviews/archive/wonderful-family-vacation-blue-ridge-georgia",
+  "source_ref": "node/49",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "c7ade09f8fb34b393e5d3aca3a65fb6daf10ee5f911adab7940b7964788afa69"
+}

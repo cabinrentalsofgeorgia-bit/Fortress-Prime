@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "181",
+  "original_slug": "/testimonial/great-times-the-north-georgia-mountains",
+  "content_body": "<p>Had a great time! Best fishing trip we&#39;ve had. House is beautiful. We&#39;ll come back soon!</p>",
+  "category_tags": [
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Times in the North Georgia Mountains",
+  "archive_slug": "great-times-the-north-georgia-mountains",
+  "archive_path": "/reviews/archive/great-times-the-north-georgia-mountains",
+  "source_ref": "node/181",
+  "hmac_signature": "821ecb59917974b15adce53f68dcacf2cbf2de5e7fba58b743f362159e5eba54"
+}

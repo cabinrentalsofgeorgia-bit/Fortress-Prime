@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1472",
+  "original_slug": "/testimonial/loved-it-1",
+  "content_body": "<p>This was great. Loved the hot tub. You should advertise your blender as an amenity. Loved the couches. Dog loved it. PRAISE HIM!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Loved It",
+  "archive_slug": "loved-it-1",
+  "archive_path": "/reviews/archive/loved-it-1",
+  "source_ref": "node/1472",
+  "hmac_signature": "7cdf130583312893e2493e19309117773922070f7f22ed04480e7502e5740d32"
+}

@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "786",
+  "original_slug": "/testimonial/family-vacation-luxury-cabin",
+  "content_body": "<p>&nbsp;A beautiful cabin and nicely furnished inside. Really enjoyed family time around the fire. Just wish it had snowed! The grandkids have never seen it.&nbsp;</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Family Vacation in a Luxury Cabin",
+  "archive_slug": "family-vacation-luxury-cabin",
+  "archive_path": "/reviews/archive/family-vacation-luxury-cabin",
+  "source_ref": "node/786",
+  "related_property_slug": "restoration-luxury",
+  "related_property_path": "/cabins/restoration-luxury",
+  "related_property_title": "Restoration Luxury",
+  "hmac_signature": "b52b00280c2eb82331aef547b7de8f2f73dd0062d0c158b7ed599ba831aeef38"
+}

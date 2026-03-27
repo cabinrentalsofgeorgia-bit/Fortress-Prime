@@ -1,0 +1,21 @@
+{
+  "name": "fortress-guest-platform",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/storefront",
+    "apps/command-center",
+    "packages/config",
+    "packages/ui"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  }
+}

@@ -1,0 +1,42 @@
+[Unit]
+Description=Fortress Guest Platform Frontend
+Wants=network-online.target
+After=network-online.target fortress-backend.service
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center
+EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env
+EnvironmentFile=-/home/admin/Fortress-Prime/.env.security
+Environment=PATH=/home/admin/.nvm/versions/node/v20.20.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=HOSTNAME=0.0.0.0
+Environment=APP_MODE=command_center
+Environment=NEXT_PUBLIC_SITE_TYPE=sovereign_glass
+Environment=FGP_BACKEND_URL=http://127.0.0.1:8100
+Environment=COMMAND_CENTER_URL=http://127.0.0.1:9800
+Environment=NEXT_PUBLIC_APP_URL=https://crog-ai.com
+# Staff glass: keep empty — all browser API calls must go through same-origin /api BFF (fortress_session + Bearer bridge).
+Environment=NEXT_PUBLIC_API_URL=
+ExecStart=/home/admin/.nvm/versions/node/v20.20.0/bin/node server.js
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+LimitNOFILE=65536
+MemoryHigh=3G
+MemoryMax=4G
+CPUWeight=100
+SyslogIdentifier=fortress-frontend
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

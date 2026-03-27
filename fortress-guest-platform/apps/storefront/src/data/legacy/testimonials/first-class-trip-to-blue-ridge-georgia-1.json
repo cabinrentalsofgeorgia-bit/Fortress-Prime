@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "756",
+  "original_slug": "/testimonial/first-class-trip-to-blue-ridge-georgia-1",
+  "content_body": "<p>We went zip lining and had a blast. It&#39;s our 2nd time at the Rolling River Cabin and we will be back for many more times. First class!!!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "First Class Cabin in Blue Ridge, Georgia",
+  "archive_slug": "first-class-trip-to-blue-ridge-georgia-1",
+  "archive_path": "/reviews/archive/first-class-trip-to-blue-ridge-georgia-1",
+  "source_ref": "node/756",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "11d83241bbaab040ff3b221b8d0e40222a6419f8f87393149f3cfb607b00c6ff"
+}

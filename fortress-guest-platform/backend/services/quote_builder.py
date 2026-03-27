@@ -1,17 +1,17 @@
 """
-Quote Builder — Multi-property pricing engine for the Lead Quoting System.
+Quote Builder — local ledger pricing only.
 
-Calculates itemized price breakdowns (base_rent, taxes, fees, total) for
-any property and date range. Uses the synced Streamline rate_card JSONB
-when populated; falls back to the proven DirectBookingEngine bedroom-based
-rates when rate_card is NULL.
-
-Rule 7 compliance: All math happens server-side with DECIMAL precision.
-The AI never guesses pricing.
+Pricing is sourced exclusively from the local Postgres `properties.rate_card`
+ledger. If required nightly rates, cleaning fees, or taxes are missing, the
+calculation fails closed.
 """
+
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Any, Optional
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -24,91 +24,255 @@ logger = structlog.get_logger()
 
 TWO_PLACES = Decimal("0.01")
 
-# Fannin County GA tax: state 4% + county 4% + local lodging 5% = 13%
-DEFAULT_TAX_RATE = Decimal("0.13")
 
-BEDROOM_BASE_RATES: Dict[int, Decimal] = {
-    1: Decimal("149.00"),
-    2: Decimal("199.00"),
-    3: Decimal("269.00"),
-    4: Decimal("329.00"),
-    5: Decimal("399.00"),
-    6: Decimal("449.00"),
-    7: Decimal("549.00"),
-    8: Decimal("649.00"),
-}
-_DEFAULT_RATE = Decimal("299.00")
-
-CLEANING_FEES: Dict[str, Decimal] = {
-    "1-2": Decimal("150.00"),
-    "3-4": Decimal("250.00"),
-    "5-6": Decimal("350.00"),
-    "7+":  Decimal("450.00"),
-}
+@dataclass(frozen=True)
+class LocalLedgerQuote:
+    property_id: UUID
+    property_name: str
+    nights: int
+    rent: Decimal
+    cleaning: Decimal
+    admin_fee: Decimal
+    taxes: Decimal
+    total: Decimal
+    tax_rate: Decimal
+    nightly_breakdown: tuple[tuple[date, Decimal], ...]
+    pricing_source: str = "local_ledger"
 
 
-def _cleaning_fee_for_bedrooms(bedrooms: int) -> Decimal:
-    if bedrooms <= 2:
-        return CLEANING_FEES["1-2"]
-    elif bedrooms <= 4:
-        return CLEANING_FEES["3-4"]
-    elif bedrooms <= 6:
-        return CLEANING_FEES["5-6"]
-    return CLEANING_FEES["7+"]
+@dataclass(frozen=True)
+class LocalLedgerRentQuote:
+    property_id: UUID
+    property_name: str
+    nights: int
+    rent: Decimal
+    nightly_breakdown: tuple[tuple[date, Decimal], ...]
+    pricing_source: str = "local_ledger"
 
 
-def _weekend_seasonal_rate(base: Decimal, d: date) -> Decimal:
-    """Apply weekend (+20%) and peak season (+15%) premiums."""
-    rate = base
-    if d.weekday() in (4, 5):
-        rate = (rate * Decimal("1.20")).quantize(TWO_PLACES, ROUND_HALF_UP)
-    if d.month in (6, 7, 8, 10, 12):
-        rate = (rate * Decimal("1.15")).quantize(TWO_PLACES, ROUND_HALF_UP)
-    return rate
+class QuoteBuilderError(ValueError):
+    """Raised when the local pricing ledger is incomplete or invalid."""
 
 
-def _parse_streamline_date(ds: Optional[str]) -> Optional[date]:
-    """Parse MM/DD/YYYY date strings from Streamline rate_card."""
+def _parse_streamline_date(ds: str | None) -> date | None:
+    """Parse MM/DD/YYYY or ISO YYYY-MM-DD date strings from Streamline rate_card."""
     if not ds:
         return None
     try:
-        parts = ds.split("/")
+        normalized = ds.strip()
+        if "-" in normalized:
+            return date.fromisoformat(normalized)
+        parts = normalized.split("/")
         return date(int(parts[2]), int(parts[0]), int(parts[1]))
     except (IndexError, ValueError):
         return None
 
 
-def _nightly_from_rate_card(rate_card: Dict, stay_date: date) -> Optional[Decimal]:
+def _to_money(value: Any, *, field_name: str) -> Decimal:
+    try:
+        return Decimal(str(value)).quantize(TWO_PLACES, ROUND_HALF_UP)
+    except Exception as exc:
+        raise QuoteBuilderError(f"Invalid money value for {field_name}") from exc
+
+
+def _require_rate_card(rate_card: Any) -> dict[str, Any]:
+    if not isinstance(rate_card, dict):
+        raise QuoteBuilderError("Property pricing ledger is missing")
+    if not rate_card.get("rates"):
+        raise QuoteBuilderError("Property nightly ledger is missing")
+    return rate_card
+
+
+def _min_nights_from_rate_entry(entry: dict[str, Any]) -> int:
+    """Minimum stay required for the rate row; default 1 when Streamline omits it."""
+    raw = entry.get("min_nights")
+    if raw is None:
+        raw = entry.get("minimum_days")
+    if raw is None or raw == "":
+        return 1
+    try:
+        n = int(Decimal(str(raw)))
+    except Exception:
+        return 1
+    return max(1, n)
+
+
+def _nightly_from_rate_card(rate_card: dict[str, Any], stay_date: date) -> Decimal | None:
     """Find the applicable nightly rate from rate_card for a given date."""
+    pair = _nightly_and_min_nights_from_rate_card(rate_card, stay_date)
+    return pair[0] if pair else None
+
+
+def _nightly_and_min_nights_from_rate_card(
+    rate_card: dict[str, Any],
+    stay_date: date,
+) -> tuple[Decimal, int] | None:
+    """Nightly rent and Streamline min-stay for the matching rate row (yield rules)."""
     for entry in rate_card.get("rates", []):
         start = _parse_streamline_date(entry.get("start_date"))
         end = _parse_streamline_date(entry.get("end_date"))
         if start and end and start <= stay_date <= end:
             nightly = entry.get("nightly")
-            if nightly is not None:
-                return Decimal(str(nightly)).quantize(TWO_PLACES, ROUND_HALF_UP)
+            if nightly is None:
+                return None
+            money = _to_money(nightly, field_name=f"nightly rate for {stay_date.isoformat()}")
+            return (money, _min_nights_from_rate_entry(entry))
     return None
 
 
-def _fees_from_rate_card(rate_card: Dict) -> Decimal:
-    """Sum all fixed fees from rate_card (cleaning, processing, etc.)."""
-    total = Decimal("0")
+def _fee_label(fee: dict[str, Any]) -> str:
+    return " ".join(
+        str(part).strip().lower()
+        for part in (
+            fee.get("name"),
+            fee.get("code"),
+            fee.get("type"),
+            fee.get("category"),
+        )
+        if part
+    )
+
+
+def _rate_card_cleaning_and_admin_fees(rate_card: dict[str, Any]) -> tuple[Decimal, Decimal]:
+    """
+    Extract cleaning and admin-style fees from the local rate_card JSON.
+
+    Cleaning: name/code/type/category contains ``clean``.
+    Admin: contains ``admin``, ``administration``, or ``management``.
+    Any other non-zero fee fails closed (prevents silent omission of charges).
+    """
+    cleaning = Decimal("0.00")
+    admin = Decimal("0.00")
     for fee in rate_card.get("fees", []):
         amount = fee.get("amount")
-        if amount is not None:
-            total += Decimal(str(amount)).quantize(TWO_PLACES, ROUND_HALF_UP)
-    return total
+        if amount is None:
+            continue
+
+        normalized_name = _fee_label(fee)
+        normalized_amount = _to_money(amount, field_name="fee amount")
+        if normalized_amount == Decimal("0.00"):
+            continue
+        if "clean" in normalized_name:
+            cleaning += normalized_amount
+            continue
+        if any(
+            token in normalized_name
+            for token in ("admin", "administration", "management")
+        ):
+            admin += normalized_amount
+            continue
+        raise QuoteBuilderError(
+            "Unsupported fee in local rate_card (not cleaning/admin): "
+            f"{fee.get('name') or fee.get('type') or 'unknown'}"
+        )
+    return cleaning, admin
 
 
-def _tax_rate_from_rate_card(rate_card: Dict) -> Decimal:
-    """Sum percentage-type tax rates from rate_card."""
-    total = Decimal("0")
+def _tax_rate_from_rate_card(rate_card: dict[str, Any]) -> Decimal:
+    """Sum percentage-type tax rates from the local ledger."""
+    total = Decimal("0.00")
     for tax in rate_card.get("taxes", []):
         rate = tax.get("rate")
         ttype = (tax.get("type") or "").lower()
         if rate is not None and "percent" in ttype:
             total += Decimal(str(rate))
-    return total if total > 0 else DEFAULT_TAX_RATE
+    if total <= Decimal("0.00"):
+        raise QuoteBuilderError("Property tax ledger is missing")
+    return total
+
+
+async def build_local_ledger_quote(
+    property_id: UUID,
+    check_in: date,
+    check_out: date,
+    db: AsyncSession,
+) -> LocalLedgerQuote:
+    """Calculate a deterministic booking quote from the local pricing ledger."""
+    rent_quote = await build_local_rent_quote(property_id, check_in, check_out, db)
+    result = await db.execute(select(Property).where(Property.id == property_id))
+    prop = result.scalar_one_or_none()
+    if not prop:
+        raise QuoteBuilderError(f"Property {property_id} not found")
+
+    rate_card = _require_rate_card(prop.rate_card)
+    cleaning, admin_fee = _rate_card_cleaning_and_admin_fees(rate_card)
+    tax_rate = _tax_rate_from_rate_card(rate_card)
+    taxable = rent_quote.rent + cleaning + admin_fee
+    taxes = (taxable * tax_rate).quantize(TWO_PLACES, ROUND_HALF_UP)
+    total = (taxable + taxes).quantize(TWO_PLACES, ROUND_HALF_UP)
+
+    logger.info(
+        "quote_calculated",
+        property=prop.name,
+        nights=rent_quote.nights,
+        rent=str(rent_quote.rent),
+        cleaning=str(cleaning),
+        admin_fee=str(admin_fee),
+        taxes=str(taxes),
+        total=str(total),
+        source="local_ledger",
+    )
+
+    return LocalLedgerQuote(
+        property_id=prop.id,
+        property_name=prop.name,
+        nights=rent_quote.nights,
+        rent=rent_quote.rent.quantize(TWO_PLACES, ROUND_HALF_UP),
+        cleaning=cleaning.quantize(TWO_PLACES, ROUND_HALF_UP),
+        admin_fee=admin_fee.quantize(TWO_PLACES, ROUND_HALF_UP),
+        taxes=taxes,
+        total=total,
+        tax_rate=tax_rate,
+        nightly_breakdown=rent_quote.nightly_breakdown,
+    )
+
+
+async def build_local_rent_quote(
+    property_id: UUID,
+    check_in: date,
+    check_out: date,
+    db: AsyncSession,
+) -> LocalLedgerRentQuote:
+    """Calculate deterministic nightly rent without tax/fee dependencies."""
+    result = await db.execute(select(Property).where(Property.id == property_id))
+    prop = result.scalar_one_or_none()
+    if not prop:
+        raise QuoteBuilderError(f"Property {property_id} not found")
+
+    nights = (check_out - check_in).days
+    if nights < 1:
+        raise QuoteBuilderError("check_out must be after check_in")
+
+    rate_card = _require_rate_card(prop.rate_card)
+    nightly_breakdown: list[tuple[date, Decimal]] = []
+    rent = Decimal("0.00")
+    required_min_nights = 1
+    current = check_in
+    while current < check_out:
+        pair = _nightly_and_min_nights_from_rate_card(rate_card, current)
+        if pair is None:
+            raise QuoteBuilderError(
+                f"Property nightly ledger is incomplete for {current.isoformat()}"
+            )
+        nightly_rate, row_min = pair
+        required_min_nights = max(required_min_nights, row_min)
+        nightly_breakdown.append((current, nightly_rate))
+        rent += nightly_rate
+        current += timedelta(days=1)
+
+    if nights < required_min_nights:
+        raise QuoteBuilderError(
+            f"Stay length {nights} night(s) is below minimum stay {required_min_nights} "
+            "for the selected dates (Streamline yield rule)."
+        )
+
+    return LocalLedgerRentQuote(
+        property_id=prop.id,
+        property_name=prop.name,
+        nights=nights,
+        rent=rent.quantize(TWO_PLACES, ROUND_HALF_UP),
+        nightly_breakdown=tuple(nightly_breakdown),
+    )
 
 
 async def calculate_property_quote(
@@ -116,92 +280,39 @@ async def calculate_property_quote(
     check_in: date,
     check_out: date,
     db: AsyncSession,
-) -> Dict[str, Any]:
+    *,
+    require_local_ledger: bool = False,
+) -> dict[str, Any]:
     """
     Calculate an itemized price breakdown for a property and date range.
 
     Returns a dict with: property_id, property_name, nights, base_rent,
     fees, taxes, total_price, pricing_source, nightly_breakdown.
 
-    Pricing source priority:
-      1. Streamline rate_card JSONB (if populated with rates, fees, taxes)
-      2. DirectBookingEngine bedroom-based fallback (proven production rates)
+    This function now prices exclusively from the local Postgres ledger.
+    `require_local_ledger` remains for call-site compatibility and is enforced.
     """
-    result = await db.execute(select(Property).where(Property.id == property_id))
-    prop = result.scalar_one_or_none()
-    if not prop:
-        raise ValueError(f"Property {property_id} not found")
+    del require_local_ledger
 
-    nights = (check_out - check_in).days
-    if nights < 1:
-        raise ValueError("check_out must be after check_in")
+    quote = await build_local_ledger_quote(property_id, check_in, check_out, db)
 
-    rate_card = prop.rate_card
-    use_rate_card = (
-        rate_card is not None
-        and isinstance(rate_card, dict)
-        and len(rate_card.get("rates", [])) > 0
-    )
-
-    nightly_breakdown = []
-    base_rent = Decimal("0")
-
-    if use_rate_card:
-        pricing_source = "streamline_rate_card"
-        bedroom_base = BEDROOM_BASE_RATES.get(prop.bedrooms, _DEFAULT_RATE)
-
-        current = check_in
-        while current < check_out:
-            rate = _nightly_from_rate_card(rate_card, current)
-            if rate is None:
-                rate = _weekend_seasonal_rate(bedroom_base, current)
-            nightly_breakdown.append({"date": current.isoformat(), "rate": str(rate)})
-            base_rent += rate
-            current += timedelta(days=1)
-
-        fees = _fees_from_rate_card(rate_card)
-        tax_rate = _tax_rate_from_rate_card(rate_card)
-    else:
-        pricing_source = "bedroom_rate_fallback"
-        bedroom_base = BEDROOM_BASE_RATES.get(prop.bedrooms, _DEFAULT_RATE)
-
-        current = check_in
-        while current < check_out:
-            rate = _weekend_seasonal_rate(bedroom_base, current)
-            nightly_breakdown.append({"date": current.isoformat(), "rate": str(rate)})
-            base_rent += rate
-            current += timedelta(days=1)
-
-        fees = _cleaning_fee_for_bedrooms(prop.bedrooms)
-        tax_rate = DEFAULT_TAX_RATE
-
-    taxable_amount = base_rent + fees
-    taxes = (taxable_amount * tax_rate).quantize(TWO_PLACES, ROUND_HALF_UP)
-    total_price = base_rent + fees + taxes
-
-    logger.info(
-        "quote_calculated",
-        property=prop.name,
-        nights=nights,
-        base_rent=str(base_rent),
-        fees=str(fees),
-        taxes=str(taxes),
-        total=str(total_price),
-        source=pricing_source,
-    )
-
+    fee_total = (quote.cleaning + quote.admin_fee).quantize(TWO_PLACES, ROUND_HALF_UP)
     return {
-        "property_id": str(prop.id),
-        "property_name": prop.name,
-        "bedrooms": prop.bedrooms,
-        "nights": nights,
+        "property_id": str(quote.property_id),
+        "property_name": quote.property_name,
+        "nights": quote.nights,
         "check_in_date": check_in.isoformat(),
         "check_out_date": check_out.isoformat(),
-        "base_rent": str(base_rent),
-        "fees": str(fees),
-        "tax_rate": str(tax_rate),
-        "taxes": str(taxes),
-        "total_price": str(total_price),
-        "pricing_source": pricing_source,
-        "nightly_breakdown": nightly_breakdown,
+        "base_rent": str(quote.rent),
+        "cleaning": str(quote.cleaning),
+        "admin_fee": str(quote.admin_fee),
+        "fees": str(fee_total),
+        "tax_rate": str(quote.tax_rate),
+        "taxes": str(quote.taxes),
+        "total_price": str(quote.total),
+        "pricing_source": quote.pricing_source,
+        "nightly_breakdown": [
+            {"date": stay_date.isoformat(), "rate": str(rate)}
+            for stay_date, rate in quote.nightly_breakdown
+        ],
     }

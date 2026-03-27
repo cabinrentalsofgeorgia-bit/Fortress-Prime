@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1116",
+  "original_slug": "/testimonial/fabulous-time",
+  "content_body": "<p>We had a fabulous time. The house and the views were beyond magnificent. The whole process was extremely easy. This was my fourth trip, and I love it more each and every time.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fabulous Time",
+  "archive_slug": "fabulous-time",
+  "archive_path": "/reviews/archive/fabulous-time",
+  "source_ref": "node/1116",
+  "hmac_signature": "c03f2b0228f64e8dff963dc4eac0f28d77f35f7b9a4ed98ae0e7bae2242f7bec"
+}

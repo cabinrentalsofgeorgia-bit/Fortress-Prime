@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1380",
+  "original_slug": "/testimonial/international-trip-success",
+  "content_body": "<p>International trip with kids, parents, and grandparents was a success! Very comfortable for all of us with two masters and a bunk room. Loved coffee on the porches, family meals in the built-in booth, playing in the river, and watching the birds. Great house, great area to explore. Thanks very much!</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "International Trip Success!",
+  "archive_slug": "international-trip-success",
+  "archive_path": "/reviews/archive/international-trip-success",
+  "source_ref": "node/1380",
+  "hmac_signature": "0dc5db7ce0c569c6372001b1130f579a2d8056263aaf9252488ba1957c5a88de"
+}

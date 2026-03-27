@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1123",
+  "original_slug": "/testimonial/fabulous-weekend",
+  "content_body": "<p>We had a fabulous weekend with our staff in Outlaw Ridge, A Rolling River, and The Rivers Edge. Looking forward to another stay next holiday season.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fabulous Weekend",
+  "archive_slug": "fabulous-weekend",
+  "archive_path": "/reviews/archive/fabulous-weekend",
+  "source_ref": "node/1123",
+  "hmac_signature": "c62680219289ef2f05371f40f67112d0334f9c53f7ae29c79d58bdced00478f6"
+}

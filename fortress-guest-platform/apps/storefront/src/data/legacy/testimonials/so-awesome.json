@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1197",
+  "original_slug": "/testimonial/so-awesome",
+  "content_body": "<p>This place was so awesome, and the rooms were so nice with comfortable beds and pillows. The hot tub was another good feature, as well as the view.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "\"So Awesome\"",
+  "archive_slug": "so-awesome",
+  "archive_path": "/reviews/archive/so-awesome",
+  "source_ref": "node/1197",
+  "hmac_signature": "63fd7ecd756f73ebb725339999fb3c4e63a159412d09ac659ce2d60673fd50e8"
+}

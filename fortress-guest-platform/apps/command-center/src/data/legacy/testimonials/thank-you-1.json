@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2351",
+  "original_slug": "/testimonial/thank-you-1",
+  "content_body": "<p>Dear Owners, thank you so much for letting our family stay here! It is a beautiful cabin and we had a wonderful time.&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Thank you!",
+  "archive_slug": "thank-you-1",
+  "archive_path": "/reviews/archive/thank-you-1",
+  "source_ref": "node/2351",
+  "hmac_signature": "41c2caa31bf02d5cbcb5e3092bd175611ea122e20d65dc17e8eeb86698f14caf"
+}

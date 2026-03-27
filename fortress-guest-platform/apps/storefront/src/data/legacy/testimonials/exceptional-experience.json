@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3077",
+  "original_slug": "/testimonial/exceptional-experience",
+  "content_body": "<p>We definitely enjoyed our stay at this enormous cabin for our week-long vacation. There was only three of us in this cabin. We each had our own floor to take in the beautiful layout and landscape from our windows. The cabin was as pictured. Although we experienced some air conditioning challenges on July 4th, we were able to find relief from the heat within an hours notice. Maintenance was there to save the day on this great holiday!!! We also experienced exceptional customer service through text messages directly from my phone. This was definitely an added bonus. We will indeed book again with this company in the near future. Thanks for making our girls trip an exceptional experience!!!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "An Exceptional Experience!",
+  "archive_slug": "exceptional-experience",
+  "archive_path": "/reviews/archive/exceptional-experience",
+  "source_ref": "node/3077",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "eaee5393b10586167bd52dd68ecd9603a3e9c737414c71996e63efc8ece3f49a"
+}

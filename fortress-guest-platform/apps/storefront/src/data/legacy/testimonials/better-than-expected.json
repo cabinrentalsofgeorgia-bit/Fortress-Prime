@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1331",
+  "original_slug": "/testimonial/better-than-expected",
+  "content_body": "<p>We had an amazing time relaxing at the cabin. Everything was better than expected. We hope to return soon.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Better Than Expected",
+  "archive_slug": "better-than-expected",
+  "archive_path": "/reviews/archive/better-than-expected",
+  "source_ref": "node/1331",
+  "hmac_signature": "2f60c581fe88856962999d0f42ee4afe47593cd9d5d000c8ba723cbd60f0720f"
+}

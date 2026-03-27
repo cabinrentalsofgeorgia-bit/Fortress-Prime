@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2737",
+  "original_slug": "/testimonial/great-experience-0",
+  "content_body": "<p>March 2022 ~ Great experience in Blue Ridge and definitely will come back! Highlights were the hot tub and the snow ~</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Great Experience",
+  "archive_slug": "great-experience-0",
+  "archive_path": "/reviews/archive/great-experience-0",
+  "source_ref": "node/2737",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "96550dee51303d88bde2cafcfd6acf968c7ce691081932ebaf49aaedc226a1ff"
+}

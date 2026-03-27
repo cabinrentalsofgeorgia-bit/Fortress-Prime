@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2804",
+  "original_slug": "/testimonial/amazing-weekend-0",
+  "content_body": "<p>Thank you for providing a beautiful cabin for my husband and I. We had an amazing weekend together. We enjoyed the views, hot tub, clean cabin, and all the space. We have reconnected and will be back with friends. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "An Amazing Weekend!",
+  "archive_slug": "amazing-weekend-0",
+  "archive_path": "/reviews/archive/amazing-weekend-0",
+  "source_ref": "node/2804",
+  "hmac_signature": "8599119ce4a13563ccbda20932e4d607493e766837d85eeccc2feccc08c6ca4b"
+}

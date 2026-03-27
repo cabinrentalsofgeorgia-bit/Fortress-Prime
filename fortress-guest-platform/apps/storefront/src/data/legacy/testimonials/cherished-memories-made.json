@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2145",
+  "original_slug": "/testimonial/cherished-memories-made",
+  "content_body": "<p>&ldquo;We had a wonderful weekend here. &nbsp;It is a beautiful cabin with everything a family would need! Very well equipped cabin! My husband and son loved fishing in the river&nbsp;while&nbsp;my mom and daughter and I loved playing games in the cabin and seeing the train go by. &nbsp;The colors of the leaves on the trees were bright and beautiful. &nbsp;Very enjoyable weekend with lots of cherished memories made.&rdquo;</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Cherished Memories Made",
+  "archive_slug": "cherished-memories-made",
+  "archive_path": "/reviews/archive/cherished-memories-made",
+  "source_ref": "node/2145",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "1a5f9b50b2f119e0502a99b5d16f84a0d5fd9aadd86f63391d0c2004163dfb5d"
+}

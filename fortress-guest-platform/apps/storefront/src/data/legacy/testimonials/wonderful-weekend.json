@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1476",
+  "original_slug": "/testimonial/wonderful-weekend",
+  "content_body": "<p>Thank you for such a wonderful weekend. It was well past our expectation and a great experience. We can&#39;t wait to come back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Weekend",
+  "archive_slug": "wonderful-weekend",
+  "archive_path": "/reviews/archive/wonderful-weekend",
+  "source_ref": "node/1476",
+  "hmac_signature": "ec25003a502bc5a22fe02fb4fb6ba8a3165aafcf72346f36daff4e186ee64c3d"
+}

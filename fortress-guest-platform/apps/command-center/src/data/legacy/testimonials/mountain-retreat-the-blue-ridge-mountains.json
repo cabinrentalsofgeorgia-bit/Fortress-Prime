@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "1061",
+  "original_slug": "/testimonial/mountain-retreat-the-blue-ridge-mountains",
+  "content_body": "<p>We just checked into Application Sunrise and it as pretty as we hoped.&nbsp; The place was well lit and had music playing upon our arrival.&nbsp; What a nice welcome. &nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Mountain Retreat In The Blue Ridge Mountains",
+  "archive_slug": "mountain-retreat-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/mountain-retreat-the-blue-ridge-mountains",
+  "source_ref": "node/1061",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "6f134adebfdb297e20dbeb00a4d46df0aee824c7e6e65670801c8bb60b1c54b9"
+}

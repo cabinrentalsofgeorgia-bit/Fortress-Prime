@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1593",
+  "original_slug": "/testimonial/beautiful-place",
+  "content_body": "<p>What a beautiful place. We loved being here. Very relaxing, and the cabin was very well equipped. The hot tub was amazing as the snow was falling down. Very romantic!!!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Place",
+  "archive_slug": "beautiful-place",
+  "archive_path": "/reviews/archive/beautiful-place",
+  "source_ref": "node/1593",
+  "hmac_signature": "bd50b2b0f7c9bcd7de02513c150aaca6a4eae8b89f10151b330461177a22898f"
+}

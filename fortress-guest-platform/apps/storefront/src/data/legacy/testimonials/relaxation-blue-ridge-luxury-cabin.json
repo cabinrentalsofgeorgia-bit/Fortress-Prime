@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "43",
+  "original_slug": "/testimonial/relaxation-blue-ridge-luxury-cabin",
+  "content_body": "<p>We came up for a&nbsp;long weekend getaway from the city. I did not want to leave from the moment we arrived. From&nbsp;greetings&nbsp;by Chloe, to evenings sitting by the fire, and morning pool matches, we enjoyed every moment. The weather wasn&#39;t the greatest, but that did not distract from the wonderful stay. Looking forward to our return visit this spring.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Luxury",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Relaxation in a Blue Ridge Luxury Cabin",
+  "archive_slug": "relaxation-blue-ridge-luxury-cabin",
+  "archive_path": "/reviews/archive/relaxation-blue-ridge-luxury-cabin",
+  "source_ref": "node/43",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "62702e7f92d316f1553f925cbf0f6a78f7ffa022c419fe7772061118fac9e059"
+}

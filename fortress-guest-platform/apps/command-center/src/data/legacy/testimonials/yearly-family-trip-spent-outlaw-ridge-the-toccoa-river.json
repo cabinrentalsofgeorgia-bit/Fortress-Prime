@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "956",
+  "original_slug": "/testimonial/yearly-family-trip-spent-outlaw-ridge-the-toccoa-river",
+  "content_body": "<p>Our yearly family trip was wonderful here. It was the best kitchen we have ever had. Awsome view too!&nbsp;The river was beautiful.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Family Fun",
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Yearly Family Trip Spent at Outlaw Ridge on the Toccoa River",
+  "archive_slug": "yearly-family-trip-spent-outlaw-ridge-the-toccoa-river",
+  "archive_path": "/reviews/archive/yearly-family-trip-spent-outlaw-ridge-the-toccoa-river",
+  "source_ref": "node/956",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "326df74b00dd1028de2abd46c9e8294bd5c4c20a02c58574d7ed63a7a59c909e"
+}

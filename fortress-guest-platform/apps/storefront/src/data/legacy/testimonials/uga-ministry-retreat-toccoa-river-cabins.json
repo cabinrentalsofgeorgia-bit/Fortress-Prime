@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "3176",
+  "original_slug": "/testimonial/uga-ministry-retreat-toccoa-river-cabins",
+  "content_body": "<p>Dear Knight Family, thank you SO much for hosting us this weekend! We had a great time hanging out, playing games, and enjoying the beauty of Blue Ridge. Sincerely, Campus Outreach of UGA</p>",
+  "category_tags": [
+    "Blue Ridge Cabins",
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "UGA Ministry Retreat at Toccoa River Cabins",
+  "archive_slug": "uga-ministry-retreat-toccoa-river-cabins",
+  "archive_path": "/reviews/archive/uga-ministry-retreat-toccoa-river-cabins",
+  "source_ref": "node/3176",
+  "related_property_slug": "rolling-river-cabin",
+  "related_property_path": "/cabins/rolling-river-cabin",
+  "related_property_title": "A Rolling River Cabin",
+  "hmac_signature": "b7d49f21218b45a010f8c391818935d2a628035ce40fe70a26be1b9e34800e48"
+}

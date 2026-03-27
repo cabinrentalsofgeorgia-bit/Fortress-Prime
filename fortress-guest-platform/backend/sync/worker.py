@@ -14,9 +14,8 @@ engine every 5 minutes (300 seconds). All 10 sync phases execute on each cycle:
   Phase 9: Guest Feedback
   Phase 10: Vectorization
 
-The existing StreamlineVRS.run_sync_loop() in main.py is the production instance.
-This SyncWorker facade provides an independent entry point for testing and
-standalone deployment.
+Production polling runs as a supervised process (systemd ``fortress-sync-worker``)
+via ``python -m backend.sync``. FastAPI no longer runs ``sync_all`` in lifespan.
 """
 from __future__ import annotations
 
@@ -64,12 +63,29 @@ class SyncWorker:
             logger.error("sync_cycle_failed", elapsed_seconds=elapsed, error=str(e))
             return {"status": "error", "error": str(e)}
 
-    async def run_sync_loop(self, get_db_session):
+    async def _sleep_or_shutdown(
+        self,
+        seconds: float,
+        shutdown_event: asyncio.Event | None,
+    ) -> None:
+        if shutdown_event is None:
+            await asyncio.sleep(seconds)
+            return
+        try:
+            await asyncio.wait_for(shutdown_event.wait(), timeout=seconds)
+        except asyncio.TimeoutError:
+            pass
+
+    async def run_sync_loop(
+        self,
+        get_db_session,
+        shutdown_event: asyncio.Event | None = None,
+    ) -> None:
         """
         Infinite polling loop. Fetches a DB session each cycle.
 
-        Mirrors the production run_sync_loop() in StreamlineVRS but adds
-        structured logging with timing for each cycle.
+        When ``shutdown_event`` is set (e.g. SIGTERM), the sleep between cycles
+        ends early so the process can exit without waiting a full interval.
         """
         self._running = True
         logger.info(
@@ -78,7 +94,7 @@ class SyncWorker:
             configured=self.is_configured,
         )
 
-        await asyncio.sleep(5)
+        await self._sleep_or_shutdown(5.0, shutdown_event)
 
         while self._running:
             try:
@@ -90,10 +106,18 @@ class SyncWorker:
             except Exception as e:
                 logger.error("synapse_worker_error", error=str(e))
 
-            logger.info("synapse_worker_sleeping", seconds=self._interval)
-            await asyncio.sleep(self._interval)
+            if not self._running or (shutdown_event is not None and shutdown_event.is_set()):
+                break
 
-    def stop(self):
+            logger.info("synapse_worker_sleeping", seconds=self._interval)
+            await self._sleep_or_shutdown(float(self._interval), shutdown_event)
+
+        logger.info("synapse_worker_stopped")
+
+    def stop(self) -> None:
         """Signal the worker to stop after the current cycle."""
         self._running = False
         logger.info("synapse_worker_stop_requested")
+
+    async def close(self) -> None:
+        await self._vrs.close()

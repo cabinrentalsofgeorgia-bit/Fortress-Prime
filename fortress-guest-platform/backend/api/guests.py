@@ -89,7 +89,7 @@ class GuestUpdate(BaseModel):
 
 class GuestResponse(BaseModel):
     id: UUID
-    phone_number: str
+    phone_number: Optional[str] = None
     email: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -219,13 +219,13 @@ def _build_guest_response(guest: Guest) -> GuestResponse:
         loyalty_tier=guest.loyalty_tier or "bronze",
         value_score=guest.value_score or 50,
         risk_score=guest.risk_score or 10,
-        is_vip=guest.is_vip or False,
+        is_vip=guest.is_vip,
         is_verified=guest.is_verified,
-        is_blacklisted=guest.is_blacklisted or False,
+        is_blacklisted=guest.is_blacklisted,
         is_repeat_guest=guest.is_repeat_guest,
         total_stays=guest.total_stays or 0,
         lifetime_revenue=float(guest.lifetime_revenue or 0),
-        average_rating=float(guest.average_rating) if guest.average_rating else None,
+        average_rating=float(guest.average_rating) if guest.average_rating is not None else None,
         last_stay_date=guest.last_stay_date,
         guest_source=guest.guest_source,
         tags=guest.tags,
@@ -286,15 +286,14 @@ async def list_guests(
 
     if search:
         search_filter = f"%{search}%"
-        query = query.where(
-            or_(
-                Guest.first_name.ilike(search_filter),
-                Guest.last_name.ilike(search_filter),
-                Guest.email.ilike(search_filter),
-                Guest.phone_number.ilike(search_filter),
-                Guest.city.ilike(search_filter),
-            )
-        )
+        search_clauses = [
+            Guest.first_name.ilike(search_filter),
+            Guest.last_name.ilike(search_filter),
+            Guest.email.ilike(search_filter),
+            Guest.phone_number.ilike(search_filter),
+            Guest.city.ilike(search_filter),
+        ]
+        query = query.where(or_(*search_clauses))
 
     if tags:
         query = query.where(Guest.tags.contains(tags))
@@ -433,12 +432,12 @@ async def get_guest(guest_id: UUID, db: AsyncSession = Depends(get_db)):
         value_score=guest.value_score or 50,
         risk_score=guest.risk_score or 10,
         satisfaction_score=guest.satisfaction_score,
-        is_vip=guest.is_vip or False,
+        is_vip=guest.is_vip,
         is_verified=guest.is_verified,
-        is_blacklisted=guest.is_blacklisted or False,
+        is_blacklisted=guest.is_blacklisted,
         is_repeat_guest=guest.is_repeat_guest,
         total_stays=guest.total_stays or 0,
-        average_rating=float(guest.average_rating) if guest.average_rating else None,
+        average_rating=float(guest.average_rating) if guest.average_rating is not None else None,
         last_stay_date=guest.last_stay_date,
         guest_source=guest.guest_source,
         tags=guest.tags,
@@ -446,7 +445,7 @@ async def get_guest(guest_id: UUID, db: AsyncSession = Depends(get_db)):
         vehicle_description=guest.vehicle_description,
         emergency_contact_name=guest.emergency_contact_name,
         emergency_contact_phone=guest.emergency_contact_phone,
-        preferred_contact_method=guest.preferred_contact_method,
+        preferred_contact_method=guest.preferred_contact_method or "sms",
         opt_in_marketing=guest.opt_in_marketing if guest.opt_in_marketing is not None else True,
         special_requests=guest.special_requests,
         internal_notes=guest.internal_notes,

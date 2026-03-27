@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1083",
+  "original_slug": "/testimonial/private-and-relaxing",
+  "content_body": "<p>This is our second time staying at this property. It is extremely private and very relaxing.</p>",
+  "category_tags": [
+    "Private Boat Dock"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Private and Relaxing",
+  "archive_slug": "private-and-relaxing",
+  "archive_path": "/reviews/archive/private-and-relaxing",
+  "source_ref": "node/1083",
+  "hmac_signature": "97e80041e46e7ec75123879290d74d590182d02efb05d0a90310d0b8040f56d1"
+}

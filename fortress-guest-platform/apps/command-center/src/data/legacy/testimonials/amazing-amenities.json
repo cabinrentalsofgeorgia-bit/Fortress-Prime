@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2534",
+  "original_slug": "/testimonial/amazing-amenities",
+  "content_body": "<p>My family has stayed in several of their properties and continue to go back because they are beautiful, comfortable, and every amenity has been thought of.&nbsp;</p>",
+  "category_tags": [
+    "Indoor Fireplaces",
+    "Motorcycle Friendly",
+    "Non-Smoking",
+    "Outdoor Fireplaces"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Amenities",
+  "archive_slug": "amazing-amenities",
+  "archive_path": "/reviews/archive/amazing-amenities",
+  "source_ref": "node/2534",
+  "hmac_signature": "2837ab8891b63841801834fc1417cb549b9081f2d82df1de634923eda67d804e"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1509",
+  "original_slug": "/testimonial/magnificent",
+  "content_body": "<p>The home was magnificent and exactly as advertised. The furniture, kitchen supplies, towels, soaps, etc. were all up to date and fresh. I would definitely stay here again. The location was ideal and the views spectacular.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Magnificent!",
+  "archive_slug": "magnificent",
+  "archive_path": "/reviews/archive/magnificent",
+  "source_ref": "node/1509",
+  "hmac_signature": "e550ec276fdbe8ad6a8e87653fbb13e456611c1659c99dd58eb003761b1b239e"
+}

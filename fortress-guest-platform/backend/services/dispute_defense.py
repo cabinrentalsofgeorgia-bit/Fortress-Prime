@@ -27,8 +27,9 @@ from backend.core.config import settings
 logger = structlog.get_logger(service="dispute_defense")
 
 NAS_EVIDENCE_BASE = Path("/mnt/fortress_nas/sectors/legal/chargeback-evidence")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_EVIDENCE_DIR = Path(
-    os.getenv("EVIDENCE_STORAGE_DIR", "/home/admin/Fortress-Prime/fortress-guest-platform/storage/evidence")
+    os.getenv("EVIDENCE_STORAGE_DIR", str(PROJECT_ROOT / "storage" / "evidence"))
 )
 LOCAL_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 

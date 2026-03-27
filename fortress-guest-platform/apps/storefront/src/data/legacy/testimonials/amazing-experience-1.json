@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2830",
+  "original_slug": "/testimonial/amazing-experience-1",
+  "content_body": "<p>We really loved our stay, we had a lot of fun and played so many games. We roasted marshmallows and spent so much time together as a family. We went hiking and got to see the waterfalls - a highlight of the trip! This was a really amazing experience. Thank you for the stay, we loved it!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "An Amazing Experience",
+  "archive_slug": "amazing-experience-1",
+  "archive_path": "/reviews/archive/amazing-experience-1",
+  "source_ref": "node/2830",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "f32da2f294824fd568976db2f3ccb907fda50b1cb98a1833279df22619849269"
+}

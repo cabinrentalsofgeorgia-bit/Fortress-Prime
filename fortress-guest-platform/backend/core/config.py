@@ -1,9 +1,21 @@
 """
-Application configuration using Pydantic Settings
+Application configuration using Pydantic Settings.
 """
 
+from pathlib import Path
+from urllib.parse import SplitResult, urlsplit, urlunsplit
+
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator
+
+
+DEFAULT_HISTORIAN_BLUEPRINT_PATH = str(
+    Path(__file__).resolve().parents[1] / "scripts" / "drupal_granular_blueprint.json"
+)
+ALLOWED_POSTGRES_DATABASES = frozenset({"fortress_prod", "fortress_shadow"})
+ALLOWED_POSTGRES_HOST = "127.0.0.1"
+ALLOWED_POSTGRES_PORT = 5432
+ALLOWED_POSTGRES_SCHEMES = frozenset({"postgres", "postgresql", "postgresql+asyncpg"})
 
 
 class Settings(BaseSettings):
@@ -11,8 +23,30 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False)
 
     # Database
-    database_url: str = Field(default="postgresql+asyncpg://fgp_app:fortress2024@localhost:5432/fortress_guest")
+    postgres_admin_uri: str = Field(
+        default="",
+        alias="POSTGRES_ADMIN_URI",
+        description="Local fortress_admin connection string used exclusively by Alembic migrations.",
+    )
+    postgres_api_uri: str = Field(
+        default="",
+        alias="POSTGRES_API_URI",
+        description="Local fortress_api connection string used by the FastAPI runtime.",
+    )
     swarm_api_key: str = Field(default="")
+
+    # ----------------------------------------
+    # Vanguard MySQL Source (Phase 1 CDC Probe)
+    # ----------------------------------------
+    mysql_source_host: str = Field(default="")
+    mysql_source_port: int = Field(default=3306)
+    mysql_source_user: str = Field(default="")
+    mysql_source_password: str = Field(default="")
+    mysql_source_database: str = Field(default="")
+    mysql_source_ssl_mode: str = Field(default="PREFERRED")
+    mysql_source_ssl_ca_path: str = Field(default="")
+    mysql_source_ssl_cert_path: str = Field(default="")
+    mysql_source_ssl_key_path: str = Field(default="")
 
     # JWT (Tier-0 hardening): RS256 asymmetric keys.
     # Keys are expected as base64-encoded PEM strings for env portability.
@@ -24,6 +58,59 @@ class Settings(BaseSettings):
     jwt_legacy_hs256_secrets: str = Field(default="")
     jwt_algorithm: str = Field(default="RS256")
     jwt_expiration_hours: int = Field(default=24)
+    audit_log_signing_key: str = Field(default="")
+    agentic_system_active: bool = Field(
+        default=False,
+        alias="AGENTIC_SYSTEM_ACTIVE",
+        description="Enables Shadow Parallel observation and parity aggregation without switching live authority.",
+    )
+    sovereign_quote_signing_key: str = Field(
+        default="",
+        alias="SOVEREIGN_QUOTE_SIGNING_KEY",
+        description="HMAC secret for sealed checkout quotes. When set, POST /api/direct-booking/book requires signed_quote.",
+    )
+    historian_blueprint_path: str = Field(default=DEFAULT_HISTORIAN_BLUEPRINT_PATH)
+    historian_blueprint_db_path: str = Field(default="")
+    historian_archive_output_dir: str = Field(default="")
+    semrush_shadow_snapshot_path: str = Field(
+        default="/mnt/fortress_nas/fortress_data/ai_brain/analytics/semrush_shadow_snapshot.json",
+        alias="SEMRUSH_SHADOW_SNAPSHOT_PATH",
+        description="Local SEMRush observation snapshot on sovereign storage for Shadow Parallel SEO parity.",
+    )
+    legacy_host_active: bool = Field(
+        default=False,
+        alias="LEGACY_HOST_ACTIVE",
+        description="Whether workers are allowed to reach the retired legacy Drupal estate.",
+    )
+
+    @field_validator("postgres_admin_uri", "postgres_api_uri", mode="before")
+    @classmethod
+    def _normalize_database_uri(cls, value: str) -> str:
+        return (value or "").strip()
+
+    @field_validator("postgres_admin_uri", "postgres_api_uri")
+    @classmethod
+    def _validate_local_postgres_contract(cls, value: str) -> str:
+        if not value:
+            return value
+
+        parsed = urlsplit(value)
+        if parsed.scheme not in ALLOWED_POSTGRES_SCHEMES:
+            raise ValueError("PostgreSQL URIs must use postgres/postgresql schemes only.")
+        if parsed.hostname != ALLOWED_POSTGRES_HOST:
+            raise ValueError(f"PostgreSQL host must be {ALLOWED_POSTGRES_HOST}.")
+        if parsed.port != ALLOWED_POSTGRES_PORT:
+            raise ValueError(f"PostgreSQL port must be {ALLOWED_POSTGRES_PORT}.")
+        if not parsed.username:
+            raise ValueError("PostgreSQL URIs must include an explicit role name.")
+
+        database_name = parsed.path.removeprefix("/")
+        if database_name not in ALLOWED_POSTGRES_DATABASES:
+            raise ValueError(
+                f"PostgreSQL database must be one of: {', '.join(sorted(ALLOWED_POSTGRES_DATABASES))}."
+            )
+
+        return value
 
     @field_validator("jwt_rsa_private_key", "jwt_rsa_public_key", mode="before")
     @classmethod
@@ -56,7 +143,82 @@ class Settings(BaseSettings):
     def _normalize_kid(cls, v: str) -> str:
         value = (v or "").strip()
         return value or "fgp-rs256-v1"
+
+    @staticmethod
+    def _rewrite_database_driver(uri: str, *, async_driver: bool) -> str:
+        parsed = urlsplit(uri)
+        if parsed.scheme not in ALLOWED_POSTGRES_SCHEMES:
+            raise RuntimeError("PostgreSQL URI uses an unsupported driver.")
+
+        target_scheme = "postgresql+asyncpg" if async_driver else "postgresql"
+        rewritten = SplitResult(
+            scheme=target_scheme,
+            netloc=parsed.netloc,
+            path=parsed.path,
+            query=parsed.query,
+            fragment=parsed.fragment,
+        )
+        return urlunsplit(rewritten)
+
+    def _require_database_uri(self, value: str, *, expected_role: str, env_var: str) -> str:
+        if not value:
+            raise RuntimeError(
+                f"{env_var} must be set to a local PostgreSQL 16 URI for Fortress Prime."
+            )
+
+        parsed = urlsplit(value)
+        role_name = parsed.username or ""
+        if role_name != expected_role:
+            raise RuntimeError(f"{env_var} must authenticate as {expected_role}.")
+
+        return value
+
+    @property
+    def database_url(self) -> str:
+        runtime_uri = self._require_database_uri(
+            self.postgres_api_uri,
+            expected_role="fortress_api",
+            env_var="POSTGRES_API_URI",
+        )
+        return self._rewrite_database_driver(runtime_uri, async_driver=True)
+
+    @property
+    def database_admin_url(self) -> str:
+        admin_uri = self._require_database_uri(
+            self.postgres_admin_uri,
+            expected_role="fortress_admin",
+            env_var="POSTGRES_ADMIN_URI",
+        )
+        return self._rewrite_database_driver(admin_uri, async_driver=True)
+
+    @property
+    def alembic_database_url(self) -> str:
+        admin_uri = self._require_database_uri(
+            self.postgres_admin_uri,
+            expected_role="fortress_admin",
+            env_var="POSTGRES_ADMIN_URI",
+        )
+        return self._rewrite_database_driver(admin_uri, async_driver=False)
+
+    @property
+    def database_name(self) -> str:
+        runtime_uri = self._require_database_uri(
+            self.postgres_api_uri,
+            expected_role="fortress_api",
+            env_var="POSTGRES_API_URI",
+        )
+        return urlsplit(runtime_uri).path.removeprefix("/")
+
+    @property
+    def sovereign_quote_signing_enabled(self) -> bool:
+        return bool(self.sovereign_quote_signing_key.strip())
+
     secret_key: str = Field(default="change-me-fortress-secret")
+
+    @field_validator("swarm_api_key", mode="before")
+    @classmethod
+    def _normalize_swarm_api_key(cls, value: str) -> str:
+        return (value or "").strip()
 
     # Command Center
     command_center_url: str = Field(default="http://localhost:9800")
@@ -71,10 +233,119 @@ class Settings(BaseSettings):
     # AI Models — DGX Nodes
     dgx_reasoner_url: str = Field(default="http://192.168.0.100/hydra/v1")
     dgx_reasoner_model: str = Field(default="deepseek-r1:70b")
+    dgx_inference_url: str = Field(
+        default="",
+        alias="DGX_INFERENCE_URL",
+        description="Direct sovereign OpenAI-compatible /v1 endpoint for local DGX inference.",
+    )
+    dgx_inference_model: str = Field(
+        default="",
+        alias="DGX_INFERENCE_MODEL",
+        description="Model alias served by the direct DGX inference endpoint.",
+    )
+    dgx_inference_api_key: str = Field(
+        default="",
+        alias="DGX_INFERENCE_API_KEY",
+        description="Optional bearer token for the DGX inference endpoint.",
+    )
     dgx_ocular_url: str = Field(default="http://192.168.0.105:8000/v1")
     dgx_ocular_model: str = Field(default="qwen2.5:7b")
     dgx_memory_url: str = Field(default="http://192.168.0.106:8000/v1")
     dgx_memory_model: str = Field(default="qwen2.5:7b")
+    nemoclaw_orchestrator_url: str = Field(
+        default="http://192.168.0.100:8000",
+        description="Authoritative Ray-governed NemoClaw control-plane base URL on the sovereign head node.",
+    )
+    nemoclaw_orchestrator_api_key: str = Field(default="")
+    orchestrator_source: str = Field(default="spark_node_2_leader")
+    inbound_agentic_loop_enabled: bool = Field(default=True)
+    swarm_model: str = Field(default="qwen2.5:14b")
+    seo_swarm_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("SWARM_SEO_API_KEY", "SEO_SWARM_API_KEY"),
+    )
+    seo_grading_consumer_enabled: bool = Field(default=True)
+    seo_rewrite_consumer_enabled: bool = Field(default=True)
+    seo_deploy_consumer_enabled: bool = Field(default=True)
+    semrush_shadow_observer_enabled: bool = Field(
+        default=False,
+        alias="SEMRUSH_SHADOW_OBSERVER_ENABLED",
+        description="Enables recurring SEMRush Shadow Parallel observation jobs.",
+    )
+    semrush_shadow_observer_interval_seconds: int = Field(
+        default=900,
+        alias="SEMRUSH_SHADOW_OBSERVER_INTERVAL_SECONDS",
+        description="Seconds between recurring SEMRush Shadow Parallel observation jobs.",
+    )
+    research_scout_enabled: bool = Field(
+        default=False,
+        alias="RESEARCH_SCOUT_ENABLED",
+        description="Enables recurring Gemini-grounded market intelligence Scout jobs.",
+    )
+    research_scout_interval_seconds: int = Field(
+        default=86400,
+        alias="RESEARCH_SCOUT_INTERVAL_SECONDS",
+        description="Seconds between recurring Research Scout cycles.",
+    )
+    research_scout_market: str = Field(
+        default="Blue Ridge, Georgia",
+        alias="RESEARCH_SCOUT_MARKET",
+        description="Primary market locality used by the Research Scout prompt.",
+    )
+    concierge_shadow_draft_enabled: bool = Field(
+        default=False,
+        alias="CONCIERGE_SHADOW_DRAFT_ENABLED",
+        description="Enables recurring Concierge Alpha recovery draft parity (legacy vs sovereign) jobs.",
+    )
+    concierge_shadow_draft_interval_seconds: int = Field(
+        default=1800,
+        alias="CONCIERGE_SHADOW_DRAFT_INTERVAL_SECONDS",
+        description="Seconds between Concierge Alpha shadow-draft enqueue attempts (~30m default).",
+    )
+    concierge_recovery_parity_candidate_limit: int = Field(
+        default=25,
+        alias="CONCIERGE_RECOVERY_PARITY_CANDIDATE_LIMIT",
+        description="Max funnel recovery candidates scanned per shadow-draft cycle.",
+    )
+    hunter_queue_sweep_enabled: bool = Field(
+        default=True,
+        alias="HUNTER_QUEUE_SWEEP_ENABLED",
+        description="Enables recurring Reactivation Hunter queue sweeps on the ARQ worker heartbeat.",
+    )
+    hunter_queue_sweep_interval_seconds: int = Field(
+        default=300,
+        alias="HUNTER_QUEUE_SWEEP_INTERVAL_SECONDS",
+        description="Seconds between Hunter queue sweep enqueue attempts (~5m default).",
+    )
+    hunter_queue_candidate_limit: int = Field(
+        default=50,
+        alias="HUNTER_QUEUE_CANDIDATE_LIMIT",
+        description="Max candidates gathered per prey class during a Hunter queue sweep.",
+    )
+    node_ip: str = Field(default="127.0.0.1")
+    seo_redirect_swarm_model: str = Field(default="nemotron-3-super-120b")
+    seo_grade_requests_channel: str = Field(default="fortress:seo:grade_requests")
+    seo_redirect_grade_threshold: float = Field(default=0.95)
+    seo_godhead_min_score: float = Field(default=0.95)
+    seo_max_rewrite_attempts: int = Field(default=3)
+    seo_redis_cache_ttl: int = Field(default=3600)
+    seo_godhead_model: str = Field(default="nemotron-3-super-120b")
+    edge_revalidation_secret: str = Field(default="")
+    storefront_base_url: str = Field(default="https://cabin-rentals-of-georgia.com")
+    storefront_revalidate_origin: str = Field(default="")
+
+    # Strike 8 — Redirect Vanguard (Cloudflare KV registry of sovereign-ready cabin slugs)
+    cloudflare_account_id: str = Field(default="", alias="CLOUDFLARE_ACCOUNT_ID")
+    cloudflare_api_token: str = Field(default="", alias="CLOUDFLARE_API_TOKEN")
+    cloudflare_kv_namespace_deployed_slugs: str = Field(
+        default="",
+        alias="CLOUDFLARE_KV_NAMESPACE_DEPLOYED_SLUGS",
+        description="Workers KV namespace ID for cabin slugs that should proxy to the sovereign storefront.",
+    )
+
+    @property
+    def swarm_seo_api_key(self) -> str:
+        return self.seo_swarm_api_key
 
     # AI Models — Cloud (fallback)
     openai_api_key: str = Field(default="")
@@ -91,6 +362,10 @@ class Settings(BaseSettings):
         default="http://127.0.0.1:4000/v1",
         description="Base URL for LiteLLM gateway; backend appends /chat/completions. FGP_BACKEND_URL is unrelated (Next.js BFF upstream).",
     )
+    litellm_master_key: str = Field(
+        default="fortress-dev-key",
+        description="Bearer token used by internal services to authenticate to the LiteLLM proxy.",
+    )
 
     # Gateway
     gateway_api_url: str = Field(default="http://localhost:8000")
@@ -102,6 +377,62 @@ class Settings(BaseSettings):
 
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0")
+    arq_redis_url: str = Field(default="redis://localhost:6379/1")
+    arq_queue_name: str = Field(default="fortress:arq")
+    arq_concurrency: int = Field(default=8)
+    arq_job_timeout_seconds: int = Field(default=3600)
+    arq_keep_result_seconds: int = Field(default=86400)
+    arq_max_tries: int = Field(default=3)
+    async_job_watchdog_enabled: bool = Field(
+        default=True,
+        alias="ASYNC_JOB_WATCHDOG_ENABLED",
+        description="Enables the ARQ worker watchdog that detects and repairs stale async job ledger rows.",
+    )
+    async_job_watchdog_interval_seconds: int = Field(
+        default=60,
+        alias="ASYNC_JOB_WATCHDOG_INTERVAL_SECONDS",
+        description="Seconds between async job watchdog sweeps.",
+    )
+    async_job_stale_queued_seconds: int = Field(
+        default=180,
+        alias="ASYNC_JOB_STALE_QUEUED_SECONDS",
+        description="Queued job age threshold before the watchdog raises an alert.",
+    )
+    async_job_stale_running_seconds: int = Field(
+        default=900,
+        alias="ASYNC_JOB_STALE_RUNNING_SECONDS",
+        description="Running job age threshold before the watchdog raises an alert.",
+    )
+    council_stream_ttl_seconds: int = Field(default=86400)
+    council_stream_maxlen: int = Field(default=500)
+    council_stream_heartbeat_seconds: int = Field(default=15)
+
+    # Sovereign object storage
+    s3_endpoint_url: str = Field(
+        default="",
+        alias="S3_ENDPOINT_URL",
+        description="S3-compatible API endpoint for sovereign media storage.",
+    )
+    s3_bucket_name: str = Field(
+        default="",
+        alias="S3_BUCKET_NAME",
+        description="Bucket name for sovereign media storage.",
+    )
+    s3_access_key: str = Field(
+        default="",
+        alias="S3_ACCESS_KEY",
+        description="Access key for sovereign media storage.",
+    )
+    s3_secret_key: str = Field(
+        default="",
+        alias="S3_SECRET_KEY",
+        description="Secret key for sovereign media storage.",
+    )
+    s3_public_base_url: str = Field(
+        default="",
+        alias="S3_PUBLIC_BASE_URL",
+        description="Public CDN base URL for sovereign media reads. Falls back to endpoint/bucket path style when omitted.",
+    )
 
     # Embedding (nomic-embed-text via Ollama, E5 NIM as future upgrade)
     embed_base_url: str = Field(default="http://192.168.0.100:11434")
@@ -118,13 +449,77 @@ class Settings(BaseSettings):
     streamline_api_secret: str = Field(default="")
     streamline_property_id: str = Field(default="")
     streamline_sync_interval: int = Field(default=300)
+    streamline_sovereign_bridge_hold_enabled: bool = Field(
+        default=False,
+        alias="STREAMLINE_SOVEREIGN_BRIDGE_HOLD_ENABLED",
+        description=(
+            "When true, notify Streamline after a sovereign checkout hold commits "
+            "(RPC method from STREAMLINE_SOVEREIGN_BRIDGE_HOLD_METHOD)."
+        ),
+    )
+    streamline_sovereign_bridge_hold_method: str = Field(
+        default="",
+        alias="STREAMLINE_SOVEREIGN_BRIDGE_HOLD_METHOD",
+        description=(
+            "Streamline JSON-RPC methodName for a temporary admin block/hold (account-specific; "
+            "empty skips outbound calls while the bridge flag is on)."
+        ),
+    )
+    streamline_sovereign_bridge_settlement_enabled: bool = Field(
+        default=False,
+        alias="STREAMLINE_SOVEREIGN_BRIDGE_SETTLEMENT_ENABLED",
+        description=(
+            "When true, after a direct-booking hold converts to a reservation via Stripe webhook, "
+            "emit an optional Streamline RPC (STREAMLINE_SOVEREIGN_BRIDGE_RESERVATION_METHOD)."
+        ),
+    )
+    streamline_sovereign_bridge_reservation_method: str = Field(
+        default="",
+        alias="STREAMLINE_SOVEREIGN_BRIDGE_RESERVATION_METHOD",
+        description=(
+            "Streamline JSON-RPC methodName for post-settlement reservation sync (account-specific)."
+        ),
+    )
+
+    deferred_api_reconciliation_enabled: bool = Field(
+        default=False,
+        alias="DEFERRED_API_RECONCILIATION_ENABLED",
+        description=(
+            "When true, ARQ worker runs a background loop that replays pending "
+            "deferred_api_writes rows for Streamline (Strike 20 / circuit-deferred RPC)."
+        ),
+    )
+    deferred_api_reconciliation_interval_seconds: int = Field(
+        default=120,
+        alias="DEFERRED_API_RECONCILIATION_INTERVAL_SECONDS",
+        ge=30,
+        description="Sleep between reconciliation sweeps in the worker background loop.",
+    )
+    deferred_api_reconciliation_batch_size: int = Field(
+        default=50,
+        alias="DEFERRED_API_RECONCILIATION_BATCH_SIZE",
+        ge=1,
+        le=500,
+        description="Max deferred Streamline rows to process per sweep.",
+    )
+    deferred_api_reconciliation_max_retries: int = Field(
+        default=10,
+        alias="DEFERRED_API_RECONCILIATION_MAX_RETRIES",
+        ge=1,
+        le=1000,
+        description="After this many failed replay attempts, row status becomes failed_final.",
+    )
 
     # Stripe Payments
-    stripe_secret_key: str = Field(default="")
+    stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
     stripe_publishable_key: str = Field(default="")
-    stripe_webhook_secret: str = Field(default="")
+    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
     stripe_connect_webhook_secret: str = Field(default="")
     stripe_dispute_webhook_secret: str = Field(default="")
+    reservation_hold_ttl_minutes: int = Field(
+        default=15,
+        description="Checkout hold duration before reservation_holds expire.",
+    )
 
     # Continuous Liquidity
     minimum_payout_amount: float = Field(default=25.00)
@@ -205,6 +600,47 @@ class Settings(BaseSettings):
     twilio_auth_token: str = Field(default="")
     twilio_phone_number: str = Field(default="")
     twilio_status_callback_url: str = Field(default="")
+    # Strike 11 — Enticer Swarm (off by default; requires Twilio env).
+    concierge_recovery_sms_enabled: bool = Field(default=False, alias="CONCIERGE_RECOVERY_SMS_ENABLED")
+    concierge_recovery_sms_cooldown_hours: int = Field(
+        default=168,
+        ge=1,
+        le=8760,
+        alias="CONCIERGE_RECOVERY_SMS_COOLDOWN_HOURS",
+    )
+    concierge_recovery_sms_body_template: str = Field(default="", alias="CONCIERGE_RECOVERY_SMS_BODY_TEMPLATE")
+    concierge_storefront_book_url: str = Field(
+        default="https://cabin-rentals-of-georgia.com/book",
+        alias="CONCIERGE_STOREFRONT_BOOK_URL",
+    )
+    # Strike 17 — Active Pilot: granular authority for live recovery SMS (Enticer Swarm).
+    concierge_strike_enabled: bool = Field(
+        default=False,
+        alias="CONCIERGE_STRIKE_ENABLED",
+        description="When true with recovery SMS enabled, live sends require cohort allowlists and optional agentic gate.",
+    )
+    concierge_strike_allowed_guest_ids: str = Field(
+        default="",
+        alias="CONCIERGE_STRIKE_ALLOWED_GUEST_IDS",
+        description="Comma-separated guest UUIDs permitted for live recovery under Strike 17.",
+    )
+    concierge_strike_allowed_property_slugs: str = Field(
+        default="",
+        alias="CONCIERGE_STRIKE_ALLOWED_PROPERTY_SLUGS",
+        description="Comma-separated storefront property slugs permitted for live recovery under Strike 17.",
+    )
+    concierge_strike_allowed_loyalty_tiers: str = Field(
+        default="",
+        alias="CONCIERGE_STRIKE_ALLOWED_LOYALTY_TIERS",
+        description="Comma-separated loyalty tiers (e.g. gold,silver) permitted when non-empty.",
+    )
+    concierge_strike_require_agentic_system_active: bool = Field(
+        default=True,
+        alias="CONCIERGE_STRIKE_REQUIRE_AGENTIC_SYSTEM_ACTIVE",
+        description="When true, Strike 17 live sends are blocked unless AGENTIC_SYSTEM_ACTIVE is on (kill-switch).",
+    )
+    sendgrid_inbound_public_key: str = Field(default="", alias="SENDGRID_INBOUND_PUBLIC_KEY")
+    sendgrid_inbound_max_age_seconds: int = Field(default=300, alias="SENDGRID_INBOUND_MAX_AGE_SECONDS")
 
     # Invites
     invite_expiry_hours: int = Field(default=72)
@@ -215,6 +651,23 @@ class Settings(BaseSettings):
 
     # Keywords
     urgent_keywords_list: str = Field(default="emergency,urgent,broken,flood,fire,leak,police")
+
+    @field_validator("stripe_secret_key", "stripe_webhook_secret", mode="before")
+    @classmethod
+    def _normalize_stripe_secrets(cls, value: str) -> str:
+        return (value or "").strip()
+
+    @field_validator(
+        "s3_endpoint_url",
+        "s3_bucket_name",
+        "s3_access_key",
+        "s3_secret_key",
+        "s3_public_base_url",
+        mode="before",
+    )
+    @classmethod
+    def _normalize_s3_config(cls, value: str) -> str:
+        return (value or "").strip()
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

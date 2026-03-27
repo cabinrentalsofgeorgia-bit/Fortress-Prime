@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "637",
+  "original_slug": "/testimonial/luxury-home-midtown-atlanta",
+  "content_body": "<p>Amazing house! Could not have expected better! Such luxurious furnishings and everything needed is provided!</p><p>Thank you!</p>",
+  "category_tags": [
+    "Atlanta"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Luxury Home in Midtown Atlanta",
+  "archive_slug": "luxury-home-midtown-atlanta",
+  "archive_path": "/reviews/archive/luxury-home-midtown-atlanta",
+  "source_ref": "node/637",
+  "hmac_signature": "2b93e3252c81595a5abc3ff7eb6a3a0dedfb2c3d68bd5bce983e91bbaa5132b2"
+}

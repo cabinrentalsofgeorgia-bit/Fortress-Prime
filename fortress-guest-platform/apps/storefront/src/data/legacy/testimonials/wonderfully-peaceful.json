@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1489",
+  "original_slug": "/testimonial/wonderfully-peaceful",
+  "content_body": "<p>We had a wonderfully peaceful time in the cabin over the weekend. Afternoon rains were perfect. No bugs even!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderfully Peaceful",
+  "archive_slug": "wonderfully-peaceful",
+  "archive_path": "/reviews/archive/wonderfully-peaceful",
+  "source_ref": "node/1489",
+  "hmac_signature": "776eadcfaa39c9a9181e604f38da92d6e06d8222fcbc10f0c7b7971b25ad3845"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1192",
+  "original_slug": "/testimonial/lovely-cabin",
+  "content_body": "<p>Lovely cabin! Clean, comfortable, and beautiful views.&nbsp;We had a wonderful time&mdash;we&#39;ll be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Lovely Cabin!",
+  "archive_slug": "lovely-cabin",
+  "archive_path": "/reviews/archive/lovely-cabin",
+  "source_ref": "node/1192",
+  "hmac_signature": "3e0446ad12e5816070aa8f6759b96e3250ce99891314925bba526e726bc21e62"
+}

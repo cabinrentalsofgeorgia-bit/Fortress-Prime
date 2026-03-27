@@ -22,3 +22,17 @@ To add the SOW PDF, place it in this directory with one of these names:
 - `statement-of-work.pdf` (recommended)
 - `sow.pdf`
 - `SOW_December_2025.pdf`
+
+## Operations Runbooks
+
+- `OPERATIONS.md`: Primary async runtime, queue split-brain recovery, worker ownership, smoke verification, and ledger cleanup runbook.
+- `SEO_OPERATOR_RUNTIME_RUNBOOK.md`: Stable runtime commands, dedicated deploy-consumer ownership, verified teardown semantics, and smoke flow for the SEO operator loop.
+- `CAPTAIN_CLOUDFLARED_RUNBOOK.md`: Verified Captain tunnel posture, `http2` pin, systemd preflight validation, official apt source, and recovery checks for `Fortress-Prime`.
+- `FORTRESS_PRIME_AUTH_PIPELINE_AUDIT.md`: Zone B auth + BFF + telemetry contract audit, Phase 1–4 findings, and post-incident hardening checklist.
+- `scripts/fortress_auth_pipeline_smoke.sh` (repo root): Backend login → `/api/auth/me` → telemetry + authenticated Streamline status (requires `FORTRESS_SMOKE_EMAIL` / `FORTRESS_SMOKE_PASSWORD`).
+
+## Runtime Launchers
+
+- `fortress-guest-platform/scripts/`: App-local launcher scripts for the SEO operator runtime and smoke flow.
+- `fortress-guest-platform/scripts/start_seo_operator_stack.sh`: Idempotent one-command bring-up for the SEO operator stack.
+- `fortress-guest-platform/scripts/stop_seo_operator_stack.sh`: Matching one-command teardown for the SEO operator stack.

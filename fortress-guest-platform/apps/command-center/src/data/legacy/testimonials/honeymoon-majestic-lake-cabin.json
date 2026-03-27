@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "33",
+  "original_slug": "/testimonial/honeymoon-majestic-lake-cabin",
+  "content_body": "<p>The Knight Family &ndash; What an amazing trip! We just got married on Sunday, after thirteen years of being together! We wanted to go to Paris, but&hellip;.decided to have a big cocktail party, classic style as our wedding and invite all of our very closest friends and family. Paris, although still happening next year, we decided to replace with a closer trip to the mountains. Blue Ridge is absolutely beautiful. We had no idea that the view from Majestic Lake was this gorgeous! We had some rain the first day, but it was OK because it forced us to relax &ndash; we live busy lives and often forget to chill. Besides, the cabin is so beautiful and clean, it&#39;s&nbsp;not like it was a struggle! We visited Downtown Blue Ridge two&nbsp;days in a row, and enjoyed a great lunch at the L.L. Beanery (tomato basil soup is unreal yum!), and shopped a ton! We bought some pottery at &ldquo;All Fired Up&rdquo; &ndash; some for us and some for gifts &ndash; beautiful. We had a great time just driving around and admiring the fall leaves and even found the old Antioch Cemetery, that was unexpected &ndash; we paid our respects and moved on &ndash; it was very touching. Thank you&nbsp;for great memories. We look forward to returning with our family.</p>",
+  "category_tags": [
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T02:08:03Z",
+  "title": "Honeymoon at Majestic Lake Cabin",
+  "archive_slug": "honeymoon-majestic-lake-cabin",
+  "archive_path": "/reviews/archive/honeymoon-majestic-lake-cabin",
+  "source_ref": "node/33",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "e25e453d88265cd95d4fb6925fb85364a5067b97b4ee8f1e8ac9bd023ce7672d"
+}

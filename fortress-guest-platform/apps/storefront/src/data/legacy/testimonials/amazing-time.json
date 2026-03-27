@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1255",
+  "original_slug": "/testimonial/amazing-time",
+  "content_body": "<p>An amazing time! The weather cleared up perfect just in time for our stay. This is the second time we have used your cabins, and this one is perfect for families with kids. We look forward to the next trip!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "An Amazing Time!",
+  "archive_slug": "amazing-time",
+  "archive_path": "/reviews/archive/amazing-time",
+  "source_ref": "node/1255",
+  "hmac_signature": "afe05f27cca3b62c59132ba3396775767fcff5efdeb003069f6069e67afc5886"
+}

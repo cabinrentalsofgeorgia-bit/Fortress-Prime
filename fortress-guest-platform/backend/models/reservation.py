@@ -3,11 +3,12 @@ Reservation model - Represents a booking/reservation
 """
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, Boolean, Integer, DECIMAL, Date, Text, TIMESTAMP, ForeignKey, Numeric
+from sqlalchemy import Boolean, Column, DECIMAL, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 
 from backend.core.database import Base
+from backend.core.time import utc_now
 
 
 class Reservation(Base):
@@ -22,10 +23,17 @@ class Reservation(Base):
     # Foreign Keys
     guest_id = Column(UUID(as_uuid=True), ForeignKey("guests.id", ondelete="CASCADE"), nullable=False, index=True)
     property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Sovereign guest ledger fields
+    guest_email = Column(String(255), nullable=False, index=True, default="", server_default="")
+    guest_name = Column(String(255), nullable=False, default="", server_default="")
+    guest_phone = Column(String(50), nullable=True)
     
     # Dates & Guests
     check_in_date = Column(Date, nullable=False, index=True)
     check_out_date = Column(Date, nullable=False, index=True)
+    check_in = synonym("check_in_date")
+    check_out = synonym("check_out_date")
     num_guests = Column(Integer, nullable=False)
     num_adults = Column(Integer)
     num_children = Column(Integer)
@@ -38,8 +46,8 @@ class Reservation(Base):
     
     # Access
     access_code = Column(String(20))
-    access_code_valid_from = Column(TIMESTAMP)
-    access_code_valid_until = Column(TIMESTAMP)
+    access_code_valid_from = Column(DateTime(timezone=True))
+    access_code_valid_until = Column(DateTime(timezone=True))
     
     # Booking Details
     booking_source = Column(String(100))  # airbnb, vrbo, direct, etc
@@ -82,12 +90,12 @@ class Reservation(Base):
     security_deposit_amount = Column(Numeric(12, 2), default=500.00, server_default="500.00", nullable=False)
     security_deposit_status = Column(String(20), default="none", server_default="none", nullable=False)
     security_deposit_stripe_pi = Column(String(255))
-    security_deposit_updated_at = Column(TIMESTAMP)
+    security_deposit_updated_at = Column(DateTime(timezone=True))
 
     # Metadata
     streamline_reservation_id = Column(String(100))
-    created_at = Column(TIMESTAMP, default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
     
     # Relationships
     guest = relationship("Guest", back_populates="reservations")

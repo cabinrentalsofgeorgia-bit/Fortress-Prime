@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "931",
+  "original_slug": "/testimonial/honeymoon-spent-river-dreams",
+  "content_body": "<p>&nbsp;This is my absolute, dream home! We had a wonderful honeymoon here.&nbsp;</p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Honeymoon Spent at A River of Dreams",
+  "archive_slug": "honeymoon-spent-river-dreams",
+  "archive_path": "/reviews/archive/honeymoon-spent-river-dreams",
+  "source_ref": "node/931",
+  "related_property_slug": "river-dreams-lodge",
+  "related_property_path": "/cabins/river-dreams-lodge",
+  "related_property_title": "A River Of Dreams Lodge",
+  "hmac_signature": "e4daaf1ae44708641b2d57dd03a2606b8b4767800ea1a5d83026122b1c720305"
+}

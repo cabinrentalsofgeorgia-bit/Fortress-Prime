@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1312",
+  "original_slug": "/testimonial/wonderful-stay",
+  "content_body": "<p>Thank you so much for the wonderful stay at Hemlock Hideaway. It was our first trip to Blue Ridge, and we can&#39;t wait to come back! The cabin was the perfect distance to town but still left you feeling like you were in the middle of the mountains! It was the perfect place to spend Mothers Day.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Stay",
+  "archive_slug": "wonderful-stay",
+  "archive_path": "/reviews/archive/wonderful-stay",
+  "source_ref": "node/1312",
+  "hmac_signature": "b898c5546aa5c28430cb9071739c1f0d3a4447b5800159ce7c88f56d281c0388"
+}

@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1595",
+  "original_slug": "/testimonial/relaxing-fun-weekend",
+  "content_body": "<p>Thank you so much for such a relaxing, fun weekend at your family&#39;s cabin. It was so nice to get away and spend some time with my friends.&nbsp;</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Relaxing, Fun Weekend",
+  "archive_slug": "relaxing-fun-weekend",
+  "archive_path": "/reviews/archive/relaxing-fun-weekend",
+  "source_ref": "node/1595",
+  "hmac_signature": "c6225d57d9b838806d0fca7d7632cc332e8f0fe7665db4b0eed8957629d1f22c"
+}

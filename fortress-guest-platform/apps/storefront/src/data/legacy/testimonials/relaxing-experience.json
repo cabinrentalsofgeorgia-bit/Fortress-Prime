@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1983",
+  "original_slug": "/testimonial/relaxing-experience",
+  "content_body": "<p>We truly enjoyed our stay. It was a relaxing experience!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Relaxing Experience",
+  "archive_slug": "relaxing-experience",
+  "archive_path": "/reviews/archive/relaxing-experience",
+  "source_ref": "node/1983",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "76c4294e1dcbf1311770917d95646993937292d69262051257d319cdcc6bd707"
+}

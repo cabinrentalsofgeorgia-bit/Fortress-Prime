@@ -13,6 +13,9 @@ from typing import Any, Optional
 import httpx
 
 from backend.core.config import settings
+from backend.services.openshell_audit import record_audit_event
+from backend.services.privacy_router import sanitize_for_cloud
+from backend.services.swarm_service import submit_chat_completion
 
 
 @dataclass
@@ -70,36 +73,20 @@ async def _call_openai(
     temperature: float,
     timeout_s: float,
 ) -> str:
-    if not settings.openai_api_key:
-        raise RuntimeError("openai_api_key not configured")
-
-    messages = []
-    if system_message:
-        messages.append({"role": "system", "content": system_message})
-    messages.append({"role": "user", "content": prompt})
-
-    payload = {
-        "model": settings.openai_model,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-    }
-    headers = {
-        "Authorization": f"Bearer {settings.openai_api_key}",
-        "Content-Type": "application/json",
-    }
-    async with httpx.AsyncClient(timeout=timeout_s) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=payload,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        choices = data.get("choices") or []
-        if not choices:
-            return ""
-        return (((choices[0] or {}).get("message") or {}).get("content") or "").strip()
+    response = await submit_chat_completion(
+        prompt=prompt,
+        model=settings.openai_model,
+        system_message=system_message,
+        timeout_s=timeout_s,
+        extra_payload={
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        },
+    )
+    choices = response.get("choices") or []
+    if not choices:
+        return ""
+    return (((choices[0] or {}).get("message") or {}).get("content") or "").strip()
 
 
 async def execute_resilient_inference(
@@ -112,7 +99,7 @@ async def execute_resilient_inference(
     source_module: Optional[str] = None,
     **kwargs: Any,
 ) -> InferenceResult:
-    _ = (db, source_module, kwargs)
+    request_id = kwargs.get("request_id")
     timeout_s = float(kwargs.get("timeout_s", 45.0))
     start = time.perf_counter()
     errors: list[str] = []
@@ -127,39 +114,103 @@ async def execute_resilient_inference(
             temperature=temperature,
             timeout_s=timeout_s,
         )
-        return InferenceResult(
+        result = InferenceResult(
             text=text,
             source="ollama",
             breaker_state="closed",
             latency_ms=int((time.perf_counter() - start) * 1000),
         )
+        await record_audit_event(
+            actor_id=None,
+            action="ai_inference",
+            resource_type="model_route",
+            resource_id=task_type,
+            purpose=source_module or "resilient_inference",
+            redaction_status="not_applicable",
+            model_route="local_ollama",
+            outcome="success",
+            request_id=request_id,
+            metadata_json={
+                "task_type": task_type,
+                "source_module": source_module,
+                "latency_ms": result.latency_ms,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            },
+            db=db,
+        )
+        return result
     except Exception as exc:  # noqa: BLE001
         errors.append(f"ollama:{exc}")
 
     # 2) Cloud fallback: OpenAI
     try:
+        privacy_decision = sanitize_for_cloud({"prompt": prompt, "system_message": system_message or ""})
+        safe_prompt = str((privacy_decision.redacted_payload or {}).get("prompt", ""))
+        safe_system_message = str((privacy_decision.redacted_payload or {}).get("system_message", ""))
         text = await _call_openai(
-            prompt=prompt,
-            system_message=system_message,
+            prompt=safe_prompt,
+            system_message=safe_system_message,
             max_tokens=max_tokens,
             temperature=temperature,
             timeout_s=timeout_s,
         )
-        return InferenceResult(
+        result = InferenceResult(
             text=text,
             source="openai",
             breaker_state="closed",
             latency_ms=int((time.perf_counter() - start) * 1000),
         )
+        await record_audit_event(
+            actor_id=None,
+            action="ai_inference",
+            resource_type="model_route",
+            resource_id=task_type,
+            purpose=source_module or "resilient_inference",
+            redaction_status=privacy_decision.redaction_status,
+            model_route="litellm_gateway_redacted",
+            outcome="success",
+            request_id=request_id,
+            metadata_json={
+                "task_type": task_type,
+                "source_module": source_module,
+                "latency_ms": result.latency_ms,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "redaction_count": privacy_decision.redaction_count,
+                "removed_fields": privacy_decision.removed_fields,
+            },
+            db=db,
+        )
+        return result
     except Exception as exc:  # noqa: BLE001
         errors.append(f"openai:{exc}")
 
     # 3) Deterministic degraded fallback (never throw in call sites)
-    return InferenceResult(
+    result = InferenceResult(
         text=prompt[:400],
         source="fallback",
         breaker_state="open",
         latency_ms=int((time.perf_counter() - start) * 1000),
         error="; ".join(errors)[:500],
     )
+    await record_audit_event(
+        actor_id=None,
+        action="ai_inference",
+        resource_type="model_route",
+        resource_id=task_type,
+        purpose=source_module or "resilient_inference",
+        redaction_status="not_applicable",
+        model_route="degraded_fallback",
+        outcome="error",
+        request_id=request_id,
+        metadata_json={
+            "task_type": task_type,
+            "source_module": source_module,
+            "latency_ms": result.latency_ms,
+            "error": result.error,
+        },
+        db=db,
+    )
+    return result
 

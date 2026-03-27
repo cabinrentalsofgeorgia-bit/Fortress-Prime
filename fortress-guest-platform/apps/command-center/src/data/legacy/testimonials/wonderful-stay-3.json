@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1816",
+  "original_slug": "/testimonial/wonderful-stay-3",
+  "content_body": "<p>We had a wonderful stay! The home was fantastic. It is located near Blue Ridge, river front, on the Toccoa on a very private lot. The weather was perfect. We had a great time fishing, picking apples, and hanging out.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Stay",
+  "archive_slug": "wonderful-stay-3",
+  "archive_path": "/reviews/archive/wonderful-stay-3",
+  "source_ref": "node/1816",
+  "hmac_signature": "b625dfb50ad05141ab7c78295a57e91cedb0532f3ef2f6b0430f33be6bcff7f8"
+}

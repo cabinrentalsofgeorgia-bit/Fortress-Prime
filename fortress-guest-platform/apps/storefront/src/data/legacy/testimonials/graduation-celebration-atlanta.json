@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "518",
+  "original_slug": "/testimonial/graduation-celebration-atlanta",
+  "content_body": "<p>Beautiful, comfortable home. It served as a warm gathering place for family and friends and we celebrated another milestone, college graduation for our daughter! Great location with easy access to every place we needed to go.</p>",
+  "category_tags": [
+    "Atlanta"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Graduation Celebration in Atlanta",
+  "archive_slug": "graduation-celebration-atlanta",
+  "archive_path": "/reviews/archive/graduation-celebration-atlanta",
+  "source_ref": "node/518",
+  "hmac_signature": "aba4218bd218b76c87833ae03b179aefd0e4f44bf1bfbe4f422f0d6a1599e9fb"
+}

@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "163",
+  "original_slug": "/testimonial/experience-blue-ridge-the-summer",
+  "content_body": "<p>The cabin is wonderful and Georgia is amazing! Our family had an incredible time doing activities - tubing was so much fun &ndash; hiking to the waterfalls was cool, too. We all enjoyed ourselves and plan to return. It&rsquo;s sad that we have to return to Florida &ndash; it&rsquo;s still too hot there!<br />FL</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Experience",
+    "Summer"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Experience Blue Ridge in the Summer",
+  "archive_slug": "experience-blue-ridge-the-summer",
+  "archive_path": "/reviews/archive/experience-blue-ridge-the-summer",
+  "source_ref": "node/163",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "563425bbf3441fa66718fd9b54d67fccb53801f6691c805dcfba3843e2ea9a62"
+}

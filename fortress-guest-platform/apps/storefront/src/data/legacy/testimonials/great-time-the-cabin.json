@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "1147",
+  "original_slug": "/testimonial/great-time-the-cabin",
+  "content_body": "<p>Our family had a great time at the cabin! The beds were sooooo comfortable! Having the train go by was such a treat! The kids loved it!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time at the Cabin",
+  "archive_slug": "great-time-the-cabin",
+  "archive_path": "/reviews/archive/great-time-the-cabin",
+  "source_ref": "node/1147",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "968907d47678635bdb860b30912b2615d69cc5e2bfcd189dc9128eba4ea93ee1"
+}

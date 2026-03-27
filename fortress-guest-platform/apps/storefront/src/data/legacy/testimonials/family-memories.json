@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "2781",
+  "original_slug": "/testimonial/family-memories",
+  "content_body": "<p>Our family certainly has been so blessed to enjoy such an amazing place! Everything here is beautiful. Wonderful cold weather, stunning, surroundings, and what an amazing view of the mountains. Memories made as a family...Thank you!</p>",
+  "category_tags": [
+    "Blue Ridge Memories",
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Family Memories",
+  "archive_slug": "family-memories",
+  "archive_path": "/reviews/archive/family-memories",
+  "source_ref": "node/2781",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "2bdba545d401e81cf8b50b2a1fb4bd5d51921ed26d2f64d1b42e756c89e90725"
+}

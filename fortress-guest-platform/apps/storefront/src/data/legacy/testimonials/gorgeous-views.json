@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1247",
+  "original_slug": "/testimonial/gorgeous-views",
+  "content_body": "<p>We really enjoyed our getaway this weekend. We created great memories, played great pool, cooked amazing food, and relaxed. Gorgeous views! We will be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Gorgeous Views!",
+  "archive_slug": "gorgeous-views",
+  "archive_path": "/reviews/archive/gorgeous-views",
+  "source_ref": "node/1247",
+  "hmac_signature": "10b068ce617fc75fc99d7403f0fd1f99b937d8d93852cfba3d8f9b9bb8389cfe"
+}

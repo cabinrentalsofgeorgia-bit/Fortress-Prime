@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1455",
+  "original_slug": "/testimonial/thank-you",
+  "content_body": "<p>We had a fabulous week of family, friendships, and fun. Your home is lovely&mdash;plenty of room for privacy as well as together time. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Thank you!",
+  "archive_slug": "thank-you",
+  "archive_path": "/reviews/archive/thank-you",
+  "source_ref": "node/1455",
+  "hmac_signature": "5d6baf919753b65768102ea7daa184860ddb28a9fe7ee0c102ee48da16e17a24"
+}

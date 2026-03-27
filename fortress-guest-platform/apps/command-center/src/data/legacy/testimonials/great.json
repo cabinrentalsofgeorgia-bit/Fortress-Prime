@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1416",
+  "original_slug": "/testimonial/great",
+  "content_body": "<p>The cabin was great and we enjoyed out stay.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great",
+  "archive_slug": "great",
+  "archive_path": "/reviews/archive/great",
+  "source_ref": "node/1416",
+  "hmac_signature": "ab451912e7803cb50309c7062e3ed29cd52835a868131cba71c2bfd001f7f4c6"
+}

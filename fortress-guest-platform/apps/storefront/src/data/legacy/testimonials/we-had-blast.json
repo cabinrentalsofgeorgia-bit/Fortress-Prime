@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1406",
+  "original_slug": "/testimonial/we-had-blast",
+  "content_body": "<p>We had a blast!!! The cabin is beautiful! Thank you! See you next year!!!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "We Had A Blast!",
+  "archive_slug": "we-had-blast",
+  "archive_path": "/reviews/archive/we-had-blast",
+  "source_ref": "node/1406",
+  "hmac_signature": "64434897154f7cc68ee8ccfaf7dfa2f4fbee0806d0a354de538ddfdf467dacea"
+}

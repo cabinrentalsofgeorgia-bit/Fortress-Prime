@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1265",
+  "original_slug": "/testimonial/great-time",
+  "content_body": "<p>We had a great time this past weekend. The cabin was beautiful, as was the river.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time",
+  "archive_slug": "great-time",
+  "archive_path": "/reviews/archive/great-time",
+  "source_ref": "node/1265",
+  "hmac_signature": "806c5f434577492b31e0b36101e995a7198b25701968d475d9afdd75cfbaa6f9"
+}

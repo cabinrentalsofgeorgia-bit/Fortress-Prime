@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2173",
+  "original_slug": "/testimonial/great-memories-1",
+  "content_body": "<p>The cabin is gorgeous! The view is amazing and we loved all the amenities the cabin has. Despite the spotty wifi, CRG promptly sent out maintenance and TDS to fix it right away! It was awesome that they took the time to come out and fix that for us. Great memories! Love, the Gomez Family</p>\r\n\r\n<p>&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Memories!",
+  "archive_slug": "great-memories-1",
+  "archive_path": "/reviews/archive/great-memories-1",
+  "source_ref": "node/2173",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "6023c24db89694afd23a21c888768b03238ed96fc671a9efd85875e07d7a2f58"
+}

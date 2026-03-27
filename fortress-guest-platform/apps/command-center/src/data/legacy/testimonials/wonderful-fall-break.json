@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1512",
+  "original_slug": "/testimonial/wonderful-fall-break",
+  "content_body": "<p>What a wonderful Fall break we shared at Arcadia with family! The cabin is beautiful, the views are gorgeous, and the memories are unforgettable. We love visiting Blue Ridge and had a wonderful visit. Thank you.</p>",
+  "category_tags": [
+    "Fall"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Fall Break",
+  "archive_slug": "wonderful-fall-break",
+  "archive_path": "/reviews/archive/wonderful-fall-break",
+  "source_ref": "node/1512",
+  "hmac_signature": "5809995728fc5609545688636a357d5798798a2612208df252e8d07b20b8e436"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1456",
+  "original_slug": "/testimonial/highly-recommend-it",
+  "content_body": "<p>The Rivers Edge cabin was wonderful.&nbsp; Very clean, well decorated, and supplied with all kitchen appliances and utensils.&nbsp; It is a beautiful cabin in a great location and very spacious.&nbsp; I highly recommend it.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Highly Recommend It",
+  "archive_slug": "highly-recommend-it",
+  "archive_path": "/reviews/archive/highly-recommend-it",
+  "source_ref": "node/1456",
+  "hmac_signature": "f12d37cf729fa2b3e8e94274bccea409bdb58df63a93f5c15df3418d9322973f"
+}

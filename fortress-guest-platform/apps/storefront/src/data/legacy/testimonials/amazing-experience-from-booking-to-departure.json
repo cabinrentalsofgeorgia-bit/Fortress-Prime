@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3036",
+  "original_slug": "/testimonial/amazing-experience-from-booking-to-departure",
+  "content_body": "<p>I was very impressed. The High Hopes cabin was fantastic! All questions received prompt responses. Overall, I had a great experience from booking to departure. Taylor was absolutely amazing!!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing Experience From Booking to Departure!",
+  "archive_slug": "amazing-experience-from-booking-to-departure",
+  "archive_path": "/reviews/archive/amazing-experience-from-booking-to-departure",
+  "source_ref": "node/3036",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "da171f7514468ae46c3fb837acdd84cd6720cae4f35e9190bb01375f3965ef55"
+}

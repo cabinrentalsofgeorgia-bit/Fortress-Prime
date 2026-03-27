@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1631",
+  "original_slug": "/testimonial/wonderful-memories",
+  "content_body": "<p>We came as a family to celebrate our 17th wedding anniversary. Spent days hiking and viewing waterfalls and nights together as a family. Will absolutely plan to come back again. Kids (6 of them) enjoyed light snowfall for the first time! Thanks for the wonderful memories!</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Memories",
+  "archive_slug": "wonderful-memories",
+  "archive_path": "/reviews/archive/wonderful-memories",
+  "source_ref": "node/1631",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "ecd9beb0ba7a39d59f648fd61c1f8e78f4dc5581c44840e98a9c6586db6509d6"
+}

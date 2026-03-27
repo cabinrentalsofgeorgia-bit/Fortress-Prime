@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1452",
+  "original_slug": "/testimonial/wonderful",
+  "content_body": "<p>Our stay in Blue Ridge was wonderful! It was really relaxing. The view was gorgeous! The cabin was quiet, spacious, and nice. The cabin was well stocked with all the must-haves! Thank you for all the accommodations!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful",
+  "archive_slug": "wonderful",
+  "archive_path": "/reviews/archive/wonderful",
+  "source_ref": "node/1452",
+  "hmac_signature": "e4770f1559a34a57fa74629e9f619390b89cf1f31ee86ede0526c97baa59e9af"
+}

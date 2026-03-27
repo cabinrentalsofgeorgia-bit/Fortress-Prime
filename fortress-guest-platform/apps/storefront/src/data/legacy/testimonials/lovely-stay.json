@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2462",
+  "original_slug": "/testimonial/lovely-stay",
+  "content_body": "<p>Thanks for a lovely stay. We hiked in the Blue Ridge wilderness area and enjoyed everything. What a beautiful area with great food. We will be back to visit the mountains again!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Lovely Stay",
+  "archive_slug": "lovely-stay",
+  "archive_path": "/reviews/archive/lovely-stay",
+  "source_ref": "node/2462",
+  "hmac_signature": "262c12df81f750e6aa4c97dbad05c737c4f0cad9b1df9c3ea7a73ab602f71f2c"
+}

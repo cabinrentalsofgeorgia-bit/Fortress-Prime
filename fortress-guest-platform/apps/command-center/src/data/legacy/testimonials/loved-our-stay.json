@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1184",
+  "original_slug": "/testimonial/loved-our-stay",
+  "content_body": "<p>We loved our stay at Outlaw Ridge. The cabin was very well stocked to fit every need. Each couple/person had their own space and bathroom. The kitchen was perfect for multiple cooks. Common areas were very cozy, and we had a great time. We will surely come again.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Loved Our Stay",
+  "archive_slug": "loved-our-stay",
+  "archive_path": "/reviews/archive/loved-our-stay",
+  "source_ref": "node/1184",
+  "hmac_signature": "d4543b1d628ac7a9ab6071e7df976c3561e03c72a02c2c319ce753b37548e678"
+}

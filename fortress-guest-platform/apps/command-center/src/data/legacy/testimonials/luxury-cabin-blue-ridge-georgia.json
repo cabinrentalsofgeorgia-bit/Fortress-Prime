@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "1006",
+  "original_slug": "/testimonial/luxury-cabin-blue-ridge-georgia",
+  "content_body": "<p>I&#39;ve visited dozens of cabins in my life. Outlaw Ridge is the best cabin I&#39;ve ever stayed in by far.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Luxury Cabin In Blue Ridge, Georgia",
+  "archive_slug": "luxury-cabin-blue-ridge-georgia",
+  "archive_path": "/reviews/archive/luxury-cabin-blue-ridge-georgia",
+  "source_ref": "node/1006",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "ef7eb95d94609078a95739c61814a83335645a54228519d4497c9d5a89e48228"
+}

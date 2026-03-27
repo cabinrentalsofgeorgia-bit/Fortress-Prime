@@ -1,11 +1,31 @@
 """
 Stripe Webhooks — Autonomous Fiduciary Clearing Engine.
 
-Handles checkout.session.completed events from Stripe Payment Links
-to autonomously fund and execute Capital Call journal entries in the
-Iron Dome ledger when an owner pays via Stripe.
+**Canonical module path:** ``backend/api/stripe_webhooks.py`` (not ``webhooks_stripe.py``).
 
-Dual-journal commit:
+True Path — direct booking settlement (Strike 20)
+===================================================
+There is **no** separate ``SovereignBooking`` / ``booking_ledger`` table. Financial finality on
+sovereign Postgres is:
+
+  ``ReservationHold`` (active checkout hold) → ``Reservation`` (settled booking)
+
+driven by :func:`~backend.services.booking_hold_service.convert_hold_to_reservation` and
+:class:`~backend.services.reservation_finalization_service.ReservationFinalizationService`.
+
+- ``payment_intent.succeeded`` with ``metadata.source == direct_booking_hold`` runs that conversion.
+- ``strike20_settlement_orphan``: no hold row for the PaymentIntent → **HTTP 200** + warning log
+  (avoids Stripe retry storms for unrelated dashboard charges).
+- Streamline sync is **secondary**: gated by ``STREAMLINE_SOVEREIGN_BRIDGE_SETTLEMENT_ENABLED`` and
+  ``STREAMLINE_SOVEREIGN_BRIDGE_RESERVATION_METHOD``. On unexpected errors after settlement,
+  :meth:`~backend.services.sovereign_inventory_manager.SovereignInventoryManager.queue_strike20_settlement_for_reconciliation`
+  best-effort enqueues ``deferred_api_writes`` for the reconciliation worker (same envelope as
+  circuit-open Streamline writes).
+
+Also handles checkout.session.completed events from Stripe Payment Links for Capital Calls
+and guest quotes.
+
+Dual-journal commit (capex path):
   Journal 1 (Deposit):  DR 1010 Cash / CR 2000 Owner Trust
   Journal 2 (Expense):  DR 2000 Owner Trust / CR 2100 AP / CR 4100 PM Revenue
 """
@@ -15,8 +35,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.config import settings
 from backend.core.database import get_db
 from backend.integrations.stripe_payments import StripePayments
+from backend.services.booking_hold_service import BookingHoldError, convert_hold_to_reservation
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -29,9 +51,10 @@ async def stripe_webhook(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Receives Stripe webhook events, verifies signature, and dispatches
-    to the appropriate handler. Currently handles Capital Call funding
-    via checkout.session.completed from Payment Links.
+    Verifies Stripe signature and dispatches by event type.
+
+    Direct booking: ``payment_intent.succeeded`` + ``direct_booking_hold`` converts
+    ``ReservationHold`` → ``Reservation`` (sovereign ledger); Streamline bridge optional.
     """
     payload = await request.body()
 
@@ -47,6 +70,85 @@ async def stripe_webhook(
 
     event_type = event.get("type", "")
     logger.info("stripe_webhook_received", event_type=event_type)
+
+    if event_type == "payment_intent.succeeded":
+        obj = event["data"]["object"]
+        metadata = obj.get("metadata") or {}
+        if metadata.get("source") == "direct_booking_hold":
+            payment_intent_id = str(obj.get("id") or "").strip()
+            meta_hold = metadata.get("hold_id") or metadata.get("reservation_hold_id")
+            meta_hold = str(meta_hold).strip() if meta_hold else None
+            if payment_intent_id:
+                try:
+                    reservation = await convert_hold_to_reservation(
+                        payment_intent_id,
+                        db,
+                        metadata_hold_id=meta_hold,
+                    )
+                except BookingHoldError as exc:
+                    logger.warning(
+                        "direct_booking_hold_conversion_rejected",
+                        payment_intent_id=payment_intent_id,
+                        detail=str(exc),
+                    )
+                    raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+                if reservation is None:
+                    logger.warning(
+                        "strike20_settlement_orphan",
+                        payment_intent_id=payment_intent_id,
+                        metadata_hold_id=meta_hold,
+                        message="No matching active hold for this PaymentIntent",
+                    )
+                else:
+                    logger.info(
+                        "strike20_settlement_confirmed",
+                        payment_intent_id=payment_intent_id,
+                        hold_id=meta_hold,
+                        reservation_id=str(reservation.id),
+                    )
+                    if settings.streamline_sovereign_bridge_settlement_enabled:
+                        from backend.services.sovereign_inventory_manager import (
+                            sovereign_inventory_manager,
+                        )
+
+                        try:
+                            bridge = await sovereign_inventory_manager.finalize_legacy_reservation(
+                                db,
+                                reservation_id=reservation.id,
+                                stripe_payment_intent_id=payment_intent_id,
+                            )
+                            logger.info(
+                                "strike20_legacy_sync_attempt",
+                                reservation_id=str(reservation.id),
+                                legacy_notified=bridge.legacy_notified,
+                                detail=bridge.detail,
+                            )
+                        except Exception as exc:
+                            logger.warning(
+                                "strike20_legacy_sync_deferred",
+                                reservation_id=str(reservation.id),
+                                error=str(exc)[:300],
+                            )
+                            qid = await sovereign_inventory_manager.queue_strike20_settlement_for_reconciliation(
+                                db,
+                                reservation_id=reservation.id,
+                                stripe_payment_intent_id=payment_intent_id,
+                                failure_reason=str(exc)[:500],
+                            )
+                            if qid > 0:
+                                logger.info(
+                                    "strike20_settlement_replay_queued_from_webhook",
+                                    deferred_api_write_id=qid,
+                                    reservation_id=str(reservation.id),
+                                )
+                logger.info(
+                    "direct_booking_hold_finalized_via_stripe_webhook",
+                    payment_intent_id=payment_intent_id,
+                    hold_id=meta_hold,
+                    reservation_id=str(reservation.id) if reservation is not None else None,
+                    converted=reservation is not None,
+                )
+            return {"status": "ok", "event_type": event_type}
 
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]

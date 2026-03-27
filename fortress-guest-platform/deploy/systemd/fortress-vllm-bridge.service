@@ -1,0 +1,26 @@
+[Unit]
+Description=Fortress vLLM Bridge
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+Environment=VLLM_BRIDGE_BIND=127.0.0.1
+Environment=VLLM_BRIDGE_PORT=18001
+Environment=VLLM_BRIDGE_CONTAINER=vllm-70b-captain
+Environment=VLLM_BRIDGE_TARGET_URL=http://127.0.0.1:8000
+ExecStart=/usr/bin/python3 /home/admin/Fortress-Prime/fortress-guest-platform/deploy/vllm_http_proxy.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+LimitNOFILE=65536
+SyslogIdentifier=fortress-vllm-bridge
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

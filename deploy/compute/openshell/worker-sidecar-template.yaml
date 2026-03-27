@@ -1,0 +1,476 @@
+# OpenShell worker sidecar template.
+#
+# Required runtime substitutions:
+# - {{NODE_OCTET}}: LAN last octet for the target worker (example: 105)
+# - {{SSH_HANDSHAKE_SECRET}}: per-node handshake secret generated or preserved by provision_worker.sh
+# - {{LITELLM_GATEWAY_IP}}: LAN IP for the sanctioned LiteLLM gateway host
+#
+# Secrets are intentionally excluded from Git. The provisioning script is responsible for
+# creating or updating these from node-local PKI before this manifest is applied:
+# - openshell-server-client-ca
+# - openshell-server-tls
+# - openshell-client-tls
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshell
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openshell
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: openshell
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openshell-sandbox
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: openshell
+rules:
+  - apiGroups:
+      - agents.x-k8s.io
+    resources:
+      - sandboxes
+      - sandboxes/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openshell-sandbox
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: openshell
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: openshell-sandbox
+subjects:
+  - kind: ServiceAccount
+    name: openshell
+    namespace: openshell
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openshell-sandbox-ssh
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: openshell
+spec:
+  podSelector:
+    matchLabels:
+      openshell.ai/managed-by: openshell
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshell
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: openshell
+              app.kubernetes.io/name: openshell
+      ports:
+        - port: 2222
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openshell
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: openshell
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: openshell
+  ports:
+    - name: grpc
+      appProtocol: grpc
+      protocol: TCP
+      port: 8080
+      targetPort: grpc
+      nodePort: 30051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-gateway
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: litellm-gateway
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4000
+      targetPort: 4000
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: litellm-gateway
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: litellm-gateway
+subsets:
+  - addresses:
+      - ip: {{LITELLM_GATEWAY_IP}}
+    ports:
+      - name: http
+        port: 4000
+        protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-relay
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: litellm-relay
+data:
+  relay.py: |
+    import json
+    import os
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from urllib.error import HTTPError, URLError
+    from urllib.request import Request, urlopen
+
+    RELAY_PORT = int(os.getenv("LITELLM_RELAY_PORT", "4010"))
+    UPSTREAM_BASE_URL = os.getenv("LITELLM_UPSTREAM_URL", "http://litellm-gateway:4000/v1").rstrip("/")
+    API_KEY = (
+        os.getenv("OPENAI_API_KEY")
+        or os.getenv("LITELLM_API_KEY")
+        or ""
+    ).strip()
+
+
+    class RelayHandler(BaseHTTPRequestHandler):
+        server_version = "FortressLiteLLMRelay/1.0"
+
+        def _write(self, status_code: int, body: bytes, content_type: str = "application/json") -> None:
+            self.send_response(status_code)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self) -> None:
+            if self.path in {"/health", "/ready"}:
+                body = json.dumps({"status": "ok", "upstream": UPSTREAM_BASE_URL}).encode("utf-8")
+                self._write(200, body)
+                return
+            self._write(404, b'{"detail":"not found"}')
+
+        def do_POST(self) -> None:
+            if self.path != "/v1/chat/completions":
+                self._write(404, b'{"detail":"not found"}')
+                return
+
+            if not API_KEY:
+                self._write(500, b'{"detail":"relay api key missing"}')
+                return
+
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = self.rfile.read(length)
+            upstream_request = Request(
+                f"{UPSTREAM_BASE_URL}/chat/completions",
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {API_KEY}",
+                },
+                method="POST",
+            )
+            try:
+                with urlopen(upstream_request, timeout=45) as upstream_response:
+                    body = upstream_response.read()
+                    self._write(upstream_response.status, body)
+            except HTTPError as exc:
+                self._write(exc.code, exc.read())
+            except URLError as exc:
+                body = json.dumps({"detail": f"upstream unavailable: {exc.reason}"}).encode("utf-8")
+                self._write(502, body)
+
+        def log_message(self, format: str, *args) -> None:  # noqa: A003
+            return
+
+
+    if __name__ == "__main__":
+        server = ThreadingHTTPServer(("0.0.0.0", RELAY_PORT), RelayHandler)
+        server.serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm-relay
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: litellm-relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: openshell
+      app.kubernetes.io/name: litellm-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: openshell
+        app.kubernetes.io/name: litellm-relay
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: relay
+          image: ghcr.io/nvidia/openshell-community/sandboxes/base@sha256:97a6a668150c1685105be2fcd0d2fdfe5da3d1f27459328ec208635506a0c18d
+          imagePullPolicy: IfNotPresent
+          command:
+            - python3
+            - /app/relay.py
+          env:
+            - name: LITELLM_UPSTREAM_URL
+              value: http://{{LITELLM_GATEWAY_IP}}:4000/v1
+            - name: LITELLM_RELAY_PORT
+              value: "4010"
+            - name: LITELLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-auth
+                  key: LITELLM_API_KEY
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-auth
+                  key: LITELLM_API_KEY
+          ports:
+            - name: http
+              containerPort: 4010
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: relay-script
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: relay-script
+          configMap:
+            name: litellm-relay
+            defaultMode: 420
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-relay
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: litellm-relay
+spec:
+  selector:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: litellm-relay
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4010
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: openshell
+  namespace: openshell
+  labels:
+    app.kubernetes.io/instance: openshell
+    app.kubernetes.io/name: openshell
+spec:
+  serviceName: openshell
+  replicas: 1
+  revisionHistoryLimit: 10
+  podManagementPolicy: OrderedReady
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: openshell
+      app.kubernetes.io/name: openshell
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: openshell
+        app.kubernetes.io/name: openshell
+    spec:
+      serviceAccountName: openshell
+      serviceAccount: openshell
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 5
+      dnsPolicy: ClusterFirst
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1000
+      hostAliases:
+        - ip: 172.17.0.1
+          hostnames:
+            - host.docker.internal
+            - host.openshell.internal
+      containers:
+        - name: openshell
+          image: ghcr.io/nvidia/openshell/gateway:0.0.11
+          imagePullPolicy: Always
+          args:
+            - --port
+            - "8080"
+            - --log-level
+            - info
+            - --db-url
+            - sqlite:/var/openshell/openshell.db
+          env:
+            - name: OPENSHELL_SANDBOX_NAMESPACE
+              value: openshell
+            - name: OPENSHELL_SANDBOX_IMAGE
+              value: ghcr.io/nvidia/openshell-community/sandboxes/base@sha256:97a6a668150c1685105be2fcd0d2fdfe5da3d1f27459328ec208635506a0c18d
+            - name: OPENSHELL_GRPC_ENDPOINT
+              value: https://openshell.openshell.svc.cluster.local:8080
+            - name: OPENSHELL_SSH_GATEWAY_HOST
+              value: 192.168.0.{{NODE_OCTET}}
+            - name: OPENSHELL_SSH_GATEWAY_PORT
+              value: "8080"
+            - name: OPENSHELL_HOST_GATEWAY_IP
+              value: 172.17.0.1
+            - name: OPENSHELL_SSH_HANDSHAKE_SECRET
+              value: "{{SSH_HANDSHAKE_SECRET}}"
+            - name: OPENSHELL_TLS_CERT
+              value: /etc/openshell-tls/server/tls.crt
+            - name: OPENSHELL_TLS_KEY
+              value: /etc/openshell-tls/server/tls.key
+            - name: OPENSHELL_TLS_CLIENT_CA
+              value: /etc/openshell-tls/client-ca/ca.crt
+            - name: OPENSHELL_CLIENT_TLS_SECRET_NAME
+              value: openshell-client-tls
+            - name: OPENAI_BASE_URL
+              value: http://litellm-gateway:4000/v1
+            - name: LITELLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-auth
+                  key: LITELLM_API_KEY
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-auth
+                  key: LITELLM_API_KEY
+          ports:
+            - name: grpc
+              containerPort: 8080
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            tcpSocket:
+              port: grpc
+            periodSeconds: 2
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: openshell-data
+              mountPath: /var/openshell
+            - name: tls-cert
+              mountPath: /etc/openshell-tls/server
+              readOnly: true
+            - name: tls-client-ca
+              mountPath: /etc/openshell-tls/client-ca
+              readOnly: true
+      volumes:
+        - name: tls-cert
+          secret:
+            secretName: openshell-server-tls
+            defaultMode: 420
+        - name: tls-client-ca
+          secret:
+            secretName: openshell-server-client-ca
+            defaultMode: 420
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: openshell-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+        volumeMode: Filesystem

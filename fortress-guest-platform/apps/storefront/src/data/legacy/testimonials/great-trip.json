@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1486",
+  "original_slug": "/testimonial/great-trip",
+  "content_body": "<p>We have had a great trip and have enjoyed staying at this cabin!</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Trip!",
+  "archive_slug": "great-trip",
+  "archive_path": "/reviews/archive/great-trip",
+  "source_ref": "node/1486",
+  "hmac_signature": "4092424354512702d76c6a8759f4ccb06ff4421d1e79018833ecee23a7b319ee"
+}

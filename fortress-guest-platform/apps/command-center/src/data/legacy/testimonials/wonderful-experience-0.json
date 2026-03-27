@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2318",
+  "original_slug": "/testimonial/wonderful-experience-0",
+  "content_body": "<p>We had a wonderful experience sharing food, fun, and fellowship. The cabin is amazing with a wonderful view. We had everything we could have ever needed. ~ The Mountain Sisters</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Experience",
+  "archive_slug": "wonderful-experience-0",
+  "archive_path": "/reviews/archive/wonderful-experience-0",
+  "source_ref": "node/2318",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "13930f608dc447e8961670fbc656d7264c88887b5e0d575a0f71cbceb8c46dad"
+}

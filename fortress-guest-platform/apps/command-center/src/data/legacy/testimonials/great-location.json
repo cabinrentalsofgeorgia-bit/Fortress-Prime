@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "3051",
+  "original_slug": "/testimonial/great-location",
+  "content_body": "<p>Beautiful mountain view and close to great hiking trails and downtown Blue Ridge! Thank you!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Cohutta Wilderness",
+    "Ellijay",
+    "Morganton"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Great Location!",
+  "archive_slug": "great-location",
+  "archive_path": "/reviews/archive/great-location",
+  "source_ref": "node/3051",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "932efeea4a4b21dd14ce5d030286b58856e6be5133e2fa0dc59fc96af82a1fde"
+}

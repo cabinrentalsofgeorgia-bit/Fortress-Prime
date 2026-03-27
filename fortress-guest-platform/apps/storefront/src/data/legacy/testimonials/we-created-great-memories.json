@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2293",
+  "original_slug": "/testimonial/we-created-great-memories",
+  "content_body": "<p>What an amazing cabin! This was my family&#39;s first cabin vacation, and with so many choices in the Blue Ridge area, this truly was the perfect choice. Walking in the door the first time and smelling the aromas of the wood interior really set the tone for &quot;cabin.&quot; The decor is completely beautiful and fun. Very spacious, the rooms were comfy and it was nice having separate bathrooms. Thank you for sharing your home with my family and creating great memories! Thank you from Cape Coral, FL</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "We Created Great Memories!",
+  "archive_slug": "we-created-great-memories",
+  "archive_path": "/reviews/archive/we-created-great-memories",
+  "source_ref": "node/2293",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "88a67a7420c29c43ba887841f77a22c6254be7c0f2233cb31e87d6ca7b36c6c1"
+}

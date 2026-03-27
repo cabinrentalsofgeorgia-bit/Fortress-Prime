@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1714",
+  "original_slug": "/testimonial/wonderful-experience",
+  "content_body": "<p>The cabin is BEAUTIFUL&nbsp;and we had all of the room we needed and more!!! The view is AMAZING and it was so nice and quiet! This was a wonderful experience and we can&#39;t wait to come back again! Thank you for letting us stay!!!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Experience",
+  "archive_slug": "wonderful-experience",
+  "archive_path": "/reviews/archive/wonderful-experience",
+  "source_ref": "node/1714",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "c916ce935c37706cec86b1513437b814a6387ba09bab223b73017a3a31059a9d"
+}

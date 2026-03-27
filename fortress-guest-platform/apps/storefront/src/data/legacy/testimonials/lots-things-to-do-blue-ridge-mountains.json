@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2740",
+  "original_slug": "/testimonial/lots-things-to-do-blue-ridge-mountains",
+  "content_body": "<p>December 2021 ~ We enjoyed your beautiful home with our family of 8. We hiked Fall Branch Falls and the Swinging Bridge while here. There is so much to do in nature ~</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Lots of Things to do in Blue Ridge Mountains",
+  "archive_slug": "lots-things-to-do-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/lots-things-to-do-blue-ridge-mountains",
+  "source_ref": "node/2740",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "9282e70bc84c8a5e32553e05357c4afc1fb78a51e8f9b7184333db8c7336d9ec"
+}

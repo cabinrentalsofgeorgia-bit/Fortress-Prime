@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "654",
+  "original_slug": "/testimonial/great-family-getaway-this-luxury-cabin",
+  "content_body": "<p>&nbsp;Our family of five spent fall break at the Rainy Day Hideaway. This cabin had something for everyone. Great views, beautifuly decorated, and you gotta love the waterfall shower. Thanks for a great getaway!&nbsp;</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Family Getaway in this Luxury Cabin",
+  "archive_slug": "great-family-getaway-this-luxury-cabin",
+  "archive_path": "/reviews/archive/great-family-getaway-this-luxury-cabin",
+  "source_ref": "node/654",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "aa0bfa20277c7e5d54c3c9a2805b28573cf1f3f90f8412166850af8a1bb50e17"
+}

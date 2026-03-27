@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1636",
+  "original_slug": "/testimonial/loved-it-3",
+  "content_body": "<p>We loved it! Thank you so much. This is such a beautiful place. Anyone will enjoy this! We will be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Loved It!",
+  "archive_slug": "loved-it-3",
+  "archive_path": "/reviews/archive/loved-it-3",
+  "source_ref": "node/1636",
+  "hmac_signature": "032582a41b08dc6110a36170f89ef143a0faba8f82720cceef3ad16fcd8ab098"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3075",
+  "original_slug": "/testimonial/what-perfect-cabin",
+  "content_body": "<p>Thank you for the hospitality in your lovely cabin! It was such a relaxing weekend - we couldn&#39;t ask for more perfect accommodations. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "What a Perfect Cabin!",
+  "archive_slug": "what-perfect-cabin",
+  "archive_path": "/reviews/archive/what-perfect-cabin",
+  "source_ref": "node/3075",
+  "hmac_signature": "c410d67bc872aef4afa36cab33daf1665fc3e59e497b5f13d1729d4378955da7"
+}

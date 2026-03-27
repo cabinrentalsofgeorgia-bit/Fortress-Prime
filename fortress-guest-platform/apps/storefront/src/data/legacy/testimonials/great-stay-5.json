@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2720",
+  "original_slug": "/testimonial/great-stay-5",
+  "content_body": "<p>Outdoor fire pit by the river and the hot tub in the treehouse were great. Pool table and games were all fun and everything was in great shape. Beds were very comfortable. Thank you for a great stay!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Great Stay",
+  "archive_slug": "great-stay-5",
+  "archive_path": "/reviews/archive/great-stay-5",
+  "source_ref": "node/2720",
+  "hmac_signature": "dfdb4d68e767881c1f56e61adcd0f6d443beef0b7be49d0258514e4f14a19a16"
+}

@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "960",
+  "original_slug": "/testimonial/family-getaway-blue-ridge-ga",
+  "content_body": "<p>Very nice location on the lake and great kitchen to gather and cook big family meals.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Family Getaway in Blue Ridge, GA",
+  "archive_slug": "family-getaway-blue-ridge-ga",
+  "archive_path": "/reviews/archive/family-getaway-blue-ridge-ga",
+  "source_ref": "node/960",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "6f0669acad23042a47ebd41e3491043b00450fc2c5fc2ae46abf180dfc19942c"
+}

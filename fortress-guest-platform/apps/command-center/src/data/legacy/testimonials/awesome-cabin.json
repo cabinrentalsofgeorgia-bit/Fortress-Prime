@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "1132",
+  "original_slug": "/testimonial/awesome-cabin",
+  "content_body": "<p>We have enjoyed the stay so far, and the cabin is awesome.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Cabin",
+  "archive_slug": "awesome-cabin",
+  "archive_path": "/reviews/archive/awesome-cabin",
+  "source_ref": "node/1132",
+  "related_property_slug": "awesome-retreat",
+  "related_property_path": "/cabins/awesome-retreat",
+  "related_property_title": "Awesome Retreat",
+  "hmac_signature": "88a815e0415d82e3135f010139569a42f4321ebd9bbad84985d608f2ed669511"
+}

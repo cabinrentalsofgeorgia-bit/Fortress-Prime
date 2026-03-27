@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1000",
+  "original_slug": "/testimonial/labor-day-weekend-the-rivers-edge",
+  "content_body": "<p>Loved the cabin and especially the view! Lots of space and very nice beds and bathrooms. We would love to return one day...</p>",
+  "category_tags": [
+    "Day Trips"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Labor Day Weekend at The Rivers Edge",
+  "archive_slug": "labor-day-weekend-the-rivers-edge",
+  "archive_path": "/reviews/archive/labor-day-weekend-the-rivers-edge",
+  "source_ref": "node/1000",
+  "related_property_slug": "the-rivers-edge",
+  "related_property_path": "/cabins/the-rivers-edge",
+  "related_property_title": "The Rivers Edge",
+  "hmac_signature": "5d6bc87298b7c21dedf1013881a4419334cd26c75fdf725307e404106af61043"
+}

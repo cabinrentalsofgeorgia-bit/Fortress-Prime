@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1827",
+  "original_slug": "/testimonial/great-time-10",
+  "content_body": "<p>The cabin was beautiful. Very modern and clean. They had everything you needed. We had a great time and would definitely return again.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time",
+  "archive_slug": "great-time-10",
+  "archive_path": "/reviews/archive/great-time-10",
+  "source_ref": "node/1827",
+  "hmac_signature": "f7709fa4dcb8d4f0b45fb2de67020c2f0c37e1f9c9044aba48a18f6b19a80564"
+}

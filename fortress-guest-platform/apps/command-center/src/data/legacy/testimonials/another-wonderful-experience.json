@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3203",
+  "original_slug": "/testimonial/another-wonderful-experience",
+  "content_body": "<p>Cabin Rentals of Georgia thank you for another wonderful cabin rental experience. This is our 3rd rental with Cabin Rentals of Georgia and it did not disappoint. We enjoyed a 4 night stay in the Aska Escape Lodge. The cabin was absolutely perfect in every way. It was so clean, well stocked, and fully furnished with comfortable, well thought out furnishings. We enjoyed every amenity the cabin offered, the pool table on the lower level, the hot tub on the lower deck, coffee on the porch, gorgeous views from the beautiful windows and even a fire in the outdoor fireplace in July. The cabin was far enough off the road to experience the serenity of the mountains but easily accessible to the town of Blue Ridge. We loved this cabin and hope it&rsquo;s not long before we can return.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Another Wonderful Experience!",
+  "archive_slug": "another-wonderful-experience",
+  "archive_path": "/reviews/archive/another-wonderful-experience",
+  "source_ref": "node/3203",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "38312b42a0241465e6b00e25f7ac8d34cf434f486bf8b344772b9e0649f1c15a"
+}

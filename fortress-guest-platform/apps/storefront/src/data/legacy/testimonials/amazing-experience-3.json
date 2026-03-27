@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3151",
+  "original_slug": "/testimonial/amazing-experience-3",
+  "content_body": "<p>Some family and friends stayed at Creekside Green and it was amazing! The cabin itself was spacious and beautiful, but the outside, views, and overall area was incredible! We loved making fires, smores, exploring the creek and so much more! We did a lot of fishing, camping, shopping, celebrating birthdays, and had so much fun! We also visited Helen and rode the Mountain Coaster and hiked the Toccoa River Swinging Bridge. We woke up to a group of deer in the front of our cabin. It was so surreal. Definitely would rent again! Thank you!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing Experience!",
+  "archive_slug": "amazing-experience-3",
+  "archive_path": "/reviews/archive/amazing-experience-3",
+  "source_ref": "node/3151",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "b7a0dcc990f0823e430883b8098b5ea2af6ba72505b7d27f142b1179b8cf2a7e"
+}

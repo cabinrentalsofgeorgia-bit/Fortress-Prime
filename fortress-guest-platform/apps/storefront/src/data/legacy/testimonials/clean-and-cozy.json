@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1201",
+  "original_slug": "/testimonial/clean-and-cozy",
+  "content_body": "<p>The cabin exceeded our expectations. It was clean and cozy! We had a great weekend and enjoyed visiting downtown Blue Ridge while here. We plan to come and stay again this Christmas. Thank you for a wonderful weekend.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Clean and Cozy!",
+  "archive_slug": "clean-and-cozy",
+  "archive_path": "/reviews/archive/clean-and-cozy",
+  "source_ref": "node/1201",
+  "hmac_signature": "3bc51f21e7c52916788979d4eaea124843eb8be07ec239f77ac7c4cd78d7cfc6"
+}

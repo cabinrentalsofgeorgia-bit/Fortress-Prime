@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2926",
+  "original_slug": "/testimonial/perfect-weekend-with-family",
+  "content_body": "<p>The house was impeccable! &nbsp;Clean, comfy, cozy and the &nbsp;kitchen was stocked with every appliance imaginable! &nbsp;It was a prefect weekend for my family! &nbsp;We will be back for sure! Thank you!&nbsp;</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Perfect Weekend with Family",
+  "archive_slug": "perfect-weekend-with-family",
+  "archive_path": "/reviews/archive/perfect-weekend-with-family",
+  "source_ref": "node/2926",
+  "hmac_signature": "626ad09706ef217012428dc055b5230f3410ef71f2dcb23fb735c676aca5d3d7"
+}

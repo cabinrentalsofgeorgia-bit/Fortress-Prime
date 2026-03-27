@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "3015",
+  "original_slug": "/testimonial/the-perfect-thanksgiving-blue-ridge",
+  "content_body": "<p>The entire booking and rental process was easy. The cabin was just perfect for our family of six to celebrate Thanksgiving. The kitchen was fully equipped with dishes and appliances to facilitate our Thanksgiving dinner. The pool table and hot tub were big hits. We even caught some trout. We are planning to return.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "The Perfect Thanksgiving in Blue Ridge",
+  "archive_slug": "the-perfect-thanksgiving-blue-ridge",
+  "archive_path": "/reviews/archive/the-perfect-thanksgiving-blue-ridge",
+  "source_ref": "node/3015",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "c3a9b27dc32f6e68011fa3cb9a777bd4ce6b66a5a6684b98ed33583b5605a352"
+}

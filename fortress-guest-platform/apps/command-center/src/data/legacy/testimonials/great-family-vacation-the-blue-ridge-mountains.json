@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "998",
+  "original_slug": "/testimonial/great-family-vacation-the-blue-ridge-mountains",
+  "content_body": "<p>&nbsp;Family vacation was a blast in this cabin. We loved all the luxury&#39;s this cabin had to offer. The kitchen was one of a kind! The beds slept great! The river was gorgeous! We look forward to returning to Blue Ridge. Thanks!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Great Family Vacation in the Blue Ridge Mountains!",
+  "archive_slug": "great-family-vacation-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/great-family-vacation-the-blue-ridge-mountains",
+  "source_ref": "node/998",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "dc315bbe389e03ee374b29bf72bf869f43d0f74f0d88eba5f216a4c8a391a431"
+}

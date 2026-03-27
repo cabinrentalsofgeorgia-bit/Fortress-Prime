@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2813",
+  "original_slug": "/testimonial/amazing-11",
+  "content_body": "<p>We had an amazing trip! The views were amazing, and the hot tub/shuffleboard table were a blast. We hope to come back soon!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing!",
+  "archive_slug": "amazing-11",
+  "archive_path": "/reviews/archive/amazing-11",
+  "source_ref": "node/2813",
+  "hmac_signature": "eb58792211d3b20ff23d3c58393ade212d1cc0869bd8cfc10d2a861815d5df64"
+}

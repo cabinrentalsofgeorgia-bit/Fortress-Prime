@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2048",
+  "original_slug": "/testimonial/more-than-we-expected",
+  "content_body": "<p>What a beautiful home! Everything was clean and amenities were great! Even though our time was short here, we had a relaxing time. This was a much needed rest time. Thank you for being so easy to work with. Mayfly Treehouse is more than we expected! ~Laura and Jeff</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "More Than We Expected!",
+  "archive_slug": "more-than-we-expected",
+  "archive_path": "/reviews/archive/more-than-we-expected",
+  "source_ref": "node/2048",
+  "hmac_signature": "d6081d77a68884ef1505e22a5dfe01383955c67e65924121054cd9f0f4e7c7ee"
+}

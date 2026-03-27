@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "40",
+  "original_slug": "/testimonial/amazing-time-this-luxury-cabin",
+  "content_body": "<p>Had an amazing trip with friends at a beautiful cabin! Loved the location, the river was directly beneath the cabin. The cabin was super clean and better than we expected! Would go back in a heart beat!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing time in this Luxury Cabin",
+  "archive_slug": "amazing-time-this-luxury-cabin",
+  "archive_path": "/reviews/archive/amazing-time-this-luxury-cabin",
+  "source_ref": "node/40",
+  "related_property_slug": "restoration-luxury",
+  "related_property_path": "/cabins/restoration-luxury",
+  "related_property_title": "Restoration Luxury",
+  "hmac_signature": "7202dc4717dd14f312c60c55c66379c5eedaf707e7f08430dd7932854d350151"
+}

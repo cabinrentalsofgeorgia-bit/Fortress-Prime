@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "2380",
+  "original_slug": "/testimonial/the-location-perfect",
+  "content_body": "<p>We&#39;re from Iowa and have rented cabins in Tennessee every October for years. We wanted to try something new this year and are SO glad we did. The cabin is wonderful. The location is perfect and there is so much to do and see. One of the best vacations we&#39;ve had! We will be back!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Cohutta Wilderness",
+    "Ellijay",
+    "Morganton"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The Location Is Perfect!",
+  "archive_slug": "the-location-perfect",
+  "archive_path": "/reviews/archive/the-location-perfect",
+  "source_ref": "node/2380",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "255861c3b8d0c3cbbc9b8083b9a5e8e22f17f5eabcc9fb5e84203257ecdf0abf"
+}

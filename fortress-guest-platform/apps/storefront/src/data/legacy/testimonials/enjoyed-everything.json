@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2472",
+  "original_slug": "/testimonial/enjoyed-everything",
+  "content_body": "<p>My friends and I really enjoyed this cabin this weekend. We really loved the way the stream was calming and just enjoyed the entire stay. Thank you so much!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Enjoyed Everything!",
+  "archive_slug": "enjoyed-everything",
+  "archive_path": "/reviews/archive/enjoyed-everything",
+  "source_ref": "node/2472",
+  "hmac_signature": "27e546643bcd0f2ea1c678603e7ca42cb285fcc526ae1e6d34593fb27fbd72e6"
+}

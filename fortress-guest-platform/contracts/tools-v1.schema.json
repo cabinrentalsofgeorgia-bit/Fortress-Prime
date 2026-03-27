@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fortress.local/contracts/tools-v1.schema.json",
+  "title": "OpenShell Tools V1",
+  "type": "object",
+  "definitions": {
+    "GetAvailabilityResponse": {
+      "type": "object",
+      "required": ["check_in", "check_out", "guests", "results"],
+      "properties": {
+        "check_in": { "type": "string", "format": "date" },
+        "check_out": { "type": "string", "format": "date" },
+        "guests": { "type": "integer", "minimum": 1 },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["property_id", "property_name", "slug", "available"],
+            "properties": {
+              "property_id": { "type": "string" },
+              "property_name": { "type": "string" },
+              "slug": { "type": "string" },
+              "available": { "type": "boolean" },
+              "pricing": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    "CreateRedirectRequest": {
+      "type": "object",
+      "required": ["source_path", "destination_path"],
+      "properties": {
+        "source_path": { "type": "string", "minLength": 1 },
+        "destination_path": { "type": "string", "minLength": 1 },
+        "is_permanent": { "type": "boolean" },
+        "reason": { "type": ["string", "null"] }
+      }
+    },
+    "CreateRedirectResponse": {
+      "type": "object",
+      "required": ["id", "source_path", "destination_path", "status_code", "is_active"],
+      "properties": {
+        "id": { "type": "string" },
+        "source_path": { "type": "string" },
+        "destination_path": { "type": "string" },
+        "status_code": { "type": "integer", "enum": [301, 302] },
+        "reason": { "type": ["string", "null"] },
+        "is_active": { "type": "boolean" }
+      }
+    }
+  }
+}

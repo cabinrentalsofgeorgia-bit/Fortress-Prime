@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1975",
+  "original_slug": "/testimonial/so-much-fun-1",
+  "content_body": "<p>We had a very relaxing time. Lots of fun! Thanks~ The Upson Family</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "So Much Fun!",
+  "archive_slug": "so-much-fun-1",
+  "archive_path": "/reviews/archive/so-much-fun-1",
+  "source_ref": "node/1975",
+  "hmac_signature": "b5a695b659ab5eed7ab96b2359e11f57a1511403e360a91947e01bf886d08a09"
+}

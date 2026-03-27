@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2154",
+  "original_slug": "/testimonial/memories-shared",
+  "content_body": "<p>&ldquo;Many memories shared on our&nbsp;adventure.&rdquo;</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Memories Shared",
+  "archive_slug": "memories-shared",
+  "archive_path": "/reviews/archive/memories-shared",
+  "source_ref": "node/2154",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "05c54d3c41181328503a5c0cf965fa3e40189a86dfa072efad967547a6d1ca7f"
+}

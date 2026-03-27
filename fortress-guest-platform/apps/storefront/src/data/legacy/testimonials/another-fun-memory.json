@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2070",
+  "original_slug": "/testimonial/another-fun-memory",
+  "content_body": "<p>We always have a great time together and the cabin stay was another fun memory. The setting overlooking the river, the train, the deer, the rafting, shopping, s&#39;mores, and grilling was amazing. Our men even caught some trout! We laughed over games and music. Fun, fun, fun!&nbsp;</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Another Fun Memory",
+  "archive_slug": "another-fun-memory",
+  "archive_path": "/reviews/archive/another-fun-memory",
+  "source_ref": "node/2070",
+  "hmac_signature": "c42f14911fa994ec3381dc735fcea034fb5700ec1ab61798fb6a577056eed851"
+}

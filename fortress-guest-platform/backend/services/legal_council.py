@@ -37,6 +37,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
+from backend.core.database import AsyncSessionLocal
 from backend.services.deliberation_vault import (
     load_active_roster,
     vault_deliberation,
@@ -74,13 +75,14 @@ PERSONAS_DIR = os.getenv(
 from backend.core.config import settings as _cfg
 
 _LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
+_LITELLM_KEY = getattr(_cfg, "litellm_master_key", "")
 
-ANTHROPIC_PROXY = os.getenv("ANTHROPIC_PROXY_URL", "http://localhost:5100/v1").rstrip("/")
+ANTHROPIC_PROXY = os.getenv("ANTHROPIC_PROXY_URL", _LITELLM_BASE).rstrip("/")
 GEMINI_BASE_URL = os.getenv(
     "GEMINI_BASE_URL",
-    "https://generativelanguage.googleapis.com/v1beta/openai",
+    _LITELLM_BASE,
 ).rstrip("/")
-XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai/v1").rstrip("/")
+XAI_BASE_URL = os.getenv("XAI_BASE_URL", _LITELLM_BASE).rstrip("/")
 HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", _LITELLM_BASE).rstrip("/")
 SWARM_URL = os.getenv("SWARM_URL", _LITELLM_BASE).rstrip("/")
 
@@ -101,6 +103,7 @@ HYDRA_MODEL = HYDRA_MODEL_120B
 ALLOW_CLOUD_LLM = os.getenv("ALLOW_CLOUD_LLM", "false").lower() == "true"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_AI_API_KEY", ""))
 XAI_API_KEY = os.getenv("XAI_API_KEY", "")
+FRONTIER_GATEWAY_API_KEY = os.getenv("LITELLM_MASTER_KEY", _LITELLM_KEY)
 
 # Anthropic=2, Gemini=2, xAI=2, Local-32B(Ocular)=2, Local-120B(Sovereign)=1
 SEAT_ROUTING = {
@@ -583,34 +586,34 @@ Format your response as JSON:
         cloud_system = system_prompt
         cloud_user = user_prompt
 
-    if provider == "ANTHROPIC":
-        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if provider == "ANTHROPIC" and FRONTIER_GATEWAY_API_KEY:
+        api_key = FRONTIER_GATEWAY_API_KEY
         text, model = await _call_llm(
             cloud_system, cloud_user,
             model=ANTHROPIC_MODEL,
             base_url=ANTHROPIC_PROXY,
             api_key=api_key,
         )
-    elif provider == "GEMINI" and GEMINI_API_KEY:
+    elif provider == "GEMINI" and FRONTIER_GATEWAY_API_KEY:
         text, model = await _call_llm(
             cloud_system, cloud_user,
             model=GEMINI_MODEL,
             base_url=GEMINI_BASE_URL,
-            api_key=GEMINI_API_KEY,
+            api_key=FRONTIER_GATEWAY_API_KEY,
         )
-    elif provider == "XAI" and XAI_API_KEY:
+    elif provider == "XAI" and FRONTIER_GATEWAY_API_KEY:
         text, model = await _call_llm(
             cloud_system, cloud_user,
             model=XAI_MODEL,
             base_url=XAI_BASE_URL,
-            api_key=XAI_API_KEY,
+            api_key=FRONTIER_GATEWAY_API_KEY,
         )
-    elif provider == "XAI_FLAGSHIP" and XAI_API_KEY:
+    elif provider == "XAI_FLAGSHIP" and FRONTIER_GATEWAY_API_KEY:
         text, model = await _call_llm(
             cloud_system, cloud_user,
             model=XAI_MODEL_FLAGSHIP,
             base_url=XAI_BASE_URL,
-            api_key=XAI_API_KEY,
+            api_key=FRONTIER_GATEWAY_API_KEY,
         )
     elif provider == "VLLM_120B":
         text, model = await _call_llm(
@@ -902,6 +905,50 @@ _active_sessions: Dict[str, Dict] = {}
 
 def get_session(session_id: str) -> Optional[Dict]:
     return _active_sessions.get(session_id)
+
+
+async def build_case_deliberation_payload(case_slug: str) -> dict[str, Any]:
+    from backend.services.legal_case_graph import get_case_graph_snapshot
+    from backend.services.legal_chronology import get_chronology
+
+    async with AsyncSessionLocal() as db:
+        snapshot = await get_case_graph_snapshot(db, case_slug=case_slug)
+        timeline = await get_chronology(db, case_slug)
+
+    nodes = snapshot.get("nodes", [])
+    edges = snapshot.get("edges", [])
+    node_lines: list[str] = []
+    label_by_id: dict[str, str] = {}
+    for node in nodes:
+        label = node.label if hasattr(node, "label") else node.get("label", "?")
+        entity_type = node.entity_type if hasattr(node, "entity_type") else node.get("entity_type", "?")
+        node_id = str(node.id if hasattr(node, "id") else node.get("id", "?"))
+        label_by_id[node_id] = label
+        node_lines.append(f"[{entity_type}] {label}")
+
+    edge_lines: list[str] = []
+    for edge in edges:
+        source_id = str(edge.source_node_id if hasattr(edge, "source_node_id") else edge.get("source_node_id", "?"))
+        target_id = str(edge.target_node_id if hasattr(edge, "target_node_id") else edge.get("target_node_id", "?"))
+        relationship = edge.relationship_type if hasattr(edge, "relationship_type") else edge.get("relationship_type", "?")
+        edge_lines.append(f"{label_by_id.get(source_id, source_id)} --({relationship})--> {label_by_id.get(target_id, target_id)}")
+
+    chronology_lines = [
+        f"{event.get('event_date', '?')}: {event.get('event_description', '')}"
+        for event in timeline
+    ]
+    case_brief = (
+        f"Case: {case_slug}\n\n"
+        f"ENTITIES:\n" + "\n".join(node_lines) + "\n\n"
+        f"RELATIONSHIPS:\n" + "\n".join(edge_lines) + "\n\n"
+        f"CHRONOLOGY:\n" + "\n".join(chronology_lines)
+    )
+    return {
+        "case_brief": case_brief,
+        "context": f"Graph: {len(nodes)} entities, {len(edges)} edges. Timeline: {len(timeline)} events.",
+        "case_slug": case_slug,
+        "trigger_type": "GLASS_DELIBERATE",
+    }
 
 
 async def run_council_deliberation(

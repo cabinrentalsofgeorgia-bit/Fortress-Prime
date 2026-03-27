@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "111",
+  "original_slug": "/testimonial/the-best-getaway-blue-ridge",
+  "content_body": "<p>We had a wonderful, relaxing time. I love this place and will be coming back. It was one of the best getaways of my life.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The Best Getaway in Blue Ridge",
+  "archive_slug": "the-best-getaway-blue-ridge",
+  "archive_path": "/reviews/archive/the-best-getaway-blue-ridge",
+  "source_ref": "node/111",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "d1632a5ecab29bc8f4416c61b29ab585bd936185dfe051dc34891e6b8a8ed193"
+}

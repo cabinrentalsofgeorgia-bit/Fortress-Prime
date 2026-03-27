@@ -1,0 +1,31 @@
+[Unit]
+Description=Fortress Ray Worker
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+Environment=HOME=/home/admin
+EnvironmentFile=-/etc/default/fortress-ray-worker
+ExecStartPre=/bin/bash -lc '/home/admin/Fortress-Prime/tools/cluster/stop_ray_runtime.sh >/dev/null 2>&1 || true'
+ExecStart=/home/admin/Fortress-Prime/tools/cluster/run_ray_worker.sh
+ExecStop=/home/admin/Fortress-Prime/tools/cluster/stop_ray_runtime.sh
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStartSec=30
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+LimitNOFILE=65536
+SyslogIdentifier=fortress-ray-worker
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

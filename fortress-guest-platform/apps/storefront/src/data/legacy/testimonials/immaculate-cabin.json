@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2533",
+  "original_slug": "/testimonial/immaculate-cabin",
+  "content_body": "<p>The cabins are beautiful and fun!&nbsp;&nbsp;They are immaculate and cozy, and have everything you need for a relaxing stay.&nbsp;&nbsp;Our entire family loved it!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Immaculate Cabin",
+  "archive_slug": "immaculate-cabin",
+  "archive_path": "/reviews/archive/immaculate-cabin",
+  "source_ref": "node/2533",
+  "hmac_signature": "999fa1cb7b9ee8c44270c281c43933ac46f1b868f8baa1313b3bbd4b9280b380"
+}

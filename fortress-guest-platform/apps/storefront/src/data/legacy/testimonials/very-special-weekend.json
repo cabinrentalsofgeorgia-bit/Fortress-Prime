@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "903",
+  "original_slug": "/testimonial/very-special-weekend",
+  "content_body": "<p>The house and property were just gorgeous. We all enjoyed the fabulous kitchen and game room. The bedrooms were very comfortable and spacious. It was just a really special weekend. I would love to do it all over again.</p><p><br /></p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Special Weekend!",
+  "archive_slug": "very-special-weekend",
+  "archive_path": "/reviews/archive/very-special-weekend",
+  "source_ref": "node/903",
+  "hmac_signature": "e7a725a36a6599c5b56aa15b32437c77722e8bf6db06e0f98e066604843bc9a4"
+}

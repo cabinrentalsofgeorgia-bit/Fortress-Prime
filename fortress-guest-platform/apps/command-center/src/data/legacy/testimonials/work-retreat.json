@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2149",
+  "original_slug": "/testimonial/work-retreat",
+  "content_body": "<p>&ldquo;On a Sales and Marketing Retreat.&nbsp;We love your cabin! Great views! Had a great time! Thank you!&quot;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Work Retreat",
+  "archive_slug": "work-retreat",
+  "archive_path": "/reviews/archive/work-retreat",
+  "source_ref": "node/2149",
+  "hmac_signature": "eaa4b7137f99b0aaa051c117d8c9e736d09df08413f923c24321907a831fdb55"
+}

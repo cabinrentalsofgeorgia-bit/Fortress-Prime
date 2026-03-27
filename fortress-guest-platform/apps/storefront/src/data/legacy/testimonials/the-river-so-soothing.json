@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "2346",
+  "original_slug": "/testimonial/the-river-so-soothing",
+  "content_body": "<p>Three generations of Lawrence men enjoyed the cabin for four great days. There is something very soothing about this river. Wonderful stay! ~ Four Lawrence Men</p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "The River Is So Soothing",
+  "archive_slug": "the-river-so-soothing",
+  "archive_path": "/reviews/archive/the-river-so-soothing",
+  "source_ref": "node/2346",
+  "hmac_signature": "ec88bd64312818a7e7040984aa11539ad96889916eede7f8f4a743e238484e7c"
+}

@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1656",
+  "original_slug": "/testimonial/family-time",
+  "content_body": "<p>Lots of family time for Spring Break!&nbsp;The train was cool, and the Big Foot Museum was neat!</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Family Time",
+  "archive_slug": "family-time",
+  "archive_path": "/reviews/archive/family-time",
+  "source_ref": "node/1656",
+  "hmac_signature": "5bce4551b84022a466f33c0aa8e9b8b27c36e834f375c820b6116f8f95be9bb9"
+}

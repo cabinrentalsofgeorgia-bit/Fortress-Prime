@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1549",
+  "original_slug": "/testimonial/what-beautiful-place",
+  "content_body": "<p>We love this cabin! What a beautiful place. I can&#39;t wait to come back. My family and I will always cherish the memories we made while visiting Blue Ridge!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "What A Beautiful Place",
+  "archive_slug": "what-beautiful-place",
+  "archive_path": "/reviews/archive/what-beautiful-place",
+  "source_ref": "node/1549",
+  "hmac_signature": "d468008a58ee7ff70a976c0d813d0d24d758fe4c3baee8dfdb19ef426e85bc84"
+}

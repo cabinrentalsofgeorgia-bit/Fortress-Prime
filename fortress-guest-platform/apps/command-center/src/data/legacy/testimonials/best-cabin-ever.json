@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1628",
+  "original_slug": "/testimonial/best-cabin-ever",
+  "content_body": "<p>Best cabin ever!!! We really enjoyed it. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "\"Best Cabin Ever!\"",
+  "archive_slug": "best-cabin-ever",
+  "archive_path": "/reviews/archive/best-cabin-ever",
+  "source_ref": "node/1628",
+  "hmac_signature": "88959efe2c6333cdc3d0227483917f8c33ef9e2f43bc0878a1c9c45e71f31ff9"
+}

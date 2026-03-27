@@ -3,7 +3,7 @@
 DGX Swarm Worker V1
 -------------------
 Reads mapped SEO targets, scrapes legacy-rendered page content by source_alias,
-generates SEO proposal payloads with local LLM, and submits to /api/seo-patches/proposals.
+generates SEO patch drafts with the local LLM, and submits to /api/seo/patches.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import unescape
@@ -35,7 +36,6 @@ from backend.core.config import settings
 
 DEFAULT_TARGET_LIST_PATH = str(REPO_ROOT / "backend" / "scripts" / "swarm_target_list.json")
 DEFAULT_LEGACY_PROXY_BASE_URL = "https://www.cabinrentalsofgeorgia.com"
-DEFAULT_LOCAL_DEV_BASE_URL = "http://localhost:3000"
 DEFAULT_SEO_PATCH_API_BASE_URL = "http://127.0.0.1:8100"
 
 AMENITY_KEYWORDS = [
@@ -55,32 +55,22 @@ AMENITY_KEYWORDS = [
 @dataclass
 class WorkerConfig:
     target_list_path: Path
+    storefront_base_url: str
     legacy_proxy_base_url: str
-    local_dev_base_url: str
     seo_patch_api_base_url: str
     swarm_api_key: str
-    prefer_local_dev: bool
     max_targets: int
     rubric_version: str
     campaign: str
     dry_run: bool
 
-
-def _bool_env(name: str, default: bool) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
-
-
 def load_config(args: argparse.Namespace) -> WorkerConfig:
     return WorkerConfig(
         target_list_path=Path(os.getenv("SWARM_TARGET_LIST_PATH", DEFAULT_TARGET_LIST_PATH)),
+        storefront_base_url=os.getenv("STOREFRONT_BASE_URL", settings.storefront_base_url).rstrip("/"),
         legacy_proxy_base_url=os.getenv("LEGACY_PROXY_BASE_URL", DEFAULT_LEGACY_PROXY_BASE_URL).rstrip("/"),
-        local_dev_base_url=os.getenv("LOCAL_DEV_BASE_URL", DEFAULT_LOCAL_DEV_BASE_URL).rstrip("/"),
         seo_patch_api_base_url=os.getenv("SEO_PATCH_API_BASE_URL", DEFAULT_SEO_PATCH_API_BASE_URL).rstrip("/"),
         swarm_api_key=os.getenv("SWARM_API_KEY", settings.swarm_api_key).strip(),
-        prefer_local_dev=_bool_env("SWARM_PREFER_LOCAL_DEV", True),
         max_targets=int(os.getenv("SWARM_MAX_TARGETS", str(args.max_targets))),
         rubric_version=os.getenv("SWARM_RUBRIC_VERSION", "godhead-v1"),
         campaign=os.getenv("SWARM_CAMPAIGN", "default"),
@@ -228,9 +218,9 @@ def build_source_snapshot(source_alias: str, scrape_url: str, page_text: str, am
 
 def build_candidate_urls(cfg: WorkerConfig, source_alias: str) -> list[str]:
     alias_path = source_alias.strip().lstrip("/")
-    local_url = urljoin(f"{cfg.local_dev_base_url}/", alias_path)
+    storefront_url = urljoin(f"{cfg.storefront_base_url}/", alias_path)
     legacy_url = urljoin(f"{cfg.legacy_proxy_base_url}/", alias_path)
-    return [local_url, legacy_url] if cfg.prefer_local_dev else [legacy_url, local_url]
+    return [storefront_url, legacy_url]
 
 
 async def scrape_alias_content(client: httpx.AsyncClient, cfg: WorkerConfig, source_alias: str) -> tuple[str, str]:
@@ -263,10 +253,10 @@ async def post_proposal(
     cfg: WorkerConfig,
     body: dict[str, Any],
 ) -> tuple[bool, str]:
-    url = f"{cfg.seo_patch_api_base_url}/api/seo-patches/proposals"
+    url = f"{cfg.seo_patch_api_base_url}/api/seo/patches"
     headers = {"Content-Type": "application/json"}
     if cfg.swarm_api_key:
-        headers["X-Swarm-Token"] = cfg.swarm_api_key
+        headers["Authorization"] = f"Bearer {cfg.swarm_api_key}"
     resp = await client.post(url, headers=headers, json=body, timeout=45)
     if resp.status_code >= 400:
         return False, f"HTTP {resp.status_code}: {resp.text[:400]}"
@@ -282,7 +272,6 @@ async def run_worker(cfg: WorkerConfig) -> None:
         print("No matched targets found in swarm target list.")
         return
 
-    run_id = f"dgx-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     print(
         f"Starting DGX worker: targets={len(targets)} dry_run={cfg.dry_run} "
         f"campaign={cfg.campaign} rubric={cfg.rubric_version}"
@@ -305,6 +294,7 @@ async def run_worker(cfg: WorkerConfig) -> None:
             try:
                 scrape_url, page_text = await scrape_alias_content(client, cfg, source_alias)
                 amenities = extract_amenities(page_text)
+                generation_started_at = time.perf_counter()
                 try:
                     proposal = await generate_with_local_llm(
                         client=client,
@@ -327,30 +317,30 @@ async def run_worker(cfg: WorkerConfig) -> None:
 
                 grading = compute_grading(proposal, target_keyword, amenities)
                 source_snapshot = build_source_snapshot(source_alias, scrape_url, page_text, amenities)
+                generation_ms = max(1, int((time.perf_counter() - generation_started_at) * 1000))
+                page_path = f"/cabins/{slug}"
                 request_body = {
                     "property_id": property_id,
-                    "target_keyword": target_keyword,
-                    "campaign": cfg.campaign,
-                    "rubric_version": cfg.rubric_version,
-                    "source_snapshot": source_snapshot,
-                    "proposal": {
-                        "title": str(proposal.get("title") or "")[:255],
-                        "meta_description": str(proposal.get("meta_description") or "")[:4000],
-                        "h1": str(proposal.get("h1") or "")[:255],
-                        "intro": str(proposal.get("intro") or ""),
-                        "faq": proposal.get("faq") if isinstance(proposal.get("faq"), list) else [],
-                        "json_ld": proposal.get("json_ld") if isinstance(proposal.get("json_ld"), dict) else {},
-                    },
-                    "grading": grading,
-                    "proposed_by": "dgx-swarm",
-                    "proposal_run_id": run_id,
+                    "page_path": page_path,
+                    "title": str(proposal.get("title") or "")[:70],
+                    "meta_description": str(proposal.get("meta_description") or "")[:320],
+                    "og_title": str(proposal.get("title") or "")[:95] or None,
+                    "og_description": str(proposal.get("meta_description") or "")[:200] or None,
+                    "jsonld_payload": proposal.get("json_ld") if isinstance(proposal.get("json_ld"), dict) else {},
+                    "canonical_url": urljoin(f"{cfg.storefront_base_url}/", page_path.lstrip("/")),
+                    "h1_suggestion": str(proposal.get("h1") or "")[:255] or None,
+                    "alt_tags": {},
+                    "swarm_model": str(settings.ollama_fast_model or "unknown-model"),
+                    "swarm_node": str(settings.node_ip or "unknown-node"),
+                    "generation_ms": generation_ms,
                 }
 
                 stats["generated"] += 1
                 if cfg.dry_run:
                     print(
                         f"[DRY] slug={slug} property_id={property_id} "
-                        f"mode={generation_mode} title='{request_body['proposal']['title'][:90]}'"
+                        f"mode={generation_mode} title='{request_body['title'][:70]}' "
+                        f"score={grading['overall']} source={source_snapshot['scrape_url']}"
                     )
                     continue
 

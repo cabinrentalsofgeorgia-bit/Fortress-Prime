@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "123",
+  "original_slug": "/testimonial/girls-weekend-the-north-georgia-mountains-0",
+  "content_body": "<p>Hidden Laurel Lodge was great for a girls getaway weekend! Beautiful, well maintained home with great amenities!</p>",
+  "category_tags": [
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Girls Weekend in the North Georgia Mountains",
+  "archive_slug": "girls-weekend-the-north-georgia-mountains-0",
+  "archive_path": "/reviews/archive/girls-weekend-the-north-georgia-mountains-0",
+  "source_ref": "node/123",
+  "hmac_signature": "5ff82b8c666f23a6f06ac035f19c28a31e14c43e143f8667a5747fcc6f747208"
+}

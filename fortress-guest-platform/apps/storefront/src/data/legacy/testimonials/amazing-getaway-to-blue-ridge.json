@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "48",
+  "original_slug": "/testimonial/amazing-getaway-to-blue-ridge",
+  "content_body": "<p>I was so happy and excited when I got here and now I couldn&#39;t have been more pleased. This was astonishing and a beautiful cabin. Enjoyed it very much. Ready for next year always.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Getaway to Blue Ridge",
+  "archive_slug": "amazing-getaway-to-blue-ridge",
+  "archive_path": "/reviews/archive/amazing-getaway-to-blue-ridge",
+  "source_ref": "node/48",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "8468e863c96b969343d0225b6b3af34dfef51b3073e32634cc065e348072a232"
+}

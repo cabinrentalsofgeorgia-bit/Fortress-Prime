@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1950",
+  "original_slug": "/testimonial/many-great-memories-were-made-your-lovely-home",
+  "content_body": "<p>Beautiful, stunning hmoe! We loved the rooms and many great memories were made in your lovely home. The view was breathtaking! Thank you!</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Many great memories were made in your lovely home!",
+  "archive_slug": "many-great-memories-were-made-your-lovely-home",
+  "archive_path": "/reviews/archive/many-great-memories-were-made-your-lovely-home",
+  "source_ref": "node/1950",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "c236844be077d7e0ed3998d3cabcbafa04e4552ef565e93f44b448280d6a30bd"
+}

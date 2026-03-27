@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1142",
+  "original_slug": "/testimonial/absolutely-beautiful",
+  "content_body": "<p>This cabin is absolutely beautiful! It was perfect for my family as we celebrated our Christmas! Loved that you had a Christmas tree put up! Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Absolutely Beautiful!",
+  "archive_slug": "absolutely-beautiful",
+  "archive_path": "/reviews/archive/absolutely-beautiful",
+  "source_ref": "node/1142",
+  "hmac_signature": "daec96463f5585d2439a6e9541125b41b5507af7d0c63dd2b9c2a7614c3d51d8"
+}

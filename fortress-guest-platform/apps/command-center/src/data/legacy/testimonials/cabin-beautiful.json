@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1942",
+  "original_slug": "/testimonial/cabin-beautiful",
+  "content_body": "<p>The cabin is beautiful! &nbsp;The view is amazing! The hot tub is supercalifragilisticexpialidocious! -The Reeves</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Cabin is Beautiful!",
+  "archive_slug": "cabin-beautiful",
+  "archive_path": "/reviews/archive/cabin-beautiful",
+  "source_ref": "node/1942",
+  "hmac_signature": "c82d7013d812e496a01041d762bb94bb74fda95ff1d8a63d11006656e511ab9b"
+}

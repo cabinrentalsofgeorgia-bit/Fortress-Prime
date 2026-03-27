@@ -1,0 +1,12 @@
+---
+description: Fortress Prime Python standards for backend code
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend Python Standards
+
+- Python must have complete type hints.
+- Code must pass strict `mypy`.
+- Maintain zero lint errors.
+- Python files use `snake_case.py`.

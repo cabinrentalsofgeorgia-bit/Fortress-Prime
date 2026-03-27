@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "2616",
+  "original_slug": "/testimonial/incredible-area",
+  "content_body": "<p>It was wonderful!! The property and cabin was just perfect for my family. My 4 and 7 year olds had the time of their lives exploring the property, fishing in the pond, splashing in the creek, and climbing the big clay mountain behind the cabin. The location was incredible - we explored 3 different waterfalls and went tubing down the Toccoa. It was an incredible week! Thank you so much!</p>",
+  "category_tags": [
+    "Atlanta",
+    "Blue Ridge",
+    "Ellijay",
+    "Tennessee"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Incredible Area!",
+  "archive_slug": "incredible-area",
+  "archive_path": "/reviews/archive/incredible-area",
+  "source_ref": "node/2616",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "b23fb6af7030f3d65859f0ebd3630a148c1154d0bd4de794398a71ca480bcea2"
+}

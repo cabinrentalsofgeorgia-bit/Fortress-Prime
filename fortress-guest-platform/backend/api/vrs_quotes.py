@@ -3,20 +3,26 @@ Public quote endpoints for guest checkout flows.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr, Field
+from arq.connections import ArqRedis
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
+from backend.core.queue import get_arq_pool
 from backend.models.property import Property
+from backend.models.vrs_add_on import VRSAddOn, VRSAddOnPricingModel, VRSAddOnScope
 from backend.models.vrs_quotes import GuestQuote, GuestQuoteStatus
 from backend.services.email_service import is_email_configured, send_email
+from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 from backend.services.quote_builder import calculate_property_quote
+from backend.services.streamline_client import StreamlineClient
 
 
 router = APIRouter()
@@ -47,6 +53,37 @@ class GuestQuoteSendRequest(BaseModel):
     property_name: str
     total_amount: Decimal
     checkout_url: str
+
+
+class StreamlineQuoteRequest(BaseModel):
+    property_id: str | UUID
+    start_date: date | None = None
+    end_date: date | None = None
+    check_in: date | None = None
+    check_out: date | None = None
+    adults: int = Field(default=2, ge=1, le=24)
+    children: int = Field(default=0, ge=0, le=24)
+    pets: int = Field(default=0, ge=0, le=12)
+    selected_add_on_ids: list[UUID] = Field(default_factory=list)
+    force_refresh: bool = False
+
+    @model_validator(mode="after")
+    def _normalize_dates(self) -> "StreamlineQuoteRequest":
+        start = self.start_date or self.check_in
+        end = self.end_date or self.check_out
+        if start is None or end is None:
+            raise ValueError("start_date/end_date or check_in/check_out are required")
+        self.start_date = start
+        self.end_date = end
+        self.check_in = start
+        self.check_out = end
+        return self
+
+
+class StreamlineRefreshRequest(BaseModel):
+    property_id: str | UUID
+    start_date: date
+    end_date: date
 
 
 async def resolve_quote_property(
@@ -94,7 +131,9 @@ async def resolve_quote_property(
 @router.post("/generate")
 async def generate_guest_quote(
     payload: GuestQuoteGenerateRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
 ):
     property_record, requested_property_id = await resolve_quote_property(payload.property_id, db)
 
@@ -176,7 +215,7 @@ async def generate_guest_quote(
     await db.commit()
     await db.refresh(quote)
 
-    return {
+    response_payload = {
         "id": str(quote.id),
         "status": quote.status,
         "checkout_url": f"/api/quotes/{quote.id}/checkout",
@@ -188,6 +227,30 @@ async def generate_guest_quote(
         "total_amount": float(quote.total_amount),
         "pricing_source": pricing_source,
     }
+
+    shadow_job = await enqueue_async_job(
+        db,
+        worker_name="run_shadow_audit_job",
+        job_name="run_shadow_audit",
+        payload={
+            "payload": payload.model_dump(mode="json"),
+            "legacy_result": response_payload,
+            "metadata": {
+                "quote_id": str(quote.id),
+                "orchestrator": "spark-node-2-leader",
+            },
+        },
+        requested_by=extract_request_actor(
+            request.headers.get("x-user-id"),
+            request.headers.get("x-user-email"),
+        ),
+        tenant_id=getattr(request.state, "tenant_id", None),
+        request_id=request.headers.get("x-request-id"),
+        redis=arq_redis,
+    )
+    response_payload["shadow_audit_job_id"] = str(shadow_job.id)
+
+    return response_payload
 
 
 @router.post("/send")
@@ -272,6 +335,143 @@ async def send_guest_quote_email(payload: GuestQuoteSendRequest):
         )
 
     return {"status": "sent", "guest_email": str(payload.guest_email)}
+
+
+@router.get("/streamline/properties")
+async def list_streamline_quote_properties(
+    db: AsyncSession = Depends(get_db),
+    force_refresh: bool = Query(default=False),
+):
+    client = StreamlineClient()
+    try:
+        return await client.get_property_catalog(db, force_refresh=force_refresh)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        await client.close()
+
+
+@router.get("/streamline/calendar/{property_id}")
+async def get_streamline_master_calendar(
+    property_id: str,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+    force_refresh: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db),
+):
+    start_date = start or date.today()
+    end_date = end or (start_date + timedelta(days=41))
+
+    client = StreamlineClient()
+    try:
+        return await client.get_master_calendar(
+            property_id,
+            start_date,
+            end_date,
+            db,
+            force_refresh=force_refresh,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        await client.close()
+
+
+@router.post("/streamline/quote")
+async def get_streamline_deterministic_quote(
+    payload: StreamlineQuoteRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    client = StreamlineClient()
+    try:
+        quote_response = await client.get_deterministic_quote(
+            payload.property_id,
+            payload.start_date,
+            payload.end_date,
+            db,
+            adults=payload.adults,
+            children=payload.children,
+            pets=payload.pets,
+            force_refresh=payload.force_refresh,
+        )
+        streamline_total = Decimal(str(quote_response["total_amount"]))
+        ancillary_total = Decimal("0.00")
+        add_on_line_items: list[dict[str, Any]] = []
+
+        if payload.selected_add_on_ids:
+            resolved_property, _ = await resolve_quote_property(payload.property_id, db)
+            add_on_result = await db.execute(
+                select(VRSAddOn).where(
+                    VRSAddOn.id.in_(payload.selected_add_on_ids),
+                    VRSAddOn.is_active.is_(True),
+                )
+            )
+            selected_add_ons = add_on_result.scalars().all()
+            total_nights = (payload.end_date - payload.start_date).days
+            total_guests = payload.adults + payload.children
+
+            for add_on in selected_add_ons:
+                if add_on.scope == VRSAddOnScope.PROPERTY_SPECIFIC and add_on.property_id != resolved_property.id:
+                    continue
+
+                unit_price = Decimal(str(add_on.price or "0.00"))
+                item_price = Decimal("0.00")
+                if add_on.pricing_model == VRSAddOnPricingModel.FLAT_FEE:
+                    item_price = unit_price
+                elif add_on.pricing_model == VRSAddOnPricingModel.PER_NIGHT:
+                    item_price = unit_price * total_nights
+                elif add_on.pricing_model == VRSAddOnPricingModel.PER_GUEST:
+                    item_price = unit_price * total_guests
+
+                item_price = item_price.quantize(Decimal("0.01"))
+                ancillary_total += item_price
+                add_on_line_items.append(
+                    {
+                        "id": str(add_on.id),
+                        "name": add_on.name,
+                        "description": add_on.description,
+                        "pricing_model": add_on.pricing_model.value,
+                        "amount": float(item_price),
+                    }
+                )
+
+        grand_total = (streamline_total + ancillary_total).quantize(Decimal("0.01"))
+        quote_response["selected_add_on_ids"] = [str(add_on_id) for add_on_id in payload.selected_add_on_ids]
+        quote_response["add_ons"] = add_on_line_items
+        quote_response["ancillary_total"] = float(ancillary_total)
+        quote_response["streamline_total"] = float(streamline_total)
+        quote_response["grand_total"] = float(grand_total)
+        quote_response["total_amount"] = float(grand_total)
+        return quote_response
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        await client.close()
+
+
+@router.post("/streamline/refresh")
+async def refresh_streamline_quote_cache(
+    payload: StreamlineRefreshRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    client = StreamlineClient()
+    try:
+        return await client.refresh_property_cache(
+            payload.property_id,
+            db,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        await client.close()
 
 
 @router.get("/{quote_id}")

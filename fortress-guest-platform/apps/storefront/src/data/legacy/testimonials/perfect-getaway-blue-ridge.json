@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2874",
+  "original_slug": "/testimonial/perfect-getaway-blue-ridge",
+  "content_body": "<p>We had an amazing time with family here! The cabin was picture-perfect and the views were spectacular!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Perfect Getaway in Blue Ridge",
+  "archive_slug": "perfect-getaway-blue-ridge",
+  "archive_path": "/reviews/archive/perfect-getaway-blue-ridge",
+  "source_ref": "node/2874",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "2e5fdae6dc12da4da8855c5de79d7ef399080af7b11cc8e2afb2987ae6495aa6"
+}

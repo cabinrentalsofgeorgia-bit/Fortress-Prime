@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1340",
+  "original_slug": "/testimonial/wonderful-cabin",
+  "content_body": "<p>Thank you for this beautiful cabin. The very first sight of the cabin impressed us. This was a wonderful cabin. We had a very nice get together. Thank you.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Cabin",
+  "archive_slug": "wonderful-cabin",
+  "archive_path": "/reviews/archive/wonderful-cabin",
+  "source_ref": "node/1340",
+  "hmac_signature": "9dde6598fe5f2a24d27251e31b0541f43c4f01b9b59b0c3eb80d8a8f85855047"
+}

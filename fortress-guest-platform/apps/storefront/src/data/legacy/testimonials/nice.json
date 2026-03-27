@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1778",
+  "original_slug": "/testimonial/nice",
+  "content_body": "<p>Cabin was nice.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Nice",
+  "archive_slug": "nice",
+  "archive_path": "/reviews/archive/nice",
+  "source_ref": "node/1778",
+  "hmac_signature": "7163f809a822a2fec24a5a44b4913156cd481ac5c1e60976611b4d7c7df67d1f"
+}

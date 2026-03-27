@@ -1,0 +1,20 @@
+@nemoclawHost = 192.168.0.100
+@nemoclawPort = 8000
+
+# Ray-governed NemoClaw ingress now terminates on the sovereign head node.
+# The Serve router on .100 fans execution out across the worker matrix.
+
+POST http://{{nemoclawHost}}:{{nemoclawPort}}/api/agent/execute
+Content-Type: application/json
+
+{
+  "task_id": "manual-nemoclaw-test-002",
+  "intent": "Draft a short, professional SMS telling the guest we received their request and a human is reviewing it now.",
+  "context_payload": {
+    "guest_id": "11111111-1111-1111-1111-111111111111",
+    "reservation_id": null,
+    "property_id": null,
+    "recipient_phone": "+17065551234",
+    "source": "manual_smoke_test"
+  }
+}

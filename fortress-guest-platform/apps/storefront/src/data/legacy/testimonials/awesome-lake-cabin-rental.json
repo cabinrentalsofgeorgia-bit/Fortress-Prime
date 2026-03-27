@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2684",
+  "original_slug": "/testimonial/awesome-lake-cabin-rental",
+  "content_body": "<p>We chose Blue Ridge as a short drive getaway from Atlanta. The house was easy to find, in a great location in the Aska Adventure Area,&nbsp;and had most of the amenities we were looking for. It was very relaxing and cozy. The porch fireplace and inside gas fireplaces were great!&nbsp;</p>",
+  "category_tags": [
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Awesome Lake Cabin Rental",
+  "archive_slug": "awesome-lake-cabin-rental",
+  "archive_path": "/reviews/archive/awesome-lake-cabin-rental",
+  "source_ref": "node/2684",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "7802c0042caa64ef6dd511c3d112d70931d24bbf785ef44ca1aab38cbd110537"
+}

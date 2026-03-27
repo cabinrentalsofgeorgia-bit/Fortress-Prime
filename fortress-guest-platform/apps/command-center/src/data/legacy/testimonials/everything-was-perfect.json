@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1710",
+  "original_slug": "/testimonial/everything-was-perfect",
+  "content_body": "<p>Our stay here was memorable. Beautiful views&mdash;in the morning, and at night. It was just amazing. Everything was perfect.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Everything Was Perfect",
+  "archive_slug": "everything-was-perfect",
+  "archive_path": "/reviews/archive/everything-was-perfect",
+  "source_ref": "node/1710",
+  "hmac_signature": "6f152d74ed690eb5826d154844b10e120dc68b9df040a898bab195e2bc606ef7"
+}

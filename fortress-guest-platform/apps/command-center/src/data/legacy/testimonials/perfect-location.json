@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "1464",
+  "original_slug": "/testimonial/perfect-location",
+  "content_body": "<p>We had a great time! Absolutely loved the &quot;cabin.&quot; Perfect location!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Cohutta Wilderness",
+    "Ellijay",
+    "Morganton"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Perfect Location!",
+  "archive_slug": "perfect-location",
+  "archive_path": "/reviews/archive/perfect-location",
+  "source_ref": "node/1464",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "d014b1ab4aceef6ecd1186b30d4d38e91d67607743c7b26c94c95dd20f6892cc"
+}

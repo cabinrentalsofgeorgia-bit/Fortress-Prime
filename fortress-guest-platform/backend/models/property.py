@@ -3,11 +3,12 @@ Property model - Represents a rental property (cabin, cottage, etc.)
 """
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, Boolean, Integer, DECIMAL, Text, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, String, Boolean, Integer, DECIMAL, Text, TIMESTAMP, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from backend.core.database import Base
+from backend.models.media import PropertyImage
 
 
 class Property(Base):
@@ -38,6 +39,7 @@ class Property(Base):
     
     # Pricing / rates from PMS
     rate_card = Column(JSONB)
+    availability = Column(JSONB)
 
     # Housekeeping defaults
     default_housekeeper_id = Column(UUID(as_uuid=True), ForeignKey("staff_users.id", ondelete="SET NULL"))
@@ -52,6 +54,7 @@ class Property(Base):
 
     # Metadata
     streamline_property_id = Column(String(100), index=True)
+    ota_metadata = Column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     owner_id = Column(String(100))
     owner_name = Column(String(255))
     owner_balance = Column(JSONB)
@@ -64,6 +67,26 @@ class Property(Base):
     work_orders = relationship("WorkOrder", back_populates="prop")
     guestbook_guides = relationship("GuestbookGuide", back_populates="prop")
     default_housekeeper = relationship("StaffUser", foreign_keys=[default_housekeeper_id])
-    
+    images = relationship(
+        "PropertyImage",
+        back_populates="property",
+        cascade="all, delete-orphan",
+    )
+    tax_links = relationship(
+        "PropertyTax",
+        back_populates="property",
+        cascade="all, delete-orphan",
+    )
+    fee_links = relationship(
+        "PropertyFee",
+        back_populates="property",
+        cascade="all, delete-orphan",
+    )
+    stay_restrictions = relationship(
+        "PropertyStayRestriction",
+        back_populates="prop",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self) -> str:
         return f"<Property {self.name}>"

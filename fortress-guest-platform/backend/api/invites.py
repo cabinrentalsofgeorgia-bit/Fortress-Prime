@@ -17,14 +17,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.security import require_admin, hash_password
-from backend.models.staff import StaffUser
+from backend.models.staff import STAFF_ROLE_VALUES, StaffRole, StaffUser
 from backend.models.staff_invite import StaffInvite
 from backend.services.email_service import send_invite_email
 
 logger = structlog.get_logger()
 router = APIRouter()
 
-VALID_ROLES = ("admin", "manager", "staff", "maintenance")
+VALID_ROLES = STAFF_ROLE_VALUES
 
 
 def _build_invite_url(token: str) -> str:
@@ -54,7 +54,7 @@ class InviteRequest(BaseModel):
     email: EmailStr
     first_name: str = Field(min_length=1)
     last_name: str = Field(min_length=1)
-    role: str = "staff"
+    role: str = StaffRole.REVIEWER.value
 
 
 class AcceptInviteRequest(BaseModel):
@@ -83,8 +83,13 @@ async def create_invite(
     admin: StaffUser = Depends(require_admin),
 ):
     """Create an invitation and send the signup email."""
-    if body.role not in VALID_ROLES:
-        raise HTTPException(status_code=422, detail=f"Invalid role. Must be one of: {', '.join(VALID_ROLES)}")
+    try:
+        invite_role = StaffRole(body.role.strip().lower())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid role. Must be one of: {', '.join(VALID_ROLES)}",
+        ) from exc
 
     # Check if email is already registered
     existing_user = await db.execute(
@@ -116,7 +121,7 @@ async def create_invite(
         email=body.email.lower(),
         first_name=body.first_name,
         last_name=body.last_name,
-        role=body.role,
+        role=invite_role.value,
         token=token,
         invited_by=admin.id,
         expires_at=expiry,

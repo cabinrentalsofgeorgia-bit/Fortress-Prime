@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "117",
+  "original_slug": "/testimonial/mountain-spring-break-blue-ridge",
+  "content_body": "<p>BEAUTIFUL!!! Everyone had a great time, kids, teens, and adults alike!! We normally do a beach spring break but decided to try something new...we were not disappointed. Thanks for a great time!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge",
+    "Spring"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Mountain Spring Break in Blue Ridge",
+  "archive_slug": "mountain-spring-break-blue-ridge",
+  "archive_path": "/reviews/archive/mountain-spring-break-blue-ridge",
+  "source_ref": "node/117",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "3556639da401ea570aeb0a8b74757b34c2ae627688db0c72a4a20d54d4377da4"
+}

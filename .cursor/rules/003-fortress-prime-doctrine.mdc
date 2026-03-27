@@ -1,0 +1,16 @@
+---
+description: Fortress Prime sovereign architecture and execution doctrine
+alwaysApply: true
+---
+
+# Fortress Prime Doctrine
+
+- Treat this repo as a sovereign bare-metal system. Do not suggest AWS, GCP, managed databases, or cloud compute for internal workloads.
+- Compute runs on the local NVIDIA DGX Spark cluster. Storage lives on the Synology NAS. Sensitive data must stay on approved physical hardware unless the user explicitly authorizes otherwise.
+- Backend and AI pipelines run locally: FastAPI for command APIs, PostgreSQL 16 host-native on the DGX, and local inference/vector storage for RAG. Do not route sensitive workloads through Supabase, RDS, or hosted inference.
+- Security is zero-trust. UFW denies inbound except LAN, external access flows through Cloudflare Tunnels, and no public ports are opened on the DGX or NAS.
+- Respect strict domain separation. `crog-ai.com` is internal staff and agent infrastructure. `cabin-rentals-of-georgia.com` is the public storefront. Never proxy, redirect, or mix public traffic into the internal domain.
+- For the storefront migration, preserve all 4,530 legacy Drupal `301` redirects. Do not propose cutovers that break legacy SEO continuity.
+- Follow the Strangler Fig pattern. Build replacement systems in parallel to Streamline VRS and QuickBooks, validate them on Fortress Prime first, then decommission legacy only after the new path is proven.
+- When UI work depends on backend capability, state the backend requirement first. Do not invent fake UI, mock data, or placeholders unless explicitly requested.
+- All code must be production-ready, strictly typed, and lint-clean. Prefer local-first, audited, reversible changes that preserve human control.

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1725",
+  "original_slug": "/testimonial/loved-the-cabin",
+  "content_body": "<p>We absolutely LOVED the cabin! Such a relaxing place! We will definitely be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "LOVED The Cabin!",
+  "archive_slug": "loved-the-cabin",
+  "archive_path": "/reviews/archive/loved-the-cabin",
+  "source_ref": "node/1725",
+  "hmac_signature": "2dbc0800f879038c0dc3c1d6b0973b46e75c86101e23fccaf05ab3371df9a21e"
+}

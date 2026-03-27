@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1878",
+  "original_slug": "/testimonial/favorite-place",
+  "content_body": "<p>We love this cabin! This is our favorite place ever! Thank you for sharing your home with us. It is a great pace to get away! We will definitely be back! :) &nbsp; -The Petersons and The Masons</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Favorite Place!",
+  "archive_slug": "favorite-place",
+  "archive_path": "/reviews/archive/favorite-place",
+  "source_ref": "node/1878",
+  "hmac_signature": "a54374bdb7230233e66c47b05dceb3c278ab820d15e5945a1332dcfc15947e4b"
+}

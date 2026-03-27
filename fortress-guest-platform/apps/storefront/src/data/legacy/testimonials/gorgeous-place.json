@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1381",
+  "original_slug": "/testimonial/gorgeous-place",
+  "content_body": "<p>Such a gorgeous place! Nice to relax and rejuvenate!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Gorgeous Place!",
+  "archive_slug": "gorgeous-place",
+  "archive_path": "/reviews/archive/gorgeous-place",
+  "source_ref": "node/1381",
+  "hmac_signature": "6a8a2fc54e1801d331e22d99985c2f523ea379a0f7c217f58cee5c7b069ffccb"
+}

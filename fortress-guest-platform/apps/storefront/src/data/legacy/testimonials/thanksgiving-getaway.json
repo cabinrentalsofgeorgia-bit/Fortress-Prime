@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3228",
+  "original_slug": "/testimonial/thanksgiving-getaway",
+  "content_body": "<p>Perfectly located cabin large enough for a group of 10!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Thanksgiving Getaway",
+  "archive_slug": "thanksgiving-getaway",
+  "archive_path": "/reviews/archive/thanksgiving-getaway",
+  "source_ref": "node/3228",
+  "hmac_signature": "61401917932596e7e309f1007a653568d56c49a7b8ac99d6b9ec95a65cb9fded"
+}

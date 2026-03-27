@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2602",
+  "original_slug": "/testimonial/outstanding",
+  "content_body": "<p>What an amazing property! The mountain views are absolutely outstanding! Proximity to Blue Ridge is very good as well. We found a nearby hike to a beautiful waterfall which was a nice bonus. Perfect romantic getaway. I would definitely come again and highly recommend this property.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Outstanding!",
+  "archive_slug": "outstanding",
+  "archive_path": "/reviews/archive/outstanding",
+  "source_ref": "node/2602",
+  "hmac_signature": "788c64d180fa7b2f2714cfee9596eb66f9ce9b494a27fd72fc2e1acfff9c9d65"
+}

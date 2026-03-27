@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "735",
+  "original_slug": "/testimonial/blue-ridge-mountains-are-breathtaking",
+  "content_body": "<p>&nbsp;We loved this cabin. We really enjoyed out stay here! The mountains are just breathtaking! We loved Blue Ridge and the surrounding towns. We loved waking up in the morning and looking out at the mountains. Great views! We just love Georgia!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Blue Ridge Mountains are Breathtaking",
+  "archive_slug": "blue-ridge-mountains-are-breathtaking",
+  "archive_path": "/reviews/archive/blue-ridge-mountains-are-breathtaking",
+  "source_ref": "node/735",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "524e615f482acd7a5c345a05ee308d769d6f45de8b38bf0378dd41667a40ae9a"
+}

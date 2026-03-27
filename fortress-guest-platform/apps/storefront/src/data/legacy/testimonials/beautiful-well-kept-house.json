@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1970",
+  "original_slug": "/testimonial/beautiful-well-kept-house",
+  "content_body": "<p>We were on vacation with our family. We stayed at this beautiful, well-kept house and loved it, from the view of the creek to all the games inside to the hot tub. The mountains are beautiful and the sound of the creek very relaxing.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful, Well-Kept House",
+  "archive_slug": "beautiful-well-kept-house",
+  "archive_path": "/reviews/archive/beautiful-well-kept-house",
+  "source_ref": "node/1970",
+  "hmac_signature": "979a8550661244cb8afeafc374629367d2a8ecbf8bdf757d7b07c771dd6298d0"
+}

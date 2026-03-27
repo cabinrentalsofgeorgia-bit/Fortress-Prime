@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fortress.local/contracts/revenue-tools-v1.json",
+  "title": "Revenue First OpenShell Tools V1",
+  "type": "object",
+  "required": ["manifest_version", "tools", "services"],
+  "properties": {
+    "manifest_version": {
+      "type": "string",
+      "const": "v1.0"
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/ToolDefinition"
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/ServiceDefinition"
+      }
+    }
+  },
+  "$defs": {
+    "ToolDefinition": {
+      "type": "object",
+      "required": [
+        "name",
+        "agent",
+        "execution_node",
+        "description",
+        "input_schema",
+        "output_schema",
+        "policy"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "agent": {
+          "type": "string",
+          "enum": ["librarian", "closer"]
+        },
+        "execution_node": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input_schema": {
+          "type": "object"
+        },
+        "output_schema": {
+          "type": "object"
+        },
+        "policy": {
+          "type": "object",
+          "required": ["db_access", "network_access", "spawn_children"],
+          "properties": {
+            "db_access": {
+              "type": "string"
+            },
+            "network_access": {
+              "type": "string"
+            },
+            "spawn_children": {
+              "type": "boolean"
+            },
+            "blocked_sql_verbs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ServiceDefinition": {
+      "type": "object",
+      "required": ["name", "kind", "module", "function"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["python_module"]
+        },
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "function": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "manifest_version": "v1.0",
+  "tools": [
+    {
+      "name": "librarian_get_base_rate",
+      "agent": "librarian",
+      "execution_node": "spark-node-1",
+      "description": "Read-only pricing and availability lookup from PostgreSQL 16 inside the OpenShell sandbox.",
+      "input_schema": {
+        "type": "object",
+        "required": ["property_id", "check_in", "check_out", "guests"],
+        "properties": {
+          "property_id": {
+            "type": "string",
+            "description": "Property UUID or Streamline property ID."
+          },
+          "check_in": {
+            "type": "string",
+            "format": "date"
+          },
+          "check_out": {
+            "type": "string",
+            "format": "date"
+          },
+          "guests": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "property_id",
+          "property_name",
+          "pricing_source",
+          "nightly_breakdown",
+          "raw_total",
+          "nights"
+        ],
+        "properties": {
+          "property_id": {
+            "type": "string"
+          },
+          "property_name": {
+            "type": "string"
+          },
+          "pricing_source": {
+            "type": "string"
+          },
+          "nightly_breakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["date", "rate"],
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "rate": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "raw_total": {
+            "type": "string",
+            "description": "Base rate plus deterministic non-tax fees, before tax."
+          },
+          "nights": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": true
+      },
+      "policy": {
+        "db_access": "readonly",
+        "network_access": "cluster-internal-only",
+        "spawn_children": false,
+        "blocked_sql_verbs": ["INSERT", "UPDATE", "DELETE", "ALTER", "DROP", "TRUNCATE"],
+        "notes": "The Librarian may query price context but cannot access or mutate guest financial history."
+      }
+    },
+    {
+      "name": "closer_build_signed_quote",
+      "agent": "closer",
+      "execution_node": "spark-node-2",
+      "description": "Apply Fortress Prime sales logic, deterministic Fannin County tax, and HMAC chain-of-custody signing.",
+      "input_schema": {
+        "type": "object",
+        "required": ["quote_id", "raw_total", "nights"],
+        "properties": {
+          "quote_id": {
+            "type": "string"
+          },
+          "raw_total": {
+            "type": "string"
+          },
+          "nights": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sales_context": {
+            "type": "object",
+            "description": "Optional structured context for tactical sales adjustments outside the canonical signed payload."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "quote_id",
+          "raw_total",
+          "tax_total",
+          "quoted_total",
+          "timestamp",
+          "hmac_sig",
+          "tax_rule"
+        ],
+        "properties": {
+          "quote_id": {
+            "type": "string"
+          },
+          "raw_total": {
+            "type": "string"
+          },
+          "tax_total": {
+            "type": "string"
+          },
+          "quoted_total": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hmac_sig": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "tax_rule": {
+            "type": "string",
+            "const": "fannin_county_v1"
+          }
+        },
+        "additionalProperties": true
+      },
+      "policy": {
+        "db_access": "write_limited",
+        "network_access": "cluster-internal-only",
+        "spawn_children": false,
+        "blocked_sql_verbs": ["ALTER", "DROP", "TRUNCATE"],
+        "notes": "The Closer may persist quote records and audit events but must route all tax math through the deterministic tax service."
+      }
+    }
+  ],
+  "services": [
+    {
+      "name": "deterministic_fannin_tax_v1",
+      "kind": "python_module",
+      "module": "backend.services.revenue_chain_of_custody",
+      "function": "calculate_fannin_county_tax",
+      "notes": "Applies 6% plus $5.00 per night. AI provides context, code provides math."
+    },
+    {
+      "name": "quote_chain_of_custody_v1",
+      "kind": "python_module",
+      "module": "backend.services.revenue_chain_of_custody",
+      "function": "build_signed_quote_record",
+      "notes": "Canonical signed payload fields are quote_id, raw_total, tax_total, and timestamp."
+    }
+  ]
+}

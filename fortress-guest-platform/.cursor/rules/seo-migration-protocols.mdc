@@ -1,0 +1,24 @@
+---
+description: Fortress Prime Drupal migration and SEO protections
+globs:
+  - "backend/api/history_*.py"
+  - "backend/api/seo*.py"
+  - "backend/services/archive_*.py"
+  - "backend/models/seo_patch.py"
+  - "backend/scripts/*drupal*.py"
+  - "backend/scripts/*seo*.py"
+  - "apps/storefront/src/app/\\[...slug\\]/**"
+  - "apps/storefront/src/app/reviews/archive/**"
+  - "apps/storefront/src/lib/archive-*.ts"
+alwaysApply: false
+---
+
+# Legacy SEO And Migration Protocols
+
+We are executing a Strangler Fig migration from the 2018 Drupal estate "Streamline".
+
+- `drupal_granular_blueprint.json` is the single source of truth for the 2,514 legacy nodes.
+- Legacy routes fallback to `GET /api/v1/history/restore/{path:path}`.
+- All metadata overrides use the `seo_patch_queue` polymorphic table with `target_type` and `target_slug`.
+- Preserve all 4,530 legacy Drupal 301 redirects.
+- Do not break canonical URLs.

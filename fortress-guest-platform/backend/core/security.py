@@ -4,10 +4,9 @@ Authentication & Authorization core
 - JWT token creation and verification
 - FastAPI dependency for protected routes
 """
-from datetime import datetime, timedelta, timezone
-import os
 import base64
-from typing import Optional
+from datetime import datetime, timedelta, timezone
+from typing import Iterable, Optional
 from uuid import UUID
 
 import bcrypt
@@ -20,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.database import get_db
-from backend.models.staff import StaffUser
+from backend.models.staff import STAFF_ROLE_VALUES, StaffRole, StaffUser
 
 logger = structlog.get_logger()
 
@@ -29,6 +28,16 @@ bearer_scheme = HTTPBearer(auto_error=False)
 ALGORITHM = settings.jwt_algorithm
 RSA_PRIVATE_KEY = settings.jwt_rsa_private_key
 RSA_PUBLIC_KEY = settings.jwt_rsa_public_key
+
+LEGACY_STAFF_ROLE_MAP: dict[str, "StaffRole"] = {
+    "admin": StaffRole.SUPER_ADMIN,
+    "superadmin": StaffRole.SUPER_ADMIN,
+    "operator": StaffRole.MANAGER,
+    "manager": StaffRole.MANAGER,
+    "staff": StaffRole.REVIEWER,
+    "reviewer": StaffRole.REVIEWER,
+    "viewer": StaffRole.REVIEWER,
+}
 
 
 def _decode_if_base64_pem(raw_value: str) -> str:
@@ -58,9 +67,13 @@ def hash_password(plain: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    if not hashed.startswith("$2"):
+        logger.warning("password_hash_scheme_unsupported", prefix=hashed[:8])
+        return False
     try:
         return bcrypt.checkpw(plain.encode(), hashed.encode())
-    except Exception:
+    except ValueError as exc:
+        logger.warning("bcrypt_verify_failed", error=str(exc))
         return False
 
 
@@ -111,6 +124,23 @@ def decode_token(token: str) -> dict:
     return payload
 
 
+def _coerce_staff_role(raw_role: StaffRole | str | None) -> StaffRole:
+    if isinstance(raw_role, StaffRole):
+        return raw_role
+    normalized_role = (raw_role or "").strip().lower()
+    legacy_role = LEGACY_STAFF_ROLE_MAP.get(normalized_role)
+    if legacy_role is not None:
+        return legacy_role
+    try:
+        return StaffRole(normalized_role)
+    except ValueError as exc:
+        logger.warning("staff_role_invalid", role=normalized_role, allowed_roles=STAFF_ROLE_VALUES)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User role is invalid. Contact a super admin.",
+        ) from exc
+
+
 async def get_current_user(
     creds: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
@@ -142,41 +172,101 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or deactivated",
         )
+    user.role = _coerce_staff_role(user.role)
     return user
+
+
+STAFF_SYSTEM_HEALTH_WS_ROLES: frozenset[StaffRole] = frozenset(
+    {StaffRole.SUPER_ADMIN, StaffRole.MANAGER, StaffRole.REVIEWER}
+)
+
+
+async def load_staff_user_from_token_string(db: AsyncSession, token: str) -> StaffUser | None:
+    """Resolve a staff user from a raw JWT access token string (WebSocket query param, etc.)."""
+    raw = (token or "").strip()
+    if not raw:
+        return None
+    try:
+        payload = decode_token(raw)
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
+            return None
+    except JWTError as exc:
+        logger.warning("ws_token_invalid", error=str(exc))
+        return None
+
+    try:
+        uid = UUID(user_id)
+    except ValueError:
+        return None
+
+    result = await db.execute(select(StaffUser).where(StaffUser.id == uid))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        return None
+    try:
+        user.role = _coerce_staff_role(user.role)
+    except HTTPException:
+        return None
+    return user
+
+
+def staff_allowed_for_system_health_stream(user: StaffUser) -> bool:
+    """Same role gate as REST GET /api/system/health/ (PULSE_ACCESS)."""
+    try:
+        role = _coerce_staff_role(user.role)
+    except HTTPException:
+        return False
+    return role in STAFF_SYSTEM_HEALTH_WS_ROLES
+
+
+class RoleChecker:
+    """Reusable dependency for hierarchical staff role enforcement."""
+
+    def __init__(self, allowed_roles: Iterable[StaffRole | str]) -> None:
+        normalized_roles: list[StaffRole] = []
+        for raw_role in allowed_roles:
+            normalized_roles.append(_coerce_staff_role(raw_role))
+        if not normalized_roles:
+            raise ValueError("RoleChecker requires at least one allowed role")
+        self.allowed_roles = tuple(normalized_roles)
+
+    async def __call__(
+        self,
+        user: StaffUser = Depends(get_current_user),
+    ) -> StaffUser:
+        user_role = _coerce_staff_role(user.role)
+        if user_role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Forbidden. Required role: "
+                    + ", ".join(role.value for role in self.allowed_roles)
+                ),
+            )
+        user.role = user_role
+        return user
 
 
 async def require_admin(
     user: StaffUser = Depends(get_current_user),
 ) -> StaffUser:
-    """Dependency that requires the user to have the 'admin' role."""
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return user
+    """Backward-compatible alias for super-admin-only routes."""
+    return await RoleChecker([StaffRole.SUPER_ADMIN])(user)
 
 
 async def require_manager_or_admin(
     user: StaffUser = Depends(get_current_user),
 ) -> StaffUser:
-    if user.role not in ("admin", "manager"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Manager or admin access required",
-        )
-    return user
+    """Backward-compatible alias for manager or super-admin routes."""
+    return await RoleChecker([StaffRole.SUPER_ADMIN, StaffRole.MANAGER])(user)
 
 
 async def require_operator_manager_admin(
     user: StaffUser = Depends(get_current_user),
 ) -> StaffUser:
-    if user.role not in ("admin", "manager", "operator"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Operator, manager, or admin access required",
-        )
-    return user
+    """Legacy operator access now resolves to manager or super-admin."""
+    return await RoleChecker([StaffRole.SUPER_ADMIN, StaffRole.MANAGER])(user)
 
 
 # ---------------------------------------------------------------------------

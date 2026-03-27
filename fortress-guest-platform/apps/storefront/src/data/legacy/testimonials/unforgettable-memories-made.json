@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2405",
+  "original_slug": "/testimonial/unforgettable-memories-made",
+  "content_body": "<p>We had a very good time in this paradise. The past few days were amazing! Out of the memories we made, the one we will keep forever is the relaxing sound of the water rolling down the mountains. The sound of rain in the morning was a high point also. My friend and I will always remember the unforgettable time that we had in this cabin. We will come back to the mountains!</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Unforgettable Memories Made",
+  "archive_slug": "unforgettable-memories-made",
+  "archive_path": "/reviews/archive/unforgettable-memories-made",
+  "source_ref": "node/2405",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "1b7646f792f8628115ebeae2b51cefdc723d81408b2871e7bd24d24416d8f467"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "863",
+  "original_slug": "/testimonial/first-class",
+  "content_body": "<p>&nbsp;We went zip lining and had a blast. This&nbsp;is our second time at the Rolling River Cabin and we will be back for many&nbsp;more times! First class!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "First Class!",
+  "archive_slug": "first-class",
+  "archive_path": "/reviews/archive/first-class",
+  "source_ref": "node/863",
+  "hmac_signature": "dce5f470dfaf03cba11e71c231fa37b4dc0f62b88b251a765ca4a77fe65623e4"
+}

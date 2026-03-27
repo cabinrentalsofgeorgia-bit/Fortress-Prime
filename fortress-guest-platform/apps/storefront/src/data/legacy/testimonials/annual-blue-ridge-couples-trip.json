@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "3229",
+  "original_slug": "/testimonial/annual-blue-ridge-couples-trip",
+  "content_body": "<p>10th Trip to Blue Ridge, 1st time at this cabin. Our group of 10 (5 couples) had a wonderful time. We will return next year!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Annual Blue Ridge Couples Trip",
+  "archive_slug": "annual-blue-ridge-couples-trip",
+  "archive_path": "/reviews/archive/annual-blue-ridge-couples-trip",
+  "source_ref": "node/3229",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "64d1c9629793c31d40a19aa01f02c57927a418b05162dead10891b3e5140a6d0"
+}

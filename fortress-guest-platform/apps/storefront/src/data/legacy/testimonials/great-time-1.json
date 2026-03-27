@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1395",
+  "original_slug": "/testimonial/great-time-1",
+  "content_body": "<p>Thanks for everything! We had a great time!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time!",
+  "archive_slug": "great-time-1",
+  "archive_path": "/reviews/archive/great-time-1",
+  "source_ref": "node/1395",
+  "hmac_signature": "75273f4c3d252f46a95eeadbf14159d2d8bbb6b2e603894fd0b0687f2630fe20"
+}

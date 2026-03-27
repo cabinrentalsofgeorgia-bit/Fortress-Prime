@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1410",
+  "original_slug": "/testimonial/wonderful-stay-0",
+  "content_body": "<p>We&nbsp;had a wonderful stay and a great time. The cabin was way more than any of us expected. We hope to come back very soon, and we are going to tell all of our friends about the great weekend we had.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Stay",
+  "archive_slug": "wonderful-stay-0",
+  "archive_path": "/reviews/archive/wonderful-stay-0",
+  "source_ref": "node/1410",
+  "hmac_signature": "979f658647107bdfd89c4cdc4b1cb537a406a52c731349a1cada1611e907f6c2"
+}

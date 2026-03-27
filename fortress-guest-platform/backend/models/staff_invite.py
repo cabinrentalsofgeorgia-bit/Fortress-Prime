@@ -20,7 +20,7 @@ class StaffInvite(Base):
     email = Column(String(255), nullable=False, index=True)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
-    role = Column(String(50), nullable=False, default="staff")
+    role = Column(String(50), nullable=False, default="reviewer")
     token = Column(String(128), unique=True, nullable=False, index=True)
 
     invited_by = Column(UUID(as_uuid=True), ForeignKey("staff_users.id"), nullable=False)

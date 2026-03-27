@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2530",
+  "original_slug": "/testimonial/perfect-and-enjoyable-experience",
+  "content_body": "<p>Booking, arrival and departure was perfect.&nbsp;&nbsp;The home was perfect.&nbsp;&nbsp;A very enjoyable experience.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Perfect and Enjoyable Experience",
+  "archive_slug": "perfect-and-enjoyable-experience",
+  "archive_path": "/reviews/archive/perfect-and-enjoyable-experience",
+  "source_ref": "node/2530",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "3ed602c9cf5c907120441671dfab039378f307f0083d0d64f4bb31f012fb63b8"
+}

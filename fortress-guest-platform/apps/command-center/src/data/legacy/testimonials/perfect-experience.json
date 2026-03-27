@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1617",
+  "original_slug": "/testimonial/perfect-experience",
+  "content_body": "<p>We could not have asked for a more perfect experience! The cabin was absolutely beautiful, and the snow was literally the icing on the cake. We were able to drive and then hike to the Toccoa Swinging Bridge&mdash;not far. We will definitely return soon!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Perfect Experience!",
+  "archive_slug": "perfect-experience",
+  "archive_path": "/reviews/archive/perfect-experience",
+  "source_ref": "node/1617",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "f2e50c8d6d43aa9c28e1cceb7b0e7ee2f458ce5db52ee8c09b7a6277b1d3707f"
+}

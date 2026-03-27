@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1243",
+  "original_slug": "/testimonial/hidden-gem",
+  "content_body": "<p>A wonderful, clean, well-maintained and tastefully decorated home. It has great access to downtown attractions and&nbsp;a nice collection of funky restaurants and shops, as well as Emory U within a short drive.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Hidden Gem",
+  "archive_slug": "hidden-gem",
+  "archive_path": "/reviews/archive/hidden-gem",
+  "source_ref": "node/1243",
+  "hmac_signature": "c551b1e4c8ff41f28d474404bfa950808fcea2f5f4216200e13c5ccc57b006c1"
+}

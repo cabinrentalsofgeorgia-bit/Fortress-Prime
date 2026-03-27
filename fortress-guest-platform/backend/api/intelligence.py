@@ -131,7 +131,7 @@ _SOVEREIGN_MODEL_PREFERENCES = tuple(
         ]
     )
 )
-SHADOW_BOARD_ALLOWED_ROLES = {"admin", "manager", "operator"}
+SHADOW_BOARD_ALLOWED_ROLES = {"super_admin", "manager", "reviewer"}
 SHADOW_CHANNEL_DEFAULT_ADJUSTMENTS: Dict[str, float] = {
     "vrbo": 8.0,
     "direct": -5.0,

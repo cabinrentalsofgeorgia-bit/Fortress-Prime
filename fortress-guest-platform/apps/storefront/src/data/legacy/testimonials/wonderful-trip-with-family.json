@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "3222",
+  "original_slug": "/testimonial/wonderful-trip-with-family",
+  "content_body": "<p>We had a family getaway week in this marvelous cabin. The management had great communication and the area guide was helpful. The view was scenic and the fall trees were so beautiful. The cabin was quiet, very clean, and well-equipped. The basement with so much natural light was my son&#39;s favorite place!</p>",
+  "category_tags": [
+    "Family Fun",
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Wonderful Trip with Family",
+  "archive_slug": "wonderful-trip-with-family",
+  "archive_path": "/reviews/archive/wonderful-trip-with-family",
+  "source_ref": "node/3222",
+  "hmac_signature": "8df12339f52b26c77d8560e0ac6b5b093dd8194b09b13a0fb70cfb48f37c5e42"
+}

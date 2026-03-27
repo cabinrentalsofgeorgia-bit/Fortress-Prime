@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "2811",
+  "original_slug": "/testimonial/amazing-cabin-and-friendly-staff",
+  "content_body": "<p>This is an amazing cabin and the staff was so friendly! Thank you! ~Girls Trip 2021</p>",
+  "category_tags": [
+    "Motorcycle Friendly",
+    "Pet-Friendly"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing Cabin and Friendly Staff!",
+  "archive_slug": "amazing-cabin-and-friendly-staff",
+  "archive_path": "/reviews/archive/amazing-cabin-and-friendly-staff",
+  "source_ref": "node/2811",
+  "hmac_signature": "aa98895ed7cf5d752041ee0ef50687fdc69b7118e0c6690d6fc7676de20ab412"
+}

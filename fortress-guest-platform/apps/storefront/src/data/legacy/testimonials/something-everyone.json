@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1867",
+  "original_slug": "/testimonial/something-everyone",
+  "content_body": "<p>Absolutely loved the view and the spaciousness. Lots of room to spread out. Road graders came just in time! Had a great time at the beach and on the river. There is something for everyone. &nbsp; -The Tolberts</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Something For Everyone!",
+  "archive_slug": "something-everyone",
+  "archive_path": "/reviews/archive/something-everyone",
+  "source_ref": "node/1867",
+  "hmac_signature": "cfd51a9d2ede2b84ababc77f59862b000b06741c84f001e55a94dbc286db6b2c"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1408",
+  "original_slug": "/testimonial/awesome-1",
+  "content_body": "<p>Aska Adventure Outpost is awesome! It was everything we expected and more! The location is great for hiking various falls and visiting several wineries. Our calves certainly got a great workout going down to the gazebo by and river and eating at Toccoa Riverside Restaurant. We checked out on Sunday and my security deposit refund was already in my account on Monday! We will definitely be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome!",
+  "archive_slug": "awesome-1",
+  "archive_path": "/reviews/archive/awesome-1",
+  "source_ref": "node/1408",
+  "hmac_signature": "948544c07297cc6c8bed38bacad007807703a4722601247300b12909067d8acc"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1496",
+  "original_slug": "/testimonial/super",
+  "content_body": "<p>Everything was super! My friends Marge and Nell and myself&nbsp;had a blast! The property is kept so nice we felt like we were the first guests. Thanks to all who worked to make our weekend great!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Super!",
+  "archive_slug": "super",
+  "archive_path": "/reviews/archive/super",
+  "source_ref": "node/1496",
+  "hmac_signature": "5c3e17ae9ce760750e5b47a96c71ad1b9afb95366971a94e8628976453bb65f3"
+}

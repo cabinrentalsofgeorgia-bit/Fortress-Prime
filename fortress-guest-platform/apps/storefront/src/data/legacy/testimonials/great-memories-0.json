@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "1928",
+  "original_slug": "/testimonial/great-memories-0",
+  "content_body": "<p>Birthday celebration for hubby spent with great friends. Such a beautiful place!!!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge Memories"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Memories",
+  "archive_slug": "great-memories-0",
+  "archive_path": "/reviews/archive/great-memories-0",
+  "source_ref": "node/1928",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "3f4d8fde975f4ed4192c47cfba495049b2a69f8b8b1e32024a2c395f5fc455e9"
+}

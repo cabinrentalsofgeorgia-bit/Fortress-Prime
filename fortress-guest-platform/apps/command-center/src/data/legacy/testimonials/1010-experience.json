@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3003",
+  "original_slug": "/testimonial/1010-experience",
+  "content_body": "<p>We had a wonderful time at Blue Ridge Lake Sanctuary! It was very accommodating for my elderly mother, my daughter, and the significant others. While we were gone most of the time, the scenery was beautiful, the home very relaxing and VERY nice, very easy access to downtown/groceries/gas/eateries! I would definitely stay again but hopefully for longer! The office staff at Cabin Rentals of Georgia were extremely professional, kept in touch with me, and were very kind. I would give them a 10/10!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "10/10 Experience!",
+  "archive_slug": "1010-experience",
+  "archive_path": "/reviews/archive/1010-experience",
+  "source_ref": "node/3003",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "cb32ea09addc909f2ad30e4ac782d03c7f4aa467c72fb275f6699f2c2847f246"
+}

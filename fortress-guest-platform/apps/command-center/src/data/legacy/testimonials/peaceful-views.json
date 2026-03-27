@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2581",
+  "original_slug": "/testimonial/peaceful-views",
+  "content_body": "<p>WOW! What a beautiful cabin, and so close to town! Thank you for letting us stay here. We thoroughly enjoyed our time here, especially the peaceful view of the field in the early mornings! We look forward to coming back soon hopefully.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Peaceful Views",
+  "archive_slug": "peaceful-views",
+  "archive_path": "/reviews/archive/peaceful-views",
+  "source_ref": "node/2581",
+  "hmac_signature": "b8c17a9eb04609da318c826c349f016280972715168079cff50627a543b705b6"
+}

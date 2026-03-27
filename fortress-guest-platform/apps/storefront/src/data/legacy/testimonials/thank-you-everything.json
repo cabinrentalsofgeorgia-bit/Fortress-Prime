@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "883",
+  "original_slug": "/testimonial/thank-you-everything",
+  "content_body": "<p>Great getaway from our everyday life! Beautiful cabin and location. You thought of everything. Very comfortable! Thank you!!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Thank You for Everything!",
+  "archive_slug": "thank-you-everything",
+  "archive_path": "/reviews/archive/thank-you-everything",
+  "source_ref": "node/883",
+  "hmac_signature": "b52da769c49e3835793a38719d67743cd22c06c42c6695a8b926be77dd5b1264"
+}

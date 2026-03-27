@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1189",
+  "original_slug": "/testimonial/great-girls-trip",
+  "content_body": "<p>Had a great girls&#39; trip with my high school friends of 40 years!!! This is a great house with a great view!!!</p>",
+  "category_tags": [
+    "Trip Itineraries"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Girls' Trip",
+  "archive_slug": "great-girls-trip",
+  "archive_path": "/reviews/archive/great-girls-trip",
+  "source_ref": "node/1189",
+  "hmac_signature": "1d65c9938b5fb017659eb5a8f709e0be4b6b02c75285573fb3632cd07f43423a"
+}

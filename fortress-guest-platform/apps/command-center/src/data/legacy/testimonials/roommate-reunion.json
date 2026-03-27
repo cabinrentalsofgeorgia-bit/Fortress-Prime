@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1333",
+  "original_slug": "/testimonial/roommate-reunion",
+  "content_body": "<p>Great place for a wonderful roommate reunion. Excellent weather and wonderful cabin. Attention to detail was spot on!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Roommate Reunion",
+  "archive_slug": "roommate-reunion",
+  "archive_path": "/reviews/archive/roommate-reunion",
+  "source_ref": "node/1333",
+  "hmac_signature": "fd9595d62ffdbeb10ef67e8563aa087bd1bd708fbdf78629d639fe7d5b95aebf"
+}

@@ -8,7 +8,6 @@ Endpoints:
   POST /api/admin/disputes/{id}/upload-evidence — Manual photo/doc upload + re-compile
 """
 
-import asyncio
 import os
 import shutil
 from datetime import datetime, timezone
@@ -16,20 +15,24 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from arq.connections import ArqRedis
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
+from backend.core.queue import get_arq_pool
 from backend.core.security import require_admin
+from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 
 logger = structlog.get_logger(service="disputes_api")
 
 router = APIRouter()
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_EVIDENCE_DIR = Path(
-    os.getenv("EVIDENCE_STORAGE_DIR", "/home/admin/Fortress-Prime/fortress-guest-platform/storage/evidence")
+    os.getenv("EVIDENCE_STORAGE_DIR", str(PROJECT_ROOT / "storage" / "evidence"))
 )
 
 
@@ -229,8 +232,10 @@ async def download_evidence(
 @router.post("/{dispute_id}/upload-evidence")
 async def upload_evidence(
     dispute_id: str,
+    request: Request,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
     _user=Depends(require_admin),
 ):
     """Manually upload additional evidence (photos, docs) and trigger re-compilation."""
@@ -268,9 +273,23 @@ async def upload_evidence(
     except Exception as e:
         logger.warning("nas_upload_copy_failed", error=str(e)[:200])
 
-    from backend.services.dispute_defense import compile_and_submit_evidence
     reservation_id = str(row.reservation_id) if row.reservation_id else ""
-    asyncio.create_task(compile_and_submit_evidence(dispute_id, reservation_id))
+    recompile_job = await enqueue_async_job(
+        db,
+        worker_name="run_dispute_evidence_job",
+        job_name="run_dispute_evidence",
+        payload={
+            "dispute_id": dispute_id,
+            "reservation_id": reservation_id,
+        },
+        requested_by=extract_request_actor(
+            request.headers.get("x-user-id"),
+            request.headers.get("x-user-email"),
+        ),
+        tenant_id=getattr(request.state, "tenant_id", None),
+        request_id=request.headers.get("x-request-id"),
+        redis=arq_redis,
+    )
 
     return {
         "status": "uploaded",
@@ -278,4 +297,5 @@ async def upload_evidence(
         "filename": safe_name,
         "size_bytes": len(content),
         "recompile_triggered": True,
+        "recompile_job_id": str(recompile_job.id),
     }

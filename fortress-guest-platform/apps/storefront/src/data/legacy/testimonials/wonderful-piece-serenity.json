@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2123",
+  "original_slug": "/testimonial/wonderful-piece-serenity",
+  "content_body": "<p>&ldquo;Cabin Friends! We had a great administration retreat at Cadence Ridge! It was a wonderful piece of serenity!&rdquo;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "wonderful piece of serenity!",
+  "archive_slug": "wonderful-piece-serenity",
+  "archive_path": "/reviews/archive/wonderful-piece-serenity",
+  "source_ref": "node/2123",
+  "hmac_signature": "e8dbbb75525fac9a21d356f73384359a2d793744f75bbc47908da2f09a89e304"
+}

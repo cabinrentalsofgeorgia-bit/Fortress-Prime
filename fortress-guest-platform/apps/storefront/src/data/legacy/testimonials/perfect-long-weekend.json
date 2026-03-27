@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3162",
+  "original_slug": "/testimonial/perfect-long-weekend",
+  "content_body": "<p>We enjoyed our long weekend with friends at this beautiful cabin. The location is perfect and the cabin was so inviting. Everything was clean and well stocked for our time there. We will definitely be renting this cabin again in the future. Thank you!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "A Perfect Long Weekend",
+  "archive_slug": "perfect-long-weekend",
+  "archive_path": "/reviews/archive/perfect-long-weekend",
+  "source_ref": "node/3162",
+  "hmac_signature": "064a1431a94582e4e562007b34a95c8bed281d056579fcd8ef22c6eed79fd80d"
+}

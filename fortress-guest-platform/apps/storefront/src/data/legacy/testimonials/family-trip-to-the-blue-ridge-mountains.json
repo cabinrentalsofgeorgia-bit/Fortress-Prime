@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "165",
+  "original_slug": "/testimonial/family-trip-to-the-blue-ridge-mountains",
+  "content_body": "<p>This is a wonderful cabin, and we had an awesome time. The Toccoa Riverside Restaurant was great! If you walk behind the Toccoa Riverside Restaurant, there&#39;s a little ledge where you can dip your feet in the water! It is awesome to sit outside when the weather is not too hot, not too cool, but just right! (like porridge). I hope the next people after us have a wonderful time! It&#39;s a great place to watch wildlife like deer, and cool bugs!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "A Family Trip to the Blue Ridge Mountains",
+  "archive_slug": "family-trip-to-the-blue-ridge-mountains",
+  "archive_path": "/reviews/archive/family-trip-to-the-blue-ridge-mountains",
+  "source_ref": "node/165",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "3cead8fe782ed9c2694524e5108a5943f5b1136752d32e1dfe35454ae2730184"
+}

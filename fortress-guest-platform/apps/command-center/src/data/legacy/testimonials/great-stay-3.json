@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1722",
+  "original_slug": "/testimonial/great-stay-3",
+  "content_body": "<p>Great stay. Cabin was great. A lot of great rides on the motorcycle in this area.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Stay",
+  "archive_slug": "great-stay-3",
+  "archive_path": "/reviews/archive/great-stay-3",
+  "source_ref": "node/1722",
+  "hmac_signature": "92e6024bcbe89fb1e6837adab636ec0ff8127aa772d37e21c6fc8ce75acfec9b"
+}

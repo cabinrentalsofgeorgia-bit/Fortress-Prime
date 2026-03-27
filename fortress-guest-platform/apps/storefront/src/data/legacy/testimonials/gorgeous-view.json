@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2153",
+  "original_slug": "/testimonial/gorgeous-view",
+  "content_body": "<p>&ldquo;Thank you for making my 40th birthday amazing! We had a wonderful time. &nbsp;The view was gorgeous!&rdquo;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Gorgeous View",
+  "archive_slug": "gorgeous-view",
+  "archive_path": "/reviews/archive/gorgeous-view",
+  "source_ref": "node/2153",
+  "hmac_signature": "c16c32242e7142901150600e1934f9136c0522b8d8f96c5f574dea9ef3354773"
+}

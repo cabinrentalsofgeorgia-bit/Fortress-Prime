@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "3197",
+  "original_slug": "/testimonial/perfect-riverfront-family-vacation",
+  "content_body": "<p>Beautifully furnished. Plenty of space for 10 people and a dog. Lovely view of the Toccoa river. Town of Blue Ridge close enough for groceries, shopping and dining. Fun trip to orchard nearby for blueberry picking.</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Perfect Riverfront Family Vacation",
+  "archive_slug": "perfect-riverfront-family-vacation",
+  "archive_path": "/reviews/archive/perfect-riverfront-family-vacation",
+  "source_ref": "node/3197",
+  "hmac_signature": "e8865ef5440a8c9edfd2b5c97a62b519126db5a703a025daf7e4333ec42b6aff"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "3217",
+  "original_slug": "/testimonial/excellent-team",
+  "content_body": "<p>Cabin Rentals of Georgia provided us with excellent customer service! The cabin was beautiful. Taylor was consistent and made sure everything was perfect! We will definitely book through them again.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Excellent Team!",
+  "archive_slug": "excellent-team",
+  "archive_path": "/reviews/archive/excellent-team",
+  "source_ref": "node/3217",
+  "hmac_signature": "e6bcb300ad95bcb6383fb865cd1c1b95b78f4d244f153088e90d51e3522a6fa2"
+}

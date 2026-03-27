@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1669",
+  "original_slug": "/testimonial/our-favorite",
+  "content_body": "<p>Thank you for sharing your home with us. We have stayed in many cabins and yours is our favorite. We will be back. Blessings to you.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Our Favorite",
+  "archive_slug": "our-favorite",
+  "archive_path": "/reviews/archive/our-favorite",
+  "source_ref": "node/1669",
+  "hmac_signature": "2086612adcfe0dbd6164a3792ba8bd12c8c0e3488454573cd0a5952dab64644a"
+}

@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "1890",
+  "original_slug": "/testimonial/awesome-cabin-0",
+  "content_body": "<p>What a great way to finihs out the year! We had such a relaxing time and &nbsp;some great down time with after a busy holiday season! Everything about the house was awesome!&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Cabin!",
+  "archive_slug": "awesome-cabin-0",
+  "archive_path": "/reviews/archive/awesome-cabin-0",
+  "source_ref": "node/1890",
+  "related_property_slug": "awesome-retreat",
+  "related_property_path": "/cabins/awesome-retreat",
+  "related_property_title": "Awesome Retreat",
+  "hmac_signature": "a56ba67bf2d1507a80ec2aac1252fb266c02a178b4587f4fdd3a374f25dae480"
+}

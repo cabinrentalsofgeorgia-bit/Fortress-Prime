@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "3078",
+  "original_slug": "/testimonial/wonderful-family-reunion",
+  "content_body": "<p>We had a wonderful family reunion with 40 people over the 4 different houses close by! This house hosted dinner every night and the grandkids loved the backyard and play room! Thank you!&nbsp;</p>",
+  "category_tags": [
+    "Family Fun",
+    "Family Reunion"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Wonderful Family Reunion",
+  "archive_slug": "wonderful-family-reunion",
+  "archive_path": "/reviews/archive/wonderful-family-reunion",
+  "source_ref": "node/3078",
+  "hmac_signature": "5033a5d39fa84577ab97a06863752b912e393f48633a56bd64435ab65504481b"
+}

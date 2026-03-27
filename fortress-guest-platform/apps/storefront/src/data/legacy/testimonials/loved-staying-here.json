@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1516",
+  "original_slug": "/testimonial/loved-staying-here",
+  "content_body": "<p>We loved staying here for Julia&#39;s 50th birthday! We also enjoyed pool and the ping pong table. Last, the view from the living room was gorgeous.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Loved Staying Here!",
+  "archive_slug": "loved-staying-here",
+  "archive_path": "/reviews/archive/loved-staying-here",
+  "source_ref": "node/1516",
+  "hmac_signature": "5bba86fa4964626c44df984bd7ad5c73594da24a2905096993a642431deaf687"
+}

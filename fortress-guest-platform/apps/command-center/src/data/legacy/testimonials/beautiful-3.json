@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1585",
+  "original_slug": "/testimonial/beautiful-3",
+  "content_body": "<p>The cabin is beautiful. We are having a wonderful time.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful",
+  "archive_slug": "beautiful-3",
+  "archive_path": "/reviews/archive/beautiful-3",
+  "source_ref": "node/1585",
+  "hmac_signature": "e201baaef288db8e4a545d48778924a5e55e2c5083c61979d239996db09a785a"
+}

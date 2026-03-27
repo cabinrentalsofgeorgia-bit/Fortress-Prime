@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1559",
+  "original_slug": "/testimonial/beautiful-home",
+  "content_body": "<p>Beautiful home! Check out the Blue Ridge Brewery! Can you guess what&#39;s in the corner top window in the living room? (2 votes for bear, 1 for mouse, 1 for dog.)</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Home!",
+  "archive_slug": "beautiful-home",
+  "archive_path": "/reviews/archive/beautiful-home",
+  "source_ref": "node/1559",
+  "hmac_signature": "f629f447213dc5eabb070c1b2950999d3ff1a7c31f37a1e431de1430d114b05b"
+}

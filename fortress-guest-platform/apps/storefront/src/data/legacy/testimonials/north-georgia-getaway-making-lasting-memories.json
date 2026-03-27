@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "368",
+  "original_slug": "/testimonial/north-georgia-getaway-making-lasting-memories",
+  "content_body": "<p>Wonderful cabin, beautiful views, so relaxing!! Great memory maker!!</p>",
+  "category_tags": [
+    "Blue Ridge Memories",
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "North Georgia Getaway ~ Making Lasting Memories!!",
+  "archive_slug": "north-georgia-getaway-making-lasting-memories",
+  "archive_path": "/reviews/archive/north-georgia-getaway-making-lasting-memories",
+  "source_ref": "node/368",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "27d6a001c90178509c9525094cd83cf8cdfb6a3451460acad9e971af351336a6"
+}

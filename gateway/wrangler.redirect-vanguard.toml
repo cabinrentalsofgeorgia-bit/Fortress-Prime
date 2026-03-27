@@ -1,0 +1,42 @@
+# Strike 8 — Redirect Vanguard (Cloudflare Worker)
+#
+# 1. Create KV:  wrangler kv namespace create SOVEREIGN_DEPLOYED_SLUGS
+# 2. Paste namespace id below.
+# 3. Set secrets/vars in dashboard or wrangler secret put.
+# 4. Deploy:     wrangler deploy -c wrangler.redirect-vanguard.toml
+# 5. Route ONLY when ready — apex cutover strangles cabin pages first.
+#
+name = "redirect-vanguard"
+main = "redirect-vanguard-worker.mjs"
+compatibility_date = "2026-03-23"
+
+# Replace with output of: wrangler kv namespace create SOVEREIGN_DEPLOYED_SLUGS
+[[kv_namespaces]]
+binding = "DEPLOYED_SLUGS"
+id = "bb987755d5a74b9890ba70006bf7c6b4"
+
+[vars]
+# Public storefront (Vercel production hostname — not the customer-facing apex until Worker fronts it)
+SOVEREIGN_ORIGIN = "https://cabin-rentals-of-georgia.vercel.app"
+# Legacy Drupal origin (Cloudflare Tunnel or direct origin URL)
+DRUPAL_ORIGIN = "https://www.cabin-rentals-of-georgia.com"
+
+# --- Staging / shadow (example) ---
+[env.shadow]
+# route = { pattern = "beta.cabin-rentals-of-georgia.com/*", zone_name = "cabin-rentals-of-georgia.com" }
+
+[env.shadow.vars]
+SOVEREIGN_ORIGIN = "https://cabin-rentals-of-georgia.vercel.app"
+DRUPAL_ORIGIN = "https://REPLACE_WITH_DRUPAL_TUNNEL_OR_ORIGIN"
+
+# --- Production apex (DO NOT enable until Commander authorizes) ---
+[env.production]
+route = { pattern = "cabin-rentals-of-georgia.com/*", zone_name = "cabin-rentals-of-georgia.com" }
+
+[[env.production.kv_namespaces]]
+binding = "DEPLOYED_SLUGS"
+id = "bb987755d5a74b9890ba70006bf7c6b4"
+
+[env.production.vars]
+SOVEREIGN_ORIGIN = "https://cabin-rentals-of-georgia.vercel.app"
+DRUPAL_ORIGIN = "https://www.cabin-rentals-of-georgia.com"

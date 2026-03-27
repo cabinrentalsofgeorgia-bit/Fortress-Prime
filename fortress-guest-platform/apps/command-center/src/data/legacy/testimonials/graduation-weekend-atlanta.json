@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "521",
+  "original_slug": "/testimonial/graduation-weekend-atlanta",
+  "content_body": "<p>Thank you for providing such a beautiful place to serve as our &quot; home&nbsp;base&quot; during Emory&#39;s Graduation Weekend! Love the neighborhood and all of the fun things to do in the area!&nbsp;</p>",
+  "category_tags": [
+    "Atlanta"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Graduation Weekend in Atlanta",
+  "archive_slug": "graduation-weekend-atlanta",
+  "archive_path": "/reviews/archive/graduation-weekend-atlanta",
+  "source_ref": "node/521",
+  "hmac_signature": "b3765faf61fc695adc5a7cdaa52b586e5794b0dc8dc5b8c40138878a5dcbe4ac"
+}

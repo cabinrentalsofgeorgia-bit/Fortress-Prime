@@ -29,6 +29,7 @@ from backend.services.sandbox_runner import (
     get_sandbox_runtime_name,
     PolicyDenied,
 )
+from backend.services.openshell_audit import record_audit_event
 
 logger = structlog.get_logger()
 
@@ -403,11 +404,26 @@ async def execute_python_tool(
 async def execute_tool_call(name: str, arguments: dict, db=None) -> str:
     """Execute a tool call by name with the given arguments."""
     if name == "execute_python":
-        return await execute_python_tool(
+        result = await execute_python_tool(
             code=arguments.get("code", ""),
             timeout_seconds=arguments.get("timeout_seconds", 30),
             allow_network=arguments.get("allow_network", False),
         )
+        await record_audit_event(
+            action="tool.execute",
+            resource_type="tool",
+            resource_id=name,
+            purpose="dgx_tools",
+            tool_name=name,
+            model_route="local_sandbox",
+            outcome="error" if result.startswith("[ERROR]") else "success",
+            metadata_json={
+                "arguments_keys": sorted(list(arguments.keys())),
+                "result_preview": result[:200],
+            },
+            db=db,
+        )
+        return result
 
     fn = TOOL_DISPATCH.get(name)
     if not fn:
@@ -417,7 +433,36 @@ async def execute_tool_call(name: str, arguments: dict, db=None) -> str:
         arguments["db"] = db
 
     try:
-        return await fn(**arguments)
+        result = await fn(**arguments)
+        await record_audit_event(
+            action="tool.execute",
+            resource_type="tool",
+            resource_id=name,
+            purpose="dgx_tools",
+            tool_name=name,
+            model_route="local_cluster",
+            outcome="error" if isinstance(result, str) and result.startswith("[ERROR]") else "success",
+            metadata_json={
+                "arguments_keys": sorted(list(arguments.keys())),
+                "result_preview": str(result)[:200],
+            },
+            db=db,
+        )
+        return result
     except Exception as e:
         logger.error("tool_execution_failed", tool=name, error=str(e)[:200])
+        await record_audit_event(
+            action="tool.execute",
+            resource_type="tool",
+            resource_id=name,
+            purpose="dgx_tools",
+            tool_name=name,
+            model_route="local_cluster",
+            outcome="error",
+            metadata_json={
+                "arguments_keys": sorted(list(arguments.keys())),
+                "error": str(e)[:200],
+            },
+            db=db,
+        )
         return f"[ERROR] Tool '{name}' failed: {str(e)[:200]}"

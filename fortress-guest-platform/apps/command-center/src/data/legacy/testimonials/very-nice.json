@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1405",
+  "original_slug": "/testimonial/very-nice",
+  "content_body": "<p>Very nice and clean cabin!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Nice!",
+  "archive_slug": "very-nice",
+  "archive_path": "/reviews/archive/very-nice",
+  "source_ref": "node/1405",
+  "hmac_signature": "130baca535204655adc125f6a1446284f7197d4eccc94394d706a6c9a9239f20"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1532",
+  "original_slug": "/testimonial/wonderful-place",
+  "content_body": "<p>Hi! Jerry found this wonderful place online. We arrived this evening&mdash;too bad our son and his wife could not come. The directions were perfect. Looking forward to the sunrise and coffee out on the porches.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Place",
+  "archive_slug": "wonderful-place",
+  "archive_path": "/reviews/archive/wonderful-place",
+  "source_ref": "node/1532",
+  "hmac_signature": "f0a464b04e9a285ecf98267470d1140b3e99ec37a8e70d132a07c76522346808"
+}

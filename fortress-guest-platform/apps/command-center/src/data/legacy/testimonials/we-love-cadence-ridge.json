@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "1684",
+  "original_slug": "/testimonial/we-love-cadence-ridge",
+  "content_body": "<p>Relaxing and lovely getaway. Thoroughly enjoyed the&nbsp;peace and quiet. The kitchen was used the most!!! We LOVE Cadence Ridge! Breathtaking view of the mountaintops.</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "We LOVE Cadence Ridge!",
+  "archive_slug": "we-love-cadence-ridge",
+  "archive_path": "/reviews/archive/we-love-cadence-ridge",
+  "source_ref": "node/1684",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "3d2144de196c244d053b779d377988d2675dbcd29b13bcb0dc0518b8bb9edbcb"
+}

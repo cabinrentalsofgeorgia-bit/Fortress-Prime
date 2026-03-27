@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2818",
+  "original_slug": "/testimonial/another-wonderful-vacation",
+  "content_body": "<p>Another wonderful vacation for our family. The cabin was clean and comfortable! Thank you for a place to rest and reconnect. We are already planning a return trip!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Another Wonderful Vacation!",
+  "archive_slug": "another-wonderful-vacation",
+  "archive_path": "/reviews/archive/another-wonderful-vacation",
+  "source_ref": "node/2818",
+  "hmac_signature": "f8cd277dd43cda9f8bac8636d98e423dd0ce1f7d7339a464b3099d7d508699e4"
+}

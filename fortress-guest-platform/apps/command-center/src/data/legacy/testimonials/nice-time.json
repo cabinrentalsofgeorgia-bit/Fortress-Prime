@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1755",
+  "original_slug": "/testimonial/nice-time",
+  "content_body": "<p>Nice time. Centrally located but a ways from town. House clean and well equipped.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Nice Time",
+  "archive_slug": "nice-time",
+  "archive_path": "/reviews/archive/nice-time",
+  "source_ref": "node/1755",
+  "hmac_signature": "59fb3c89d2f7573d626454c11ced8ac57b720808fc96e02aaf2dbbf29eaed521"
+}

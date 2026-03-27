@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1129",
+  "original_slug": "/testimonial/very-beautiful",
+  "content_body": "<p>Had a wonderful say&mdash;very very beautiful!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Very Beautiful",
+  "archive_slug": "very-beautiful",
+  "archive_path": "/reviews/archive/very-beautiful",
+  "source_ref": "node/1129",
+  "hmac_signature": "c3d9454086b34193932898de999de3ce9798dd809cace7dd48a16ec010a0cfe0"
+}

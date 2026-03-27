@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1430",
+  "original_slug": "/testimonial/great-time-3",
+  "content_body": "<p>We enjoyed our stay here. It was nice and accommodating. Thanks for everything. We had a great time.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time",
+  "archive_slug": "great-time-3",
+  "archive_path": "/reviews/archive/great-time-3",
+  "source_ref": "node/1430",
+  "hmac_signature": "949453cb77a65818294c4243dd0e50d72babf4b64361e0277c2e9acffa254d17"
+}

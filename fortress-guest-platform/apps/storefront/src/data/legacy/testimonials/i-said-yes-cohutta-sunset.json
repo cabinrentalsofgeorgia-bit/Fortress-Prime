@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2873",
+  "original_slug": "/testimonial/i-said-yes-cohutta-sunset",
+  "content_body": "<p>Thank you for a memorable weekend! I said YES!&nbsp;</p>",
+  "category_tags": [
+    "Cohutta Wilderness"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "I Said Yes at Cohutta Sunset!",
+  "archive_slug": "i-said-yes-cohutta-sunset",
+  "archive_path": "/reviews/archive/i-said-yes-cohutta-sunset",
+  "source_ref": "node/2873",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "70d199399ee08c03fa1ea622aef68337d01ee1afe3e16e64fd3bef3d114e8f19"
+}

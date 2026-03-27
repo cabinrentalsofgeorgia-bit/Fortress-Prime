@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "699",
+  "original_slug": "/testimonial/fun-blue-ridge-ga",
+  "content_body": "<p>We enjoyed our time so much! Thank you for sharing your beautiful home with us.&nbsp;&nbsp;We look foward to coming back soon!!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fun in Blue Ridge, GA",
+  "archive_slug": "fun-blue-ridge-ga",
+  "archive_path": "/reviews/archive/fun-blue-ridge-ga",
+  "source_ref": "node/699",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "d6e71ddd0c520642c64a835063e6d43a01da087262055cb767151eaf62437c92"
+}

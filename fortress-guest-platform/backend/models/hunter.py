@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from backend.core.database import Base
@@ -19,10 +19,12 @@ class HunterQueueEntry(Base):
             "status IN ('queued','processing','sent','failed','cancelled')",
             name="ck_hunter_queue_status",
         ),
+        UniqueConstraint("session_fp", name="uq_hunter_queue_session_fp"),
         Index("ix_hunter_queue_status_created", "status", "created_at"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_fp = Column(String(128), nullable=False, unique=True, index=True)
     property_id = Column(UUID(as_uuid=True), ForeignKey("properties.id", ondelete="SET NULL"), index=True)
     reservation_id = Column(UUID(as_uuid=True), ForeignKey("reservations.id", ondelete="SET NULL"), index=True)
     guest_phone = Column(String(40), index=True)

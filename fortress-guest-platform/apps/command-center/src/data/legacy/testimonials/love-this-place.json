@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1730",
+  "original_slug": "/testimonial/love-this-place",
+  "content_body": "<p>We love this place! We will be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Love This Place!",
+  "archive_slug": "love-this-place",
+  "archive_path": "/reviews/archive/love-this-place",
+  "source_ref": "node/1730",
+  "hmac_signature": "5481e831382d6d814cfd7bd6a6c9b571bbfa18dfa75a4aee1703d0a21f6f86cb"
+}

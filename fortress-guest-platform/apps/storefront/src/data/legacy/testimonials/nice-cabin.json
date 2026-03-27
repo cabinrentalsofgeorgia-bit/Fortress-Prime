@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1400",
+  "original_slug": "/testimonial/nice-cabin",
+  "content_body": "<p>We enjoyed out stay! Nice cabin.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Nice Cabin",
+  "archive_slug": "nice-cabin",
+  "archive_path": "/reviews/archive/nice-cabin",
+  "source_ref": "node/1400",
+  "hmac_signature": "a4e9a51a0dfe656a1dcc4791ba20086c502fac99226c41aee76a38f7792ec1d6"
+}

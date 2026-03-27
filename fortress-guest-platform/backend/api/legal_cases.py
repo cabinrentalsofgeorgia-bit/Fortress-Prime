@@ -26,17 +26,20 @@ import uuid
 from uuid import UUID
 
 import httpx
+from arq.connections import ArqRedis
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 
 from backend.core.database import AsyncSessionLocal
+from backend.core.queue import get_arq_pool
 from backend.services.ediscovery_agent import LegacySession
+from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 from backend.services.legal_extractor import extract_entities
 from backend.services.legal_case_graph import (
     HiveMindFeedback,
@@ -731,10 +734,26 @@ async def _refresh_graph_background(case_slug: str) -> None:
     summary="Queue legal case graph refresh",
     status_code=status.HTTP_202_ACCEPTED,
 )
-async def refresh_case_graph(slug: str, background_tasks: BackgroundTasks):
-    # Fast-ack pattern: queue refresh so frontend stays responsive.
-    background_tasks.add_task(_refresh_graph_background, slug)
-    return {"status": "refresh_queued", "case_slug": slug}
+async def refresh_case_graph(
+    slug: str,
+    request: Request,
+    arq_redis: ArqRedis = Depends(get_arq_pool),
+):
+    async with AsyncSessionLocal() as db:
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_legal_graph_refresh_job",
+            job_name="run_legal_graph_refresh",
+            payload={"case_slug": slug},
+            requested_by=extract_request_actor(
+                request.headers.get("x-user-id"),
+                request.headers.get("x-user-email"),
+            ),
+            tenant_id=getattr(request.state, "tenant_id", None),
+            request_id=request.headers.get("x-request-id"),
+            redis=arq_redis,
+        )
+    return {"status": "refresh_queued", "case_slug": slug, "job_id": str(job.id)}
 
 
 @router.post("/cases/{slug}/discovery/draft-pack", summary="Generate discovery draft pack")
@@ -1087,7 +1106,12 @@ async def _run_extraction_job(
 
 
 @router.post("/cases/{slug}/extract", summary="Queue entity extraction")
-async def trigger_extraction(slug: str, body: ExtractionRequest, background_tasks: BackgroundTasks):
+async def trigger_extraction(
+    slug: str,
+    body: ExtractionRequest,
+    request: Request,
+    arq_redis: ArqRedis = Depends(get_arq_pool),
+):
     async with LegacySession() as session:
         case_r = await session.execute(
             text("SELECT id, notes FROM legal.cases WHERE case_slug = :slug"),
@@ -1195,14 +1219,26 @@ async def trigger_extraction(slug: str, body: ExtractionRequest, background_task
         )
         await session.commit()
 
-    background_tasks.add_task(
-        _run_extraction_job,
-        slug=slug,
-        case_id=case_row.id,
-        target=body.target,
-        source_text=source_text,
-        correspondence_id=corr_id,
-    )
+    async with AsyncSessionLocal() as queue_db:
+        job = await enqueue_async_job(
+            queue_db,
+            worker_name="run_legal_extraction_job",
+            job_name="run_legal_extraction",
+            payload={
+                "slug": slug,
+                "case_id": case_row.id,
+                "target": body.target,
+                "source_text": source_text,
+                "correspondence_id": corr_id,
+            },
+            requested_by=extract_request_actor(
+                request.headers.get("x-user-id"),
+                request.headers.get("x-user-email"),
+            ),
+            tenant_id=getattr(request.state, "tenant_id", None),
+            request_id=request.headers.get("x-request-id"),
+            redis=arq_redis,
+        )
 
     logger.info("legal_extraction_queued", slug=slug, target=body.target, correspondence_id=corr_id)
     return {
@@ -1212,6 +1248,7 @@ async def trigger_extraction(slug: str, body: ExtractionRequest, background_task
         "extraction": "queued",
         "target": body.target,
         "id": case_row.id,
+        "job_id": str(job.id),
     }
 
 
@@ -1532,70 +1569,66 @@ async def get_sanctions_drafts(slug: str):
 # ─── Harvey Engine: Master Chronology ─────────────────────────────────
 
 @router.post("/cases/{slug}/chronology/build", summary="Build master chronology from evidence")
-async def build_case_chronology(slug: str, background_tasks: BackgroundTasks):
+async def build_case_chronology(
+    slug: str,
+    request: Request,
+    arq_redis: ArqRedis = Depends(get_arq_pool),
+):
     """Trigger chronology extraction (runs against local DGX)."""
-    from backend.services.legal_chronology import build_chronology
-
-    async def _bg():
-        async with AsyncSessionLocal() as db:
-            await build_chronology(db, slug)
-
-    background_tasks.add_task(asyncio.coroutine(_bg) if False else _bg)
-    return {"status": "queued", "case_slug": slug}
+    async with AsyncSessionLocal() as db:
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_legal_chronology_job",
+            job_name="run_legal_chronology",
+            payload={"case_slug": slug},
+            requested_by=extract_request_actor(
+                request.headers.get("x-user-id"),
+                request.headers.get("x-user-email"),
+            ),
+            tenant_id=getattr(request.state, "tenant_id", None),
+            request_id=request.headers.get("x-request-id"),
+            redis=arq_redis,
+        )
+    return {"status": "queued", "case_slug": slug, "job_id": str(job.id)}
 
 
 @router.post("/cases/{slug}/deliberate", summary="Convene the Counsel of 9")
-async def deliberate_case(slug: str):
-    """Run the Counsel of 9 deliberation against the case graph + chronology."""
-    from backend.services.legal_council import run_council_deliberation
-    from backend.services.legal_case_graph import get_case_graph_snapshot
-    from backend.services.legal_chronology import get_chronology
-    import json as _json
-
+async def deliberate_case(
+    slug: str,
+    request: Request,
+    arq_redis: ArqRedis = Depends(get_arq_pool),
+):
+    """Queue the Counsel of 9 deliberation against the case graph + chronology."""
     async with AsyncSessionLocal() as db:
-        snapshot = await get_case_graph_snapshot(db, case_slug=slug)
-        timeline = await get_chronology(db, slug)
+        case_res = await db.execute(select(LegalCase).where(LegalCase.slug == slug))
+        case = case_res.scalar_one_or_none()
+        if not case:
+            raise HTTPException(status_code=404, detail=f"Legal case '{slug}' not found")
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_legal_council_job",
+            job_name="run_legal_council",
+            payload={
+                "case_slug": slug,
+                "case_number": getattr(case, "case_number", "") or "",
+                "trigger_type": "GLASS_DELIBERATE",
+            },
+            requested_by=extract_request_actor(
+                request.headers.get("x-user-id"),
+                request.headers.get("x-user-email"),
+            ),
+            tenant_id=getattr(request.state, "tenant_id", None),
+            request_id=request.headers.get("x-request-id"),
+            redis=arq_redis,
+        )
 
-    nodes = snapshot.get("nodes", [])
-    edges = snapshot.get("edges", [])
-    node_lines = []
-    for n in nodes:
-        label = n.label if hasattr(n, "label") else n.get("label", "?")
-        etype = n.entity_type if hasattr(n, "entity_type") else n.get("entity_type", "?")
-        node_lines.append(f"[{etype}] {label}")
-    edge_lines = []
-    label_by_id = {}
-    for n in nodes:
-        nid = str(n.id if hasattr(n, "id") else n.get("id", "?"))
-        label = n.label if hasattr(n, "label") else n.get("label", "?")
-        label_by_id[nid] = label
-    for e in edges:
-        src = label_by_id.get(str(e.source_node_id if hasattr(e, "source_node_id") else e.get("source_node_id", "?")), "?")
-        tgt = label_by_id.get(str(e.target_node_id if hasattr(e, "target_node_id") else e.get("target_node_id", "?")), "?")
-        rel = e.relationship_type if hasattr(e, "relationship_type") else e.get("relationship_type", "?")
-        edge_lines.append(f"{src} --({rel})--> {tgt}")
-
-    chrono_lines = []
-    for ev in timeline:
-        chrono_lines.append(f"{ev.get('event_date','?')}: {ev.get('event_description','')}")
-
-    case_brief = (
-        f"Case: {slug}\n\n"
-        f"ENTITIES:\n" + "\n".join(node_lines) + "\n\n"
-        f"RELATIONSHIPS:\n" + "\n".join(edge_lines) + "\n\n"
-        f"CHRONOLOGY:\n" + "\n".join(chrono_lines)
-    )
-
-    import uuid as _uuid
-    result = await run_council_deliberation(
-        session_id=str(_uuid.uuid4()),
-        case_brief=case_brief,
-        context=f"Graph: {len(nodes)} entities, {len(edges)} edges. Timeline: {len(timeline)} events.",
-        case_slug=slug,
-        trigger_type="GLASS_DELIBERATE",
-    )
-
-    return result
+    return {
+        "status": "queued",
+        "case_slug": slug,
+        "job_id": str(job.id),
+        "stream_url": f"/api/legal/council/{job.id}/stream",
+        "status_url": f"/api/async/jobs/{job.id}",
+    }
 
 
 @router.get("/cases/{slug}/chronology", summary="Get master chronology timeline")

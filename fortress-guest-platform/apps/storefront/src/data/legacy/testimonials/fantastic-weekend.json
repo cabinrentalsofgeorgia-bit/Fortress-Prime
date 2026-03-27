@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1621",
+  "original_slug": "/testimonial/fantastic-weekend",
+  "content_body": "<p>Work retreat from Columbus, GA. Lovely weather, breathtaking views, fantastic weekend! Cabin is beautiful. Hoping to make it an annual trip!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Fantastic Weekend!",
+  "archive_slug": "fantastic-weekend",
+  "archive_path": "/reviews/archive/fantastic-weekend",
+  "source_ref": "node/1621",
+  "hmac_signature": "476cc44b0002142f40143d6894cbf8127ef04854d1056cce4ed3047806559f96"
+}

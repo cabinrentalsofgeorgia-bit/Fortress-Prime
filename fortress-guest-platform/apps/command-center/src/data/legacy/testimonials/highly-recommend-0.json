@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1718",
+  "original_slug": "/testimonial/highly-recommend-0",
+  "content_body": "<p>Great cabin and great environtment! Highly recommend! Will be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Highly Recommend!",
+  "archive_slug": "highly-recommend-0",
+  "archive_path": "/reviews/archive/highly-recommend-0",
+  "source_ref": "node/1718",
+  "hmac_signature": "3eb4cf548dcbdb5fa0e4c3050abdcf18dccf02ab92aa02593215efc8dc31a003"
+}

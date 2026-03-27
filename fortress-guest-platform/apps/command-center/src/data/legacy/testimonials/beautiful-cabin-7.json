@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1721",
+  "original_slug": "/testimonial/beautiful-cabin-7",
+  "content_body": "<p>We went shopping, white water rafting, played games, ate great food, and talked with family. Beautiful cabin! Loved playing games by the fire at night.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Cabin",
+  "archive_slug": "beautiful-cabin-7",
+  "archive_path": "/reviews/archive/beautiful-cabin-7",
+  "source_ref": "node/1721",
+  "hmac_signature": "8ac010de8c726220db07051603d2e178ef7bd1cd2804f45590c50887c17e3994"
+}

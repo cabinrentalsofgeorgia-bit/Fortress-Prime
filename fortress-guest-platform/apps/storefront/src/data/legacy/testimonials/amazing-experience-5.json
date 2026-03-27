@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3224",
+  "original_slug": "/testimonial/amazing-experience-5",
+  "content_body": "<p>Had an amazing experience. The cabin and all of the amenities were fantastic, very clean. The Staff is amazing and very helpful. They also give you a list of things you and your family can do.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing Experience",
+  "archive_slug": "amazing-experience-5",
+  "archive_path": "/reviews/archive/amazing-experience-5",
+  "source_ref": "node/3224",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "91b0e54ab1768d6acef7036e259cbef33003540ac4c74b70acda43932a2df32b"
+}

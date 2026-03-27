@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1413",
+  "original_slug": "/testimonial/great-summer-vacation",
+  "content_body": "<p>Thank you for letting us use your house. The Blue Ridge Mountains were a great break from the Houston heat. We enjoyed rafting, fishing, and ziplining. We also loved tubing and boating. We had a great summer vacation.&nbsp;</p>",
+  "category_tags": [
+    "Summer"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Summer Vacation",
+  "archive_slug": "great-summer-vacation",
+  "archive_path": "/reviews/archive/great-summer-vacation",
+  "source_ref": "node/1413",
+  "hmac_signature": "d274a959974a2d18db672221a79a4c4d7d3e80908b083000aed8c9efb07e861e"
+}

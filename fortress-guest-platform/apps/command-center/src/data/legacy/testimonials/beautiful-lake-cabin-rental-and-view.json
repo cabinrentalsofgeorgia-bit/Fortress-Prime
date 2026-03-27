@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2683",
+  "original_slug": "/testimonial/beautiful-lake-cabin-rental-and-view",
+  "content_body": "<p>This lake house was even better than the pictures. It was extremely clean, spacious, well-stocked, and cozy!</p>",
+  "category_tags": [
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Beautiful Lake Cabin Rental and View",
+  "archive_slug": "beautiful-lake-cabin-rental-and-view",
+  "archive_path": "/reviews/archive/beautiful-lake-cabin-rental-and-view",
+  "source_ref": "node/2683",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "e14f23bbf45a5516b46f9acd0f012224b76af07fca2f641f4de4da8b10b6fbf9"
+}

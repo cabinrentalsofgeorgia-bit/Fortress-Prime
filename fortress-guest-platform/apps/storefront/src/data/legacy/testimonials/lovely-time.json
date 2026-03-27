@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1435",
+  "original_slug": "/testimonial/lovely-time",
+  "content_body": "<p>Beautiful cabin! We had a lovely time and enjoyed the view, morning dew, and fresh air. Even our 2-year-old loved it. We celebrated his birthday!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Lovely Time",
+  "archive_slug": "lovely-time",
+  "archive_path": "/reviews/archive/lovely-time",
+  "source_ref": "node/1435",
+  "hmac_signature": "d3b260e6ccdda0e354671ba7c55582a33dba2013aa5fad7a0d7aab58a6391f34"
+}

@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2786",
+  "original_slug": "/testimonial/magical-experience-luxury-blue-ridge-cabin",
+  "content_body": "<p>ABSOLUTELY BEAUTIFUL AND SERENE. My experience was magical!!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Experience",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Magical Experience in a Luxury Blue Ridge Cabin",
+  "archive_slug": "magical-experience-luxury-blue-ridge-cabin",
+  "archive_path": "/reviews/archive/magical-experience-luxury-blue-ridge-cabin",
+  "source_ref": "node/2786",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "efe1da9b07a261e9af0860be24400c42f51ef9dfac65b0549291dd99123eb22a"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1393",
+  "original_slug": "/testimonial/amazing-2",
+  "content_body": "<p>We had a blast!!! Awesome family get-together. Your cabin is amazing!!!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing!!!",
+  "archive_slug": "amazing-2",
+  "archive_path": "/reviews/archive/amazing-2",
+  "source_ref": "node/1393",
+  "hmac_signature": "946bce473dd6742da9d02b157fb41c9809487369996b6f5480285c9e05c265e4"
+}

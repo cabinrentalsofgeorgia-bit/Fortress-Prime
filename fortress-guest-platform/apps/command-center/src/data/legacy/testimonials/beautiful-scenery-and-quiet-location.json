@@ -1,0 +1,22 @@
+{
+  "legacy_node_id": "1996",
+  "original_slug": "/testimonial/beautiful-scenery-and-quiet-location",
+  "content_body": "<p>Perfect spot! Our family enjoyed a great weekend get away. Beautiful scenery and quiet location. Already discussing a return trip. ~The Greenways</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Cohutta Wilderness",
+    "Ellijay",
+    "Morganton"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Scenery and Quiet Location!",
+  "archive_slug": "beautiful-scenery-and-quiet-location",
+  "archive_path": "/reviews/archive/beautiful-scenery-and-quiet-location",
+  "source_ref": "node/1996",
+  "related_property_slug": "cohutta-sunset",
+  "related_property_path": "/cabins/cohutta-sunset",
+  "related_property_title": "Cohutta Sunset",
+  "hmac_signature": "8a026edef2ec7b82959138674acda1d520f0c2bb594acf516f978750635c99c2"
+}

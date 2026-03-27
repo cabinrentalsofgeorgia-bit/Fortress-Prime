@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1630",
+  "original_slug": "/testimonial/awesome-weekend",
+  "content_body": "<p>This weekend was awesome. Hope to be back!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Weekend",
+  "archive_slug": "awesome-weekend",
+  "archive_path": "/reviews/archive/awesome-weekend",
+  "source_ref": "node/1630",
+  "hmac_signature": "90563bbb29142463bbcadefc62e94b96390c2c4812315669eaf4862dd3dcdab9"
+}

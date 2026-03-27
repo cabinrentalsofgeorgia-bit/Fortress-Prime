@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1503",
+  "original_slug": "/testimonial/enjoyed-our-stay",
+  "content_body": "<p>We enjoyed our stay at the cabin. We hope to be able to rent the same cabin next year. Thanks for the opportunity.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Enjoyed Our Stay",
+  "archive_slug": "enjoyed-our-stay",
+  "archive_path": "/reviews/archive/enjoyed-our-stay",
+  "source_ref": "node/1503",
+  "hmac_signature": "761a885279aed0ac460463b5742b0f5f630365706dab9c54f5fde15767334e34"
+}

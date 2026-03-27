@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1662",
+  "original_slug": "/testimonial/great-stay-1",
+  "content_body": "<p>Great stay. Easy check in. Great views 360 degrees. Will miss the area. We will definitely be back.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Stay",
+  "archive_slug": "great-stay-1",
+  "archive_path": "/reviews/archive/great-stay-1",
+  "source_ref": "node/1662",
+  "hmac_signature": "fa55b8cf9ff15e9cda338ec9d8c3ab5f18fd7be5eb8fe12543606bc4387090e8"
+}

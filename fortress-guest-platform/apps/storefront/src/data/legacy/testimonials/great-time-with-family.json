@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "1550",
+  "original_slug": "/testimonial/great-time-with-family",
+  "content_body": "<p>Wonderful view! Great time with family! The children had a blast with the pool table and ping pong, and they loved fishing in the river.</p>",
+  "category_tags": [
+    "Family Fun"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Time with Family!",
+  "archive_slug": "great-time-with-family",
+  "archive_path": "/reviews/archive/great-time-with-family",
+  "source_ref": "node/1550",
+  "hmac_signature": "fea98a84e3ccc595bbad8e3292e8ac2d38d445435b2edfc5a3c5f52695e267d8"
+}

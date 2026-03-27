@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1429",
+  "original_slug": "/testimonial/beautiful",
+  "content_body": "<p>A beautiful cabin in a beautiful place to relax and get away from the daily grind.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful",
+  "archive_slug": "beautiful",
+  "archive_path": "/reviews/archive/beautiful",
+  "source_ref": "node/1429",
+  "hmac_signature": "967fa5c70cab3348b27131f0c32cfa1ec091cace25fffd3459f5a0da6d9172a0"
+}

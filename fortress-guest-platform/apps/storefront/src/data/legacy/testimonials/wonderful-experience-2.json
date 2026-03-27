@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "2629",
+  "original_slug": "/testimonial/wonderful-experience-2",
+  "content_body": "<p>What a wonderful experience we had! The communication was seamless; we appreciate that a lot. The cabin was equipped with all we needed. The location, views and warmth were ideal for a restful retreat, to recharge for 2021.</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "A Wonderful Experience",
+  "archive_slug": "wonderful-experience-2",
+  "archive_path": "/reviews/archive/wonderful-experience-2",
+  "source_ref": "node/2629",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "82cb011e7be476c885bb937b61031e9fcc9115a5e63ccc7fdb2a79fd62d740c9"
+}

@@ -1,0 +1,17 @@
+{
+  "legacy_node_id": "1384",
+  "original_slug": "/testimonial/family-summer-vacation",
+  "content_body": "<p>This was our family&#39;s summer vacation. We came from Florida, and it was nice to get away from the heat. We went tubing, fishing, hiking, shopping at Huck&#39;s, and rented a pontoon boat on Lake Blue Ridge. The kids loved tubing behind the boat! We also really enjoyed watching the thunderstorm while swinging on the porch.</p>",
+  "category_tags": [
+    "Family Fun",
+    "Summer"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Family Summer Vacation",
+  "archive_slug": "family-summer-vacation",
+  "archive_path": "/reviews/archive/family-summer-vacation",
+  "source_ref": "node/1384",
+  "hmac_signature": "8752c622f13888d7bc2f46697ea9fa235f21eca00522fc29d0397fb546cc9868"
+}

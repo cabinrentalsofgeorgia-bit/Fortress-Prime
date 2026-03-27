@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2656",
+  "original_slug": "/testimonial/great-blue-ridge-cabin-getaway",
+  "content_body": "<p>Thanks for hosting us at your beautiful cabin! We&nbsp;enjoyed the great views, relaxing in the hot tub, and the extra-soft blankets! We also went horseback riding at Cowgirl Up and enjoyed hiking Fall Branch Falls. Would love to come back! ~ Georgia and Kentucky</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Great Blue Ridge Cabin Getaway",
+  "archive_slug": "great-blue-ridge-cabin-getaway",
+  "archive_path": "/reviews/archive/great-blue-ridge-cabin-getaway",
+  "source_ref": "node/2656",
+  "related_property_slug": "the-great-getaway",
+  "related_property_path": "/cabins/the-great-getaway",
+  "related_property_title": "The Great Getaway",
+  "hmac_signature": "82d5a674e2699ffd84679acb367ed09b09f833738485d185fe20644d97050892"
+}

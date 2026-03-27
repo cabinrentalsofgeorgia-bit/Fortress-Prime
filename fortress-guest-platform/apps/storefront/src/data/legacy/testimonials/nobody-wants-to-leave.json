@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1256",
+  "original_slug": "/testimonial/nobody-wants-to-leave",
+  "content_body": "<p>Awesome cabin/view! It was such a refreshing getaway. A lot of family time in the cabin living room&mdash;it was awesome! Family time in the hot tub, too. Nobody wants to leave!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Nobody Wants to Leave!",
+  "archive_slug": "nobody-wants-to-leave",
+  "archive_path": "/reviews/archive/nobody-wants-to-leave",
+  "source_ref": "node/1256",
+  "hmac_signature": "342f70a7c3ca6fc84d5dd793eb9a67c1b9446aa0d4ae68e52140e26cbc56eaa9"
+}

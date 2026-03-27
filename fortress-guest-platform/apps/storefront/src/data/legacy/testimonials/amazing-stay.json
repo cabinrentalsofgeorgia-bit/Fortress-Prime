@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1235",
+  "original_slug": "/testimonial/amazing-stay",
+  "content_body": "<p>We had an amazing stay at Time Flies cabin in Mineral Bluff. Steps from the Toccoa River, the cabin is beautiful. Extraordinarily well maintained with a luxurious master bath, fireplaces inside and out, gorgeous stone breakfast bar and floor-to-ceiling windows. Great customer service. Perfect for the four of us to rest and relax.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Stay",
+  "archive_slug": "amazing-stay",
+  "archive_path": "/reviews/archive/amazing-stay",
+  "source_ref": "node/1235",
+  "hmac_signature": "885e32f8d446d024df26e3a3ed3bca72d07a492869ed314814f97e64477c8a7a"
+}

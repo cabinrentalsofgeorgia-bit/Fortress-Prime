@@ -1,0 +1,27 @@
+---
+description: Require direct backend or edge fetches for all server-side operations
+alwaysApply: true
+---
+
+# Direct Backend And Edge Fetches
+
+- For any server-side operation, fetch directly from the authoritative backend or edge endpoint.
+- This applies to FastAPI services, scripts, jobs, Next.js server components, server actions, route handlers, middleware, and edge runtime code.
+- Do not make server-side calls to frontend proxy routes, browser-oriented BFF endpoints, or same-app API shims when a direct backend or edge target exists.
+- Treat `src/app/api/**` proxy handlers as browser-facing adapters unless the task is specifically to implement or maintain that edge surface.
+- When server code needs data or mutation capability, use the backend or edge base URL directly through shared server utilities and typed contracts.
+- Keep domain separation intact: public storefront traffic stays on the storefront domain, while internal or privileged server operations talk directly to backend or approved edge infrastructure.
+
+## Good
+
+```ts
+await fetch(`${backendBaseUrl}/v1/reservations`, { cache: "no-store" });
+await fetch(`${edgeBaseUrl}/seo/revalidate`, { method: "POST" });
+```
+
+## Reject
+
+```ts
+await fetch(`${siteUrl}/api/reservations`);
+await fetch(`${siteUrl}/api/internal/revalidate`);
+```

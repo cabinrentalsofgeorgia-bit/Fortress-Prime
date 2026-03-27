@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "873",
+  "original_slug": "/testimonial/spacious-and-clean-vacation",
+  "content_body": "<p>The cabins were beautiful and clean. Plenty of room.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Spacious and Clean Vacation",
+  "archive_slug": "spacious-and-clean-vacation",
+  "archive_path": "/reviews/archive/spacious-and-clean-vacation",
+  "source_ref": "node/873",
+  "hmac_signature": "0a41ec62326b7d482d6c67184886379a66a8ee852aaae9dfc6f1a0550de1a5d6"
+}

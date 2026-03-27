@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "3198",
+  "original_slug": "/testimonial/amazing-experience-4",
+  "content_body": "<p>Cabin Rentals of Georgia is an amazing and awesome experience!! The Professionalism of the staff and the cabin was &ldquo;all dat and a bag of chips&rdquo;! We had a great weekend full of nature, comfort and luxury. Rest was a premium! Excited to return in October 2025!</p>",
+  "category_tags": [
+    "Blue Ridge Experience"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "Amazing Experience",
+  "archive_slug": "amazing-experience-4",
+  "archive_path": "/reviews/archive/amazing-experience-4",
+  "source_ref": "node/3198",
+  "related_property_slug": "outlaw-ridge",
+  "related_property_path": "/cabins/outlaw-ridge",
+  "related_property_title": "Outlaw Ridge",
+  "hmac_signature": "3dd7d8789a11182d08c6f70dd57d8fabb45b7f63494c0a94f3c9aa72e448d7cf"
+}

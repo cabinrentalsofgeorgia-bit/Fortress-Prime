@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1386",
+  "original_slug": "/testimonial/happy-fourth",
+  "content_body": "<p>Happy Fourth! Friends, food, and great adventures. Hiking in the Cherokee Forest and whitewater rafting on the Ocoee. Rainy nights with BBQ by the fire.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Happy Fourth!",
+  "archive_slug": "happy-fourth",
+  "archive_path": "/reviews/archive/happy-fourth",
+  "source_ref": "node/1386",
+  "hmac_signature": "5aa408a8d8bae9f39fb67dde9f083f2e0430030c43a1a9b699d0394cdc2d2d91"
+}

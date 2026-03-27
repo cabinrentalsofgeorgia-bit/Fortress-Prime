@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1480",
+  "original_slug": "/testimonial/wonderful-time-3",
+  "content_body": "<p>Had a wonderful time. Great views, and the cabin was amazing. Loved wading in the river and whitewater rafting. Hope to come back soon.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Wonderful Time",
+  "archive_slug": "wonderful-time-3",
+  "archive_path": "/reviews/archive/wonderful-time-3",
+  "source_ref": "node/1480",
+  "hmac_signature": "ef51bdb77b76c722bf99ed144501e79b67c851c2a1da5afbad15b0ce07857dc6"
+}

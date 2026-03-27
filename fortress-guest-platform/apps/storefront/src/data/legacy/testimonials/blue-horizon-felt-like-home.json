@@ -1,0 +1,20 @@
+{
+  "legacy_node_id": "1060",
+  "original_slug": "/testimonial/blue-horizon-felt-like-home",
+  "content_body": "<p>&nbsp;We enjoyed our stay at Blue Horizon Lodge. The cabin is beautiful and so comfy. Once we got used to the drive, it felt like coming home. Our stay was very enjoyable!&nbsp;</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Blue Horizon Felt Like Home",
+  "archive_slug": "blue-horizon-felt-like-home",
+  "archive_path": "/reviews/archive/blue-horizon-felt-like-home",
+  "source_ref": "node/1060",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "b218f1ba77295f8ef29499f249ea857f79f12960f531eb555d7860e297903a2e"
+}

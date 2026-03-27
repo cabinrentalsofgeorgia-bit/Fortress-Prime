@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "2348",
+  "original_slug": "/testimonial/what-property",
+  "content_body": "<p>What a property! Fun and relaxation. Blue Ridge is a pretty neat place. Great house for multiple families.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "What A Property!",
+  "archive_slug": "what-property",
+  "archive_path": "/reviews/archive/what-property",
+  "source_ref": "node/2348",
+  "hmac_signature": "b0f6ba731882b68e811bd07fc07d7615b9f28a0878e9e3ef7e20320f02fbd493"
+}

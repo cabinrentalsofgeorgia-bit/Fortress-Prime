@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1523",
+  "original_slug": "/testimonial/awesome-stay-0",
+  "content_body": "<p>We had an awesome stay at Blue Horizon Lodge! The cabin was beautifully decorated and provided us with everything we needed.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Stay",
+  "archive_slug": "awesome-stay-0",
+  "archive_path": "/reviews/archive/awesome-stay-0",
+  "source_ref": "node/1523",
+  "hmac_signature": "c80cb6f28f2f824f1be0f8bd9fd31ff7f5be64d8683cfe7a7a2c77865bfab2c2"
+}

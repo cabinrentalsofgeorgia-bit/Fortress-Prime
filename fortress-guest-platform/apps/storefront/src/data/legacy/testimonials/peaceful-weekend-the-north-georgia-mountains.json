@@ -1,0 +1,16 @@
+{
+  "legacy_node_id": "500",
+  "original_slug": "/testimonial/peaceful-weekend-the-north-georgia-mountains",
+  "content_body": "<p>What a beautiful place for us to reconnect as friends. I truly enjoyed a wonderful and peaceful weekend!</p>",
+  "category_tags": [
+    "North Carolina"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Peaceful Weekend In the North Georgia Mountains",
+  "archive_slug": "peaceful-weekend-the-north-georgia-mountains",
+  "archive_path": "/reviews/archive/peaceful-weekend-the-north-georgia-mountains",
+  "source_ref": "node/500",
+  "hmac_signature": "f2206d37bae1e2cac5ab45cb946df2f76288f3c4467c248fa046c3f424a997cb"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1984",
+  "original_slug": "/testimonial/so-accommodating",
+  "content_body": "<p>We enjoyed our stay here. It was nice and accommodating. Thanks for everything. We had a great time. Thank you! ~The Collins</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "So Accommodating!",
+  "archive_slug": "so-accommodating",
+  "archive_path": "/reviews/archive/so-accommodating",
+  "source_ref": "node/1984",
+  "hmac_signature": "ab7c853f0596cfbde933b341e4361724234d38a8562f92cc14f4950e6fe10c93"
+}

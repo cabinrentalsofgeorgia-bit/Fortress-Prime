@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1228",
+  "original_slug": "/testimonial/awesome-stay",
+  "content_body": "<p>We had an awesome stay! We stayed last year as a dating couple and this year as married! We love the scenery and everything Blue Ridge! Thank you.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Awesome Stay",
+  "archive_slug": "awesome-stay",
+  "archive_path": "/reviews/archive/awesome-stay",
+  "source_ref": "node/1228",
+  "hmac_signature": "14224dd77711a011b3db71a17ed924a487152882ce53e08159432dd575492fa3"
+}

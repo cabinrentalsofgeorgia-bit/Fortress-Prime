@@ -1,0 +1,13 @@
+---
+description: Fortress Prime React component standards
+globs: apps/**/*.tsx
+alwaysApply: false
+---
+
+# Frontend React Standards
+
+- Never write fake UI, mock data, or placeholders.
+- If a React component needs a data pipeline, state the database schema and FastAPI requirement first.
+- TypeScript in React files must have zero `any` types.
+- Maintain zero lint errors.
+- React components use `kebab-case.tsx`.

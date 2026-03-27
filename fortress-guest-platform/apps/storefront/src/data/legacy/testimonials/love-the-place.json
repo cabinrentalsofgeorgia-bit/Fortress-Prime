@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1558",
+  "original_slug": "/testimonial/love-the-place",
+  "content_body": "<p>We really enjoyed our short stay, love the place!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Love The Place!",
+  "archive_slug": "love-the-place",
+  "archive_path": "/reviews/archive/love-the-place",
+  "source_ref": "node/1558",
+  "hmac_signature": "0c61c923719f462bb4d3f0ca7515fd59216e19d37c962795ea1bd31e615cbca5"
+}

@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1653",
+  "original_slug": "/testimonial/amazing-time-1",
+  "content_body": "<p>We had an amazing time at Serendipity! We hope your time is as enjoyable!</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Amazing Time",
+  "archive_slug": "amazing-time-1",
+  "archive_path": "/reviews/archive/amazing-time-1",
+  "source_ref": "node/1653",
+  "hmac_signature": "9e207e08374cb6f0bfd7e7cb319d3a96f11aa60c1ae362f5fceda8612f7c550e"
+}

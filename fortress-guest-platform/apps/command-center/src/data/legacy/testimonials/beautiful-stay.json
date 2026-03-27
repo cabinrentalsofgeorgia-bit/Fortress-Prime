@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1909",
+  "original_slug": "/testimonial/beautiful-stay",
+  "content_body": "<p>Enjoyed our stay for our honeymoon! It was a beautiful place to start our marriage at! Best Wishes! - The Carrolls&nbsp;</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Beautiful Stay",
+  "archive_slug": "beautiful-stay",
+  "archive_path": "/reviews/archive/beautiful-stay",
+  "source_ref": "node/1909",
+  "hmac_signature": "8d09c11db0bf5366a8cd38f652dade94c2f61fac46723bbafc05c0eba3ea4b5f"
+}

@@ -17,13 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.security import (
+    RoleChecker,
+    _coerce_staff_role,
     create_access_token,
     get_current_user,
     hash_password,
     require_admin,
     verify_password,
 )
-from backend.models.staff import StaffUser
+from backend.models.staff import STAFF_ROLE_VALUES, StaffRole, StaffUser
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -41,6 +43,8 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: dict
+    # Seconds; matches JWT exp and BFF fortress_session maxAge when provided.
+    expires_in: int
 
 
 class RegisterRequest(BaseModel):
@@ -48,7 +52,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8)
     first_name: str
     last_name: str
-    role: str = "staff"
+    role: str = StaffRole.REVIEWER.value
     notification_phone: Optional[str] = None
     notification_email: Optional[str] = None
 
@@ -81,12 +85,13 @@ class UpdateProfileRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 def _user_dict(u: StaffUser) -> dict:
+    normalized_role = _coerce_staff_role(u.role)
     return {
         "id": str(u.id),
         "email": u.email,
         "first_name": u.first_name,
         "last_name": u.last_name,
-        "role": u.role,
+        "role": normalized_role.value,
         "is_active": u.is_active,
         "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
         "notification_phone": u.notification_phone,
@@ -98,7 +103,14 @@ def _user_dict(u: StaffUser) -> dict:
 # Endpoints
 # ---------------------------------------------------------------------------
 @router.post("/login", response_model=LoginResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    body: LoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    client_ip = request.client.host if request.client else "unknown"
+    _check_login_rate_limit(client_ip)
+
     result = await db.execute(
         select(StaffUser).where(StaffUser.email == body.email.lower())
     )
@@ -119,15 +131,21 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
 
     user.last_login_at = datetime.utcnow()
+    await db.commit()
 
+    normalized_role = _coerce_staff_role(user.role)
     token = create_access_token(
         user_id=str(user.id),
-        role=user.role,
+        role=normalized_role,
         email=user.email,
     )
 
     logger.info("login_success", user_id=str(user.id), role=user.role)
-    return LoginResponse(access_token=token, user=_user_dict(user))
+    return LoginResponse(
+        access_token=token,
+        user=_user_dict(user),
+        expires_in=_access_token_ttl_seconds(),
+    )
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
@@ -143,15 +161,20 @@ async def register(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    if body.role not in ("admin", "manager", "staff", "maintenance"):
-        raise HTTPException(status_code=422, detail="Invalid role")
+    try:
+        requested_role = StaffRole(body.role.strip().lower())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid role. Must be one of: {', '.join(STAFF_ROLE_VALUES)}",
+        ) from exc
 
     user = StaffUser(
         email=body.email.lower(),
         password_hash=hash_password(body.password),
         first_name=body.first_name,
         last_name=body.last_name,
-        role=body.role,
+        role=requested_role,
         notification_phone=body.notification_phone,
         notification_email=body.notification_email,
         is_active=True,
@@ -183,6 +206,7 @@ async def update_profile(
     if body.notification_email is not None:
         user.notification_email = body.notification_email
     user.updated_at = datetime.utcnow()
+    await db.commit()
     logger.info("profile_updated", user_id=str(user.id))
     return UserResponse(**_user_dict(user))
 
@@ -198,6 +222,7 @@ async def change_password(
 
     user.password_hash = hash_password(body.new_password)
     user.updated_at = datetime.utcnow()
+    await db.commit()
     logger.info("password_changed", user_id=str(user.id))
     return {"status": "password_updated"}
 
@@ -255,6 +280,7 @@ async def deactivate_user(
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
     target.is_active = False
     target.updated_at = datetime.utcnow()
+    await db.commit()
     logger.info("user_deactivated", user_id=user_id, by=str(admin.id))
     return {"status": "deactivated"}
 
@@ -264,14 +290,38 @@ async def deactivate_user(
 # ---------------------------------------------------------------------------
 
 GATEWAY_ROLE_MAP = {
-    "admin": "admin",
-    "operator": "manager",
-    "viewer": "staff",
+    "admin": StaffRole.SUPER_ADMIN,
+    "operator": StaffRole.MANAGER,
+    "manager": StaffRole.MANAGER,
+    "reviewer": StaffRole.REVIEWER,
+    "viewer": StaffRole.REVIEWER,
 }
 
 _sso_rate_buckets: dict[str, list[float]] = defaultdict(list)
 SSO_RATE_LIMIT = 10
 SSO_RATE_WINDOW = 60
+
+_login_rate_buckets: dict[str, list[float]] = defaultdict(list)
+LOGIN_RATE_LIMIT = 25
+LOGIN_RATE_WINDOW = 60
+
+
+def _access_token_ttl_seconds() -> int:
+    return max(300, int(settings.jwt_expiration_hours * 3600))
+
+
+def _check_login_rate_limit(client_ip: str) -> None:
+    """Sliding-window limit on password login attempts per client IP."""
+    now = time.monotonic()
+    bucket = _login_rate_buckets[client_ip]
+    _login_rate_buckets[client_ip] = [t for t in bucket if now - t < LOGIN_RATE_WINDOW]
+    if len(_login_rate_buckets[client_ip]) >= LOGIN_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Try again in 60 seconds.",
+            headers={"Retry-After": "60"},
+        )
+    _login_rate_buckets[client_ip].append(now)
 
 
 def _check_sso_rate_limit(client_ip: str):
@@ -320,7 +370,7 @@ async def sso_login(
     )
     user = result.scalar_one_or_none()
 
-    vrs_role = GATEWAY_ROLE_MAP.get(gw_role, "staff")
+    vrs_role = GATEWAY_ROLE_MAP.get(gw_role, StaffRole.REVIEWER)
 
     if user is None:
         name_parts = gw_full_name.split(None, 1) if gw_full_name else [gw_username]
@@ -338,7 +388,7 @@ async def sso_login(
         db.add(user)
         await db.commit()
         await db.refresh(user)
-        logger.info("sso_user_provisioned", email=gw_email, role=vrs_role, gateway_user=gw_username)
+        logger.info("sso_user_provisioned", email=gw_email, role=vrs_role.value, gateway_user=gw_username)
     else:
         if not user.is_active:
             raise HTTPException(
@@ -356,7 +406,11 @@ async def sso_login(
     )
 
     logger.info("sso_login_success", user_id=str(user.id), gateway_user=gw_username)
-    return LoginResponse(access_token=token, user=_user_dict(user))
+    return LoginResponse(
+        access_token=token,
+        user=_user_dict(user),
+        expires_in=_access_token_ttl_seconds(),
+    )
 
 
 @router.get("/command-center-url")

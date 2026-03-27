@@ -1,0 +1,19 @@
+{
+  "legacy_node_id": "814",
+  "original_slug": "/testimonial/serene-cabin-along-the-toccoa-river",
+  "content_body": "<p>We had an awesome time. This place is beautiful, serene, full of adventure. and a great place to party! It&rsquo;s a great place to get away and make memories! We will be back!&nbsp;</p>",
+  "category_tags": [
+    "Toccoa River"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Serene Cabin along the Toccoa River",
+  "archive_slug": "serene-cabin-along-the-toccoa-river",
+  "archive_path": "/reviews/archive/serene-cabin-along-the-toccoa-river",
+  "source_ref": "node/814",
+  "related_property_slug": "rolling-river-cabin",
+  "related_property_path": "/cabins/rolling-river-cabin",
+  "related_property_title": "A Rolling River Cabin",
+  "hmac_signature": "4d8d62d9d6389cc40d566883c4d0994d7c1fd70185f7b3a5b93b0ba2b1bd0dfd"
+}

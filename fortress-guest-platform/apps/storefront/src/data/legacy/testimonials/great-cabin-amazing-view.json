@@ -1,0 +1,14 @@
+{
+  "legacy_node_id": "1808",
+  "original_slug": "/testimonial/great-cabin-amazing-view",
+  "content_body": "<p>Great cabin with an amazing view. Our family had one of the best vacations. We definitely would like to come back.</p>",
+  "category_tags": [],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:27Z",
+  "title": "Great Cabin, Amazing View",
+  "archive_slug": "great-cabin-amazing-view",
+  "archive_path": "/reviews/archive/great-cabin-amazing-view",
+  "source_ref": "node/1808",
+  "hmac_signature": "a4988eac487154109bafb026a8c5f54c91b21006236237079af44d99302abca6"
+}

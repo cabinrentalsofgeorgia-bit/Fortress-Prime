@@ -1,0 +1,21 @@
+{
+  "legacy_node_id": "2886",
+  "original_slug": "/testimonial/high-quality-cabin-blue-ridge",
+  "content_body": "<p>Can&rsquo;t beat the views, the high quality furnishings, little extras that make the stay luxurious. Would definitely stay here again!</p>",
+  "category_tags": [
+    "Blue Ridge",
+    "Blue Ridge Things To Do",
+    "Lake Blue Ridge"
+  ],
+  "node_type": "testimonial",
+  "body_status": "verified",
+  "signed_at": "2026-03-20T00:44:28Z",
+  "title": "High Quality Cabin in Blue Ridge",
+  "archive_slug": "high-quality-cabin-blue-ridge",
+  "archive_path": "/reviews/archive/high-quality-cabin-blue-ridge",
+  "source_ref": "node/2886",
+  "related_property_slug": "blue-ridge-lake-retreat",
+  "related_property_path": "/cabins/blue-ridge-lake-retreat",
+  "related_property_title": "Blue Ridge Lake Retreat",
+  "hmac_signature": "5e029ec2ba5df656e957c5e14280d7863f13bc28adc091cbbd692b0523096c47"
+}
