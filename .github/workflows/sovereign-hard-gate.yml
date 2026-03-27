@@ -2,25 +2,170 @@ name: Sovereign Hard Gate
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches:
       - main
 
 jobs:
   hard-gate:
-    # This gate is intended for the Spark head node runner.
-    runs-on: [self-hosted, linux, spark-head]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fortress_shadow
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fortress_shadow"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_API_URI: postgresql+asyncpg://fortress_api:fortress_api@127.0.0.1:5432/fortress_shadow
+      POSTGRES_ADMIN_URI: postgresql://fortress_admin:fortress_admin@127.0.0.1:5432/fortress_shadow
+      DATABASE_URL: postgresql+asyncpg://fortress_api:fortress_api@127.0.0.1:5432/fortress_shadow
+      SWARM_API_KEY: ${{ secrets.SWARM_API_KEY }}
+      INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
+      AUDIT_LOG_SIGNING_KEY: ${{ secrets.AUDIT_LOG_SIGNING_KEY }}
+      FOCUSED_SMOKE_BASE_URL: http://127.0.0.1:8115
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run sovereign hard gate
-        env:
-          NODES: "192.168.0.104 192.168.0.100 192.168.0.101 192.168.0.102"
-          THRESHOLD_MBPS: "200000"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Assert sovereign secrets are present
         run: |
-          chmod +x tools/cluster/run_hard_gate.sh
+          missing=0
+          for key in SWARM_API_KEY INTERNAL_API_KEY AUDIT_LOG_SIGNING_KEY; do
+            if [[ -z "${!key}" ]]; then
+              echo "::error::$key is required for the sovereign hard gate"
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Install backend dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Provision sovereign CI database roles
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d fortress_shadow -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fortress_admin') THEN
+              CREATE ROLE fortress_admin LOGIN PASSWORD 'fortress_admin';
+            ELSE
+              ALTER ROLE fortress_admin WITH LOGIN PASSWORD 'fortress_admin';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fortress_api') THEN
+              CREATE ROLE fortress_api LOGIN PASSWORD 'fortress_api';
+            ELSE
+              ALTER ROLE fortress_api WITH LOGIN PASSWORD 'fortress_api';
+            END IF;
+          END
+          $$;
+          GRANT ALL PRIVILEGES ON DATABASE fortress_shadow TO fortress_admin;
+          GRANT CONNECT, TEMPORARY ON DATABASE fortress_shadow TO fortress_api;
+          GRANT USAGE, CREATE ON SCHEMA public TO fortress_api;
+          GRANT USAGE, CREATE ON SCHEMA public TO fortress_admin;
+          ALTER SCHEMA public OWNER TO fortress_admin;
+          ALTER DEFAULT PRIVILEGES FOR ROLE fortress_admin IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO fortress_api;
+          ALTER DEFAULT PRIVILEGES FOR ROLE fortress_admin IN SCHEMA public
+            GRANT USAGE, SELECT ON SEQUENCES TO fortress_api;
+          SQL
+
+      - name: Apply sovereign schema
+        working-directory: fortress-guest-platform
+        run: |
+          source "$GITHUB_WORKSPACE/.venv/bin/activate"
+          alembic upgrade head
+
+      - name: Generate HITL keypair
+        run: |
+          mkdir -p /tmp/hitl-keys
+          openssl genrsa -out /tmp/hitl-keys/private.pem 2048 >/dev/null 2>&1
+          openssl rsa -in /tmp/hitl-keys/private.pem -pubout -out /tmp/hitl-keys/public.pem >/dev/null 2>&1
+          echo "JWT_RSA_PRIVATE_KEY=$(base64 -w0 /tmp/hitl-keys/private.pem)" >> "$GITHUB_ENV"
+          echo "JWT_RSA_PUBLIC_KEY=$(base64 -w0 /tmp/hitl-keys/public.pem)" >> "$GITHUB_ENV"
+          echo "JWT_KEY_ID=fgp-rs256-v1" >> "$GITHUB_ENV"
+
+      - name: Start sovereign backend
+        working-directory: fortress-guest-platform
+        run: |
+          source "$GITHUB_WORKSPACE/.venv/bin/activate"
+          nohup python -m uvicorn backend.main:app --host 127.0.0.1 --port 8115 --log-level warning > "$RUNNER_TEMP/hard-gate-backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/hard-gate-backend.pid"
+
+      - name: Wait for backend readiness
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8115/docs > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Hard-gate backend did not become ready on 127.0.0.1:8115"
+          exit 1
+
+      - name: Seed deterministic CI admin
+        working-directory: fortress-guest-platform
+        env:
+          CI: "true"
+          BOOTSTRAP_ADMIN_PASSWORD: FortressPrime2026!
+          BOOTSTRAP_ADMIN_CONFIRM_PASSWORD: FortressPrime2026!
+        run: |
+          source "$GITHUB_WORKSPACE/.venv/bin/activate"
+          python backend/scripts/seed_master_admin.py
+
+      - name: Run focused sovereign smoke
+        env:
+          BASE_URL: http://127.0.0.1:8115
+          FGP_ROOT: ${{ github.workspace }}/fortress-guest-platform
+        run: |
           chmod +x tools/cluster/focused_smoke.sh
-          chmod +x tools/cluster/nvidia_fabric_health_monitor.sh
-          tools/cluster/run_hard_gate.sh
+          tools/cluster/focused_smoke.sh
+
+      - name: Run focused hard-gate pytest
+        env:
+          FOCUSED_SMOKE_BASE_URL: http://127.0.0.1:8115
+        run: |
+          source "$GITHUB_WORKSPACE/.venv/bin/activate"
+          python3 -m pytest -q fortress-guest-platform/backend/tests/test_focused_smoke.py
+
+      - name: Skip DGX fabric probe on github-hosted runners
+        run: |
+          echo "Skipping nvidia_fabric_health_monitor.sh because no spark-head self-hosted runner is registered for this repository."
+
+      - name: Upload hard-gate logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sovereign-hard-gate-logs
+          path: |
+            ${{ runner.temp }}/hard-gate-backend.log
+          if-no-files-found: ignore
+
+      - name: Stop hard-gate backend
+        if: always()
+        run: |
+          if [[ -f "$RUNNER_TEMP/hard-gate-backend.pid" ]]; then
+            kill "$(cat "$RUNNER_TEMP/hard-gate-backend.pid")" || true
+          fi
