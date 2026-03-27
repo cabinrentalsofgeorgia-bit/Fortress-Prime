@@ -20,12 +20,12 @@ type AvailableStay = {
 };
 
 type AvailabilityResult = {
-  id: string;
-  slug: string;
+  date: string;
+  available: boolean;
 };
 
 type AvailabilityPayload = {
-  results: AvailabilityResult[];
+  month_grid?: Record<string, AvailabilityResult>;
 };
 
 function parseCurrency(amount: string): number {
@@ -41,35 +41,60 @@ async function findAvailableStay(request: APIRequestContext): Promise<AvailableS
   const property = (await propertyResponse.json()) as PropertyPayload;
   expect(property.slug).toBe(CABIN_SLUG);
 
-  for (let offsetDays = SEARCH_START_OFFSET_DAYS; offsetDays <= 120; offsetDays += 7) {
-    const checkInDate = new Date();
-    checkInDate.setUTCDate(checkInDate.getUTCDate() + offsetDays);
+  const searchCursor = new Date();
+  searchCursor.setUTCDate(searchCursor.getUTCDate() + SEARCH_START_OFFSET_DAYS);
 
-    const checkOutDate = new Date(checkInDate);
-    checkOutDate.setUTCDate(checkOutDate.getUTCDate() + NIGHT_COUNT);
-
-    const checkIn = checkInDate.toISOString().slice(0, 10);
-    const checkOut = checkOutDate.toISOString().slice(0, 10);
-    const availabilityResponse = await request.get(
-      `${BACKEND_URL}/api/direct-booking/availability?check_in=${checkIn}&check_out=${checkOut}&guests=${SEARCH_GUESTS}`,
+  for (let monthOffset = 0; monthOffset < 6; monthOffset += 1) {
+    const monthCursor = new Date(Date.UTC(searchCursor.getUTCFullYear(), searchCursor.getUTCMonth() + monthOffset, 1));
+    const year = monthCursor.getUTCFullYear();
+    const month = monthCursor.getUTCMonth() + 1;
+    const calendarResponse = await request.get(
+      `${BACKEND_URL}/api/direct-booking/property/${CABIN_SLUG}/calendar-v2?year=${year}&month=${month}`,
     );
     expect(
-      availabilityResponse.ok(),
-      `availability lookup failed for ${checkIn} -> ${checkOut}`,
+      calendarResponse.ok(),
+      `calendar lookup failed for ${CABIN_SLUG} ${year}-${String(month).padStart(2, "0")}`,
     ).toBeTruthy();
 
-    const availability = (await availabilityResponse.json()) as AvailabilityPayload;
-    const matchingProperty = availability.results.find((result) => result.slug === CABIN_SLUG);
-    if (matchingProperty) {
-      return {
-        propertyId: matchingProperty.id,
-        checkIn,
-        checkOut,
-      };
+    const calendar = (await calendarResponse.json()) as AvailabilityPayload;
+    const monthGrid = Object.values(calendar.month_grid ?? {})
+      .filter((day) => day.available)
+      .map((day) => day.date)
+      .sort();
+
+    for (let index = 0; index <= monthGrid.length - NIGHT_COUNT; index += 1) {
+      const start = new Date(`${monthGrid[index]}T00:00:00Z`);
+      if (start < searchCursor) {
+        continue;
+      }
+
+      let hasContiguousWindow = true;
+      for (let night = 1; night < NIGHT_COUNT; night += 1) {
+        const expected = new Date(start);
+        expected.setUTCDate(expected.getUTCDate() + night);
+        const expectedIso = expected.toISOString().slice(0, 10);
+        if (monthGrid[index + night] !== expectedIso) {
+          hasContiguousWindow = false;
+          break;
+        }
+      }
+
+      if (hasContiguousWindow) {
+        const checkIn = start.toISOString().slice(0, 10);
+        const checkOut = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + NIGHT_COUNT))
+          .toISOString()
+          .slice(0, 10);
+
+        return {
+          propertyId: property.id,
+          checkIn,
+          checkOut,
+        };
+      }
     }
   }
 
-  throw new Error(`No available ${CABIN_SLUG} stay found in the next 120 days`);
+  throw new Error(`No contiguous ${NIGHT_COUNT}-night ${CABIN_SLUG} stay found in the next 6 months`);
 }
 
 test.describe("Guest booking critical path", () => {
