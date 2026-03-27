@@ -59,3 +59,10 @@ data/
 training_data/
 fortress-guest-platform/backend/artifacts/
 fortress-guest-platform/backend/data/
+fortress-guest-platform/backend/scripts/archive_seo_bulk_payloads.*
+fortress-guest-platform/backend/scripts/drupal_granular_blueprint_*.json
+fortress-guest-platform/backend/scripts/orphan_report.json
+fortress-guest-platform/backend/scripts/review_namespace_batch*.json
+fortress-guest-platform/backend/scripts/seo_migration_candidates*.json
+fortress-guest-platform/backend/scripts/seo_migration_map_dry_run.json
+fortress-guest-platform/backend/scripts/seo_orphan_report_dry_run.json
