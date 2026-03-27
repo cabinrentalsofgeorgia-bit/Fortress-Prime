@@ -39,8 +39,23 @@ full_index.txt
 
 # Sensitive data
 .env
+.env.bak
+.env.security
 *.key
 *.pem
 id_*
 .e2e-venv/
 .vercel
+.coverage
+.coverage.*
+.venv-test/
+.wrangler/
+.env.sandbox
+
+# Disposable run artifacts
+.gh-run-*/
+backups/
+data/
+training_data/
+fortress-guest-platform/backend/artifacts/
+fortress-guest-platform/backend/data/
