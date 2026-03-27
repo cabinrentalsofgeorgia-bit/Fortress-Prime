@@ -19,16 +19,20 @@ type AvailableStay = {
   checkOut: string;
 };
 
+type AvailabilityResult = {
+  id: string;
+  slug: string;
+};
+
+type AvailabilityPayload = {
+  results: AvailabilityResult[];
+};
+
 function parseCurrency(amount: string): number {
   return Number.parseFloat(amount.replace(/[^0-9.-]+/g, ""));
 }
 
 async function findAvailableStay(request: APIRequestContext): Promise<AvailableStay> {
-  const startDate = new Date();
-  startDate.setUTCDate(startDate.getUTCDate() + SEARCH_START_OFFSET_DAYS);
-  const checkOutDate = new Date(startDate);
-  checkOutDate.setUTCDate(checkOutDate.getUTCDate() + NIGHT_COUNT);
-
   const propertyResponse = await request.get(
     `${BACKEND_URL}/api/direct-booking/property/${CABIN_SLUG}`,
   );
@@ -37,11 +41,35 @@ async function findAvailableStay(request: APIRequestContext): Promise<AvailableS
   const property = (await propertyResponse.json()) as PropertyPayload;
   expect(property.slug).toBe(CABIN_SLUG);
 
-  return {
-    propertyId: property.id,
-    checkIn: startDate.toISOString().slice(0, 10),
-    checkOut: checkOutDate.toISOString().slice(0, 10),
-  };
+  for (let offsetDays = SEARCH_START_OFFSET_DAYS; offsetDays <= 120; offsetDays += 7) {
+    const checkInDate = new Date();
+    checkInDate.setUTCDate(checkInDate.getUTCDate() + offsetDays);
+
+    const checkOutDate = new Date(checkInDate);
+    checkOutDate.setUTCDate(checkOutDate.getUTCDate() + NIGHT_COUNT);
+
+    const checkIn = checkInDate.toISOString().slice(0, 10);
+    const checkOut = checkOutDate.toISOString().slice(0, 10);
+    const availabilityResponse = await request.get(
+      `${BACKEND_URL}/api/direct-booking/availability?check_in=${checkIn}&check_out=${checkOut}&guests=${SEARCH_GUESTS}`,
+    );
+    expect(
+      availabilityResponse.ok(),
+      `availability lookup failed for ${checkIn} -> ${checkOut}`,
+    ).toBeTruthy();
+
+    const availability = (await availabilityResponse.json()) as AvailabilityPayload;
+    const matchingProperty = availability.results.find((result) => result.slug === CABIN_SLUG);
+    if (matchingProperty) {
+      return {
+        propertyId: matchingProperty.id,
+        checkIn,
+        checkOut,
+      };
+    }
+  }
+
+  throw new Error(`No available ${CABIN_SLUG} stay found in the next 120 days`);
 }
 
 test.describe("Guest booking critical path", () => {
