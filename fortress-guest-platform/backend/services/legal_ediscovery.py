@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.http_client import shared_client
+from backend.core.vector_db import embed_text
 from backend.services.legal_evidence_ingestion import _chunk_document
 
 logger = structlog.get_logger()
@@ -31,11 +32,18 @@ NAS_VAULT_ROOT = Path("/mnt/fortress_nas/legal_vault")
 LOCAL_VAULT_FALLBACK = Path("/home/admin/Fortress-Prime/data/legal_vault")
 QDRANT_COLLECTION = "legal_ediscovery"
 QDRANT_URL = settings.qdrant_url if hasattr(settings, "qdrant_url") else "http://localhost:6333"
-EMBED_URL = settings.embedding_url if hasattr(settings, "embedding_url") else "http://192.168.0.100/api/embeddings"
-EMBED_MODEL = "nomic-embed-text:latest"
 
-SWARM_ENDPOINT = "http://192.168.0.100/v1/chat/completions"
-SWARM_MODEL = "qwen2.5:7b"
+
+def _litellm_chat_completions_url() -> str:
+    """OpenAI-compatible chat URL on the unified LiteLLM gateway (LITELLM_BASE_URL)."""
+    return f"{settings.litellm_base_url.rstrip('/')}/chat/completions"
+
+
+def _litellm_request_headers() -> dict[str, str]:
+    key = (settings.litellm_master_key or "").strip()
+    if not key:
+        return {}
+    return {"Authorization": f"Bearer {key}"}
 
 
 # ── Pydantic: Privilege Classification ────────────────────────────
@@ -111,7 +119,7 @@ def _extract_text(file_bytes: bytes, mime_type: str, file_name: str) -> str:
 # ── Privilege Classifier ──────────────────────────────────────────
 
 async def _classify_privilege(raw_text: str, file_name: str) -> tuple[PrivilegeClassification, int]:
-    """Run a fast pre-flight privilege check via local Qwen2.5.
+    """Pre-flight privilege check via LiteLLM (embeddings already use vector_db / Ollama path).
     Returns (classification, latency_ms)."""
     snippet = raw_text[:3000]
     prompt = f"DOCUMENT: {file_name}\n\n{snippet}"
@@ -119,9 +127,10 @@ async def _classify_privilege(raw_text: str, file_name: str) -> tuple[PrivilegeC
     t0 = time.perf_counter()
     try:
         resp = await shared_client.post(
-            SWARM_ENDPOINT,
+            _litellm_chat_completions_url(),
+            headers=_litellm_request_headers(),
             json={
-                "model": SWARM_MODEL,
+                "model": settings.ollama_fast_model,
                 "messages": [
                     {"role": "system", "content": PRIVILEGE_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
@@ -227,15 +236,10 @@ async def _embed_single(text_input: str) -> list[float]:
     current = text_input[:4000]
     for attempt in range(max_retries):
         try:
-            resp = await shared_client.post(
-                EMBED_URL,
-                json={"model": EMBED_MODEL, "prompt": current},
-                timeout=120.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            embedding = data.get("embedding") or data.get("data", [{}])[0].get("embedding")
-            return embedding if embedding else []
+            vec = await embed_text(current)
+            if len(vec) == settings.embed_dim:
+                return vec
+            return []
         except Exception as exc:
             err = str(exc)[:200]
             if "500" in err and attempt < max_retries - 1:
@@ -360,7 +364,7 @@ async def process_vault_upload(
                 case_slug=case_slug,
                 file_name=file_name,
                 classification=classification,
-                model=SWARM_MODEL,
+                model=settings.ollama_fast_model,
                 latency_ms=priv_latency,
                 snippet=raw_text[:2000],
             )
