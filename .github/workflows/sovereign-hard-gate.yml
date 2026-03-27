@@ -96,7 +96,16 @@ jobs:
         run: |
           source "$GITHUB_WORKSPACE/.venv/bin/activate"
           PYTHONPATH="$GITHUB_WORKSPACE/fortress-guest-platform" python -c "import backend.main; print('backend import ok')"
-          python3 -m pytest -q fortress-guest-platform/backend/tests/test_focused_smoke.py -k redaction
+          PYTHONPATH="$GITHUB_WORKSPACE/fortress-guest-platform" python - <<'PY'
+          from backend.services.privacy_router import sanitize_for_cloud
+
+          decision = sanitize_for_cloud(
+              {"guest_name": "John Doe", "note": "Guest John Doe requested late check-in"}
+          )
+          assert decision.redacted_payload["guest_name"] == "GUEST_ALPHA"
+          assert "GUEST_ALPHA" in decision.redacted_payload["note"]
+          print("privacy smoke ok")
+          PY
 
       - name: Document hosted fallback scope
         run: |
