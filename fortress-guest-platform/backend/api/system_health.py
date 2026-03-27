@@ -1,9 +1,8 @@
 """
-Bare-metal system health for Command Center `/api/system-health` BFF.
+Sovereign system health for Command Center `/api/system-health` BFF and telemetry WebSocket.
 
-Probes: Postgres (SQLAlchemy + pg_stat_user_tables), optional Qdrant HTTP,
-local node vitals (psutil, /proc/uptime), NVIDIA via nvidia-smi (shared with C2 pulse),
-systemd units instead of Docker-only service matrix.
+Collectors: PostgreSQL 16 (connections + liveness), NVML multi-GPU, optional Qdrant HTTP,
+SNMP interface rates (MikroTik CRS / IF-MIB), Synology (or any) mount usage + /proc/diskstats IOPS.
 """
 
 from __future__ import annotations
@@ -14,32 +13,74 @@ import platform
 import socket
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 import httpx
-import psutil
 import structlog
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.command_c2 import PULSE_ACCESS, get_nvidia_vitals
+from backend.api.command_c2 import PULSE_ACCESS
+from backend.core.config import settings
 from backend.core.database import get_db
 from backend.models.staff import StaffUser
+from backend.services.sovereign_hardware_metrics import (
+    collect_nvml_gpus,
+    collect_snmp_network,
+    collect_storage,
+    host_cpu_ram_load,
+)
 
 logger = structlog.get_logger()
-router = APIRouter()
 
 QDRANT_URL = os.getenv("QDRANT_HTTP_URL", "http://127.0.0.1:6333").rstrip("/")
 
-_SYSTEMD_UNITS: tuple[tuple[str, int, str], ...] = (
-    ("fortress-backend.service", 8100, "Fortress API"),
-    ("fortress-frontend.service", 3001, "Command Center"),
-    ("fortress-arq-worker.service", 0, "ARQ Worker"),
-    ("fortress-sync-worker.service", 0, "Streamline Sync"),
-    ("cloudflared.service", 0, "Cloudflare Tunnel"),
-    ("postgresql.service", 5432, "PostgreSQL"),
-)
+
+class GpuMetricOut(BaseModel):
+    id: int = Field(..., ge=0)
+    utilization_pct: int = Field(..., ge=0, le=100)
+    memory_used_mb: int = Field(..., ge=0)
+    memory_total_mb: int = Field(..., ge=0)
+    temperature_c: int = Field(..., ge=0, le=150)
+
+
+class NetworkMetricOut(BaseModel):
+    interface: str = Field(..., min_length=1)
+    rx_bytes_sec: int = Field(..., ge=0)
+    tx_bytes_sec: int = Field(..., ge=0)
+    dropped_packets: int = Field(..., ge=0)
+
+
+class StorageMetricOut(BaseModel):
+    volume: str = Field(..., min_length=1)
+    mount_path: str = Field(..., min_length=1)
+    capacity_pct: float = Field(..., ge=0.0, le=100.0)
+    iops: int = Field(..., ge=0)
+
+
+SystemHealthStatus = Literal["NOMINAL", "WARNING", "DEGRADED"]
+
+
+class SystemHealthPayload(BaseModel):
+    """Strict REST/WebSocket body (before optional `pulse` merge on WS)."""
+
+    status: SystemHealthStatus
+    gpus: list[GpuMetricOut]
+    network: list[NetworkMetricOut]
+    database_connections: int = Field(..., ge=0)
+    postgres_ok: bool
+    storage: list[StorageMetricOut]
+    hostname: str = Field(..., min_length=1)
+    host_cpu_usage_pct: float = Field(..., ge=0.0, le=100.0)
+    host_ram_pct: float = Field(..., ge=0.0, le=100.0)
+    host_load_1m: float = Field(..., ge=0.0)
+    service: str = Field(default="fortress_system_health")
+    timestamp: str
+    collected_in_ms: int = Field(..., ge=0)
+    uptime_seconds: int = Field(..., ge=0)
+    qdrant_reachable: bool = False
 
 
 def _proc_uptime_seconds() -> float:
@@ -51,191 +92,126 @@ def _proc_uptime_seconds() -> float:
         return 0.0
 
 
-def _systemd_is_active(unit: str) -> bool:
-    try:
-        import subprocess
-
-        r = subprocess.run(
-            ["systemctl", "is-active", unit],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-        return r.stdout.strip() == "active"
-    except Exception:
-        return False
-
-
-async def _postgres_table_rows(db: AsyncSession) -> dict[str, int]:
-    sql = text(
-        """
-        SELECT relname, COALESCE(n_live_tup::bigint, 0) AS n
-        FROM pg_stat_user_tables
-        WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-        ORDER BY n_live_tup DESC NULLS LAST
-        LIMIT 16
-        """
+async def _postgres_connection_count(db: AsyncSession) -> int:
+    row = await db.execute(
+        text("SELECT count(*)::bigint FROM pg_stat_activity WHERE state = 'active'")
     )
-    result = await db.execute(sql)
-    rows = result.fetchall()
-    return {str(r[0]): int(r[1]) for r in rows if r[0]}
+    val = row.scalar_one()
+    return int(val or 0)
 
 
-async def _qdrant_collections() -> dict[str, dict[str, Any]]:
+async def _qdrant_ping() -> bool:
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            r = await client.get(f"{QDRANT_URL}/collections")
-            if r.status_code != 200:
-                return {}
-            data = r.json()
-            out: dict[str, dict[str, Any]] = {}
-            for c in data.get("result", {}).get("collections", []) or []:
-                name = c.get("name")
-                if not name:
-                    continue
-                points = 0
-                status = "unknown"
-                try:
-                    ci = await client.get(f"{QDRANT_URL}/collections/{name}")
-                    if ci.status_code == 200:
-                        info = ci.json().get("result", {}) or {}
-                        status = str(info.get("status", "unknown"))
-                        pts = info.get("points_count")
-                        if pts is not None:
-                            points = int(pts)
-                except Exception:
-                    pass
-                out[str(name)] = {"points": points, "status": status}
-            return out
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            r = await client.get(f"{QDRANT_URL}/readyz")
+            return r.status_code == 200
     except Exception as exc:
         logger.warning("qdrant_health_skipped", error=str(exc))
-        return {}
+        return False
 
 
 def _hostname() -> str:
     return socket.gethostname() or platform.node()
 
 
-def _build_node_payload(
-    *,
-    postgres_ok: bool,
-    gpu: Any,
-) -> dict[str, Any]:
-    hn = _hostname()
-    load_1, load_5, load_15 = (0.0, 0.0, 0.0)
-    try:
-        load_1, load_5, load_15 = os.getloadavg()
-    except OSError:
-        pass
-
-    cores = psutil.cpu_count(logical=True) or 1
-    ram = psutil.virtual_memory()
-    disk = psutil.disk_usage("/")
-
-    used_mib = int(gpu.vram_used or 0)
-    total_mib = int(gpu.vram_total or 1)
-    pct = float(gpu.vram_percent or 0.0)
-    temp_c = int(gpu.temp or 0)
-    util_pct = int(gpu.utilization or 0)
-
-    return {
-        "name": hn,
-        "ip": "127.0.0.1",
-        "role": "dgx-spark",
-        "online": postgres_ok,
-        "gpu": {
-            "temp_c": temp_c,
-            "total_mib": total_mib,
-            "used_mib": used_mib,
-            "pct": round(pct, 1),
-            "util_pct": util_pct,
-            "power_w": 0,
-            "pstate": "",
-            "driver": "",
-            "clock_mhz": 0,
-            "clock_max_mhz": 0,
-            "processes": [],
-        },
-        "cpu": {
-            "load_1m": round(load_1, 2),
-            "load_5m": round(load_5, 2),
-            "load_15m": round(load_15, 2),
-            "cores": cores,
-            "usage_pct": round(psutil.cpu_percent(interval=None), 1),
-        },
-        "ram": {
-            "total_gb": round(ram.total / (1024**3), 2),
-            "used_gb": round(ram.used / (1024**3), 2),
-            "free_gb": round(ram.free / (1024**3), 2),
-            "avail_gb": round(ram.available / (1024**3), 2),
-            "pct": round(ram.percent, 1),
-        },
-        "disk": {
-            "total_gb": round(disk.total / (1024**3), 2),
-            "used_gb": round(disk.used / (1024**3), 2),
-            "avail_gb": round(disk.free / (1024**3), 2),
-            "pct": str(round(disk.percent, 1)),
-        },
-    }
-
-
 async def build_system_health_payload(db: AsyncSession) -> dict[str, Any]:
-    """Collect bare-metal system health; shared by REST aggregate and telemetry WebSocket."""
+    """Collect sovereign hardware health; shared by REST aggregate and telemetry WebSocket."""
     t0 = time.perf_counter()
     ts = datetime.now(timezone.utc).isoformat()
 
     postgres_ok = False
-    pg_rows: dict[str, int] = {}
+    db_conns = 0
     try:
         await db.execute(text("SELECT 1"))
         postgres_ok = True
-        pg_rows = await _postgres_table_rows(db)
+        db_conns = await _postgres_connection_count(db)
     except Exception as exc:
         logger.warning("postgres_health_probe_failed", error=str(exc))
 
-    qdrant_task = asyncio.create_task(_qdrant_collections())
-    gpu_task = get_nvidia_vitals()
+    qdrant_task = asyncio.create_task(_qdrant_ping())
+    gpu_task = asyncio.to_thread(collect_nvml_gpus)
+    snmp_task = asyncio.to_thread(collect_snmp_network, settings)
+    storage_task = asyncio.to_thread(collect_storage, settings)
+    host_task = asyncio.to_thread(host_cpu_ram_load)
 
-    gpu, qdrant = await asyncio.gather(gpu_task, qdrant_task)
+    gpus_raw, network_raw, storage_raw, host_tuple, qdrant_ok = await asyncio.gather(
+        gpu_task,
+        snmp_task,
+        storage_task,
+        host_task,
+        qdrant_task,
+    )
 
-    services_out: list[dict[str, Any]] = []
-    for unit, port, label in _SYSTEMD_UNITS:
-        active = _systemd_is_active(unit)
-        services_out.append(
-            {
-                "name": label,
-                "port": port,
-                "status": "online" if active else "offline",
-            }
+    cpu_pct, ram_pct, load_1 = host_tuple
+
+    gpus = [
+        GpuMetricOut(
+            id=g.gpu_id,
+            utilization_pct=g.utilization_pct,
+            memory_used_mb=g.memory_used_mb,
+            memory_total_mb=g.memory_total_mb,
+            temperature_c=g.temperature_c,
         )
+        for g in gpus_raw
+    ]
 
-    node = _build_node_payload(postgres_ok=postgres_ok, gpu=gpu)
-    nodes = {node["name"]: node}
+    network = [
+        NetworkMetricOut(
+            interface=n.interface,
+            rx_bytes_sec=n.rx_bytes_sec,
+            tx_bytes_sec=n.tx_bytes_sec,
+            dropped_packets=n.dropped_packets,
+        )
+        for n in network_raw
+    ]
 
-    # Postgres is authoritative for "glass online"; GPU probe may fail on CPU-only dev hosts.
-    status: str = "healthy" if postgres_ok else "degraded"
+    storage = [
+        StorageMetricOut(
+            volume=s.volume,
+            mount_path=s.mount_path,
+            capacity_pct=s.capacity_pct,
+            iops=s.iops,
+        )
+        for s in storage_raw
+    ]
+
+    temp_warn = any(g.temperature_c >= 85 for g in gpus)
+    storage_warn = any(s.capacity_pct >= 90.0 for s in storage)
+
+    if not postgres_ok:
+        status: SystemHealthStatus = "DEGRADED"
+    elif temp_warn or storage_warn:
+        status = "WARNING"
+    else:
+        status = "NOMINAL"
 
     collected_ms = int((time.perf_counter() - t0) * 1000)
 
-    return {
-        "status": status,
-        "service": "fortress_system_health",
-        "uptime_seconds": int(_proc_uptime_seconds()),
-        "timestamp": ts,
-        "collected_in_ms": collected_ms,
-        "nodes": nodes,
-        "services": services_out,
-        "databases": {
-            "postgres": pg_rows if pg_rows else ({"connected": 1} if postgres_ok else {}),
-            "qdrant": qdrant,
-        },
-    }
+    payload = SystemHealthPayload(
+        status=status,
+        gpus=gpus,
+        network=network,
+        database_connections=db_conns,
+        postgres_ok=postgres_ok,
+        storage=storage,
+        hostname=_hostname(),
+        host_cpu_usage_pct=cpu_pct,
+        host_ram_pct=ram_pct,
+        host_load_1m=load_1,
+        timestamp=ts,
+        collected_in_ms=collected_ms,
+        uptime_seconds=int(_proc_uptime_seconds()),
+        qdrant_reachable=bool(qdrant_ok),
+    )
+    return payload.model_dump(mode="json")
 
 
-@router.get("/")
+router = APIRouter()
+
+
+@router.get("/", response_model=SystemHealthPayload)
 async def system_health_aggregate(
     _: StaffUser = Depends(PULSE_ACCESS),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
-    return await build_system_health_payload(db)
+) -> SystemHealthPayload:
+    return SystemHealthPayload.model_validate(await build_system_health_payload(db))

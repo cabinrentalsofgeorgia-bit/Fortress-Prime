@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,14 +36,8 @@ export function Topbar() {
     : "LK";
   const displayName = user ? `${user.first_name} ${user.last_name}` : "Lissa Knight";
   const displayRole = user?.role ?? "Admin";
-  const databaseOnline = useMemo(() => {
-    const postgresTables = Object.keys(health?.databases?.postgres ?? {});
-    return postgresTables.length > 0;
-  }, [health?.databases?.postgres]);
-  const qdrantHealthy = useMemo(() => {
-    const entries = Object.values(health?.databases?.qdrant ?? {});
-    return entries.length > 0 && entries.every((entry) => entry.status === "green");
-  }, [health?.databases?.qdrant]);
+  const databaseOnline = health?.postgres_ok === true;
+  const qdrantHealthy = health?.qdrant_reachable === true;
   const dbTone = databaseOnline ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200" : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200";
   const securityTone = "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200";
   const uptime = formatUptime(health?.uptime_seconds);
@@ -67,15 +60,17 @@ export function Topbar() {
             <Badge
               variant="outline"
               className={
-                health.status === "healthy"
+                health.status === "NOMINAL"
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
-                  : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200"
+                  : health.status === "WARNING"
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200"
+                    : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200"
               }
             >
               OPS {health.status}
             </Badge>
           ) : null}
-          {health?.databases?.qdrant ? (
+          {health ? (
             <Badge
               variant="outline"
               className={
@@ -84,7 +79,7 @@ export function Topbar() {
                   : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200"
               }
             >
-              Vector {qdrantHealthy ? "green" : "watch"}
+              Vector {qdrantHealthy ? "reachable" : "watch"}
             </Badge>
           ) : null}
         </div>

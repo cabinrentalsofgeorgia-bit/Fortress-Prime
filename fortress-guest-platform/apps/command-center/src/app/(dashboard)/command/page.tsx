@@ -138,16 +138,14 @@ export default function CommandCenterPage() {
   const funnelData = funnel.data;
   const healthData = health.data;
 
-  const nodes = healthData?.nodes ? Object.values(healthData.nodes) : [];
-  const onlineNodes = nodes.filter((node) => node.online);
+  const headOnline = healthData?.postgres_ok === true ? 1 : 0;
+  const gpuList = healthData?.gpus ?? [];
   const avgGpuTemp =
-    onlineNodes.length > 0
-      ? Math.round(
-          onlineNodes.reduce((sum, node) => sum + (node.gpu?.temp_c ?? 0), 0) / onlineNodes.length,
-        )
+    gpuList.length > 0
+      ? Math.round(gpuList.reduce((sum, g) => sum + g.temperature_c, 0) / gpuList.length)
       : 0;
-  const postgresTables = Object.entries(healthData?.databases?.postgres ?? {});
-  const qdrantCollections = Object.entries(healthData?.databases?.qdrant ?? {});
+  const pgConnections = healthData?.database_connections ?? 0;
+  const qdrantOk = healthData?.qdrant_reachable === true;
   const blockers = [
     !parityData && parity.error ? errorMessage(parity.error, "Parity telemetry unavailable.") : null,
     !pulseData && pulse.error ? errorMessage(pulse.error, "Sovereign Pulse unavailable.") : null,
@@ -302,8 +300,8 @@ export default function CommandCenterPage() {
               {healthData?.status ?? "unknown"}
             </div>
             <p className="mt-2 text-sm text-zinc-400">
-              Uptime {formatUptime(healthData?.uptime_seconds)}. Nodes online {onlineNodes.length}/
-              {nodes.length}.
+              Uptime {formatUptime(healthData?.uptime_seconds)}. Head node {headOnline}/1 · pg sessions{" "}
+              {pgConnections}.
             </p>
           </CardContent>
         </Card>
@@ -452,9 +450,9 @@ export default function CommandCenterPage() {
             <CardContent className="space-y-3 pt-6">
               <div className="grid gap-3 sm:grid-cols-2">
                 <TacticalStat
-                  label="Nodes Online"
-                  value={`${onlineNodes.length}/${nodes.length}`}
-                  detail="DGX Spark cluster"
+                  label="Head Node"
+                  value={`${headOnline}/1`}
+                  detail={healthData?.hostname ?? "DGX Spark"}
                 />
                 <TacticalStat
                   label="Avg GPU Temp"
@@ -507,32 +505,28 @@ export default function CommandCenterPage() {
               <div>
                 <p className="mb-2 text-xs uppercase tracking-[0.24em] text-zinc-500">PostgreSQL</p>
                 <div className="space-y-2">
-                  {postgresTables.length === 0 ? (
+                  {!healthData ? (
                     <p className="text-sm text-zinc-400">Postgres telemetry unavailable.</p>
                   ) : (
-                    postgresTables.slice(0, 4).map(([table, rows]) => (
-                      <div key={table} className="flex items-center justify-between text-sm">
-                        <span className="text-zinc-300">{table}</span>
-                        <span className="text-zinc-500">{rows.toLocaleString()} rows</span>
-                      </div>
-                    ))
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-300">Active connections</span>
+                      <span className="text-zinc-500">
+                        {healthData.postgres_ok ? pgConnections.toLocaleString() : "probe failed"}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
               <div>
                 <p className="mb-2 text-xs uppercase tracking-[0.24em] text-zinc-500">Vector DB</p>
                 <div className="space-y-2">
-                  {qdrantCollections.length === 0 ? (
+                  {!healthData ? (
                     <p className="text-sm text-zinc-400">Qdrant telemetry unavailable.</p>
                   ) : (
-                    qdrantCollections.slice(0, 4).map(([collection, info]) => (
-                      <div key={collection} className="flex items-center justify-between text-sm">
-                        <span className="text-zinc-300">{collection}</span>
-                        <span className="text-zinc-500">
-                          {info.points.toLocaleString()} pts · {info.status}
-                        </span>
-                      </div>
-                    ))
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-300">HTTP /readyz</span>
+                      <span className="text-zinc-500">{qdrantOk ? "reachable" : "unreachable"}</span>
+                    </div>
                   )}
                 </div>
               </div>

@@ -878,103 +878,50 @@ export interface FullEmailTemplate {
 }
 
 // ---------------------------------------------------------------------------
-// System Health (bare-metal dashboard on port 9876)
+// System Health (sovereign NVML + SNMP + PostgreSQL + storage; 1 Hz WS)
 // ---------------------------------------------------------------------------
 
-export interface GpuProcess {
-  pid: string;
-  name: string;
-  vram_mib: string;
+export type SystemHealthStatus = "NOMINAL" | "WARNING" | "DEGRADED";
+
+export interface SystemHealthGpuMetric {
+  id: number;
+  utilization_pct: number;
+  memory_used_mb: number;
+  memory_total_mb: number;
+  temperature_c: number;
 }
 
-export interface NodeGpuMetrics {
-  temp_c: number;
-  total_mib: number;
-  used_mib: number;
-  pct: number;
-  util_pct: number;
-  power_w: number;
-  pstate: string;
-  driver: string;
-  clock_mhz: number;
-  clock_max_mhz: number;
-  processes: GpuProcess[];
+export interface SystemHealthNetworkMetric {
+  interface: string;
+  rx_bytes_sec: number;
+  tx_bytes_sec: number;
+  dropped_packets: number;
 }
 
-export interface NodeCpuMetrics {
-  load_1m: number;
-  load_5m: number;
-  load_15m: number;
-  cores: number;
-  usage_pct: number;
-}
-
-export interface NodeRamMetrics {
-  total_gb: number;
-  used_gb: number;
-  free_gb: number;
-  avail_gb: number;
-  pct: number;
-}
-
-export interface NodeDiskMetrics {
-  total_gb: number;
-  used_gb: number;
-  avail_gb: number;
-  pct: string;
-}
-
-export interface NodeThermalSensor {
-  name: string;
-  temps: number[];
-}
-
-export interface NodeMetrics {
-  name: string;
-  ip: string;
-  role: string;
-  online: boolean;
-  gpu: NodeGpuMetrics;
-  cpu: NodeCpuMetrics;
-  ram: NodeRamMetrics;
-  disk: NodeDiskMetrics;
-  thermals?: NodeThermalSensor[];
-  processes?: Array<{
-    user: string;
-    pid: string;
-    cpu: string;
-    mem: string;
-    vsz_mb: number;
-    rss_mb: number;
-    command: string;
-  }>;
-}
-
-export interface SystemHealthService {
-  name: string;
-  port: number;
-  status: "online" | "offline";
-}
-
-export interface QdrantCollectionStats {
-  points: number;
-  status: string;
-}
-
-export interface SystemHealthDatabases {
-  postgres: Record<string, number>;
-  qdrant: Record<string, QdrantCollectionStats>;
+export interface SystemHealthStorageMetric {
+  volume: string;
+  mount_path: string;
+  capacity_pct: number;
+  iops: number;
 }
 
 export interface SystemHealthResponse {
-  status: "healthy" | "degraded";
+  status: SystemHealthStatus;
+  gpus: SystemHealthGpuMetric[];
+  network: SystemHealthNetworkMetric[];
+  database_connections: number;
+  postgres_ok: boolean;
+  storage: SystemHealthStorageMetric[];
+  hostname: string;
+  host_cpu_usage_pct: number;
+  host_ram_pct: number;
+  host_load_1m: number;
   service: string;
   uptime_seconds: number;
   timestamp: string;
   collected_in_ms: number;
-  nodes?: Record<string, NodeMetrics> | null;
-  services: SystemHealthService[];
-  databases: SystemHealthDatabases;
+  qdrant_reachable: boolean;
+  pulse?: CommandC2PulseResponse;
 }
 
 export interface CommandC2RootResponse {
@@ -1015,6 +962,7 @@ export interface CommandC2PulseResponse {
   gpu: CommandC2GpuVitals;
   services: Record<string, string>;
   uptime: string;
+  timestamp?: string;
 }
 
 export interface CommandC2VerificationResponse {

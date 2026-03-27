@@ -645,6 +645,63 @@ class Settings(BaseSettings):
     # Invites
     invite_expiry_hours: int = Field(default=72)
 
+    # System Health (sovereign telemetry: NVML, SNMP MikroTik, Synology mounts)
+    system_health_mikrotik_snmp_host: str = Field(
+        default="",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_HOST",
+        description="MikroTik (or switch) SNMP agent host. Empty disables SNMP interface polling.",
+    )
+    system_health_mikrotik_snmp_version: str = Field(
+        default="v2c",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_VERSION",
+        description="SNMP security model for telemetry polling: v2c or v3.",
+    )
+    system_health_mikrotik_snmp_community: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_COMMUNITY",
+        description="SNMPv2c community for MikroTik CRS / CRS812 telemetry.",
+    )
+    system_health_mikrotik_snmp_port: int = Field(
+        default=161,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_PORT",
+        description="SNMP UDP port (usually 161).",
+    )
+    system_health_mikrotik_snmp_if_indices: str = Field(
+        default="",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_IF_INDICES",
+        description="Comma-separated IF-MIB ifIndex values to poll (e.g. 1,2,3).",
+    )
+    system_health_mikrotik_snmp_v3_username: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_USERNAME",
+        description="SNMPv3 username for MikroTik telemetry polling.",
+    )
+    system_health_mikrotik_snmp_v3_auth_protocol: str | None = Field(
+        default="SHA",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_AUTH_PROTOCOL",
+        description="SNMPv3 auth protocol: SHA or MD5.",
+    )
+    system_health_mikrotik_snmp_v3_auth_key: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_AUTH_KEY",
+        description="SNMPv3 auth key for MikroTik telemetry polling.",
+    )
+    system_health_mikrotik_snmp_v3_priv_protocol: str | None = Field(
+        default="AES128",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_PRIV_PROTOCOL",
+        description="SNMPv3 privacy protocol: AES128 or DES.",
+    )
+    system_health_mikrotik_snmp_v3_priv_key: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_PRIV_KEY",
+        description="SNMPv3 privacy key for MikroTik telemetry polling.",
+    )
+    system_health_synology_mount_paths: str = Field(
+        default="/mnt/synology",
+        alias="SYSTEM_HEALTH_SYNOLOGY_MOUNT_PATHS",
+        description="Comma-separated mount paths for sovereign NAS capacity telemetry.",
+    )
+
     # Staff notifications
     staff_notification_email: str = Field(default="")
     staff_notification_phone: str = Field(default="")

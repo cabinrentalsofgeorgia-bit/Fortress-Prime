@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Activity, Crosshair, Shield, Workflow } from "lucide-react";
 import { useSystemHealth } from "@/lib/hooks";
 import { useSystemHealthWsStore } from "@/lib/system-health-ws-store";
-import type { NodeMetrics } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { HunterOpsQueue } from "./hunter-ops-queue";
@@ -30,7 +29,6 @@ export function VrsHunterShell() {
   const wsStatus = useSystemHealthWsStore((state) => state.wsStatus);
   const lastMessageAt = useSystemHealthWsStore((state) => state.lastMessageAt);
   const isConnected = wsStatus === "connected";
-  const nodes = useMemo<NodeMetrics[]>(() => Object.values(health.data?.nodes ?? {}), [health.data?.nodes]);
   const queuePanel = useMemo(() => <HunterOpsQueue />, []);
   const terminalPanel = useMemo(() => <MatrixTerminal />, []);
   const lastUpdated = useMemo(() => {
@@ -38,6 +36,13 @@ export function VrsHunterShell() {
     if (!health.dataUpdatedAt) return null;
     return new Date(health.dataUpdatedAt).toLocaleTimeString();
   }, [health.dataUpdatedAt, lastMessageAt]);
+
+  const d = health.data;
+  const hasHealth =
+    d != null &&
+    Array.isArray(d.gpus) &&
+    typeof d.host_cpu_usage_pct === "number" &&
+    typeof d.postgres_ok === "boolean";
 
   return (
     <div className="space-y-6">
@@ -88,65 +93,101 @@ export function VrsHunterShell() {
           <p className="text-rose-400">
             {health.error instanceof Error ? health.error.message : "System health unavailable"}
           </p>
-        ) : nodes.length === 0 ? (
-          <p className="text-zinc-400">NO NODE METRICS RETURNED.</p>
+        ) : !hasHealth ? (
+          <p className="text-zinc-400">NO TELEMETRY PAYLOAD.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {nodes.map((node) => {
-              const cpuPct = progressValue(node.cpu?.usage_pct);
-              const ramPct = progressValue(node.ram?.pct);
-              const vramPct =
-                node.gpu?.total_mib > 0 ? progressValue((node.gpu.used_mib / node.gpu.total_mib) * 100) : 0;
-
-              return (
-                <div key={node.ip} className="border border-zinc-800 bg-[#050505] p-3">
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold text-cyan-400">{node.ip}</p>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">{node.name}</p>
-                    </div>
-                    <span
-                      className={`rounded-sm px-1.5 py-0.5 text-[10px] ${
-                        node.online ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
-                      }`}
-                    >
-                      {node.online ? "ONLINE" : "OFFLINE"}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                        <span>CPU</span>
-                        <span>{cpuPct.toFixed(1)}%</span>
-                      </div>
-                      <Progress value={cpuPct} className={`h-1 rounded-none bg-zinc-900 ${progressTone(cpuPct)}`} />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                        <span>RAM</span>
-                        <span>{ramPct.toFixed(1)}%</span>
-                      </div>
-                      <Progress value={ramPct} className={`h-1 rounded-none bg-zinc-900 ${progressTone(ramPct)}`} />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                        <span>VRAM</span>
-                        <span>{vramPct.toFixed(1)}%</span>
-                      </div>
-                      <Progress value={vramPct} className={`h-1 rounded-none bg-zinc-900 ${progressTone(vramPct)}`} />
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                      <span>{node.role}</span>
-                      <span>{node.gpu.temp_c}C GPU</span>
-                    </div>
-                  </div>
+            <div className="border border-zinc-800 bg-[#050505] p-3">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-cyan-400">{d.hostname}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">head node</p>
                 </div>
-              );
-            })}
+                <span
+                  className={`rounded-sm px-1.5 py-0.5 text-[10px] ${
+                    d.postgres_ok ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+                  }`}
+                >
+                  {d.postgres_ok ? "POSTGRES" : "DB DOWN"}
+                </span>
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                    <span>CPU</span>
+                    <span>{d.host_cpu_usage_pct.toFixed(1)}%</span>
+                  </div>
+                  <Progress
+                    value={progressValue(d.host_cpu_usage_pct)}
+                    className={`h-1 rounded-none bg-zinc-900 ${progressTone(d.host_cpu_usage_pct)}`}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                    <span>RAM</span>
+                    <span>{d.host_ram_pct.toFixed(1)}%</span>
+                  </div>
+                  <Progress
+                    value={progressValue(d.host_ram_pct)}
+                    className={`h-1 rounded-none bg-zinc-900 ${progressTone(d.host_ram_pct)}`}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                  <span>pg conns</span>
+                  <span>{d.database_connections}</span>
+                </div>
+              </div>
+            </div>
+
+            {d.gpus.length === 0 ? (
+              <div className="border border-zinc-800 bg-[#050505] p-3 text-zinc-500 text-xs xl:col-span-3">
+                NVML returned no GPUs (CPU-only or driver unavailable).
+              </div>
+            ) : (
+              d.gpus.map((gpu) => {
+                const vramPct =
+                  gpu.memory_total_mb > 0 ? (gpu.memory_used_mb / gpu.memory_total_mb) * 100 : 0;
+                return (
+                  <div key={gpu.id} className="border border-zinc-800 bg-[#050505] p-3">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-bold text-cyan-400">GPU {gpu.id}</p>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">NVML</p>
+                      </div>
+                      <span
+                        className={`rounded-sm px-1.5 py-0.5 text-[10px] ${
+                          gpu.temperature_c > 80 ? "bg-rose-500/10 text-rose-400" : "bg-emerald-500/10 text-emerald-400"
+                        }`}
+                      >
+                        {gpu.temperature_c}°C
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                          <span>UTIL</span>
+                          <span>{gpu.utilization_pct}%</span>
+                        </div>
+                        <Progress
+                          value={progressValue(gpu.utilization_pct)}
+                          className={`h-1 rounded-none bg-zinc-900 ${progressTone(gpu.utilization_pct)}`}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                          <span>VRAM</span>
+                          <span>{vramPct.toFixed(1)}%</span>
+                        </div>
+                        <Progress
+                          value={progressValue(vramPct)}
+                          className={`h-1 rounded-none bg-zinc-900 ${progressTone(vramPct)}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
@@ -189,19 +230,21 @@ export function VrsHunterShell() {
             <p className="text-zinc-400">LOCKING SIGNAL...</p>
           ) : health.isError ? (
             <p className="text-rose-400">System telemetry degraded.</p>
+          ) : !hasHealth ? (
+            <p className="text-zinc-400">NO PAYLOAD.</p>
           ) : (
             <div className="grid gap-3 md:grid-cols-3">
               <div className="border border-zinc-800 bg-[#050505] p-3">
-                <p className="text-[11px] tracking-[0.24em] text-zinc-500">CLUSTER</p>
-                <p className="mt-2 text-lg font-bold text-emerald-400">{health.data?.status?.toUpperCase()}</p>
+                <p className="text-[11px] tracking-[0.24em] text-zinc-500">STATUS</p>
+                <p className="mt-2 text-lg font-bold text-emerald-400">{d.status}</p>
               </div>
               <div className="border border-zinc-800 bg-[#050505] p-3">
                 <p className="text-[11px] tracking-[0.24em] text-zinc-500">SERVICE</p>
-                <p className="mt-2 text-lg font-bold text-white">{health.data?.service?.toUpperCase()}</p>
+                <p className="mt-2 text-lg font-bold text-white">{d.service.toUpperCase()}</p>
               </div>
               <div className="border border-zinc-800 bg-[#050505] p-3">
-                <p className="text-[11px] tracking-[0.24em] text-zinc-500">NODES</p>
-                <p className="mt-2 text-lg font-bold text-cyan-400">{nodes.filter((node) => node.online).length}</p>
+                <p className="text-[11px] tracking-[0.24em] text-zinc-500">GPU COUNT</p>
+                <p className="mt-2 text-lg font-bold text-cyan-400">{d.gpus.length}</p>
               </div>
             </div>
           )}
