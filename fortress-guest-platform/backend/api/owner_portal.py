@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from backend.core.database import get_db
 from backend.core.config import settings
+from backend.services.inventory_events import publish_inventory_availability_changed
 from backend.services.knowledge_retriever import (
     semantic_search,
     legal_library_search,
@@ -822,6 +823,16 @@ async def create_owner_block(
         reason=request.reason,
     )
 
+    await publish_inventory_availability_changed(
+        str(property_id),
+        reason="owner_calendar_block",
+        source="owner_portal",
+        extra={
+            "start_date": request.start_date.isoformat(),
+            "end_date": request.end_date.isoformat(),
+        },
+    )
+
     return {
         "status": "blocked",
         "property_id": property_id,
@@ -853,6 +864,14 @@ async def delete_owner_block(
         raise HTTPException(status_code=404, detail="Owner block not found")
 
     logger.info("owner_block_deleted", property_id=property_id, block_id=block_id)
+
+    await publish_inventory_availability_changed(
+        str(property_id),
+        reason="owner_calendar_unblock",
+        source="owner_portal",
+        extra={"block_id": block_id},
+    )
+
     return {"status": "unblocked", "block_id": block_id}
 
 

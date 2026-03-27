@@ -15,10 +15,13 @@ from uuid import UUID
 
 import structlog
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import lazyload
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
+from backend.core.event_publisher import EventPublisher
+from backend.services.inventory_events import publish_inventory_availability_changed
 from backend.core.time import ensure_utc, utc_now
 from backend.integrations.stripe_payments import StripePayments
 from backend.models.guest import Guest
@@ -45,6 +48,9 @@ class _TransactionScope:
         self._db = db
         self._context_manager: object | None = None
         self._owns_transaction = False
+        # LazyAsyncSessionProxy / autobegin: in_transaction() can be False while begin() raises
+        # "already begun". Run the body on the existing transaction and commit/rollback here.
+        self._fallback_commit = False
 
     async def __aenter__(self) -> object:
         if self._db.in_transaction():
@@ -52,12 +58,26 @@ class _TransactionScope:
         begin_result = self._db.begin()
         self._owns_transaction = True
         self._context_manager = await begin_result if isawaitable(begin_result) else begin_result
-        return await self._context_manager.__aenter__()  # type: ignore[union-attr]
+        try:
+            return await self._context_manager.__aenter__()  # type: ignore[union-attr]
+        except InvalidRequestError as exc:
+            if "already begun" not in str(exc).lower():
+                raise
+            self._owns_transaction = False
+            self._context_manager = None
+            self._fallback_commit = True
+            return self._db
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> bool | None:
-        if not self._owns_transaction or self._context_manager is None:
+        if self._owns_transaction and self._context_manager is not None:
+            return await self._context_manager.__aexit__(exc_type, exc, tb)  # type: ignore[union-attr]
+        if self._fallback_commit:
+            if exc_type is not None:
+                await self._db.rollback()
+            else:
+                await self._db.commit()
             return None
-        return await self._context_manager.__aexit__(exc_type, exc, tb)  # type: ignore[union-attr]
+        return None
 
 
 def _transaction_scope(db: AsyncSession) -> _TransactionScope:
@@ -96,7 +116,15 @@ class ReservationFinalizationService:
         stripe_payment_intent_id: str | None = None,
         metadata_hold_id: str | None = None,
     ) -> FinalizeHoldResult:
-        stmt = select(ReservationHold).where(ReservationHold.id == hold_id).with_for_update()
+        stmt = (
+            select(ReservationHold)
+            .where(ReservationHold.id == hold_id)
+            .options(
+                lazyload(ReservationHold.property),
+                lazyload(ReservationHold.guest),
+            )
+            .with_for_update()
+        )
         async with _transaction_scope(db):
             result = await db.execute(stmt)
             hold = result.scalar_one_or_none()
@@ -123,6 +151,10 @@ class ReservationFinalizationService:
         stmt = (
             select(ReservationHold)
             .where(ReservationHold.payment_intent_id == normalized)
+            .options(
+                lazyload(ReservationHold.property),
+                lazyload(ReservationHold.guest),
+            )
             .with_for_update()
         )
         async with _transaction_scope(db):
@@ -284,6 +316,29 @@ class ReservationFinalizationService:
             hold_id=str(hold.id),
             reservation_id=str(reservation.id),
             verification_mode=verification_mode,
+        )
+        await EventPublisher.publish(
+            "reservation.confirmed",
+            {
+                "reservation_id": str(reservation.id),
+                "property_id": str(reservation.property_id),
+                "confirmation_code": reservation.confirmation_code,
+                "check_in_date": reservation.check_in_date.isoformat(),
+                "check_out_date": reservation.check_out_date.isoformat(),
+                "total_amount": float(reservation.total_amount or 0),
+                "booking_source": reservation.booking_source or "direct",
+                "guest_email": reservation.guest_email or "",
+            },
+            key=reservation.confirmation_code,
+        )
+        await publish_inventory_availability_changed(
+            str(reservation.property_id),
+            reason="reservation_confirmed",
+            source="direct_booking_checkout",
+            extra={
+                "reservation_id": str(reservation.id),
+                "confirmation_code": reservation.confirmation_code,
+            },
         )
         return FinalizeHoldResult(reservation=reservation, already_finalized=False)
 

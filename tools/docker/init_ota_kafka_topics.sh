@@ -14,6 +14,7 @@ topics=(
   ota.booking.created
   ota.booking.modified
   ota.booking.cancelled
+  inventory.availability.changed
 )
 
 for t in "${topics[@]}"; do

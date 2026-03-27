@@ -544,6 +544,9 @@ class Settings(BaseSettings):
 
     # Channex (or compatible headless channel manager) — POST /api/webhooks/channex
     channex_webhook_secret: str = Field(default="", alias="CHANNEX_WEBHOOK_SECRET")
+    # Channex egress (availability push) — used by backend.workers.channex_egress
+    channex_api_base_url: str = Field(default="", alias="CHANNEX_API_BASE_URL")
+    channex_api_key: str = Field(default="", alias="CHANNEX_API_KEY")
 
     # Feature Flags
     enable_ai_responses: bool = Field(default=True)
