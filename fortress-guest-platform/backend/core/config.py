@@ -13,7 +13,18 @@ DEFAULT_HISTORIAN_BLUEPRINT_PATH = str(
     Path(__file__).resolve().parents[1] / "scripts" / "drupal_granular_blueprint.json"
 )
 ALLOWED_POSTGRES_DATABASES = frozenset({"fortress_prod", "fortress_shadow"})
-ALLOWED_POSTGRES_HOST = "127.0.0.1"
+# Loopback plus dual-lane 200G RoCE /30 backplane (node-1 .1, node-2 .2 per lane).
+ALLOWED_POSTGRES_HOSTS = frozenset(
+    {
+        "127.0.0.1",
+        "localhost",
+        "::1",
+        "10.101.1.1",
+        "10.101.1.2",
+        "10.101.2.1",
+        "10.101.2.2",
+    }
+)
 ALLOWED_POSTGRES_PORT = 5432
 ALLOWED_POSTGRES_SCHEMES = frozenset({"postgres", "postgresql", "postgresql+asyncpg"})
 
@@ -90,15 +101,19 @@ class Settings(BaseSettings):
 
     @field_validator("postgres_admin_uri", "postgres_api_uri")
     @classmethod
-    def _validate_local_postgres_contract(cls, value: str) -> str:
+    def _validate_sovereign_postgres_contract(cls, value: str) -> str:
         if not value:
             return value
 
         parsed = urlsplit(value)
         if parsed.scheme not in ALLOWED_POSTGRES_SCHEMES:
             raise ValueError("PostgreSQL URIs must use postgres/postgresql schemes only.")
-        if parsed.hostname != ALLOWED_POSTGRES_HOST:
-            raise ValueError(f"PostgreSQL host must be {ALLOWED_POSTGRES_HOST}.")
+        host = (parsed.hostname or "").strip().lower()
+        if host == "localhost":
+            host = "127.0.0.1"
+        if host not in ALLOWED_POSTGRES_HOSTS:
+            allowed = ", ".join(sorted(ALLOWED_POSTGRES_HOSTS))
+            raise ValueError(f"PostgreSQL host must be one of: {allowed}.")
         if parsed.port != ALLOWED_POSTGRES_PORT:
             raise ValueError(f"PostgreSQL port must be {ALLOWED_POSTGRES_PORT}.")
         if not parsed.username:
@@ -526,6 +541,9 @@ class Settings(BaseSettings):
 
     # Reservation Webhooks (HMAC shared secret for POST /api/webhooks/reservations)
     reservation_webhook_secret: str = Field(default="")
+
+    # Channex (or compatible headless channel manager) — POST /api/webhooks/channex
+    channex_webhook_secret: str = Field(default="", alias="CHANNEX_WEBHOOK_SECRET")
 
     # Feature Flags
     enable_ai_responses: bool = Field(default=True)

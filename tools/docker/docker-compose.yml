@@ -1,0 +1,45 @@
+services:
+  fortress-event-broker:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.11
+    container_name: fortress-event-broker
+    restart: unless-stopped
+    ports:
+      - "10.101.1.2:19092:19092"
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:9644:9644"
+    command:
+      - redpanda
+      - start
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://fortress-event-broker:9092,external://10.101.1.2:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr
+      - internal://fortress-event-broker:8082,external://10.101.1.2:18082
+      - --rpc-addr
+      - fortress-event-broker:33145
+      - --advertise-rpc-addr
+      - fortress-event-broker:33145
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    # After broker is healthy, create OTA topics (from repo root):
+    #   ./tools/docker/init_ota_kafka_topics.sh
+
+  fortress-event-console:
+    image: docker.redpanda.com/redpandadata/console:v2.4.6
+    container_name: fortress-event-console
+    restart: unless-stopped
+    ports:
+      # 8080 is often taken by other stacks; use 18080 locally for the console UI.
+      - "127.0.0.1:18080:8080"
+    environment:
+      - KAFKA_BROKERS=fortress-event-broker:9092
+    depends_on:
+      - fortress-event-broker
+
+volumes:
+  redpanda-data:
+    external: true
+    name: fortress-prime_redpanda_data

@@ -21,7 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from backend.core.config import settings
 from backend.core.database import init_db, close_db, get_db, async_engine
 from backend.core.public_api_paths import is_public_api_path
-from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, guestbook
+from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, webhooks_channex, guestbook
 from backend.api import integrations as integrations_api
 from backend.api import booking, housekeeping, channels, agent
 from backend.api import portal as portal_api
@@ -329,6 +329,7 @@ app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
 app.include_router(workorders.router, prefix="/api/work-orders", tags=["Work Orders"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
+app.include_router(webhooks_channex.router, prefix="/api/webhooks/channex", tags=["Channex Webhooks"])
 app.include_router(guestbook.router, prefix="/api/guestbook", tags=["Guestbook"])
 app.include_router(integrations_api.router, prefix="/api/integrations", tags=["Integrations"])
 app.include_router(booking.router, prefix="/api/booking", tags=["Booking"])
