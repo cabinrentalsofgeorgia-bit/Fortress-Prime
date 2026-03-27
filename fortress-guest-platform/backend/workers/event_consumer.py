@@ -30,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import logging
 import os
 import signal
 import uuid
@@ -41,6 +42,13 @@ import structlog
 from aiokafka import AIOKafkaConsumer
 from aiokafka.errors import KafkaError
 from qdrant_client.http import models as qmodels
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 from backend.core.config import settings
 from backend.core.event_publisher import REDPANDA_BROKER
@@ -48,6 +56,13 @@ from backend.core.qdrant import COLLECTION_NAME
 from backend.core.vector_db import embed_text_sync, get_qdrant_client
 
 logger = structlog.get_logger(service="event_consumer")
+_stdlib_log = logging.getLogger(__name__)
+
+
+class NemoclawDispatchError(Exception):
+    """Transient 5xx from the Ray Serve / NemoClaw HTTP surface."""
+
+    pass
 
 DEFAULT_TOPICS: tuple[str, ...] = (
     "trust.revenue.staged",
@@ -239,16 +254,42 @@ def _build_directive(
     }
 
 
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential_jitter(initial=2, max=30),
+    retry=retry_if_exception_type(NemoclawDispatchError),
+    before_sleep=before_sleep_log(_stdlib_log, logging.WARNING),
+    reraise=True,
+)
+async def _dispatch_to_nemoclaw_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    response = await client.post(url, json=payload, headers=headers)
+    if response.status_code in (500, 502, 503, 504):
+        raise NemoclawDispatchError(f"Ray Serve transient error: {response.status_code}")
+    response.raise_for_status()
+    if not response.content.strip():
+        return {}
+    try:
+        body = response.json()
+    except json.JSONDecodeError:
+        return {"_non_json_body": response.text[:800]}
+    return body if isinstance(body, dict) else {"_parsed": body}
+
+
 async def _dispatch_nemoclaw(directive: dict[str, Any]) -> None:
     url = _nemoclaw_execute_url()
     verify = _nemoclaw_verify_ssl(url)
+    headers = _nemoclaw_headers()
     async with httpx.AsyncClient(timeout=120.0, verify=verify) as client:
-        resp = await client.post(url, json=directive, headers=_nemoclaw_headers())
-        resp.raise_for_status()
+        body = await _dispatch_to_nemoclaw_with_retry(client, url, headers, directive)
     logger.info(
         "event_consumer_nemoclaw_ok",
         task_id=directive.get("task_id"),
-        status_code=resp.status_code,
+        nemoclaw_status=body.get("status") if isinstance(body, dict) else None,
     )
 
 
