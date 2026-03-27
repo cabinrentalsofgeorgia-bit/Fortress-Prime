@@ -29,6 +29,10 @@ class StripePayments:
         if not self._configured:
             raise RuntimeError("Stripe is not configured — set STRIPE_SECRET_KEY in .env")
 
+    def _require_webhook_secret(self) -> None:
+        if not settings.stripe_webhook_secret:
+            raise RuntimeError("Stripe webhook secret is not configured — set STRIPE_WEBHOOK_SECRET in .env")
+
     async def create_payment_intent(
         self,
         amount_cents: int,
@@ -37,21 +41,32 @@ class StripePayments:
         guest_name: str,
         property_name: str = "",
         currency: str = "usd",
+        extra_metadata: dict[str, str] | None = None,
+        idempotency_key: str | None = None,
     ) -> dict:
         """Standard payment intent for guest-facing checkout."""
         self._require_configured()
-        intent = stripe.PaymentIntent.create(
-            amount=amount_cents,
-            currency=currency,
-            metadata={
-                "reservation_id": reservation_id,
-                "guest_email": guest_email,
-                "guest_name": guest_name,
-                "property_name": property_name,
-                "source": "direct_booking",
-            },
-            receipt_email=guest_email,
-        )
+        meta: dict[str, str] = {
+            "reservation_id": reservation_id,
+            "guest_email": guest_email,
+            "guest_name": guest_name,
+            "property_name": property_name,
+            "source": "direct_booking",
+        }
+        if extra_metadata:
+            for k, v in extra_metadata.items():
+                if v is not None:
+                    meta[str(k)[:40]] = str(v)[:500]
+        create_kwargs: dict = {
+            "amount": amount_cents,
+            "currency": currency,
+            "payment_method_types": ["card"],
+            "metadata": meta,
+            "receipt_email": guest_email,
+        }
+        if idempotency_key:
+            create_kwargs["idempotency_key"] = idempotency_key
+        intent = stripe.PaymentIntent.create(**create_kwargs)
         logger.info(
             "stripe_payment_intent_created",
             intent_id=intent.id,
@@ -63,6 +78,12 @@ class StripePayments:
             "client_secret": intent.client_secret,
             "payment_intent_id": intent.id,
         }
+
+    def retrieve_payment_intent_status(self, payment_intent_id: str) -> str:
+        """Return Stripe PaymentIntent status string (e.g. succeeded, requires_payment_method)."""
+        self._require_configured()
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        return str(getattr(intent, "status", "") or "")
 
     async def create_moto_intent(
         self,
@@ -196,6 +217,7 @@ class StripePayments:
     async def handle_webhook(self, payload: bytes, sig_header: str) -> dict:
         """Verify and parse a Stripe webhook event."""
         self._require_configured()
+        self._require_webhook_secret()
         event = stripe.Webhook.construct_event(
             payload,
             sig_header,

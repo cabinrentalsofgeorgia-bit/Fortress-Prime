@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from inspect import isawaitable
 from typing import Any
 from uuid import UUID
 
@@ -16,55 +15,48 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.time import ensure_utc, utc_now
+from backend.core.config import settings
 from backend.integrations.stripe_payments import StripePayments
 from backend.models.guest import Guest
 from backend.models.property import Property
 from backend.models.reservation_hold import ReservationHold
+from backend.services.booking_hold_errors import BookingHoldError
 from backend.services.hold_service import create_inventory_hold
 from backend.services.fast_quote_service import (
     FastQuoteError,
-    acquire_property_booking_lock,
-    assert_property_available_for_stay,
     build_quote_snapshot,
-    expire_stale_holds,
 )
-from backend.services.reservation_engine import ReservationEngine
+from backend.services.reservation_finalization_service import (
+    FinalizeHoldResult,
+    reservation_finalization_service,
+)
+from backend.services.sovereign_checkout_quote import validate_signed_quote_for_hold
 
 logger = structlog.get_logger()
 
 stripe_payments = StripePayments()
-reservation_engine = ReservationEngine()
 
 
-class BookingHoldError(Exception):
-    def __init__(self, message: str, status_code: int = 400) -> None:
-        super().__init__(message)
-        self.status_code = status_code
-
-
-class _TransactionScope:
-    def __init__(self, db: AsyncSession) -> None:
-        self._db = db
-        self._context_manager: object | None = None
-        self._owns_transaction = False
-
-    async def __aenter__(self) -> object:
-        if self._db.in_transaction():
-            return self._db
-        begin_result = self._db.begin()
-        self._owns_transaction = True
-        self._context_manager = await begin_result if isawaitable(begin_result) else begin_result
-        return await self._context_manager.__aenter__()  # type: ignore[union-attr]
-
-    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> bool | None:
-        if not self._owns_transaction or self._context_manager is None:
-            return None
-        return await self._context_manager.__aexit__(exc_type, exc, tb)  # type: ignore[union-attr]
-
-
-def _transaction_scope(db: AsyncSession) -> _TransactionScope:
-    return _TransactionScope(db)
+def _signed_quote_hold_error(code: str) -> BookingHoldError:
+    mapping: dict[str, tuple[str, int]] = {
+        "signed_quote_verification_misconfigured": (
+            "Signed quote verification is not configured",
+            500,
+        ),
+        "signed_quote_invalid_signature": ("Invalid signed quote signature", 403),
+        "signed_quote_missing_expiry": ("Signed quote is missing expiry", 422),
+        "signed_quote_invalid_expiry": ("Signed quote has invalid expiry", 422),
+        "signed_quote_expired": ("Signed quote has expired", 410),
+        "signed_quote_property_mismatch": ("Signed quote does not match this property", 422),
+        "signed_quote_dates_mismatch": ("Signed quote does not match these dates", 422),
+        "signed_quote_guests_mismatch": ("Signed quote does not match guest count", 422),
+        "signed_quote_pets_mismatch": ("Signed quote does not match pet count", 422),
+        "signed_quote_missing_line_items": ("Signed quote is missing line items", 422),
+        "signed_quote_invalid_line_items": ("Signed quote has invalid line items", 422),
+        "signed_quote_total_mismatch": ("Signed quote total does not match line items", 422),
+    }
+    message, status = mapping.get(code, ("Invalid signed quote", 422))
+    return BookingHoldError(message, status)
 
 
 async def create_checkout_hold(
@@ -80,10 +72,47 @@ async def create_checkout_hold(
     guest_email: str,
     guest_phone: str,
     special_requests: str | None = None,
+    signed_quote: dict[str, Any] | None = None,
+    pets: int = 0,
+    adults: int | None = None,
+    children: int | None = None,
 ) -> dict[str, Any]:
     prop = await db.get(Property, property_id)
     if not prop or not prop.is_active:
         raise BookingHoldError("Property not found", 404)
+
+    if settings.sovereign_quote_signing_enabled:
+        if signed_quote is None:
+            raise BookingHoldError("Signed quote is required for checkout", 422)
+        try:
+            validate_signed_quote_for_hold(
+                signed_quote,
+                property_id=property_id,
+                check_in=check_in,
+                check_out=check_out,
+                num_guests=num_guests,
+                pets=pets,
+                secret=settings.sovereign_quote_signing_key,
+            )
+        except ValueError as exc:
+            raise _signed_quote_hold_error(str(exc)) from exc
+        snapshot = dict(signed_quote)
+        total = Decimal(str(signed_quote["total"]))
+    else:
+        try:
+            snapshot = await build_quote_snapshot(
+                db,
+                property_id,
+                check_in,
+                check_out,
+                num_guests,
+                adults=adults,
+                children=children,
+                pets=pets,
+            )
+        except FastQuoteError as exc:
+            raise BookingHoldError(exc.message, exc.http_status) from exc
+        total = Decimal(str(snapshot["total"]))
 
     guest = None
     if guest_email:
@@ -108,13 +137,6 @@ async def create_checkout_hold(
         guest.first_name = guest_first_name
         guest.last_name = guest_last_name
         guest.phone = guest_phone
-
-    try:
-        snapshot = await build_quote_snapshot(db, property_id, check_in, check_out, num_guests)
-    except FastQuoteError as exc:
-        await db.rollback()
-        raise BookingHoldError(exc.message, exc.http_status) from exc
-    total = Decimal(str(snapshot["total"]))
     total_cents = int((total * 100).to_integral_value())
     try:
         hold = await create_inventory_hold(
@@ -141,10 +163,12 @@ async def create_checkout_hold(
             guest_name=f"{guest_first_name} {guest_last_name}",
             property_name=prop.name,
             extra_metadata={
+                "hold_id": str(hold.id),
                 "reservation_hold_id": str(hold.id),
                 "property_id": str(property_id),
                 "source": "direct_booking_hold",
             },
+            idempotency_key=f"fortress_direct_hold_{hold.id}",
         )
     except Exception as exc:
         await db.rollback()
@@ -165,6 +189,30 @@ async def create_checkout_hold(
         payment_intent_id=hold.payment_intent_id,
     )
 
+    if settings.streamline_sovereign_bridge_hold_enabled:
+        try:
+            from backend.services.sovereign_inventory_manager import sovereign_inventory_manager
+
+            bridge = await sovereign_inventory_manager.hold_dates_for_property(
+                db,
+                property_id=property_id,
+                check_in=check_in,
+                check_out=check_out,
+                note=f"SOVEREIGN_CHECKOUT_IN_PROGRESS hold_id={hold.id}",
+            )
+            logger.info(
+                "checkout_hold_streamline_bridge",
+                hold_id=str(hold.id),
+                legacy_notified=bridge.legacy_notified,
+                detail=bridge.detail,
+            )
+        except Exception as exc:
+            logger.warning(
+                "checkout_hold_streamline_bridge_failed",
+                hold_id=str(hold.id),
+                error=str(exc)[:200],
+            )
+
     return {
         "hold_id": str(hold.id),
         "expires_at": hold.expires_at.isoformat(),
@@ -173,156 +221,54 @@ async def create_checkout_hold(
     }
 
 
-def _payment_intent_succeeded(intent_id: str) -> bool:
-    if not settings.stripe_secret_key:
-        return False
-    try:
-        return stripe_payments.retrieve_payment_intent_status(intent_id) == "succeeded"
-    except Exception:
-        return False
-
-
 async def finalize_hold_as_reservation(
     db: AsyncSession,
     hold_id: UUID,
     *,
     require_succeeded_intent: bool = True,
-) -> Any:
+) -> FinalizeHoldResult:
     """
-    Convert an active hold to a confirmed reservation after payment succeeds.
-    Caller should ensure Stripe intent is paid when require_succeeded_intent is True.
-    """
-    reservation: Any | None = None
-    pending_error: BookingHoldError | None = None
+    Convert an active hold to a confirmed reservation after the client confirms payment.
 
+    Webhook finalization uses :func:`convert_hold_to_reservation` so both paths share
+    :class:`~backend.services.reservation_finalization_service.ReservationFinalizationService`.
+    """
+    _ = require_succeeded_intent  # API compatibility; client path always verifies PI with Stripe.
     try:
-        async with _transaction_scope(db):
-            hold = await db.get(ReservationHold, hold_id)
-            if hold is None:
-                raise BookingHoldError("Hold not found", 404)
-
-            await acquire_property_booking_lock(db, hold.property_id)
-            await expire_stale_holds(db)
-
-            hold = await db.get(ReservationHold, hold_id)
-            if hold is None or hold.status != "active":
-                raise BookingHoldError("Hold is no longer active", 409)
-
-            now = utc_now()
-            expires_at = ensure_utc(hold.expires_at)
-            if expires_at <= now:
-                hold.status = "expired"
-                hold.updated_at = now
-                pending_error = BookingHoldError("Hold expired", 410)
-            elif require_succeeded_intent and not hold.payment_intent_id:
-                raise BookingHoldError("Missing payment intent", 400)
-            elif require_succeeded_intent and not _payment_intent_succeeded(hold.payment_intent_id):
-                raise BookingHoldError("Payment not completed", 402)
-            else:
-                try:
-                    await assert_property_available_for_stay(
-                        db,
-                        hold.property_id,
-                        hold.check_in_date,
-                        hold.check_out_date,
-                        exclude_hold_id=hold.id,
-                    )
-                except FastQuoteError as exc:
-                    raise BookingHoldError(exc.message, exc.http_status) from exc
-
-                snap = hold.quote_snapshot or {}
-                total_amount = Decimal(str(snap.get("total", hold.amount_total or "0")))
-                guest = await db.get(Guest, hold.guest_id) if hold.guest_id else None
-
-                try:
-                    reservation = await reservation_engine.create_reservation(
-                        db,
-                        {
-                            "guest_id": hold.guest_id,
-                            "property_id": hold.property_id,
-                            "check_in_date": hold.check_in_date,
-                            "check_out_date": hold.check_out_date,
-                            "num_guests": hold.num_guests,
-                            "booking_source": "direct",
-                            "total_amount": total_amount,
-                            "internal_notes": hold.special_requests,
-                            "exclude_hold_id": hold.id,
-                        },
-                    )
-                except ValueError as exc:
-                    raise BookingHoldError(str(exc), 409) from exc
-                except IntegrityError as exc:
-                    raise BookingHoldError("Property is not available for these dates", 409) from exc
-
-                rent = snap.get("rent")
-                cleaning = snap.get("cleaning")
-                taxes = snap.get("taxes")
-                if rent is not None:
-                    reservation.nightly_rate = Decimal(str(rent)) / max(
-                        1, (hold.check_out_date - hold.check_in_date).days
-                    )
-                if cleaning is not None:
-                    reservation.cleaning_fee = Decimal(str(cleaning))
-                if taxes is not None:
-                    reservation.tax_amount = Decimal(str(taxes))
-                reservation.price_breakdown = snap
-                reservation.special_requests = hold.special_requests
-                reservation.guest_email = guest.email if guest is not None else reservation.guest_email
-                reservation.guest_name = guest.full_name if guest is not None else reservation.guest_name
-                reservation.guest_phone = guest.phone if guest is not None else reservation.guest_phone
-                reservation.paid_amount = total_amount
-                reservation.balance_due = Decimal("0.00")
-
-                hold.status = "converted"
-                hold.updated_at = now
+        return await reservation_finalization_service.finalize_by_hold_id(
+            db,
+            hold_id=hold_id,
+            verification_mode="client",
+        )
     except BookingHoldError:
         await db.rollback()
         raise
-    except IntegrityError as exc:
-        await db.rollback()
-        raise BookingHoldError("Property is not available for these dates", 409) from exc
-
-    if pending_error is not None:
-        raise pending_error
-    if reservation is None:
-        raise BookingHoldError("Hold conversion failed", 500)
-
-    logger.info(
-        "checkout_hold_confirmed",
-        hold_id=str(hold_id),
-        reservation_id=str(reservation.id),
-    )
-
-    return reservation
 
 
 async def convert_hold_to_reservation(
     payment_intent_id: str,
     db: AsyncSession,
+    *,
+    metadata_hold_id: str | None = None,
 ) -> Any | None:
     """
-    Convert the active checkout hold associated with a Stripe PaymentIntent
-    into a permanent reservation. Returns None when no matching active hold exists.
+    Convert the checkout hold for this PaymentIntent into a reservation.
+
+    Returns ``None`` when no hold row matches the PaymentIntent id. Idempotent: if the hold
+    was already converted (e.g. client confirm-hold won the race), returns the existing reservation.
     """
     normalized_payment_intent_id = (payment_intent_id or "").strip()
     if not normalized_payment_intent_id:
         raise BookingHoldError("Missing payment intent", 400)
 
-    hold_result = await db.execute(
-        select(ReservationHold).where(ReservationHold.payment_intent_id == normalized_payment_intent_id)
-    )
-    hold = hold_result.scalar_one_or_none()
-    if hold is None:
-        return None
-    if hold.status != "active":
-        return None
-
     try:
-        reservation = await finalize_hold_as_reservation(
+        outcome = await reservation_finalization_service.finalize_by_payment_intent(
             db,
-            hold.id,
-            require_succeeded_intent=False,
+            payment_intent_id=normalized_payment_intent_id,
+            metadata_hold_id=metadata_hold_id,
         )
+        if outcome is None:
+            return None
         await db.commit()
     except BookingHoldError:
         await db.rollback()
@@ -331,11 +277,12 @@ async def convert_hold_to_reservation(
         await db.rollback()
         raise BookingHoldError("Property is not available for these dates", 409) from exc
 
+    reservation = outcome.reservation
     logger.info(
         "checkout_hold_converted_via_payment_intent",
-        hold_id=str(hold.id),
         reservation_id=str(reservation.id),
         payment_intent_id=normalized_payment_intent_id,
+        already_finalized=outcome.already_finalized,
     )
     return reservation
 
@@ -343,26 +290,24 @@ async def convert_hold_to_reservation(
 async def process_payment_intent_succeeded_for_hold(
     db: AsyncSession,
     payment_intent_id: str,
+    *,
+    metadata_hold_id: str | None = None,
 ) -> bool:
-    """Idempotent webhook handler: find hold by PI id and finalize."""
+    """Idempotent webhook helper: find hold by PI id and finalize."""
     normalized_payment_intent_id = (payment_intent_id or "").strip()
     if not normalized_payment_intent_id:
         return False
 
-    result = await db.execute(
-        select(ReservationHold).where(ReservationHold.payment_intent_id == normalized_payment_intent_id)
-    )
-    hold = result.scalar_one_or_none()
-    if hold is None:
-        return False
-    if hold.status != "active":
-        return True
     try:
-        await convert_hold_to_reservation(normalized_payment_intent_id, db)
+        await convert_hold_to_reservation(
+            normalized_payment_intent_id,
+            db,
+            metadata_hold_id=metadata_hold_id,
+        )
     except BookingHoldError as exc:
         logger.warning(
             "hold_finalize_skipped",
-            hold_id=str(hold.id),
+            payment_intent_id=normalized_payment_intent_id,
             detail=str(exc),
         )
     return True

@@ -16,6 +16,7 @@ from backend.models.pricing import QuoteLineItem, QuoteRequest, QuoteResponse
 from backend.models.pricing_override import PricingOverride
 from backend.models.property import Property
 from backend.services.quote_builder import QuoteBuilderError, build_local_rent_quote
+from backend.services.sovereign_yield_authority import SovereignYieldAuthority
 
 
 TWO_PLACES = Decimal("0.01")
@@ -202,6 +203,15 @@ async def calculate_fast_quote(
     property_record = await db.get(Property, request.property_id)
     if property_record is None or not property_record.is_active:
         raise PricingError("Property not found")
+
+    yield_violations = await SovereignYieldAuthority.validate_stay_constraints(
+        db,
+        request.property_id,
+        request.check_in,
+        request.check_out,
+    )
+    if yield_violations:
+        raise PricingError("; ".join(yield_violations))
 
     total_guests = request.adults + request.children
     is_bookable = total_guests <= int(property_record.max_guests or 0)

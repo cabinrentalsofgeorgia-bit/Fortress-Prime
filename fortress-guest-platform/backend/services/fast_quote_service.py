@@ -2,7 +2,7 @@
 Fast quote — local Postgres ledger only (no live Streamline on request path).
 
 Availability: reservations (occupying statuses), blocked_days, active reservation_holds.
-Pricing: properties.rate_card via calculate_property_quote; requires populated rate_card rates.
+Pricing: unified sovereign quote (SQL fee/tax ledgers when linked, else ``rate_card``).
 """
 
 from __future__ import annotations
@@ -23,7 +23,9 @@ from backend.models.property import Property
 from backend.models.reservation import Reservation
 from backend.models.reservation_hold import ReservationHold
 from backend.core.time import utc_now
-from backend.services.quote_builder import QuoteBuilderError, build_local_ledger_quote
+from backend.services.quote_builder import QuoteBuilderError
+from backend.services.sovereign_quote_service import compute_sovereign_quote
+from backend.services.sovereign_yield_authority import SovereignYieldAuthority
 
 logger = structlog.get_logger()
 
@@ -36,6 +38,10 @@ class FastQuoteBreakdown:
     cleaning: Decimal
     taxes: Decimal
     total: Decimal
+    admin_fee: Decimal = Decimal("0.00")
+    pet_fee: Decimal = Decimal("0.00")
+    line_items: tuple[dict[str, str], ...] = ()
+    pricing_source: str = "local_ledger"
 
 
 class FastQuoteError(Exception):
@@ -46,6 +52,37 @@ class FastQuoteError(Exception):
         self.code = code
         self.message = message
         self.http_status = http_status
+
+
+def _resolve_guest_party(
+    guests: int,
+    adults: int | None,
+    children: int | None,
+) -> tuple[int, int]:
+    if adults is None and children is None:
+        eff_adults = max(1, guests)
+        eff_children = max(0, guests - eff_adults)
+        return eff_adults, eff_children
+    if adults is not None and children is not None:
+        return adults, children
+    raise FastQuoteError(
+        "guest_party_incomplete",
+        "Provide both adults and children or neither",
+        422,
+    )
+
+
+def _assert_party_matches_guests(
+    guests: int,
+    eff_adults: int,
+    eff_children: int,
+) -> None:
+    if eff_adults + eff_children != guests:
+        raise FastQuoteError(
+            "guest_count_mismatch",
+            "adults + children must equal guests",
+            422,
+        )
 
 
 async def acquire_property_booking_lock(db: AsyncSession, property_id: UUID) -> None:
@@ -186,6 +223,16 @@ async def assert_property_available_for_stay(
     if not prop or not prop.is_active:
         raise FastQuoteError("property_not_found", "Property not found", 404)
 
+    yield_violations = await SovereignYieldAuthority.validate_stay_constraints(
+        db, property_id, check_in, check_out
+    )
+    if yield_violations:
+        raise FastQuoteError(
+            "stay_yield_restricted",
+            "; ".join(yield_violations),
+            409,
+        )
+
     if await has_blocked_day_conflict(db, property_id, check_in, check_out):
         raise FastQuoteError("dates_blocked", "Property is not available for these dates", 409)
 
@@ -206,6 +253,10 @@ async def compute_fast_quote_breakdown(
     check_in: date,
     check_out: date,
     guests: int,
+    *,
+    adults: int | None = None,
+    children: int | None = None,
+    pets: int = 0,
 ) -> FastQuoteBreakdown:
     prop = await db.get(Property, property_id)
     if not prop or not prop.is_active:
@@ -214,8 +265,19 @@ async def compute_fast_quote_breakdown(
     if guests > prop.max_guests:
         raise FastQuoteError("too_many_guests", "Guest count exceeds property maximum", 422)
 
+    eff_adults, eff_children = _resolve_guest_party(guests, adults, children)
+    _assert_party_matches_guests(guests, eff_adults, eff_children)
+
     try:
-        quote = await build_local_ledger_quote(property_id, check_in, check_out, db)
+        sov = await compute_sovereign_quote(
+            db,
+            property_id,
+            check_in,
+            check_out,
+            adults=eff_adults,
+            children=eff_children,
+            pets=pets,
+        )
     except QuoteBuilderError as exc:
         raise FastQuoteError(
             "pricing_ledger_incomplete",
@@ -224,10 +286,14 @@ async def compute_fast_quote_breakdown(
         ) from exc
 
     return FastQuoteBreakdown(
-        rent=quote.rent,
-        cleaning=quote.cleaning,
-        taxes=quote.taxes,
-        total=quote.total,
+        rent=sov.rent,
+        cleaning=sov.cleaning,
+        taxes=sov.taxes,
+        total=sov.total,
+        admin_fee=sov.admin_fee,
+        pet_fee=sov.pet_fee,
+        line_items=sov.line_items,
+        pricing_source=sov.pricing_source,
     )
 
 
@@ -237,6 +303,10 @@ async def calculate_locked_fast_quote_breakdown(
     check_in: date,
     check_out: date,
     guests: int,
+    *,
+    adults: int | None = None,
+    children: int | None = None,
+    pets: int = 0,
 ) -> FastQuoteBreakdown:
     """
     Quote a stay inside the same transaction/lock envelope used by checkout holds.
@@ -250,7 +320,16 @@ async def calculate_locked_fast_quote_breakdown(
     await acquire_property_booking_lock(db, property_id)
     await expire_stale_holds(db)
     await assert_property_available_for_stay(db, property_id, check_in, check_out)
-    return await compute_fast_quote_breakdown(db, property_id, check_in, check_out, guests)
+    return await compute_fast_quote_breakdown(
+        db,
+        property_id,
+        check_in,
+        check_out,
+        guests,
+        adults=adults,
+        children=children,
+        pets=pets,
+    )
 
 
 def breakdown_to_response_dict(b: FastQuoteBreakdown) -> dict[str, float]:
@@ -260,6 +339,8 @@ def breakdown_to_response_dict(b: FastQuoteBreakdown) -> dict[str, float]:
     return {
         "rent": _f(b.rent),
         "cleaning": _f(b.cleaning),
+        "admin_fee": _f(b.admin_fee),
+        "pet_fee": _f(b.pet_fee),
         "taxes": _f(b.taxes),
         "total": _f(b.total),
     }
@@ -271,18 +352,39 @@ async def build_quote_snapshot(
     check_in: date,
     check_out: date,
     guests: int,
+    *,
+    adults: int | None = None,
+    children: int | None = None,
+    pets: int = 0,
 ) -> dict[str, Any]:
     """Persistable pricing snapshot for a hold / reservation."""
-    b = await compute_fast_quote_breakdown(db, property_id, check_in, check_out, guests)
+    b = await compute_fast_quote_breakdown(
+        db,
+        property_id,
+        check_in,
+        check_out,
+        guests,
+        adults=adults,
+        children=children,
+        pets=pets,
+    )
     prop = await db.get(Property, property_id)
+    snap_adults, snap_children = _resolve_guest_party(guests, adults, children)
     return {
         "property_id": str(property_id),
         "property_name": prop.name if prop else "",
         "check_in": check_in.isoformat(),
         "check_out": check_out.isoformat(),
         "guests": guests,
+        "adults": snap_adults,
+        "children": snap_children,
+        "pets": pets,
+        "pricing_source": b.pricing_source,
         "rent": str(b.rent),
         "cleaning": str(b.cleaning),
+        "admin_fee": str(b.admin_fee),
+        "pet_fee": str(b.pet_fee),
         "taxes": str(b.taxes),
         "total": str(b.total),
+        "line_items": [dict(item) for item in b.line_items],
     }

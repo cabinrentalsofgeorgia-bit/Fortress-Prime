@@ -11,13 +11,16 @@ evidence packets from signed rental agreements + IoT lock logs:
 
 import stripe
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request, Depends
+from arq.connections import ArqRedis
+from fastapi import APIRouter, Header, HTTPException, Request, Depends
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.queue import get_arq_pool
 from backend.models import Reservation, RentalAgreement
+from backend.services.async_jobs import enqueue_async_job
 
 logger = structlog.get_logger(service="dispute_webhooks")
 router = APIRouter()
@@ -139,7 +142,10 @@ async def _create_dispute_record(db: AsyncSession, dispute: dict, reservation, a
 
 
 async def _handle_dispute_created(
-    event: dict, db: AsyncSession, background_tasks: BackgroundTasks
+    event: dict,
+    db: AsyncSession,
+    request: Request,
+    arq_redis: ArqRedis,
 ):
     """Process charge.dispute.created — lookup evidence and compile packet."""
     obj = event.get("data", {}).get("object", {})
@@ -173,17 +179,25 @@ async def _handle_dispute_created(
 
     await _create_dispute_record(db, event, reservation, agreement, iot_events)
 
-    from backend.services.dispute_defense import compile_and_submit_evidence
-    background_tasks.add_task(
-        compile_and_submit_evidence,
-        dispute_id=dispute_id,
-        reservation_id=str(reservation.id),
+    dispute_job = await enqueue_async_job(
+        db,
+        worker_name="run_dispute_evidence_job",
+        job_name="run_dispute_evidence",
+        payload={
+            "dispute_id": dispute_id,
+            "reservation_id": str(reservation.id),
+        },
+        requested_by="stripe_webhook",
+        tenant_id=getattr(request.state, "tenant_id", None),
+        request_id=request.headers.get("x-request-id"),
+        redis=arq_redis,
     )
 
     logger.info(
         "dispute_evidence_compilation_queued",
         dispute_id=dispute_id,
         reservation_id=str(reservation.id),
+        job_id=str(dispute_job.id),
         has_agreement=bool(agreement),
         iot_events=len(iot_events),
     )
@@ -220,9 +234,9 @@ async def _handle_dispute_status_update(event: dict, db: AsyncSession):
 @router.post("/stripe-disputes")
 async def handle_stripe_dispute_webhook(
     request: Request,
-    background_tasks: BackgroundTasks,
     stripe_signature: str = Header(alias="Stripe-Signature"),
     db: AsyncSession = Depends(get_db),
+    arq_redis: ArqRedis = Depends(get_arq_pool),
 ):
     """
     Receive and process Stripe dispute webhook events.
@@ -243,7 +257,7 @@ async def handle_stripe_dispute_webhook(
     logger.info("dispute_webhook_received", event_type=event_type)
 
     if event_type == "charge.dispute.created":
-        await _handle_dispute_created(event, db, background_tasks)
+        await _handle_dispute_created(event, db, request, arq_redis)
     elif event_type in ("charge.dispute.updated", "charge.dispute.closed"):
         await _handle_dispute_status_update(event, db)
     else:
