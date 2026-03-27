@@ -1,0 +1,11 @@
+---
+description: Fortress Prime domain and zone boundaries
+alwaysApply: true
+---
+
+# Immutable Domain Boundaries
+
+We operate two completely isolated zones. Never cross-link or proxy between them.
+
+- Zone A: `cabin-rentals-of-georgia.com`. Next.js App Router storefront. Guest-facing, SEO-optimized, highly cached.
+- Zone B: `crog-ai.com`. Next.js Command Center. Protected by `GlobalAuthMiddleware`. Staff and AI agents only.

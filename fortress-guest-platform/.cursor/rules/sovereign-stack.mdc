@@ -1,0 +1,14 @@
+---
+description: Fortress Prime sovereign infrastructure constraints
+alwaysApply: true
+---
+
+# Sovereign Stack
+
+Do not suggest AWS, GCP, Vercel Postgres, or external managed databases.
+
+- Hardware: Local bare-metal NVIDIA DGX Spark cluster.
+- Database: PostgreSQL 16 host-native. Sovereign data never leaves physical hardware.
+- Backend: FastAPI on Python 3.11+, async, strict Pydantic v2 schemas, SQLAlchemy 2.0.
+- Frontend: Next.js 15+ App Router, TypeScript, Tailwind CSS, shadcn/ui.
+- Inference: Local vLLM containers serving Llama 3.3 70B FP4.

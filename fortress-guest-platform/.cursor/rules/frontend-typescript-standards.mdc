@@ -1,0 +1,11 @@
+---
+description: Fortress Prime TypeScript standards for frontend support files
+globs: apps/**/*.ts
+alwaysApply: false
+---
+
+# Frontend TypeScript Standards
+
+- TypeScript must have zero `any` types.
+- Maintain zero lint errors.
+- Keep code production-ready. Do not introduce placeholder logic or fake data pipelines.

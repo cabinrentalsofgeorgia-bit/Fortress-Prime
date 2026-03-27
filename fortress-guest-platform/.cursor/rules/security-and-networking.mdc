@@ -1,0 +1,12 @@
+---
+description: Fortress Prime security and networking constraints
+alwaysApply: true
+---
+
+# Security And Networking
+
+- Communication via Cloudflare Tunnels only.
+- UFW denies all inbound except LAN.
+- Expose zero public ports.
+- Internal telemetry and audit logging must write to `openshell_audit_logs`.
+- Maintain Human-in-the-Loop visibility at all times.

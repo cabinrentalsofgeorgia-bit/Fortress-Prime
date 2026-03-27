@@ -1,0 +1,13 @@
+---
+description: Fortress Prime full-stack feature build order
+alwaysApply: true
+---
+
+# Feature Delivery Order
+
+Build multi-layer features in this order:
+
+- Database model or migration
+- FastAPI route and Pydantic schema
+- Next.js types and hooks
+- Next.js UI component
