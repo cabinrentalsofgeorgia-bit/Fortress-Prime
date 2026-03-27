@@ -32,6 +32,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, cast, String, and_
 
 from backend.core.config import settings
+from backend.services.swarm_service import submit_chat_completion
 from backend.core.database import AsyncSessionLocal
 from backend.models.reservation import Reservation
 from backend.models.damage_claim import DamageClaim
@@ -145,27 +146,23 @@ async def call_llm(prompt: str, client: httpx.AsyncClient) -> Optional[str]:
     except Exception:
         pass
 
-    # Tier 3: OpenAI (cloud fallback)
-    if settings.openai_api_key:
-        try:
-            resp = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                json={
-                    "model": settings.openai_model,
-                    "messages": [
-                        {"role": "system", "content": "You are a property damage analyst. Respond with JSON only."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.1,
-                    "max_tokens": 512,
-                },
-                timeout=30,
-            )
-            if resp.status_code == 200:
-                return resp.json()["choices"][0]["message"]["content"].strip()
-        except Exception:
-            pass
+    # Tier 3: LiteLLM frontier lane
+    try:
+        response = await submit_chat_completion(
+            prompt=prompt,
+            model=settings.openai_model,
+            system_message="You are a property damage analyst. Respond with JSON only.",
+            timeout_s=30.0,
+            extra_payload={
+                "temperature": 0.1,
+                "max_tokens": 512,
+            },
+        )
+        choices = response.get("choices") or []
+        if choices:
+            return ((choices[0] or {}).get("message") or {}).get("content", "").strip()
+    except Exception:
+        pass
 
     return None
 

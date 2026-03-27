@@ -93,28 +93,30 @@ GOD_HEADS = [
     {
         "name": "ANTHROPIC (Claude Opus 4.6)",
         "model": settings.anthropic_model,
-        "base_url": "https://api.anthropic.com",
-        "type": "anthropic",
+        "base_url": settings.litellm_base_url,
+        "type": "openai_compat",
+        "api_key_attr": "litellm_master_key",
     },
     {
         "name": "GEMINI (Google 3.1 Pro)",
         "model": settings.gemini_model,
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "base_url": settings.litellm_base_url,
         "type": "openai_compat",
-        "api_key_attr": "gemini_api_key",
+        "api_key_attr": "litellm_master_key",
     },
     {
         "name": "XAI (Grok 4.1)",
         "model": settings.xai_model,
-        "base_url": "https://api.x.ai/v1",
+        "base_url": settings.litellm_base_url,
         "type": "openai_compat",
-        "api_key_attr": "xai_api_key",
+        "api_key_attr": "litellm_master_key",
     },
     {
         "name": "OPENAI (GPT-4o)",
         "model": settings.openai_model,
-        "base_url": "https://api.openai.com/v1",
-        "type": "openai",
+        "base_url": settings.litellm_base_url,
+        "type": "openai_compat",
+        "api_key_attr": "litellm_master_key",
     },
 ]
 
@@ -329,11 +331,6 @@ async def main():
                 ok, lat, detail = await probe_ollama_chat(client, gh["base_url"], model)
             elif ghtype == "embedding":
                 ok, lat, detail = await probe_embedding(client, gh["base_url"], model)
-            elif ghtype == "anthropic":
-                if not settings.anthropic_api_key:
-                    result_line(f"{name}  [{model}]", SKIP, detail="No API key")
-                    continue
-                ok, lat, detail = await probe_anthropic(client, model)
             elif ghtype == "openai_compat":
                 key_attr = gh.get("api_key_attr", "")
                 api_key = getattr(settings, key_attr, "") if key_attr else ""
@@ -341,13 +338,6 @@ async def main():
                     result_line(f"{name}  [{model}]", SKIP, detail=f"No {key_attr}")
                     continue
                 ok, lat, detail = await probe_openai_compat(client, gh["base_url"], model, api_key)
-            elif ghtype == "openai":
-                if not settings.openai_api_key:
-                    result_line(f"{name}  [{model}]", SKIP, detail="No API key")
-                    continue
-                ok, lat, detail = await probe_openai_compat(
-                    client, gh["base_url"], model, settings.openai_api_key,
-                )
             else:
                 continue
 
