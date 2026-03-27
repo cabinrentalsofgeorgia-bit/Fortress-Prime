@@ -31,5 +31,7 @@ bcrypt
 python-jose[cryptography]
 aiokafka
 email-validator
+markdown2
+python-multipart
 twilio>=9.0.0
 stripe
