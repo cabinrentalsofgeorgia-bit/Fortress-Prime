@@ -5,15 +5,39 @@ After=network.target
 [Service]
 Type=simple
 User=admin
+Group=admin
+SupplementaryGroups=video render
 WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
-EnvironmentFile=/home/admin/Fortress-Prime/fortress-guest-platform/.env
-EnvironmentFile=/home/admin/Fortress-Prime/.env.security
+EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env
+EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx
+EnvironmentFile=-/home/admin/Fortress-Prime/.env.security
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python /home/admin/Fortress-Prime/fortress-guest-platform/run.py
 Restart=always
-RestartSec=5
-Environment=PYTHONUNBUFFERED=1
+RestartSec=3
+TimeoutStartSec=45
+TimeoutStopSec=30
+KillSignal=SIGINT
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+LimitNOFILE=65536
+TasksMax=4096
 MemoryMax=8G
 CPUWeight=100
+SyslogIdentifier=fortress-backend
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

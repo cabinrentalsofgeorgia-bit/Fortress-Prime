@@ -293,14 +293,12 @@ export default function SovereignPulsePage() {
   const recoveryRows = normalizeRecoveryRows(funnelData.recovery);
   const enticementForge = normalizeEnticementForge(funnelData.enticement_forge);
 
-  const nodes = healthData.nodes ? Object.values(healthData.nodes) : [];
-  const online = nodes.filter((n) => n.online);
+  const gpus = healthData.gpus ?? [];
+  const headOnline = healthData.postgres_ok ? 1 : 0;
   const avgTemp =
-    online.length > 0
-      ? Math.round(online.reduce((sum, n) => sum + (n.gpu?.temp_c ?? 0), 0) / online.length)
-      : 0;
-  const vramTotal = nodes.reduce((sum, n) => sum + (n.gpu?.total_mib ?? 0), 0);
-  const vramUsed = nodes.reduce((sum, n) => sum + (n.gpu?.used_mib ?? 0), 0);
+    gpus.length > 0 ? Math.round(gpus.reduce((sum, g) => sum + g.temperature_c, 0) / gpus.length) : 0;
+  const vramTotal = gpus.reduce((sum, g) => sum + g.memory_total_mb, 0);
+  const vramUsed = gpus.reduce((sum, g) => sum + g.memory_used_mb, 0);
   const vramPct = vramTotal > 0 ? (vramUsed / vramTotal) * 100 : 0;
 
   const lastPulse = pulse.dataUpdatedAt ? new Date(pulse.dataUpdatedAt).toLocaleTimeString() : "Preview";
@@ -366,14 +364,14 @@ export default function SovereignPulsePage() {
         <CardContent className="pt-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
-              label="Nodes online"
-              value={`${online.length}/${nodes.length}`}
-              variant={online.length === nodes.length ? "success" : "warning"}
+              label="Head node"
+              value={`${headOnline}/1`}
+              variant={headOnline === 1 ? "success" : "warning"}
             />
             <Kpi
               label="Avg GPU temp"
               value={`${avgTemp}°C`}
-              hint="Across online nodes"
+              hint="Across NVML GPUs"
               variant={avgTemp >= 80 ? "danger" : avgTemp >= 65 ? "warning" : "success"}
             />
             <Kpi
@@ -384,8 +382,14 @@ export default function SovereignPulsePage() {
             />
             <Kpi
               label="Service posture"
-              value={healthData.status === "healthy" ? "Healthy" : "Degraded"}
-              variant={healthData.status === "healthy" ? "success" : "warning"}
+              value={healthData.status}
+              variant={
+                healthData.status === "NOMINAL"
+                  ? "success"
+                  : healthData.status === "WARNING"
+                    ? "warning"
+                    : "danger"
+              }
             />
           </div>
         </CardContent>
