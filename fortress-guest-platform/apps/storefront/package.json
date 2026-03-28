@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "node scripts/compile_redirects.js",
+    "predev": "node scripts/compile_redirects.js",
     "dev": "next dev",
     "build": "next build && node ../../scripts/sync-next-standalone-assets.mjs",
     "start": "next start",

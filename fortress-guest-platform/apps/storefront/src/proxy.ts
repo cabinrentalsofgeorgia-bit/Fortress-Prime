@@ -1,6 +1,11 @@
+/**
+ * Next.js 16 network boundary (`proxy`). Build-time Drupal 301s: `data/raw_drupal_redirects.json`
+ * → `scripts/compile_redirects.js` → `@/generated/legacyRedirectMap` (checked first, before other maps).
+ */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import legacyRedirects from "@/data/legacy-redirects";
+import { legacyRedirectMap as compiledDrupalRedirects } from "@/generated/legacyRedirectMap";
 import redirectLedger from "@/lib/redirects.json";
 
 type RedirectLedger = Record<string, string>;
@@ -44,6 +49,16 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const normalizedPathname = normalizePathname(pathname);
   const requestHeaders = new Headers(request.headers);
+
+  const compiledTarget = compiledDrupalRedirects[normalizedPathname];
+  if (compiledTarget && compiledTarget !== normalizedPathname) {
+    const redirectUrl = request.nextUrl.clone();
+    const destinationUrl = new URL(compiledTarget, request.url);
+    redirectUrl.pathname = destinationUrl.pathname;
+    redirectUrl.search = destinationUrl.search || redirectUrl.search;
+    return NextResponse.redirect(redirectUrl, 301);
+  }
+
   const legacyDestination =
     sovereignCategoryRedirectMap.get(normalizedPathname) ??
     scaffoldRedirectMap.get(normalizedPathname) ??

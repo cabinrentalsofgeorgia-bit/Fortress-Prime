@@ -38,9 +38,12 @@ uploads/
 full_index.txt
 
 # Sensitive data
+# Local Bare-Metal Secrets — bare-metal IPs and SCRAM-SHA-256 credentials must never touch GitHub.
+# Only fortress-guest-platform/.env.dgx.example is version-controlled as the operator contract.
+fortress-guest-platform/.env.dgx
+.env.security
 .env
 .env.bak
-.env.security
 *.key
 *.pem
 id_*
@@ -57,6 +60,8 @@ deploy/.env.litellm
 .gh-run-*/
 backups/
 data/
+!fortress-guest-platform/apps/storefront/data/
+!fortress-guest-platform/apps/storefront/data/raw_drupal_redirects.json
 training_data/
 fortress-guest-platform/backend/artifacts/
 fortress-guest-platform/backend/data/
