@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paperclip-glass-proxy
+  namespace: paperclip
+  labels:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip-glass-proxy
+data:
+  glass-proxy.mjs: |
+    import http from "node:http";
+
+    const TARGET_HOST = process.env.TARGET_HOST || "paperclip.paperclip.svc.cluster.local";
+    const TARGET_PORT = Number(process.env.TARGET_PORT || "3100");
+    const LISTEN_PORT = Number(process.env.LISTEN_PORT || "8080");
+    const PREFIX = "/orchestrator";
+
+    function writeJson(res, statusCode, payload) {
+      res.writeHead(statusCode, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(payload));
+    }
+
+    const server = http.createServer((req, res) => {
+      const url = req.url || "/";
+
+      if (url === PREFIX) {
+        res.writeHead(302, { Location: `${PREFIX}/` });
+        res.end();
+        return;
+      }
+
+      if (!url.startsWith(`${PREFIX}/`)) {
+        writeJson(res, 404, { detail: "not found" });
+        return;
+      }
+
+      const upstreamPath = url.slice(PREFIX.length) || "/";
+      const headers = {
+        ...req.headers,
+        host: TARGET_HOST,
+        "x-forwarded-host": req.headers.host || "",
+        "x-forwarded-proto": "https",
+        "x-forwarded-prefix": PREFIX,
+        connection: req.headers.upgrade ? "upgrade" : "close",
+      };
+
+      const upstreamReq = http.request(
+        {
+          host: TARGET_HOST,
+          port: TARGET_PORT,
+          path: upstreamPath,
+          method: req.method,
+          headers,
+        },
+        (upstreamRes) => {
+          const responseHeaders = { ...upstreamRes.headers };
+          delete responseHeaders["content-length"];
+          res.writeHead(upstreamRes.statusCode || 502, responseHeaders);
+          upstreamRes.pipe(res);
+        },
+      );
+
+      upstreamReq.on("error", (error) => {
+        writeJson(res, 502, { detail: `paperclip upstream unavailable: ${error.message}` });
+      });
+
+      req.pipe(upstreamReq);
+    });
+
+    server.on("upgrade", (req, socket, head) => {
+      const url = req.url || "/";
+      if (!url.startsWith(`${PREFIX}/`)) {
+        socket.destroy();
+        return;
+      }
+
+      const upstreamPath = url.slice(PREFIX.length) || "/";
+      const upstreamReq = http.request({
+        host: TARGET_HOST,
+        port: TARGET_PORT,
+        path: upstreamPath,
+        headers: {
+          ...req.headers,
+          host: TARGET_HOST,
+          "x-forwarded-host": req.headers.host || "",
+          "x-forwarded-proto": "https",
+          "x-forwarded-prefix": PREFIX,
+          connection: "upgrade",
+        },
+      });
+
+      upstreamReq.on("upgrade", (upstreamRes, upstreamSocket, upstreamHead) => {
+        socket.write(
+          [
+            `HTTP/1.1 ${upstreamRes.statusCode || 101} Switching Protocols`,
+            ...Object.entries(upstreamRes.headers).map(([key, value]) => `${key}: ${value}`),
+            "",
+            "",
+          ].join("\r\n"),
+        );
+        if (head.length) upstreamSocket.write(head);
+        if (upstreamHead.length) socket.write(upstreamHead);
+        upstreamSocket.pipe(socket).pipe(upstreamSocket);
+      });
+
+      upstreamReq.on("error", () => {
+        socket.destroy();
+      });
+
+      upstreamReq.end();
+    });
+
+    server.listen(LISTEN_PORT, "0.0.0.0");

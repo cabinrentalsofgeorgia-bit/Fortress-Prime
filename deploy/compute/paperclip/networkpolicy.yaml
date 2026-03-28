@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: paperclip-ingress
+  namespace: paperclip
+  labels:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: paperclip
+      app.kubernetes.io/name: paperclip
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3100
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.0.0/24
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

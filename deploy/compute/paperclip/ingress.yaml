@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: paperclip-orchestrator
+  namespace: paperclip
+  labels:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    - host: crog-ai.com
+      http:
+        paths:
+          - path: /orchestrator
+            pathType: Prefix
+            backend:
+              service:
+                name: paperclip-glass-proxy
+                port:
+                  number: 18180
+    - host: www.crog-ai.com
+      http:
+        paths:
+          - path: /orchestrator
+            pathType: Prefix
+            backend:
+              service:
+                name: paperclip-glass-proxy
+                port:
+                  number: 18180

@@ -123,23 +123,37 @@ config_path = Path(sys.argv[1])
 text = config_path.read_text()
 lines = text.splitlines()
 
-def service_for_hostname(target: str):
+def rule_for_hostname(target: str, required_path: str | None = None):
     host_re = re.compile(
         rf"^\s*-\s*hostname:\s*{re.escape(target)}\s*$|^\s*hostname:\s*{re.escape(target)}\s*$"
     )
     for i, line in enumerate(lines):
         if not host_re.match(line):
             continue
+        path_value = None
+        service_value = None
         for j in range(i + 1, min(i + 8, len(lines))):
+            path_match = re.match(r"^\s*path:\s*(.+?)\s*$", lines[j])
+            if path_match:
+                path_value = path_match.group(1).strip().strip('"').strip("'")
             m = re.match(r"^\s*service:\s*(.+?)\s*$", lines[j])
             if m:
-                return m.group(1).strip()
+                service_value = m.group(1).strip()
+                break
+        if service_value is None:
+            continue
+        if required_path is None and path_value is not None:
+            continue
+        if required_path is not None and path_value != required_path:
+            continue
+        return {"service": service_value, "path": path_value}
     return None
 
 for hn in ("crog-ai.com", "www.crog-ai.com"):
-    svc = service_for_hostname(hn)
-    if svc is None:
+    root_rule = rule_for_hostname(hn)
+    if root_rule is None:
         continue
+    svc = root_rule["service"]
     if re.search(r":8100\b", svc) or re.search(r"localhost:8100|127\.0\.0\.1:8100", svc):
         raise SystemExit(
             f"ingress for {hn} points to FastAPI ({svc}). "
@@ -152,8 +166,19 @@ for hn in ("crog-ai.com", "www.crog-ai.com"):
         )
     print(f"ingress_ok {hn} -> {svc}")
 
+for hn in ("crog-ai.com", "www.crog-ai.com"):
+    orchestrator_rule = rule_for_hostname(hn, "^/orchestrator(?:/.*)?$")
+    if orchestrator_rule is None:
+        raise SystemExit(f"missing /orchestrator path rule for {hn}")
+    svc = orchestrator_rule["service"]
+    if not re.search(r":18180\b", svc):
+        raise SystemExit(
+            f"/orchestrator ingress for {hn} is {svc!r} — expected http://192.168.0.100:18180"
+        )
+    print(f"orchestrator_ingress_ok {hn} -> {svc}")
+
 # If no crog-ai rule found, warn only (some tunnels use catch-all)
-if service_for_hostname("crog-ai.com") is None:
+if rule_for_hostname("crog-ai.com") is None:
     print("note: no explicit hostname: crog-ai.com in config (skipping port check)")
 PY
 

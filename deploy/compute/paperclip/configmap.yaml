@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paperclip-config
+  namespace: paperclip
+  labels:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip
+data:
+  HOST: "0.0.0.0"
+  PORT: "3100"
+  PAPERCLIP_HOME: "/paperclip"
+  PAPERCLIP_INSTANCE_ID: "fortress-prime"
+  PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
+  PAPERCLIP_SECRETS_STRICT_MODE: "true"

@@ -84,6 +84,7 @@ const NAV_SECTIONS: { heading: string; items: NavItem[] }[] = [
     heading: "OPS Sector",
     items: [
       { label: "System Health", href: "/system-health", icon: Server },
+      { label: "Workforce Matrix", href: "/workforce", icon: Bot },
       { label: "Admin Ops", href: "/admin", icon: Shield },
       { label: "Staff Settings", href: "/command/settings/staff", icon: UserCog },
       { label: "Settings", href: "/settings", icon: Settings },

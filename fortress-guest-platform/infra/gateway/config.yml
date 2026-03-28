@@ -2,8 +2,17 @@
 # (FastAPI) or browsers will see OpenAPI/JSON instead of /login.
 tunnel: ${CLOUDFLARE_TUNNEL_ID}
 credentials-file: /etc/cloudflared/${CLOUDFLARE_TUNNEL_ID}.json
+protocol: http2
 
 ingress:
+  - hostname: ssh.crog-ai.com
+    service: ssh://localhost:22
+  - hostname: www.crog-ai.com
+    path: "^/orchestrator(?:/.*)?$"
+    service: http://192.168.0.100:18180
+  - hostname: crog-ai.com
+    path: "^/orchestrator(?:/.*)?$"
+    service: http://192.168.0.100:18180
   - hostname: www.crog-ai.com
     service: http://127.0.0.1:3001
   - hostname: crog-ai.com

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperclip-home
+  namespace: paperclip
+  labels:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

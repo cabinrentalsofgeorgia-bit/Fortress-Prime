@@ -44,6 +44,7 @@ fortress-guest-platform/.env.dgx
 .env.security
 .env
 .env.bak
+deploy/compute/paperclip/secret.yaml
 *.key
 *.pem
 id_*

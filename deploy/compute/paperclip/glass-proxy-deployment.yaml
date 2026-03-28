@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paperclip-glass-proxy
+  namespace: paperclip
+  labels:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip-glass-proxy
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: paperclip
+      app.kubernetes.io/name: paperclip-glass-proxy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: paperclip
+        app.kubernetes.io/name: paperclip-glass-proxy
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: spark-node-2
+      containers:
+        - name: glass-proxy
+          image: paperclip-local:v2026.325.0
+          imagePullPolicy: Never
+          command:
+            - node
+            - /app/glass-proxy.mjs
+          env:
+            - name: TARGET_HOST
+              value: paperclip.paperclip.svc.cluster.local
+            - name: TARGET_PORT
+              value: "3100"
+            - name: LISTEN_PORT
+              value: "18180"
+          ports:
+            - name: http
+              containerPort: 18180
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: glass-proxy-script
+              mountPath: /app/glass-proxy.mjs
+              subPath: glass-proxy.mjs
+              readOnly: true
+      volumes:
+        - name: glass-proxy-script
+          configMap:
+            name: paperclip-glass-proxy

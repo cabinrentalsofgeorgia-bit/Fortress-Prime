@@ -23,7 +23,7 @@ from backend.core.database import init_db, close_db, get_db, async_engine
 from backend.core.public_api_paths import is_public_api_path
 from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, webhooks_channex, guestbook
 from backend.api import integrations as integrations_api
-from backend.api import booking, housekeeping, channels, agent
+from backend.api import booking, housekeeping, channels, agent, paperclip_bridge
 from backend.api import portal as portal_api
 from backend.api import review_queue, email_bridge, damage_claims
 from backend.api import tenants as tenants_api
@@ -336,12 +336,14 @@ app.include_router(booking.router, prefix="/api/booking", tags=["Booking"])
 app.include_router(housekeeping.router, prefix="/api/housekeeping", tags=["Housekeeping"])
 app.include_router(channels.router, prefix="/api/channels", tags=["Channels"])
 app.include_router(agent.router, prefix="/api/agent", tags=["AI Agent"])
+app.include_router(paperclip_bridge.router, prefix="/api/paperclip", tags=["Paperclip Bridge"])
 app.include_router(portal_api.router, prefix="/api/portal", tags=["Portal"])
 app.include_router(review_queue.router, prefix="/api/review-queue", tags=["Review Queue"])
 app.include_router(email_bridge.router, prefix="/api/email-bridge", tags=["Email Bridge"])
 app.include_router(damage_claims.router, prefix="/api/damage-claims", tags=["Damage Claims"])
 app.include_router(tenants_api.router, prefix="/api/tenants", tags=["Tenants"])
 app.include_router(owner_portal.router, prefix="/api/owner", tags=["Owner Portal"])
+# Guest checkout surfaces live here; Stripe settlement ingress is mounted on /api/webhooks below.
 app.include_router(direct_booking_api.router, prefix="/api/direct-booking", tags=["Direct Booking"])
 app.include_router(guest_portal_api.router, prefix="/api/guest-portal", tags=["Guest Portal"])
 app.include_router(channel_mgr.router, prefix="/api/channel-manager", tags=["Channel Manager"])
@@ -378,8 +380,10 @@ app.include_router(vault_api.router, prefix="/api/vault", tags=["E-Discovery Vau
 app.include_router(legal_council_api.router, prefix="/api/legal", tags=["Legal Council"])
 app.include_router(ediscovery_api.router, prefix="/api/legal", tags=["E-Discovery"])
 app.include_router(legal_docgen_api.router, prefix="/api/legal", tags=["Legal DocGen"])
-app.include_router(legal_graph_api.router, prefix="/api/legal", tags=["Legal Graph"])
-app.include_router(legal_discovery_api.router, prefix="/api/legal", tags=["Legal Discovery"])
+# Keep graph/discovery routers namespaced so their specialized handlers do not shadow
+# the dashboard-facing `/api/legal/cases/...` contract owned by `legal_cases_api`.
+app.include_router(legal_graph_api.router, prefix="/api/legal/graph", tags=["Legal Graph"])
+app.include_router(legal_discovery_api.router, prefix="/api/legal/discovery", tags=["Legal Discovery"])
 app.include_router(legal_cases_api.router, prefix="/api/legal", tags=["Legal Cases"])
 app.include_router(legal_strategy_api.router, prefix="/api/legal", tags=["Legal Strategy"])
 app.include_router(legal_counsel_dispatch_api.router, prefix="/api/legal", tags=["Outside Counsel Dispatch"])

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: paperclip-glass-proxy
+  namespace: paperclip
+  labels:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip-glass-proxy
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: paperclip
+    app.kubernetes.io/name: paperclip-glass-proxy
+  ports:
+    - name: http
+      protocol: TCP
+      port: 18180
+      targetPort: http

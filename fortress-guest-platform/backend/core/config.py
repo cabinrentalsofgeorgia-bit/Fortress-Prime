@@ -272,6 +272,16 @@ class Settings(BaseSettings):
         description="Authoritative Ray-governed NemoClaw control-plane base URL on the sovereign head node.",
     )
     nemoclaw_orchestrator_api_key: str = Field(default="")
+    paperclip_control_plane_url: str = Field(
+        default="",
+        alias="PAPERCLIP_CONTROL_PLANE_URL",
+        description="Paperclip control-plane base URL used for Fortress BYOA callback delivery.",
+    )
+    paperclip_control_plane_api_key: str = Field(
+        default="",
+        alias="PAPERCLIP_CONTROL_PLANE_API_KEY",
+        description="Paperclip API key used by the Fortress bridge to POST heartbeat-run callbacks.",
+    )
     orchestrator_source: str = Field(default="spark_node_2_leader")
     inbound_agentic_loop_enabled: bool = Field(default=True)
     swarm_model: str = Field(default="qwen2.5:14b")
