@@ -26,6 +26,7 @@ import {
   useSovereignPulse,
   useSystemHealth,
 } from "@/lib/hooks";
+import type { SystemHealthStatus } from "@/lib/types";
 import { MobileC2Panel } from "./_components/mobile-c2-panel";
 import { MarketIntelligenceFeed } from "./parity/_components/market-intelligence-feed";
 import { RecoveryDraftParity } from "./parity/_components/recovery-draft-parity";
@@ -52,6 +53,19 @@ function formatUptime(seconds: number | undefined): string {
   return `${minutes}m`;
 }
 
+function mapSystemHealthStatus(s: SystemHealthStatus | undefined): string {
+  switch (s) {
+    case "NOMINAL":
+      return "healthy";
+    case "WARNING":
+      return "warning";
+    case "DEGRADED":
+      return "failed";
+    default:
+      return "unknown";
+  }
+}
+
 function statusTone(status: string): string {
   switch (status) {
     case "healthy":
@@ -60,6 +74,7 @@ function statusTone(status: string): string {
     case "succeeded":
     case "online":
     case "MATCH":
+    case "NOMINAL":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
     case "degraded":
     case "warning":
@@ -67,12 +82,14 @@ function statusTone(status: string): string {
     case "running":
     case "processing":
     case "MINOR_DRIFT":
+    case "WARNING":
       return "border-amber-500/30 bg-amber-500/10 text-amber-200";
     case "failed":
     case "offline":
     case "alert":
     case "error":
     case "CRITICAL_MISMATCH":
+    case "DEGRADED":
       return "border-rose-500/30 bg-rose-500/10 text-rose-200";
     default:
       return "border-zinc-700 bg-zinc-900/80 text-zinc-300";
@@ -640,17 +657,38 @@ export default function CommandCenterPage() {
             <CardDescription>OPS service lane summarized from bare-metal health telemetry.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 pt-6">
-            {healthData?.services?.length ? (
-              healthData.services.slice(0, 5).map((service) => (
+            {healthData ? (
+              [
+                {
+                  name: "Cluster",
+                  tone: mapSystemHealthStatus(healthData.status),
+                  label: healthData.status,
+                },
+                {
+                  name: "PostgreSQL",
+                  tone: healthData.postgres_ok ? "healthy" : "failed",
+                  label: healthData.postgres_ok ? "NOMINAL" : "DEGRADED",
+                },
+                {
+                  name: "Qdrant",
+                  tone: healthData.qdrant_reachable ? "healthy" : "warning",
+                  label: healthData.qdrant_reachable ? "REACHABLE" : "UNREACHABLE",
+                },
+                {
+                  name: healthData.service || "Health probe",
+                  tone: mapSystemHealthStatus(healthData.status),
+                  label: healthData.status,
+                },
+              ].map((row) => (
                 <div
-                  key={service.name}
+                  key={row.name}
                   className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/70 px-4 py-3"
                 >
-                  <p className="text-sm text-zinc-100">{service.name}</p>
+                  <p className="text-sm text-zinc-100">{row.name}</p>
                   <span
-                    className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.24em] ${statusTone(service.status)}`}
+                    className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.24em] ${statusTone(row.tone)}`}
                   >
-                    {service.status}
+                    {row.label}
                   </span>
                 </div>
               ))
