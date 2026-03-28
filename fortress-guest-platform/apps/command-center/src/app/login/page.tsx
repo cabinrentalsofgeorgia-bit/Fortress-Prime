@@ -157,10 +157,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-zinc-500">
-          <span>Port 3001 isolated</span>
-          <span>Internal use only</span>
-        </div>
+        <p className="mt-8 border-t border-white/10 pt-4 text-center text-xs text-zinc-500">
+          Authorized Fortress Prime staff only. Sessions are audited.
+        </p>
       </div>
     </div>
   );
