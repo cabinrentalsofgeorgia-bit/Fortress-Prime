@@ -44,6 +44,7 @@ _install_stub_module(
 
 import run  # noqa: F401
 import backend.api.admin as admin_api
+import backend.api.admin_insights as admin_insights_api
 import backend.api.ai_superpowers as ai_superpowers_api
 import backend.api.booking as booking_api
 import backend.api.channel_mgr as channel_mgr_api
@@ -251,6 +252,56 @@ async def test_admin_god_mode_financials_allows_super_admin() -> None:
     assert payload["global_metrics"]["properties_in_overdraft"] == 1
     assert payload["capital_calls_required"][0]["property_id"] == "70224"
     assert payload["iron_dome_health"]["balance_enforcement"] is True
+
+
+@pytest.mark.asyncio
+async def test_admin_insights_allows_manager_role() -> None:
+    app = FastAPI()
+    app.include_router(admin_insights_api.router, prefix="/api/admin")
+    session = AsyncMock()
+
+    def _scalar_result(value):
+        result = MagicMock()
+        result.scalar.return_value = value
+        return result
+
+    def _rows_result(rows):
+        result = MagicMock()
+        result.all.return_value = rows
+        return result
+
+    session.execute = AsyncMock(
+        side_effect=[
+            _scalar_result(5),   # total_properties
+            _scalar_result(2),   # active_reservations
+            _scalar_result(1200),  # total_revenue_mtd
+            _scalar_result(3),   # open_work_orders
+            _scalar_result(4),   # unread_messages
+            _scalar_result(10),  # outbound_messages_7d
+            _scalar_result(6),   # auto_outbound_messages_7d
+            _scalar_result(1),   # urgent_work_orders
+            _rows_result([("2026-03", 3200, 8)]),  # revenue_rows
+            _rows_result([("plumbing", 2)]),       # maintenance_rows
+        ]
+    )
+
+    async def override_get_db():
+        yield session
+
+    async def override_current_user():
+        return _user("manager")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/admin/insights")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "derived_snapshot"
+    assert payload["items"][1]["metrics"]["months"][0]["month"] == "2026-03"
 
 
 @pytest.mark.asyncio
