@@ -699,6 +699,74 @@ async def test_channel_manager_status_blocks_owner_role() -> None:
 
 
 @pytest.mark.asyncio
+async def test_channel_manager_mappings_allows_manager_role() -> None:
+    app = FastAPI()
+    app.include_router(channel_mgr_api.router, prefix="/api/channel-manager")
+    session = AsyncMock()
+    row = MagicMock()
+    row._mapping = {
+        "property_id": "prop-1",
+        "channel": "airbnb",
+        "listing_id": "listing-123",
+        "is_active": True,
+        "property_name": "Blue Ridge Lodge",
+    }
+    result = MagicMock()
+    result.fetchall.return_value = [row]
+    session.execute = AsyncMock(return_value=result)
+
+    async def override_get_db():
+        yield session
+
+    async def override_current_user():
+        return _user("manager")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/channel-manager/mappings")
+
+    assert response.status_code == 200
+    assert response.json()[0]["channel"] == "airbnb"
+
+
+@pytest.mark.asyncio
+async def test_channel_manager_create_mapping_allows_manager_role() -> None:
+    app = FastAPI()
+    app.include_router(channel_mgr_api.router, prefix="/api/channel-manager")
+    session = AsyncMock()
+    session.execute = AsyncMock()
+    session.commit = AsyncMock()
+
+    async def override_get_db():
+        yield session
+
+    async def override_current_user():
+        return _user("manager")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/channel-manager/mappings",
+            json={
+                "property_id": "prop-1",
+                "channel": "vrbo",
+                "listing_id": "listing-456",
+                "is_active": True,
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "created"
+    session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_channels_status_blocks_owner_role() -> None:
     app = FastAPI()
     app.include_router(channels_api.router, prefix="/api/channels")
