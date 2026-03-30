@@ -42,6 +42,7 @@ from backend.api import auth as auth_api
 from backend.api import invites as invites_api
 from backend.api import agreements as agreements_api
 from backend.api import payments as payments_api
+from backend.api import fast_quote as fast_quote_api
 from backend.api import quotes as quotes_api
 from backend.api import vrs_quotes as vrs_quotes_api
 from backend.api import leads as leads_api
@@ -70,6 +71,7 @@ from backend.api import legal_deposition as legal_deposition_api
 from backend.api import legal_agent as legal_agent_api
 from backend.api import verses as verses_api
 from backend.api import seo_patches as seo_patches_api
+from backend.api import seo_audit as seo_audit_api
 from backend.api import wealth as wealth_api
 from backend.api import reservation_webhooks
 from backend.api import contracts as contracts_api
@@ -95,6 +97,7 @@ from backend.api import command_c2 as command_c2_api
 from backend.api import sovereign_pulse as sovereign_pulse_api
 from backend.api import funnel_hq as funnel_hq_api
 from backend.api import openshell_audit as openshell_audit_api
+from backend.api import openshell_tools as openshell_tools_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -350,6 +353,8 @@ app.include_router(utilities_api.router, prefix="/api/utilities", tags=["Utiliti
 app.include_router(invites_api.router, prefix="/api/invites", tags=["Invites"])
 app.include_router(agreements_api.router, prefix="/api/agreements", tags=["Agreements"])
 app.include_router(payments_api.router, prefix="/api/payments", tags=["Payments"])
+# Before /api/quotes/{quote_id} so POST /api/quotes/calculate is not swallowed as a UUID path.
+app.include_router(fast_quote_api.router, tags=["Fast Quote"])
 app.include_router(quotes_api.router, prefix="/api/quotes", tags=["Quotes"])
 app.include_router(vrs_quotes_api.router, prefix="/api/quotes", tags=["Sovereign Quotes"])
 app.include_router(leads_api.router, prefix="/api/leads", tags=["Leads"])
@@ -390,6 +395,7 @@ app.include_router(
     tags=["SEO Compatibility"],
     include_in_schema=False,
 )
+app.include_router(seo_audit_api.router, tags=["SEO Audit"])
 app.include_router(wealth_api.router, prefix="/api/wealth", tags=["Wealth & Development"])
 app.include_router(reservation_webhooks.router, prefix="/api/webhooks", tags=["Reservation Webhooks"])
 app.include_router(dispute_webhooks.router, prefix="/api/webhooks", tags=["Dispute Webhooks"])
@@ -415,6 +421,7 @@ app.include_router(command_c2_api.router, prefix="/api/telemetry", tags=["Comman
 app.include_router(sovereign_pulse_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
 app.include_router(funnel_hq_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
 app.include_router(openshell_audit_api.router, prefix="/api/openshell/audit", tags=["OpenShell Audit"])
+app.include_router(openshell_tools_api.router, tags=["OpenShell Tools"])
 
 
 # ---------------------------------------------------------------------------
