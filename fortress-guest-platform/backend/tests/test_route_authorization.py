@@ -1108,6 +1108,88 @@ async def test_intelligence_models_blocks_owner_role() -> None:
 
 
 @pytest.mark.asyncio
+async def test_intelligence_shadow_board_approve_allows_manager_role() -> None:
+    app = FastAPI()
+    app.include_router(intelligence_api.router, prefix="/api/intelligence")
+    session = AsyncMock()
+
+    def _first_row(*values):
+        result = MagicMock()
+        result.first.return_value = values
+        return result
+
+    def _no_row():
+        result = MagicMock()
+        result.first.return_value = None
+        return result
+
+    session.execute = AsyncMock(
+        side_effect=[
+            _first_row("11111111-1111-1111-1111-111111111111"),  # property lookup
+            _no_row(),                                           # base rate update miss
+            _first_row("base-rate-id"),                          # base rate insert
+            _no_row(),                                           # vrbo channel lookup miss
+            _first_row("channel-vrbo"),                          # vrbo channel insert
+            _no_row(),                                           # vrbo adjustment update miss
+            _first_row("adj-vrbo"),                              # vrbo adjustment insert
+            _no_row(),                                           # direct channel lookup miss
+            _first_row("channel-direct"),                        # direct channel insert
+            _no_row(),                                           # direct adjustment update miss
+            _first_row("adj-direct"),                            # direct adjustment insert
+        ]
+    )
+    session.commit = AsyncMock()
+
+    async def override_get_db():
+        yield session
+
+    async def override_current_user():
+        return _user("manager")
+
+    shadow_board = {
+        "entries": [
+            {
+                "id": "entry-1",
+                "status": "pending_review",
+                "recommendation_json": {
+                    "underperformers": [
+                        {
+                            "property_id": "prop-1",
+                            "property_name": "Blue Ridge Lodge",
+                            "recommended_base_rate": 250.0,
+                            "date_start": "2026-04-01",
+                            "date_end": "2026-04-03",
+                        }
+                    ]
+                },
+            }
+        ]
+    }
+
+    async def _run_test():
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = override_current_user
+        transport = ASGITransport(app=app)
+        with patch.object(intelligence_api, "_read_shadow_board", return_value=shadow_board), patch.object(
+            intelligence_api, "_write_shadow_board"
+        ):
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                response = await client.post(
+                    "/api/intelligence/market-snapshot/shadow-board/entry-1/approve",
+                    json={"actor": "manager@fortress.local"},
+                )
+        return response
+
+    response = await _run_test()
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "approved"
+    assert payload["actuation"]["base_rate_count"] == 1
+    assert payload["actuation"]["channel_adjustment_count"] == 2
+    session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_legal_tactical_blocks_owner_role() -> None:
     app = FastAPI()
     app.include_router(legal_tactical_api.router, prefix="/api/legal")
