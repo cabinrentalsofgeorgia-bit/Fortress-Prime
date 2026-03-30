@@ -190,6 +190,70 @@ async def test_admin_fleet_status_blocks_manager_role() -> None:
 
 
 @pytest.mark.asyncio
+async def test_admin_god_mode_financials_allows_super_admin() -> None:
+    app = FastAPI()
+    app.include_router(admin_api.router, prefix="/api/admin")
+    session = AsyncMock()
+
+    def _result(value):
+        result = MagicMock()
+        result.scalar.return_value = value
+        if isinstance(value, list):
+            result.fetchall.return_value = value
+        else:
+            result.fetchall.return_value = []
+        return result
+
+    capital_call_row = SimpleNamespace(property_id="70224", operating_funds=-125.50)
+    margin_row = SimpleNamespace(
+        property_id="70224",
+        entry_date=None,
+        description="Margin capture",
+        margin_captured=25.0,
+    )
+    trigger_row = SimpleNamespace(trigger_name="trg_verify_balance", event_manipulation="INSERT")
+    markup_row = SimpleNamespace(
+        property_id="70224",
+        expense_category="ALL",
+        markup_percentage=23.0,
+        owner_funds=50.0,
+        operating_funds=-125.50,
+    )
+
+    session.execute = AsyncMock(
+        side_effect=[
+            _result(125.0),               # total_overhead
+            _result(75.0),                # total_ap
+            _result([capital_call_row]),  # capital calls from trust_balance
+            _result([margin_row]),        # recent margins
+            _result([markup_row]),        # markup rules
+            _result(12),                  # journal entry count
+            _result(48),                  # journal line count
+            _result([trigger_row]),       # trigger metadata
+        ]
+    )
+
+    async def override_get_db():
+        yield session
+
+    async def override_current_user():
+        return _user("super_admin")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/admin/god-mode/financials")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["global_metrics"]["properties_in_overdraft"] == 1
+    assert payload["capital_calls_required"][0]["property_id"] == "70224"
+    assert payload["iron_dome_health"]["balance_enforcement"] is True
+
+
+@pytest.mark.asyncio
 async def test_admin_pending_payments_allows_manager_role() -> None:
     app = FastAPI()
     app.include_router(admin_api.router, prefix="/api/admin")

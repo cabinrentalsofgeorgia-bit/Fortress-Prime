@@ -244,7 +244,7 @@ async def get_god_mode_financials(
 
         cc_result = await db.execute(text("""
             SELECT property_id, operating_funds
-            FROM trust_balance_cache
+            FROM trust_balance
             WHERE operating_funds <= 0
         """))
         capital_calls = [
