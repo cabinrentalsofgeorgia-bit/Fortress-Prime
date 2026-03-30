@@ -432,6 +432,99 @@ async def test_tenants_list_blocks_manager_role() -> None:
 
 
 @pytest.mark.asyncio
+async def test_tenants_list_allows_super_admin() -> None:
+    app = FastAPI()
+    app.include_router(tenants_api.router, prefix="/api/tenants")
+    session = AsyncMock()
+    row = MagicMock()
+    row._mapping = {
+        "id": uuid4(),
+        "name": "Fortress Prime",
+        "slug": "fortress-prime",
+        "domain": "prime.example.com",
+        "logo_url": None,
+        "primary_color": "#111827",
+        "timezone": "America/New_York",
+        "plan": "starter",
+        "max_properties": 25,
+        "max_staff_users": 5,
+        "is_active": True,
+    }
+    result = MagicMock()
+    result.fetchall.return_value = [row]
+    session.execute = AsyncMock(return_value=result)
+
+    async def override_get_db():
+        yield session
+
+    async def override_current_user():
+        return _user("super_admin")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/tenants/")
+
+    assert response.status_code == 200
+    assert response.json()[0]["slug"] == "fortress-prime"
+
+
+@pytest.mark.asyncio
+async def test_tenants_create_allows_super_admin() -> None:
+    app = FastAPI()
+    app.include_router(tenants_api.router, prefix="/api/tenants")
+    session = AsyncMock()
+    row = MagicMock()
+    row._mapping = {
+        "id": uuid4(),
+        "name": "Fortress Prime",
+        "slug": "fortress-prime",
+        "domain": "prime.example.com",
+        "logo_url": None,
+        "primary_color": "#111827",
+        "timezone": "America/New_York",
+        "plan": "starter",
+        "max_properties": 25,
+        "max_staff_users": 5,
+        "is_active": True,
+    }
+    existing = MagicMock()
+    existing.fetchone.return_value = None
+    inserted = MagicMock()
+    inserted.fetchone.return_value = row
+    session.execute = AsyncMock(side_effect=[existing, inserted])
+    session.commit = AsyncMock()
+
+    async def override_get_db():
+        yield session
+
+    async def override_current_user():
+        return _user("super_admin")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/tenants/",
+            json={
+                "name": "Fortress Prime",
+                "slug": "fortress-prime",
+                "domain": "prime.example.com",
+                "timezone": "America/New_York",
+                "plan": "starter",
+            },
+        )
+
+    assert response.status_code == 201
+    assert response.json()["slug"] == "fortress-prime"
+    session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_reservations_list_blocks_owner_role() -> None:
     app = FastAPI()
     app.include_router(reservations_api.router, prefix="/api/reservations")
