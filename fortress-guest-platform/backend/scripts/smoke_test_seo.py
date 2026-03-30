@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """
-Temporary end-to-end smoke test for the Phase 1 SEO Swarm-to-Edge pipeline.
+Temporary end-to-end smoke test for the live SEO proposal/review pipeline.
 
 Flow:
-1. Load a valid property + rubric + active admin from Postgres.
-2. POST a drafted SEO patch to the live API on :8100.
-3. GET the queue to verify the patch is visible.
-4. Promote to pending_human for deterministic HITL approval.
-5. POST approval through the live API.
-6. GET /api/seo/live/{property_slug} and assert the payload matches.
-7. Restore the prior deployed patch state so the smoke test does not leave
-   permanent mock SEO live on the edge surface.
+1. Load a valid property and active review user from Postgres.
+2. POST a proposal to the live API on :8100.
+3. GET the queue to verify the proposal is visible.
+4. POST approval through the live API.
+5. GET /api/seo/live/property/{property_slug} and assert the payload matches.
+6. Restore the prior live queue state so the smoke test does not leave
+   permanent mock SEO content on the property surface.
 """
 
 from __future__ import annotations
@@ -71,14 +70,11 @@ class RubricTarget:
 class PriorDeployedPatch:
     id: UUID
     status: str
+    target_slug: str
     reviewed_by: str | None
-    reviewed_at: Any
-    final_payload: dict[str, Any] | None
+    approved_at: Any
+    approved_payload: dict[str, Any] | None
     deployed_at: Any
-    godhead_score: float | None
-    godhead_model: str | None
-    godhead_feedback: dict[str, Any] | None
-    grade_attempts: int
 
 
 class SmokeFailure(RuntimeError):
@@ -201,18 +197,15 @@ async def fetch_prior_deployed_patch(
         SELECT
             id,
             status,
+            target_slug,
             reviewed_by,
-            reviewed_at,
-            final_payload,
-            deployed_at,
-            godhead_score,
-            godhead_model,
-            godhead_feedback,
-            grade_attempts
-        FROM seo_patches
+            approved_at,
+            approved_payload,
+            deployed_at
+        FROM seo_patch_queue
         WHERE property_id = $1
-          AND status = 'deployed'
-        ORDER BY deployed_at DESC NULLS LAST, updated_at DESC
+          AND status IN ('approved', 'deployed')
+        ORDER BY approved_at DESC NULLS LAST, updated_at DESC
         LIMIT 1
         """,
         property_id,
@@ -222,38 +215,11 @@ async def fetch_prior_deployed_patch(
     return PriorDeployedPatch(
         id=row["id"],
         status=str(row["status"]),
+        target_slug=str(row["target_slug"]),
         reviewed_by=row["reviewed_by"],
-        reviewed_at=row["reviewed_at"],
-        final_payload=coerce_json_object(row["final_payload"]),
+        approved_at=row["approved_at"],
+        approved_payload=coerce_json_object(row["approved_payload"]),
         deployed_at=row["deployed_at"],
-        godhead_score=row["godhead_score"],
-        godhead_model=row["godhead_model"],
-        godhead_feedback=coerce_json_object(row["godhead_feedback"]),
-        grade_attempts=int(row["grade_attempts"] or 0),
-    )
-
-
-async def promote_for_hitl(conn: asyncpg.Connection, patch_id: UUID) -> None:
-    await conn.execute(
-        """
-        UPDATE seo_patches
-        SET
-            status = 'pending_human',
-            godhead_score = 0.99,
-            godhead_model = 'seo-smoke-godhead',
-            godhead_feedback = $2::jsonb,
-            grade_attempts = GREATEST(COALESCE(grade_attempts, 0), 1),
-            updated_at = NOW()
-        WHERE id = $1
-        """,
-        patch_id,
-        json.dumps(
-            {
-                "smoke_test": True,
-                "decision": "promoted_for_hitl",
-                "note": "Deterministic smoke-test escalation",
-            }
-        ),
     )
 
 
@@ -266,52 +232,46 @@ async def restore_prior_state(
     if prior_patch is not None:
         await conn.execute(
             """
-            UPDATE seo_patches
+            UPDATE seo_patch_queue
             SET
                 status = 'superseded',
                 updated_at = NOW()
             WHERE property_id = $1
               AND id <> $2
-              AND status = 'deployed'
+              AND status IN ('approved', 'deployed')
             """,
             property_id,
             prior_patch.id,
         )
         await conn.execute(
             """
-            UPDATE seo_patches
+            UPDATE seo_patch_queue
             SET
                 status = $2,
-                reviewed_by = $3,
-                reviewed_at = $4,
-                final_payload = $5::jsonb,
-                deployed_at = $6,
-                godhead_score = $7,
-                godhead_model = $8,
-                godhead_feedback = $9::jsonb,
-                grade_attempts = $10,
+                target_slug = $3,
+                approved_payload = $4::jsonb,
+                deployed_at = $5,
+                reviewed_by = $6,
+                approved_at = $7,
                 updated_at = NOW()
             WHERE id = $1
             """,
             prior_patch.id,
             prior_patch.status,
-            prior_patch.reviewed_by,
-            prior_patch.reviewed_at,
-            json.dumps(prior_patch.final_payload or {}),
+            prior_patch.target_slug,
+            json.dumps(prior_patch.approved_payload or {}),
             prior_patch.deployed_at,
-            prior_patch.godhead_score,
-            prior_patch.godhead_model,
-            json.dumps(prior_patch.godhead_feedback or {}),
-            prior_patch.grade_attempts,
+            prior_patch.reviewed_by,
+            prior_patch.approved_at,
         )
 
     await conn.execute(
         """
-        UPDATE seo_patches
+        UPDATE seo_patch_queue
         SET
             status = 'rejected',
             reviewed_by = 'seo-smoke-cleanup',
-            reviewed_at = NOW(),
+            approved_at = NOW(),
             updated_at = NOW()
         WHERE id = $1
         """,
@@ -319,40 +279,48 @@ async def restore_prior_state(
     )
 
 
-def make_mock_payload(target: PropertyTarget, rubric: RubricTarget) -> tuple[dict[str, Any], dict[str, Any]]:
+def make_mock_payload(target: PropertyTarget) -> tuple[dict[str, Any], dict[str, Any]]:
     approved_payload = {
         "title": f"SMOKE Title :: {target.name}",
         "meta_description": f"SMOKE Meta :: {target.slug}",
-        "og_title": f"SMOKE OG :: {target.name}",
-        "og_description": f"SMOKE OG Desc :: {target.slug}",
-        "h1_suggestion": f"SMOKE H1 :: {target.name}",
-        "canonical_url": f"https://cabin-rentals-of-georgia.com/cabins/{target.slug}",
-        "jsonld": {
+        "h1": f"SMOKE H1 :: {target.name}",
+        "intro": f"SMOKE intro :: {target.slug}",
+        "faq": [],
+        "json_ld": {
             "@context": "https://schema.org",
             "@type": "VacationRental",
             "name": f"SMOKE JSONLD :: {target.name}",
             "url": f"https://cabin-rentals-of-georgia.com/cabins/{target.slug}",
             "description": f"SMOKE JSONLD DESC :: {target.slug}",
         },
-        "alt_tags": {
-            "hero": f"SMOKE alt tag for {target.slug}",
-        },
+        "target_keyword": f"SMOKE keyword :: {target.slug}",
+        "campaign": "seo-smoke",
+        "rubric_version": "v1",
     }
     ingest_payload = {
         "property_id": str(target.id),
-        "rubric_id": str(rubric.id),
-        "page_path": target.page_path,
-        "title": approved_payload["title"],
-        "meta_description": approved_payload["meta_description"],
-        "og_title": approved_payload["og_title"],
-        "og_description": approved_payload["og_description"],
-        "jsonld_payload": approved_payload["jsonld"],
-        "canonical_url": approved_payload["canonical_url"],
-        "h1_suggestion": approved_payload["h1_suggestion"],
-        "alt_tags": approved_payload["alt_tags"],
-        "swarm_model": "seo-smoke-swarm",
-        "swarm_node": "spark-node-2",
-        "generation_ms": 1234,
+        "target_keyword": approved_payload["target_keyword"],
+        "campaign": approved_payload["campaign"],
+        "rubric_version": approved_payload["rubric_version"],
+        "source_snapshot": {
+            "page_path": target.page_path,
+            "property_slug": target.slug,
+            "smoke_test": True,
+        },
+        "proposal": {
+            "title": approved_payload["title"],
+            "meta_description": approved_payload["meta_description"],
+            "h1": approved_payload["h1"],
+            "intro": approved_payload["intro"],
+            "faq": approved_payload["faq"],
+            "json_ld": approved_payload["json_ld"],
+        },
+        "grading": {
+            "overall": 99.0,
+            "breakdown": {"smoke_test": 99.0},
+        },
+        "proposed_by": "seo-smoke-swarm",
+        "proposal_run_id": "seo-smoke-script",
     }
     return ingest_payload, approved_payload
 
@@ -416,81 +384,55 @@ async def main() -> int:
 
     try:
         target = await fetch_property(conn)
-        rubric = await fetch_rubric(conn)
         db_staff = await fetch_staff_auth(conn)
         prior_patch = await fetch_prior_deployed_patch(conn, target.id)
 
         log_pass("db-property", f"{target.slug} ({target.id})")
-        log_pass("db-rubric", f"{rubric.keyword_cluster} ({rubric.id})")
         log_pass("db-staff", f"{db_staff.email} ({db_staff.role})")
 
-        ingest_payload, approved_payload = make_mock_payload(target, rubric)
+        ingest_payload, approved_payload = make_mock_payload(target)
         ingest_headers: dict[str, str] = {}
         if swarm_token:
-            ingest_headers["Authorization"] = f"Bearer {swarm_token}"
             ingest_headers["X-Swarm-Token"] = swarm_token
-            log_pass("auth-ingest", "using Bearer + X-Swarm-Token swarm auth")
+            log_pass("auth-ingest", "using X-Swarm-Token alongside staff Bearer auth")
 
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             staff = await login_staff_auth(client)
             log_pass("auth-review", f"{staff.email} ({staff.role})")
-            if not swarm_token:
-                ingest_headers["Authorization"] = f"Bearer {staff.bearer_token}"
-                log_pass("auth-ingest", "using Bearer token fallback")
             review_headers = {"Authorization": f"Bearer {staff.bearer_token}"}
-            ingest_res = await api_post(client, "/api/seo/patches", ingest_payload, headers=ingest_headers)
-            require(ingest_res.status_code == 201, "ingest", f"unexpected status {ingest_res.status_code}: {ingest_res.text}")
+            ingest_headers.setdefault("Authorization", f"Bearer {staff.bearer_token}")
+            if not swarm_token:
+                log_pass("auth-ingest", "using Bearer token fallback")
+            ingest_res = await api_post(client, "/api/seo/proposals", ingest_payload, headers=ingest_headers)
+            require(ingest_res.status_code == 200, "ingest", f"unexpected status {ingest_res.status_code}: {ingest_res.text}")
             ingest_body = ingest_res.json()
-            smoke_patch_id = UUID(str(ingest_body["id"]))
+            smoke_patch_id = UUID(str((ingest_body.get("item") or {})["id"]))
             log_pass("ingest", f"patch_id={smoke_patch_id}")
 
             queue_res = await api_get(
                 client,
-                "/api/seo/queue?status=drafted&limit=100",
+                "/api/seo/queue?status=proposed&limit=100",
                 headers=review_headers,
             )
-            require(queue_res.status_code == 200, "queue-drafted", f"unexpected status {queue_res.status_code}: {queue_res.text}")
+            require(queue_res.status_code == 200, "queue-proposed", f"unexpected status {queue_res.status_code}: {queue_res.text}")
             queue_items = extract_queue_items(queue_res.json())
             require(
                 any(str(item["id"]) == str(smoke_patch_id) for item in queue_items),
-                "queue-drafted",
-                "ingested patch not visible in drafted queue",
+                "queue-proposed",
+                "ingested patch not visible in proposed queue",
             )
-            log_pass("queue-drafted", f"patch visible in drafted queue ({len(queue_items)} items returned)")
-
-            await promote_for_hitl(conn, smoke_patch_id)
-            log_pass("promote-hitl", "patch promoted to pending_human for deterministic approval")
-
-            pending_res = await api_get(
-                client,
-                "/api/seo/queue?status=pending_human&limit=100",
-                headers=review_headers,
-            )
-            require(pending_res.status_code == 200, "queue-pending_human", f"unexpected status {pending_res.status_code}: {pending_res.text}")
-            pending_items = extract_queue_items(pending_res.json())
-            require(
-                any(str(item["id"]) == str(smoke_patch_id) for item in pending_items),
-                "queue-pending_human",
-                "promoted patch not visible in pending_human queue",
-            )
-            log_pass("queue-pending_human", "patch visible for HITL review")
+            log_pass("queue-proposed", f"patch visible in proposed queue ({len(queue_items)} items returned)")
 
             approve_res = await api_post(
                 client,
-                f"/api/seo/queue/{smoke_patch_id}/approve",
-                {"final_payload": approved_payload, "note": "SEO smoke approval"},
+                f"/api/seo/{smoke_patch_id}/approve",
+                {"note": "SEO smoke approval"},
                 headers=review_headers,
             )
             require(approve_res.status_code == 200, "approve", f"unexpected status {approve_res.status_code}: {approve_res.text}")
             log_pass("approve", f"patch approved via API ({smoke_patch_id})")
 
-            deploy_payload = await wait_for_deploy_success(client, smoke_patch_id, headers=review_headers)
-            log_pass(
-                "deploy-status",
-                f"succeeded ({deploy_payload.get('deploy_acknowledged_at') or 'acknowledged'})",
-            )
-
-            live_res = await api_get(client, f"/api/seo/live/{target.slug}")
+            live_res = await api_get(client, f"/api/seo/live/property/{target.slug}")
             require(live_res.status_code == 200, "edge-live", f"unexpected status {live_res.status_code}: {live_res.text}")
             live_body = live_res.json()
             require(live_body.get("property_slug") == target.slug, "edge-live", "property_slug mismatch")
@@ -518,7 +460,7 @@ async def main() -> int:
                 return 1
         await conn.close()
 
-    log_pass("pipeline", "ingest -> queue -> approve -> edge live")
+    log_pass("pipeline", "ingest -> proposed queue -> approve -> edge live")
     return 0
 
 
