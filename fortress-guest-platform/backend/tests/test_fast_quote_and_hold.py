@@ -19,6 +19,7 @@ from backend.core.database import get_db
 from backend.models.pricing import QuoteRequest, QuoteResponse
 from backend.services.pricing_service import PricingError
 from backend.services.fast_quote_service import FastQuoteBreakdown, FastQuoteError
+from backend.services.reservation_finalization_service import FinalizeHoldResult
 
 
 def build_fast_quote_test_app() -> FastAPI:
@@ -192,7 +193,7 @@ async def test_calculate_endpoint_rolls_back_and_surfaces_fast_quote_error() -> 
     mock_session = AsyncMock()
 
     async def override_get_db():
-        return mock_session
+        yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -235,7 +236,7 @@ async def test_direct_booking_quote_uses_local_ledger_breakdown() -> None:
     mock_session.get = AsyncMock(return_value=prop)
 
     async def override_get_db():
-        return mock_session
+        yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -268,9 +269,11 @@ async def test_direct_booking_quote_uses_local_ledger_breakdown() -> None:
     assert payload["pricing_source"] == "local_ledger"
     assert payload["breakdown"]["subtotal"] == 800.0
     assert payload["breakdown"]["cleaning_fee"] == 150.0
+    assert payload["breakdown"]["admin_fee"] == 0.0
     assert payload["breakdown"]["tax"] == 123.5
     assert payload["breakdown"]["total"] == 1073.5
     assert payload["breakdown"]["pet_fee"] == 0
+    assert payload["breakdown"]["line_items"] == []
     assert payload["breakdown"]["nightly_breakdown"] == []
     mock_session.commit.assert_awaited_once()
     mock_session.rollback.assert_not_awaited()
@@ -288,7 +291,7 @@ async def test_direct_booking_quote_rolls_back_on_fast_quote_error() -> None:
     mock_session.get = AsyncMock(return_value=prop)
 
     async def override_get_db():
-        return mock_session
+        yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -329,7 +332,7 @@ async def test_direct_booking_book_returns_hold_payload() -> None:
     mock_session.get = AsyncMock(return_value=prop)
 
     async def override_get_db():
-        return mock_session
+        yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -391,7 +394,7 @@ async def test_direct_booking_book_maps_booking_hold_error() -> None:
     mock_session.get = AsyncMock(return_value=prop)
 
     async def override_get_db():
-        return mock_session
+        yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -443,7 +446,7 @@ async def test_confirm_hold_returns_reservation_payload() -> None:
     mock_session = AsyncMock()
 
     async def override_get_db():
-        return mock_session
+        yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -455,7 +458,7 @@ async def test_confirm_hold_returns_reservation_payload() -> None:
     with patch(
         "backend.api.direct_booking.finalize_hold_as_reservation",
         new_callable=AsyncMock,
-        return_value=reservation,
+        return_value=FinalizeHoldResult(reservation=reservation, already_finalized=False),
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -479,7 +482,7 @@ async def test_stripe_webhook_finalizes_direct_booking_hold() -> None:
     mock_session = AsyncMock()
 
     async def override_get_db():
-        return mock_session
+        yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -514,7 +517,11 @@ async def test_stripe_webhook_finalizes_direct_booking_hold() -> None:
 
     assert resp.status_code == 200
     assert resp.json()["event_type"] == "payment_intent.succeeded"
-    convert_hold.assert_awaited_once_with("pi_123", mock_session)
+    convert_hold.assert_awaited_once_with(
+        "pi_123",
+        mock_session,
+        metadata_hold_id=None,
+    )
 
 
 @pytest.mark.asyncio
@@ -542,38 +549,12 @@ async def test_finalize_hold_rolls_back_when_availability_changes() -> None:
     from backend.services.booking_hold_service import BookingHoldError, finalize_hold_as_reservation
 
     hold_id = uuid.uuid4()
-    hold = MagicMock()
-    hold.id = hold_id
-    hold.property_id = uuid.uuid4()
-    hold.status = "active"
-    hold.expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-    hold.payment_intent_id = "pi_123"
-    hold.check_in_date = date(2026, 8, 1)
-    hold.check_out_date = date(2026, 8, 5)
-
     mock_session = AsyncMock()
-    mock_session.get = AsyncMock(side_effect=[hold, hold])
-    mock_session.in_transaction = MagicMock(return_value=False)
 
-    with (
-        patch(
-            "backend.services.booking_hold_service.acquire_property_booking_lock",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "backend.services.booking_hold_service.expire_stale_holds",
-            new_callable=AsyncMock,
-            return_value=0,
-        ),
-        patch(
-            "backend.services.booking_hold_service._payment_intent_succeeded",
-            return_value=True,
-        ),
-        patch(
-            "backend.services.booking_hold_service.assert_property_available_for_stay",
-            new_callable=AsyncMock,
-            side_effect=FastQuoteError("dates_blocked", "Property is not available for these dates", 409),
-        ),
+    with patch(
+        "backend.services.booking_hold_service.reservation_finalization_service.finalize_by_hold_id",
+        new_callable=AsyncMock,
+        side_effect=BookingHoldError("Property is not available for these dates", 409),
     ):
         with pytest.raises(BookingHoldError) as exc_info:
             await finalize_hold_as_reservation(mock_session, hold_id)
@@ -642,6 +623,10 @@ async def test_create_checkout_hold_serializes_collision_and_second_fails_gracef
 
     with (
         patch(
+            "backend.services.booking_hold_service.settings.sovereign_quote_signing_key",
+            "",
+        ),
+        patch(
             "backend.services.booking_hold_service.build_quote_snapshot",
             new_callable=AsyncMock,
             return_value={"total": "500.00"},
@@ -701,22 +686,11 @@ async def test_finalize_hold_skips_when_not_active() -> None:
     from backend.services.booking_hold_service import BookingHoldError, finalize_hold_as_reservation
 
     mock_session = AsyncMock()
-    hold = MagicMock()
-    hold.status = "confirmed"
-    hold.property_id = uuid.uuid4()
-    mock_session.get = AsyncMock(return_value=hold)
-    mock_session.in_transaction = MagicMock(return_value=False)
 
-    with (
-        patch(
-            "backend.services.booking_hold_service.acquire_property_booking_lock",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "backend.services.booking_hold_service.expire_stale_holds",
-            new_callable=AsyncMock,
-            return_value=0,
-        ),
+    with patch(
+        "backend.services.booking_hold_service.reservation_finalization_service.finalize_by_hold_id",
+        new_callable=AsyncMock,
+        side_effect=BookingHoldError("Hold is no longer active", 409),
     ):
         with pytest.raises(BookingHoldError):
             await finalize_hold_as_reservation(mock_session, uuid.uuid4())
@@ -726,28 +700,23 @@ async def test_finalize_hold_skips_when_not_active() -> None:
 async def test_convert_hold_to_reservation_commits_atomic_conversion() -> None:
     from backend.services.booking_hold_service import convert_hold_to_reservation
 
-    hold = MagicMock()
-    hold.id = uuid.uuid4()
-    hold.status = "active"
-    hold.payment_intent_id = "pi_convert_123"
-
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = hold
-
     mock_session = AsyncMock()
-    mock_session.execute = AsyncMock(return_value=result)
 
     reservation = MagicMock()
     reservation.id = uuid.uuid4()
 
     with patch(
-        "backend.services.booking_hold_service.finalize_hold_as_reservation",
+        "backend.services.booking_hold_service.reservation_finalization_service.finalize_by_payment_intent",
         new_callable=AsyncMock,
-        return_value=reservation,
-    ) as finalize_hold:
+        return_value=FinalizeHoldResult(reservation=reservation, already_finalized=False),
+    ) as finalize_pi:
         converted = await convert_hold_to_reservation("pi_convert_123", mock_session)
 
     assert converted is reservation
-    finalize_hold.assert_awaited_once_with(mock_session, hold.id, require_succeeded_intent=False)
+    finalize_pi.assert_awaited_once_with(
+        mock_session,
+        payment_intent_id="pi_convert_123",
+        metadata_hold_id=None,
+    )
     mock_session.commit.assert_awaited_once()
     mock_session.rollback.assert_not_awaited()

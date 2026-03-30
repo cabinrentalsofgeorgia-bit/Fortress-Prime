@@ -40,6 +40,8 @@ class SeoGradingPayload(BaseModel):
 
 
 class SeoProposalRequest(BaseModel):
+    target_type: str = Field(default="property", max_length=32)
+    target_slug: Optional[str] = Field(default=None, max_length=255)
     property_id: Optional[UUID] = None
     property_slug: Optional[str] = None
     target_keyword: str = Field(..., max_length=255)
@@ -53,7 +55,21 @@ class SeoProposalRequest(BaseModel):
 
     @model_validator(mode="after")
     def ensure_property_reference(self) -> "SeoProposalRequest":
-        if not self.property_id and not (self.property_slug or "").strip():
+        self.target_type = (self.target_type or "property").strip().lower() or "property"
+        if self.target_type not in {"property", "archive_review"}:
+            raise ValueError("target_type must be either property or archive_review")
+
+        normalized_slug = ((self.target_slug or self.property_slug) or "").strip().strip("/").lower()
+        self.target_slug = normalized_slug or None
+        if self.property_slug is not None:
+            self.property_slug = self.target_slug
+
+        if self.target_type == "archive_review":
+            if not self.target_slug:
+                raise ValueError("target_slug is required for archive_review")
+            return self
+
+        if not self.property_id and not self.target_slug:
             raise ValueError("Either property_id or property_slug is required")
         return self
 
@@ -103,9 +119,17 @@ async def require_swarm_or_jwt(request: Request) -> dict[str, str]:
         )
 
 
-def _source_hash(*, property_id: UUID, campaign: str, rubric_version: str, source_snapshot: dict[str, Any]) -> str:
+def _source_hash(
+    *,
+    target_type: str,
+    target_slug: str,
+    campaign: str,
+    rubric_version: str,
+    source_snapshot: dict[str, Any],
+) -> str:
     basis = {
-        "property_id": str(property_id),
+        "target_type": target_type,
+        "target_slug": target_slug,
         "campaign": campaign,
         "rubric_version": rubric_version,
         "source_snapshot": source_snapshot or {},
@@ -114,26 +138,36 @@ def _source_hash(*, property_id: UUID, campaign: str, rubric_version: str, sourc
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-async def _resolve_property_id(db: AsyncSession, body: SeoProposalRequest) -> UUID:
+async def _resolve_target_identity(
+    db: AsyncSession,
+    body: SeoProposalRequest,
+) -> tuple[str, str, UUID | None]:
+    target_type = body.target_type
+    if target_type == "archive_review":
+        assert body.target_slug is not None
+        return target_type, body.target_slug, None
+
     if body.property_id:
         prop = await db.get(Property, body.property_id)
         if not prop:
             raise HTTPException(status_code=404, detail="Property not found")
-        return prop.id
+        return target_type, str(prop.slug).strip().lower(), prop.id
 
     result = await db.execute(
-        select(Property).where(Property.slug == (body.property_slug or "").strip())
+        select(Property).where(Property.slug == ((body.target_slug or body.property_slug) or "").strip())
     )
     prop = result.scalar_one_or_none()
     if not prop:
         raise HTTPException(status_code=404, detail="Property slug not found")
-    return prop.id
+    return target_type, str(prop.slug).strip().lower(), prop.id
 
 
 def _to_payload_row(row: SeoPatchQueue) -> dict[str, Any]:
     return {
         "id": str(row.id),
-        "property_id": str(row.property_id),
+        "target_type": row.target_type,
+        "target_slug": row.target_slug,
+        "property_id": str(row.property_id) if row.property_id is not None else None,
         "status": row.status,
         "target_keyword": row.target_keyword,
         "campaign": row.campaign,
@@ -161,16 +195,18 @@ def _to_payload_row(row: SeoPatchQueue) -> dict[str, Any]:
 
 
 async def _upsert_proposal(db: AsyncSession, body: SeoProposalRequest) -> SeoPatchQueue:
-    property_id = await _resolve_property_id(db, body)
+    target_type, target_slug, property_id = await _resolve_target_identity(db, body)
     source_hash = _source_hash(
-        property_id=property_id,
+        target_type=target_type,
+        target_slug=target_slug,
         campaign=body.campaign,
         rubric_version=body.rubric_version,
         source_snapshot=body.source_snapshot,
     )
     result = await db.execute(
         select(SeoPatchQueue).where(
-            SeoPatchQueue.property_id == property_id,
+            SeoPatchQueue.target_type == target_type,
+            SeoPatchQueue.target_slug == target_slug,
             SeoPatchQueue.campaign == body.campaign,
             SeoPatchQueue.source_hash == source_hash,
         )
@@ -178,12 +214,17 @@ async def _upsert_proposal(db: AsyncSession, body: SeoProposalRequest) -> SeoPat
     row = result.scalar_one_or_none()
     if row is None:
         row = SeoPatchQueue(
+            target_type=target_type,
+            target_slug=target_slug,
             property_id=property_id,
             campaign=body.campaign,
             source_hash=source_hash,
         )
         db.add(row)
 
+    row.target_type = target_type
+    row.target_slug = target_slug
+    row.property_id = property_id
     row.status = "proposed"
     row.target_keyword = body.target_keyword
     row.rubric_version = body.rubric_version

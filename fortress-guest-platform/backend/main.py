@@ -20,7 +20,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.core.config import settings
 from backend.core.database import init_db, close_db, get_db, async_engine
-from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, guestbook
+from backend.core.public_api_paths import is_public_api_path
+from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, webhooks_channex, guestbook
 from backend.api import integrations as integrations_api
 from backend.api import booking, housekeeping, channels, agent
 from backend.api import portal as portal_api
@@ -41,6 +42,7 @@ from backend.api import auth as auth_api
 from backend.api import invites as invites_api
 from backend.api import agreements as agreements_api
 from backend.api import payments as payments_api
+from backend.api import fast_quote as fast_quote_api
 from backend.api import quotes as quotes_api
 from backend.api import vrs_quotes as vrs_quotes_api
 from backend.api import leads as leads_api
@@ -49,8 +51,11 @@ from backend.api import checkout as checkout_api
 from backend.api import templates as templates_api
 from backend.api import copilot_queue as copilot_queue_api
 from backend.api import admin as admin_api
+from backend.api import admin_insights as admin_insights_api
 from backend.api import rule_engine as rule_engine_api
 from backend.api import intelligence as intelligence_api
+from backend.api import intelligence_feed as intelligence_feed_api
+from backend.api import intelligence_projection as intelligence_projection_api
 from backend.api import vault as vault_api
 from backend.api import legal_council as legal_council_api
 from backend.api import ediscovery as ediscovery_api
@@ -74,13 +79,24 @@ from backend.api import dispute_webhooks
 from backend.api import disputes as disputes_api
 from backend.api import system_sensors as system_sensors_api
 from backend.api import system_health as system_health_api
+from backend.api import system_nodes as system_nodes_api
+from backend.api import system_dashboard as system_dashboard_api
+from backend.api import ops as ops_api
 from backend.api import vrs_health as vrs_health_api
 from backend.api import vrs_treasury as vrs_treasury_api
 from backend.api import hunter as hunter_api
 from backend.api import concierge as concierge_api
-from backend.api import dispatch as dispatch_api
+from backend.api import dispatch as contact_form
 from backend.api import internal_deck as internal_deck_api
+from backend.api import redirect_vanguard_admin as redirect_vanguard_admin_api
+from backend.api import storefront_concierge as storefront_concierge_api
+from backend.api import storefront_intent as storefront_intent_api
 from backend.api import disagg_admin as disagg_admin_api
+from backend.api import telemetry as telemetry_api
+from backend.api import command_c2 as command_c2_api
+from backend.api import sovereign_pulse as sovereign_pulse_api
+from backend.api import funnel_hq as funnel_hq_api
+from backend.api import openshell_audit as openshell_audit_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -107,48 +123,6 @@ logger = structlog.get_logger()
 _bg_task_heartbeats: dict[str, float] = {}
 
 
-# ---------------------------------------------------------------------------
-# Global Auth Middleware — protects ALL /api/* routes by default
-# ---------------------------------------------------------------------------
-PUBLIC_PATH_PREFIXES = (
-    "/health",
-    "/docs",
-    "/redoc",
-    "/openapi.json",
-    "/metrics",
-    "/ws",
-    "/webhooks/",
-    "/dashboard",
-    "/guestbook",
-    "/portal/",
-    "/api/auth/login",
-    "/api/auth/register",
-    "/api/auth/sso",
-    "/api/auth/command-center-url",
-    "/api/auth/owner/request-magic-link",
-    "/api/auth/owner/verify-magic-link",
-    "/api/auth/owner/logout",
-    "/api/guest-portal/",
-    "/api/guestbook/",
-    "/api/agreements/public/",
-    "/api/direct-booking/availability",
-    "/api/direct-booking/properties",
-    "/api/seo-patches/live/",
-    "/api/quotes/",
-    "/api/seo-patches/proposals",
-    "/api/seo-patches/bulk-proposals",
-    "/api/checkout/",
-    "/api/copilot-queue/",
-    "/api/vrs/automations/",
-    "/api/system/health/",
-    "/api/vrs/system-pulse",
-    "/api/vrs/leads/",
-    "/api/webhooks/",
-    "/api/dispatch/",
-    "/api/internal/deck-key",
-)
-
-
 class GlobalAuthMiddleware(BaseHTTPMiddleware):
     """Enforces JWT authentication on all /api/* routes except whitelisted public paths."""
 
@@ -158,16 +132,8 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
         if not path.startswith("/api/"):
             return await call_next(request)
 
-        if any(path.startswith(prefix) for prefix in PUBLIC_PATH_PREFIXES):
+        if is_public_api_path(path, request.method):
             return await call_next(request)
-
-        if (
-            path.startswith("/api/quotes/")
-            and path not in ("/api/quotes", "/api/quotes/")
-            and not path.endswith("/generate")
-        ):
-            if request.method == "GET" or path.endswith("/checkout"):
-                return await call_next(request)
 
         if "/download/" in path and path.startswith("/api/legal/cases/"):
             return await call_next(request)
@@ -176,6 +142,7 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         auth_header = request.headers.get("authorization", "")
+
         if not auth_header.startswith("Bearer "):
             return JSONResponse(
                 status_code=401,
@@ -249,6 +216,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
+    app.state.arq_pool = getattr(app.state, "arq_pool", None)
     logger.info(
         "starting_fortress_guest_platform",
         environment=settings.environment,
@@ -261,66 +229,47 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("database_init_skipped", error=str(e), note="App will run without DB - configure DATABASE_URL")
 
-    async def _deferred_kb_sync():
+    async def _deferred_kb_sync_enqueue():
         await asyncio.sleep(5)
         try:
             from backend.core.qdrant import ensure_collection
             qdrant_ready = await ensure_collection()
             if qdrant_ready:
                 logger.info("qdrant_fgp_knowledge_ready")
-                try:
-                    from backend.services.knowledge_retriever import sync_knowledge_base_to_qdrant
-                    from backend.core.database import AsyncSessionLocal
-                    async with AsyncSessionLocal() as kb_session:
-                        synced = await sync_knowledge_base_to_qdrant(kb_session)
-                        logger.info("kb_vectorization_complete", synced=synced)
-                except Exception as kb_err:
-                    logger.warning("kb_vectorization_failed", error=str(kb_err)[:200])
+                from backend.core.database import AsyncSessionLocal
+                from backend.services.async_jobs import enqueue_async_job
+
+                if app.state.arq_pool is None:
+                    logger.warning("kb_vectorization_enqueue_skipped", error="ARQ pool unavailable")
+                    return
+                async with AsyncSessionLocal() as kb_session:
+                    job = await enqueue_async_job(
+                        kb_session,
+                        worker_name="sync_knowledge_base_job",
+                        job_name="sync_knowledge_base",
+                        payload={"reason": "startup_bootstrap"},
+                        requested_by="system_startup",
+                        tenant_id=None,
+                        request_id="startup-bootstrap",
+                        redis=app.state.arq_pool,
+                    )
+                    logger.info("kb_vectorization_enqueued", job_id=str(job.id))
             else:
                 logger.warning("qdrant_fgp_knowledge_unavailable")
         except Exception as e:
             logger.warning("qdrant_init_skipped", error=str(e))
 
-    kb_sync_task = asyncio.create_task(_deferred_kb_sync())
+    kb_sync_task = asyncio.create_task(_deferred_kb_sync_enqueue())
 
-    from backend.integrations.streamline_vrs import StreamlineVRS
-    from backend.core.database import AsyncSessionLocal
-    vrs = StreamlineVRS()
-    sync_task = None
-    if vrs.is_configured:
-        async def _run_sync():
-            while True:
-                try:
-                    async with AsyncSessionLocal() as db:
-                        await vrs.sync_all(db)
-                except Exception as e:
-                    logger.error("streamline_sync_error", error=str(e)[:500])
-                await asyncio.sleep(settings.streamline_sync_interval)
-        sync_task = asyncio.create_task(_run_sync())
-        logger.info("streamline_background_sync_started", interval=settings.streamline_sync_interval)
-    else:
-        logger.warning("streamline_not_configured")
-
-    # --- VRS Event Consumer (Priority #2 from Forensic Audit) ---
-    event_consumer_task = None
-    try:
-        from backend.vrs.application.event_consumer import process_automation_queue
-        event_consumer_task = asyncio.create_task(process_automation_queue())
-        logger.info("vrs_event_consumer_started")
-    except Exception as e:
-        logger.warning("vrs_event_consumer_start_failed", error=str(e)[:200])
+    # Streamline full sync (sync_all) runs in a dedicated process:
+    # systemd fortress-sync-worker → python -m backend.sync
+    logger.info("streamline_full_sync_delegated_to_sync_worker")
 
     yield
 
-    if event_consumer_task:
-        event_consumer_task.cancel()
-        try:
-            await event_consumer_task
-        except asyncio.CancelledError:
-            pass
-    if sync_task:
-        sync_task.cancel()
     kb_sync_task.cancel()
+    if app.state.arq_pool is not None:
+        await app.state.arq_pool.aclose()
     from backend.core.http_client import close_shared_client
     await close_shared_client()
     from backend.core.event_publisher import close_event_publisher
@@ -349,6 +298,7 @@ app.add_middleware(
     allow_origins=[
         "https://crog-ai.com",
         "https://www.crog-ai.com",
+        "https://api.cabin-rentals-of-georgia.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -379,6 +329,7 @@ app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
 app.include_router(workorders.router, prefix="/api/work-orders", tags=["Work Orders"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
+app.include_router(webhooks_channex.router, prefix="/api/webhooks/channex", tags=["Channex Webhooks"])
 app.include_router(guestbook.router, prefix="/api/guestbook", tags=["Guestbook"])
 app.include_router(integrations_api.router, prefix="/api/integrations", tags=["Integrations"])
 app.include_router(booking.router, prefix="/api/booking", tags=["Booking"])
@@ -402,6 +353,8 @@ app.include_router(utilities_api.router, prefix="/api/utilities", tags=["Utiliti
 app.include_router(invites_api.router, prefix="/api/invites", tags=["Invites"])
 app.include_router(agreements_api.router, prefix="/api/agreements", tags=["Agreements"])
 app.include_router(payments_api.router, prefix="/api/payments", tags=["Payments"])
+# Before /api/quotes/{quote_id} so POST /api/quotes/calculate is not swallowed as a UUID path.
+app.include_router(fast_quote_api.router, tags=["Fast Quote"])
 app.include_router(quotes_api.router, prefix="/api/quotes", tags=["Quotes"])
 app.include_router(vrs_quotes_api.router, prefix="/api/quotes", tags=["Sovereign Quotes"])
 app.include_router(leads_api.router, prefix="/api/leads", tags=["Leads"])
@@ -412,8 +365,15 @@ app.include_router(copilot_queue_api.router, prefix="/api/copilot-queue", tags=[
 app.include_router(stripe_webhooks.router, prefix="/api/webhooks", tags=["Stripe Webhooks"])
 app.include_router(stripe_connect_webhooks.router, prefix="/api/webhooks", tags=["Stripe Connect Webhooks"])
 app.include_router(admin_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_insights_api.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(rule_engine_api.router, prefix="/api/rules", tags=["Rule Engine"])
 app.include_router(intelligence_api.router, prefix="/api/intelligence", tags=["Intelligence"])
+app.include_router(intelligence_feed_api.router, prefix="/api/intelligence/feed", tags=["Intelligence Feed"])
+app.include_router(
+    intelligence_projection_api.router,
+    prefix="/api/intelligence/projection",
+    tags=["Intelligence Projection"],
+)
 app.include_router(vault_api.router, prefix="/api/vault", tags=["E-Discovery Vault"])
 app.include_router(legal_council_api.router, prefix="/api/legal", tags=["Legal Council"])
 app.include_router(ediscovery_api.router, prefix="/api/legal", tags=["E-Discovery"])
@@ -429,7 +389,13 @@ app.include_router(legal_sanctions_api.router, prefix="/api/legal", tags=["Legal
 app.include_router(legal_deposition_api.router, prefix="/api/legal", tags=["Legal Deposition"])
 app.include_router(legal_agent_api.router, prefix="/api/legal", tags=["Legal Agent"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
-app.include_router(seo_patches_api.router, prefix="/api/seo-patches", tags=["SEO Patches"])
+app.include_router(seo_patches_api.router, prefix="/api/seo", tags=["SEO"])
+app.include_router(
+    seo_patches_api.router,
+    prefix="/api/seo-patches",
+    tags=["SEO Compatibility"],
+    include_in_schema=False,
+)
 app.include_router(wealth_api.router, prefix="/api/wealth", tags=["Wealth & Development"])
 app.include_router(reservation_webhooks.router, prefix="/api/webhooks", tags=["Reservation Webhooks"])
 app.include_router(dispute_webhooks.router, prefix="/api/webhooks", tags=["Dispute Webhooks"])
@@ -437,19 +403,30 @@ app.include_router(contracts_api.router, prefix="/api/admin/contracts", tags=["M
 app.include_router(disputes_api.router, prefix="/api/admin/disputes", tags=["Dispute Exception Desk"])
 app.include_router(system_sensors_api.router, prefix="/api/system/sensors", tags=["System Sensors"])
 app.include_router(system_health_api.router, prefix="/api/system/health", tags=["System Health Hardware"])
+app.include_router(system_nodes_api.router, prefix="/api/system/nodes", tags=["System Nodes"])
+app.include_router(system_dashboard_api.router, prefix="/api/system", tags=["Staff Dashboard Aggregate"])
+app.include_router(ops_api.router, prefix="/api")
 app.include_router(vrs_health_api.router, tags=["VRS Health"])
 app.include_router(vrs_treasury_api.router, prefix="/api/vrs/treasury", tags=["OTA Warfare"])
 app.include_router(hunter_api.router, prefix="/api", tags=["Reactivation Hunter"])
 app.include_router(concierge_api.router, tags=["Concierge"])
-app.include_router(dispatch_api.router, prefix="/api/dispatch", tags=["Autonomous Dispatch"])
+app.include_router(contact_form.router, prefix="/api/dispatch", tags=["Autonomous Dispatch"])
 app.include_router(internal_deck_api.router, prefix="/api/internal", tags=["Internal Deck"])
+app.include_router(redirect_vanguard_admin_api.router, prefix="/api/internal", tags=["Redirect Vanguard"])
+app.include_router(storefront_intent_api.router, prefix="/api/storefront/intent", tags=["Storefront Intent"])
+app.include_router(storefront_concierge_api.router, prefix="/api/storefront/concierge", tags=["Storefront Concierge"])
 app.include_router(disagg_admin_api.router, prefix="/api/disagg/admin", tags=["Disagg Admin"])
+app.include_router(telemetry_api.router, prefix="/api/telemetry", tags=["Telemetry"])
+app.include_router(command_c2_api.router, prefix="/api/telemetry", tags=["Command C2"])
+app.include_router(sovereign_pulse_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
+app.include_router(funnel_hq_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
+app.include_router(openshell_audit_api.router, prefix="/api/openshell/audit", tags=["OpenShell Audit"])
 
 
 # ---------------------------------------------------------------------------
 # Static files / Frontend fallback
 # ---------------------------------------------------------------------------
-_frontend_dist = Path(__file__).resolve().parent.parent / "frontend-next" / "out"
+_frontend_dist = Path(__file__).resolve().parent.parent / "apps" / "storefront" / "out"
 if _frontend_dist.is_dir():
     app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
 
