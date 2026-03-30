@@ -1,0 +1,16 @@
+[Unit]
+Description=Fortress ARQ Worker
+After=network-online.target fortress-backend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+ExecStart=/usr/local/bin/run-fortress-arq-worker.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

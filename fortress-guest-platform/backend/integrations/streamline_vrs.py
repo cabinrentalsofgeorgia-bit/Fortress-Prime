@@ -1405,75 +1405,63 @@ class StreamlineVRS:
     # ================================================================
 
     async def sync_property_availability(self, db) -> Dict[str, Any]:
-        """Refresh the local Property.availability cache from Streamline."""
-        from sqlalchemy import select
+        """
+        Compatibility wrapper for the ARQ availability loop.
 
+        Syncs only blocked-day availability for properties already mapped into the
+        local database and returns the historical summary shape consumed by the
+        worker logs.
+        """
+        from sqlalchemy import select, text as sa_text_p3
         from backend.models import Property
 
         if not self.is_configured:
-            return {"status": "skipped", "reason": "Streamline VRS not configured"}
+            return {"status": "skipped", "reason": "Streamline VRS not configured", "synced": 0, "skipped": 0, "bookings_found": 0}
 
-        summary = {
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "synced": 0,
-            "skipped": 0,
-            "bookings_found": 0,
-            "errors": [],
-        }
+        summary = {"synced": 0, "skipped": 0, "bookings_found": 0}
         remote_properties = await self.fetch_properties()
-        streamline_ids = [
-            str(property_row.get("streamline_property_id") or "").strip()
-            for property_row in remote_properties
-            if property_row.get("streamline_property_id")
-        ]
-        if not streamline_ids:
-            return summary
 
-        local_properties = (
-            await db.execute(
-                select(Property).where(Property.streamline_property_id.in_(streamline_ids))
-            )
-        ).scalars().all()
-        properties_by_streamline_id = {
-            str(property_record.streamline_property_id): property_record
-            for property_record in local_properties
-            if property_record.streamline_property_id
-        }
-
-        cache_generated_at = datetime.now(timezone.utc)
-        cache_updated = False
-        for remote_property in remote_properties:
-            streamline_property_id = str(
-                remote_property.get("streamline_property_id") or ""
-            ).strip()
-            if not streamline_property_id:
-                continue
-            local_property = properties_by_streamline_id.get(streamline_property_id)
-            if local_property is None:
-                summary["skipped"] += 1
-                continue
-
+        for rp in remote_properties:
             try:
-                blocked_ranges = await self.fetch_blocked_days(int(streamline_property_id))
-                local_property.availability = build_property_availability_snapshot(
-                    property_id=str(local_property.id),
-                    property_slug=local_property.slug,
-                    blocked_ranges=blocked_ranges,
-                    generated_at=cache_generated_at,
+                sl_id = rp["streamline_property_id"]
+                unit_id = int(sl_id)
+                prop_result = await db.execute(
+                    select(Property).where(Property.streamline_property_id == sl_id)
                 )
-                summary["synced"] += 1
-                summary["bookings_found"] += len(blocked_ranges)
-                cache_updated = True
-            except StreamlineMethodNotAllowed:
-                summary["errors"].append("Availability sync is not enabled for this Streamline token")
-                break
-            except Exception as exc:
-                summary["errors"].append(
-                    f"Availability {remote_property.get('name')}: {exc}"
-                )
+                local_prop = prop_result.scalar_one_or_none()
+                if not local_prop:
+                    summary["skipped"] += 1
+                    continue
 
-        if cache_updated:
-            await db.commit()
+                blocked = await self.fetch_blocked_days(unit_id)
+                for b in blocked:
+                    if not b.get("start_date") or not b.get("end_date"):
+                        continue
+                    block_type = (b.get("type_name") or "reservation").lower().replace(" ", "_")
+                    await db.execute(
+                        sa_text_p3("""
+                            INSERT INTO blocked_days
+                                (id, property_id, start_date, end_date, block_type,
+                                 confirmation_code, source, created_at, updated_at)
+                            VALUES
+                                (gen_random_uuid(), :pid, :sd, :ed, :bt, :cc,
+                                 'streamline', NOW(), NOW())
+                            ON CONFLICT (property_id, start_date, end_date, block_type)
+                            DO UPDATE SET
+                                confirmation_code = EXCLUDED.confirmation_code,
+                                updated_at = NOW()
+                        """),
+                        {"pid": str(local_prop.id), "sd": b["start_date"], "ed": b["end_date"], "bt": block_type[:50], "cc": str(b.get("confirmation_id") or "")[:50] or None},
+                    )
+                await db.commit()
+                summary["synced"] += 1
+                summary["bookings_found"] += len(blocked)
+            except StreamlineMethodNotAllowed:
+                break
+            except Exception:
+                await db.rollback()
+                raise
+
         return summary
 
     async def sync_all(self, db) -> Dict[str, Any]:
@@ -2800,5 +2788,5 @@ class StreamlineVRS:
         }
 
 
-# Shared client for workers and reconciliation (one connection pool per process).
+# Shared client used by legacy call sites that expect a module-level singleton.
 streamline_vrs = StreamlineVRS()
