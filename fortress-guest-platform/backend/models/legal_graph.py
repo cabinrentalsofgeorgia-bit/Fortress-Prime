@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import synonym
 
 from backend.models.legal_base import LegalBase
 
@@ -15,6 +16,7 @@ class LegalCase(LegalBase):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     slug = Column(String(255), nullable=False, unique=True, index=True)
+    case_slug = synonym("slug")
     court = Column(String(255), nullable=False)
     jurisdiction = Column(String(255), nullable=False)
     status = Column(String(64), nullable=False, default="open")
