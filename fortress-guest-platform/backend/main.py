@@ -21,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from backend.core.config import settings
 from backend.core.database import init_db, close_db, get_db, async_engine
 from backend.core.public_api_paths import is_public_api_path
+from backend.core.queue import create_arq_pool
 from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, webhooks_channex, guestbook
 from backend.api import integrations as integrations_api
 from backend.api import booking, housekeeping, channels, agent
@@ -216,7 +217,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
-    app.state.arq_pool = getattr(app.state, "arq_pool", None)
+    app.state.arq_pool = None
     logger.info(
         "starting_fortress_guest_platform",
         environment=settings.environment,
@@ -228,6 +229,12 @@ async def lifespan(app: FastAPI):
         logger.info("database_initialized")
     except Exception as e:
         logger.warning("database_init_skipped", error=str(e), note="App will run without DB - configure DATABASE_URL")
+
+    try:
+        app.state.arq_pool = await create_arq_pool()
+        logger.info("arq_pool_initialized", queue_name=settings.arq_queue_name)
+    except Exception as e:
+        logger.warning("arq_pool_init_skipped", error=str(e), queue_name=settings.arq_queue_name)
 
     async def _deferred_kb_sync_enqueue():
         await asyncio.sleep(5)
