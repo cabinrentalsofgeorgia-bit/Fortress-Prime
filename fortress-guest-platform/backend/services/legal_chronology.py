@@ -73,7 +73,7 @@ async def _gather_chronology_context(db: AsyncSession, case_slug: str) -> str:
         for row in r.fetchall():
             chunks.append(f"[ENTITY: {row[0]}] {row[1]} {row[2] or ''}")
     except Exception:
-        pass
+        await db.rollback()
 
     try:
         r = await db.execute(
@@ -93,7 +93,7 @@ async def _gather_chronology_context(db: AsyncSession, case_slug: str) -> str:
                 f"(ref: {d.get('source_ref','n/a')}, date: {d.get('stated_at','?')})"
             )
     except Exception:
-        pass
+        await db.rollback()
 
     try:
         r = await db.execute(
@@ -114,7 +114,7 @@ async def _gather_chronology_context(db: AsyncSession, case_slug: str) -> str:
                 f"Date: {d.get('sent_at','')}"
             )
     except Exception:
-        pass
+        await db.rollback()
 
     from pathlib import Path
     try:
@@ -158,7 +158,7 @@ async def _gather_chronology_context(db: AsyncSession, case_slug: str) -> str:
             except Exception:
                 pass
     except Exception:
-        pass
+        await db.rollback()
 
     return "\n\n".join(chunks)[:30000]
 
