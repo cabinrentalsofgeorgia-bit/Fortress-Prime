@@ -34,20 +34,26 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.api.checkout import _build_quote_data_for_docs
 from backend.core.database import get_db
 from backend.core.event_publisher import EventPublisher
-from backend.core.queue import get_arq_pool
+from backend.core.security import require_admin, require_manager_or_admin
 from backend.models.lead import Lead
 from backend.models.quote import Quote, QuoteOption
-from backend.services.async_jobs import enqueue_async_job, extract_request_actor
+from backend.models.staff import StaffUser
 
 logger = structlog.get_logger(service="admin_api")
 
 router = APIRouter()
+
+
+def _missing_runtime_table(exc: ProgrammingError) -> bool:
+    message = str(getattr(exc, "orig", exc)).lower()
+    return "does not exist" in message or "undefinedtable" in message
 
 
 class PendingPaymentItem(BaseModel):
@@ -72,7 +78,10 @@ class VerifyResponse(BaseModel):
 
 
 @router.get("/payments/pending", response_model=PendingPaymentsResponse)
-async def list_pending_payments(db: AsyncSession = Depends(get_db)):
+async def list_pending_payments(
+    db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_manager_or_admin),
+):
     """List all quotes with status 'pending_verification' for the admin queue."""
     result = await db.execute(
         select(Quote)
@@ -113,7 +122,7 @@ async def verify_payment(
     quote_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    arq_redis: ArqRedis = Depends(get_arq_pool),
+    _user: StaffUser = Depends(require_manager_or_admin),
 ):
     """
     Verify that manual funds (Zelle/Crypto) have been received.
@@ -208,6 +217,7 @@ async def verify_payment(
 @router.get("/god-mode/financials")
 async def get_god_mode_financials(
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     FORTRESS PROTOCOL: God Mode Aggregation.
@@ -349,7 +359,10 @@ KAFKA_BROKER = os.getenv("KAFKA_BROKER_URL", "192.168.0.100:19092")
 
 
 @router.get("/prime/stream")
-async def prime_telemetry_stream(request: Request):
+async def prime_telemetry_stream(
+    request: Request,
+    _user: StaffUser = Depends(require_manager_or_admin),
+):
     """
     FORTRESS PRIME: Live SSE stream of the Redpanda event bus.
 
@@ -437,7 +450,10 @@ async def prime_telemetry_stream(request: Request):
 
 
 @router.get("/prime/snapshot")
-async def prime_snapshot(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def prime_snapshot(
+    db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_manager_or_admin),
+) -> Dict[str, Any]:
     """
     FORTRESS PRIME: Treasury snapshot for the God Mode dashboard.
 
@@ -520,17 +536,24 @@ async def prime_snapshot(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
             for row in recent_result.fetchall()
         ]
 
-        payout_result = await db.execute(text("""
-            SELECT status,
-                   COUNT(*) AS cnt,
-                   COALESCE(SUM(owner_amount), 0) AS total
-            FROM payout_ledger
-            GROUP BY status
-        """))
-        payout_summary = {
-            row.status: {"count": row.cnt, "total": round(float(row.total), 2)}
-            for row in payout_result.fetchall()
-        }
+        try:
+            payout_result = await db.execute(text("""
+                SELECT status,
+                       COUNT(*) AS cnt,
+                       COALESCE(SUM(owner_amount), 0) AS total
+                FROM payout_ledger
+                GROUP BY status
+            """))
+            payout_summary = {
+                row.status: {"count": row.cnt, "total": round(float(row.total), 2)}
+                for row in payout_result.fetchall()
+            }
+        except ProgrammingError as exc:
+            if not _missing_runtime_table(exc):
+                raise
+            await db.rollback()
+            payout_summary = {}
+            logger.warning("prime_snapshot_payout_ledger_missing")
 
         today_je_result = await db.execute(text("""
             SELECT COUNT(*) FROM journal_entries
@@ -583,6 +606,7 @@ class MarkupUpdateRequest(BaseModel):
 @router.get("/fleet-status")
 async def get_fleet_status(
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Fleet Matrix aggregation for the Admin Operations Glass.
@@ -701,6 +725,7 @@ async def update_commission_split(
     property_id: str,
     payload: SplitUpdateRequest,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Upsert a management commission split for a property.
@@ -750,6 +775,7 @@ async def update_capex_markup(
     property_id: str,
     payload: MarkupUpdateRequest,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Upsert a CapEx markup percentage for a property.
@@ -801,6 +827,7 @@ class CapexRejectRequest(BaseModel):
 async def get_pending_capex(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Returns all PENDING_CAPEX_APPROVAL items for a given property.
@@ -837,6 +864,7 @@ async def get_pending_capex(
 async def approve_capex(
     staging_id: int,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Approve a CapEx staging item: commits pre-computed journal_lines
@@ -931,6 +959,7 @@ async def reject_capex(
     staging_id: int,
     payload: CapexRejectRequest,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """Reject a CapEx staging item with a reason. No journal lines are committed."""
     try:
@@ -983,6 +1012,7 @@ async def reject_capex(
 async def dispatch_capital_call(
     staging_id: int,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Dispatch a Capital Call: create a Stripe Payment Link for the total
@@ -1148,6 +1178,7 @@ async def dispatch_capital_call(
 async def reconcile_revenue(
     execute: bool = False,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Revenue Reconciliation Sweep.
@@ -1304,7 +1335,7 @@ async def onboard_owner(
     req: OnboardOwnerRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    arq_redis: ArqRedis = Depends(get_arq_pool),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Monolithic owner onboarding transaction.
@@ -1515,6 +1546,7 @@ async def onboard_owner(
 @router.get("/marketing-budgets")
 async def get_marketing_budgets(
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """Fleet-wide marketing escrow balances and latest attribution metrics."""
     try:
@@ -1609,6 +1641,7 @@ async def post_marketing_attribution(
     property_id: str,
     entry: MarketingAttributionEntry,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_admin),
 ) -> Dict[str, Any]:
     """Admin enters campaign performance data for a property/period. ROAS auto-computed."""
     roas = round(entry.gross_revenue / entry.ad_spend, 2) if entry.ad_spend > 0 else 0.0
