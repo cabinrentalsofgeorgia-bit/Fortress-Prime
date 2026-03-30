@@ -104,8 +104,13 @@ class StreamlineRateLimitError(StreamlineVRSError):
     pass
 
 
-# Strict per-request HTTP bounds; each RPC uses ``async with httpx.AsyncClient`` to avoid CLOSE_WAIT leaks.
-STREAMLINE_HTTP_TIMEOUT = httpx.Timeout(15.0, connect=5.0)
+def is_streamline_circuit_placeholder(payload: Any) -> bool:
+    """Detect the sentinel payload returned when the circuit breaker is open."""
+    return (
+        isinstance(payload, dict)
+        and payload.get("_circuit_open") is True
+        and payload.get("_stale") is True
+    )
 
 
 class StreamlineVRS:
@@ -1451,7 +1456,13 @@ class StreamlineVRS:
                                 confirmation_code = EXCLUDED.confirmation_code,
                                 updated_at = NOW()
                         """),
-                        {"pid": str(local_prop.id), "sd": b["start_date"], "ed": b["end_date"], "bt": block_type[:50], "cc": str(b.get("confirmation_id") or "")[:50] or None},
+                        {
+                            "pid": str(local_prop.id),
+                            "sd": b["start_date"],
+                            "ed": b["end_date"],
+                            "bt": block_type[:50],
+                            "cc": str(b.get("confirmation_id") or "")[:50] or None,
+                        },
                     )
                 await db.commit()
                 summary["synced"] += 1
@@ -2168,6 +2179,11 @@ class StreamlineVRS:
                 owner_map = {}
                 for ow in owners_data:
                     owner_map[str(ow.get("owner_id", ""))] = ow
+                live_streamline_ids = {
+                    str(prop["streamline_property_id"])
+                    for prop in await self.fetch_properties()
+                    if str(prop.get("streamline_property_id", "")).strip()
+                }
 
                 all_props = await db.execute(
                     select(Property).where(Property.streamline_property_id.isnot(None))
@@ -2177,30 +2193,35 @@ class StreamlineVRS:
                 balance_count = 0
                 for prop in props_list:
                     try:
-                        unit_id = int(prop.streamline_property_id)
+                        streamline_id = str(prop.streamline_property_id or "").strip()
+                        if streamline_id not in live_streamline_ids:
+                            continue
+                        unit_id = int(streamline_id)
                         bal = await self.fetch_unit_owner_balance(unit_id)
-                        if bal:
-                            prop.owner_balance = bal
-                            ow_id = str(bal.get("owner_id", ""))
-                            if ow_id and ow_id in owner_map:
-                                ow = owner_map[ow_id]
-                                prop.owner_id = ow_id
-                                prop.owner_name = f"{ow.get('first_name', '')} {ow.get('last_name', '')}".strip()
-                            elif ow_id:
-                                prop.owner_id = ow_id
+                        if not bal or is_streamline_circuit_placeholder(bal):
+                            continue
 
-                            from sqlalchemy import text as sa_text
-                            owner_funds = self._safe_decimal(bal.get("owner_balance")) or Decimal("0")
-                            await db.execute(
-                                sa_text("""
-                                    INSERT INTO trust_balance (property_id, owner_funds, last_updated)
-                                    VALUES (:pid, :funds, NOW())
-                                    ON CONFLICT (property_id)
-                                    DO UPDATE SET owner_funds = :funds, last_updated = NOW()
-                                """),
-                                {"pid": prop.streamline_property_id, "funds": float(owner_funds)},
-                            )
-                            balance_count += 1
+                        prop.owner_balance = bal
+                        ow_id = str(bal.get("owner_id", ""))
+                        if ow_id and ow_id in owner_map:
+                            ow = owner_map[ow_id]
+                            prop.owner_id = ow_id
+                            prop.owner_name = f"{ow.get('first_name', '')} {ow.get('last_name', '')}".strip()
+                        elif ow_id:
+                            prop.owner_id = ow_id
+
+                        from sqlalchemy import text as sa_text
+                        owner_funds = self._safe_decimal(bal.get("owner_balance")) or Decimal("0")
+                        await db.execute(
+                            sa_text("""
+                                INSERT INTO trust_balance (property_id, owner_funds, last_updated)
+                                VALUES (:pid, :funds, NOW())
+                                ON CONFLICT (property_id)
+                                DO UPDATE SET owner_funds = :funds, last_updated = NOW()
+                            """),
+                            {"pid": prop.streamline_property_id, "funds": float(owner_funds)},
+                        )
+                        balance_count += 1
                     except StreamlineMethodNotAllowed:
                         break
                     except Exception as e:

@@ -12,7 +12,7 @@ from sqlalchemy import (
     TIMESTAMP, ARRAY
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, synonym
+from sqlalchemy.orm import relationship, deferred, synonym
 import enum
 
 from backend.core.database import Base
@@ -24,7 +24,10 @@ class Guest(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     
     # ── Contact Information ──
-    phone_number = Column(String(20), unique=True, nullable=False, index=True)
+    # Live database still stores the primary phone in the legacy `phone` column.
+    # Keep the Python attribute as `phone_number` so the rest of the app contract
+    # stays stable while the ORM targets the real column name.
+    phone_number = Column("phone", String(20), unique=True, nullable=False, index=True)
     phone = synonym("phone_number")
     phone_number_secondary = Column(String(20))
     email = Column(String(255), index=True)
@@ -71,8 +74,11 @@ class Guest(Base):
     )
     verification_method = Column(String(50))  # id_upload, stripe_identity, manual
     verified_at = Column(TIMESTAMP)
-    id_document_type = Column(String(50))  # drivers_license, passport, state_id
-    id_expiration_date = Column(Date)
+    # These expanded verification/contact analytics fields are not present in every
+    # deployed schema yet. Mark them deferred so routine guest queries can still run
+    # against leaner live databases without selecting nonexistent columns up front.
+    id_document_type = deferred(Column(String(50)))  # drivers_license, passport, state_id
+    id_expiration_date = deferred(Column(Date))
     
     # ── Loyalty Program ──
     loyalty_tier = Column(String(20), default="bronze", index=True)
@@ -123,8 +129,8 @@ class Guest(Base):
     
     # ── Legacy Analytics (backward compat) ──
     total_stays = Column(Integer, default=0)
-    total_messages_sent = Column(Integer, default=0)
-    total_messages_received = Column(Integer, default=0)
+    total_messages_sent = deferred(Column(Integer, default=0))
+    total_messages_received = deferred(Column(Integer, default=0))
     average_rating = Column(DECIMAL(3, 2))
     last_stay_date = Column(Date)
     
@@ -142,8 +148,8 @@ class Guest(Base):
     # ── Timestamps ──
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
     updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_contacted_at = Column(TIMESTAMP)
-    last_activity_at = Column(TIMESTAMP)
+    last_contacted_at = deferred(Column(TIMESTAMP))
+    last_activity_at = deferred(Column(TIMESTAMP))
     
     # ── Relationships ──
     reservations = relationship("Reservation", back_populates="guest", cascade="all, delete-orphan")
