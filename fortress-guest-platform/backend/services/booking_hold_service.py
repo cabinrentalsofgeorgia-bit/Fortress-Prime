@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
+from backend.core.event_publisher import EventPublisher
 from backend.integrations.stripe_payments import StripePayments
 from backend.models.guest import Guest
 from backend.models.property import Property
@@ -269,21 +270,48 @@ async def convert_hold_to_reservation(
         )
         if outcome is None:
             return None
-        await db.commit()
     except BookingHoldError:
         await db.rollback()
         raise
     except IntegrityError as exc:
         await db.rollback()
+        orig = getattr(exc, "orig", None)
+        logger.warning(
+            "hold_finalize_integrity_error",
+            payment_intent_id=normalized_payment_intent_id,
+            constraint_name=getattr(orig, "constraint_name", None),
+            pgcode=getattr(orig, "sqlstate", None),
+            detail=str(orig) if orig is not None else str(exc),
+        )
         raise BookingHoldError("Property is not available for these dates", 409) from exc
 
     reservation = outcome.reservation
+    await db.commit()
     logger.info(
         "checkout_hold_converted_via_payment_intent",
         reservation_id=str(reservation.id),
         payment_intent_id=normalized_payment_intent_id,
         already_finalized=outcome.already_finalized,
     )
+    if not outcome.already_finalized:
+        await EventPublisher.publish(
+            "reservation.confirmed",
+            {
+                "reservation_id": str(reservation.id),
+                "confirmation_code": str(reservation.confirmation_code or ""),
+                "guest_id": str(reservation.guest_id),
+                "property_id": str(reservation.property_id),
+                "status": str(reservation.status or "confirmed"),
+                "booking_source": str(reservation.booking_source or "direct"),
+                "check_in_date": reservation.check_in_date.isoformat(),
+                "check_out_date": reservation.check_out_date.isoformat(),
+                "total_amount": float(reservation.total_amount or 0),
+                "paid_amount": float(reservation.paid_amount or 0),
+                "source": "direct_booking_hold",
+                "payment_intent_id": normalized_payment_intent_id,
+            },
+            key=str(reservation.id),
+        )
     return reservation
 
 
