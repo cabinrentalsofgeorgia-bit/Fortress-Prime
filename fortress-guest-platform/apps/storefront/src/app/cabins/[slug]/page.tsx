@@ -233,7 +233,7 @@ export default async function CabinPage({
   if (!data) {
     notFound();
   }
-  if ("archived" in data) {
+  if ("archived" in data && data.archived) {
     permanentRedirect(data.archived.redirect_to || "/");
   }
 

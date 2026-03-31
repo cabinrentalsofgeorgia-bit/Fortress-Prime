@@ -17,6 +17,7 @@ import type {
   PropertyUtility,
   UtilityReading,
   UtilityCostSummary,
+  VrsAddOn,
   StaffUserDetail,
   StaffInvite,
   AutomationRule,
@@ -53,6 +54,10 @@ import type {
   SeoRedirectRemapFilters,
   SeoRedirectRemapQueueResponse,
   SeoRedirectRemapReviewResponse,
+  StreamlineDeterministicQuoteResponse,
+  StreamlineMasterCalendarResponse,
+  StreamlineQuotePropertyCatalogResponse,
+  StreamlineRefreshResponse,
 } from "./types";
 
 // ---------------------------------------------------------------------------
