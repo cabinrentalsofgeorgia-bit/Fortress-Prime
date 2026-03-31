@@ -9,11 +9,17 @@ Failed events are pushed to a dead-letter queue for later inspection.
 """
 import asyncio
 import time
+from pathlib import Path
+from typing import Any
+from uuid import UUID
 
+import httpx
 import structlog
 from sqlalchemy import select
 
+from backend.core.config import settings
 from backend.core.database import AsyncSessionLocal
+from backend.services.hunter_reactivation import draft_reactivation_sequence
 from backend.vrs.infrastructure.event_bus import (
     redis_client,
     EVENT_QUEUE_KEY,
@@ -28,6 +34,133 @@ from backend.vrs.domain.automations import (
 from backend.vrs.application.rule_engine import RuleEngine
 
 logger = structlog.get_logger(service="vrs.event_consumer")
+
+
+def _internal_api_base_url() -> str:
+    base = str(settings.internal_api_base_url or "").strip().rstrip("/")
+    if not base:
+        raise RuntimeError("INTERNAL_API_BASE_URL is not configured")
+    return base
+
+
+def _internal_api_headers() -> dict[str, str]:
+    token = settings.internal_api_bearer_token
+    if not token:
+        raise RuntimeError("INTERNAL_API_TOKEN or SWARM_API_KEY is not configured")
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def _post_fireclaw_interrogate(document_path: str) -> dict[str, Any]:
+    base = _internal_api_base_url()
+    headers = _internal_api_headers()
+    mime = "application/pdf" if document_path.lower().endswith(".pdf") else "application/octet-stream"
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        with open(document_path, "rb") as payload_stream:
+            response = await client.post(
+                f"{base}/api/sandbox/fireclaw/interrogate",
+                headers=headers,
+                files={"file": (Path(document_path).name, payload_stream, mime)},
+            )
+        response.raise_for_status()
+        return response.json()
+
+
+async def _post_legal_threat_assessor(payload: dict[str, Any]) -> dict[str, Any]:
+    base = _internal_api_base_url()
+    headers = _internal_api_headers()
+    async with httpx.AsyncClient(timeout=180.0) as client:
+        response = await client.post(
+            f"{base}/api/agent/tools/legal-threat-assessor",
+            headers=headers,
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+async def handle_docket_updated_event(event: StreamlineEventPayload) -> dict[str, Any]:
+    current = event.current_state or {}
+    case_number = str(current.get("case_number") or "").strip()
+    case_slug = str(current.get("case_slug") or "").strip()
+    document_path = str(current.get("document_path") or "").strip()
+    filing_name = str(current.get("filing_name") or Path(document_path).name).strip()
+    target_vault_path = current.get("target_vault_path")
+
+    if not case_number:
+        raise RuntimeError("docket_updated event missing case_number")
+    if not document_path:
+        raise RuntimeError("docket_updated event missing document_path")
+    if not Path(document_path).is_file():
+        raise RuntimeError(f"docket_updated document_path does not exist: {document_path}")
+
+    logger.info(
+        "docket_updated_decontamination_started",
+        case_number=case_number,
+        case_slug=case_slug or None,
+        document_path=document_path,
+    )
+    sandbox_data = await _post_fireclaw_interrogate(document_path)
+    guest_output = sandbox_data.get("guest") or {}
+    if guest_output.get("status") != "success":
+        raise RuntimeError(
+            f"Fireclaw guest failed: {guest_output.get('message') or sandbox_data.get('stderr') or 'unknown error'}"
+        )
+
+    safe_text = str(guest_output.get("sanitized_content") or "").strip()
+    if not safe_text:
+        raise RuntimeError("Fireclaw decontamination returned empty sanitized_content")
+
+    tool_payload = {
+        "case_number": case_number,
+        "case_slug": case_slug or None,
+        "filing_name": filing_name or None,
+        "document_text": safe_text,
+        "metadata": guest_output.get("metadata") or {},
+        "target_vault_path": target_vault_path,
+        "persist_to_vault": bool(current.get("persist_to_vault", True)),
+    }
+    tool_result = await _post_legal_threat_assessor(tool_payload)
+    if tool_result.get("status") != "success":
+        raise RuntimeError(
+            tool_result.get("error_message") or "Legal threat assessor returned a non-success status"
+        )
+
+    artifact = tool_result.get("data") or {}
+    logger.info(
+        "docket_updated_threat_assessment_completed",
+        case_number=case_number,
+        case_slug=case_slug or None,
+        sha256_hash=(guest_output.get("metadata") or {}).get("sha256_hash"),
+        artifact_path=artifact.get("vault_path") or artifact.get("download_url"),
+        artifact_filename=artifact.get("artifact_filename"),
+    )
+    return {
+        "fireclaw": sandbox_data,
+        "paperclip": tool_result,
+    }
+
+
+async def handle_reactivation_dispatched_event(
+    db: Any,
+    event: StreamlineEventPayload,
+) -> dict[str, Any]:
+    current = event.current_state or {}
+    raw_guest_id = str(current.get("guest_id") or event.entity_id or "").strip()
+    if not raw_guest_id:
+        raise RuntimeError("reactivation_dispatched event missing guest_id")
+
+    try:
+        guest_id = UUID(raw_guest_id)
+    except ValueError as exc:
+        raise RuntimeError(f"reactivation_dispatched guest_id is not a UUID: {raw_guest_id}") from exc
+
+    target_score = int(current.get("target_score") or 0)
+    return await draft_reactivation_sequence(
+        db,
+        guest_id=guest_id,
+        target_score=target_score,
+        trigger_type="EVENT_CONSUMER_REACTIVATION_DISPATCHED",
+    )
 
 
 async def process_automation_queue() -> None:
@@ -55,6 +188,12 @@ async def process_automation_queue() -> None:
 
             _, raw_payload = result
             event = StreamlineEventPayload.model_validate_json(raw_payload)
+            logger.info(
+                "event_dequeued",
+                entity=event.entity_type,
+                entity_id=event.entity_id,
+                event_type=event.event_type,
+            )
 
             # ── Autonomous Dispatcher: IoT checkout → AI → work order ──
             if (
@@ -90,6 +229,13 @@ async def process_automation_queue() -> None:
                     VRSRuleEngine.is_active == True,
                 )
                 matching_rules = (await session.execute(query)).scalars().all()
+                logger.info(
+                    "event_rule_scan",
+                    entity=event.entity_type,
+                    entity_id=event.entity_id,
+                    event_type=event.event_type,
+                    matching_rules=len(matching_rules),
+                )
 
                 fired = 0
                 for rule in matching_rules:
@@ -120,6 +266,30 @@ async def process_automation_queue() -> None:
                         entity_id=event.entity_id,
                         event_type=event.event_type,
                         rules_fired=fired,
+                    )
+                elif event.event_type == "docket_updated":
+                    fallback = await handle_docket_updated_event(event)
+                    logger.info(
+                        "event_processed_via_fallback",
+                        entity=event.entity_type,
+                        entity_id=event.entity_id,
+                        event_type=event.event_type,
+                        fallback="docket_updated_decontamination",
+                        artifact_path=((fallback.get("paperclip") or {}).get("data") or {}).get("vault_path"),
+                    )
+                elif (
+                    event.entity_type == "guest"
+                    and event.event_type == "reactivation_dispatched"
+                ):
+                    fallback = await handle_reactivation_dispatched_event(session, event)
+                    await session.commit()
+                    logger.info(
+                        "event_processed_via_fallback",
+                        entity=event.entity_type,
+                        entity_id=event.entity_id,
+                        event_type=event.event_type,
+                        fallback="draft_reactivation_sequence",
+                        queue_entry_id=((fallback.get("queue_entry") or {}).get("id")),
                     )
 
             consecutive_errors = 0

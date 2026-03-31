@@ -62,6 +62,7 @@ def build_hunter_test_app() -> FastAPI:
 def app() -> FastAPI:
     app = build_hunter_test_app()
     session = AsyncMock()
+    session.add = MagicMock()
 
     async def override_get_db():
         yield session
@@ -215,6 +216,7 @@ async def test_edit_hunter_queue_entry_updates_status_and_message(app: FastAPI) 
     with (
         patch("backend.api.hunter._load_agent_queue_entry", new=AsyncMock(return_value=queue_entry)),
         patch("backend.api.hunter._deliver_hunter_message", new=AsyncMock(return_value=(True, None))),
+        patch("backend.api.hunter.record_audit_event", new=AsyncMock(return_value=None)),
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:

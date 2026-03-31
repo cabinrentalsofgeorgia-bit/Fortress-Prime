@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildBackendUrl } from "@/lib/server/backend-url";
 
-function sessionFromCookieHeader(cookieHeader: string | null): string | null {
-  if (!cookieHeader) return null;
-  const parts = cookieHeader.split(";").map((p) => p.trim());
-  const match = parts.find((p) => p.startsWith("fortress_session="));
-  if (!match) return null;
-  return decodeURIComponent(match.slice("fortress_session=".length));
+const BACKEND = process.env.FGP_BACKEND_URL || "http://localhost:8100";
+const SESSION_COOKIE = "fortress_session";
+
+function extractToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+
+  const sessionCookie = request.cookies.get(SESSION_COOKIE);
+  if (sessionCookie?.value) return sessionCookie.value;
+
+  const ownerCookie = request.cookies.get("fgp_owner_token");
+  if (ownerCookie?.value) return ownerCookie.value;
+
+  const headerToken = request.headers.get("x-fgp-token");
+  if (headerToken) return headerToken;
+
+  return null;
 }
 
 async function forwardToBackend(
@@ -18,27 +30,51 @@ async function forwardToBackend(
   const url = new URL(request.url);
   const target = `${buildBackendUrl(`/api/vrs/${pathString}`)}${url.search}`;
 
-  const cookie = request.headers.get("cookie");
-  const auth = request.headers.get("authorization");
-  const sessionToken = sessionFromCookieHeader(cookie);
+  const token = extractToken(request);
+  const rawCookies = request.headers.get("cookie") || "";
 
   const headers: Record<string, string> = {
     "Content-Type": request.headers.get("content-type") || "application/json",
+    Accept: request.headers.get("accept") || "application/json",
   };
 
-  if (auth) {
-    headers.Authorization = auth;
-  } else if (sessionToken) {
-    headers.Authorization = `Bearer ${sessionToken}`;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
-  if (cookie) headers.Cookie = cookie;
+  if (token) {
+    headers.Cookie = rawCookies
+      ? rawCookies.includes(`${SESSION_COOKIE}=`)
+        ? rawCookies
+        : `${rawCookies}; ${SESSION_COOKIE}=${token}`
+      : `${SESSION_COOKIE}=${token}`;
+  } else if (rawCookies) {
+    headers.Cookie = rawCookies;
+  }
 
   try {
+    console.log(
+      `[BFF] ${request.method} /api/vrs/${pathString} → FGP:8100` +
+        ` | auth=${token ? `Bearer(${token.slice(0, 8)}…)` : "NONE"}` +
+        `${token ? " | cookie-injected" : ""}`,
+    );
     const upstream = await fetch(target, {
       method: request.method,
       headers,
       body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.text(),
+      redirect: "follow",
     });
+
+    if (upstream.status === 401) {
+      console.error(
+        `[BFF] AUTH FAILURE 401 ← FGP:8100 | path=/api/vrs/${pathString}` +
+          ` | token=${token ? "present" : "MISSING"}`,
+      );
+    } else {
+      console.log(
+        `[BFF] ${request.method} /api/vrs/${pathString} ← ${upstream.status}` +
+          ` (${upstream.headers.get("content-type") || "unknown"})`,
+      );
+    }
 
     return new NextResponse(upstream.body, {
       status: upstream.status,
