@@ -19,10 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.api.command_c2 import CONTROL_ACCESS
 from backend.core.config import settings
 from backend.core.database import get_db
-from backend.models.staff import StaffUser
+from backend.core.security import require_manager_or_admin
 from backend.services.agentic_orchestrator import AgenticOrchestrator
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 orchestrator = AgenticOrchestrator()
 logger = logging.getLogger(__name__)
 

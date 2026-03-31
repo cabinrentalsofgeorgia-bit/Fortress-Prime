@@ -23,6 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.http_client import shared_client
+from backend.vrs.domain.automations import StreamlineEventPayload
+from backend.vrs.infrastructure.event_bus import publish_vrs_event
 from backend.services.legal_evidence_ingestion import _chunk_document
 
 logger = structlog.get_logger()
@@ -30,12 +32,12 @@ logger = structlog.get_logger()
 NAS_VAULT_ROOT = Path("/mnt/fortress_nas/legal_vault")
 LOCAL_VAULT_FALLBACK = Path("/home/admin/Fortress-Prime/data/legal_vault")
 QDRANT_COLLECTION = "legal_ediscovery"
-QDRANT_URL = settings.qdrant_url if hasattr(settings, "qdrant_url") else "http://localhost:6333"
-EMBED_URL = settings.embedding_url if hasattr(settings, "embedding_url") else "http://192.168.0.100/api/embeddings"
-EMBED_MODEL = "nomic-embed-text:latest"
+QDRANT_URL = settings.qdrant_url.rstrip("/")
+EMBED_URL = f"{settings.embed_base_url.rstrip('/')}/api/embeddings"
+EMBED_MODEL = settings.embed_model
 
-SWARM_ENDPOINT = "http://192.168.0.100/v1/chat/completions"
-SWARM_MODEL = "qwen2.5:7b"
+SWARM_ENDPOINT = f"{settings.ollama_base_url.rstrip('/')}/v1/chat/completions"
+SWARM_MODEL = settings.ollama_fast_model
 
 
 # ── Pydantic: Privilege Classification ────────────────────────────
@@ -97,9 +99,17 @@ def _extract_text(file_bytes: bytes, mime_type: str, file_name: str) -> str:
             doc.close()
             return "\n\n".join(pages)
         except ImportError:
-            logger.warning("pymupdf_not_installed_falling_back_to_raw")
+            pass
         except Exception as exc:
             logger.warning("pdf_extraction_failed", error=str(exc)[:200])
+        try:
+            from io import BytesIO
+            from pypdf import PdfReader
+
+            reader = PdfReader(BytesIO(file_bytes))
+            return "\n\n".join((page.extract_text() or "") for page in reader.pages)
+        except Exception as exc:
+            logger.warning("pypdf_extraction_failed", file=file_name, error=str(exc)[:200])
         return file_bytes.decode("utf-8", errors="ignore")
 
     if "csv" in mime_type.lower():
@@ -346,6 +356,14 @@ async def process_vault_upload(
         },
     )
     await db.commit()
+    docket_event_emitted = await _emit_docket_updated_event(
+        db=db,
+        case_slug=case_slug,
+        document_id=doc_id,
+        file_name=file_name,
+        mime_type=mime_type,
+        nfs_path=nfs_path,
+    )
 
     try:
         raw_text = _extract_text(file_bytes, mime_type, file_name)
@@ -368,6 +386,7 @@ async def process_vault_upload(
                 "status": "locked_privileged",
                 "document_id": doc_id,
                 "file_name": file_name,
+                "docket_event_emitted": docket_event_emitted,
                 "privilege_type": classification.privilege_type,
                 "confidence": classification.confidence,
                 "reasoning": classification.reasoning,
@@ -453,6 +472,7 @@ async def process_vault_upload(
             "chunks": len(chunks),
             "vectors_indexed": indexed,
             "nfs_path": nfs_path,
+            "docket_event_emitted": docket_event_emitted,
             "privilege_cleared": True,
         }
 
@@ -464,3 +484,67 @@ async def process_vault_upload(
         await db.commit()
         logger.error("vault_upload_failed", doc_id=doc_id, error=str(exc)[:300])
         return {"status": "failed", "document_id": doc_id, "error": str(exc)[:200]}
+
+
+async def _emit_docket_updated_event(
+    *,
+    db: AsyncSession,
+    case_slug: str,
+    document_id: str,
+    file_name: str,
+    mime_type: str,
+    nfs_path: str,
+) -> bool:
+    if "pdf" not in (mime_type or "").lower() and not file_name.lower().endswith(".pdf"):
+        return False
+
+    row = (
+        await db.execute(
+            text(
+                """
+                SELECT case_number, status
+                FROM legal.cases
+                WHERE case_slug = :slug
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ),
+            {"slug": case_slug},
+        )
+    ).mappings().first()
+    if not row or not row.get("case_number"):
+        logger.warning("docket_updated_emit_skipped_missing_case", case_slug=case_slug, document_id=document_id)
+        return False
+
+    event = StreamlineEventPayload(
+        entity_type="legal_document",
+        entity_id=document_id,
+        event_type="docket_updated",
+        previous_state={},
+        current_state={
+            "case_slug": case_slug,
+            "case_number": row["case_number"],
+            "status": row.get("status"),
+            "document_path": nfs_path,
+            "filing_name": file_name,
+            "persist_to_vault": True,
+            "mime_type": mime_type or "application/pdf",
+        },
+    )
+    queued = await publish_vrs_event(event)
+    if queued:
+        logger.info(
+            "docket_updated_event_emitted",
+            case_slug=case_slug,
+            case_number=row["case_number"],
+            document_id=document_id,
+            filing_name=file_name,
+        )
+    else:
+        logger.warning(
+            "docket_updated_emit_failed",
+            case_slug=case_slug,
+            case_number=row["case_number"],
+            document_id=document_id,
+        )
+    return bool(queued)
