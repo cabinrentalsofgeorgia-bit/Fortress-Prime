@@ -20,7 +20,7 @@
  * Environment Variables (set in Cloudflare Worker Settings):
  *   JWT_SECRET            — Same HS256 secret as gateway/auth.py
  *   GARY_HW_FINGERPRINT   — SHA-256 fingerprint of Gary's hardware key
- *   TUNNEL_HOSTNAME       — Cloudflare Tunnel hostname (e.g., fortress-tunnel.cfargotunnel.com)
+ *   TUNNEL_HOSTNAME       — Backend ingress hostname (e.g., api.cabin-rentals-of-georgia.com)
  *   RATE_LIMIT_KV         — KV namespace binding for rate limiting state
  *
  * Deployment:
@@ -45,6 +45,16 @@ const PUBLIC_PATHS = new Set([
   '/openapi.json',
   '/redoc',
 ]);
+
+// Trusted machine-to-machine bridge paths. The backend verifies the swarm Bearer
+// token itself, so the edge should rate-limit and forward these requests rather
+// than forcing the generic JWT/API key contract used by browser/public clients.
+const SWARM_BRIDGE_PATHS = [
+  '/api/agent/tools/',
+  '/api/paperclip/tools/',
+  '/api/agent/execute',
+  '/api/paperclip/execute',
+];
 
 // Paths that require TITAN-level auth (hardware key + admin role)
 const TITAN_PATHS = [
@@ -239,6 +249,10 @@ function isTitanPath(path) {
   return TITAN_PATHS.some(prefix => path.startsWith(prefix));
 }
 
+function isSwarmBridgePath(path) {
+  return SWARM_BRIDGE_PATHS.some(prefix => path.startsWith(prefix));
+}
+
 // =============================================================================
 // VI. MAIN HANDLER
 // =============================================================================
@@ -281,9 +295,15 @@ export default {
       authMethod = 'api_key';
     }
 
+    const swarmBridgePath = isSwarmBridgePath(path);
+
     // --- JWT Verification ---
     let payload = null;
-    if (authMethod === 'jwt') {
+    if (swarmBridgePath && authMethod === 'jwt') {
+      // Trusted bridge path: forward the Bearer token upstream and let the
+      // sovereign backend validate the swarm token contract.
+      authMethod = 'swarm_bridge';
+    } else if (authMethod === 'jwt') {
       payload = await verifyJWT(token, env.JWT_SECRET);
       if (!payload) {
         return jsonResponse(401, {
@@ -321,7 +341,11 @@ export default {
     }
 
     // --- Rate Limiting ---
-    const rlKey = payload ? `user:${payload.sub}` : `ip:${request.headers.get('CF-Connecting-IP')}`;
+    const rlKey = payload
+      ? `user:${payload.sub}`
+      : authMethod === 'swarm_bridge'
+        ? `swarm:${request.headers.get('CF-Connecting-IP') || 'unknown'}`
+        : `ip:${request.headers.get('CF-Connecting-IP')}`;
     const rlLimit = isTitanPath(path) ? TITAN_RATE_LIMIT : DEFAULT_RATE_LIMIT;
     const rl = await checkRateLimit(rlKey, rlLimit, env.RATE_LIMIT_KV);
 
@@ -365,7 +389,7 @@ export default {
  * Proxy a request to the local Fortress cluster via Cloudflare Tunnel.
  */
 async function proxyToTunnel(request, env, path) {
-  const tunnelHost = env.TUNNEL_HOSTNAME || 'fortress-tunnel.cfargotunnel.com';
+  const tunnelHost = env.TUNNEL_HOSTNAME || 'api.cabin-rentals-of-georgia.com';
   const targetUrl = `https://${tunnelHost}${path}${new URL(request.url).search}`;
 
   const proxyHeaders = new Headers(request.headers);

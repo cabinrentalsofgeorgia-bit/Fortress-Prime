@@ -14,6 +14,16 @@ compatibility_date = "2026-02-13"
 # routes = [
 #   { pattern = "api.crog-ai.com/*", zone_name = "crog-ai.com" }
 # ]
+#
+# NOTE:
+# If Cloudflare Browser Integrity / custom WAF rules are enabled on api.crog-ai.com,
+# explicitly allow M2M ingress for:
+#   /api/agent/tools/*
+#   /api/paperclip/tools/*
+#   /api/agent/execute
+#   /api/paperclip/execute
+# Otherwise Paperclip will be blocked upstream with Cloudflare 1010 before the
+# Worker can forward the Bearer swarm token to the sovereign backend.
 
 # KV namespace for rate limiting state
 # Create with: wrangler kv:namespace create "RATE_LIMIT_KV"
@@ -23,4 +33,4 @@ compatibility_date = "2026-02-13"
 
 [vars]
 # Non-secret defaults (secrets go in Cloudflare Dashboard)
-TUNNEL_HOSTNAME = "fortress-tunnel.cfargotunnel.com"
+TUNNEL_HOSTNAME = "api.cabin-rentals-of-georgia.com"
