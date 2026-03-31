@@ -48,6 +48,7 @@ CONCIERGE_PERSONAS_DIR = os.getenv(
     "CONCIERGE_PERSONAS_DIR",
     str(_project_root / "personas" / "concierge"),
 )
+CONCIERGE_ALLOWED_VECTOR_COLLECTIONS = frozenset({"fgp_knowledge"})
 
 _LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
 _LITELLM_KEY = getattr(_cfg, "litellm_master_key", "")
@@ -200,6 +201,11 @@ class ConciergePersona:
     def load(cls, filepath: str) -> ConciergePersona:
         with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
+        vector_collection = data.get("vector_collection", "fgp_knowledge")
+        _validate_concierge_persona_boundary(
+            slug=data.get("slug", os.path.basename(filepath)),
+            vector_collection=vector_collection,
+        )
         return cls(
             name=data["name"],
             slug=data["slug"],
@@ -212,7 +218,7 @@ class ConciergePersona:
             focus_areas=data.get("focus_areas", []),
             trigger_events=data.get("trigger_events", []),
             godhead_prompt=data.get("godhead_prompt", ""),
-            vector_collection=data.get("vector_collection", "fgp_knowledge"),
+            vector_collection=vector_collection,
             created_at=data.get("created_at", ""),
         )
 
@@ -228,10 +234,23 @@ class ConciergePersona:
                 continue
             try:
                 personas.append(cls.load(os.path.join(directory, fname)))
+            except ConciergePersonaBoundaryError:
+                raise
             except Exception as e:  # noqa: BLE001
                 logger.warning("concierge_persona_load_failed file=%s err=%s", fname, e)
         personas.sort(key=lambda p: p.seat)
         return personas
+
+
+class ConciergePersonaBoundaryError(RuntimeError):
+    """Raised when hospitality personas attempt to cross the legal boundary."""
+
+
+def _validate_concierge_persona_boundary(*, slug: str, vector_collection: str) -> None:
+    if vector_collection not in CONCIERGE_ALLOWED_VECTOR_COLLECTIONS:
+        raise ConciergePersonaBoundaryError(
+            f"Concierge persona '{slug}' attempted to access forbidden vector collection '{vector_collection}'."
+        )
 
 
 def _extract_content(data: dict) -> str:

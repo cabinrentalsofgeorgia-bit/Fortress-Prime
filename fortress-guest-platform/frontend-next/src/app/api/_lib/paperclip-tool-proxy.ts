@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const FGP_BACKEND = process.env.FGP_BACKEND_URL || "http://127.0.0.1:8100";
 const SESSION_COOKIE = "fortress_session";
+const INTERNAL_TUNNEL_SIGNATURE =
+  process.env.INTERNAL_API_TOKEN || process.env.SWARM_API_KEY || "";
 
 function buildForwardHeaders(request: NextRequest): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -28,8 +30,16 @@ function buildForwardHeaders(request: NextRequest): Record<string, string> {
   const xff = request.headers.get("x-forwarded-for");
   if (xff) headers["X-Forwarded-For"] = xff;
 
+  const host = request.headers.get("host") || request.nextUrl.host;
+  if (host) headers["X-Forwarded-Host"] = host;
+
   const userAgent = request.headers.get("user-agent");
   if (userAgent) headers["User-Agent"] = userAgent;
+
+  if (INTERNAL_TUNNEL_SIGNATURE) {
+    headers["X-Fortress-Ingress"] = "command_center";
+    headers["X-Fortress-Tunnel-Signature"] = INTERNAL_TUNNEL_SIGNATURE;
+  }
 
   return headers;
 }

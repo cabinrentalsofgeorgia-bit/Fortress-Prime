@@ -71,6 +71,7 @@ PERSONAS_DIR = os.getenv(
     "LEGAL_PERSONAS_DIR",
     "/home/admin/Fortress-Prime/personas/legal",
 )
+LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library"})
 
 from backend.core.config import settings as _cfg
 
@@ -239,6 +240,11 @@ class LegalPersona:
     def load(cls, filepath: str) -> "LegalPersona":
         with open(filepath, "r") as f:
             data = json.load(f)
+        vector_collection = data.get("vector_collection", "legal_library")
+        _validate_legal_persona_boundary(
+            slug=data.get("slug", os.path.basename(filepath)),
+            vector_collection=vector_collection,
+        )
         return cls(
             name=data["name"],
             slug=data["slug"],
@@ -251,7 +257,7 @@ class LegalPersona:
             focus_areas=data.get("focus_areas", []),
             trigger_events=data.get("trigger_events", []),
             godhead_prompt=data.get("godhead_prompt", ""),
-            vector_collection=data.get("vector_collection", "legal_library"),
+            vector_collection=vector_collection,
             created_at=data.get("created_at", ""),
         )
 
@@ -266,10 +272,23 @@ class LegalPersona:
             try:
                 p = cls.load(os.path.join(PERSONAS_DIR, fname))
                 personas.append(p)
+            except LegalPersonaBoundaryError:
+                raise
             except Exception as e:
                 logger.warning("Failed to load persona %s: %s", fname, e)
         personas.sort(key=lambda p: p.seat)
         return personas
+
+
+class LegalPersonaBoundaryError(RuntimeError):
+    """Raised when legal personas attempt to cross into hospitality retrieval."""
+
+
+def _validate_legal_persona_boundary(*, slug: str, vector_collection: str) -> None:
+    if vector_collection not in LEGAL_ALLOWED_VECTOR_COLLECTIONS:
+        raise LegalPersonaBoundaryError(
+            f"Legal persona '{slug}' attempted to access forbidden vector collection '{vector_collection}'."
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════

@@ -2,17 +2,20 @@
 # Deploy: cd gateway && wrangler publish
 #
 # Environment Variables (set via Cloudflare Dashboard > Workers > Settings):
-#   JWT_SECRET           — Same HS256 secret as gateway/auth.py
-#   GARY_HW_FINGERPRINT  — SHA-256 fingerprint of Gary's hardware key
-#   TUNNEL_HOSTNAME      — Cloudflare Tunnel hostname
+#   JWT_SECRET                    — Same HS256 secret as gateway/auth.py
+#   GARY_HW_FINGERPRINT           — SHA-256 fingerprint of Gary's hardware key
+#   COMMAND_CENTER_TUNNEL_HOSTNAME — Private command-center ingress target
+#   PUBLIC_TUNNEL_HOSTNAME        — Public storefront ingress target
+#   INTERNAL_TUNNEL_SIGNATURE     — Shared secret added only on command-center hops
 
 name = "fortress-edge-gateway"
 main = "cloudflare_worker.js"
 compatibility_date = "2026-02-13"
 
-# Custom domain binding
+# Custom domain bindings
 # routes = [
 #   { pattern = "api.crog-ai.com/*", zone_name = "crog-ai.com" }
+#   { pattern = "api.cabin-rentals-of-georgia.com/*", zone_name = "cabin-rentals-of-georgia.com" }
 # ]
 #
 # NOTE:
@@ -33,4 +36,7 @@ compatibility_date = "2026-02-13"
 
 [vars]
 # Non-secret defaults (secrets go in Cloudflare Dashboard)
-TUNNEL_HOSTNAME = "api.cabin-rentals-of-georgia.com"
+COMMAND_CENTER_EDGE_HOSTNAME = "api.crog-ai.com"
+PUBLIC_EDGE_HOSTNAME = "api.cabin-rentals-of-georgia.com"
+COMMAND_CENTER_TUNNEL_HOSTNAME = "api.crog-ai.com"
+PUBLIC_TUNNEL_HOSTNAME = "api.cabin-rentals-of-georgia.com"

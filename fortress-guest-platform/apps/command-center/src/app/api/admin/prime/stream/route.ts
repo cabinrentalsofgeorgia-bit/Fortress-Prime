@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { buildBackendUrl } from "@/lib/server/backend-url";
 
 const SESSION_COOKIE = "fortress_session";
+const INTERNAL_TUNNEL_SIGNATURE =
+  process.env.INTERNAL_API_TOKEN || process.env.SWARM_API_KEY || "";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,6 +37,13 @@ export async function GET(request: NextRequest) {
 
   const rawCookies = request.headers.get("cookie") || "";
   if (rawCookies) headers["Cookie"] = rawCookies;
+
+  const host = request.headers.get("host") || request.nextUrl.host;
+  if (host) headers["X-Forwarded-Host"] = host;
+  if (INTERNAL_TUNNEL_SIGNATURE) {
+    headers["X-Fortress-Ingress"] = "command_center";
+    headers["X-Fortress-Tunnel-Signature"] = INTERNAL_TUNNEL_SIGNATURE;
+  }
 
   console.log(
     `[BFF-SSE] GET /api/admin/prime/stream → FGP:8100 | auth=${token ? "yes" : "NONE"}`,

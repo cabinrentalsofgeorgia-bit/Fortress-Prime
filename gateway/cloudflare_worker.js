@@ -3,7 +3,9 @@
  * ===================================================
  * Implements the JWT Auth Flow from REQUIREMENTS.md Section 2.1.
  *
- * This Worker sits at api.crog-ai.com and handles ALL ingress traffic:
+ * This Worker fronts the sovereign ingress domains and enforces a hard split:
+ *   - api.crog-ai.com                     → command center + admin/internal APIs
+ *   - api.cabin-rentals-of-georgia.com   → public booking + SEO APIs
  *   1. JWT verification (HS256 signed by the local gateway)
  *   2. Hardware Key binding — only Gary's specific key fingerprint can trigger TITAN
  *   3. Rate limiting (100 req/min default per API key)
@@ -20,7 +22,9 @@
  * Environment Variables (set in Cloudflare Worker Settings):
  *   JWT_SECRET            — Same HS256 secret as gateway/auth.py
  *   GARY_HW_FINGERPRINT   — SHA-256 fingerprint of Gary's hardware key
- *   TUNNEL_HOSTNAME       — Backend ingress hostname (e.g., api.cabin-rentals-of-georgia.com)
+ *   COMMAND_CENTER_TUNNEL_HOSTNAME — Command center backend ingress hostname
+ *   PUBLIC_TUNNEL_HOSTNAME         — Public storefront backend ingress hostname
+ *   INTERNAL_TUNNEL_SIGNATURE      — Shared secret forwarded only on command center ingress
  *   RATE_LIMIT_KV         — KV namespace binding for rate limiting state
  *
  * Deployment:
@@ -45,6 +49,10 @@ const PUBLIC_PATHS = new Set([
   '/openapi.json',
   '/redoc',
 ]);
+const DEFAULT_COMMAND_CENTER_EDGE_HOST = 'api.crog-ai.com';
+const DEFAULT_PUBLIC_EDGE_HOST = 'api.cabin-rentals-of-georgia.com';
+const COMMAND_CENTER_INGRESS = 'command_center';
+const PUBLIC_STOREFRONT_INGRESS = 'public_storefront';
 
 // Trusted machine-to-machine bridge paths. The backend verifies the swarm Bearer
 // token itself, so the edge should rate-limit and forward these requests rather
@@ -54,6 +62,35 @@ const SWARM_BRIDGE_PATHS = [
   '/api/paperclip/tools/',
   '/api/agent/execute',
   '/api/paperclip/execute',
+];
+const INTERNAL_ONLY_PATHS = [
+  '/api/internal/',
+  '/api/admin/',
+  '/api/vrs/',
+  '/api/agent/',
+  '/api/paperclip/',
+  '/api/review-queue/',
+  '/api/copilot-queue/',
+  '/api/analytics/',
+  '/api/intelligence/',
+  '/api/rules/',
+  '/api/system/',
+  '/api/telemetry/',
+  '/api/disagg/admin/',
+  '/api/vault/',
+  '/api/openshell/',
+  '/api/internal/legal/',
+];
+const PUBLIC_ONLY_PATHS = [
+  '/api/direct-booking/',
+  '/api/checkout/',
+  '/api/quotes/',
+  '/api/agreements/public/',
+  '/api/guest-portal/',
+  '/api/guestbook/',
+  '/api/storefront/',
+  '/api/seo/',
+  '/api/seo-patches/',
 ];
 
 // Paths that require TITAN-level auth (hardware key + admin role)
@@ -253,6 +290,28 @@ function isSwarmBridgePath(path) {
   return SWARM_BRIDGE_PATHS.some(prefix => path.startsWith(prefix));
 }
 
+function normalizeHost(value) {
+  if (!value) return '';
+  return value.trim().toLowerCase().split(',')[0].split(':')[0];
+}
+
+function isInternalOnlyPath(path) {
+  return INTERNAL_ONLY_PATHS.some(prefix => path.startsWith(prefix));
+}
+
+function isPublicOnlyPath(path) {
+  return PUBLIC_ONLY_PATHS.some(prefix => path.startsWith(prefix));
+}
+
+function resolveIngressTier(host, env) {
+  const normalized = normalizeHost(host);
+  const commandCenterHost = normalizeHost(env.COMMAND_CENTER_EDGE_HOSTNAME || DEFAULT_COMMAND_CENTER_EDGE_HOST);
+  const publicHost = normalizeHost(env.PUBLIC_EDGE_HOSTNAME || DEFAULT_PUBLIC_EDGE_HOST);
+  if (normalized === commandCenterHost) return COMMAND_CENTER_INGRESS;
+  if (normalized === publicHost) return PUBLIC_STOREFRONT_INGRESS;
+  return 'unknown';
+}
+
 // =============================================================================
 // VI. MAIN HANDLER
 // =============================================================================
@@ -262,6 +321,15 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+    const requestHost = normalizeHost(request.headers.get('host') || url.hostname);
+    const ingressTier = resolveIngressTier(requestHost, env);
+
+    if (ingressTier === 'unknown') {
+      return jsonResponse(403, {
+        error: 'Unknown ingress host',
+        host: requestHost,
+      });
+    }
 
     // --- CORS Preflight ---
     if (method === 'OPTIONS') {
@@ -276,9 +344,25 @@ export default {
       });
     }
 
+    if (ingressTier === PUBLIC_STOREFRONT_INGRESS && isInternalOnlyPath(path)) {
+      return jsonResponse(403, {
+        error: 'Internal command-center paths are not served from the public ingress',
+        host: requestHost,
+        path,
+      });
+    }
+
+    if (ingressTier === COMMAND_CENTER_INGRESS && isPublicOnlyPath(path)) {
+      return jsonResponse(403, {
+        error: 'Public booking and SEO paths are not served from the command-center ingress',
+        host: requestHost,
+        path,
+      });
+    }
+
     // --- Public Paths (no auth required) ---
     if (PUBLIC_PATHS.has(path)) {
-      return proxyToTunnel(request, env, path);
+      return proxyToTunnel(request, env, path, ingressTier, requestHost);
     }
 
     // --- Extract Token ---
@@ -364,7 +448,7 @@ export default {
     }
 
     // --- Proxy to Local Cluster (via Cloudflare Tunnel) ---
-    const response = await proxyToTunnel(request, env, path);
+    const response = await proxyToTunnel(request, env, path, ingressTier, requestHost);
 
     // Add rate limit headers to response
     const headers = new Headers(response.headers);
@@ -388,14 +472,21 @@ export default {
 /**
  * Proxy a request to the local Fortress cluster via Cloudflare Tunnel.
  */
-async function proxyToTunnel(request, env, path) {
-  const tunnelHost = env.TUNNEL_HOSTNAME || 'api.cabin-rentals-of-georgia.com';
+async function proxyToTunnel(request, env, path, ingressTier, requestHost) {
+  const tunnelHost = ingressTier === PUBLIC_STOREFRONT_INGRESS
+    ? (env.PUBLIC_TUNNEL_HOSTNAME || env.PUBLIC_EDGE_HOSTNAME || DEFAULT_PUBLIC_EDGE_HOST)
+    : (env.COMMAND_CENTER_TUNNEL_HOSTNAME || env.COMMAND_CENTER_EDGE_HOSTNAME || DEFAULT_COMMAND_CENTER_EDGE_HOST);
   const targetUrl = `https://${tunnelHost}${path}${new URL(request.url).search}`;
 
   const proxyHeaders = new Headers(request.headers);
   proxyHeaders.set('X-Forwarded-For', request.headers.get('CF-Connecting-IP') || 'unknown');
+  proxyHeaders.set('X-Forwarded-Host', requestHost);
   proxyHeaders.set('X-Fortress-Edge', 'cloudflare');
+  proxyHeaders.set('X-Fortress-Ingress', ingressTier);
   proxyHeaders.set('X-Request-ID', crypto.randomUUID());
+  if (ingressTier === COMMAND_CENTER_INGRESS && env.INTERNAL_TUNNEL_SIGNATURE) {
+    proxyHeaders.set('X-Fortress-Tunnel-Signature', env.INTERNAL_TUNNEL_SIGNATURE);
+  }
 
   try {
     return await fetch(targetUrl, {

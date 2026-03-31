@@ -4,6 +4,7 @@ Enterprise guest communication system
 """
 import asyncio
 import os
+import secrets
 import time
 import uuid
 import traceback
@@ -11,6 +12,7 @@ import structlog
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -128,6 +130,89 @@ logger = structlog.get_logger()
 # ---------------------------------------------------------------------------
 _bg_task_heartbeats: dict[str, float] = {}
 INTERNAL_LEGAL_API_PREFIX = "/api/internal/legal"
+INTERNAL_INGRESS_HEADER = "x-fortress-ingress"
+INTERNAL_INGRESS_SIGNATURE_HEADER = "x-fortress-tunnel-signature"
+COMMAND_CENTER_INGRESS = "command_center"
+PUBLIC_STOREFRONT_INGRESS = "public_storefront"
+
+
+def _normalize_host(value: str | None) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    candidate = raw if "://" in raw else f"https://{raw}"
+    parsed = urlparse(candidate)
+    host = (parsed.hostname or raw.split("/")[0].split(":")[0]).strip().lower()
+    return host
+
+
+def _expand_host_variants(value: str | None) -> set[str]:
+    host = _normalize_host(value)
+    if not host:
+        return set()
+    variants = {host}
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return variants
+
+    base = host[4:] if host.startswith("www.") else host
+    variants.add(base)
+    variants.add(f"www.{base}")
+    variants.add(f"api.{base}")
+    return variants
+
+
+def _command_center_hosts() -> set[str]:
+    return _expand_host_variants(settings.frontend_url) | _expand_host_variants(settings.command_center_url)
+
+
+def _storefront_hosts() -> set[str]:
+    return _expand_host_variants(settings.storefront_base_url)
+
+
+def _request_effective_host(request: Request) -> str:
+    forwarded_host = request.headers.get("x-forwarded-host")
+    if forwarded_host:
+        first = forwarded_host.split(",")[0].strip()
+        if first:
+            return _normalize_host(first)
+    return _normalize_host(request.headers.get("host"))
+
+
+def _request_origin_host(request: Request) -> str:
+    for header_name in ("origin", "referer"):
+        header_value = request.headers.get(header_name)
+        if header_value:
+            return _normalize_host(header_value)
+    return ""
+
+
+def _has_valid_internal_tunnel_signature(request: Request) -> bool:
+    expected = settings.internal_api_bearer_token
+    presented = (request.headers.get(INTERNAL_INGRESS_SIGNATURE_HEADER) or "").strip()
+    ingress = (request.headers.get(INTERNAL_INGRESS_HEADER) or "").strip().lower()
+    if not expected or not presented or ingress != COMMAND_CENTER_INGRESS:
+        return False
+    return secrets.compare_digest(presented, expected)
+
+
+def _requires_internal_ingress(request: Request) -> bool:
+    path = request.url.path
+    return path.startswith("/api/") and not is_public_api_path(path, request.method)
+
+
+def _is_allowed_internal_request(request: Request) -> bool:
+    if not _requires_internal_ingress(request):
+        return True
+
+    request_host = _request_effective_host(request)
+    if request_host and request_host in _storefront_hosts():
+        return False
+
+    if _has_valid_internal_tunnel_signature(request):
+        return True
+
+    origin_host = _request_origin_host(request)
+    return origin_host in _command_center_hosts()
 
 
 class GlobalAuthMiddleware(BaseHTTPMiddleware):
@@ -138,6 +223,18 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
 
         if not path.startswith("/api/"):
             return await call_next(request)
+
+        if not _is_allowed_internal_request(request):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "type": "https://fortress/errors/ingress-boundary",
+                    "title": "Ingress Boundary Violation",
+                    "status": 403,
+                    "detail": "Internal routes are restricted to crog-ai.com or signed command-center ingress.",
+                    "instance": path,
+                },
+            )
 
         if is_public_api_path(path, request.method):
             return await call_next(request)
