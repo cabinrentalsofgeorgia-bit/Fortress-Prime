@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import {
+  useAdminInsights,
   useFleetStatus,
   useUpdateSplit,
   useUpdateMarkup,
@@ -9,15 +10,25 @@ import {
   useAdminApproveCapex,
   useAdminRejectCapex,
   useDispatchCapitalCall,
+  useChannexHealth,
+  useChannexHistory,
+  useChannexRemediation,
+  useChannexSyncInventory,
   useOnboardOwner,
   useAdminMarketingBudgets,
-  useAsyncJobArchivePrune,
-  type AsyncJobArchivePruneResult,
+  type AdminInsightItem,
+  type ChannexSyncResult,
+  type ChannexHealthPropertyStatus,
+  type ChannexHistoryItem,
+  type ChannexRemediationResult,
   type FleetProperty,
   type CapitalCallResult,
   type OnboardOwnerPayload,
   type OnboardOwnerResponse,
 } from "@/lib/hooks";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageAdminOps, canManageContracts, canManageDisputes } from "@/lib/roles";
 import ContractManagementPanel from "./components/ContractManagementPanel";
 import DisputeExceptionDesk from "./components/DisputeExceptionDesk";
 import {
@@ -70,7 +81,554 @@ function HealthIcon({ health }: { health: string | undefined }) {
   return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
 }
 
-function CapexReviewSection({ propertyId }: { propertyId: string }) {
+function summarizeInsightMetrics(item: AdminInsightItem): string[] {
+  switch (item.id) {
+    case "operational_overview":
+      return [
+        `Occupancy ${String(item.metrics.occupancy_rate ?? 0)}%`,
+        `Revenue MTD $${fmt(Number(item.metrics.revenue_mtd ?? 0))}`,
+        `${String(item.metrics.unread_messages ?? 0)} unread`,
+      ];
+    case "revenue_signal": {
+      const months = Array.isArray(item.metrics.months)
+        ? (item.metrics.months as Array<Record<string, unknown>>)
+        : [];
+      return months.slice(0, 2).map((month) => {
+        const label = String(month.month ?? "unknown");
+        const revenue = fmt(Number(month.revenue ?? 0));
+        return `${label}: $${revenue}`;
+      });
+    }
+    case "automation_signal":
+      return [
+        `Automation ${String(item.metrics.automation_rate_7d ?? 0)}%`,
+        `${String(item.metrics.auto_outbound_messages_7d ?? 0)} automated`,
+        `${String(item.metrics.unread_inbound_messages ?? 0)} unread inbound`,
+      ];
+    case "maintenance_signal": {
+      const categories = Array.isArray(item.metrics.top_open_categories)
+        ? (item.metrics.top_open_categories as Array<Record<string, unknown>>)
+        : [];
+      const categoryBits = categories.slice(0, 2).map((entry) => {
+        const category = String(entry.category ?? "unknown");
+        const count = String(entry.count ?? 0);
+        return `${category}: ${count}`;
+      });
+      return [
+        `${String(item.metrics.open_work_orders ?? 0)} open`,
+        `${String(item.metrics.urgent_work_orders ?? 0)} urgent`,
+        ...categoryBits,
+      ];
+    }
+    default:
+      return [];
+  }
+}
+
+function channexResultVariant(action: string): {
+  label: string;
+  className: string;
+} {
+  switch (action) {
+    case "mapped_existing":
+      return {
+        label: "Mapped",
+        className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+      };
+    case "would_map_existing":
+      return {
+        label: "Would Map",
+        className: "border-blue-500/30 bg-blue-500/10 text-blue-400",
+      };
+    case "created_property":
+      return {
+        label: "Created",
+        className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+      };
+    case "would_create_property":
+      return {
+        label: "Would Create",
+        className: "border-blue-500/30 bg-blue-500/10 text-blue-400",
+      };
+    case "skipped_existing_mapping":
+      return {
+        label: "Skipped",
+        className: "border-border bg-muted/60 text-muted-foreground",
+      };
+    default:
+      return {
+        label: "Failed",
+        className: "border-red-500/30 bg-red-500/10 text-red-400",
+      };
+  }
+}
+
+function ChannexSyncSection({ canOperate }: { canOperate: boolean }) {
+  const syncMutation = useChannexSyncInventory();
+  const result = syncMutation.data;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-primary" />
+              Channex Inventory Sync
+            </CardTitle>
+            <CardDescription>
+              Match unmapped local properties to upstream Channex inventory, or
+              create a property shell when no upstream match exists.
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+              <Button
+                variant="outline"
+                onClick={() => syncMutation.mutate({ dry_run: true })}
+                disabled={!canOperate || syncMutation.isPending}
+              >
+                {syncMutation.isPending && syncMutation.variables?.dry_run ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                Dry Run
+              </Button>
+            </RoleGatedAction>
+            <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+              <Button
+                onClick={() => syncMutation.mutate({ dry_run: false })}
+                disabled={!canOperate || syncMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {syncMutation.isPending && !syncMutation.variables?.dry_run ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                Sync Upstream Inventory
+              </Button>
+            </RoleGatedAction>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {result ? (
+          <>
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Mode</p>
+                <p className="font-medium">{result.dry_run ? "Dry Run" : "Live Sync"}</p>
+              </div>
+              <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Scanned</p>
+                <p className="font-mono text-lg">{result.scanned_count}</p>
+              </div>
+              <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <p className="text-xs text-muted-foreground">Mapped / Created</p>
+                <p className="font-mono text-lg text-emerald-400">
+                  {result.mapped_count} / {result.created_count}
+                </p>
+              </div>
+              <div className="rounded-md border border-red-500/20 bg-red-500/5 p-3">
+                <p className="text-xs text-muted-foreground">Failed</p>
+                <p className="font-mono text-lg text-red-400">{result.failed_count}</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-md border border-border/60">
+              <div className="max-h-80 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-background">
+                    <tr className="border-b text-xs uppercase text-muted-foreground">
+                      <th className="px-4 py-3 text-left font-medium">Property</th>
+                      <th className="px-4 py-3 text-left font-medium">Status</th>
+                      <th className="px-4 py-3 text-left font-medium">Match</th>
+                      <th className="px-4 py-3 text-left font-medium">Channex ID</th>
+                      <th className="px-4 py-3 text-left font-medium">Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.results.map((row: ChannexSyncResult) => {
+                      const variant = channexResultVariant(row.action);
+                      return (
+                        <tr
+                          key={`${row.property_id}-${row.action}-${row.channex_listing_id ?? "none"}`}
+                          className="border-b border-border/50 align-top"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{row.property_name}</div>
+                            <div className="text-xs text-muted-foreground">{row.slug}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={variant.className}>
+                              {variant.label}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {row.match_strategy ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {row.channex_listing_id ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-red-300">
+                            {row.error ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-md border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+            Run a dry run first to preview which properties will map to Channex
+            and which ones will require a new upstream shell.
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function healthBadge(ok: boolean, label: string) {
+  return (
+    <Badge
+      variant="outline"
+      className={
+        ok
+          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+          : "border-red-500/30 bg-red-500/10 text-red-400"
+      }
+    >
+      {label}
+    </Badge>
+  );
+}
+
+function ChannexHealthSection({ canOperate }: { canOperate: boolean }) {
+  const { data, isLoading, error } = useChannexHealth();
+  const { data: historyData } = useChannexHistory(8);
+  const remediationMutation = useChannexRemediation();
+  const lastRemediationByProperty = new Map<string, ChannexHistoryItem>();
+  const attentionReasons: string[] = [];
+
+  for (const item of historyData?.items ?? []) {
+    for (const result of item.results ?? []) {
+      const propertyId = result.property_id;
+      if (!propertyId || lastRemediationByProperty.has(propertyId)) continue;
+      lastRemediationByProperty.set(propertyId, item);
+    }
+  }
+
+  if (data) {
+    if (data.healthy_count < data.property_count) {
+      attentionReasons.push(`${data.property_count - data.healthy_count} properties are not healthy`);
+    }
+    if (data.duplicate_rate_plan_count > 0) {
+      attentionReasons.push(`${data.duplicate_rate_plan_count} duplicate rate plans detected`);
+    }
+    if (data.ari_ready_count < data.property_count) {
+      attentionReasons.push(`${data.property_count - data.ari_ready_count} properties are missing ARI coverage`);
+    }
+  }
+  if (historyData?.recent_partial_failure_count) {
+    attentionReasons.push(`${historyData.recent_partial_failure_count} recent remediation runs had partial failures`);
+  }
+  const channexHealthy = attentionReasons.length === 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              Channex Health
+            </CardTitle>
+            <CardDescription>
+              Live shell, catalog, and ARI compliance for the current property fleet.
+            </CardDescription>
+          </div>
+          <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+            <Button
+              variant="outline"
+              onClick={() => remediationMutation.mutate({ ari_window_days: 30 })}
+              disabled={!canOperate || remediationMutation.isPending}
+            >
+              {remediationMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Remediate Drift
+            </Button>
+          </RoleGatedAction>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading Channex health...
+          </div>
+        ) : error ? (
+          <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+            {(error as Error).message || "Failed to load Channex health"}
+          </div>
+        ) : data ? (
+          <>
+            <div
+              className={
+                channexHealthy
+                  ? "rounded-md border border-emerald-500/30 bg-emerald-500/10 p-4"
+                  : "rounded-md border border-amber-500/30 bg-amber-500/10 p-4"
+              }
+            >
+              <div className="flex items-start gap-3">
+                <div className="pt-0.5">
+                  {channexHealthy ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-amber-400" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <p
+                    className={
+                      channexHealthy
+                        ? "text-sm font-medium text-emerald-300"
+                        : "text-sm font-medium text-amber-300"
+                    }
+                  >
+                    {channexHealthy ? "Channex fleet healthy" : "Channex attention required"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {channexHealthy
+                      ? "All live properties currently meet shell, preferred catalog, and ARI readiness checks."
+                      : attentionReasons.join(" • ")}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-5">
+              <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Properties</p>
+                <p className="font-mono text-lg">{data.property_count}</p>
+              </div>
+              <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <p className="text-xs text-muted-foreground">Healthy</p>
+                <p className="font-mono text-lg text-emerald-400">{data.healthy_count}</p>
+              </div>
+              <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Shell Ready</p>
+                <p className="font-mono text-lg">{data.shell_ready_count}</p>
+              </div>
+              <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Catalog Ready</p>
+                <p className="font-mono text-lg">{data.catalog_ready_count}</p>
+              </div>
+              <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">ARI Ready / Duplicates</p>
+                <p className="font-mono text-lg">
+                  {data.ari_ready_count} / {data.duplicate_rate_plan_count}
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-md border border-border/60">
+              <div className="max-h-80 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-background">
+                    <tr className="border-b text-xs uppercase text-muted-foreground">
+                      <th className="px-4 py-3 text-left font-medium">Property</th>
+                      <th className="px-4 py-3 text-left font-medium">Shell</th>
+                      <th className="px-4 py-3 text-left font-medium">Catalog</th>
+                      <th className="px-4 py-3 text-left font-medium">ARI</th>
+                      <th className="px-4 py-3 text-left font-medium">Counts</th>
+                      <th className="px-4 py-3 text-left font-medium">Last Remediated</th>
+                      <th className="px-4 py-3 text-left font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.properties.map((row: ChannexHealthPropertyStatus) => {
+                      const lastRun = lastRemediationByProperty.get(row.property_id);
+                      return (
+                        <tr key={row.property_id} className="border-b border-border/50 align-top">
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{row.property_name}</div>
+                            <div className="text-xs text-muted-foreground">{row.slug}</div>
+                          </td>
+                          <td className="px-4 py-3">{healthBadge(row.shell_present, row.shell_present ? "OK" : "Missing")}</td>
+                          <td className="px-4 py-3 space-x-2">
+                            {healthBadge(
+                              row.preferred_room_type_present && row.preferred_rate_plan_present,
+                              row.preferred_room_type_present && row.preferred_rate_plan_present ? "OK" : "Drift",
+                            )}
+                            {row.duplicate_rate_plan_count > 0 ? (
+                              <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-400">
+                                {row.duplicate_rate_plan_count} duplicate
+                              </Badge>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3">
+                            {healthBadge(
+                              row.ari_availability_present && row.ari_restrictions_present,
+                              row.ari_availability_present && row.ari_restrictions_present ? "Ready" : "Missing",
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                            RT {row.room_type_count} / RP {row.rate_plan_count}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            {lastRun ? new Date(lastRun.created_at).toLocaleString() : "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  remediationMutation.mutate({
+                                    property_ids: [row.property_id],
+                                    ari_window_days: 30,
+                                  })
+                                }
+                                disabled={!canOperate || remediationMutation.isPending}
+                              >
+                                Repair
+                              </Button>
+                            </RoleGatedAction>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {remediationMutation.data?.results?.length ? (
+              <div className="overflow-x-auto rounded-md border border-border/60">
+                <div className="max-h-64 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-background">
+                      <tr className="border-b text-xs uppercase text-muted-foreground">
+                        <th className="px-4 py-3 text-left font-medium">Property</th>
+                        <th className="px-4 py-3 text-left font-medium">Shell</th>
+                        <th className="px-4 py-3 text-left font-medium">Catalog</th>
+                        <th className="px-4 py-3 text-left font-medium">ARI</th>
+                        <th className="px-4 py-3 text-left font-medium">Error</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {remediationMutation.data.results.map((row: ChannexRemediationResult) => (
+                        <tr key={row.property_id} className="border-b border-border/50 align-top">
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{row.property_name}</div>
+                            <div className="text-xs text-muted-foreground">{row.slug}</div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{row.shell_action}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{row.catalog_action}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">{row.ari_action}</td>
+                          <td className="px-4 py-3 text-xs text-red-300">{row.error ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+
+            {historyData?.items?.length ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-5">
+                  <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">Recent Runs</p>
+                    <p className="font-mono text-lg">{historyData.count}</p>
+                  </div>
+                  <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3">
+                    <p className="text-xs text-muted-foreground">Recent Success</p>
+                    <p className="font-mono text-lg text-emerald-400">{historyData.recent_success_count}</p>
+                  </div>
+                  <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3">
+                    <p className="text-xs text-muted-foreground">Recent Partial Failure</p>
+                    <p className="font-mono text-lg text-amber-400">{historyData.recent_partial_failure_count}</p>
+                  </div>
+                  <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">Properties Remediated</p>
+                    <p className="font-mono text-lg">{historyData.recent_remediated_property_count}</p>
+                  </div>
+                  <div className="rounded-md border border-red-500/20 bg-red-500/5 p-3">
+                    <p className="text-xs text-muted-foreground">Properties Failed</p>
+                    <p className="font-mono text-lg text-red-400">{historyData.recent_failed_property_count}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+                    <p className="text-xs text-muted-foreground">Last Run</p>
+                    <p className="font-medium">
+                      {historyData.last_run_at ? new Date(historyData.last_run_at).toLocaleString() : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+                    <p className="text-xs text-muted-foreground">Last Successful Run</p>
+                    <p className="font-medium">
+                      {historyData.last_success_at ? new Date(historyData.last_success_at).toLocaleString() : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-md border border-border/60">
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-background">
+                        <tr className="border-b text-xs uppercase text-muted-foreground">
+                          <th className="px-4 py-3 text-left font-medium">When</th>
+                          <th className="px-4 py-3 text-left font-medium">Actor</th>
+                          <th className="px-4 py-3 text-left font-medium">Outcome</th>
+                          <th className="px-4 py-3 text-left font-medium">Scope</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historyData.items.map((item: ChannexHistoryItem) => (
+                          <tr key={item.id} className="border-b border-border/50 align-top">
+                            <td className="px-4 py-3 text-xs text-muted-foreground">
+                              {new Date(item.created_at).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">
+                              {item.actor_email ?? "system"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  item.outcome === "success"
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                                    : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                                }
+                              >
+                                {item.outcome}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">
+                              {item.remediated_count ?? 0}/{item.property_count ?? 0} properties, {item.ari_window_days ?? 0}-day ARI
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CapexReviewSection({ propertyId, canOperate }: { propertyId: string; canOperate: boolean }) {
   const { data, isLoading } = useAdminPendingCapex(propertyId);
   const approveMutation = useAdminApproveCapex();
   const rejectMutation = useAdminRejectCapex();
@@ -217,55 +775,62 @@ function CapexReviewSection({ propertyId }: { propertyId: string }) {
 
               {!dispatched && !isRejecting && (
                 <div className="flex items-center gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    disabled={approveMutation.isPending}
-                    onClick={() =>
-                      approveMutation.mutate({ stagingId: item.id })
-                    }
-                  >
-                    {approveMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    ) : (
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                    )}
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => setRejectingId(item.id)}
-                  >
-                    <XCircle className="h-3 w-3 mr-1" />
-                    Reject
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
-                    disabled={dispatchMutation.isPending}
-                    onClick={() =>
-                      dispatchMutation.mutate(
-                        { stagingId: item.id },
-                        {
-                          onSuccess: (result) => {
-                            setDispatchedLinks((prev) => ({
-                              ...prev,
-                              [item.id]: result,
-                            }));
+                  <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                      disabled={!canOperate || approveMutation.isPending}
+                      onClick={() =>
+                        approveMutation.mutate({ stagingId: item.id })
+                      }
+                    >
+                      {approveMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                      )}
+                      Approve
+                    </Button>
+                  </RoleGatedAction>
+                  <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={!canOperate}
+                      onClick={() => setRejectingId(item.id)}
+                    >
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Reject
+                    </Button>
+                  </RoleGatedAction>
+                  <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                      disabled={!canOperate || dispatchMutation.isPending}
+                      onClick={() =>
+                        dispatchMutation.mutate(
+                          { stagingId: item.id },
+                          {
+                            onSuccess: (result) => {
+                              setDispatchedLinks((prev) => ({
+                                ...prev,
+                                [item.id]: result,
+                              }));
+                            },
                           },
-                        },
-                      )
-                    }
-                  >
-                    {dispatchMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    ) : (
-                      <DollarSign className="h-3 w-3 mr-1" />
-                    )}
-                    Dispatch Capital Call
-                  </Button>
+                        )
+                      }
+                    >
+                      {dispatchMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <DollarSign className="h-3 w-3 mr-1" />
+                      )}
+                      Dispatch Capital Call
+                    </Button>
+                  </RoleGatedAction>
                 </div>
               )}
             </div>
@@ -279,9 +844,11 @@ function CapexReviewSection({ propertyId }: { propertyId: string }) {
 function MasterOwnerCard({
   property,
   onBack,
+  canOperate,
 }: {
   property: FleetProperty;
   onBack: () => void;
+  canOperate: boolean;
 }) {
   const splitMutation = useUpdateSplit();
   const markupMutation = useUpdateMarkup();
@@ -371,26 +938,29 @@ function MasterOwnerCard({
                   className="w-24 font-mono"
                 />
               </div>
-              <Button
-                className="mt-5"
-                onClick={() =>
-                  splitMutation.mutate({
-                    propertyId: property.property_id,
-                    ownerPct,
-                    pmPct,
-                  })
-                }
-                disabled={
-                  splitMutation.isPending ||
-                  Math.round((ownerPct + pmPct) * 100) !== 10000
-                }
-              >
-                {splitMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Save Split"
-                )}
-              </Button>
+              <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                <Button
+                  className="mt-5"
+                  onClick={() =>
+                    splitMutation.mutate({
+                      propertyId: property.property_id,
+                      ownerPct,
+                      pmPct,
+                    })
+                  }
+                  disabled={
+                    !canOperate ||
+                    splitMutation.isPending ||
+                    Math.round((ownerPct + pmPct) * 100) !== 10000
+                  }
+                >
+                  {splitMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Save Split"
+                  )}
+                </Button>
+              </RoleGatedAction>
             </div>
             {Math.round((ownerPct + pmPct) * 100) !== 10000 && (
               <p className="text-xs text-red-400">
@@ -431,23 +1001,25 @@ function MasterOwnerCard({
                   className="w-24 font-mono"
                 />
               </div>
-              <Button
-                variant="secondary"
-                className="mt-5"
-                onClick={() =>
-                  markupMutation.mutate({
-                    propertyId: property.property_id,
-                    markupPct,
-                  })
-                }
-                disabled={markupMutation.isPending}
-              >
-                {markupMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Update Markup"
-                )}
-              </Button>
+              <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                <Button
+                  variant="secondary"
+                  className="mt-5"
+                  onClick={() =>
+                    markupMutation.mutate({
+                      propertyId: property.property_id,
+                      markupPct,
+                    })
+                  }
+                  disabled={!canOperate || markupMutation.isPending}
+                >
+                  {markupMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Update Markup"
+                  )}
+                </Button>
+              </RoleGatedAction>
             </div>
           </CardContent>
         </Card>
@@ -525,7 +1097,7 @@ function MasterOwnerCard({
 
         {/* CapEx Review Section — shows when there are pending items */}
         {(property.pending_capex_count ?? 0) > 0 && (
-          <CapexReviewSection propertyId={property.property_id} />
+          <CapexReviewSection propertyId={property.property_id} canOperate={canOperate} />
         )}
       </div>
     </div>
@@ -536,10 +1108,12 @@ function OnboardOwnerPanel({
   fleet,
   onComplete,
   onGenerateContract,
+  canOperate,
 }: {
   fleet: FleetProperty[];
   onComplete: () => void;
   onGenerateContract?: (ownerId: string) => void;
+  canOperate: boolean;
 }) {
   const onboardMutation = useOnboardOwner();
 
@@ -924,18 +1498,20 @@ function OnboardOwnerPanel({
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <Button
-          onClick={handleSubmit}
-          disabled={!formValid || onboardMutation.isPending}
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          {onboardMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <UserPlus className="h-4 w-4 mr-2" />
-          )}
-          Onboard Owner
-        </Button>
+        <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+          <Button
+            onClick={handleSubmit}
+            disabled={!canOperate || !formValid || onboardMutation.isPending}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {onboardMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <UserPlus className="h-4 w-4 mr-2" />
+            )}
+            Onboard Owner
+          </Button>
+        </RoleGatedAction>
         <Button variant="outline" onClick={onComplete}>
           Cancel
         </Button>
@@ -1083,7 +1659,10 @@ function AsyncJobLedgerArchiveCard() {
 }
 
 export default function AdminOperationsGlass() {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageAdminOps(user);
   const { data, isLoading, error } = useFleetStatus();
+  const { data: adminInsights } = useAdminInsights();
   const { data: mktgBudgets } = useAdminMarketingBudgets();
   const [selectedProperty, setSelectedProperty] =
     useState<FleetProperty | null>(null);
@@ -1117,6 +1696,7 @@ export default function AdminOperationsGlass() {
       <MasterOwnerCard
         property={selectedProperty}
         onBack={() => setSelectedProperty(null)}
+        canOperate={canOperate}
       />
     );
   }
@@ -1129,6 +1709,7 @@ export default function AdminOperationsGlass() {
       <OnboardOwnerPanel
         fleet={fleet}
         onComplete={() => setShowOnboard(false)}
+        canOperate={canOperate}
         onGenerateContract={(ownerId) => {
           setShowOnboard(false);
           setContractPrefillOwnerId(ownerId);
@@ -1143,6 +1724,7 @@ export default function AdminOperationsGlass() {
       <ContractManagementPanel
         fleet={fleet}
         prefillOwnerId={contractPrefillOwnerId}
+        canOperate={canManageContracts(user)}
         onBack={() => {
           setShowContracts(false);
           setContractPrefillOwnerId(undefined);
@@ -1152,7 +1734,7 @@ export default function AdminOperationsGlass() {
   }
 
   if (showDisputes) {
-    return <DisputeExceptionDesk onBack={() => setShowDisputes(false)} />;
+    return <DisputeExceptionDesk onBack={() => setShowDisputes(false)} canOperate={canManageDisputes(user)} />;
   }
 
   return (
@@ -1167,31 +1749,74 @@ export default function AdminOperationsGlass() {
           <p className="text-muted-foreground text-sm">
             Fleet-wide financial controls and property management
           </p>
+          {!canOperate ? (
+            <Badge variant="outline" className="mt-2 text-xs">
+              View-only role
+            </Badge>
+          ) : null}
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowDisputes(true)}
-          >
-            <ShieldAlert className="h-4 w-4 mr-2" />
-            Disputes
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowContracts(true)}
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Contracts
-          </Button>
-          <Button
-            onClick={() => setShowOnboard(true)}
-            className="bg-emerald-600 hover:bg-emerald-700"
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Onboard Owner
-          </Button>
+          <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+            <Button
+              variant="outline"
+              onClick={() => setShowDisputes(true)}
+              disabled={!canOperate}
+            >
+              <ShieldAlert className="h-4 w-4 mr-2" />
+              Disputes
+            </Button>
+          </RoleGatedAction>
+          <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+            <Button
+              variant="outline"
+              onClick={() => setShowContracts(true)}
+              disabled={!canOperate}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Contracts
+            </Button>
+          </RoleGatedAction>
+          <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+            <Button
+              onClick={() => setShowOnboard(true)}
+              disabled={!canOperate}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Onboard Owner
+            </Button>
+          </RoleGatedAction>
         </div>
       </div>
+
+      <ChannexSyncSection canOperate={canOperate} />
+      <ChannexHealthSection canOperate={canOperate} />
+
+      {adminInsights?.items?.length ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {adminInsights.items.map((item) => (
+            <Card key={item.id}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-1.5">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  {item.title}
+                </CardTitle>
+                <CardDescription>{item.summary}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {summarizeInsightMetrics(item).map((metric) => (
+                  <div
+                    key={metric}
+                    className="rounded-md bg-muted/50 px-2.5 py-2 text-xs font-mono text-muted-foreground"
+                  >
+                    {metric}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
 
       {/* Global Totals HUD */}
       <div className="grid gap-3 md:grid-cols-5">
@@ -1309,13 +1934,15 @@ export default function AdminOperationsGlass() {
                       <HealthIcon health={p.health} />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedProperty(p)}
-                      >
-                        Manage
-                      </Button>
+                      <RoleGatedAction allowed={canOperate} reason="Admin role required for financial controls.">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedProperty(p)}
+                        >
+                          Manage
+                        </Button>
+                      </RoleGatedAction>
                     </td>
                   </tr>
                 ))}

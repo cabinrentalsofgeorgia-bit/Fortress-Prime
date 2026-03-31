@@ -25,12 +25,15 @@ import type {
   EmailTemplateSummary,
   FullEmailTemplate,
   VrsMessageStats,
+  VrsHunterQueueActionResponse,
+  VrsHunterQueueResponse,
+  VrsHunterQueueStats,
+  VrsHunterAuditLogItem,
+  VrsHunterDispatchResponse,
+  VrsHunterTarget,
   VrsReservationDetailResponse,
-  StreamlineDeterministicQuoteResponse,
-  StreamlineMasterCalendarResponse,
-  StreamlineQuotePropertyCatalogResponse,
-  StreamlineRefreshResponse,
-  VrsAddOn,
+  VrsConflictQueueResponse,
+  VrsAdjudicationDetail,
   SystemHealthResponse,
   CommandC2ActionResponse,
   CommandC2PulseResponse,
@@ -905,6 +908,14 @@ export function useOwnerReservations(ownerId: string) {
   });
 }
 
+export function useOwnerWorkOrders(ownerId: string) {
+  return useQuery<WorkOrder[]>({
+    queryKey: ["owner-work-orders", ownerId],
+    queryFn: () => api.get<WorkOrder[]>(`/api/owner/work-orders/${ownerId}`),
+    enabled: !!ownerId,
+  });
+}
+
 export function useOwnerBalances(ownerId: string) {
   return useQuery({
     queryKey: ["owner-balances", ownerId],
@@ -1761,11 +1772,215 @@ export function useVrsMessageStats() {
   });
 }
 
+export function useVrsHunterTargets(enabled = true) {
+  return useQuery<VrsHunterTarget[]>({
+    queryKey: ["vrs", "hunter-targets"],
+    queryFn: () => api.get<VrsHunterTarget[]>("/api/vrs/hunter/targets"),
+    enabled,
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+}
+
+export function useDispatchHunterTarget() {
+  const qc = useQueryClient();
+  return useMutation<
+    VrsHunterDispatchResponse,
+    Error,
+    { guestId: string; fullName: string; targetScore: number }
+  >({
+    mutationFn: ({ guestId, fullName, targetScore }) =>
+      api.hunter.dispatch<VrsHunterDispatchResponse>({
+        guest_id: guestId,
+        full_name: fullName,
+        target_score: targetScore,
+      }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue-stats"] });
+      toast.success(data.message || "Hunter dispatch queued");
+    },
+    onError: (err) => toast.error(err.message || "Failed to dispatch AI agent"),
+  });
+}
+
+export function useVrsHunterQueue(status = "pending_review", limit = 20) {
+  return useQuery<VrsHunterQueueResponse>({
+    queryKey: ["vrs", "hunter-queue", status, limit],
+    queryFn: () => api.hunter.queue<VrsHunterQueueResponse>(status, limit),
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+  });
+}
+
+export function useVrsHunterQueueStats() {
+  return useQuery<VrsHunterQueueStats>({
+    queryKey: ["vrs", "hunter-queue-stats"],
+    queryFn: () => api.hunter.metrics<VrsHunterQueueStats>(),
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+  });
+}
+
+export function useVrsHunterAuditLog(limit = 40) {
+  return useQuery<VrsHunterAuditLogItem[]>({
+    queryKey: ["vrs", "hunter-audit-log", limit],
+    queryFn: async () => {
+      const rows = await api.get<VrsHunterAuditLogItem[]>("/api/openshell/audit/log", { limit });
+      return rows.filter((row) => row.action.startsWith("hunter."));
+    },
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+  });
+}
+
+export function useApproveHunterDraft() {
+  const qc = useQueryClient();
+  return useMutation<
+    VrsHunterQueueActionResponse,
+    Error,
+    { entryId: string; channel: "email" | "sms" }
+  >({
+    mutationFn: ({ entryId, channel }) =>
+      api.hunter.approveVia<VrsHunterQueueActionResponse>(entryId, channel),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue-stats"] });
+      if (data.delivery_status === "sent") {
+        toast.success(`Hunter draft delivered via ${data.delivery_channel || "email"}`);
+      } else {
+        toast.error("Hunter delivery failed");
+      }
+    },
+    onError: (err) => toast.error(err.message || "Failed to approve Hunter draft"),
+  });
+}
+
+export function useEditHunterDraft() {
+  const qc = useQueryClient();
+  return useMutation<
+    VrsHunterQueueActionResponse,
+    Error,
+    { entryId: string; finalMessage: string; channel: "email" | "sms" }
+  >({
+    mutationFn: ({ entryId, finalMessage, channel }) =>
+      api.hunter.editVia<VrsHunterQueueActionResponse>(entryId, finalMessage, channel),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue-stats"] });
+      if (data.delivery_status === "sent") {
+        toast.success(`Edited Hunter draft delivered via ${data.delivery_channel || "email"}`);
+      } else {
+        toast.error("Edited Hunter delivery failed");
+      }
+    },
+    onError: (err) => toast.error(err.message || "Failed to update Hunter draft"),
+  });
+}
+
+export function useRejectHunterDraft() {
+  const qc = useQueryClient();
+  return useMutation<
+    VrsHunterQueueActionResponse,
+    Error,
+    { entryId: string; reason?: string }
+  >({
+    mutationFn: ({ entryId, reason }) =>
+      api.hunter.reject<VrsHunterQueueActionResponse>(entryId, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue-stats"] });
+      toast.success("Hunter draft rejected");
+    },
+    onError: (err) => toast.error(err.message || "Failed to reject Hunter draft"),
+  });
+}
+
+export function useRetryHunterDraft() {
+  const qc = useQueryClient();
+  return useMutation<
+    VrsHunterQueueActionResponse,
+    Error,
+    { entryId: string; channel: "email" | "sms" }
+  >({
+    mutationFn: ({ entryId, channel }) =>
+      api.hunter.retryVia<VrsHunterQueueActionResponse>(entryId, channel),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue-stats"] });
+      if (data.delivery_status === "sent") {
+        toast.success(`Hunter delivery retried via ${data.delivery_channel || "email"}`);
+      } else {
+        toast.error("Hunter retry failed");
+      }
+    },
+    onError: (err) => toast.error(err.message || "Failed to retry Hunter delivery"),
+  });
+}
+
 export function useVrsReservationFull(id: string | undefined) {
   return useQuery<VrsReservationDetailResponse | Reservation>({
     queryKey: ["vrs", "reservation", id],
     queryFn: () => api.get(`/api/reservations/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useVrsConflictQueue(limit = 25) {
+  return useQuery<VrsConflictQueueResponse>({
+    queryKey: ["vrs", "conflict-queue", limit],
+    queryFn: () => api.get("/api/vrs/queue", { limit, held_only: true }),
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+  });
+}
+
+export function useSyncVrsLedger(limit = 25) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<VrsConflictQueueResponse>(`/api/vrs/sync?limit=${limit}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vrs", "conflict-queue"] });
+      toast.success("Ledger synced");
+    },
+    onError: (err: Error) => toast.error(err.message || "Ledger sync failed"),
+  });
+}
+
+export function useVrsAdjudicationDetail(id: string | undefined) {
+  return useQuery<VrsAdjudicationDetail>({
+    queryKey: ["vrs", "adjudication", id],
+    queryFn: () => api.get(`/api/vrs/adjudications/${id}`),
+    enabled: !!id,
+    staleTime: 5_000,
+  });
+}
+
+export function useOverrideVrsDispatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+      consensusConviction,
+      minimumConviction = 0,
+    }: {
+      id: string;
+      body?: string;
+      consensusConviction?: number;
+      minimumConviction?: number;
+    }) =>
+      api.post(`/api/vrs/adjudications/${id}/override-dispatch`, {
+        body,
+        consensus_conviction: consensusConviction,
+        minimum_conviction: minimumConviction,
+      }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ["vrs", "conflict-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "adjudication", variables.id] });
+      toast.success("Override dispatched");
+    },
+    onError: (err: Error) => toast.error(err.message || "Override dispatch failed"),
   });
 }
 
@@ -2083,6 +2298,38 @@ export interface FleetStatusResponse {
   };
 }
 
+export interface AdminInsightItem {
+  id: string;
+  title: string;
+  summary: string;
+  metrics: Record<string, unknown>;
+}
+
+export interface AdminInsightsResponse {
+  items: AdminInsightItem[];
+  count: number;
+  requested_limit: number;
+  source_table_present: boolean;
+  live_data_supported: boolean;
+  status: string;
+  message: string;
+  replacement_contract: {
+    type: string;
+    supported_endpoints: Array<Record<string, unknown>>;
+    dashboard_routes: string[];
+    source_tables?: string[];
+    notes: string[];
+  };
+}
+
+export function useAdminInsights(limit = 4) {
+  return useQuery<AdminInsightsResponse>({
+    queryKey: ["admin", "insights", limit],
+    queryFn: () => api.get("/api/admin/insights", { limit }),
+    refetchInterval: 30_000,
+  });
+}
+
 export function useFleetStatus() {
   return useQuery<FleetStatusResponse>({
     queryKey: ["admin", "fleet-status"],
@@ -2254,6 +2501,172 @@ export function useOnboardOwner() {
     },
     onError: (err) =>
       toast.error(err.message || "Failed to onboard owner"),
+  });
+}
+
+export interface ChannexSyncInventoryRequest {
+  dry_run?: boolean;
+  limit?: number | null;
+  property_ids?: string[] | null;
+}
+
+export interface ChannexSyncResult {
+  property_id: string;
+  slug: string;
+  property_name: string;
+  action: string;
+  channex_listing_id: string | null;
+  match_strategy: string | null;
+  error: string | null;
+}
+
+export interface ChannexSyncInventoryResponse {
+  status: string;
+  dry_run: boolean;
+  scanned_count: number;
+  created_count: number;
+  mapped_count: number;
+  failed_count: number;
+  results: ChannexSyncResult[];
+}
+
+export function useChannexSyncInventory() {
+  const qc = useQueryClient();
+  return useMutation<
+    ChannexSyncInventoryResponse,
+    Error,
+    ChannexSyncInventoryRequest | undefined
+  >({
+    mutationFn: (payload) => api.post("/api/admin/channex/sync-inventory", payload ?? {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin", "fleet-status"] });
+      const mode = data.dry_run ? "dry run" : "sync";
+      toast.success(
+        `Channex ${mode} complete — ${data.mapped_count} mapped, ${data.created_count} created, ${data.failed_count} failed`,
+      );
+    },
+    onError: (err) =>
+      toast.error(err.message || "Failed to sync Channex inventory"),
+  });
+}
+
+export interface ChannexHealthPropertyStatus {
+  property_id: string;
+  streamline_property_id: string;
+  slug: string;
+  property_name: string;
+  channex_listing_id: string | null;
+  shell_present: boolean;
+  preferred_room_type_present: boolean;
+  preferred_rate_plan_present: boolean;
+  room_type_count: number;
+  rate_plan_count: number;
+  duplicate_rate_plan_count: number;
+  ari_availability_present: boolean;
+  ari_restrictions_present: boolean;
+  healthy: boolean;
+}
+
+export interface ChannexHealthResponse {
+  property_count: number;
+  healthy_count: number;
+  shell_ready_count: number;
+  catalog_ready_count: number;
+  ari_ready_count: number;
+  duplicate_rate_plan_count: number;
+  properties: ChannexHealthPropertyStatus[];
+}
+
+export function useChannexHealth() {
+  return useQuery<ChannexHealthResponse>({
+    queryKey: ["admin", "channex-health"],
+    queryFn: () => api.get("/api/admin/channex/health"),
+    refetchInterval: 60_000,
+  });
+}
+
+export interface ChannexRemediationRequest {
+  property_ids?: string[] | null;
+  ari_window_days?: number;
+}
+
+export interface ChannexRemediationResult {
+  property_id: string;
+  slug: string;
+  property_name: string;
+  channex_listing_id: string | null;
+  shell_action: string;
+  catalog_action: string;
+  ari_action: string;
+  room_type_id: string | null;
+  rate_plan_id: string | null;
+  error: string | null;
+}
+
+export interface ChannexRemediationResponse {
+  status: string;
+  property_count: number;
+  remediated_count: number;
+  failed_count: number;
+  results: ChannexRemediationResult[];
+}
+
+export function useChannexRemediation() {
+  const qc = useQueryClient();
+  return useMutation<
+    ChannexRemediationResponse,
+    Error,
+    ChannexRemediationRequest | undefined
+  >({
+    mutationFn: (payload) => api.post("/api/admin/channex/remediate", payload ?? {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin", "channex-health"] });
+      toast.success(
+        `Channex remediation complete — ${data.remediated_count} remediated, ${data.failed_count} failed`,
+      );
+    },
+    onError: (err) => toast.error(err.message || "Failed to remediate Channex drift"),
+  });
+}
+
+export interface ChannexHistoryItem {
+  id: string;
+  action: string;
+  outcome: string;
+  actor_email: string | null;
+  created_at: string;
+  request_id: string | null;
+  property_count: number | null;
+  remediated_count: number | null;
+  failed_count: number | null;
+  ari_window_days: number | null;
+  results: Array<{
+    property_id?: string;
+    slug?: string;
+    property_name?: string;
+    shell_action?: string;
+    catalog_action?: string;
+    ari_action?: string;
+    error?: string | null;
+  }>;
+}
+
+export interface ChannexHistoryResponse {
+  count: number;
+  recent_success_count: number;
+  recent_partial_failure_count: number;
+  recent_remediated_property_count: number;
+  recent_failed_property_count: number;
+  last_run_at: string | null;
+  last_success_at: string | null;
+  items: ChannexHistoryItem[];
+}
+
+export function useChannexHistory(limit = 10) {
+  return useQuery<ChannexHistoryResponse>({
+    queryKey: ["admin", "channex-history", limit],
+    queryFn: () => api.get("/api/admin/channex/history", { limit }),
+    refetchInterval: 60_000,
   });
 }
 

@@ -7,6 +7,7 @@ import {
   useUploadDisputeEvidence,
   type DisputeListItem,
 } from "@/lib/hooks";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
 import {
   Card,
   CardContent,
@@ -101,8 +102,10 @@ function deadlineLabel(days: number | null): string {
 
 export default function DisputeExceptionDesk({
   onBack,
+  canOperate = true,
 }: {
   onBack: () => void;
+  canOperate?: boolean;
 }) {
   const { data: stats, isLoading: statsLoading } = useDisputeStats();
   const { data: disputeList, isLoading: listLoading } = useDisputes();
@@ -411,20 +414,22 @@ export default function DisputeExceptionDesk({
 
                 {/* Evidence PDF Download */}
                 {selectedDispute.has_evidence_pdf && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    asChild
-                  >
-                    <a
-                      href={`/api/admin/disputes/${selectedDispute.dispute_id}/evidence`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      asChild
                     >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Evidence Packet (PDF)
-                    </a>
-                  </Button>
+                      <a
+                        href={`/api/admin/disputes/${selectedDispute.dispute_id}/evidence`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Evidence Packet (PDF)
+                      </a>
+                    </Button>
+                  </RoleGatedAction>
                 )}
 
                 {/* Manual Upload */}
@@ -444,23 +449,25 @@ export default function DisputeExceptionDesk({
                     accept="image/*,.pdf,.doc,.docx"
                     className="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
                   />
-                  <Button
-                    onClick={handleUpload}
-                    disabled={uploadMutation.isPending}
-                    className="w-full"
-                  >
-                    {uploadMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading & Re-compiling…
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Re-compile &amp; Submit to Stripe
-                      </>
-                    )}
-                  </Button>
+                  <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                    <Button
+                      onClick={handleUpload}
+                      disabled={!canOperate || uploadMutation.isPending}
+                      className="w-full"
+                    >
+                      {uploadMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Uploading & Re-compiling…
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Re-compile &amp; Submit to Stripe
+                        </>
+                      )}
+                    </Button>
+                  </RoleGatedAction>
                 </div>
 
                 {selectedDispute.submitted_to_stripe_at && (
