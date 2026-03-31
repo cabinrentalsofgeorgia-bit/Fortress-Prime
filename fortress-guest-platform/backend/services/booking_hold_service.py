@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
-from backend.core.event_publisher import EventPublisher
+from backend.core.event_publisher import publish_event
 from backend.integrations.stripe_payments import StripePayments
 from backend.models.guest import Guest
 from backend.models.property import Property
@@ -58,6 +58,25 @@ def _signed_quote_hold_error(code: str) -> BookingHoldError:
     }
     message, status = mapping.get(code, ("Invalid signed quote", 422))
     return BookingHoldError(message, status)
+
+
+async def _emit_reservation_confirmed(reservation: Any) -> None:
+    await publish_event(
+        "reservation.confirmed",
+        {
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "property_id": str(reservation.property_id) if reservation.property_id else None,
+            "guest_id": str(reservation.guest_id) if reservation.guest_id else None,
+            "booking_source": reservation.booking_source,
+            "status": reservation.status,
+            "check_in_date": reservation.check_in_date.isoformat() if reservation.check_in_date else None,
+            "check_out_date": reservation.check_out_date.isoformat() if reservation.check_out_date else None,
+            "total_amount": float(reservation.total_amount or 0),
+            "paid_amount": float(reservation.paid_amount or 0),
+        },
+        key=reservation.confirmation_code or str(reservation.id),
+    )
 
 
 async def create_checkout_hold(
@@ -236,11 +255,14 @@ async def finalize_hold_as_reservation(
     """
     _ = require_succeeded_intent  # API compatibility; client path always verifies PI with Stripe.
     try:
-        return await reservation_finalization_service.finalize_by_hold_id(
+        outcome = await reservation_finalization_service.finalize_by_hold_id(
             db,
             hold_id=hold_id,
             verification_mode="client",
         )
+        if not outcome.already_finalized:
+            await _emit_reservation_confirmed(outcome.reservation)
+        return outcome
     except BookingHoldError:
         await db.rollback()
         raise
@@ -270,23 +292,15 @@ async def convert_hold_to_reservation(
         )
         if outcome is None:
             return None
+        await db.commit()
     except BookingHoldError:
         await db.rollback()
         raise
     except IntegrityError as exc:
         await db.rollback()
-        orig = getattr(exc, "orig", None)
-        logger.warning(
-            "hold_finalize_integrity_error",
-            payment_intent_id=normalized_payment_intent_id,
-            constraint_name=getattr(orig, "constraint_name", None),
-            pgcode=getattr(orig, "sqlstate", None),
-            detail=str(orig) if orig is not None else str(exc),
-        )
         raise BookingHoldError("Property is not available for these dates", 409) from exc
 
     reservation = outcome.reservation
-    await db.commit()
     logger.info(
         "checkout_hold_converted_via_payment_intent",
         reservation_id=str(reservation.id),
@@ -294,24 +308,7 @@ async def convert_hold_to_reservation(
         already_finalized=outcome.already_finalized,
     )
     if not outcome.already_finalized:
-        await EventPublisher.publish(
-            "reservation.confirmed",
-            {
-                "reservation_id": str(reservation.id),
-                "confirmation_code": str(reservation.confirmation_code or ""),
-                "guest_id": str(reservation.guest_id),
-                "property_id": str(reservation.property_id),
-                "status": str(reservation.status or "confirmed"),
-                "booking_source": str(reservation.booking_source or "direct"),
-                "check_in_date": reservation.check_in_date.isoformat(),
-                "check_out_date": reservation.check_out_date.isoformat(),
-                "total_amount": float(reservation.total_amount or 0),
-                "paid_amount": float(reservation.paid_amount or 0),
-                "source": "direct_booking_hold",
-                "payment_intent_id": normalized_payment_intent_id,
-            },
-            key=str(reservation.id),
-        )
+        await _emit_reservation_confirmed(reservation)
     return reservation
 
 

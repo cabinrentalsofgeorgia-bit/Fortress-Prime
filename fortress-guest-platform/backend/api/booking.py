@@ -9,10 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.services.direct_booking import DirectBookingEngine
 from backend.services.reservation_engine import ReservationEngine
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 booking_engine = DirectBookingEngine()
 reservation_engine = ReservationEngine()
 
