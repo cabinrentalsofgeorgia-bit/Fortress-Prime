@@ -59,7 +59,7 @@ export function JurisprudenceRadar({ slug }: { slug: string }) {
     setPrecLoading(true);
     try {
       const data = await api.post<PrecedentResult>(
-        `/api/legal/cases/${slug}/jurisprudence/precedent`,
+        `/api/internal/legal/cases/${slug}/jurisprudence/precedent`,
         { keywords: precKeywords.split(/\s+/).filter(Boolean) },
       );
       setPrecResult(data);
@@ -76,7 +76,7 @@ export function JurisprudenceRadar({ slug }: { slug: string }) {
     setReconLoading(true);
     try {
       const data = await api.post<ReconResult>(
-        `/api/legal/cases/${slug}/jurisprudence/attorney-recon`,
+        `/api/internal/legal/cases/${slug}/jurisprudence/attorney-recon`,
         { query: reconQuery.trim() },
       );
       setReconResult(data);

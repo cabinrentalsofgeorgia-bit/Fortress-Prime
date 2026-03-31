@@ -1,5 +1,5 @@
 """
-E-Discovery API — POST /api/legal/discovery/extract
+E-Discovery API — POST /api/internal/legal/discovery/extract
 ====================================================
 Accepts a list of entity keywords, runs the e-discovery pipeline against
 the legacy Command Center database (fortress_db), and returns a unified
@@ -14,9 +14,10 @@ Hooked into:
 """
 
 import structlog
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
+from backend.core.security import require_manager_or_admin
 from backend.services.ediscovery_agent import run_discovery
 
 logger = structlog.get_logger()
@@ -68,7 +69,10 @@ class DiscoveryResponse(BaseModel):
     summary="Run automated e-discovery extraction",
     description="Search all legacy databases for entity mentions and return a unified evidence timeline.",
 )
-async def extract_discovery(request: DiscoveryRequest) -> DiscoveryResponse:
+async def extract_discovery(
+    request: DiscoveryRequest,
+    _user=Depends(require_manager_or_admin),
+) -> DiscoveryResponse:
     logger.info(
         "ediscovery_api_request",
         entities=request.entities,

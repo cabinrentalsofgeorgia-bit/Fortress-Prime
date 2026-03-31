@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageLegalOps } from "@/lib/roles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,9 +88,11 @@ function hasTextFile(filePath: string | null | undefined): boolean {
 function CorrespondenceVaultRow({
   item,
   slug,
+  canOperate,
 }: {
   item: Correspondence;
   slug: string;
+  canOperate: boolean;
 }) {
   const statusMutation = useUpdateCorrespondenceStatus(slug);
   const [downloading, setDownloading] = useState(false);
@@ -164,19 +169,21 @@ function CorrespondenceVaultRow({
             {item.file_path && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={handleDownload}
-                    disabled={downloading}
-                  >
-                    {downloading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
+                  <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={handleDownload}
+                      disabled={!canOperate || downloading}
+                    >
+                      {downloading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </RoleGatedAction>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>Download file</p>
@@ -187,19 +194,21 @@ function CorrespondenceVaultRow({
             {hasTextFile(item.file_path) && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={handleCopy}
-                    disabled={copying}
-                  >
-                    {copying ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <ClipboardCopy className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
+                  <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={handleCopy}
+                      disabled={!canOperate || copying}
+                    >
+                      {copying ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ClipboardCopy className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </RoleGatedAction>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>Copy draft to clipboard</p>
@@ -210,19 +219,21 @@ function CorrespondenceVaultRow({
             {item.status === "draft" && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-green-500 hover:text-green-400 hover:bg-green-500/10"
-                    onClick={handleMarkSent}
-                    disabled={statusMutation.isPending}
-                  >
-                    {statusMutation.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
+                  <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                      onClick={handleMarkSent}
+                      disabled={!canOperate || statusMutation.isPending}
+                    >
+                      {statusMutation.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </RoleGatedAction>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>Mark as sent</p>
@@ -236,7 +247,7 @@ function CorrespondenceVaultRow({
   );
 }
 
-function CorrespondenceVault({ slug }: { slug: string }) {
+function CorrespondenceVault({ slug, canOperate }: { slug: string; canOperate: boolean }) {
   const { data, isLoading } = useCaseCorrespondence(slug);
 
   if (isLoading) {
@@ -270,7 +281,7 @@ function CorrespondenceVault({ slug }: { slug: string }) {
             Pending Drafts ({drafts.length})
           </h4>
           {drafts.map((c: Correspondence) => (
-            <CorrespondenceVaultRow key={c.id} item={c} slug={slug} />
+            <CorrespondenceVaultRow key={c.id} item={c} slug={slug} canOperate={canOperate} />
           ))}
         </div>
       )}
@@ -280,7 +291,7 @@ function CorrespondenceVault({ slug }: { slug: string }) {
             History ({others.length})
           </h4>
           {others.map((c: Correspondence) => (
-            <CorrespondenceVaultRow key={c.id} item={c} slug={slug} />
+            <CorrespondenceVaultRow key={c.id} item={c} slug={slug} canOperate={canOperate} />
           ))}
         </div>
       )}
@@ -311,6 +322,8 @@ function TimelineView({ slug }: { slug: string }) {
 }
 
 export function DocumentViewer({ legalCase, slug }: { legalCase: LegalCase; slug: string }) {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageLegalOps(user);
   return (
     <div className="h-full overflow-y-auto p-4">
       <Tabs defaultValue="document">
@@ -329,7 +342,7 @@ export function DocumentViewer({ legalCase, slug }: { legalCase: LegalCase; slug
           <CaseNotesView legalCase={legalCase} />
         </TabsContent>
         <TabsContent value="correspondence" className="mt-3">
-          <CorrespondenceVault slug={slug} />
+        <CorrespondenceVault slug={slug} canOperate={canOperate} />
         </TabsContent>
         <TabsContent value="timeline" className="mt-3">
           <TimelineView slug={slug} />

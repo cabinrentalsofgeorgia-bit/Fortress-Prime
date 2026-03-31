@@ -19,7 +19,7 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from sqlalchemy import Boolean, Column, DateTime, String, delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,6 +56,25 @@ class LegalEdge(BaseModel):
 class CaseGraphExtraction(BaseModel):
     nodes: list[LegalEntity] = Field(default_factory=list)
     edges: list[LegalEdge] = Field(default_factory=list)
+
+
+class LegalDiscoveryDraftCandidate(BaseModel):
+    """Discrete claim or discovery item extracted from raw evidence."""
+
+    category: str = Field(
+        default="CLAIM",
+        description="INTERROGATORY|RFP|ADMISSION|CLAIM",
+    )
+    content: str = Field(..., min_length=1)
+    rationale: str = Field(default="")
+
+
+class RawEvidenceExtraction(BaseModel):
+    """Graph nodes/edges plus discoverable claim lines from a raw text payload."""
+
+    nodes: list[LegalEntity] = Field(default_factory=list)
+    edges: list[LegalEdge] = Field(default_factory=list)
+    claims: list[LegalDiscoveryDraftCandidate] = Field(default_factory=list)
 
 
 class CaseStatement(Base):
@@ -136,6 +155,18 @@ EXTRACTOR_SYSTEM_PROMPT = (
 
 EXPECTED_GRAPH_KEYS = {"nodes": True, "edges": True}
 
+RAW_EVIDENCE_EXTRACTOR_SYSTEM_PROMPT = (
+    "You are an expert legal AI. Given raw case evidence text, extract:\n"
+    "(1) entities as nodes: entity_type one of person|company|claim|document|email|exhibit|date; "
+    "label; source_document (file name if known, else empty string); optional metadata object.\n"
+    "(2) relationships as edges: source_label, target_label, relationship_type, weight between 0 and 1, source_ref.\n"
+    "(3) discrete legal claims or assertions as discovery candidates: category one of "
+    "INTERROGATORY|RFP|ADMISSION|CLAIM; content (specific draftable item); rationale (brief reason tied to the text).\n"
+    "You MUST respond ONLY with valid minified JSON in this exact shape: "
+    '{"nodes":[...],"edges":[...],"claims":[...]}. '
+    "claims may be an empty array if none are suitable."
+)
+
 
 def _extract_json_payload(content: str) -> dict:
     raw = (content or "").strip()
@@ -208,6 +239,126 @@ def _validate_extraction(
                 )
 
     return extraction
+
+
+def _validate_raw_evidence_extraction(
+    parsed: dict,
+    known_files: set[str],
+) -> RawEvidenceExtraction:
+    """Pydantic-validate raw ingest output; fuzzy-match node source_document like graph refresh."""
+    extraction = RawEvidenceExtraction.model_validate(parsed)
+
+    for entity in extraction.nodes:
+        src = entity.source_document.strip()
+        if src and known_files and src not in known_files:
+            src_lower = src.lower().replace("_", "").replace(" ", "").replace("-", "")
+            close = [
+                f for f in known_files
+                if src.lower() in f.lower()
+                or f.lower() in src.lower()
+                or src_lower in f.lower().replace("_", "").replace(" ", "").replace("-", "")
+                or f.lower().replace("_", "").replace(" ", "").replace("-", "") in src_lower
+            ]
+            if close:
+                rag_logger.warning(
+                    "RAW_INGEST_SOURCE_FUZZY_MATCH: entity='%s' cited '%s', closest match='%s'",
+                    entity.label, src, close[0],
+                )
+                entity.source_document = close[0]
+            else:
+                rag_logger.warning(
+                    "RAW_INGEST_SOURCE_UNVERIFIED: entity='%s' cited '%s'",
+                    entity.label, src,
+                )
+
+    return extraction
+
+
+def _heuristic_raw_evidence_extraction(evidence_text: str, source_document: str) -> dict:
+    snippet = (evidence_text or "")[:400].strip().replace("\n", " ")
+    src = (source_document or "").strip() or "raw_payload"
+    doc_label = f"Raw evidence: {src}"
+    claim_label = "Primary assertion (review)"
+    return {
+        "nodes": [
+            {
+                "entity_type": "document",
+                "label": doc_label,
+                "source_document": src,
+                "metadata": {"ingest": "heuristic_fallback"},
+            },
+            {
+                "entity_type": "claim",
+                "label": claim_label,
+                "source_document": src,
+                "metadata": {"excerpt": snippet[:300]},
+            },
+        ],
+        "edges": [
+            {
+                "source_label": doc_label,
+                "target_label": claim_label,
+                "relationship_type": "supports",
+                "weight": 0.5,
+                "source_ref": "heuristic_fallback",
+            },
+        ],
+        "claims": [
+            {
+                "category": "CLAIM",
+                "content": snippet[:800] if snippet else "Review raw payload for discoverable issues.",
+                "rationale": "Heuristic fallback — model output was not valid structured JSON.",
+            },
+        ],
+    }
+
+
+async def extract_raw_evidence_from_text(
+    db: AsyncSession,
+    evidence_text: str,
+    *,
+    source_document: str = "",
+    source_module: str = "legal_raw_evidence_extract",
+) -> RawEvidenceExtraction:
+    """
+    Run Tier-0 inference on raw text and return validated nodes, edges, and claim candidates.
+    Falls back to a minimal heuristic graph when the model output cannot be parsed.
+    """
+    known_files: set[str] = set()
+    sd = (source_document or "").strip()
+    if sd:
+        known_files.add(sd)
+
+    prompt = (evidence_text or "")[:50000]
+    if not prompt.strip():
+        return RawEvidenceExtraction.model_validate(
+            _heuristic_raw_evidence_extraction("", source_document)
+        )
+
+    result = await execute_resilient_inference(
+        prompt=prompt,
+        task_type="legal",
+        system_message=RAW_EVIDENCE_EXTRACTOR_SYSTEM_PROMPT,
+        max_tokens=4096,
+        temperature=0.1,
+        db=db,
+        source_module=source_module,
+    )
+
+    try:
+        raw_parsed = _extract_json_payload(result.text or "")
+        if not isinstance(raw_parsed, dict):
+            raise ValueError("LLM output is not a JSON object")
+        return _validate_raw_evidence_extraction(raw_parsed, known_files)
+    except Exception as exc:
+        rag_logger.warning(
+            "[RAW_INGEST] extraction validation failed: %s — using heuristic fallback",
+            str(exc)[:300],
+        )
+        logger.warning("raw_evidence_extract_parse_failed error=%s", str(exc)[:200])
+        return RawEvidenceExtraction.model_validate(
+            _heuristic_raw_evidence_extraction(prompt, source_document)
+        )
 
 
 async def _gather_evidence_text(
@@ -356,21 +507,37 @@ async def _write_retrieval_to_audit_ledger(
 
 
 async def get_case_graph_snapshot(db: AsyncSession, case_slug: str) -> dict:
-    case_res = await db.execute(select(LegalCase).where(LegalCase.slug == case_slug))
-    case = case_res.scalar_one_or_none()
-    if not case:
-        raise HTTPException(status_code=404, detail=f"Legal case '{case_slug}' not found")
+    try:
+        case_res = await db.execute(select(LegalCase).where(LegalCase.slug == case_slug))
+        case = case_res.scalar_one_or_none()
+        if not case:
+            raise HTTPException(status_code=404, detail=f"Legal case '{case_slug}' not found")
 
-    nodes_res = await db.execute(
-        select(CaseGraphNode).where(CaseGraphNode.case_id == case.id).order_by(CaseGraphNode.created_at.asc())
-    )
-    edges_res = await db.execute(
-        select(CaseGraphEdge).where(CaseGraphEdge.case_id == case.id).order_by(CaseGraphEdge.created_at.asc())
-    )
-    return {
-        "nodes": list(nodes_res.scalars().all()),
-        "edges": list(edges_res.scalars().all()),
-    }
+        nodes_res = await db.execute(
+            select(CaseGraphNode).where(CaseGraphNode.case_id == case.id).order_by(CaseGraphNode.created_at.asc())
+        )
+        edges_res = await db.execute(
+            select(CaseGraphEdge).where(CaseGraphEdge.case_id == case.id).order_by(CaseGraphEdge.created_at.asc())
+        )
+        return {
+            "nodes": list(nodes_res.scalars().all()),
+            "edges": list(edges_res.scalars().all()),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # Some live environments only have the Phase 2 / v2 graph tables.
+        # Fall back to the v2 builder so legal case pages still render instead
+        # of crashing on missing legacy `legal.legal_cases` relations.
+        logger.warning("legacy_graph_snapshot_unavailable case_slug=%s error=%s", case_slug, str(exc)[:240])
+        await db.rollback()
+        snapshot = await LegalCaseGraphBuilder.get_graph_snapshot(case_slug, db)
+        if snapshot.get("nodes"):
+            return snapshot
+
+        seeded = await LegalCaseGraphBuilder.build_baseline_graph(case_slug, db)
+        logger.info("v2_graph_seeded case_slug=%s result=%s", case_slug, seeded.get("status"))
+        return await LegalCaseGraphBuilder.get_graph_snapshot(case_slug, db)
 
 
 async def trigger_graph_refresh(db: AsyncSession, case_slug: str) -> None:
@@ -501,7 +668,135 @@ class LegalCaseGraphBuilder:
     """Phase 2 Hybrid MVP graph builder backed by v2 graph tables."""
 
     @staticmethod
+    def _fallback_nodes_from_case_record(case_row: dict[str, Any] | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        if not case_row:
+            return [], []
+
+        extracted = case_row.get("extracted_entities")
+        if isinstance(extracted, str):
+            try:
+                extracted = json.loads(extracted)
+            except Exception:
+                extracted = {}
+        if not isinstance(extracted, dict):
+            extracted = {}
+
+        case_node_id = str(uuid4())
+        nodes: list[dict[str, Any]] = [
+            {
+                "id": case_node_id,
+                "entity_type": "case",
+                "entity_reference_id": None,
+                "label": case_row.get("case_name") or case_row.get("case_slug") or "Legal Case",
+                "properties_json": {
+                    "case_slug": case_row.get("case_slug"),
+                    "case_number": case_row.get("case_number"),
+                    "court": case_row.get("court"),
+                    "status": case_row.get("status"),
+                    "risk_score": extracted.get("risk_score"),
+                    "summary": extracted.get("summary"),
+                },
+            }
+        ]
+        edges: list[dict[str, Any]] = []
+
+        summary = str(extracted.get("summary") or "").strip()
+        if summary:
+            summary_node_id = str(uuid4())
+            nodes.append(
+                {
+                    "id": summary_node_id,
+                    "entity_type": "claim",
+                    "entity_reference_id": None,
+                    "label": "Case Summary",
+                    "properties_json": {"summary": summary},
+                }
+            )
+            edges.append(
+                {
+                    "source_node_id": case_node_id,
+                    "target_node_id": summary_node_id,
+                    "relationship_type": "SUMMARIZED_BY",
+                    "weight": 0.6,
+                    "source_evidence_id": None,
+                }
+            )
+
+        key_claims = extracted.get("key_claims") or []
+        if isinstance(key_claims, list):
+            for claim in key_claims[:5]:
+                claim_text = str(claim or "").strip()
+                if not claim_text:
+                    continue
+                claim_node_id = str(uuid4())
+                nodes.append(
+                    {
+                        "id": claim_node_id,
+                        "entity_type": "claim",
+                        "entity_reference_id": None,
+                        "label": claim_text[:240],
+                        "properties_json": {"source": "case_extracted_entities"},
+                    }
+                )
+                edges.append(
+                    {
+                        "source_node_id": case_node_id,
+                        "target_node_id": claim_node_id,
+                        "relationship_type": "ASSERTS",
+                        "weight": 0.55,
+                        "source_evidence_id": None,
+                    }
+                )
+
+        deadlines = extracted.get("deadlines") or []
+        if isinstance(deadlines, list):
+            for deadline in deadlines[:5]:
+                if isinstance(deadline, dict):
+                    description = str(deadline.get("description") or deadline.get("due_date") or "").strip()
+                    due_date = deadline.get("due_date")
+                else:
+                    description = str(deadline or "").strip()
+                    due_date = None
+                if not description:
+                    continue
+                deadline_node_id = str(uuid4())
+                nodes.append(
+                    {
+                        "id": deadline_node_id,
+                        "entity_type": "date",
+                        "entity_reference_id": None,
+                        "label": description[:240],
+                        "properties_json": {"due_date": due_date},
+                    }
+                )
+                edges.append(
+                    {
+                        "source_node_id": case_node_id,
+                        "target_node_id": deadline_node_id,
+                        "relationship_type": "TRACKS_DEADLINE",
+                        "weight": 0.5,
+                        "source_evidence_id": None,
+                    }
+                )
+
+        return nodes, edges
+
+    @staticmethod
     async def build_baseline_graph(case_slug: str, db: AsyncSession) -> dict:
+        case_row = (
+            await db.execute(
+                text(
+                    """
+                    SELECT case_slug, case_name, case_number, court, status, extracted_entities
+                    FROM legal.cases
+                    WHERE case_slug = :case_slug
+                    LIMIT 1
+                    """
+                ),
+                {"case_slug": case_slug},
+            )
+        ).mappings().first()
+
         evidence_rows = (
             await db.execute(
                 text(
@@ -559,6 +854,31 @@ class LegalCaseGraphBuilder:
 
         def _node_key(prefix: str, ref: str) -> str:
             return f"{prefix}:{ref}"
+
+        fallback_nodes, fallback_edges = LegalCaseGraphBuilder._fallback_nodes_from_case_record(
+            dict(case_row) if case_row else None
+        )
+
+        for node in fallback_nodes:
+            await db.execute(
+                text(
+                    """
+                    INSERT INTO legal.case_graph_nodes_v2
+                        (id, case_slug, entity_type, entity_reference_id, label, properties_json)
+                    VALUES
+                        (:id, :case_slug, :entity_type, :entity_reference_id, :label, CAST(:props AS jsonb))
+                    """
+                ),
+                {
+                    "id": node["id"],
+                    "case_slug": case_slug,
+                    "entity_type": node["entity_type"],
+                    "entity_reference_id": node["entity_reference_id"],
+                    "label": node["label"],
+                    "props": json.dumps(node["properties_json"]),
+                },
+            )
+            node_ids[_node_key("fallback", str(node["id"]))] = node["id"]
 
         for e in evidence_rows:
             node_id = str(uuid4())
@@ -724,6 +1044,15 @@ class LegalCaseGraphBuilder:
                     schedule_node = ent_node
             if blackman_node and schedule_node:
                 await _insert_edge(blackman_node, schedule_node, "MENTIONED_IN", 0.8, str(evidence_rows[0]["id"]))
+
+        for edge in fallback_edges:
+            await _insert_edge(
+                edge["source_node_id"],
+                edge["target_node_id"],
+                edge["relationship_type"],
+                float(edge["weight"]),
+                edge.get("source_evidence_id"),
+            )
 
         await db.commit()
         node_count = len(node_ids)

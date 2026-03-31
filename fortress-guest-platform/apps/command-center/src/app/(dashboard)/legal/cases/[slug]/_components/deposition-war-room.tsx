@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageLegalOps } from "@/lib/roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -47,6 +50,8 @@ export function DepositionWarRoomModal({
   edges,
   onClose,
 }: DepositionWarRoomModalProps) {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageLegalOps(user);
   const [streamingFunnelText, setStreamingFunnelText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [savedToVault, setSavedToVault] = useState(false);
@@ -135,7 +140,7 @@ export function DepositionWarRoomModal({
     }
     setIsCommitting(true);
     try {
-      await fetch(`/api/legal/cases/${slug}/deposition/funnels/${parsedFunnel.id}`, {
+      await fetch(`/api/internal/legal/cases/${slug}/deposition/funnels/${parsedFunnel.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -173,7 +178,7 @@ export function DepositionWarRoomModal({
     }
     setIsUpdatingStatus(true);
     try {
-      await fetch(`/api/legal/cases/${slug}/deposition/targets/${parsedFunnel.target_id}/status`, {
+      await fetch(`/api/internal/legal/cases/${slug}/deposition/targets/${parsedFunnel.target_id}/status`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -206,7 +211,7 @@ export function DepositionWarRoomModal({
 
     setIsResolvingExport(true);
     try {
-      const resp = await fetch(`/api/legal/cases/${slug}/deposition/targets`, {
+      const resp = await fetch(`/api/internal/legal/cases/${slug}/deposition/targets`, {
         method: "GET",
         credentials: "include",
       });
@@ -254,7 +259,7 @@ export function DepositionWarRoomModal({
     setParsedFunnel(null);
     setIsStreaming(true);
 
-    const streamUrl = `/api/legal/cases/${slug}/deposition/stream-funnel?target_name=${encodeURIComponent(
+    const streamUrl = `/api/internal/legal/cases/${slug}/deposition/stream-funnel?target_name=${encodeURIComponent(
       targetNode.label,
     )}`;
     const source = new EventSource(streamUrl, { withCredentials: true });
@@ -263,7 +268,7 @@ export function DepositionWarRoomModal({
 
     const hydrateParsedFromVault = async () => {
       try {
-        const resp = await fetch(`/api/legal/cases/${slug}/deposition/targets`, {
+        const resp = await fetch(`/api/internal/legal/cases/${slug}/deposition/targets`, {
           method: "GET",
           credentials: "include",
         });
@@ -392,30 +397,36 @@ export function DepositionWarRoomModal({
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant={targetStatus === "drafting" ? "default" : "outline"}
-                disabled={isUpdatingStatus}
-                onClick={() => updateTargetStatus("drafting")}
-              >
-                Draft
-              </Button>
-              <Button
-                type="button"
-                variant={targetStatus === "ready" ? "default" : "outline"}
-                disabled={isUpdatingStatus}
-                onClick={() => updateTargetStatus("ready")}
-              >
-                Mark Ready for Deposition
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isStreaming || isResolvingExport}
-                onClick={openCourtroomPacket}
-              >
-                {isResolvingExport ? "Resolving Packet..." : "Export Courtroom Packet"}
-              </Button>
+              <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                <Button
+                  type="button"
+                  variant={targetStatus === "drafting" ? "default" : "outline"}
+                  disabled={!canOperate || isUpdatingStatus}
+                  onClick={() => updateTargetStatus("drafting")}
+                >
+                  Draft
+                </Button>
+              </RoleGatedAction>
+              <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                <Button
+                  type="button"
+                  variant={targetStatus === "ready" ? "default" : "outline"}
+                  disabled={!canOperate || isUpdatingStatus}
+                  onClick={() => updateTargetStatus("ready")}
+                >
+                  Mark Ready for Deposition
+                </Button>
+              </RoleGatedAction>
+              <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!canOperate || isStreaming || isResolvingExport}
+                  onClick={openCourtroomPacket}
+                >
+                  {isResolvingExport ? "Resolving Packet..." : "Export Courtroom Packet"}
+                </Button>
+              </RoleGatedAction>
               <Button variant="outline" size="icon" onClick={handleDismiss} aria-label="Close War Room">
                 <X className="h-4 w-4" />
               </Button>
@@ -472,9 +483,11 @@ export function DepositionWarRoomModal({
                       rows={4}
                     />
                     <div className="mt-4 flex justify-end">
-                      <Button type="button" onClick={commitEditsToVault} disabled={isCommitting}>
-                        {isCommitting ? "Committing..." : "Commit Edits to Vault"}
-                      </Button>
+                      <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                        <Button type="button" onClick={commitEditsToVault} disabled={!canOperate || isCommitting}>
+                          {isCommitting ? "Committing..." : "Commit Edits to Vault"}
+                        </Button>
+                      </RoleGatedAction>
                     </div>
                   </div>
                 </div>

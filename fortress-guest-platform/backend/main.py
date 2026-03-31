@@ -29,6 +29,7 @@ from backend.api import portal as portal_api
 from backend.api import review_queue, email_bridge, damage_claims
 from backend.api import tenants as tenants_api
 from backend.api import owner_portal
+from backend.api import paperclip_bridge as paperclip_bridge_api
 from backend.api import direct_booking as direct_booking_api
 from backend.api import guest_portal_api
 from backend.api import channel_mgr
@@ -47,11 +48,15 @@ from backend.api import fast_quote as fast_quote_api
 from backend.api import quotes as quotes_api
 from backend.api import vrs_quotes as vrs_quotes_api
 from backend.api import leads as leads_api
+from backend.api import vrs as vrs_api
 from backend.api import vrs_operations as vrs_operations_api
 from backend.api import checkout as checkout_api
 from backend.api import templates as templates_api
 from backend.api import copilot_queue as copilot_queue_api
 from backend.api import admin as admin_api
+from backend.api import admin_acquisition as admin_acquisition_api
+from backend.api import admin_acquisition_foia as admin_acquisition_foia_api
+from backend.api import admin_channex as admin_channex_api
 from backend.api import admin_insights as admin_insights_api
 from backend.api import rule_engine as rule_engine_api
 from backend.api import intelligence as intelligence_api
@@ -122,6 +127,7 @@ logger = structlog.get_logger()
 # Background task tracking (for watchdog)
 # ---------------------------------------------------------------------------
 _bg_task_heartbeats: dict[str, float] = {}
+INTERNAL_LEGAL_API_PREFIX = "/api/internal/legal"
 
 
 class GlobalAuthMiddleware(BaseHTTPMiddleware):
@@ -136,7 +142,7 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
         if is_public_api_path(path, request.method):
             return await call_next(request)
 
-        if "/download/" in path and path.startswith("/api/legal/cases/"):
+        if "/download/" in path and path.startswith(f"{INTERNAL_LEGAL_API_PREFIX}/cases/"):
             return await call_next(request)
 
         if request.method == "OPTIONS":
@@ -337,12 +343,20 @@ app.include_router(workorders.router, prefix="/api/work-orders", tags=["Work Ord
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(webhooks_channex.router, prefix="/api/webhooks/channex", tags=["Channex Webhooks"])
+app.include_router(
+    webhooks_channex.router,
+    prefix="/webhooks/channex",
+    tags=["Channex Webhooks Legacy Compatibility"],
+    include_in_schema=False,
+)
 app.include_router(guestbook.router, prefix="/api/guestbook", tags=["Guestbook"])
 app.include_router(integrations_api.router, prefix="/api/integrations", tags=["Integrations"])
 app.include_router(booking.router, prefix="/api/booking", tags=["Booking"])
 app.include_router(housekeeping.router, prefix="/api/housekeeping", tags=["Housekeeping"])
 app.include_router(channels.router, prefix="/api/channels", tags=["Channels"])
 app.include_router(agent.router, prefix="/api/agent", tags=["AI Agent"])
+app.include_router(paperclip_bridge_api.router, prefix="/api/agent", tags=["Paperclip Bridge"])
+app.include_router(paperclip_bridge_api.router, prefix="/api/paperclip", tags=["Paperclip Bridge"])
 app.include_router(portal_api.router, prefix="/api/portal", tags=["Portal"])
 app.include_router(review_queue.router, prefix="/api/review-queue", tags=["Review Queue"])
 app.include_router(email_bridge.router, prefix="/api/email-bridge", tags=["Email Bridge"])
@@ -365,6 +379,7 @@ app.include_router(fast_quote_api.router, tags=["Fast Quote"])
 app.include_router(quotes_api.router, prefix="/api/quotes", tags=["Quotes"])
 app.include_router(vrs_quotes_api.router, prefix="/api/quotes", tags=["Sovereign Quotes"])
 app.include_router(leads_api.router, prefix="/api/leads", tags=["Leads"])
+app.include_router(vrs_api.router, prefix="/api/vrs", tags=["VRS Command Center"])
 app.include_router(vrs_operations_api.router, prefix="/api/vrs", tags=["VRS Operations"])
 app.include_router(checkout_api.router, prefix="/api/checkout", tags=["Checkout Gateway"])
 app.include_router(templates_api.router, prefix="/api/templates", tags=["Templates"])
@@ -372,6 +387,9 @@ app.include_router(copilot_queue_api.router, prefix="/api/copilot-queue", tags=[
 app.include_router(stripe_webhooks.router, prefix="/api/webhooks", tags=["Stripe Webhooks"])
 app.include_router(stripe_connect_webhooks.router, prefix="/api/webhooks", tags=["Stripe Connect Webhooks"])
 app.include_router(admin_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_acquisition_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_acquisition_foia_api.router, tags=["Admin"])
+app.include_router(admin_channex_api.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(admin_insights_api.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(rule_engine_api.router, prefix="/api/rules", tags=["Rule Engine"])
 app.include_router(intelligence_api.router, prefix="/api/intelligence", tags=["Intelligence"])
@@ -382,19 +400,19 @@ app.include_router(
     tags=["Intelligence Projection"],
 )
 app.include_router(vault_api.router, prefix="/api/vault", tags=["E-Discovery Vault"])
-app.include_router(legal_council_api.router, prefix="/api/legal", tags=["Legal Council"])
-app.include_router(ediscovery_api.router, prefix="/api/legal", tags=["E-Discovery"])
-app.include_router(legal_docgen_api.router, prefix="/api/legal", tags=["Legal DocGen"])
-app.include_router(legal_graph_api.router, prefix="/api/legal", tags=["Legal Graph"])
-app.include_router(legal_discovery_api.router, prefix="/api/legal", tags=["Legal Discovery"])
-app.include_router(legal_cases_api.router, prefix="/api/legal", tags=["Legal Cases"])
-app.include_router(legal_strategy_api.router, prefix="/api/legal", tags=["Legal Strategy"])
-app.include_router(legal_counsel_dispatch_api.router, prefix="/api/legal", tags=["Outside Counsel Dispatch"])
-app.include_router(legal_hold_api.router, prefix="/api/legal", tags=["Legal Hold"])
-app.include_router(legal_tactical_api.router, prefix="/api/legal", tags=["Legal Tactical"])
-app.include_router(legal_sanctions_api.router, prefix="/api/legal", tags=["Legal Sanctions"])
-app.include_router(legal_deposition_api.router, prefix="/api/legal", tags=["Legal Deposition"])
-app.include_router(legal_agent_api.router, prefix="/api/legal", tags=["Legal Agent"])
+app.include_router(legal_council_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Council"])
+app.include_router(ediscovery_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["E-Discovery"])
+app.include_router(legal_docgen_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal DocGen"])
+app.include_router(legal_graph_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Graph"])
+app.include_router(legal_discovery_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Discovery"])
+app.include_router(legal_cases_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Cases"])
+app.include_router(legal_strategy_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Strategy"])
+app.include_router(legal_counsel_dispatch_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Outside Counsel Dispatch"])
+app.include_router(legal_hold_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Hold"])
+app.include_router(legal_tactical_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Tactical"])
+app.include_router(legal_sanctions_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Sanctions"])
+app.include_router(legal_deposition_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Deposition"])
+app.include_router(legal_agent_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Agent"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
 app.include_router(seo_patches_api.router, prefix="/api/seo", tags=["SEO"])
 app.include_router(

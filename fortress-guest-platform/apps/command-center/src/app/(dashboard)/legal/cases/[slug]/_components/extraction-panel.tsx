@@ -1,5 +1,8 @@
 "use client";
 
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageLegalOps } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +33,8 @@ function RiskMeter({ score }: { score: number }) {
 }
 
 export function ExtractionPanel({ legalCase, slug }: { legalCase: LegalCase; slug: string }) {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageLegalOps(user);
   const trigger = useTriggerExtraction(slug);
   const status = legalCase.extraction_status;
   const entities = legalCase.extracted_entities as ExtractedEntities | null | Record<string, never>;
@@ -44,22 +49,24 @@ export function ExtractionPanel({ legalCase, slug }: { legalCase: LegalCase; slu
           <Brain className="h-4 w-4 text-primary" />
           AI Extraction Engine
         </h3>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={isExtracting || trigger.isPending}
-          onClick={() =>
-            trigger.mutate({ target: "case", text: legalCase.notes ?? "" })
-          }
-        >
-          {isExtracting ? (
-            <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Extracting...</>
-          ) : hasEntities ? (
-            "Re-Extract"
-          ) : (
-            "Run Extraction"
-          )}
-        </Button>
+        <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!canOperate || isExtracting || trigger.isPending}
+            onClick={() =>
+              trigger.mutate({ target: "case", text: legalCase.notes ?? "" })
+            }
+          >
+            {isExtracting ? (
+              <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Extracting...</>
+            ) : hasEntities ? (
+              "Re-Extract"
+            ) : (
+              "Run Extraction"
+            )}
+          </Button>
+        </RoleGatedAction>
       </div>
 
       {isExtracting && (

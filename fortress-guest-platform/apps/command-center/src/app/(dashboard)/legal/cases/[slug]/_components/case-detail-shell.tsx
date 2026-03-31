@@ -13,6 +13,9 @@ import {
   downloadKillSheetMarkdown,
 } from "@/lib/legal-hooks";
 import { api } from "@/lib/api";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageLegalOps } from "@/lib/roles";
 import {
   Tabs,
   TabsContent,
@@ -144,6 +147,8 @@ function SanctionsAlertsPanel({ slug }: { slug: string }) {
 }
 
 export function CaseDetailShell({ slug }: { slug: string }) {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageLegalOps(user);
   const { data, isLoading, error } = useCaseDetail(slug);
   const poll = useCaseExtractionPoll(slug);
   const caseGraphQuery = useCaseGraph(slug);
@@ -184,7 +189,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
       setIsGraphLoading(true);
       setGraphError(null);
       try {
-        const snapshot = await api.get<GraphSnapshot>(`/api/legal/cases/${slug}/graph/snapshot`);
+        const snapshot = await api.get<GraphSnapshot>(`/api/internal/legal/cases/${slug}/graph/snapshot`);
         if (cancelled) return;
         setGraphSnapshot({
           nodes: Array.isArray(snapshot?.nodes) ? snapshot.nodes : [],
@@ -207,7 +212,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const pollSnapshot = async () => {
       try {
-        const snapshot = await api.get<GraphSnapshot>(`/api/legal/cases/${slug}/graph/snapshot`);
+        const snapshot = await api.get<GraphSnapshot>(`/api/internal/legal/cases/${slug}/graph/snapshot`);
         if (cancelled) return;
         const next: GraphSnapshot = {
           nodes: Array.isArray(snapshot?.nodes) ? snapshot.nodes : [],
@@ -269,7 +274,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
     setGraphError(null);
     try {
       const response = await api.post<{ status: string; case_slug: string }>(
-        `/api/legal/cases/${slug}/graph/refresh`,
+        `/api/internal/legal/cases/${slug}/graph/refresh`,
       );
       if (response?.status === "refresh_queued") {
         setRefreshBaseline(snapshotSignature(graphSnapshot));
@@ -352,15 +357,19 @@ export function CaseDetailShell({ slug }: { slug: string }) {
             <p className="text-sm text-muted-foreground">
               {radarNodes} Entities Mapped | {radarEdges} Contradiction Edges
             </p>
-            <Button type="button" onClick={handleGraphRefresh} disabled={isRefreshing} size="sm" className="w-fit">
-              {isRefreshing ? "Refreshing Graph..." : "Refresh Graph"}
-            </Button>
+            <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+              <Button type="button" onClick={handleGraphRefresh} disabled={!canOperate || isRefreshing} size="sm" className="w-fit">
+                {isRefreshing ? "Refreshing Graph..." : "Refresh Graph"}
+              </Button>
+            </RoleGatedAction>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" onClick={handleGraphRefresh} disabled={isRefreshing} size="sm">
-              {isRefreshing ? "Recalculating..." : "Recalculate Graph Topology"}
-            </Button>
+            <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+              <Button type="button" onClick={handleGraphRefresh} disabled={!canOperate || isRefreshing} size="sm">
+                {isRefreshing ? "Recalculating..." : "Recalculate Graph Topology"}
+              </Button>
+            </RoleGatedAction>
             <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
               Graph Synced: {syncedCount} {armedLabel}
             </Badge>
@@ -381,9 +390,9 @@ export function CaseDetailShell({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <EvidenceUpload slug={slug} onIngested={() => {
+          <EvidenceUpload slug={slug} canOperate={canOperate} onIngested={() => {
             setIsGraphLoading(true);
-            api.get<GraphSnapshot>(`/api/legal/cases/${slug}/graph/snapshot`)
+            api.get<GraphSnapshot>(`/api/internal/legal/cases/${slug}/graph/snapshot`)
               .then((s) => setGraphSnapshot({ nodes: Array.isArray(s?.nodes) ? s.nodes : [], edges: Array.isArray(s?.edges) ? s.edges : [] }))
               .catch(() => {})
               .finally(() => setIsGraphLoading(false));
@@ -415,19 +424,21 @@ export function CaseDetailShell({ slug }: { slug: string }) {
                 DRAFT / COUNSEL REVIEW REQUIRED
               </Badge>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              disabled={generateDiscoveryPack.isPending}
-              onClick={() =>
-                generateDiscoveryPack.mutate({
-                  target_entity: c.case_name || c.case_slug,
-                  max_items: 10,
-                })
-              }
-            >
-              {generateDiscoveryPack.isPending ? "Generating..." : "Generate New Draft Pack"}
-            </Button>
+            <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+              <Button
+                type="button"
+                size="sm"
+                disabled={!canOperate || generateDiscoveryPack.isPending}
+                onClick={() =>
+                  generateDiscoveryPack.mutate({
+                    target_entity: c.case_name || c.case_slug,
+                    max_items: 10,
+                  })
+                }
+              >
+                {generateDiscoveryPack.isPending ? "Generating..." : "Generate New Draft Pack"}
+              </Button>
+            </RoleGatedAction>
             <div className="space-y-2">
               {topScoredDraftItems.length === 0 && (
                 <p className="text-xs text-muted-foreground">
@@ -469,21 +480,23 @@ export function CaseDetailShell({ slug }: { slug: string }) {
             ) : (
               <p className="text-xs text-muted-foreground">No active sanctions alerts.</p>
             )}
-            <Button
-              type="button"
-              size="sm"
-              disabled={!latestKillSheet?.id}
-              onClick={() => {
-                if (!latestKillSheet?.id) return;
-                void downloadKillSheetMarkdown(
-                  slug,
-                  latestKillSheet.id,
-                  `${latestKillSheet.deponent_entity.replaceAll(" ", "_")}_Kill_Sheet.md`,
-                );
-              }}
-            >
-              Download Kill-Sheet
-            </Button>
+            <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+              <Button
+                type="button"
+                size="sm"
+                disabled={!canOperate || !latestKillSheet?.id}
+                onClick={() => {
+                  if (!latestKillSheet?.id) return;
+                  void downloadKillSheetMarkdown(
+                    slug,
+                    latestKillSheet.id,
+                    `${latestKillSheet.deponent_entity.replaceAll(" ", "_")}_Kill_Sheet.md`,
+                  );
+                }}
+              >
+                Download Kill-Sheet
+              </Button>
+            </RoleGatedAction>
           </div>
 
           <DiscoveryDraftPanel slug={slug} />

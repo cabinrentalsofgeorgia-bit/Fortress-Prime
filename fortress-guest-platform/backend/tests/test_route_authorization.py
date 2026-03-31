@@ -412,7 +412,7 @@ async def test_legal_hold_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_cases_list_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_cases_api.router, prefix="/api/legal")
+    app.include_router(legal_cases_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -421,7 +421,7 @@ async def test_legal_cases_list_blocks_owner_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/legal/cases")
+        response = await client.get("/api/internal/legal/cases")
 
     assert response.status_code == 403
 
@@ -429,7 +429,7 @@ async def test_legal_cases_list_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_case_detail_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_cases_api.router, prefix="/api/legal")
+    app.include_router(legal_cases_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -438,7 +438,7 @@ async def test_legal_case_detail_blocks_owner_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/legal/cases/demo-case")
+        response = await client.get("/api/internal/legal/cases/demo-case")
 
     assert response.status_code == 403
 
@@ -446,7 +446,7 @@ async def test_legal_case_detail_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_crm_overview_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_cases_api.router, prefix="/api/legal")
+    app.include_router(legal_cases_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -455,7 +455,7 @@ async def test_legal_crm_overview_blocks_owner_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/legal/crm/overview")
+        response = await client.get("/api/internal/legal/crm/overview")
 
     assert response.status_code == 403
 
@@ -1114,7 +1114,7 @@ async def test_vault_audit_log_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_ediscovery_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(ediscovery_api.router, prefix="/api/legal")
+    app.include_router(ediscovery_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1124,7 +1124,7 @@ async def test_ediscovery_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/discovery/extract",
+            "/api/internal/legal/discovery/extract",
             json={"entities": ["Generali"], "max_per_table": 10},
         )
 
@@ -1220,7 +1220,7 @@ async def test_ai_superpowers_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_council_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_council_api.router, prefix="/api/legal")
+    app.include_router(legal_council_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1229,7 +1229,7 @@ async def test_legal_council_blocks_owner_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/legal/council/personas")
+        response = await client.get("/api/internal/legal/council/personas")
 
     assert response.status_code == 403
 
@@ -1336,7 +1336,7 @@ async def test_intelligence_shadow_board_approve_allows_manager_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_tactical_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_tactical_api.router, prefix="/api/legal")
+    app.include_router(legal_tactical_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1346,7 +1346,7 @@ async def test_legal_tactical_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/cases/demo-case/omni-search",
+            "/api/internal/legal/cases/demo-case/omni-search",
             json={"query": "Generali"},
         )
 
@@ -1356,7 +1356,7 @@ async def test_legal_tactical_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_graph_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_graph_api.router, prefix="/api/legal")
+    app.include_router(legal_graph_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1365,7 +1365,7 @@ async def test_legal_graph_blocks_owner_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/legal/cases/demo-case/graph/snapshot")
+        response = await client.get("/api/internal/legal/cases/demo-case/graph/snapshot")
 
     assert response.status_code == 403
 
@@ -1373,7 +1373,7 @@ async def test_legal_graph_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_discovery_pack_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_discovery_api.router, prefix="/api/legal")
+    app.include_router(legal_discovery_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1383,7 +1383,7 @@ async def test_legal_discovery_pack_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/cases/demo-case/discovery/draft-pack",
+            "/api/internal/legal/cases/demo-case/discovery/draft-pack",
             json={"local_rules_cap": 10},
         )
 
@@ -1393,7 +1393,7 @@ async def test_legal_discovery_pack_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_docgen_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_docgen_api.router, prefix="/api/legal")
+    app.include_router(legal_docgen_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1403,7 +1403,7 @@ async def test_legal_docgen_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/document/draft",
+            "/api/internal/legal/document/draft",
             json={"case_brief": "Example case brief for testing.", "consensus": {"consensus_signal": "TEST"}},
         )
 
@@ -1413,7 +1413,7 @@ async def test_legal_docgen_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_strategy_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_strategy_api.router, prefix="/api/legal")
+    app.include_router(legal_strategy_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1423,7 +1423,7 @@ async def test_legal_strategy_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/strategy/chat",
+            "/api/internal/legal/strategy/chat",
             json={"message": "Analyze this", "case_brief": "Example case brief for testing."},
         )
 
@@ -1433,7 +1433,7 @@ async def test_legal_strategy_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_counsel_dispatch_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_counsel_dispatch_api.router, prefix="/api/legal")
+    app.include_router(legal_counsel_dispatch_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1443,7 +1443,7 @@ async def test_legal_counsel_dispatch_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/counsel/dispatch/draft",
+            "/api/internal/legal/counsel/dispatch/draft",
             json={"case_brief": "Example case brief for testing.", "consensus": {"consensus_signal": "TEST"}},
         )
 
@@ -1453,7 +1453,7 @@ async def test_legal_counsel_dispatch_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_sanctions_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_sanctions_api.router, prefix="/api/legal")
+    app.include_router(legal_sanctions_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1462,7 +1462,7 @@ async def test_legal_sanctions_blocks_owner_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/api/legal/cases/demo-case/sanctions/sweep")
+        response = await client.post("/api/internal/legal/cases/demo-case/sanctions/sweep")
 
     assert response.status_code == 403
 
@@ -1470,7 +1470,7 @@ async def test_legal_sanctions_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_sanctions_batch_blocks_manager_role() -> None:
     app = FastAPI()
-    app.include_router(legal_sanctions_api.router, prefix="/api/legal")
+    app.include_router(legal_sanctions_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("manager")
@@ -1479,7 +1479,7 @@ async def test_legal_sanctions_batch_blocks_manager_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/api/legal/sanctions/sweep/all")
+        response = await client.post("/api/internal/legal/sanctions/sweep/all")
 
     assert response.status_code == 403
 
@@ -1487,7 +1487,7 @@ async def test_legal_sanctions_batch_blocks_manager_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_deposition_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_deposition_api.router, prefix="/api/legal")
+    app.include_router(legal_deposition_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1497,7 +1497,7 @@ async def test_legal_deposition_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/cases/demo-case/deposition/kill-sheet",
+            "/api/internal/legal/cases/demo-case/deposition/kill-sheet",
             json={"deponent_entity": "Opposing Party"},
         )
 
@@ -1507,7 +1507,7 @@ async def test_legal_deposition_blocks_owner_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_agent_blocks_owner_role() -> None:
     app = FastAPI()
-    app.include_router(legal_agent_api.router, prefix="/api/legal")
+    app.include_router(legal_agent_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("owner")
@@ -1517,7 +1517,7 @@ async def test_legal_agent_blocks_owner_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/cases/demo-case/agent/mission",
+            "/api/internal/legal/cases/demo-case/agent/mission",
             json={"strategic_objective": "Run a focused legal mission against this case."},
         )
 
@@ -1666,7 +1666,7 @@ async def test_admin_onboard_owner_blocks_manager_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_extract_blocks_operator_role() -> None:
     app = FastAPI()
-    app.include_router(legal_cases_api.router, prefix="/api/legal")
+    app.include_router(legal_cases_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("operator")
@@ -1676,7 +1676,7 @@ async def test_legal_extract_blocks_operator_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/legal/cases/demo-case/extract",
+            "/api/internal/legal/cases/demo-case/extract",
             json={"target": "case", "text": "Example body for extraction."},
         )
 
@@ -1686,7 +1686,7 @@ async def test_legal_extract_blocks_operator_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_deadline_review_blocks_reviewer_role() -> None:
     app = FastAPI()
-    app.include_router(legal_cases_api.router, prefix="/api/legal")
+    app.include_router(legal_cases_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("reviewer")
@@ -1696,7 +1696,7 @@ async def test_legal_deadline_review_blocks_reviewer_role() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.put(
-            "/api/legal/deadlines/42",
+            "/api/internal/legal/deadlines/42",
             json={"review_status": "approved"},
         )
 
@@ -1706,7 +1706,7 @@ async def test_legal_deadline_review_blocks_reviewer_role() -> None:
 @pytest.mark.asyncio
 async def test_legal_deliberate_blocks_operator_role() -> None:
     app = FastAPI()
-    app.include_router(legal_cases_api.router, prefix="/api/legal")
+    app.include_router(legal_cases_api.router, prefix="/api/internal/legal")
 
     async def override_current_user():
         return _user("operator")
@@ -1715,6 +1715,6 @@ async def test_legal_deliberate_blocks_operator_role() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/api/legal/cases/demo-case/deliberate")
+        response = await client.post("/api/internal/legal/cases/demo-case/deliberate")
 
     assert response.status_code == 403

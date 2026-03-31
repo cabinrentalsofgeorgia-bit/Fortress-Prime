@@ -49,7 +49,7 @@ export function AgentCommandTerminal({ slug }: AgentCommandTerminalProps) {
     setMission(null);
     try {
       const res = await api.post<MissionResponse>(
-        `/api/legal/cases/${slug}/agent/mission`,
+        `/api/internal/legal/cases/${slug}/agent/mission`,
         { strategic_objective: objective.trim() },
       );
       setMission(res);

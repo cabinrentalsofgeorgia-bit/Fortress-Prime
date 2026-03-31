@@ -49,7 +49,7 @@ export function EdiscoveryDropzone({ slug }: EdiscoveryDropzoneProps) {
 
   const loadDocs = useCallback(async () => {
     try {
-      const res = await api.get<VaultListResponse>(`/api/legal/cases/${slug}/vault/documents`);
+      const res = await api.get<VaultListResponse>(`/api/internal/legal/cases/${slug}/vault/documents`);
       setDocs(res?.documents ?? []);
     } catch {
       /* silent */
@@ -78,7 +78,7 @@ export function EdiscoveryDropzone({ slug }: EdiscoveryDropzoneProps) {
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        const res = await fetch(`/api/legal/cases/${slug}/vault/upload`, {
+        const res = await fetch(`/api/internal/legal/cases/${slug}/vault/upload`, {
           method: "POST",
           headers,
           body: formData,

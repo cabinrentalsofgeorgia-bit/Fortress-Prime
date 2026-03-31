@@ -1,21 +1,22 @@
 """
-Legal Document Generation API — POST /api/legal/document/draft
+Legal Document Generation API — POST /api/internal/legal/document/draft
 ===============================================================
 Accepts the Council's consensus + case brief, generates a court-formatted
 DOCX (Answer and Affirmative Defenses), and returns the binary file.
 """
 
 import structlog
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from typing import Any
 
+from backend.core.security import require_manager_or_admin
 from backend.services.legal_docgen import generate_answer_and_defenses
 
 logger = structlog.get_logger()
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 class DocGenRequest(BaseModel):

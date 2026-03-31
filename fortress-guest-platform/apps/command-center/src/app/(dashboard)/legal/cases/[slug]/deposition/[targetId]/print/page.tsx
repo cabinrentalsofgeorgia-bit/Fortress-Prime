@@ -51,8 +51,8 @@ export default function PrintDepositionPacketPage({
       setError(null);
       try {
         const [caseResp, targetsResp] = await Promise.all([
-          api.get<CaseDetailResponse>(`/api/legal/cases/${params.slug}`),
-          api.get<TargetsResponse>(`/api/legal/cases/${params.slug}/deposition/targets`),
+          api.get<CaseDetailResponse>(`/api/internal/legal/cases/${params.slug}`),
+          api.get<TargetsResponse>(`/api/internal/legal/cases/${params.slug}/deposition/targets`),
         ]);
         if (cancelled) return;
         setCaseData(caseResp?.case ?? null);

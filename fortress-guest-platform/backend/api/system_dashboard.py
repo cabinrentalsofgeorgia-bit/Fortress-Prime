@@ -93,7 +93,7 @@ _MODULE_ROWS: tuple[dict[str, Any], ...] = (
         "id": "legal-council",
         "label": "Fortress Legal",
         "legacy_path": "/legal",
-        "native_path": "/api/legal/health",
+        "native_path": "/api/internal/legal/health",
         "data_probe_path": None,
         "data_live": True,
     },

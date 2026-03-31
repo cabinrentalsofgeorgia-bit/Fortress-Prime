@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,9 +24,10 @@ type IngestResponse = {
 type EvidenceUploadProps = {
   slug: string;
   onIngested?: () => void;
+  canOperate?: boolean;
 };
 
-export function EvidenceUpload({ slug, onIngested }: EvidenceUploadProps) {
+export function EvidenceUpload({ slug, onIngested, canOperate = true }: EvidenceUploadProps) {
   const [text, setText] = useState("");
   const [sourceRef, setSourceRef] = useState("");
   const [ingesting, setIngesting] = useState(false);
@@ -38,7 +40,7 @@ export function EvidenceUpload({ slug, onIngested }: EvidenceUploadProps) {
     setResult(null);
     try {
       const res = await api.post<IngestResponse>(
-        `/api/legal/cases/${slug}/evidence/ingest-text`,
+        `/api/internal/legal/cases/${slug}/evidence/ingest-text`,
         { document_text: text.trim(), source_ref: sourceRef.trim() },
       );
       setResult(res);
@@ -76,26 +78,28 @@ export function EvidenceUpload({ slug, onIngested }: EvidenceUploadProps) {
       />
 
       <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          onClick={handleIngest}
-          disabled={!canSubmit}
-          className="gap-2"
-        >
-          {ingesting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {text.length > 15000
-                ? "Swarm is processing massive document... This may take a minute."
-                : "Ingesting to Swarm..."}
-            </>
-          ) : (
-            <>
-              <FileText className="h-4 w-4" />
-              Ingest to Swarm
-            </>
-          )}
-        </Button>
+        <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+          <Button
+            type="button"
+            onClick={handleIngest}
+            disabled={!canOperate || !canSubmit}
+            className="gap-2"
+          >
+            {ingesting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {text.length > 15000
+                  ? "Swarm is processing massive document... This may take a minute."
+                  : "Ingesting to Swarm..."}
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4" />
+                Ingest to Swarm
+              </>
+            )}
+          </Button>
+        </RoleGatedAction>
         <span className="text-[10px] text-zinc-500">
           {text.length.toLocaleString()} chars
           {text.length > 10000 && ` · ~${Math.ceil(text.length / 10000)} chunks`}
