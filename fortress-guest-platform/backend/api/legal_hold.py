@@ -25,14 +25,15 @@ import os
 import structlog
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 
+from backend.core.security import require_manager_or_admin
 from backend.services.ediscovery_agent import LegacySession
 
 logger = structlog.get_logger()
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 NAS_LEGAL = "/mnt/fortress_nas/sectors/legal"
 

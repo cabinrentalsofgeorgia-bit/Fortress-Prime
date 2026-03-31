@@ -34,21 +34,11 @@ import structlog
 import hashlib
 import os
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from backend.core.config import settings
-from backend.core.council_stream import (
-    create_council_redis,
-    get_council_state,
-    is_terminal_event,
-    publish_council_event,
-    replay_council_events,
-)
-from backend.core.database import AsyncSessionLocal
-from backend.core.queue import get_arq_pool
-from backend.services.async_jobs import enqueue_async_job, extract_request_actor, get_async_job
+from backend.core.security import require_manager_or_admin
 from backend.services.deliberation_vault import (
     compute_signature,
     get_vault_connection,
@@ -59,7 +49,7 @@ from backend.services.legal_council import (
 )
 
 logger = structlog.get_logger()
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 class DeliberationRequest(BaseModel):

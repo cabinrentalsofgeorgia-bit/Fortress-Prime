@@ -1,13 +1,14 @@
 """
 Sanctions Tripwire API endpoints.
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 
 from backend.core.database import AsyncSessionLocal
+from backend.core.security import require_admin, require_manager_or_admin
 from backend.services.legal_sanctions_tripwire import LegalSanctionsTripwire
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 @router.post("/cases/{case_slug}/sanctions/sweep", summary="Run sanctions tripwire sweep")
@@ -66,6 +67,7 @@ async def list_sanctions_alerts(case_slug: str):
 async def run_tripwire_cron_batch(
     limit: int = Query(default=25, ge=1, le=500),
     include_closed: bool = Query(default=False),
+    _user=Depends(require_admin),
 ):
     async with AsyncSessionLocal() as db:
         try:

@@ -10,16 +10,18 @@ POSTs here.  We:
   4. Optionally run the orchestrator to draft a response
 """
 from datetime import date, datetime
+import hashlib
 from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from backend.core.database import get_db
+from backend.core.security_swarm import verify_swarm_token
 from backend.models import Guest, Reservation, Message
 
 router = APIRouter()
@@ -38,10 +40,20 @@ class CabinEmailPayload(BaseModel):
     division_confidence: Optional[float] = 0.0
 
 
+def _bridge_phone(sender_email: str, sender_phone: Optional[str]) -> str:
+    phone = (sender_phone or "").strip()
+    if phone:
+        return phone
+    digest = hashlib.sha256((sender_email or "").strip().lower().encode("utf-8")).hexdigest()
+    digits = "".join(str(int(ch, 16) % 10) for ch in digest[:10])
+    return f"+1999{digits}"
+
+
 @router.post("/ingest")
 async def ingest_cabin_email(
     payload: CabinEmailPayload,
     db: AsyncSession = Depends(get_db),
+    _swarm_token: str = Depends(verify_swarm_token),
 ):
     """
     Receive a CABIN_VRS-classified email and integrate it into the
@@ -52,6 +64,8 @@ async def ingest_cabin_email(
 
     # ── 1. Find or create guest ──
     guest = None
+
+    bridge_phone = _bridge_phone(payload.sender_email, payload.sender_phone)
 
     if payload.sender_phone:
         result = await db.execute(
@@ -67,15 +81,80 @@ async def ingest_cabin_email(
 
     if not guest:
         name_parts = (payload.sender_name or "").split(None, 1)
-        guest = Guest(
-            first_name=name_parts[0] if name_parts else None,
-            last_name=name_parts[1] if len(name_parts) > 1 else None,
-            email=payload.sender_email,
-            phone_number=payload.sender_phone or "",
-            guest_source="email_intake",
-        )
-        db.add(guest)
-        await db.flush()
+        guest_id = (
+            await db.execute(
+                text("""
+                    INSERT INTO guests (
+                        id,
+                        email,
+                        first_name,
+                        last_name,
+                        phone,
+                        guest_source,
+                        verification_status,
+                        loyalty_tier,
+                        language_preference,
+                        preferred_contact_method,
+                        opt_in_marketing,
+                        opt_in_sms,
+                        opt_in_email,
+                        timezone,
+                        total_stays,
+                        lifetime_stays,
+                        lifetime_nights,
+                        lifetime_revenue,
+                        value_score,
+                        risk_score,
+                        preferences,
+                        is_vip,
+                        is_blacklisted,
+                        requires_supervision,
+                        is_do_not_contact,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (
+                        :id,
+                        :email,
+                        :first_name,
+                        :last_name,
+                        :phone,
+                        'email_intake',
+                        'unverified',
+                        'bronze',
+                        'en',
+                        'sms',
+                        TRUE,
+                        TRUE,
+                        TRUE,
+                        'America/New_York',
+                        0,
+                        0,
+                        0,
+                        0,
+                        50,
+                        10,
+                        CAST(:preferences AS jsonb),
+                        FALSE,
+                        FALSE,
+                        FALSE,
+                        FALSE,
+                        NOW(),
+                        NOW()
+                    )
+                    RETURNING id
+                """),
+                {
+                    "id": str(uuid4()),
+                    "email": payload.sender_email,
+                    "first_name": name_parts[0] if name_parts else None,
+                    "last_name": name_parts[1] if len(name_parts) > 1 else None,
+                    "phone": bridge_phone,
+                    "preferences": "{}",
+                },
+            )
+        ).scalar_one()
+        guest = await db.get(Guest, guest_id)
         log.info("guest_created_from_email", guest_id=str(guest.id))
 
     # ── 2. Link to active reservation ──
@@ -97,9 +176,9 @@ async def ingest_cabin_email(
     message = Message(
         external_id=f"email-{payload.email_id or uuid4().hex[:8]}",
         direction="inbound",
-        phone_from=payload.sender_phone or payload.sender_email,
+        phone_from=payload.sender_phone or bridge_phone,
         phone_to="email-bridge",
-        body=f"[{payload.subject}]\n\n{payload.body}",
+        body=f"[Email From: {payload.sender_email}]\n[{payload.subject}]\n\n{payload.body}",
         status="received",
         sent_at=datetime.utcnow(),
         guest_id=guest.id,

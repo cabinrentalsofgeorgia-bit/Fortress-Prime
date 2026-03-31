@@ -3,15 +3,16 @@ Deposition Kill-Sheet API.
 """
 from datetime import timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from backend.core.database import AsyncSessionLocal
+from backend.core.security import require_manager_or_admin
 from backend.services.legal_deposition_engine import LegalDepositionEngine
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 class KillSheetRequest(BaseModel):

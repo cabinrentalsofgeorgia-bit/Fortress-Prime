@@ -6,14 +6,12 @@ from pathlib import Path
 from uuid import uuid4
 
 import structlog
-from arq.connections import ArqRedis
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from backend.core.database import AsyncSessionLocal
-from backend.core.queue import get_arq_pool
-from backend.services.async_jobs import enqueue_async_job, extract_request_actor
+from backend.core.security import require_manager_or_admin
 from backend.services.ai_router import execute_resilient_inference
 from backend.services.legal_case_graph import get_case_graph_snapshot
 from backend.services.legal_search_engine import synthesize_historic_search
@@ -23,9 +21,7 @@ from backend.services.legal_evidence_ingestion import ingest_document_to_graph
 
 logger = structlog.get_logger()
 
-router = APIRouter()
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-UPLOAD_SPOOL_DIR = PROJECT_ROOT / "storage" / "async_jobs" / "legal_vault_uploads"
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 STRIKE_TYPES = {"deposition_kill_sheet", "sanctions_tripwire", "proportional_discovery"}
 
