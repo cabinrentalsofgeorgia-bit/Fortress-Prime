@@ -1,7 +1,11 @@
 """
 Async database engine and session factory.
 """
-from sqlalchemy import text
+
+from __future__ import annotations
+
+from typing import Any, AsyncIterator
+
 import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
@@ -15,28 +19,24 @@ logger = structlog.get_logger()
 class Base(DeclarativeBase):
     """Shared declarative base for Fortress Prime models."""
 
-# Backward-compatible alias for legacy service imports.
-async_session_maker = AsyncSessionLocal
-
-
-def get_session_factory():
-    """Backward-compatible accessor for legacy async session callers."""
-    return AsyncSessionLocal
-
 
 async_engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
-async def init_db():
-    """Validate connectivity and optionally create tables in opt-in dev mode."""
-    async with async_engine.begin() as conn:
-        await conn.execute(text("SELECT 1"))
-        if settings.db_auto_create_tables:
-            await conn.run_sync(Base.metadata.create_all)
-            logger.info("database_tables_ensured")
-        else:
-            logger.info("database_connection_verified", auto_create_tables=False)
+def get_async_engine() -> AsyncEngine:
+    """Return the shared async engine for runtime DB access."""
+    global async_engine
+
+    if async_engine is None:
+        async_engine = create_async_engine(
+            settings.database_url,
+            echo=False,
+            pool_pre_ping=True,
+            pool_size=20,
+            max_overflow=10,
+        )
+    return async_engine
 
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
@@ -85,10 +85,8 @@ class LazyAsyncSessionProxy:
 
 AsyncSessionLocal = _LazySessionFactory()
 
-# Backward-compatible alias used by older background services.
+# Backward-compatible aliases used by older services.
 async_session_factory = AsyncSessionLocal
-
-# Callable that returns an :class:`~sqlalchemy.ext.asyncio.AsyncSession` for ``async with`` blocks.
 async_session_maker = AsyncSessionLocal
 
 
@@ -120,3 +118,73 @@ async def close_db() -> None:
         async_engine = None
         _session_factory = None
         logger.info("database_connections_closed")
+"""
+Async database engine, session factory, and FastAPI dependency.
+"""
+from sqlalchemy import text
+import structlog
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import declarative_base
+
+from backend.core.config import settings
+
+logger = structlog.get_logger()
+
+Base = declarative_base()
+
+def _async_url(url: str) -> str:
+    """Ensure the database URL uses the asyncpg driver."""
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    return url
+
+async_engine = create_async_engine(
+    _async_url(settings.database_url),
+    echo=False,
+    pool_size=20,
+    max_overflow=10,
+    pool_pre_ping=True,
+)
+
+AsyncSessionLocal = async_sessionmaker(
+    async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+# Backward-compatible alias for legacy service imports.
+async_session_maker = AsyncSessionLocal
+
+
+def get_session_factory():
+    """Backward-compatible accessor for legacy async session callers."""
+    return AsyncSessionLocal
+
+
+async def get_db():
+    """FastAPI dependency that yields an async DB session."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+
+
+async def init_db():
+    """Validate connectivity and optionally create tables in opt-in dev mode."""
+    async with async_engine.begin() as conn:
+        await conn.execute(text("SELECT 1"))
+        if settings.db_auto_create_tables:
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("database_tables_ensured")
+        else:
+            logger.info("database_connection_verified", auto_create_tables=False)
+
+
+async def close_db():
+    """Dispose of the engine connection pool."""
+    await async_engine.dispose()
+    logger.info("database_connections_closed")

@@ -111,13 +111,14 @@ class SeoProposalGradingCompat(BaseModel):
 
 
 class SeoProposalRequest(BaseModel):
-    target_type: str = Field(default="property", max_length=32)
-    target_slug: Optional[str] = Field(default=None, max_length=255)
-    property_id: Optional[UUID] = None
-    property_slug: Optional[str] = None
-    target_keyword: str = Field(..., max_length=255)
-    campaign: str = Field(default="default", max_length=100)
-    rubric_version: str = Field(default="v1", max_length=50)
+    model_config = ConfigDict(populate_by_name=True)
+
+    target_type: str
+    target_slug: str
+    property_id: UUID | None = None
+    target_keyword: str
+    campaign: str = "default"
+    rubric_version: str = "v1"
     source_snapshot: dict[str, Any] = Field(default_factory=dict)
     proposal: SeoProposalPayloadCompat
     grading: SeoProposalGradingCompat
@@ -125,23 +126,15 @@ class SeoProposalRequest(BaseModel):
     proposal_run_id: str | None = None
 
     @model_validator(mode="after")
-    def ensure_property_reference(self) -> "SeoProposalRequest":
-        self.target_type = (self.target_type or "property").strip().lower() or "property"
-        if self.target_type not in {"property", "archive_review"}:
-            raise ValueError("target_type must be either property or archive_review")
-
-        normalized_slug = ((self.target_slug or self.property_slug) or "").strip().strip("/").lower()
-        self.target_slug = normalized_slug or None
-        if self.property_slug is not None:
-            self.property_slug = self.target_slug
-
-        if self.target_type == "archive_review":
-            if not self.target_slug:
-                raise ValueError("target_slug is required for archive_review")
-            return self
-
-        if not self.property_id and not self.target_slug:
-            raise ValueError("Either property_id or property_slug is required")
+    def _normalize_target_fields(self) -> "SeoProposalRequest":
+        normalized_type = str(self.target_type or "").strip().lower()
+        normalized_slug = re.sub(r"[^a-z0-9-]+", "-", str(self.target_slug or "").strip().lower()).strip("-")
+        if normalized_type not in {"property", "archive_review"}:
+            raise ValueError("target_type must be 'property' or 'archive_review'")
+        if not normalized_slug:
+            raise ValueError("target_slug is required")
+        self.target_type = normalized_type
+        self.target_slug = normalized_slug
         return self
 
 
@@ -174,6 +167,55 @@ class SEOPatchReviewEditRequest(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
 
 
+class SEOPatchReviewRejectRequest(BaseModel):
+    note: str = Field(..., min_length=1, max_length=2000)
+
+
+class SEOPatchQueueListResponse(BaseModel):
+    items: list[SEOPatchResponse]
+    total: int
+    offset: int
+    limit: int
+
+
+class SEOPatchQueueStatsResponse(BaseModel):
+    drafted: int
+    needs_rewrite: int
+    pending_human: int
+    deployed: int
+    rejected: int
+    total: int
+
+
+class LiveSEOPayloadResponse(BaseModel):
+    property_slug: str
+    property_name: str
+    page_path: str
+    payload: dict[str, Any]
+    deployed_at: datetime | None = None
+    godhead_score: float | None = None
+
+
+class LiveSEOBulkResponse(BaseModel):
+    items: list[LiveSEOPayloadResponse]
+    requested: int
+    returned: int
+
+
+class LiveLegacySEOPayloadResponse(BaseModel):
+    target_type: str
+    target_slug: str
+    property_slug: str | None = None
+    property_name: str | None = None
+    payload: dict[str, Any]
+    deployed_at: datetime | None = None
+    approved_at: datetime | None = None
+
+
+class LivePropertySlugListResponse(BaseModel):
+    slugs: list[str]
+
+
 def _source_hash(
     *,
     target_type: str,
@@ -182,40 +224,40 @@ def _source_hash(
     rubric_version: str,
     source_snapshot: dict[str, Any],
 ) -> str:
-    basis = {
-        "target_type": target_type,
-        "target_slug": target_slug,
-        "campaign": campaign,
-        "rubric_version": rubric_version,
-        "source_snapshot": source_snapshot or {},
+    payload = {
+        "target_type": str(target_type).strip().lower(),
+        "target_slug": re.sub(r"[^a-z0-9-]+", "-", str(target_slug).strip().lower()).strip("-"),
+        "campaign": str(campaign).strip().lower(),
+        "rubric_version": str(rubric_version).strip().lower(),
+        "source_snapshot": source_snapshot,
     }
     return hashlib.sha256(
         repr(payload).encode("utf-8")
     ).hexdigest()
 
 
-async def _resolve_target_identity(
-    db: AsyncSession,
-    body: SeoProposalRequest,
-) -> tuple[str, str, UUID | None]:
-    target_type = body.target_type
-    if target_type == "archive_review":
-        assert body.target_slug is not None
-        return target_type, body.target_slug, None
-
-    if body.property_id:
-        prop = await db.get(Property, body.property_id)
-        if not prop:
-            raise HTTPException(status_code=404, detail="Property not found")
-        return target_type, str(prop.slug).strip().lower(), prop.id
-
-    result = await db.execute(
-        select(Property).where(Property.slug == ((body.target_slug or body.property_slug) or "").strip())
-    )
-    prop = result.scalar_one_or_none()
-    if not prop:
-        raise HTTPException(status_code=404, detail="Property slug not found")
-    return target_type, str(prop.slug).strip().lower(), prop.id
+async def require_swarm_seo_bearer(
+    credentials: HTTPAuthorizationCredentials | None = Depends(internal_bearer),
+) -> str:
+    expected_token = settings.swarm_seo_api_key.strip()
+    if not expected_token:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server misconfiguration: SWARM_SEO_API_KEY not configured",
+        )
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing machine bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not hmac.compare_digest(credentials.credentials, expected_token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid machine bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials.credentials
 
 
 def _serialize_patch(
@@ -232,51 +274,100 @@ def _serialize_patch(
 
 def _default_final_payload(patch: SEOPatch) -> dict[str, Any]:
     return {
-        "id": str(row.id),
-        "target_type": row.target_type,
-        "target_slug": row.target_slug,
-        "property_id": str(row.property_id) if row.property_id is not None else None,
-        "status": row.status,
-        "target_keyword": row.target_keyword,
-        "campaign": row.campaign,
-        "rubric_version": row.rubric_version,
-        "source_hash": row.source_hash,
-        "proposed_title": row.proposed_title,
-        "proposed_meta_description": row.proposed_meta_description,
-        "proposed_h1": row.proposed_h1,
-        "proposed_intro": row.proposed_intro,
-        "proposed_faq": row.proposed_faq or [],
-        "proposed_json_ld": row.proposed_json_ld or {},
-        "fact_snapshot": row.fact_snapshot or {},
-        "score_overall": row.score_overall,
-        "score_breakdown": row.score_breakdown or {},
-        "proposed_by": row.proposed_by,
-        "proposal_run_id": row.proposal_run_id,
-        "reviewed_by": row.reviewed_by,
-        "review_note": row.review_note,
-        "approved_payload": row.approved_payload or {},
-        "approved_at": row.approved_at.isoformat() if row.approved_at else None,
-        "deployed_at": row.deployed_at.isoformat() if row.deployed_at else None,
-        "created_at": row.created_at.isoformat() if row.created_at else None,
-        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        "title": patch.title,
+        "meta_description": patch.meta_description,
+        "og_title": patch.og_title,
+        "og_description": patch.og_description,
+        "h1_suggestion": patch.h1_suggestion,
+        "jsonld": patch.jsonld_payload or {},
+        "canonical_url": patch.canonical_url,
+        "alt_tags": patch.alt_tags or {},
     }
 
 
-async def _upsert_proposal(db: AsyncSession, body: SeoProposalRequest) -> SeoPatchQueue:
-    target_type, target_slug, property_id = await _resolve_target_identity(db, body)
-    source_hash = _source_hash(
-        target_type=target_type,
-        target_slug=target_slug,
-        campaign=body.campaign,
-        rubric_version=body.rubric_version,
-        source_snapshot=body.source_snapshot,
-    )
-    result = await db.execute(
-        select(SeoPatchQueue).where(
-            SeoPatchQueue.target_type == target_type,
-            SeoPatchQueue.target_slug == target_slug,
-            SeoPatchQueue.campaign == body.campaign,
-            SeoPatchQueue.source_hash == source_hash,
+def _normalize_legacy_overlay_payload(payload: dict[str, Any] | None, patch: SeoPatchQueue) -> dict[str, Any]:
+    source = payload if isinstance(payload, dict) else {}
+    title = source.get("title") or patch.proposed_title
+    meta_description = source.get("meta_description") or patch.proposed_meta_description
+    h1 = source.get("h1") or source.get("h1_suggestion") or patch.proposed_h1
+    intro = source.get("intro") or patch.proposed_intro
+    faq = source.get("faq") if isinstance(source.get("faq"), list) else (patch.proposed_faq or [])
+    json_ld = source.get("json_ld") or source.get("jsonld") or patch.proposed_json_ld or {}
+    normalized: dict[str, Any] = {
+        "title": title,
+        "meta_description": meta_description,
+        "h1": h1,
+        "intro": intro,
+        "faq": faq,
+        "json_ld": json_ld,
+    }
+    for optional_key in ("canonical_url", "og_title", "og_description", "alt_tags"):
+        value = source.get(optional_key)
+        if value is not None:
+            normalized[optional_key] = value
+    return normalized
+
+
+def _snapshot_patch_state(patch: SEOPatch) -> dict[str, Any]:
+    return {
+        "page_path": patch.page_path,
+        "patch_version": patch.patch_version,
+        "status": patch.status,
+        "title": patch.title,
+        "meta_description": patch.meta_description,
+        "og_title": patch.og_title,
+        "og_description": patch.og_description,
+        "jsonld_payload": patch.jsonld_payload,
+        "canonical_url": patch.canonical_url,
+        "h1_suggestion": patch.h1_suggestion,
+        "alt_tags": patch.alt_tags,
+        "godhead_score": patch.godhead_score,
+        "godhead_model": patch.godhead_model,
+        "godhead_feedback": patch.godhead_feedback,
+        "reviewed_by": patch.reviewed_by,
+        "reviewed_at": patch.reviewed_at,
+        "final_payload": patch.final_payload,
+        "deployed_at": patch.deployed_at,
+        "deploy_task_id": patch.deploy_task_id,
+        "deploy_status": patch.deploy_status,
+        "deploy_queued_at": patch.deploy_queued_at,
+        "deploy_acknowledged_at": patch.deploy_acknowledged_at,
+        "deploy_attempts": patch.deploy_attempts,
+        "deploy_last_error": patch.deploy_last_error,
+        "deploy_last_http_status": patch.deploy_last_http_status,
+        "swarm_model": patch.swarm_model,
+        "swarm_node": patch.swarm_node,
+        "generation_ms": patch.generation_ms,
+    }
+
+
+def _restore_patch_state(patch: SEOPatch, snapshot: dict[str, Any]) -> None:
+    for key, value in snapshot.items():
+        setattr(patch, key, value)
+
+
+async def _resolve_property_for_patch(db: AsyncSession, property_id: UUID | None) -> Property | None:
+    if property_id is None:
+        return None
+    prop = await db.get(Property, property_id)
+    if prop is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found")
+    return prop
+
+
+async def _resolve_rubric_id(db: AsyncSession, rubric_id: UUID | None) -> UUID:
+    if rubric_id is not None:
+        rubric = await db.get(SEORubric, rubric_id)
+        if rubric is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rubric not found")
+        return rubric.id
+
+    rubric = (
+        await db.execute(
+            select(SEORubric)
+            .where(SEORubric.status == "active")
+            .order_by(SEORubric.created_at.desc())
+            .limit(1)
         )
     ).scalar_one_or_none()
     if rubric is None:
@@ -299,41 +390,52 @@ async def _load_patch_with_property(
         )
     ).one_or_none()
     if row is None:
-        row = SeoPatchQueue(
-            target_type=target_type,
-            target_slug=target_slug,
-            property_id=property_id,
-            campaign=body.campaign,
-            source_hash=source_hash,
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SEO patch not found")
+    patch, property_slug, property_name = row
+    return patch, property_slug, property_name
+
+
+async def _load_deployed_live_payload(
+    db: AsyncSession,
+    property_slug: str,
+) -> LiveSEOPayloadResponse:
+    normalized_slug = property_slug.strip().lower()
+    property_row = (
+        await db.execute(
+            select(Property).where(
+                Property.slug == normalized_slug,
+                Property.is_active.is_(True),
+            )
         )
     ).scalar_one_or_none()
     if property_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found")
 
-    row.target_type = target_type
-    row.target_slug = target_slug
-    row.property_id = property_id
-    row.status = "proposed"
-    row.target_keyword = body.target_keyword
-    row.rubric_version = body.rubric_version
-    row.proposed_title = body.proposal.title
-    row.proposed_meta_description = body.proposal.meta_description
-    row.proposed_h1 = body.proposal.h1
-    row.proposed_intro = body.proposal.intro
-    row.proposed_faq = body.proposal.faq
-    row.proposed_json_ld = body.proposal.json_ld
-    row.fact_snapshot = body.source_snapshot
-    row.score_overall = body.grading.overall
-    row.score_breakdown = body.grading.breakdown
-    row.proposed_by = body.proposed_by
-    row.proposal_run_id = body.proposal_run_id
-    row.reviewed_by = None
-    row.review_note = None
-    row.approved_payload = {}
-    row.approved_at = None
-    row.deployed_at = None
-    row.updated_at = datetime.utcnow()
-    return row
+    patch = (
+        await db.execute(
+            select(SEOPatch)
+            .where(
+                SEOPatch.property_id == property_row.id,
+                SEOPatch.status == "deployed",
+            )
+            .order_by(SEOPatch.deployed_at.desc(), SEOPatch.updated_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if patch is None or patch.final_payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No deployed SEO payload for property",
+        )
+
+    return LiveSEOPayloadResponse(
+        property_slug=property_row.slug,
+        property_name=property_row.name,
+        page_path=patch.page_path,
+        payload=patch.final_payload,
+        deployed_at=patch.deployed_at,
+        godhead_score=patch.godhead_score,
+    )
 
 
 async def _load_legacy_property_overlay(

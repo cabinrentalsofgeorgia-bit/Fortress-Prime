@@ -28,13 +28,12 @@ import json
 import uuid
 from typing import Any, Dict, List
 
-from arq.connections import ArqRedis
 import psycopg2.extras
 import structlog
 import hashlib
 import os
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -46,6 +45,7 @@ from backend.services.deliberation_vault import (
 from backend.services.legal_council import (
     get_session,
     list_personas_summary,
+    run_council_deliberation,
 )
 
 logger = structlog.get_logger()
@@ -74,111 +74,9 @@ class DeliberationRequest(BaseModel):
         default="MANUAL_RUN",
         description="Trigger type: MANUAL_RUN, RE_DELIBERATE, NEW_DOCUMENT_INGEST",
     )
-    case_type: str = Field(
-        default="legal_case",
-        description="Workflow type: legal_case or seo_migration",
-    )
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Optional workflow metadata carried through to the final payload",
-    )
 
 
-class DeliberationEnqueueResponse(BaseModel):
-    job_id: str
-    session_id: str
-    status: str
-    stream_url: str
-    status_url: str
-
-
-SEO_MIGRATION_CASE_TYPE = "seo_migration"
-SEO_MIGRATION_CASE_SLUG = "seo_migration_case"
-
-
-def _metadata_record(value: Any) -> Dict[str, Any]:
-    return value if isinstance(value, dict) else {}
-
-
-def _json_preview(value: Any) -> str:
-    try:
-        rendered = json.dumps(value, ensure_ascii=True, default=str, indent=2)
-    except (TypeError, ValueError):
-        rendered = str(value)
-    return rendered[:4000]
-
-
-def _build_seo_migration_case_brief(metadata: Dict[str, Any]) -> str:
-    legacy_snapshot = _metadata_record(metadata.get("legacy_snapshot"))
-    final_json_ld = _metadata_record(metadata.get("final_json_ld"))
-    target_slug = str(metadata.get("target_slug") or "unspecified-target")
-    target_keyword = str(metadata.get("target_keyword") or "unspecified-keyword")
-    legacy_path = str(
-        legacy_snapshot.get("scrape_url")
-        or legacy_snapshot.get("archive_path")
-        or metadata.get("legacy_path")
-        or target_slug
-    )
-    proposed_path = str(
-        final_json_ld.get("url")
-        or metadata.get("proposed_url")
-        or f"/properties/{target_slug}"
-    )
-
-    return (
-        "SEO migration sovereign audit.\n\n"
-        f"Case slug: {SEO_MIGRATION_CASE_SLUG}\n"
-        f"Legacy path: {legacy_path}\n"
-        f"Proposed path: {proposed_path}\n"
-        f"Target slug: {target_slug}\n"
-        f"Target keyword: {target_keyword}\n\n"
-        "Evaluate whether the redirect preserves semantic intent, canonical continuity, "
-        "and structured-data fidelity during the Drupal-to-Next migration.\n\n"
-        "Legacy snapshot:\n"
-        f"{_json_preview(legacy_snapshot)}\n\n"
-        "Proposed JSON-LD payload:\n"
-        f"{_json_preview(final_json_ld)}"
-    )
-
-
-def _build_seo_migration_context(metadata: Dict[str, Any]) -> str:
-    campaign = str(metadata.get("campaign") or "default")
-    proposal_run_id = str(metadata.get("proposal_run_id") or "")
-    source_hash = str(metadata.get("source_hash") or "")
-    return (
-        f"Campaign: {campaign}\n"
-        f"Proposal run: {proposal_run_id or 'n/a'}\n"
-        f"Source hash: {source_hash or 'n/a'}\n"
-        "Focus on redirect legitimacy, metadata continuity, and whether the proposed "
-        "schema preserves the legacy page's search intent."
-    )
-
-
-def _normalize_deliberation_payload(body: DeliberationRequest) -> Dict[str, Any]:
-    payload = body.model_dump()
-    payload["case_type"] = str(payload.get("case_type") or "legal_case").strip().lower()
-    payload["metadata"] = _metadata_record(payload.get("metadata"))
-
-    if payload["case_type"] != SEO_MIGRATION_CASE_TYPE:
-        return payload
-
-    payload["case_slug"] = str(payload.get("case_slug") or SEO_MIGRATION_CASE_SLUG).strip()
-    if not payload["case_slug"]:
-        payload["case_slug"] = SEO_MIGRATION_CASE_SLUG
-
-    if not str(payload.get("trigger_type") or "").strip() or payload.get("trigger_type") == "MANUAL_RUN":
-        payload["trigger_type"] = "SEO_MIGRATION_AUDIT"
-
-    if not str(payload.get("case_brief") or "").strip():
-        payload["case_brief"] = _build_seo_migration_case_brief(payload["metadata"])
-
-    if not str(payload.get("context") or "").strip():
-        payload["context"] = _build_seo_migration_context(payload["metadata"])
-
-    return payload
-
-
-def _sse(data: dict, event_id: str | None = None) -> str:
+def _sse(data: dict) -> str:
     """Format a dict as an SSE data frame with strict JSON safety.
 
     Uses ensure_ascii to escape all non-ASCII into \\uXXXX sequences,
@@ -188,169 +86,72 @@ def _sse(data: dict, event_id: str | None = None) -> str:
         payload = json.dumps(data, ensure_ascii=True, default=str)
     except (TypeError, ValueError) as exc:
         payload = json.dumps({"type": "error", "message": f"Serialization error: {exc}"})
-    lines = []
-    if event_id:
-        lines.append(f"id: {event_id}")
-    lines.append(f"data: {payload}")
-    return "\n".join(lines) + "\n\n"
+    return f"data: {payload}\n\n"
 
 
-def _job_terminal_event(job_id: str, status_value: str, result: dict[str, Any], error: str | None) -> dict[str, Any]:
-    if status_value == "succeeded":
-        payload = dict(result or {})
-        payload.setdefault("type", "done")
-        payload.setdefault("job_id", job_id)
-        payload.setdefault("session_id", job_id)
-        return payload
-    return {
-        "type": "error",
-        "job_id": job_id,
-        "session_id": job_id,
-        "message": error or f"Council job ended with status '{status_value}'",
-    }
-
-
-@router.post(
-    "/council/deliberate",
-    response_model=DeliberationEnqueueResponse,
-    status_code=status.HTTP_202_ACCEPTED,
-)
-async def deliberate(
-    request: Request,
-    body: DeliberationRequest,
-    arq_redis: ArqRedis = Depends(get_arq_pool),
-):
+@router.post("/council/deliberate")
+async def deliberate(request: Request, body: DeliberationRequest):
     """
-    Enqueue a Legal Council of 9 deliberation session.
+    Start a Legal Council of 9 deliberation session.
+    Returns an SSE stream with real-time persona opinions and consensus.
     """
-    payload = _normalize_deliberation_payload(body)
-    async with AsyncSessionLocal() as db:
-        job = await enqueue_async_job(
-            db,
-            worker_name="run_legal_council_job",
-            job_name="run_legal_council",
-            payload=payload,
-            requested_by=extract_request_actor(
-                request.headers.get("x-user-id"),
-                request.headers.get("x-user-email"),
-            ),
-            tenant_id=getattr(request.state, "tenant_id", None),
-            request_id=request.headers.get("x-request-id"),
-            redis=arq_redis,
-        )
-    return DeliberationEnqueueResponse(
-        job_id=str(job.id),
-        session_id=str(job.id),
-        status="queued",
-        stream_url=f"/api/legal/council/{job.id}/stream",
-        status_url=f"/api/async/jobs/{job.id}",
-    )
-
-
-@router.get("/council/{job_id}/stream")
-async def stream_deliberation(
-    job_id: str,
-    request: Request,
-    cursor: str | None = Query(default=None),
-):
-    async with AsyncSessionLocal() as db:
-        job = await get_async_job(db, job_id)
-    if job is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Council job not found")
+    session_id = str(uuid.uuid4())
 
     async def generate():
-        redis = await create_council_redis()
-        pubsub = redis.pubsub()
-        last_event_id = cursor or request.headers.get("last-event-id")
-        terminal_emitted = False
-        heartbeat_interval = max(1, settings.council_stream_heartbeat_seconds)
-        heartbeat_ticks = 0
+        queue: asyncio.Queue = asyncio.Queue()
 
-        async def emit_replay() -> list[str]:
-            nonlocal last_event_id, terminal_emitted
-            frames: list[str] = []
-            replay = await replay_council_events(redis, job_id, after_id=last_event_id)
-            for stream_id, event in replay:
-                frames.append(_sse(event, event_id=stream_id))
-                last_event_id = stream_id
-                terminal_emitted = terminal_emitted or is_terminal_event(event)
-            return frames
+        async def on_progress(event: dict):
+            await queue.put(event)
+
+        task = asyncio.create_task(
+            run_council_deliberation(
+                session_id=session_id,
+                case_brief=body.case_brief,
+                context=body.context,
+                progress_callback=on_progress,
+                case_slug=body.case_slug,
+                case_number=body.case_number,
+                trigger_type=body.trigger_type,
+            )
+        )
+
+        yield _sse({
+            "type": "session_start",
+            "session_id": session_id,
+        })
 
         try:
-            for frame in await emit_replay():
-                yield frame
-            if terminal_emitted:
-                return
-
-            await pubsub.subscribe(f"council_stream:{job_id}")
-
-            for frame in await emit_replay():
-                yield frame
-            if terminal_emitted:
-                return
-
             while True:
                 if await request.is_disconnected():
-                    logger.info("council_relay_disconnected", job_id=job_id)
+                    task.cancel()
+                    logger.info("council_client_disconnected", session_id=session_id)
                     break
 
-                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                if message and message.get("type") == "message":
-                    try:
-                        envelope = json.loads(message["data"])
-                        stream_id = envelope.get("stream_id")
-                        event = envelope.get("event") or {}
-                    except Exception as exc:
-                        logger.warning("council_relay_decode_failed", job_id=job_id, error=str(exc)[:200])
-                        continue
-                    if stream_id and stream_id == last_event_id:
-                        continue
-                    if stream_id:
-                        last_event_id = stream_id
-                    yield _sse(event, event_id=stream_id)
-                    if is_terminal_event(event):
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield _sse(event)
+
+                    if event.get("type") == "done":
                         break
-                    heartbeat_ticks = 0
-                    continue
-
-                heartbeat_ticks += 1
-                if heartbeat_ticks >= heartbeat_interval:
+                except asyncio.TimeoutError:
                     yield ": heartbeat\n\n"
-                    heartbeat_ticks = 0
-
-                async with AsyncSessionLocal() as db:
-                    current_job = await get_async_job(db, job_id)
-                if current_job and current_job.status in {"succeeded", "failed", "cancelled"}:
-                    terminal_event = _job_terminal_event(
-                        job_id,
-                        current_job.status,
-                        current_job.result_json or {},
-                        current_job.error_text,
-                    )
-                    if not terminal_emitted:
-                        current_state = await get_council_state(redis, job_id)
-                        current_last_id = (
-                            str(current_state.get("last_event_id"))
-                            if isinstance(current_state, dict) and current_state.get("last_event_id")
-                            else None
-                        )
-                        current_event_type = (
-                            str(current_state.get("event_type") or "").lower()
-                            if isinstance(current_state, dict)
-                            else ""
-                        )
-                        if current_last_id and current_event_type in {"done", "error"}:
-                            last_event_id = current_last_id
-                            yield _sse(terminal_event, event_id=current_last_id)
-                        else:
-                            terminal_stream_id = await publish_council_event(redis, job_id, terminal_event)
-                            last_event_id = terminal_stream_id
-                            yield _sse(terminal_event, event_id=terminal_stream_id)
-                    break
-        finally:
-            await pubsub.unsubscribe(f"council_stream:{job_id}")
-            await pubsub.aclose()
-            await redis.aclose()
+                    if task.done():
+                        exc = task.exception()
+                        if exc:
+                            yield _sse({
+                                "type": "error",
+                                "message": f"Council error: {exc}",
+                            })
+                        break
+        except asyncio.CancelledError:
+            task.cancel()
+            raise
+        except Exception as exc:
+            logger.exception("council_stream_error", error=str(exc))
+            yield _sse({
+                "type": "error",
+                "message": f"Stream error: {type(exc).__name__}: {exc}",
+            })
 
     return StreamingResponse(
         generate(),
@@ -366,30 +167,10 @@ async def stream_deliberation(
 @router.get("/council/session/{session_id}")
 async def get_session_state(session_id: str):
     """Get the current state of a council session (polling fallback)."""
-    redis = await create_council_redis()
-    try:
-        state = await get_council_state(redis, session_id)
-    finally:
-        await redis.aclose()
-
-    async with AsyncSessionLocal() as db:
-        job = await get_async_job(db, session_id)
-
-    if job is not None:
-        return {
-            "session_id": session_id,
-            "job_id": session_id,
-            "status": job.status,
-            "attempts": job.attempts,
-            "result": job.result_json or {},
-            "error": job.error_text,
-            "council_state": state,
-        }
-
     session = get_session(session_id)
-    if session:
-        return session
-    return {"error": "Session not found", "session_id": session_id}
+    if not session:
+        return {"error": "Session not found", "session_id": session_id}
+    return session
 
 
 @router.get("/council/personas")

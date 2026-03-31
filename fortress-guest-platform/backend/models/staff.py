@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 from uuid import uuid4
-from sqlalchemy import Column, String, Boolean, TIMESTAMP
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, String, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgresUUID
+from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.core.database import Base
 
@@ -21,12 +24,15 @@ class StaffRole(StrEnum):
     MAINTENANCE = "maintenance"
 
 
+STAFF_ROLE_VALUES = tuple(role.value for role in StaffRole)
+
+
 class StaffUser(Base):
     """Staff/admin identity stored inside the sovereign Postgres runtime."""
 
     __tablename__ = "staff_users"
 
-    id: Mapped[UUID] = mapped_column(
+    id: Mapped[PostgresUUID] = mapped_column(
         PostgresUUID(as_uuid=True),
         primary_key=True,
         default=uuid4,
