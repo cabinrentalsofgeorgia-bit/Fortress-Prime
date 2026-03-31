@@ -59,6 +59,9 @@ import {
   useResendInvite,
   useRevokeInvite,
 } from "@/lib/hooks";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageStaff } from "@/lib/roles";
 import { toast } from "sonner";
 
 const FEATURE_FLAGS = [
@@ -81,6 +84,8 @@ const NOTIFICATION_PREFS = [
 ];
 
 export default function SettingsPage() {
+  const user = useAppStore((state) => state.user);
+  const canAdminSettings = canManageStaff(user);
   const { data: streamline, isLoading: streamlineLoading } = useStreamlineStatus();
   useChannelStatus();
   const [features, setFeatures] = useState<Record<string, boolean>>(
@@ -130,6 +135,11 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">
           Platform configuration and management
         </p>
+        {!canAdminSettings ? (
+          <Badge variant="outline" className="mt-2 text-xs">
+            View-only role
+          </Badge>
+        ) : null}
       </div>
 
       <Tabs defaultValue="integrations">
@@ -234,10 +244,12 @@ export default function SettingsPage() {
                   </CardTitle>
                   <CardDescription>Manage team members with platform access</CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setInviteOpen(true)}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Invite User
-                </Button>
+                <RoleGatedAction allowed={canAdminSettings} reason="Admin role required.">
+                  <Button size="sm" onClick={() => setInviteOpen(true)} disabled={!canAdminSettings}>
+                    <Send className="mr-2 h-4 w-4" />
+                    Invite User
+                  </Button>
+                </RoleGatedAction>
               </div>
             </CardHeader>
             <CardContent>
@@ -270,12 +282,16 @@ export default function SettingsPage() {
                         )}
                         {s.is_active && (
                           <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Reset password" onClick={() => { setResetPwUser({ id: s.id, name: `${s.first_name} ${s.last_name}` }); setResetPw(""); setResetPwConfirm(""); }}>
-                              <KeyRound className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Deactivate" onClick={() => { if (confirm(`Deactivate ${s.first_name} ${s.last_name}?`)) deactivateUser.mutate(s.id); }}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <RoleGatedAction allowed={canAdminSettings} reason="Admin role required.">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Reset password" disabled={!canAdminSettings} onClick={() => { setResetPwUser({ id: s.id, name: `${s.first_name} ${s.last_name}` }); setResetPw(""); setResetPwConfirm(""); }}>
+                                <KeyRound className="h-3.5 w-3.5" />
+                              </Button>
+                            </RoleGatedAction>
+                            <RoleGatedAction allowed={canAdminSettings} reason="Admin role required.">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Deactivate" disabled={!canAdminSettings} onClick={() => { if (confirm(`Deactivate ${s.first_name} ${s.last_name}?`)) deactivateUser.mutate(s.id); }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </RoleGatedAction>
                           </>
                         )}
                       </div>
@@ -333,12 +349,16 @@ export default function SettingsPage() {
                         </Badge>
                         {inv.status === "pending" && (
                           <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Resend invite" onClick={() => resendInvite.mutate(inv.id)}>
-                              <RotateCw className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Revoke invite" onClick={() => { if (confirm(`Revoke invitation for ${inv.first_name}?`)) revokeInvite.mutate(inv.id); }}>
-                              <Ban className="h-3.5 w-3.5" />
-                            </Button>
+                            <RoleGatedAction allowed={canAdminSettings} reason="Admin role required.">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" title="Resend invite" disabled={!canAdminSettings} onClick={() => resendInvite.mutate(inv.id)}>
+                                <RotateCw className="h-3.5 w-3.5" />
+                              </Button>
+                            </RoleGatedAction>
+                            <RoleGatedAction allowed={canAdminSettings} reason="Admin role required.">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Revoke invite" disabled={!canAdminSettings} onClick={() => { if (confirm(`Revoke invitation for ${inv.first_name}?`)) revokeInvite.mutate(inv.id); }}>
+                                <Ban className="h-3.5 w-3.5" />
+                              </Button>
+                            </RoleGatedAction>
                           </>
                         )}
                         {inv.expires_at && inv.status === "pending" && (
@@ -415,7 +435,7 @@ export default function SettingsPage() {
                 </div>
                 <DialogFooter className="gap-2">
                   <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={sendInvite.isPending}>
+                  <Button type="submit" disabled={!canAdminSettings || sendInvite.isPending}>
                     {sendInvite.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</> : <><Send className="mr-2 h-4 w-4" />Send Invitation</>}
                   </Button>
                 </DialogFooter>

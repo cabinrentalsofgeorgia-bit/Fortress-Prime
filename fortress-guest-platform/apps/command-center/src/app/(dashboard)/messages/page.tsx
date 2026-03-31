@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useConversations, useMessagesByPhone, useSendMessage, useGuest, useReservations, useMessageTemplates } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,16 +31,25 @@ import {
   Check,
 } from "lucide-react";
 import { ChatSkeleton } from "@/components/skeletons";
-import type { ConversationThread } from "@/lib/types";
+import { useAppStore } from "@/lib/store";
 
 export default function MessagesPage() {
-  const [selectedThread, setSelectedThread] = useState<ConversationThread | null>(null);
+  const activeConversationContext = useAppStore((s) => s.activeConversationContext);
+  const setActiveConversationContext = useAppStore((s) => s.setActiveConversationContext);
+  const clearActiveConversationContext = useAppStore((s) => s.clearActiveConversationContext);
+  const [selectedThreadPhone, setSelectedThreadPhone] = useState<string | null>(
+    activeConversationContext?.guestPhone ?? null,
+  );
   const [reply, setReply] = useState("");
   const [threadSearch, setThreadSearch] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: conversations, isLoading: convoLoading } = useConversations();
-  const { data: messages } = useMessagesByPhone(selectedThread?.guest_phone ?? "");
+  const selectedThread = useMemo(
+    () => (conversations ?? []).find((thread) => thread.guest_phone === selectedThreadPhone) ?? null,
+    [conversations, selectedThreadPhone],
+  );
+  const { data: messages } = useMessagesByPhone(selectedThreadPhone ?? "");
   const { data: guest } = useGuest(selectedThread?.guest_id ?? "");
   const { data: reservations } = useReservations();
   const { data: templates } = useMessageTemplates();
@@ -54,6 +63,30 @@ export default function MessagesPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!selectedThread) {
+      if (activeConversationContext?.guestPhone) {
+        return;
+      }
+      clearActiveConversationContext();
+      return;
+    }
+
+    setActiveConversationContext({
+      guestId: selectedThread.guest_id,
+      guestName: selectedThread.guest_name,
+      guestPhone: selectedThread.guest_phone,
+      propertyName: selectedThread.property_name,
+      lastMessage: selectedThread.last_message,
+      unreadCount: selectedThread.unread_count,
+    });
+  }, [
+    activeConversationContext?.guestPhone,
+    clearActiveConversationContext,
+    selectedThread,
+    setActiveConversationContext,
+  ]);
 
   const filteredConversations = (conversations ?? []).filter((c) => {
     if (!threadSearch) return true;
@@ -134,10 +167,10 @@ export default function MessagesPage() {
           {filteredConversations.map((thread) => (
             <button
               key={thread.guest_phone}
-              onClick={() => setSelectedThread(thread)}
+              onClick={() => setSelectedThreadPhone(thread.guest_phone)}
               className={cn(
                 "w-full text-left p-3 border-b transition-colors hover:bg-accent",
-                selectedThread?.guest_phone === thread.guest_phone && "bg-accent",
+                selectedThreadPhone === thread.guest_phone && "bg-accent",
               )}
             >
               <div className="flex items-start gap-2.5">
