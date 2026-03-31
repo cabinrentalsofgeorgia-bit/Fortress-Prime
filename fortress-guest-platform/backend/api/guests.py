@@ -24,10 +24,12 @@ from sqlalchemy import select, func, or_, desc
 from pydantic import BaseModel, Field
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
+from backend.models.staff import StaffUser
 from backend.models import Guest, Reservation, Message
 from backend.services.guest_management import GuestManagementService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -211,7 +213,7 @@ def _build_guest_response(guest: Guest) -> GuestResponse:
     """Build a GuestResponse from a Guest model"""
     return GuestResponse(
         id=guest.id,
-        phone_number=guest.phone_number,
+        phone_number=guest.phone_number or "",
         email=guest.email,
         first_name=guest.first_name,
         last_name=guest.last_name,
@@ -413,7 +415,7 @@ async def get_guest(guest_id: UUID, db: AsyncSession = Depends(get_db)):
 
     return GuestDetail(
         id=guest.id,
-        phone_number=guest.phone_number,
+        phone_number=guest.phone_number or "",
         phone_number_secondary=guest.phone_number_secondary,
         email=guest.email,
         email_secondary=guest.email_secondary,

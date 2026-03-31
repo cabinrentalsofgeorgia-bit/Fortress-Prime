@@ -13,7 +13,8 @@ from sqlalchemy.orm import selectinload
 
 from backend.core.config import settings
 from backend.core.database import get_db
-from backend.core.queue import get_arq_pool
+from backend.core.security import require_admin, require_operator_manager_admin
+from backend.models.staff import StaffUser
 from backend.models import Property
 from backend.schemas.media import PropertyImageResponse
 
@@ -62,6 +63,7 @@ async def list_properties(
     is_active: Optional[bool] = Query(None),
     limit: int = Query(100, le=1000),
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_operator_manager_admin),
 ):
     """List all properties."""
 
@@ -93,7 +95,7 @@ class PropertyCreate(BaseModel):
 async def create_property(
     data: PropertyCreate,
     db: AsyncSession = Depends(get_db),
-    arq_redis: ArqRedis = Depends(get_arq_pool),
+    _user: StaffUser = Depends(require_admin),
 ):
     """Create a new property."""
 
@@ -138,7 +140,7 @@ async def update_property(
     property_id: UUID,
     body: PropertyUpdate,
     db: AsyncSession = Depends(get_db),
-    arq_redis: ArqRedis = Depends(get_arq_pool),
+    _user: StaffUser = Depends(require_admin),
 ):
     """Update a property's details."""
     prop = await _load_property(db, property_id)
@@ -162,6 +164,7 @@ async def update_property(
 async def get_property(
     property_id: UUID,
     db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_operator_manager_admin),
 ):
     """Get property by ID."""
 

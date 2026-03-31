@@ -11,10 +11,11 @@ from sqlalchemy import select, func
 from pydantic import BaseModel
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.core.websocket import emit_work_order_update
 from backend.models import WorkOrder, Property
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 class WorkOrderUpdate(BaseModel):
