@@ -730,7 +730,6 @@ async def confirm_hold(body: ConfirmHoldRequest, db: AsyncSession = Depends(get_
     except BookingHoldError as exc:
         raise HTTPException(exc.status_code, exc.args[0]) from exc
 
-    await db.commit()
     reservation = outcome.reservation
     return {
         "reservation_id": str(reservation.id),

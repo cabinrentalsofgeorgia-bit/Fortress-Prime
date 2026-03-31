@@ -84,7 +84,7 @@ class SignatureSubmission(BaseModel):
 @router.get("/templates")
 async def list_templates(
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
+    _user: StaffUser = Depends(require_manager_or_admin),
 ):
     result = await db.execute(
         select(AgreementTemplate).where(AgreementTemplate.is_active == True).order_by(AgreementTemplate.name)
@@ -97,7 +97,7 @@ async def list_templates(
 async def get_template(
     template_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
+    _user: StaffUser = Depends(require_manager_or_admin),
 ):
     t = await db.get(AgreementTemplate, template_id)
     if not t:
@@ -177,7 +177,7 @@ async def delete_template(
 @router.get("/dashboard")
 async def agreement_dashboard(
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
+    _user: StaffUser = Depends(require_manager_or_admin),
 ):
     """Stats overview for the agreements page."""
     total = (await db.execute(select(func.count(RentalAgreement.id)))).scalar() or 0
@@ -201,7 +201,7 @@ async def agreement_dashboard(
 @router.get("/")
 async def list_agreements(
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
+    _user: StaffUser = Depends(require_manager_or_admin),
     status_filter: Optional[str] = Query(None, alias="status"),
     property_id: Optional[UUID] = None,
     limit: int = Query(50, le=200),
@@ -236,7 +236,7 @@ async def list_agreements(
 async def get_agreement(
     agreement_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
+    _user: StaffUser = Depends(require_manager_or_admin),
 ):
     a = await db.get(RentalAgreement, agreement_id)
     if not a:

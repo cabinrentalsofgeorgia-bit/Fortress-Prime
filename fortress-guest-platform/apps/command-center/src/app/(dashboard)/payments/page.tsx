@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { api } from "@/lib/api";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManagePayments } from "@/lib/roles";
 import { toast } from "sonner";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import {
@@ -91,11 +94,13 @@ function CardForm({
   intentMeta,
   onSuccess,
   onCancel,
+  canOperate,
 }: {
   clientSecret: string;
   intentMeta: MOTOIntentResponse;
   onSuccess: () => void;
   onCancel: () => void;
+  canOperate: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -202,23 +207,25 @@ function CardForm({
       </div>
 
       <div className="flex gap-3">
-        <Button
-          type="submit"
-          disabled={processing || !stripe}
-          className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-        >
-          {processing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <Lock className="mr-2 h-4 w-4" />
-              Charge ${(intentMeta.amount_cents / 100).toFixed(2)}
-            </>
-          )}
-        </Button>
+        <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+          <Button
+            type="submit"
+            disabled={!canOperate || processing || !stripe}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+          >
+            {processing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Lock className="mr-2 h-4 w-4" />
+                Charge ${(intentMeta.amount_cents / 100).toFixed(2)}
+              </>
+            )}
+          </Button>
+        </RoleGatedAction>
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
@@ -237,6 +244,8 @@ function formatMoney(v: string | number) {
 }
 
 export default function PaymentsPage() {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManagePayments(user);
   const [stripePromise, setStripePromise] =
     useState<Promise<Stripe | null> | null>(null);
 
@@ -362,6 +371,11 @@ export default function PaymentsPage() {
           <p className="text-sm text-muted-foreground mt-1">
             MOTO payment processing &mdash; phone &amp; mail orders
           </p>
+          {!canOperate ? (
+            <Badge variant="outline" className="mt-2 text-xs">
+              View-only role
+            </Badge>
+          ) : null}
         </div>
         <Badge
           variant="outline"
@@ -558,6 +572,7 @@ export default function PaymentsPage() {
                     intentMeta={intentMeta}
                     onSuccess={handlePaymentSuccess}
                     onCancel={handleCancel}
+                    canOperate={canOperate}
                   />
                 </Elements>
               ) : (
@@ -621,23 +636,25 @@ export default function PaymentsPage() {
                     />
                   </div>
 
-                  <Button
-                    onClick={createIntent}
-                    disabled={creatingIntent || !chargeAmount || parseFloat(chargeAmount) <= 0}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {creatingIntent ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        Enter Card Details
-                      </>
-                    )}
-                  </Button>
+                  <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+                    <Button
+                      onClick={createIntent}
+                      disabled={!canOperate || creatingIntent || !chargeAmount || parseFloat(chargeAmount) <= 0}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      {creatingIntent ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Enter Card Details
+                        </>
+                      )}
+                    </Button>
+                  </RoleGatedAction>
 
                   <Button variant="ghost" className="w-full" onClick={() => setSelected(null)}>
                     Clear Selection

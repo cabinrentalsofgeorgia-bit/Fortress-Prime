@@ -12,7 +12,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
+from backend.core.security import get_current_user
 from backend.models.seo_redirect import SeoRedirect
+from backend.models.staff import StaffUser
 from backend.services.openshell_audit import record_audit_event
 
 router = APIRouter()
@@ -75,6 +77,7 @@ def _confidence_from_reason(reason: Optional[str]) -> float:
 async def get_seo_audit_queue(
     status_filter: str = "pending",
     limit: int = 1000,
+    _user: StaffUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     status_norm = (status_filter or "pending").lower()
@@ -112,6 +115,7 @@ async def get_seo_audit_queue(
 async def approve_redirect(
     redirect_id: str,
     request: Request,
+    _user: StaffUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     row = (await db.execute(select(SeoRedirect).where(SeoRedirect.id == redirect_id))).scalar_one_or_none()

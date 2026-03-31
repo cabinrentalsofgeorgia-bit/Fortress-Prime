@@ -7,10 +7,13 @@ preserving a few compatibility aliases used by older services.
 from decimal import Decimal
 from datetime import datetime
 from uuid import uuid4
-
-from sqlalchemy import Boolean, Column, Date, DateTime, Integer, Numeric, String, Text, TIMESTAMP
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
-from sqlalchemy.orm import relationship, synonym
+from sqlalchemy import (
+    Column, String, Boolean, Integer, DECIMAL, Date, Text,
+    TIMESTAMP, ARRAY
+)
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import relationship, deferred, synonym
+import enum
 
 from backend.core.database import Base
 
@@ -19,78 +22,136 @@ class Guest(Base):
     __tablename__ = "guests"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    email = Column(String(255), nullable=False, unique=True, index=True)
-    first_name = Column(String(100), nullable=False)
-    last_name = Column(String(100), nullable=False)
-    phone = Column(String(20), nullable=True, index=True)
-    phone_number_secondary = Column(String(20), nullable=True)
-    email_secondary = Column(String(255), nullable=True)
-    address_line1 = Column(String(255), nullable=True)
-    address_line2 = Column(String(255), nullable=True)
-    city = Column(String(100), nullable=True, index=True)
-    state = Column(String(100), nullable=True, index=True)
-    postal_code = Column(String(20), nullable=True)
-    country = Column(String(100), nullable=True)
-    date_of_birth = Column(Date, nullable=True)
-    language_preference = Column(String(16), nullable=True)
-    preferred_contact_method = Column(String(32), nullable=True)
-    opt_in_marketing = Column(Boolean, nullable=True)
-    opt_in_sms = Column(Boolean, nullable=True)
-    opt_in_email = Column(Boolean, nullable=True)
-    quiet_hours_start = Column(String(16), nullable=True)
-    quiet_hours_end = Column(String(16), nullable=True)
-    timezone = Column(String(64), nullable=True)
-    emergency_contact_name = Column(String(255), nullable=True)
-    emergency_contact_phone = Column(String(20), nullable=True)
-    emergency_contact_relationship = Column(String(100), nullable=True)
-    vehicle_make = Column(String(100), nullable=True)
-    vehicle_model = Column(String(100), nullable=True)
-    vehicle_color = Column(String(100), nullable=True)
-    vehicle_plate = Column(String(32), nullable=True)
-    vehicle_state = Column(String(32), nullable=True)
-    special_requests = Column(Text, nullable=True)
-    internal_notes = Column(Text, nullable=True)
-    staff_notes = Column(Text, nullable=True)
-    preferences = Column(JSONB, nullable=True)
-    tags = Column(ARRAY(String()), nullable=True)
-    verification_status = Column(String(20), nullable=False, default="unverified", index=True)
-    verified_at = Column(DateTime(timezone=True), nullable=True)
-    verification_method = Column(String(64), nullable=True)
-    loyalty_tier = Column(String(20), nullable=False, default="bronze", index=True)
-    loyalty_points = Column(Integer, nullable=False, default=0)
-    loyalty_enrolled_at = Column(DateTime(timezone=True), nullable=True)
-    lifetime_stays = Column(Integer, nullable=False, default=0)
-    total_stays = Column(Integer, nullable=False, default=0)
-    lifetime_nights = Column(Integer, nullable=False, default=0)
-    lifetime_revenue = Column(Numeric(12, 2), nullable=False, default=0)
-    average_rating = Column(Numeric(4, 2), nullable=True)
-    last_stay_date = Column(Date, nullable=True, index=True)
-    value_score = Column(Integer, nullable=True, index=True)
-    risk_score = Column(Integer, nullable=True, index=True)
-    satisfaction_score = Column(Integer, nullable=True)
-    is_vip = Column(Boolean, nullable=False, default=False, index=True)
-    is_blacklisted = Column(Boolean, nullable=False, default=False, index=True)
-    blacklist_reason = Column(Text, nullable=True)
-    blacklisted_by = Column(String(255), nullable=True)
-    blacklisted_at = Column(DateTime(timezone=True), nullable=True)
-    requires_supervision = Column(Boolean, nullable=False, default=False)
-    is_do_not_contact = Column(Boolean, nullable=False, default=False)
-    guest_source = Column(String(100), nullable=True, index=True)
-    first_booking_source = Column(String(100), nullable=True)
-    referral_source = Column(String(100), nullable=True)
-    acquisition_campaign = Column(String(255), nullable=True)
-    streamline_guest_id = Column(String(100), nullable=True, index=True)
-    airbnb_guest_id = Column(String(100), nullable=True)
-    vrbo_guest_id = Column(String(100), nullable=True)
-    booking_com_guest_id = Column(String(100), nullable=True)
-    stripe_customer_id = Column(String(100), nullable=True)
-    notes = Column(Text, nullable=True)
-    created_at = Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    # Legacy compatibility alias still referenced across the backend.
-    phone_number = synonym("phone")
-
+    
+    # ── Contact Information ──
+    # Live database still stores the primary phone in the legacy `phone` column.
+    # Keep the Python attribute as `phone_number` so the rest of the app contract
+    # stays stable while the ORM targets the real column name.
+    phone_number = Column("phone", String(20), unique=True, nullable=False, index=True)
+    phone = synonym("phone_number")
+    phone_number_secondary = Column(String(20))
+    email = Column(String(255), index=True)
+    email_secondary = Column(String(255))
+    first_name = Column(String(100))
+    last_name = Column(String(100))
+    
+    # ── Address ──
+    address_line1 = Column(String(255))
+    address_line2 = Column(String(255))
+    city = Column(String(100))
+    state = Column(String(50))
+    postal_code = Column(String(20))
+    country = Column(String(2), default="US")
+    
+    # ── Demographics ──
+    date_of_birth = Column(Date)
+    
+    # ── Emergency Contact ──
+    emergency_contact_name = Column(String(200))
+    emergency_contact_phone = Column(String(20))
+    emergency_contact_relationship = Column(String(50))
+    
+    # ── Vehicle Information ──
+    vehicle_make = Column(String(50))
+    vehicle_model = Column(String(50))
+    vehicle_color = Column(String(30))
+    vehicle_plate = Column(String(20))
+    vehicle_state = Column(String(5))
+    
+    # ── Communication Preferences ──
+    language_preference = Column(String(10), default="en")
+    opt_in_marketing = Column(Boolean, default=True)
+    opt_in_sms = Column(Boolean, default=True)
+    opt_in_email = Column(Boolean, default=True)
+    preferred_contact_method = Column(String(20), default="sms")
+    quiet_hours_start = Column(String(5))  # "22:00"
+    quiet_hours_end = Column(String(5))    # "08:00"
+    timezone = Column(String(50), default="America/New_York")
+    
+    # ── Identity Verification ──
+    verification_status = Column(
+        String(20), default="unverified", index=True
+    )
+    verification_method = Column(String(50))  # id_upload, stripe_identity, manual
+    verified_at = Column(TIMESTAMP)
+    # These expanded verification/contact analytics fields are not present in every
+    # deployed schema yet. Mark them deferred so routine guest queries can still run
+    # against leaner live databases without selecting nonexistent columns up front.
+    id_document_type = deferred(Column(String(50)))  # drivers_license, passport, state_id
+    id_expiration_date = deferred(Column(Date))
+    
+    # ── Loyalty Program ──
+    loyalty_tier = Column(String(20), default="bronze", index=True)
+    loyalty_points = Column(Integer, default=0)
+    loyalty_enrolled_at = Column(TIMESTAMP)
+    lifetime_stays = Column(Integer, default=0)
+    lifetime_nights = Column(Integer, default=0)
+    lifetime_revenue = Column(DECIMAL(12, 2), default=0)
+    
+    # ── Scoring ──
+    value_score = Column(Integer, default=50)    # 0-100 (revenue potential)
+    risk_score = Column(Integer, default=10)     # 0-100 (damage/problem potential)
+    satisfaction_score = Column(Integer)          # 0-100 (based on surveys/reviews)
+    
+    # ── Guest Preferences (stored as structured JSON) ──
+    preferences = Column(JSONB, default={})
+    # {
+    #   "bed_type": "king",
+    #   "floor_preference": "upper",
+    #   "pillow_type": "firm",
+    #   "temperature": "cool",
+    #   "dietary": ["vegetarian"],
+    #   "special_occasions": [{"type": "anniversary", "date": "2026-06-15"}],
+    #   "pet_info": {"has_pets": true, "type": "dog", "breed": "labrador", "name": "Max"},
+    #   "accessibility": ["ground_floor", "grab_bars"],
+    #   "amenity_favorites": ["hot_tub", "fireplace", "game_room"]
+    # }
+    
+    # ── Special Requests / Notes ──
+    special_requests = Column(Text)
+    internal_notes = Column(Text)
+    staff_notes = Column(Text)  # Visible only to management
+    
+    # ── Flags & Status ──
+    is_vip = Column(Boolean, default=False, index=True)
+    is_blacklisted = Column(Boolean, default=False, index=True)
+    blacklist_reason = Column(Text)
+    blacklisted_at = Column(TIMESTAMP)
+    blacklisted_by = Column(String(100))
+    is_do_not_contact = Column(Boolean, default=False)
+    requires_supervision = Column(Boolean, default=False)
+    
+    # ── Source & Attribution ──
+    guest_source = Column(String(50), index=True)  # airbnb, vrbo, direct, referral, repeat
+    referral_source = Column(String(255))  # specific referral detail
+    first_booking_source = Column(String(50))
+    acquisition_campaign = Column(String(100))
+    
+    # ── Legacy Analytics (backward compat) ──
+    total_stays = Column(Integer, default=0)
+    total_messages_sent = deferred(Column(Integer, default=0))
+    total_messages_received = deferred(Column(Integer, default=0))
+    average_rating = Column(DECIMAL(3, 2))
+    last_stay_date = Column(Date)
+    
+    # ── External IDs ──
+    streamline_guest_id = Column(String(100))
+    airbnb_guest_id = Column(String(100))
+    vrbo_guest_id = Column(String(100))
+    booking_com_guest_id = Column(String(100))
+    stripe_customer_id = Column(String(100))
+    
+    # ── Tags (flexible categorization) ──
+    tags = Column(ARRAY(String))
+    notes = Column(Text)  # backward compat
+    
+    # ── Timestamps ──
+    created_at = Column(TIMESTAMP, default=datetime.utcnow)
+    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_contacted_at = deferred(Column(TIMESTAMP))
+    last_activity_at = deferred(Column(TIMESTAMP))
+    
+    # ── Relationships ──
     reservations = relationship("Reservation", back_populates="guest", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="guest", cascade="all, delete-orphan")
     work_orders = relationship("WorkOrder", back_populates="guest")

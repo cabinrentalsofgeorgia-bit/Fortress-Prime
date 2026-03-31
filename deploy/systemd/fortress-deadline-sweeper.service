@@ -1,0 +1,10 @@
+[Unit]
+Description=Fortress Deadline Sweeper
+After=network-online.target fortress-backend.service fortress-event-consumer.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+ExecStart=/home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python -m backend.workers.sweep_deadlines

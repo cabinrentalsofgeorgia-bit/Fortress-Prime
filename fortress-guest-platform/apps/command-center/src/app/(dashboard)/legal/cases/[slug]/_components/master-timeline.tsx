@@ -48,7 +48,7 @@ export function MasterTimeline({ slug }: { slug: string }) {
     setLoading(true);
     try {
       const data = await api.get<{ events: TimelineEvent[] }>(
-        `/api/legal/cases/${slug}/chronology`,
+        `/api/internal/legal/cases/${slug}/chronology`,
       );
       setEvents(data.events ?? []);
     } catch {
@@ -66,7 +66,7 @@ export function MasterTimeline({ slug }: { slug: string }) {
     setBuilding(true);
     toast.info("Building chronology — Sovereign is reading the evidence...");
     try {
-      await api.post(`/api/legal/cases/${slug}/chronology/build`, {});
+      await api.post(`/api/internal/legal/cases/${slug}/chronology/build`, {});
       toast.success("Chronology build queued. Refreshing in 90 seconds...");
       setTimeout(() => {
         fetchTimeline();

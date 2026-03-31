@@ -1,5 +1,5 @@
-import { VrsHubShell } from "./_components/vrs-hub-shell";
+import { VrsCommandCenter } from "./_components/vrs-command-center";
 
 export default function VrsHubPage() {
-  return <VrsHubShell />;
+  return <VrsCommandCenter />;
 }

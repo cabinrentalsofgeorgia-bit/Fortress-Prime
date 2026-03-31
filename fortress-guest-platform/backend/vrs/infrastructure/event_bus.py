@@ -19,7 +19,62 @@ logger = structlog.get_logger(service="vrs.event_bus")
 EVENT_QUEUE_KEY = "process_streamline_event_job"
 DLQ_KEY = "process_streamline_event_job:failed"
 
-redis_client = None
+# ---------------------------------------------------------------------------
+# Lazy Redis client — initialized on first real call, importable everywhere
+# ---------------------------------------------------------------------------
+
+_client = None
+
+
+def _events_redis_url() -> str:
+    parts = settings.redis_url.rsplit("/", 1)
+    return f"{parts[0]}/1" if len(parts) == 2 else f"{settings.redis_url}/1"
+
+
+async def _ensure_client():
+    import redis.asyncio as aioredis
+
+    global _client
+    if _client is None:
+        _client = aioredis.from_url(
+            _events_redis_url(),
+            decode_responses=True,
+            # BRPOP is used as an idle wait primitive in the consumer loop.
+            # Disable the low-level read timeout so a healthy idle queue is not
+            # misclassified as a Redis failure.
+            socket_timeout=None,
+            socket_connect_timeout=5,
+            health_check_interval=30,
+        )
+    return _client
+
+
+class _LazyRedisClient:
+    """Thin wrapper so ``redis_client`` can be imported at module level.
+
+    Attribute access (``redis_client.brpop(...)``) lazily initialises the real
+    aioredis client on the first awaited call, keeping module-level import
+    side-effect-free.
+    """
+
+    async def brpop(self, *args, **kwargs):
+        c = await _ensure_client()
+        return await c.brpop(*args, **kwargs)
+
+    async def lpush(self, *args, **kwargs):
+        c = await _ensure_client()
+        return await c.lpush(*args, **kwargs)
+
+    async def llen(self, *args, **kwargs):
+        c = await _ensure_client()
+        return await c.llen(*args, **kwargs)
+
+    async def aclose(self):
+        c = await _ensure_client()
+        await c.aclose()
+
+
+redis_client = _LazyRedisClient()
 
 # ---------------------------------------------------------------------------
 # High-level helpers (kept for backward compat & convenience)

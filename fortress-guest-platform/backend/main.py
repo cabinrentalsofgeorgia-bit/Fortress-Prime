@@ -4,6 +4,7 @@ Enterprise guest communication system
 """
 import asyncio
 import os
+import secrets
 import time
 import uuid
 import traceback
@@ -11,6 +12,7 @@ import structlog
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -21,13 +23,15 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from backend.core.config import settings
 from backend.core.database import init_db, close_db, get_db, async_engine
 from backend.core.public_api_paths import is_public_api_path
-from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, guestbook
+from backend.core.queue import create_arq_pool
+from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, webhooks_channex, guestbook
 from backend.api import integrations as integrations_api
 from backend.api import booking, housekeeping, channels, agent
 from backend.api import portal as portal_api
 from backend.api import review_queue, email_bridge, damage_claims
 from backend.api import tenants as tenants_api
 from backend.api import owner_portal
+from backend.api import paperclip_bridge as paperclip_bridge_api
 from backend.api import direct_booking as direct_booking_api
 from backend.api import guest_portal_api
 from backend.api import channel_mgr
@@ -42,14 +46,20 @@ from backend.api import auth as auth_api
 from backend.api import invites as invites_api
 from backend.api import agreements as agreements_api
 from backend.api import payments as payments_api
+from backend.api import fast_quote as fast_quote_api
 from backend.api import quotes as quotes_api
 from backend.api import vrs_quotes as vrs_quotes_api
 from backend.api import leads as leads_api
+from backend.api import vrs as vrs_api
 from backend.api import vrs_operations as vrs_operations_api
 from backend.api import checkout as checkout_api
 from backend.api import templates as templates_api
 from backend.api import copilot_queue as copilot_queue_api
 from backend.api import admin as admin_api
+from backend.api import admin_acquisition as admin_acquisition_api
+from backend.api import admin_acquisition_foia as admin_acquisition_foia_api
+from backend.api import admin_channex as admin_channex_api
+from backend.api import admin_insights as admin_insights_api
 from backend.api import rule_engine as rule_engine_api
 from backend.api import intelligence as intelligence_api
 from backend.api import intelligence_feed as intelligence_feed_api
@@ -119,6 +129,90 @@ logger = structlog.get_logger()
 # Background task tracking (for watchdog)
 # ---------------------------------------------------------------------------
 _bg_task_heartbeats: dict[str, float] = {}
+INTERNAL_LEGAL_API_PREFIX = "/api/internal/legal"
+INTERNAL_INGRESS_HEADER = "x-fortress-ingress"
+INTERNAL_INGRESS_SIGNATURE_HEADER = "x-fortress-tunnel-signature"
+COMMAND_CENTER_INGRESS = "command_center"
+PUBLIC_STOREFRONT_INGRESS = "public_storefront"
+
+
+def _normalize_host(value: str | None) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    candidate = raw if "://" in raw else f"https://{raw}"
+    parsed = urlparse(candidate)
+    host = (parsed.hostname or raw.split("/")[0].split(":")[0]).strip().lower()
+    return host
+
+
+def _expand_host_variants(value: str | None) -> set[str]:
+    host = _normalize_host(value)
+    if not host:
+        return set()
+    variants = {host}
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return variants
+
+    base = host[4:] if host.startswith("www.") else host
+    variants.add(base)
+    variants.add(f"www.{base}")
+    variants.add(f"api.{base}")
+    return variants
+
+
+def _command_center_hosts() -> set[str]:
+    return _expand_host_variants(settings.frontend_url) | _expand_host_variants(settings.command_center_url)
+
+
+def _storefront_hosts() -> set[str]:
+    return _expand_host_variants(settings.storefront_base_url)
+
+
+def _request_effective_host(request: Request) -> str:
+    forwarded_host = request.headers.get("x-forwarded-host")
+    if forwarded_host:
+        first = forwarded_host.split(",")[0].strip()
+        if first:
+            return _normalize_host(first)
+    return _normalize_host(request.headers.get("host"))
+
+
+def _request_origin_host(request: Request) -> str:
+    for header_name in ("origin", "referer"):
+        header_value = request.headers.get(header_name)
+        if header_value:
+            return _normalize_host(header_value)
+    return ""
+
+
+def _has_valid_internal_tunnel_signature(request: Request) -> bool:
+    expected = settings.internal_api_bearer_token
+    presented = (request.headers.get(INTERNAL_INGRESS_SIGNATURE_HEADER) or "").strip()
+    ingress = (request.headers.get(INTERNAL_INGRESS_HEADER) or "").strip().lower()
+    if not expected or not presented or ingress != COMMAND_CENTER_INGRESS:
+        return False
+    return secrets.compare_digest(presented, expected)
+
+
+def _requires_internal_ingress(request: Request) -> bool:
+    path = request.url.path
+    return path.startswith("/api/") and not is_public_api_path(path, request.method)
+
+
+def _is_allowed_internal_request(request: Request) -> bool:
+    if not _requires_internal_ingress(request):
+        return True
+
+    request_host = _request_effective_host(request)
+    if request_host and request_host in _storefront_hosts():
+        return False
+
+    if _has_valid_internal_tunnel_signature(request):
+        return True
+
+    origin_host = _request_origin_host(request)
+    return origin_host in _command_center_hosts()
 
 
 class GlobalAuthMiddleware(BaseHTTPMiddleware):
@@ -130,10 +224,22 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
         if not path.startswith("/api/"):
             return await call_next(request)
 
+        if not _is_allowed_internal_request(request):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "type": "https://fortress/errors/ingress-boundary",
+                    "title": "Ingress Boundary Violation",
+                    "status": 403,
+                    "detail": "Internal routes are restricted to crog-ai.com or signed command-center ingress.",
+                    "instance": path,
+                },
+            )
+
         if is_public_api_path(path, request.method):
             return await call_next(request)
 
-        if "/download/" in path and path.startswith("/api/legal/cases/"):
+        if "/download/" in path and path.startswith(f"{INTERNAL_LEGAL_API_PREFIX}/cases/"):
             return await call_next(request)
 
         if request.method == "OPTIONS":
@@ -214,7 +320,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
-    app.state.arq_pool = getattr(app.state, "arq_pool", None)
+    app.state.arq_pool = None
     logger.info(
         "starting_fortress_guest_platform",
         environment=settings.environment,
@@ -226,6 +332,12 @@ async def lifespan(app: FastAPI):
         logger.info("database_initialized")
     except Exception as e:
         logger.warning("database_init_skipped", error=str(e), note="App will run without DB - configure DATABASE_URL")
+
+    try:
+        app.state.arq_pool = await create_arq_pool()
+        logger.info("arq_pool_initialized", queue_name=settings.arq_queue_name)
+    except Exception as e:
+        logger.warning("arq_pool_init_skipped", error=str(e), queue_name=settings.arq_queue_name)
 
     async def _deferred_kb_sync_enqueue():
         await asyncio.sleep(5)
@@ -327,12 +439,21 @@ app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
 app.include_router(workorders.router, prefix="/api/work-orders", tags=["Work Orders"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["Webhooks"])
+app.include_router(webhooks_channex.router, prefix="/api/webhooks/channex", tags=["Channex Webhooks"])
+app.include_router(
+    webhooks_channex.router,
+    prefix="/webhooks/channex",
+    tags=["Channex Webhooks Legacy Compatibility"],
+    include_in_schema=False,
+)
 app.include_router(guestbook.router, prefix="/api/guestbook", tags=["Guestbook"])
 app.include_router(integrations_api.router, prefix="/api/integrations", tags=["Integrations"])
 app.include_router(booking.router, prefix="/api/booking", tags=["Booking"])
 app.include_router(housekeeping.router, prefix="/api/housekeeping", tags=["Housekeeping"])
 app.include_router(channels.router, prefix="/api/channels", tags=["Channels"])
 app.include_router(agent.router, prefix="/api/agent", tags=["AI Agent"])
+app.include_router(paperclip_bridge_api.router, prefix="/api/agent", tags=["Paperclip Bridge"])
+app.include_router(paperclip_bridge_api.router, prefix="/api/paperclip", tags=["Paperclip Bridge"])
 app.include_router(portal_api.router, prefix="/api/portal", tags=["Portal"])
 app.include_router(review_queue.router, prefix="/api/review-queue", tags=["Review Queue"])
 app.include_router(email_bridge.router, prefix="/api/email-bridge", tags=["Email Bridge"])
@@ -350,9 +471,12 @@ app.include_router(utilities_api.router, prefix="/api/utilities", tags=["Utiliti
 app.include_router(invites_api.router, prefix="/api/invites", tags=["Invites"])
 app.include_router(agreements_api.router, prefix="/api/agreements", tags=["Agreements"])
 app.include_router(payments_api.router, prefix="/api/payments", tags=["Payments"])
+# Before /api/quotes/{quote_id} so POST /api/quotes/calculate is not swallowed as a UUID path.
+app.include_router(fast_quote_api.router, tags=["Fast Quote"])
 app.include_router(quotes_api.router, prefix="/api/quotes", tags=["Quotes"])
 app.include_router(vrs_quotes_api.router, prefix="/api/quotes", tags=["Sovereign Quotes"])
 app.include_router(leads_api.router, prefix="/api/leads", tags=["Leads"])
+app.include_router(vrs_api.router, prefix="/api/vrs", tags=["VRS Command Center"])
 app.include_router(vrs_operations_api.router, prefix="/api/vrs", tags=["VRS Operations"])
 app.include_router(checkout_api.router, prefix="/api/checkout", tags=["Checkout Gateway"])
 app.include_router(templates_api.router, prefix="/api/templates", tags=["Templates"])
@@ -360,6 +484,10 @@ app.include_router(copilot_queue_api.router, prefix="/api/copilot-queue", tags=[
 app.include_router(stripe_webhooks.router, prefix="/api/webhooks", tags=["Stripe Webhooks"])
 app.include_router(stripe_connect_webhooks.router, prefix="/api/webhooks", tags=["Stripe Connect Webhooks"])
 app.include_router(admin_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_acquisition_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_acquisition_foia_api.router, tags=["Admin"])
+app.include_router(admin_channex_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_insights_api.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(rule_engine_api.router, prefix="/api/rules", tags=["Rule Engine"])
 app.include_router(intelligence_api.router, prefix="/api/intelligence", tags=["Intelligence"])
 app.include_router(intelligence_feed_api.router, prefix="/api/intelligence/feed", tags=["Intelligence Feed"])
@@ -369,19 +497,19 @@ app.include_router(
     tags=["Intelligence Projection"],
 )
 app.include_router(vault_api.router, prefix="/api/vault", tags=["E-Discovery Vault"])
-app.include_router(legal_council_api.router, prefix="/api/legal", tags=["Legal Council"])
-app.include_router(ediscovery_api.router, prefix="/api/legal", tags=["E-Discovery"])
-app.include_router(legal_docgen_api.router, prefix="/api/legal", tags=["Legal DocGen"])
-app.include_router(legal_graph_api.router, prefix="/api/legal", tags=["Legal Graph"])
-app.include_router(legal_discovery_api.router, prefix="/api/legal", tags=["Legal Discovery"])
-app.include_router(legal_cases_api.router, prefix="/api/legal", tags=["Legal Cases"])
-app.include_router(legal_strategy_api.router, prefix="/api/legal", tags=["Legal Strategy"])
-app.include_router(legal_counsel_dispatch_api.router, prefix="/api/legal", tags=["Outside Counsel Dispatch"])
-app.include_router(legal_hold_api.router, prefix="/api/legal", tags=["Legal Hold"])
-app.include_router(legal_tactical_api.router, prefix="/api/legal", tags=["Legal Tactical"])
-app.include_router(legal_sanctions_api.router, prefix="/api/legal", tags=["Legal Sanctions"])
-app.include_router(legal_deposition_api.router, prefix="/api/legal", tags=["Legal Deposition"])
-app.include_router(legal_agent_api.router, prefix="/api/legal", tags=["Legal Agent"])
+app.include_router(legal_council_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Council"])
+app.include_router(ediscovery_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["E-Discovery"])
+app.include_router(legal_docgen_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal DocGen"])
+app.include_router(legal_graph_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Graph"])
+app.include_router(legal_discovery_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Discovery"])
+app.include_router(legal_cases_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Cases"])
+app.include_router(legal_strategy_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Strategy"])
+app.include_router(legal_counsel_dispatch_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Outside Counsel Dispatch"])
+app.include_router(legal_hold_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Hold"])
+app.include_router(legal_tactical_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Tactical"])
+app.include_router(legal_sanctions_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Sanctions"])
+app.include_router(legal_deposition_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Deposition"])
+app.include_router(legal_agent_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Agent"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
 app.include_router(seo_patches_api.router, prefix="/api/seo", tags=["SEO"])
 app.include_router(

@@ -12,8 +12,7 @@ from typing import List, Optional
 from uuid import UUID
 
 import structlog
-from arq.connections import ArqRedis
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,13 +20,13 @@ from sqlalchemy.orm import joinedload
 
 from backend.core.database import get_db
 from backend.core.queue import get_arq_pool
+from backend.core.security import require_operator_manager_admin
 from backend.models.message_queue import MessageQueue
 from backend.models.quote import Quote, QuoteOption
-from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 from backend.services.email_service import is_email_configured, send_email
 
 logger = structlog.get_logger(service="copilot_queue")
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -45,7 +44,6 @@ class DraftResponse(BaseModel):
     guest_email: Optional[str] = None
     property_name: Optional[str] = None
     template_name: Optional[str] = None
-    dispatch_job_id: Optional[str] = None
 
 
 class EditDraftRequest(BaseModel):
@@ -87,7 +85,6 @@ def _draft_to_response(msg: MessageQueue) -> DraftResponse:
 async def _dispatch_email(msg_id: UUID) -> None:
     """Background task: send the email for an approved message and update status."""
     from backend.core.database import AsyncSessionLocal
-    normalized_msg_id = UUID(str(msg_id))
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(
@@ -95,11 +92,11 @@ async def _dispatch_email(msg_id: UUID) -> None:
             .options(
                 joinedload(MessageQueue.quote).joinedload(Quote.lead),
             )
-            .where(MessageQueue.id == normalized_msg_id)
+            .where(MessageQueue.id == msg_id)
         )
         msg = result.unique().scalar_one_or_none()
         if not msg:
-            logger.error("dispatch_msg_not_found", msg_id=str(normalized_msg_id))
+            logger.error("dispatch_msg_not_found", msg_id=str(msg_id))
             return
 
         to_email = msg.quote.lead.email if msg.quote and msg.quote.lead else None
@@ -112,7 +109,7 @@ async def _dispatch_email(msg_id: UUID) -> None:
         if not is_email_configured():
             logger.warning(
                 "dispatch_smtp_not_configured",
-                msg_id=str(normalized_msg_id),
+                msg_id=str(msg_id),
                 to=to_email,
             )
             msg.status = "sent"
@@ -131,14 +128,14 @@ async def _dispatch_email(msg_id: UUID) -> None:
             msg.status = "sent" if sent else "approved"
             logger.info(
                 "copilot_dispatch_complete",
-                msg_id=str(normalized_msg_id),
+                msg_id=str(msg_id),
                 to=to_email,
                 success=sent,
             )
         except Exception as exc:
             logger.error(
                 "copilot_dispatch_error",
-                msg_id=str(normalized_msg_id),
+                msg_id=str(msg_id),
                 error=str(exc),
             )
 
@@ -205,9 +202,8 @@ async def edit_draft(
 @router.post("/{msg_id}/approve", response_model=DraftResponse)
 async def approve_draft(
     msg_id: UUID,
-    request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    arq_redis: ArqRedis = Depends(get_arq_pool),
 ):
     """Approve a drafted message: set status to approved and queue SMTP dispatch."""
     result = await db.execute(
@@ -232,19 +228,7 @@ async def approve_draft(
     await db.commit()
     await db.refresh(msg)
 
-    dispatch_job = await enqueue_async_job(
-        db,
-        worker_name="dispatch_copilot_email_job",
-        job_name="dispatch_copilot_email",
-        payload={"message_id": str(msg.id)},
-        requested_by=extract_request_actor(
-            request.headers.get("x-user-id"),
-            request.headers.get("x-user-email"),
-        ),
-        tenant_id=getattr(request.state, "tenant_id", None),
-        request_id=request.headers.get("x-request-id"),
-        redis=arq_redis,
-    )
+    background_tasks.add_task(_dispatch_email, msg.id)
 
     logger.info(
         "copilot_draft_approved",
@@ -252,9 +236,7 @@ async def approve_draft(
         guest=msg.quote.lead.guest_name if msg.quote and msg.quote.lead else None,
     )
 
-    response = _draft_to_response(msg)
-    response.dispatch_job_id = str(dispatch_job.id)
-    return response
+    return _draft_to_response(msg)
 
 
 @router.post("/{msg_id}/cancel", response_model=DraftResponse)

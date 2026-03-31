@@ -1,5 +1,8 @@
 "use client";
 
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageLegalOps } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,12 +41,14 @@ function PendingDeadlineCard({
   onApprove,
   onReject,
   isSubmitting,
+  canOperate,
 }: {
   deadline: LegalDeadline;
   sourceText: string | null;
   onApprove: () => void;
   onReject: () => void;
   isSubmitting: boolean;
+  canOperate: boolean;
 }) {
   return (
     <Card className="border-amber-500/20 bg-amber-500/5">
@@ -76,24 +81,28 @@ function PendingDeadlineCard({
         )}
 
         <div className="flex items-center gap-2 pt-1">
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20"
-            disabled={isSubmitting}
-            onClick={onApprove}
-          >
-            <CheckCircle className="h-3 w-3 mr-1" /> Approve
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20"
-            disabled={isSubmitting}
-            onClick={onReject}
-          >
-            <XCircle className="h-3 w-3 mr-1" /> Reject
-          </Button>
+          <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-green-500/10 text-green-500 border-green-500/30 hover:bg-green-500/20"
+              disabled={isSubmitting}
+              onClick={onApprove}
+            >
+              <CheckCircle className="h-3 w-3 mr-1" /> Approve
+            </Button>
+          </RoleGatedAction>
+          <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20"
+              disabled={isSubmitting}
+              onClick={onReject}
+            >
+              <XCircle className="h-3 w-3 mr-1" /> Reject
+            </Button>
+          </RoleGatedAction>
         </div>
       </CardContent>
     </Card>
@@ -101,6 +110,8 @@ function PendingDeadlineCard({
 }
 
 export function HitlDeadlineQueue({ slug }: { slug: string }) {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageLegalOps(user);
   const { data: caseData } = useCaseDetail(slug);
   const { data: deadlinesData, isLoading } = useCaseDeadlines(slug);
   const review = useDeadlineReview(slug);
@@ -136,12 +147,13 @@ export function HitlDeadlineQueue({ slug }: { slug: string }) {
               deadline={d}
               sourceText={findSourceText(d, entities)}
               onApprove={() =>
-                review.mutate({ deadlineId: d.id, action: "approved" })
+                canOperate && review.mutate({ deadlineId: d.id, action: "approved" })
               }
               onReject={() =>
-                review.mutate({ deadlineId: d.id, action: "rejected" })
+                canOperate && review.mutate({ deadlineId: d.id, action: "rejected" })
               }
-              isSubmitting={review.isPending}
+              isSubmitting={review.isPending || !canOperate}
+              canOperate={canOperate}
             />
           ))}
         </div>

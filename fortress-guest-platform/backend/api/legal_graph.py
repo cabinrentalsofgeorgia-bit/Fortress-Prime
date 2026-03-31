@@ -1,12 +1,13 @@
 """
 Legal Case Graph API (Phase 2 Hybrid MVP).
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.core.database import AsyncSessionLocal
+from backend.core.security import require_manager_or_admin
 from backend.services.legal_case_graph import LegalCaseGraphBuilder
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 @router.post("/cases/{case_slug}/graph/refresh", summary="Build legal case graph baseline")
@@ -25,6 +26,9 @@ async def get_graph_snapshot(case_slug: str):
     async with AsyncSessionLocal() as session:
         try:
             snapshot = await LegalCaseGraphBuilder.get_graph_snapshot(case_slug=case_slug, db=session)
+            if not snapshot or not snapshot.get("nodes"):
+                await LegalCaseGraphBuilder.build_baseline_graph(case_slug=case_slug, db=session)
+                snapshot = await LegalCaseGraphBuilder.get_graph_snapshot(case_slug=case_slug, db=session)
             if not snapshot or not snapshot.get("nodes"):
                 raise HTTPException(status_code=404, detail="Case graph not found or empty.")
             return snapshot

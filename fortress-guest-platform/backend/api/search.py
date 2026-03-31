@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.models import Property, Guest, Reservation
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 @router.get("/")

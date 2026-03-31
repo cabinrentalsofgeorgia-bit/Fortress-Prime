@@ -38,9 +38,13 @@ uploads/
 full_index.txt
 
 # Sensitive data
+# Local Bare-Metal Secrets — bare-metal IPs and SCRAM-SHA-256 credentials must never touch GitHub.
+# Only fortress-guest-platform/.env.dgx.example is version-controlled as the operator contract.
+fortress-guest-platform/.env.dgx
+.env.security
 .env
 .env.bak
-.env.security
+deploy/compute/paperclip/secret.yaml
 *.key
 *.pem
 id_*
@@ -57,11 +61,18 @@ deploy/.env.litellm
 .gh-run-*/
 backups/
 data/
+!fortress-guest-platform/apps/storefront/data/
+!fortress-guest-platform/apps/storefront/data/raw_drupal_redirects.json
 training_data/
 fortress-guest-platform/backend/artifacts/
 fortress-guest-platform/backend/data/
 fortress-guest-platform/apps/storefront/artifacts/
 fortress-guest-platform/apps/command-center/artifacts/
+fortress-guest-platform/apps/**/.next/
+fortress-guest-platform/apps/**/playwright-report/
+fortress-guest-platform/apps/**/test-results/
+gateway/.wrangler/
+deploy/compute/paperclip-image-hotfix/*.tar
 fortress-guest-platform/backend/scripts/archive_seo_bulk_payloads.*
 fortress-guest-platform/backend/scripts/drupal_granular_blueprint_*.json
 fortress-guest-platform/backend/scripts/orphan_report.json

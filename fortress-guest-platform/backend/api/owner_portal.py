@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from backend.core.database import get_db
 from backend.core.config import settings
+from backend.core.security import get_current_owner
 from backend.services.knowledge_retriever import (
     semantic_search,
     legal_library_search,
@@ -87,69 +88,121 @@ def _et_today():
     return _dt.now(pytz.timezone("America/New_York")).date()
 
 
+def _selected_property_id(owner: dict[str, Any]) -> str | None:
+    value = owner.get("selected_property_id")
+    return str(value) if value else None
+
+
+async def require_owner_subject_access(
+    owner_id: str,
+    owner: dict[str, Any] = Depends(get_current_owner),
+) -> dict[str, Any]:
+    if owner_id == owner["sl_owner_id"]:
+        return {**owner, "selected_property_id": None}
+    if owner_id in owner["unit_ids"]:
+        return {**owner, "selected_property_id": owner_id}
+    raise HTTPException(status_code=403, detail="Owner does not have access to this resource")
+
+
+async def require_owner_property_access(
+    property_id: str,
+    owner: dict[str, Any] = Depends(get_current_owner),
+) -> dict[str, Any]:
+    if property_id not in owner["unit_ids"]:
+        raise HTTPException(status_code=403, detail="Owner does not have access to this property")
+    return {**owner, "selected_property_id": property_id}
+
+
 @router.get("/dashboard/{owner_id}", response_model=OwnerDashboard)
-async def owner_dashboard(owner_id: str, db: AsyncSession = Depends(get_db)):
+async def owner_dashboard(
+    owner_id: str,
+    db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
+):
     """Get owner's high-level dashboard metrics."""
     today = _et_today()
     month_start = today.replace(day=1)
     year_start = today.replace(month=1, day=1)
+    property_id = _selected_property_id(owner)
 
-    props = await db.execute(
-        text("SELECT COUNT(*) FROM properties WHERE is_active = true"),
-    )
-    total_properties = props.scalar() or 0
+    total_properties = len(owner["unit_ids"])
 
     active = await db.execute(
         text("""
-            SELECT COUNT(*) FROM reservations 
+            SELECT COUNT(*)
+            FROM reservations r
+            JOIN properties p ON r.property_id = p.id
             WHERE status IN ('confirmed', 'checked_in')
-            AND check_in_date <= :today AND check_out_date >= :today
+              AND check_in_date <= :today AND check_out_date >= :today
+              AND p.streamline_property_id = :property_id
         """),
-        {"today": today},
+        {"today": today, "property_id": property_id},
     )
     active_reservations = active.scalar() or 0
 
     rev_mtd = await db.execute(
         text("""
-            SELECT COALESCE(SUM(total_amount), 0) FROM reservations
-            WHERE check_in_date >= :start AND status != 'cancelled'
+            SELECT COALESCE(SUM(r.total_amount), 0)
+            FROM reservations r
+            JOIN properties p ON r.property_id = p.id
+            WHERE r.check_in_date >= :start
+              AND r.status != 'cancelled'
+              AND p.streamline_property_id = :property_id
         """),
-        {"start": month_start},
+        {"start": month_start, "property_id": property_id},
     )
     revenue_mtd = float(rev_mtd.scalar() or 0)
 
     rev_ytd = await db.execute(
         text("""
-            SELECT COALESCE(SUM(total_amount), 0) FROM reservations
-            WHERE check_in_date >= :start AND status != 'cancelled'
+            SELECT COALESCE(SUM(r.total_amount), 0)
+            FROM reservations r
+            JOIN properties p ON r.property_id = p.id
+            WHERE r.check_in_date >= :start
+              AND r.status != 'cancelled'
+              AND p.streamline_property_id = :property_id
         """),
-        {"start": year_start},
+        {"start": year_start, "property_id": property_id},
     )
     revenue_ytd = float(rev_ytd.scalar() or 0)
 
     occ = await db.execute(
         text("""
-            SELECT COUNT(DISTINCT property_id) FROM reservations
+            SELECT COUNT(DISTINCT p.streamline_property_id)
+            FROM reservations r
+            JOIN properties p ON r.property_id = p.id
             WHERE status IN ('confirmed', 'checked_in')
-            AND check_in_date <= :today AND check_out_date >= :today
+              AND check_in_date <= :today AND check_out_date >= :today
+              AND p.streamline_property_id = :property_id
         """),
-        {"today": today},
+        {"today": today, "property_id": property_id},
     )
     occupied = occ.scalar() or 0
-    occupancy_rate = (occupied / total_properties * 100) if total_properties > 0 else 0
+    occupancy_rate = float(occupied * 100)
 
     wo = await db.execute(
-        text("SELECT COUNT(*) FROM work_orders WHERE status = 'open'"),
+        text("""
+            SELECT COUNT(*)
+            FROM work_orders wo
+            JOIN properties p ON wo.property_id = p.id
+            WHERE wo.status = 'open'
+              AND p.streamline_property_id = :property_id
+        """),
+        {"property_id": property_id},
     )
     open_work_orders = wo.scalar() or 0
 
     upcoming = await db.execute(
         text("""
-            SELECT COUNT(*) FROM reservations
-            WHERE check_in_date > :today AND check_in_date <= :future
-            AND status != 'cancelled'
+            SELECT COUNT(*)
+            FROM reservations r
+            JOIN properties p ON r.property_id = p.id
+            WHERE r.check_in_date > :today
+              AND r.check_in_date <= :future
+              AND r.status != 'cancelled'
+              AND p.streamline_property_id = :property_id
         """),
-        {"today": today, "future": today + timedelta(days=30)},
+        {"today": today, "future": today + timedelta(days=30), "property_id": property_id},
     )
 
     return OwnerDashboard(
@@ -173,10 +226,12 @@ async def owner_reservations(
     start: Optional[str] = Query(None),
     end: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
 ):
     """Get owner's property reservations within a date range."""
     start_date = date.fromisoformat(start) if start else _et_today() - timedelta(days=30)
     end_date = date.fromisoformat(end) if end else _et_today() + timedelta(days=90)
+    property_id = _selected_property_id(owner)
 
     result = await db.execute(
         text("""
@@ -186,10 +241,11 @@ async def owner_reservations(
             JOIN properties p ON r.property_id = p.id
             LEFT JOIN guests g ON r.guest_id = g.id
             WHERE r.check_in_date <= :end AND r.check_out_date >= :start
-            AND r.status != 'cancelled'
+              AND r.status != 'cancelled'
+              AND p.streamline_property_id = :property_id
             ORDER BY r.check_in_date
         """),
-        {"start": start_date, "end": end_date},
+        {"start": start_date, "end": end_date, "property_id": property_id},
     )
     return [dict(row._mapping) for row in result.fetchall()]
 
@@ -203,16 +259,19 @@ async def owner_work_orders(
     owner_id: str,
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
 ):
     """Get work orders for owner's properties."""
+    property_id = _selected_property_id(owner)
     query = """
         SELECT wo.*, p.name as property_name
         FROM work_orders wo
         LEFT JOIN properties p ON wo.property_id = p.id
+        WHERE p.streamline_property_id = :property_id
     """
-    params = {}
+    params = {"property_id": property_id}
     if status:
-        query += " WHERE wo.status = :status"
+        query += " AND wo.status = :status"
         params["status"] = status
     query += " ORDER BY wo.created_at DESC LIMIT 50"
 
@@ -228,35 +287,12 @@ async def owner_work_orders(
 async def owner_statements(
     owner_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
 ):
     """Get owner financial statements.
     Tries DB owner_statements first, falls back to reservation-based calc."""
-    db_stmts = await db.execute(
-        text("""
-            SELECT * FROM owner_statements
-            ORDER BY period_start DESC LIMIT 12
-        """)
-    )
-    rows = db_stmts.fetchall()
-
-    if rows:
-        return [
-            {
-                "id": str(r.id),
-                "period_start": r.period_start.isoformat() if r.period_start else "",
-                "period_end": r.period_end.isoformat() if r.period_end else "",
-                "gross_revenue": float(r.gross_revenue or 0),
-                "management_fee": float(r.management_fee or 0),
-                "cleaning_fees": float(r.cleaning_revenue or 0),
-                "maintenance_costs": float(r.maintenance_expenses or 0),
-                "net_payout": float(r.net_to_owner or 0),
-                "status": r.payout_status or "pending",
-                "generated_at": r.generated_at.isoformat() if r.generated_at else "",
-            }
-            for r in rows
-        ]
-
     today = _et_today()
+    property_id = _selected_property_id(owner)
     statements = []
     for months_back in range(6):
         period_end = today.replace(day=1) - timedelta(days=1 + months_back * 30)
@@ -264,11 +300,15 @@ async def owner_statements(
 
         rev = await db.execute(
             text("""
-                SELECT COALESCE(SUM(total_amount), 0) FROM reservations
-                WHERE check_in_date >= :start AND check_in_date <= :end
-                AND status != 'cancelled'
+                SELECT COALESCE(SUM(r.total_amount), 0)
+                FROM reservations r
+                JOIN properties p ON r.property_id = p.id
+                WHERE r.check_in_date >= :start
+                  AND r.check_in_date <= :end
+                  AND r.status != 'cancelled'
+                  AND p.streamline_property_id = :property_id
             """),
-            {"start": period_start, "end": period_end},
+            {"start": period_start, "end": period_end, "property_id": property_id},
         )
         gross = float(rev.scalar() or 0)
         mgmt_fee = gross * 0.20
@@ -297,7 +337,11 @@ async def owner_statements(
 # ============================================================================
 
 @router.get("/documents/{owner_id}")
-async def owner_documents(owner_id: str, db: AsyncSession = Depends(get_db)):
+async def owner_documents(
+    owner_id: str,
+    db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
+):
     """Get owner documents (leases, insurance, tax docs)."""
     return [
         {
@@ -329,13 +373,24 @@ async def owner_documents(owner_id: str, db: AsyncSession = Depends(get_db)):
 # ============================================================================
 
 @router.get("/balances/{owner_id}")
-async def owner_balances(owner_id: str, db: AsyncSession = Depends(get_db)):
+async def owner_balances(
+    owner_id: str,
+    db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
+):
     """
     Return per-property owner balances from the trust_balance table
     and from the cached owner_balance JSONB on properties.
     """
+    property_id = _selected_property_id(owner)
     tb_result = await db.execute(
-        text("SELECT * FROM trust_balance_cache ORDER BY last_updated DESC")
+        text("""
+            SELECT *
+            FROM trust_balance
+            WHERE property_id = :property_id
+            ORDER BY last_updated DESC
+        """),
+        {"property_id": property_id},
     )
     trust_rows = tb_result.fetchall()
 
@@ -345,8 +400,10 @@ async def owner_balances(owner_id: str, db: AsyncSession = Depends(get_db)):
                    owner_balance
             FROM properties
             WHERE owner_balance IS NOT NULL
+              AND streamline_property_id = :property_id
             ORDER BY name
-        """)
+        """),
+        {"property_id": property_id},
     )
     prop_rows = prop_result.fetchall()
 
@@ -376,7 +433,11 @@ async def owner_balances(owner_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/balances/{owner_id}/live")
-async def owner_balance_live(owner_id: str, unit_id: Optional[int] = Query(None)):
+async def owner_balance_live(
+    owner_id: str,
+    unit_id: Optional[int] = Query(None),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
+):
     """Fetch live owner balance from Streamline for a specific unit."""
     if not unit_id:
         raise HTTPException(status_code=400, detail="unit_id query parameter is required")
@@ -400,6 +461,7 @@ async def owner_statement_live(
     unit_id: Optional[int] = Query(None),
     start: Optional[str] = Query(None),
     end: Optional[str] = Query(None),
+    owner: dict[str, Any] = Depends(require_owner_subject_access),
 ):
     """Fetch a live monthly statement from Streamline."""
     from backend.integrations.streamline_vrs import StreamlineVRS
@@ -426,7 +488,10 @@ async def owner_statement_live(
 # ============================================================================
 
 @router.get("/{property_id}/statements/legacy")
-async def get_legacy_statements_list(property_id: str):
+async def get_legacy_statements_list(
+    property_id: str,
+    owner: dict[str, Any] = Depends(require_owner_property_access),
+):
     """Proxy to Streamline for historical owner statement PDFs.
 
     The Next.js UI renders these alongside new Iron Dome statements,
@@ -459,7 +524,11 @@ async def get_legacy_statements_list(property_id: str):
 
 
 @router.get("/{property_id}/statements/legacy/{statement_id}/download")
-async def download_legacy_statement(property_id: str, statement_id: str):
+async def download_legacy_statement(
+    property_id: str,
+    statement_id: str,
+    owner: dict[str, Any] = Depends(require_owner_property_access),
+):
     """Stream a Streamline owner statement PDF directly to the browser."""
     from backend.integrations.streamline_vrs import StreamlineVRS
 
@@ -513,6 +582,7 @@ async def download_legacy_statement(property_id: str, statement_id: str):
 async def get_iron_dome_activity(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """Owner-facing journal activity showing total charges only."""
     result = await db.execute(
@@ -618,6 +688,7 @@ async def calculate_yield_loss(
     property_id: str,
     request: BlockRequest,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     YIELD LOSS ENGINE: Intercepts an owner block request and calculates
@@ -748,6 +819,7 @@ async def calculate_yield_loss(
 async def list_owner_blocks(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """List all owner hold blocks for a property."""
     result = await db.execute(
@@ -779,6 +851,7 @@ async def create_owner_block(
     property_id: str,
     request: BlockRequest,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     Create an owner hold block after the yield loss intercept.
@@ -836,6 +909,7 @@ async def delete_owner_block(
     property_id: str,
     block_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """Remove an owner hold. Only owner_hold blocks can be deleted via this endpoint."""
     result = await db.execute(
@@ -866,6 +940,7 @@ async def owner_calendar(
     start: Optional[str] = Query(None),
     end: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     Merged calendar returning reservations, owner holds, and per-day
@@ -1018,6 +1093,7 @@ async def owner_calendar(
 async def list_pending_capex(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """List all pending CapEx invoices awaiting owner approval."""
     result = await db.execute(
@@ -1053,6 +1129,7 @@ async def approve_capex(
     property_id: str,
     staging_id: int,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     Owner approves a staged CapEx invoice.
@@ -1159,6 +1236,7 @@ async def reject_capex(
     staging_id: int,
     reason: str = Query("Owner declined"),
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """Owner rejects a staged CapEx invoice. No journal entry is created."""
     result = await db.execute(
@@ -1233,6 +1311,7 @@ class UpgradeAuthorization(BaseModel):
 async def get_roi_simulations(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     SOTA WEALTH MULTIPLIER: Identifies missing high-yield amenities,
@@ -1445,6 +1524,7 @@ async def authorize_strategic_upgrade(
     property_id: str,
     req: UpgradeAuthorization,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     THE KILLSHOT: The owner clicks 'Authorize'. This writes to capex_staging
@@ -1504,6 +1584,7 @@ async def authorize_strategic_upgrade(
 async def get_iot_telemetry(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     SOTA DIGITAL TWIN: Exposes real-time cabin telemetry to the Owner Glass.
@@ -1642,6 +1723,7 @@ async def setup_payout_account(
     property_id: str,
     req: PayoutSetupRequest,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     CONTINUOUS LIQUIDITY: Initiate Stripe Connect onboarding for the property owner.
@@ -1718,6 +1800,7 @@ async def setup_payout_account(
 async def get_payout_account_status(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """Check the Stripe Connect account status for this property."""
     result = await db.execute(
@@ -1762,6 +1845,7 @@ async def get_payout_account_status(
 async def get_payout_history(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """List payout history for this property."""
     result = await db.execute(
@@ -1818,6 +1902,7 @@ async def fiduciary_concierge(
     property_id: str,
     req: ConciergeRequest,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ):
     """
     SSE-streaming AI concierge for owner queries.
@@ -1850,7 +1935,7 @@ async def fiduciary_concierge(
 
     try:
         trust_result = await db.execute(
-            text("SELECT * FROM trust_balance_cache WHERE property_id = :pid"),
+            text("SELECT * FROM trust_balance WHERE property_id = :pid"),
             {"pid": property_id},
         )
         trust_row = trust_result.fetchone()
@@ -2062,6 +2147,7 @@ class MarketingPreferencesRequest(BaseModel):
 async def get_marketing_preferences(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ) -> Dict[str, Any]:
     """Return the current marketing allocation and escrow balance for a property."""
     try:
@@ -2106,6 +2192,7 @@ async def update_marketing_preferences(
     property_id: str,
     req: MarketingPreferencesRequest,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ) -> Dict[str, Any]:
     """Upsert marketing allocation % for a property (0-25 range enforced)."""
     if req.marketing_pct < 0 or req.marketing_pct > 25:
@@ -2153,6 +2240,7 @@ async def update_marketing_preferences(
 async def get_marketing_attribution(
     property_id: str,
     db: AsyncSession = Depends(get_db),
+    owner: dict[str, Any] = Depends(require_owner_property_access),
 ) -> Dict[str, Any]:
     """Return campaign attribution data for a property (last 12 months)."""
     try:

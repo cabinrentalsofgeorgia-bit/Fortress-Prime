@@ -2,14 +2,15 @@
 Phase 2 discovery draft API.
 """
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 
 from backend.core.database import AsyncSessionLocal
+from backend.core.security import require_manager_or_admin
 from backend.services.legal_discovery_engine import LegalDiscoveryEngine
 from backend.services.legal_discovery_validator import LegalDiscoveryValidator
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 class DiscoveryDraftRequest(BaseModel):

@@ -958,35 +958,35 @@ def _legal_get(path: str, token: str = None):
     return resp.json()
 
 
-@app.get("/api/legal/cases")
+@app.get("/api/internal/legal/cases")
 async def legal_cases(request: Request):
     """List all legal cases."""
     get_current_user(request)
     return _legal_get("/api/cases", _bearer(request))
 
 
-@app.get("/api/legal/overview")
+@app.get("/api/internal/legal/overview")
 async def legal_overview(request: Request):
     """Full legal CRM overview (cases, deadlines, correspondence, actions)."""
     get_current_user(request)
     return _legal_get("/api/crm/overview", _bearer(request))
 
 
-@app.get("/api/legal/cases/{slug}")
+@app.get("/api/internal/legal/cases/{slug}")
 async def legal_case_detail(slug: str, request: Request):
     """Single case detail with actions, evidence, watchdog."""
     get_current_user(request)
     return _legal_get(f"/api/cases/{slug}", _bearer(request))
 
 
-@app.get("/api/legal/cases/{slug}/correspondence")
+@app.get("/api/internal/legal/cases/{slug}/correspondence")
 async def legal_case_correspondence(slug: str, request: Request):
     """Correspondence for a specific case."""
     get_current_user(request)
     return _legal_get(f"/api/cases/{slug}/correspondence", _bearer(request))
 
 
-@app.get("/api/legal/cases/{slug}/deadlines")
+@app.get("/api/internal/legal/cases/{slug}/deadlines")
 async def legal_case_deadlines(slug: str, request: Request):
     """Deadlines for a specific case."""
     get_current_user(request)

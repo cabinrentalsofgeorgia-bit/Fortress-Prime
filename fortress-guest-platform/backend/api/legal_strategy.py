@@ -2,7 +2,7 @@
 LEGAL STRATEGY TERMINAL — Interactive War Room Chat with SSE Streaming
 ======================================================================
 
-POST /api/legal/strategy/chat
+POST /api/internal/legal/strategy/chat
     Accepts a user message, case brief (e-discovery context), and Council
     consensus. Routes through the God Head (Claude proxy → HYDRA → SWARM
     fallback chain) and streams the response via Server-Sent Events.
@@ -21,18 +21,19 @@ import structlog
 import httpx
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Any, Optional
 
 from backend.core.config import settings
+from backend.core.security import require_manager_or_admin
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 logger = structlog.get_logger()
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 _LITELLM_BASE = getattr(settings, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
 

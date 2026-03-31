@@ -116,7 +116,7 @@ async def _audit_log(
 async def search_reservations(
     q: str = "",
     db: AsyncSession = Depends(get_db),
-    user: StaffUser = Depends(get_current_user),
+    user: StaffUser = Depends(require_manager_or_admin),
 ):
     """
     Search reservations by confirmation code, guest name, or property name.
@@ -254,7 +254,7 @@ async def payment_history(
     page: int = 1,
     per_page: int = 50,
     db: AsyncSession = Depends(get_db),
-    user: StaffUser = Depends(get_current_user),
+    user: StaffUser = Depends(require_manager_or_admin),
 ):
     """
     List recent MOTO payment events from the audit trail.
@@ -307,7 +307,7 @@ async def payment_history(
 
 @router.get("/stripe-key")
 async def get_stripe_publishable_key(
-    user: StaffUser = Depends(get_current_user),
+    user: StaffUser = Depends(require_manager_or_admin),
 ):
     """Return the Stripe publishable key for the frontend Elements integration."""
     key = stripe_payments.get_publishable_key()

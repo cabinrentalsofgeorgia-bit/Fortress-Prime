@@ -23,9 +23,36 @@ from backend.core.database import Base
 # Allowed-value sets
 # ---------------------------------------------------------------------------
 
-ALLOWED_ENTITIES = {"reservation", "work_order", "guest", "message"}
-ALLOWED_TRIGGERS = {"created", "updated", "status_changed"}
-ALLOWED_ACTIONS = {"send_email_template", "create_task", "notify_staff"}
+ALLOWED_ENTITIES = {
+    "reservation",
+    "work_order",
+    "guest",
+    "message",
+    "legal_case",
+    "legal_document",
+    "discovery_pack",
+}
+ALLOWED_TRIGGERS = {
+    "created",
+    "updated",
+    "status_changed",
+    "deadline_approaching",
+    "docket_updated",
+    "opposing_counsel_correspondence",
+    "reactivation_dispatched",
+}
+ALLOWED_ACTIONS = {
+    "send_email_template",
+    "create_task",
+    "notify_staff",
+    "legal_search",
+    "legal_council",
+    "legal_ingest",
+    "legal_deposition",
+    "draft_motion_extension",
+    "analyze_opposing_filing",
+    "concierge_conflict",
+}
 
 # ---------------------------------------------------------------------------
 # Condition operators

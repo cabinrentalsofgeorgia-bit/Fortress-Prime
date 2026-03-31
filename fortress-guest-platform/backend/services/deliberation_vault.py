@@ -65,6 +65,19 @@ def get_vault_connection():
     return _get_vault_conn()
 
 
+def get_deliberation_ledger_connection():
+    """
+    Physical connection to the immutable deliberation ledger (legal_cmd.deliberation_events).
+
+    Prefer ``DELIBERATION_LEDGER_DATABASE_URL`` or ``FORTRESS_DELIBERATION_DSN`` when the ledger
+    is reachable via a single DSN; otherwise uses the same fortress_db parameters as vault writes.
+    """
+    dsn = (os.getenv("DELIBERATION_LEDGER_DATABASE_URL") or os.getenv("FORTRESS_DELIBERATION_DSN") or "").strip()
+    if dsn:
+        return psycopg2.connect(dsn)
+    return _get_vault_conn()
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # Canonical Hashing
 # ═══════════════════════════════════════════════════════════════════════

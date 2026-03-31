@@ -10,9 +10,10 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.models import Reservation, Message, WorkOrder, Guest, Property
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 class DashboardStats(BaseModel):

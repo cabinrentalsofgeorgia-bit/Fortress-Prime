@@ -18,10 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.models.lead import Lead
 from backend.models.quote import Quote
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 # ── Response schemas ─────────────────────────────────────────────────────────
@@ -100,7 +101,9 @@ def _lead_to_summary(lead: Lead) -> LeadSummary:
     )
 
 
-_LEAD_EAGER = selectinload(Lead.quotes).selectinload(Quote.options)
+def _lead_eager_options():
+    """Build eager-load options lazily to avoid mapper configuration at import time."""
+    return selectinload(Lead.quotes).selectinload(Quote.options)
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -145,7 +148,7 @@ async def list_leads(
 
     offset = (page - 1) * per_page
     query = query.offset(offset).limit(per_page)
-    query = query.options(_LEAD_EAGER)
+    query = query.options(_lead_eager_options())
 
     result = await db.execute(query)
     leads = result.scalars().all()
@@ -162,7 +165,7 @@ async def list_leads(
 async def get_lead(lead_id: UUID, db: AsyncSession = Depends(get_db)):
     """Get a single lead by ID."""
     result = await db.execute(
-        select(Lead).where(Lead.id == lead_id).options(_LEAD_EAGER)
+        select(Lead).where(Lead.id == lead_id).options(_lead_eager_options())
     )
     lead = result.scalar_one_or_none()
     if not lead:
@@ -179,7 +182,7 @@ async def update_lead(
 ):
     """Update lead status, score, or details."""
     result = await db.execute(
-        select(Lead).where(Lead.id == lead_id).options(_LEAD_EAGER)
+        select(Lead).where(Lead.id == lead_id).options(_lead_eager_options())
     )
     lead = result.scalar_one_or_none()
     if not lead:

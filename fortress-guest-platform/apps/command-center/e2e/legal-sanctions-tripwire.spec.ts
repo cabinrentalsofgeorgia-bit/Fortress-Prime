@@ -11,7 +11,7 @@ test.describe("Sanctions Tripwire Panel", () => {
 
     await loginAsE2EStaff(page, baseURL);
 
-    await page.route(/\/api\/legal\/cases\/[^/]+\/sanctions\/alerts$/, async (route) => {
+    await page.route(/\/api\/internal\/legal\/cases\/[^/]+\/sanctions\/alerts$/, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -39,13 +39,13 @@ test.describe("Sanctions Tripwire Panel", () => {
         response.request().method() === "GET" &&
         response
           .url()
-          .includes(`/api/legal/cases/${caseSlug}/sanctions/alerts`) &&
+          .includes(`/api/internal/legal/cases/${caseSlug}/sanctions/alerts`) &&
         response.status() === 200,
       { timeout: 120_000 },
     );
 
     // PRECISION MOCK: Route by strict pathname, completely ignoring query strings.
-    await page.route(`**/api/legal/cases/${caseSlug}**`, async (route) => {
+    await page.route(`**/api/internal/legal/cases/${caseSlug}**`, async (route) => {
       const requestUrl = new URL(route.request().url());
 
       // Let the specific sanctions alert mock above own its dedicated request.
@@ -60,8 +60,8 @@ test.describe("Sanctions Tripwire Panel", () => {
 
       // Exact match for the base case shell, tolerant of query params and trailing slash.
       if (
-        requestUrl.pathname === `/api/legal/cases/${caseSlug}` ||
-        requestUrl.pathname === `/api/legal/cases/${caseSlug}/`
+        requestUrl.pathname === `/api/internal/legal/cases/${caseSlug}` ||
+        requestUrl.pathname === `/api/internal/legal/cases/${caseSlug}/`
       ) {
         await route.fulfill({
           status: 200,

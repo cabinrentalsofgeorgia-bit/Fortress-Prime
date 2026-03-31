@@ -21,11 +21,12 @@ from sqlalchemy.orm import selectinload
 import structlog
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.models import AgentResponseQueue, Message, Guest
 from backend.services.message_service import MessageService
 from backend.integrations.twilio_client import TwilioClient
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 logger = structlog.get_logger()
 
 

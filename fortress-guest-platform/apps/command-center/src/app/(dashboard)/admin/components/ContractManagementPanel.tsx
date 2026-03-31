@@ -10,6 +10,7 @@ import {
   type ManagementContract,
   type FleetProperty,
 } from "@/lib/hooks";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
 import {
   Card,
   CardContent,
@@ -100,6 +101,7 @@ interface ContractManagementPanelProps {
   /** Pre-fill the generate form with a specific owner after onboarding */
   prefillOwnerId?: string;
   onBack: () => void;
+  canOperate?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -110,6 +112,7 @@ export default function ContractManagementPanel({
   fleet,
   prefillOwnerId,
   onBack,
+  canOperate = true,
 }: ContractManagementPanelProps) {
   const { data: contractsData, isLoading } = useManagementContracts();
   const { data: propertiesData } = useProperties();
@@ -246,10 +249,12 @@ export default function ContractManagementPanel({
         <div className="flex gap-2">
         <Dialog open={prosOpen} onOpenChange={setProsOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10">
-              <Presentation className="h-4 w-4 mr-2" />
-              Generate Prospectus
-            </Button>
+            <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+              <Button variant="outline" className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10" disabled={!canOperate}>
+                <Presentation className="h-4 w-4 mr-2" />
+                Generate Prospectus
+              </Button>
+            </RoleGatedAction>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -294,27 +299,31 @@ export default function ContractManagementPanel({
               </div>
             </div>
             <DialogFooter>
-              <Button
-                onClick={handleProspectus}
-                disabled={!prosPropertyId || !prosOwnerId.trim() || prospectusMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {prospectusMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Presentation className="h-4 w-4 mr-2" />
-                )}
-                Generate Prospectus
-              </Button>
+              <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                <Button
+                  onClick={handleProspectus}
+                  disabled={!canOperate || !prosPropertyId || !prosOwnerId.trim() || prospectusMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {prospectusMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Presentation className="h-4 w-4 mr-2" />
+                  )}
+                  Generate Prospectus
+                </Button>
+              </RoleGatedAction>
             </DialogFooter>
           </DialogContent>
         </Dialog>
         <Dialog open={genOpen} onOpenChange={setGenOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Generate Agreement
-            </Button>
+            <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+              <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={!canOperate}>
+                <Plus className="h-4 w-4 mr-2" />
+                Generate Agreement
+              </Button>
+            </RoleGatedAction>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -369,17 +378,19 @@ export default function ContractManagementPanel({
               </div>
             </div>
             <DialogFooter>
-              <Button
-                onClick={handleGenerate}
-                disabled={!genPropertyId || !genOwnerId.trim() || generateMutation.isPending}
-              >
-                {generateMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <PenTool className="h-4 w-4 mr-2" />
-                )}
-                Generate PDF
-              </Button>
+              <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!canOperate || !genPropertyId || !genOwnerId.trim() || generateMutation.isPending}
+                >
+                  {generateMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <PenTool className="h-4 w-4 mr-2" />
+                  )}
+                  Generate PDF
+                </Button>
+              </RoleGatedAction>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -571,16 +582,18 @@ export default function ContractManagementPanel({
                 <div className="space-y-3 border-t pt-4">
                   {/* Download PDF */}
                   {detailContract.pdf_url && (
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <a
-                        href={`/api/admin/contracts/${detailContract.id}/pdf`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download PDF
-                      </a>
-                    </Button>
+                    <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                      <Button variant="outline" className="w-full justify-start" asChild>
+                        <a
+                          href={`/api/admin/contracts/${detailContract.id}/pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download PDF
+                        </a>
+                      </Button>
+                    </RoleGatedAction>
                   )}
 
                   {/* Send for Signature (only for draft status) */}
@@ -614,18 +627,20 @@ export default function ContractManagementPanel({
                             onChange={(e) => setSendDays(e.target.value)}
                           />
                         </div>
-                        <Button
-                          className="w-full bg-emerald-600 hover:bg-emerald-700"
-                          onClick={handleSend}
-                          disabled={sendMutation.isPending}
-                        >
-                          {sendMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4 mr-2" />
-                          )}
-                          Send for Signature
-                        </Button>
+                        <RoleGatedAction allowed={canOperate} reason="Admin role required.">
+                          <Button
+                            className="w-full bg-emerald-600 hover:bg-emerald-700"
+                            onClick={handleSend}
+                            disabled={!canOperate || sendMutation.isPending}
+                          >
+                            {sendMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Send for Signature
+                          </Button>
+                        </RoleGatedAction>
                       </CardContent>
                     </Card>
                   )}

@@ -35,6 +35,34 @@ const ENTITY_FIELDS: Record<string, string[]> = {
   work_order: ["status", "priority", "category", "assigned_to"],
   guest: ["total_stays", "language_preference", "opt_in_marketing"],
   message: ["direction", "intent", "sentiment", "is_auto_response"],
+  legal_case: [
+    "case_slug",
+    "case_number",
+    "status",
+    "risk_score",
+    "consensus_signal",
+    "consensus_conviction",
+    "extraction_status",
+    "deadline_date",
+    "deadline_type",
+    "days_remaining",
+    "presiding_judge",
+  ],
+  legal_document: [
+    "case_slug",
+    "case_number",
+    "filing_name",
+    "filing_summary",
+    "document_type",
+    "status",
+  ],
+  discovery_pack: [
+    "case_slug",
+    "pack_id",
+    "status",
+    "target_entity",
+    "items_count",
+  ],
 };
 
 interface ConditionBuilderProps {

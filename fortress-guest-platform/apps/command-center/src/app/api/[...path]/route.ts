@@ -3,6 +3,8 @@ import { getBackendBaseUrl } from "@/lib/server/backend-url";
 
 const COMMAND_CENTER =
   process.env.COMMAND_CENTER_URL || "http://127.0.0.1:9800";
+const INTERNAL_TUNNEL_SIGNATURE =
+  process.env.INTERNAL_API_TOKEN || process.env.SWARM_API_KEY || "";
 
 const COMMAND_CENTER_PREFIXES = [
   "/api/vrs/",
@@ -20,9 +22,33 @@ const COMMAND_CENTER_PREFIXES = [
 
 const SESSION_COOKIE = "fortress_session";
 
+const PUBLIC_FGP_PATH_PREFIXES = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/sso",
+  "/api/auth/owner/",
+  "/api/guest-portal/",
+  "/api/guestbook/",
+  "/api/agreements/public/",
+  "/api/direct-booking/",
+  "/api/quotes/",
+  "/api/seo/",
+  "/api/seo-patches/",
+  "/api/checkout/",
+  "/api/storefront/",
+  "/api/email-bridge/",
+  "/api/webhooks/",
+  "/api/dispatch/",
+];
+
 function resolveUpstream(pathname: string): { base: string; isCC: boolean } {
   const isCC = COMMAND_CENTER_PREFIXES.some((p) => pathname.startsWith(p));
   return { base: isCC ? COMMAND_CENTER : getBackendBaseUrl(), isCC };
+}
+
+function shouldSignInternalFgpRequest(pathname: string, isCC: boolean): boolean {
+  if (isCC) return false;
+  return !PUBLIC_FGP_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 /**
@@ -95,11 +121,12 @@ function buildUpstreamHeaders(
   const xff = request.headers.get("x-forwarded-for") || "";
   if (xff) headers["X-Forwarded-For"] = xff;
 
-  // Privacy router signal: backend must keep local-first routing and redact
-  // if cloud fallback is needed for AI workloads.
-  headers["X-Privacy-Mode"] = "local-first";
-  if (pathname.startsWith("/api/intelligence/") || pathname.startsWith("/api/legal/")) {
-    headers["X-Privacy-Redaction"] = "required-on-cloud-fallback";
+  const host = request.headers.get("host") || request.nextUrl.host;
+  if (host) headers["X-Forwarded-Host"] = host;
+
+  if (shouldSignInternalFgpRequest(pathname, isCC) && INTERNAL_TUNNEL_SIGNATURE) {
+    headers["X-Fortress-Ingress"] = "command_center";
+    headers["X-Fortress-Tunnel-Signature"] = INTERNAL_TUNNEL_SIGNATURE;
   }
 
   return headers;

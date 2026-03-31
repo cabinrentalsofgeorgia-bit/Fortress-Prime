@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import {
-  Controller,
-  FormProvider,
-  useForm,
-  useWatch,
-} from "react-hook-form";
+import { Controller, FormProvider, useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,18 +39,31 @@ const TARGET_ENTITIES = [
   { value: "work_order", label: "Work Order" },
   { value: "guest", label: "Guest" },
   { value: "message", label: "Message" },
+  { value: "legal_case", label: "Legal Case (Division 3)" },
+  { value: "legal_document", label: "Legal Document (Division 3)" },
+  { value: "discovery_pack", label: "Discovery Pack (Division 3)" },
 ];
 
 const TRIGGER_EVENTS = [
   { value: "created", label: "Created" },
   { value: "updated", label: "Updated" },
   { value: "status_changed", label: "Status Changed" },
+  { value: "deadline_approaching", label: "Deadline Approaching (72h)" },
+  { value: "docket_updated", label: "Docket Updated" },
+  { value: "opposing_counsel_correspondence", label: "Opposing Counsel Correspondence" },
 ];
 
 const ACTION_TYPES = [
   { value: "send_email_template", label: "Send Email Template" },
   { value: "create_task", label: "Create Task" },
   { value: "notify_staff", label: "Notify Staff" },
+  { value: "legal_search", label: "Paperclip: Legal Search" },
+  { value: "legal_council", label: "Paperclip: 9-Seat Council" },
+  { value: "legal_ingest", label: "Paperclip: Legal Ingest" },
+  { value: "legal_deposition", label: "Paperclip: Deposition Outline" },
+  { value: "draft_motion_extension", label: "Paperclip: Draft Motion Extension" },
+  { value: "analyze_opposing_filing", label: "Paperclip: Analyze Opposing Filing" },
+  { value: "concierge_conflict", label: "Paperclip: Concierge Conflict Mediator" },
 ];
 
 const EMPTY_FORM: AutomationFormValues = {
@@ -83,8 +91,8 @@ export function AutomationForm({
   const updateRule = useUpdateRule();
   const testRule = useTestRule();
 
-  const methods = useForm<AutomationFormValues, undefined, AutomationFormSubmitValues>({
-    resolver: zodResolver(AutomationFormSchema),
+  const methods = useForm<AutomationFormValues>({
+    resolver: zodResolver(AutomationFormSchema) as Resolver<AutomationFormValues>,
     defaultValues: EMPTY_FORM,
   });
 
@@ -169,6 +177,10 @@ export function AutomationForm({
   }
 
   const saving = createRule.isPending || updateRule.isPending;
+  const isLegalTarget =
+    targetEntity === "legal_case" ||
+    targetEntity === "legal_document" ||
+    targetEntity === "discovery_pack";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -253,6 +265,12 @@ export function AutomationForm({
                 />
               </div>
             </div>
+
+            {isLegalTarget && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">
+                Division 3 workflow selected. This rule can target the Legal Hivemind and Paperclip bridge.
+              </div>
+            )}
 
             {/* Conditions Panel */}
             <div className="space-y-4 rounded-lg border p-4">

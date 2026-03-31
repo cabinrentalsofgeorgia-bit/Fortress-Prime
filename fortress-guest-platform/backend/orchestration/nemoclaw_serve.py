@@ -357,7 +357,7 @@ try:
         "llm_api_key_source=" + chat_api_key_source,
     ]
     result_payload = {}
-    if intent == "draft_recovery_email":
+    if intent in {"draft_recovery_email", "guest_concierge"}:
         system_prompt, user_prompt = _recovery_prompt(context_payload)
         draft_body = _call_local_llm(
             chat_base_url,
@@ -367,6 +367,8 @@ try:
             user_prompt,
         )
         result_payload["draft_body"] = draft_body
+        result_payload["draft_email"] = draft_body
+        result_payload["schema"] = "fortress.guest_concierge.draft_email.v1"
         action_log.append("draft_chars=" + str(len(draft_body)))
 
     print(json.dumps({
@@ -864,7 +866,7 @@ class NemoClawWorker:
             self.pinned_node_ip,
             directive.task_id,
         )
-        if directive.intent == "draft_recovery_email":
+        if directive.intent in {"draft_recovery_email", "guest_concierge"}:
             logger.error("Worker-local recovery fallback has been removed; inference.local is required.")
         else:
             logger.error("LiteLLM fallback is explicitly disabled to protect Head Node memory.")

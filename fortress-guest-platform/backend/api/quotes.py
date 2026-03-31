@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from backend.core.database import get_db
-from backend.core.security import get_current_user
+from backend.core.security import require_operator_manager_admin
 from backend.models.staff import StaffUser
 from backend.models.quote import Quote
 
@@ -18,7 +18,7 @@ router = APIRouter()
 @router.get("/")
 async def list_quotes(
     db: AsyncSession = Depends(get_db),
-    user: StaffUser = Depends(get_current_user),
+    user: StaffUser = Depends(require_operator_manager_admin),
 ):
     result = await db.execute(
         select(Quote).order_by(Quote.created_at.desc()).limit(50)

@@ -26,7 +26,7 @@ export function HiveMindEditor({
     setSyncState("idle");
 
     try {
-      const response = await fetch(`/api/legal/cases/${caseSlug}/feedback/telemetry`, {
+      const response = await fetch(`/api/internal/legal/cases/${caseSlug}/feedback/telemetry`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -12,8 +12,9 @@ from sqlalchemy import text
 from pydantic import BaseModel
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 CF01_BASE = os.getenv("CF01_GUARDIAN_URL", "http://localhost:8001/v1")
 

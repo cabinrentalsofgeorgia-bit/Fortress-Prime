@@ -22,10 +22,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.security import require_manager_or_admin
 from backend.models.vault_audit import VaultAuditLog
 
 logger = structlog.get_logger(service="vault_ediscovery")
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 QDRANT_COLLECTION = "email_embeddings"
 
@@ -75,16 +76,14 @@ class AuditLogEntry(BaseModel):
 
 
 async def _embed_query(text: str) -> Optional[List[float]]:
-    """Get embedding vector from Ollama (nomic-embed-text)."""
-    url = f"{settings.embed_base_url}/api/embeddings"
+    """Get embedding vector via Ollama OpenAI-compatible /v1/embeddings (vector_db)."""
+    from backend.core.vector_db import embed_text
+
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(url, json={
-                "model": settings.embed_model,
-                "prompt": text,
-            })
-            resp.raise_for_status()
-            return resp.json().get("embedding")
+        vec = await embed_text(text[:8000])
+        if len(vec) == settings.embed_dim:
+            return vec
+        return None
     except Exception as e:
         logger.error("vault_embedding_failed", error=str(e)[:300])
         return None

@@ -26,45 +26,34 @@ import uuid
 from uuid import UUID
 
 import httpx
-from arq.connections import ArqRedis
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 
 from backend.core.database import AsyncSessionLocal
 from backend.core.queue import get_arq_pool
+from backend.core.security import require_manager_or_admin
 from backend.services.ediscovery_agent import LegacySession
-from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 from backend.services.legal_extractor import extract_entities
-from backend.services.legal_case_graph import (
-    HiveMindFeedback,
-    get_case_graph_snapshot,
-    trigger_graph_refresh,
-)
-from backend.services.legal_discovery_engine import generate_discovery_pack, validate_discovery_pack
+from backend.services.legal_case_graph import HiveMindFeedback, get_case_graph_snapshot
+from backend.services.legal_discovery_engine import validate_discovery_pack
 from backend.services.legal_deposition_engine import (
-    DepositionKillSheet,
     build_cross_exam_funnels,
-    generate_kill_sheet,
     get_deposition_targets,
     stream_cross_exam_funnels,
 )
-from backend.schemas.legal_schemas import (
-    FunnelUpdateRequest,
-    GraphSnapshotResponse,
-    TargetStatusUpdateRequest,
-)
+from backend.schemas.legal_schemas import FunnelUpdateRequest, TargetStatusUpdateRequest
 from backend.models.legal_deposition import CrossExamFunnel, DepositionTarget
 from backend.models.legal_graph import LegalCase
 
 logger = structlog.get_logger()
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 def _row_to_dict(row) -> dict:
@@ -347,6 +336,7 @@ MIME_MAP = {
 }
 
 NAS_LEGAL_ROOT = "/mnt/fortress_nas/sectors/legal"
+INTERNAL_LEGAL_API_PREFIX = "/api/internal/legal"
 
 
 @router.get("/correspondence/{corr_id}/download", summary="Download correspondence file from NAS")
@@ -522,7 +512,7 @@ async def list_case_files(slug: str):
                     "filename": f.name,
                     "subdir": subdir,
                     "size_bytes": f.stat().st_size,
-                    "download_url": f"/api/legal/cases/{slug}/download/{f.name}",
+                    "download_url": f"{INTERNAL_LEGAL_API_PREFIX}/cases/{slug}/download/{f.name}",
                 })
     return {"case_slug": slug, "files": files, "total": len(files)}
 
@@ -665,130 +655,14 @@ class ExtractionRequest(BaseModel):
     correspondence_id: Optional[int] = None
 
 
-class DiscoveryDraftPackRequest(BaseModel):
-    # New dashboard contract: max discovery items capped by local rules.
-    local_rules_cap: int = Field(default=25, ge=1, le=25)
-    pack_type: str | None = Field(default=None, pattern="^(interrogatory|rfp|admission)$")
-    item_limit: int = Field(default=5, ge=1, le=25)
-    # Backward-compatible fields for older callers.
-    target_party: str | None = Field(default=None)
-    category: str | None = Field(default=None, pattern="^(interrogatory|rfp|admission)$")
-
-
 class DepositionBuildFunnelRequest(BaseModel):
     target_name: str = Field(..., min_length=1, max_length=255)
-
-
-class KillSheetRequest(BaseModel):
-    deponent_name: str = Field(..., min_length=1, max_length=255)
-
 
 class FeedbackPayload(BaseModel):
     module_type: str
     original_swarm_text: str
     human_edited_text: str
     accepted: bool
-
-
-@router.get("/cases/{slug}/graph/snapshot", response_model=GraphSnapshotResponse, summary="Get legal case graph snapshot")
-async def get_graph_snapshot(slug: str):
-    async with AsyncSessionLocal() as session:
-        snapshot = await get_case_graph_snapshot(session, case_slug=slug)
-    if not snapshot or not snapshot.get("nodes"):
-        raise HTTPException(status_code=404, detail="Case graph not found or empty.")
-
-    nodes = [
-        {
-            "id": str(node.id),
-            "entity_type": node.entity_type,
-            "label": node.label,
-            "node_metadata": node.node_metadata or {},
-        }
-        for node in snapshot["nodes"]
-    ]
-    edges = [
-        {
-            "id": str(edge.id),
-            "source_node_id": str(edge.source_node_id),
-            "target_node_id": str(edge.target_node_id),
-            "relationship_type": edge.relationship_type,
-            "weight": float(edge.weight or 0.0),
-            "source_ref": edge.source_ref,
-        }
-        for edge in snapshot["edges"]
-    ]
-    return GraphSnapshotResponse(nodes=nodes, edges=edges)
-
-
-async def _refresh_graph_background(case_slug: str) -> None:
-    async with AsyncSessionLocal() as session:
-        try:
-            await trigger_graph_refresh(session, case_slug=case_slug)
-        except Exception as exc:
-            await session.rollback()
-            logger.error("legal_graph_refresh_failed", slug=case_slug, error=str(exc)[:280])
-
-
-@router.post(
-    "/cases/{slug}/graph/refresh",
-    summary="Queue legal case graph refresh",
-    status_code=status.HTTP_202_ACCEPTED,
-)
-async def refresh_case_graph(
-    slug: str,
-    request: Request,
-    arq_redis: ArqRedis = Depends(get_arq_pool),
-):
-    async with AsyncSessionLocal() as db:
-        job = await enqueue_async_job(
-            db,
-            worker_name="run_legal_graph_refresh_job",
-            job_name="run_legal_graph_refresh",
-            payload={"case_slug": slug},
-            requested_by=extract_request_actor(
-                request.headers.get("x-user-id"),
-                request.headers.get("x-user-email"),
-            ),
-            tenant_id=getattr(request.state, "tenant_id", None),
-            request_id=request.headers.get("x-request-id"),
-            redis=arq_redis,
-        )
-    return {"status": "refresh_queued", "case_slug": slug, "job_id": str(job.id)}
-
-
-@router.post("/cases/{slug}/discovery/draft-pack", summary="Generate discovery draft pack")
-async def draft_discovery_pack(slug: str, body: DiscoveryDraftPackRequest):
-    async with AsyncSessionLocal() as session:
-        try:
-            # Compat contract:
-            # - New callers provide local_rules_cap only
-            # - Legacy callers provide pack_type/category + item_limit
-            resolved_pack_type = body.pack_type or body.category or "interrogatory"
-            effective_limit = min(
-                int(body.local_rules_cap or 25),
-                int(body.item_limit or 25),
-                25,
-            )
-
-            # Ensure there is enough graph context to draft discovery items.
-            snapshot = await get_case_graph_snapshot(session, case_slug=slug)
-            if not snapshot or not snapshot.get("nodes"):
-                raise HTTPException(status_code=400, detail="Cannot draft discovery: Case graph is empty.")
-
-            return await generate_discovery_pack(
-                db=session,
-                case_slug=slug,
-                pack_type=resolved_pack_type,
-                item_limit=effective_limit,
-            )
-        except HTTPException:
-            await session.rollback()
-            raise
-        except Exception as exc:
-            await session.rollback()
-            logger.error("legal_discovery_draft_failed", slug=slug, error=str(exc)[:280])
-            raise HTTPException(status_code=500, detail="Failed to generate discovery draft pack")
-
 
 @router.post("/cases/{slug}/discovery/{pack_id}/validate", summary="Validate Rule 26 proportionality for draft pack")
 async def validate_discovery_draft_pack(slug: str, pack_id: UUID):
@@ -821,58 +695,54 @@ async def ingest_hive_mind_telemetry(slug: str, payload: FeedbackPayload):
     ).hexdigest()
 
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            text(
-                """
-                INSERT INTO public.legal_hive_mind_feedback_events
-                    (event_id, case_slug, source_route, draft_text, final_text, edit_distance_pct,
-                     outcome_label, model_used, source_trace, signature_hash, created_at)
-                VALUES
-                    (CAST(:event_id AS uuid), :case_slug, :source_route, :draft_text, :final_text, :edit_distance_pct,
-                     :outcome_label, :model_used, CAST(:source_trace AS jsonb), :signature_hash, NOW())
-                ON CONFLICT (signature_hash) DO UPDATE
-                    SET final_text = EXCLUDED.final_text,
-                        edit_distance_pct = EXCLUDED.edit_distance_pct,
-                        outcome_label = EXCLUDED.outcome_label,
-                        model_used = EXCLUDED.model_used,
-                        source_trace = EXCLUDED.source_trace,
-                        created_at = NOW()
-                RETURNING event_id
-                """
-            ),
-            {
-                "event_id": event_id,
-                "case_slug": slug,
-                "source_route": payload.module_type,
-                "draft_text": payload.original_swarm_text,
-                "final_text": payload.human_edited_text,
-                "edit_distance_pct": edit_distance_pct,
-                "outcome_label": "accepted" if payload.accepted else "rejected",
-                "model_used": "hive-mind-telemetry-v1",
-                "source_trace": json.dumps({"module_type": payload.module_type, "accepted": payload.accepted}),
-                "signature_hash": signature_hash,
-            },
-        )
-        await session.commit()
-
-    persisted_event_id = str(result.scalar() or event_id)
-    return {"status": "telemetry_logged", "event_id": persisted_event_id}
-
-
-@router.post("/cases/{slug}/deposition/kill-sheet", response_model=DepositionKillSheet)
-async def create_deposition_kill_sheet(slug: str, req: KillSheetRequest):
-    """
-    Commands the Swarm to cross-reference statements and draft an impeachment brief.
-    """
-    logger.info("[API] Kill-sheet requested for %s in %s", req.deponent_name, slug)
-    try:
-        kill_sheet = await generate_kill_sheet(slug, req.deponent_name)
-        return kill_sheet
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        logger.error("[API] Kill-sheet engine failed: %s", str(e))
-        raise HTTPException(status_code=500, detail="Swarm inference failed during kill-sheet drafting.")
+        try:
+            result = await session.execute(
+                text(
+                    """
+                    INSERT INTO public.legal_hive_mind_feedback_events
+                        (event_id, case_slug, source_route, draft_text, final_text, edit_distance_pct,
+                         outcome_label, model_used, source_trace, signature_hash, created_at)
+                    VALUES
+                        (CAST(:event_id AS uuid), :case_slug, :source_route, :draft_text, :final_text, :edit_distance_pct,
+                         :outcome_label, :model_used, CAST(:source_trace AS jsonb), :signature_hash, NOW())
+                    ON CONFLICT (signature_hash) DO UPDATE
+                        SET final_text = EXCLUDED.final_text,
+                            edit_distance_pct = EXCLUDED.edit_distance_pct,
+                            outcome_label = EXCLUDED.outcome_label,
+                            model_used = EXCLUDED.model_used,
+                            source_trace = EXCLUDED.source_trace,
+                            created_at = NOW()
+                    RETURNING event_id
+                    """
+                ),
+                {
+                    "event_id": event_id,
+                    "case_slug": slug,
+                    "source_route": payload.module_type,
+                    "draft_text": payload.original_swarm_text,
+                    "final_text": payload.human_edited_text,
+                    "edit_distance_pct": edit_distance_pct,
+                    "outcome_label": "accepted" if payload.accepted else "rejected",
+                    "model_used": "hive-mind-telemetry-v1",
+                    "source_trace": json.dumps({"module_type": payload.module_type, "accepted": payload.accepted}),
+                    "signature_hash": signature_hash,
+                },
+            )
+            await session.commit()
+            persisted_event_id = str(result.scalar() or event_id)
+            return {"status": "telemetry_logged", "event_id": persisted_event_id}
+        except Exception as exc:
+            await session.rollback()
+            logger.warning(
+                "hive_mind_telemetry_deferred",
+                slug=slug,
+                error=str(exc)[:240],
+                signature_hash=signature_hash,
+            )
+            # Some live environments have not yet provisioned the feedback ledger table.
+            # Do not block counsel workflows or the UI sync indicator on observability-only
+            # persistence failures; acknowledge the event and allow the operator to continue.
+            return {"status": "telemetry_deferred", "event_id": event_id}
 
 
 @router.post("/cases/{slug}/deposition/build-funnel", summary="Build graph-driven cross-exam funnels")
@@ -1106,12 +976,7 @@ async def _run_extraction_job(
 
 
 @router.post("/cases/{slug}/extract", summary="Queue entity extraction")
-async def trigger_extraction(
-    slug: str,
-    body: ExtractionRequest,
-    request: Request,
-    arq_redis: ArqRedis = Depends(get_arq_pool),
-):
+async def trigger_extraction(slug: str, body: ExtractionRequest, background_tasks: BackgroundTasks):
     async with LegacySession() as session:
         case_r = await session.execute(
             text("SELECT id, notes FROM legal.cases WHERE case_slug = :slug"),
@@ -1219,26 +1084,14 @@ async def trigger_extraction(
         )
         await session.commit()
 
-    async with AsyncSessionLocal() as queue_db:
-        job = await enqueue_async_job(
-            queue_db,
-            worker_name="run_legal_extraction_job",
-            job_name="run_legal_extraction",
-            payload={
-                "slug": slug,
-                "case_id": case_row.id,
-                "target": body.target,
-                "source_text": source_text,
-                "correspondence_id": corr_id,
-            },
-            requested_by=extract_request_actor(
-                request.headers.get("x-user-id"),
-                request.headers.get("x-user-email"),
-            ),
-            tenant_id=getattr(request.state, "tenant_id", None),
-            request_id=request.headers.get("x-request-id"),
-            redis=arq_redis,
-        )
+    background_tasks.add_task(
+        _run_extraction_job,
+        slug=slug,
+        case_id=case_row.id,
+        target=body.target,
+        source_text=source_text,
+        correspondence_id=corr_id,
+    )
 
     logger.info("legal_extraction_queued", slug=slug, target=body.target, correspondence_id=corr_id)
     return {
@@ -1248,7 +1101,6 @@ async def trigger_extraction(
         "extraction": "queued",
         "target": body.target,
         "id": case_row.id,
-        "job_id": str(job.id),
     }
 
 
@@ -1569,66 +1421,70 @@ async def get_sanctions_drafts(slug: str):
 # ─── Harvey Engine: Master Chronology ─────────────────────────────────
 
 @router.post("/cases/{slug}/chronology/build", summary="Build master chronology from evidence")
-async def build_case_chronology(
-    slug: str,
-    request: Request,
-    arq_redis: ArqRedis = Depends(get_arq_pool),
-):
+async def build_case_chronology(slug: str, background_tasks: BackgroundTasks):
     """Trigger chronology extraction (runs against local DGX)."""
-    async with AsyncSessionLocal() as db:
-        job = await enqueue_async_job(
-            db,
-            worker_name="run_legal_chronology_job",
-            job_name="run_legal_chronology",
-            payload={"case_slug": slug},
-            requested_by=extract_request_actor(
-                request.headers.get("x-user-id"),
-                request.headers.get("x-user-email"),
-            ),
-            tenant_id=getattr(request.state, "tenant_id", None),
-            request_id=request.headers.get("x-request-id"),
-            redis=arq_redis,
-        )
-    return {"status": "queued", "case_slug": slug, "job_id": str(job.id)}
+    from backend.services.legal_chronology import build_chronology
+
+    async def _bg():
+        async with AsyncSessionLocal() as db:
+            await build_chronology(db, slug)
+
+    background_tasks.add_task(asyncio.coroutine(_bg) if False else _bg)
+    return {"status": "queued", "case_slug": slug}
 
 
 @router.post("/cases/{slug}/deliberate", summary="Convene the Counsel of 9")
-async def deliberate_case(
-    slug: str,
-    request: Request,
-    arq_redis: ArqRedis = Depends(get_arq_pool),
-):
-    """Queue the Counsel of 9 deliberation against the case graph + chronology."""
-    async with AsyncSessionLocal() as db:
-        case_res = await db.execute(select(LegalCase).where(LegalCase.slug == slug))
-        case = case_res.scalar_one_or_none()
-        if not case:
-            raise HTTPException(status_code=404, detail=f"Legal case '{slug}' not found")
-        job = await enqueue_async_job(
-            db,
-            worker_name="run_legal_council_job",
-            job_name="run_legal_council",
-            payload={
-                "case_slug": slug,
-                "case_number": getattr(case, "case_number", "") or "",
-                "trigger_type": "GLASS_DELIBERATE",
-            },
-            requested_by=extract_request_actor(
-                request.headers.get("x-user-id"),
-                request.headers.get("x-user-email"),
-            ),
-            tenant_id=getattr(request.state, "tenant_id", None),
-            request_id=request.headers.get("x-request-id"),
-            redis=arq_redis,
-        )
+async def deliberate_case(slug: str):
+    """Run the Counsel of 9 deliberation against the case graph + chronology."""
+    from backend.services.legal_council import run_council_deliberation
+    from backend.services.legal_case_graph import get_case_graph_snapshot
+    from backend.services.legal_chronology import get_chronology
+    import json as _json
 
-    return {
-        "status": "queued",
-        "case_slug": slug,
-        "job_id": str(job.id),
-        "stream_url": f"/api/legal/council/{job.id}/stream",
-        "status_url": f"/api/async/jobs/{job.id}",
-    }
+    async with AsyncSessionLocal() as db:
+        snapshot = await get_case_graph_snapshot(db, case_slug=slug)
+        timeline = await get_chronology(db, slug)
+
+    nodes = snapshot.get("nodes", [])
+    edges = snapshot.get("edges", [])
+    node_lines = []
+    for n in nodes:
+        label = n.label if hasattr(n, "label") else n.get("label", "?")
+        etype = n.entity_type if hasattr(n, "entity_type") else n.get("entity_type", "?")
+        node_lines.append(f"[{etype}] {label}")
+    edge_lines = []
+    label_by_id = {}
+    for n in nodes:
+        nid = str(n.id if hasattr(n, "id") else n.get("id", "?"))
+        label = n.label if hasattr(n, "label") else n.get("label", "?")
+        label_by_id[nid] = label
+    for e in edges:
+        src = label_by_id.get(str(e.source_node_id if hasattr(e, "source_node_id") else e.get("source_node_id", "?")), "?")
+        tgt = label_by_id.get(str(e.target_node_id if hasattr(e, "target_node_id") else e.get("target_node_id", "?")), "?")
+        rel = e.relationship_type if hasattr(e, "relationship_type") else e.get("relationship_type", "?")
+        edge_lines.append(f"{src} --({rel})--> {tgt}")
+
+    chrono_lines = []
+    for ev in timeline:
+        chrono_lines.append(f"{ev.get('event_date','?')}: {ev.get('event_description','')}")
+
+    case_brief = (
+        f"Case: {slug}\n\n"
+        f"ENTITIES:\n" + "\n".join(node_lines) + "\n\n"
+        f"RELATIONSHIPS:\n" + "\n".join(edge_lines) + "\n\n"
+        f"CHRONOLOGY:\n" + "\n".join(chrono_lines)
+    )
+
+    import uuid as _uuid
+    result = await run_council_deliberation(
+        session_id=str(_uuid.uuid4()),
+        case_brief=case_brief,
+        context=f"Graph: {len(nodes)} entities, {len(edges)} edges. Timeline: {len(timeline)} events.",
+        case_slug=slug,
+        trigger_type="GLASS_DELIBERATE",
+    )
+
+    return result
 
 
 @router.get("/cases/{slug}/chronology", summary="Get master chronology timeline")

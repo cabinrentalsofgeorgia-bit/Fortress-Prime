@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageLegalOps } from "@/lib/roles";
 
 interface SanctionsTripwirePanelProps {
   caseSlug: string;
@@ -16,6 +19,8 @@ type SanctionsAlert = {
 };
 
 export function SanctionsTripwirePanel({ caseSlug }: SanctionsTripwirePanelProps) {
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageLegalOps(user);
   const [alerts, setAlerts] = useState<SanctionsAlert[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSweeping, setIsSweeping] = useState<boolean>(false);
@@ -23,7 +28,7 @@ export function SanctionsTripwirePanel({ caseSlug }: SanctionsTripwirePanelProps
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const response = await fetch(`/api/legal/cases/${caseSlug}/sanctions/alerts`, {
+      const response = await fetch(`/api/internal/legal/cases/${caseSlug}/sanctions/alerts`, {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
@@ -50,7 +55,7 @@ export function SanctionsTripwirePanel({ caseSlug }: SanctionsTripwirePanelProps
     setError(null);
     try {
       // Case-scoped manual sweep keeps operator action deterministic.
-      const response = await fetch(`/api/legal/cases/${caseSlug}/sanctions/sweep`, {
+      const response = await fetch(`/api/internal/legal/cases/${caseSlug}/sanctions/sweep`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -79,17 +84,19 @@ export function SanctionsTripwirePanel({ caseSlug }: SanctionsTripwirePanelProps
           <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
           Sanctions Tripwire
         </h3>
-        <button
-          onClick={handleForceSweep}
-          disabled={isSweeping}
-          className={`text-xs px-3 py-1 rounded font-mono uppercase border transition-colors ${
-            isSweeping
-              ? "bg-red-900/20 text-red-500 border-red-900/50 cursor-not-allowed"
-              : "bg-red-900/40 text-red-200 border-red-700 hover:bg-red-800/60"
-          }`}
-        >
-          {isSweeping ? "Sweeping Case Graph..." : "Force Manual Sweep"}
-        </button>
+        <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+          <button
+            onClick={handleForceSweep}
+            disabled={!canOperate || isSweeping}
+            className={`text-xs px-3 py-1 rounded font-mono uppercase border transition-colors ${
+              isSweeping || !canOperate
+                ? "bg-red-900/20 text-red-500 border-red-900/50 cursor-not-allowed"
+                : "bg-red-900/40 text-red-200 border-red-700 hover:bg-red-800/60"
+            }`}
+          >
+            {isSweeping ? "Sweeping Case Graph..." : "Force Manual Sweep"}
+          </button>
+        </RoleGatedAction>
       </div>
 
       {error && (
@@ -124,8 +131,13 @@ export function SanctionsTripwirePanel({ caseSlug }: SanctionsTripwirePanelProps
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <span className="block text-xs text-gray-500 uppercase mb-1">Detected Contradiction</span>
+                <div className="mb-4" data-testid="sanctions-contradiction-card">
+                  <span
+                    className="block text-xs text-gray-500 uppercase mb-1"
+                    data-testid="sanctions-contradiction-label"
+                  >
+                    Detected Contradiction
+                  </span>
                   <p className="text-sm text-gray-200 border-l-2 border-red-600 pl-3 py-1 bg-red-900/10">
                     {alert.contradiction_summary}
                   </p>

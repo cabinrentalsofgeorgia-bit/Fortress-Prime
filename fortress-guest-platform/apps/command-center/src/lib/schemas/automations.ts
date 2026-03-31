@@ -19,13 +19,39 @@ const CreateTaskPayloadSchema = z.object({
 
 export const AutomationFormSchema = z.object({
   name: z.string().min(3, "Rule name must be at least 3 characters"),
-  target_entity: z.enum(["reservation", "work_order", "message", "guest"]),
-  trigger_event: z.enum(["created", "updated", "status_changed"]),
+  target_entity: z.enum([
+    "reservation",
+    "work_order",
+    "message",
+    "guest",
+    "legal_case",
+    "legal_document",
+    "discovery_pack",
+  ]),
+  trigger_event: z.enum([
+    "created",
+    "updated",
+    "status_changed",
+    "deadline_approaching",
+    "docket_updated",
+    "opposing_counsel_correspondence",
+  ]),
   conditions: z.object({
     operator: z.enum(["AND", "OR"]),
     rules: z.array(ConditionRuleSchema),
   }),
-  action_type: z.enum(["send_email_template", "create_task", "notify_staff"]),
+  action_type: z.enum([
+    "send_email_template",
+    "create_task",
+    "notify_staff",
+    "legal_search",
+    "legal_council",
+    "legal_ingest",
+    "legal_deposition",
+    "draft_motion_extension",
+    "analyze_opposing_filing",
+    "concierge_conflict",
+  ]),
   action_payload: z.record(z.string(), z.any()),
   is_active: z.boolean().default(false),
 });

@@ -101,6 +101,7 @@ class AgentQueue(Base):
     original_ai_draft = Column(Text, nullable=False)
     final_human_message = Column(Text, nullable=True)
     status = Column(String(30), nullable=False, default="pending_review", index=True)
+    delivery_channel = Column(String(20), nullable=False, default="email", server_default="email")
 
     twilio_sid = Column(String(128), nullable=True, index=True)
     error_log = Column(Text, nullable=True)

@@ -1,6 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState } from "react";
+import { api } from "@/lib/api";
+import { RoleGatedAction } from "@/components/access/role-gated-action";
+import { useAppStore } from "@/lib/store";
+import { canManageLegalOps } from "@/lib/roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,21 +31,19 @@ const SIGNAL_LABEL: Record<string, string> = {
 };
 
 export function CounselThreatMatrix({ slug }: { slug: string }) {
-  const council = useCouncilStream(slug);
-  const opinions = council.finalResult?.opinions.length
-    ? council.finalResult.opinions
-    : council.opinions;
-  const consensus = council.finalResult ?? council.consensus;
-  const liveSummary = useMemo(
-    () => council.streamLines.slice(-8).reverse(),
-    [council.streamLines],
-  );
+  const user = useAppStore((state) => state.user);
+  const canOperate = canManageLegalOps(user);
+  const [result, setResult] = useState<DeliberationResult | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleDeliberate = async () => {
     toast.info("Convening the Counsel of 9 — this may take several minutes...");
     try {
-      await council.start();
-      toast.success("Council stream established");
+      const data = await api.post<DeliberationResult>(
+        `/api/internal/legal/cases/${slug}/deliberate`,
+      );
+      setResult(data);
+      toast.success("Counsel deliberation complete");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Deliberation failed");
     }
@@ -60,24 +62,26 @@ export function CounselThreatMatrix({ slug }: { slug: string }) {
             <Shield className="h-4 w-4 text-primary" />
             Counsel of 9 — Threat Matrix
           </CardTitle>
-          <Button
-            size="sm"
-            onClick={handleDeliberate}
-            disabled={isRunning}
-            className="text-xs h-7"
-          >
-            {isRunning ? (
-              <>
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                {council.connectionState === "reconnecting" ? "Reconnecting..." : "Streaming..."}
-              </>
-            ) : (
-              <>
-                <Swords className="h-3 w-3 mr-1" />
-                Convene the Counsel
-              </>
-            )}
-          </Button>
+          <RoleGatedAction allowed={canOperate} reason="Manager or admin role required.">
+            <Button
+              size="sm"
+              onClick={handleDeliberate}
+              disabled={!canOperate || loading}
+              className="text-xs h-7"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Deliberating...
+                </>
+              ) : (
+                <>
+                  <Swords className="h-3 w-3 mr-1" />
+                  Convene the Counsel
+                </>
+              )}
+            </Button>
+          </RoleGatedAction>
         </div>
       </CardHeader>
       <CardContent>

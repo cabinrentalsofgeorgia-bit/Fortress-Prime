@@ -9,11 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from backend.core.database import get_db
+from backend.core.security import require_manager_or_admin
 from backend.integrations.channel_adapters import (
     get_adapter, get_all_adapters, ICalAdapter,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 # ── Models ──

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, String, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgresUUID
@@ -14,15 +14,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 from backend.core.database import Base
 
 
-class StaffRole(str, Enum):
-    """Hierarchy for Command Center access control."""
-
+class StaffRole(StrEnum):
     SUPER_ADMIN = "super_admin"
+    ADMIN = "admin"
     MANAGER = "manager"
     REVIEWER = "reviewer"
+    OPERATOR = "operator"
+    STAFF = "staff"
+    MAINTENANCE = "maintenance"
 
 
-STAFF_ROLE_VALUES: tuple[str, ...] = tuple(role.value for role in StaffRole)
+STAFF_ROLE_VALUES = tuple(role.value for role in StaffRole)
 
 
 class StaffUser(Base):
@@ -30,7 +32,7 @@ class StaffUser(Base):
 
     __tablename__ = "staff_users"
 
-    id: Mapped[UUID] = mapped_column(
+    id: Mapped[PostgresUUID] = mapped_column(
         PostgresUUID(as_uuid=True),
         primary_key=True,
         default=uuid4,

@@ -2,18 +2,18 @@
 OUTSIDE COUNSEL DISPATCH ENGINE — Dynamic Multi-Source Legal Headhunter
 =======================================================================
 
-POST /api/legal/counsel/dispatch/draft
+POST /api/internal/legal/counsel/dispatch/draft
     Accepts case_brief + consensus, uses the God Head to generate a
     Fortune-500 style "Limited Scope Representation Inquiry" email.
 
-POST /api/legal/counsel/dispatch/hunt
+POST /api/internal/legal/counsel/dispatch/hunt
     Dynamic multi-source attorney search.  Accepts jurisdiction, specialty,
     and case_brief.  The God Head generates 3 distinct search queries,
     executes them against docket/caselaw sites AND legal journalism sites,
     then evaluates the scraped results to return a ranked attorney list
     with firm, contact info, and reason for recommendation.
 
-POST /api/legal/counsel/dispatch/feedback
+POST /api/internal/legal/counsel/dispatch/feedback
     Vectorized episodic memory.  CEO thumbs-up/down on hunt results is
     embedded via nomic-embed-text (768-dim) and upserted into the
     legal_headhunter_memory Qdrant collection for semantic pre-retrieval
@@ -31,19 +31,20 @@ import asyncio
 
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from typing import Any, Optional
 from urllib.parse import quote_plus
 
 from backend.core.config import settings
+from backend.core.security import require_manager_or_admin
 from backend.services.ediscovery_agent import LegacySession
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 logger = structlog.get_logger()
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 _LITELLM_BASE = getattr(settings, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
 
@@ -61,8 +62,6 @@ SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
 QDRANT_URL = getattr(settings, "qdrant_url", "http://localhost:6333").rstrip("/")
 QDRANT_API_KEY = getattr(settings, "qdrant_api_key", "") or ""
 QDRANT_HEADERS: dict[str, str] = {"api-key": QDRANT_API_KEY} if QDRANT_API_KEY else {}
-EMBED_URL = getattr(settings, "embed_base_url", "http://192.168.0.100:11434")
-EMBED_MODEL = getattr(settings, "embed_model", "nomic-embed-text")
 MEMORY_COLLECTION = "legal_headhunter_memory"
 MEMORY_VECTOR_DIM = 768
 
@@ -133,17 +132,13 @@ async def ensure_memory_collection() -> bool:
 
 
 async def _embed_text(text_input: str) -> list[float]:
-    """Generate a 768-dim embedding via the local nomic-embed-text model (Ollama-compatible)."""
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{EMBED_URL}/api/embeddings",
-            json={"model": EMBED_MODEL, "prompt": text_input},
-        )
-        resp.raise_for_status()
-        embedding = resp.json().get("embedding", [])
-        if not embedding:
-            raise ValueError("Empty embedding returned from model")
-        return embedding
+    """768-dim embedding via settings.embed_base_url /v1/embeddings (vector_db)."""
+    from backend.core.vector_db import embed_text as _embed_vec
+
+    vec = await _embed_vec(text_input[:8000])
+    if len(vec) != MEMORY_VECTOR_DIM:
+        raise ValueError(f"Unexpected embedding dim: {len(vec)}")
+    return vec
 
 
 async def _upsert_memory_vector(

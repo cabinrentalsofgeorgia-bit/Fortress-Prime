@@ -1443,6 +1443,36 @@ class ReservationEngine:
             return "shoulder"
         return "off_season"
 
+    def _resolve_nightly_rate(
+        self,
+        d: date,
+        *,
+        base_rate: Decimal | None = None,
+    ) -> tuple[Decimal, str, Decimal]:
+        """
+        Backward-compatible nightly rate helper for cache/export callers.
+
+        Returns ``(nightly_rate, season_label, multiplier)`` using the same
+        holiday/season logic as ``calculate_pricing()``.
+        """
+        resolved_base_rate = (base_rate or self.DEFAULT_BASE_RATE).quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )
+        holiday = self._get_holiday(d)
+        if holiday:
+            multiplier = self.HOLIDAY_MULTIPLIERS[holiday]
+            season_label = f"holiday_{holiday}"
+        else:
+            season_label = self._get_season(d)
+            multiplier = self.SEASON_MULTIPLIERS[season_label]
+
+        nightly_rate = (resolved_base_rate * multiplier).quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )
+        return nightly_rate, season_label, multiplier
+
     def _get_holiday(self, d: date) -> Optional[str]:
         """
         Check if a date falls within a holiday surcharge window.

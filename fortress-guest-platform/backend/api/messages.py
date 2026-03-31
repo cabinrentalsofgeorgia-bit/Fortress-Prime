@@ -17,6 +17,7 @@ from sqlalchemy import text as sa_text
 
 from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.core.websocket import emit_new_message
 from backend.services.message_service import MessageService
 from backend.models import Message
@@ -27,7 +28,7 @@ _LITELLM_CHAT = f"{getattr(settings, 'litellm_base_url', 'http://127.0.0.1:4000/
 GODHEAD_URL = os.getenv("GODHEAD_URL", _LITELLM_CHAT)
 GODHEAD_MODEL = os.getenv("GODHEAD_MODEL", "qwen2.5:7b")
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 # Pydantic schemas

@@ -87,3 +87,11 @@ def test_public_api_path_rejects_seo_queue_listing() -> None:
 
 def test_public_api_path_allows_local_streamline_swarm_test() -> None:
     assert is_public_api_path("/api/swarm/webhooks/streamline/test", "POST") is True
+
+
+def test_public_api_path_rejects_internal_deck_key_when_route_missing() -> None:
+    assert is_public_api_path("/api/internal/deck-key", "GET") is False
+
+
+def test_public_api_path_rejects_chat_concierge_when_route_missing() -> None:
+    assert is_public_api_path("/api/chat/concierge", "POST") is False

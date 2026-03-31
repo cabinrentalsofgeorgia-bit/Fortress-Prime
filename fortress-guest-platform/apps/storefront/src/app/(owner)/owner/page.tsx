@@ -8,8 +8,7 @@ import {
   useOwnerBalances,
   useIronDomeActivity,
   useLegacyStatements,
-  useProperties,
-  useWorkOrders,
+  useOwnerWorkOrders,
 } from "@/lib/hooks";
 import {
   Card,
@@ -112,31 +111,47 @@ interface LegacyStatement {
   download_url: string;
 }
 
+interface OwnerProfile {
+  owner_id: string;
+  email: string;
+  properties: Array<{ unit_id: string; name: string }>;
+}
+
 function fmt(n: number | null | undefined): string {
   if (n == null) return "–";
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function OwnerPortalPage() {
-  const [ownerId, setOwnerId] = useState<string>("");
+  const [ownerProfile] = useState<OwnerProfile | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("fgp_owner_profile");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as OwnerProfile;
+    } catch {
+      return null;
+    }
+  });
+  const [propertyId, setPropertyId] = useState<string>(() => ownerProfile?.properties?.[0]?.unit_id ?? "");
 
-  const { data: properties } = useProperties();
-  const { data: dashboardRaw } = useOwnerDashboard(ownerId);
+  const ownerProperties = ownerProfile?.properties ?? [];
+  const { data: dashboardRaw } = useOwnerDashboard(propertyId);
   const dashboard = dashboardRaw as DashboardData | undefined;
-  const { data: statementsRaw } = useOwnerStatements(ownerId);
+  const { data: statementsRaw } = useOwnerStatements(propertyId);
   const statements = statementsRaw as StatementRow[] | undefined;
-  useOwnerReservations(ownerId);
-  const { data: workOrders } = useWorkOrders();
-  const { data: balancesRaw } = useOwnerBalances(ownerId);
+  useOwnerReservations(propertyId);
+  const { data: workOrders } = useOwnerWorkOrders(propertyId);
+  const { data: balancesRaw } = useOwnerBalances(propertyId);
   const balances = balancesRaw as BalancesData | undefined;
-  const { data: activityRaw } = useIronDomeActivity(ownerId);
+  const { data: activityRaw } = useIronDomeActivity(propertyId);
   const activity = activityRaw as { transactions: ActivityRow[] } | undefined;
-  const { data: legacyRaw } = useLegacyStatements(ownerId);
+  const { data: legacyRaw } = useLegacyStatements(propertyId);
   const legacy = legacyRaw as { statements: LegacyStatement[] } | undefined;
 
   const trustRow = balances?.trust_balances?.[0];
   const operatingFunds = trustRow?.operating_funds ?? 0;
-  const capitalCallActive = operatingFunds <= 0 && !!ownerId;
+  const capitalCallActive = operatingFunds <= 0 && !!propertyId;
 
   return (
     <div className="space-y-6">
@@ -148,13 +163,13 @@ export default function OwnerPortalPage() {
           </p>
         </div>
         <div className="w-72">
-          <Select value={ownerId} onValueChange={setOwnerId}>
+          <Select value={propertyId} onValueChange={setPropertyId}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a property / owner…" />
+              <SelectValue placeholder="Select a property…" />
             </SelectTrigger>
             <SelectContent>
-              {(properties ?? []).map((p) => (
-                <SelectItem key={p.id} value={p.id}>
+              {ownerProperties.map((p) => (
+                <SelectItem key={p.unit_id} value={p.unit_id}>
                   {p.name}
                 </SelectItem>
               ))}
@@ -163,7 +178,7 @@ export default function OwnerPortalPage() {
         </div>
       </div>
 
-      {!ownerId && (
+      {!propertyId && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -172,7 +187,7 @@ export default function OwnerPortalPage() {
         </Card>
       )}
 
-      {ownerId && (
+      {propertyId && (
         <>
           {capitalCallActive && (
             <Card className="border-destructive bg-destructive/5">
@@ -343,7 +358,7 @@ export default function OwnerPortalPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CapexApprovalCards propertyId={ownerId} />
+                  <CapexApprovalCards propertyId={propertyId} />
                 </CardContent>
               </Card>
 
@@ -522,7 +537,7 @@ export default function OwnerPortalPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <OwnerCalendar propertyId={ownerId} />
+                  <OwnerCalendar propertyId={propertyId} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -557,7 +572,7 @@ export default function OwnerPortalPage() {
                               {wo.title}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {wo.property?.name ?? "–"}
+                              {wo.property_name ?? wo.property?.name ?? "–"}
                             </TableCell>
                             <TableCell>
                               <Badge variant={wo.priority === "urgent" ? "destructive" : "secondary"} className="text-xs">
@@ -594,7 +609,7 @@ export default function OwnerPortalPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <OwnerConcierge propertyId={ownerId} />
+                  <OwnerConcierge propertyId={propertyId} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -615,7 +630,7 @@ export default function OwnerPortalPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RoiSimulator propertyId={ownerId} />
+                  <RoiSimulator propertyId={propertyId} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -636,7 +651,7 @@ export default function OwnerPortalPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <DigitalTwinHud propertyId={ownerId} />
+                  <DigitalTwinHud propertyId={propertyId} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -657,13 +672,13 @@ export default function OwnerPortalPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PayoutDashboard propertyId={ownerId} />
+                  <PayoutDashboard propertyId={propertyId} />
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="direct-booking" className="mt-4">
-              <DirectBookingEngine propertyId={ownerId} />
+              <DirectBookingEngine propertyId={propertyId} />
             </TabsContent>
           </Tabs>
         </>

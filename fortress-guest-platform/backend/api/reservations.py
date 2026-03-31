@@ -12,6 +12,7 @@ from sqlalchemy import select, or_, func, asc, desc as sa_desc, case, literal
 from pydantic import BaseModel
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.core.websocket import emit_reservation_update
 from backend.models import Reservation, Guest, Property, Message, WorkOrder, DamageClaim, RentalAgreement
 from backend.schemas.folio import (
@@ -39,7 +40,7 @@ SORTABLE_COLUMNS = {
     "num_guests": Reservation.num_guests,
 }
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 class ReservationResponse(BaseModel):

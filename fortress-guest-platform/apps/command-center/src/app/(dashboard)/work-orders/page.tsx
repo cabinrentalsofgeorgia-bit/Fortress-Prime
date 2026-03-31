@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWorkOrders, useCreateWorkOrder, useUpdateWorkOrder, useProperties } from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ import {
 import { KanbanSkeleton } from "@/components/skeletons";
 import type { WorkOrder } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/lib/store";
 
 const COLUMNS = [
   { id: "open", label: "Open", icon: AlertTriangle, color: "text-orange-500" },
@@ -59,13 +60,23 @@ export default function WorkOrdersPage() {
   const { data: properties } = useProperties();
   const updateWorkOrder = useUpdateWorkOrder();
   const createWorkOrder = useCreateWorkOrder();
+  const activeWorkOrderContext = useAppStore((s) => s.activeWorkOrderContext);
+  const setActiveWorkOrderContext = useAppStore((s) => s.setActiveWorkOrderContext);
+  const clearActiveWorkOrderContext = useAppStore((s) => s.clearActiveWorkOrderContext);
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedWo, setSelectedWo] = useState<WorkOrder | null>(null);
+  const [selectedWoId, setSelectedWoId] = useState<string | null>(
+    activeWorkOrderContext?.id ?? null,
+  );
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterProperty] = useState("all");
 
-  const propMap = new Map((properties ?? []).map((p) => [p.id, p.name]));
+  const propMap = useMemo(
+    () => new Map((properties ?? []).map((p) => [p.id, p.name])),
+    [properties],
+  );
+  const selectedWo =
+    (workOrders ?? []).find((wo) => wo.id === selectedWoId) ?? null;
 
   const filtered = (workOrders ?? []).filter((wo) => {
     if (filterPriority !== "all" && wo.priority !== filterPriority) return false;
@@ -92,6 +103,32 @@ export default function WorkOrdersPage() {
       priority: (form.get("priority") as string) || "medium",
     }, { onSuccess: () => setCreateOpen(false) });
   }
+
+  useEffect(() => {
+    if (!selectedWo) {
+      if (activeWorkOrderContext?.id) {
+        return;
+      }
+      clearActiveWorkOrderContext();
+      return;
+    }
+
+    setActiveWorkOrderContext({
+      id: selectedWo.id,
+      title: selectedWo.title,
+      ticketNumber: selectedWo.ticket_number,
+      status: selectedWo.status,
+      priority: selectedWo.priority,
+      propertyName: propMap.get(selectedWo.property_id ?? ""),
+      assignedTo: selectedWo.assigned_to,
+    });
+  }, [
+    activeWorkOrderContext?.id,
+    clearActiveWorkOrderContext,
+    propMap,
+    selectedWo,
+    setActiveWorkOrderContext,
+  ]);
 
   if (isLoading) return <KanbanSkeleton />;
 
@@ -209,7 +246,7 @@ export default function WorkOrdersPage() {
                     <Card
                       key={wo.id}
                       className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => setSelectedWo(wo)}
+                      onClick={() => setSelectedWoId(wo.id)}
                     >
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-start justify-between">
@@ -244,7 +281,7 @@ export default function WorkOrdersPage() {
       </div>
 
       {/* Detail Sheet */}
-      <Sheet open={!!selectedWo} onOpenChange={() => setSelectedWo(null)}>
+      <Sheet open={!!selectedWo} onOpenChange={() => setSelectedWoId(null)}>
         <SheetContent className="w-[480px] overflow-y-auto">
           {selectedWo && (
             <>
@@ -294,7 +331,7 @@ export default function WorkOrdersPage() {
                         size="sm"
                         onClick={() => {
                           moveToColumn(selectedWo, col.id);
-                          setSelectedWo(null);
+                          setSelectedWoId(null);
                         }}
                       >
                         <col.icon className={`mr-1.5 h-3.5 w-3.5 ${col.color}`} />

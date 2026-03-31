@@ -24,7 +24,6 @@ from backend.models.lead import Lead
 from backend.models.quote import Quote, QuoteOption
 from backend.models.vrs_quotes import GuestQuote, GuestQuoteStatus
 from backend.models.blocked_day import BlockedDay
-from backend.models.property_stay_restriction import PropertyStayRestriction
 from backend.models.reservation_hold import ReservationHold
 from backend.models.template import EmailTemplate
 from backend.models.message_queue import MessageQueue
@@ -35,11 +34,11 @@ from backend.models.concierge_recovery_dispatch import ConciergeRecoveryDispatch
 from backend.models.citation_audit import CitationRecord
 from backend.models.concierge_queue import ConciergeQueue
 from backend.models.property_knowledge import PropertyKnowledge
-from backend.models.pricing import QuoteLineItem, QuoteRequest, QuoteResponse
-from backend.models.financial_primitives import Fee, PropertyFee, PropertyTax, Tax
+from backend.models.operational_deliberation_log import OperationalDeliberationLog
+from backend.models.financial_primitives import Fee, Tax, PropertyTax, PropertyFee
+from backend.models.media import PropertyImage
+from backend.models.property_stay_restriction import PropertyStayRestriction
 from backend.models.pricing_override import PricingOverride
-from backend.models.content import TaxonomyCategory, MarketingArticle
-from backend.models.functional_node import FunctionalNode
 from backend.vrs.domain.automations import VRSRuleEngine, AutomationEvent
 # from backend.services.housekeeping_service import HousekeepingTask
 from backend.models.iot_device import DigitalTwin, DeviceEvent
@@ -68,24 +67,14 @@ from backend.models.seo_redirect import SeoRedirect
 from backend.models.seo_redirect_remap import SeoRedirectRemapQueue
 from backend.models.async_job import AsyncJobRun
 from backend.models.vrs_add_on import VRSAddOn, VRSAddOnPricingModel, VRSAddOnScope
-from backend.models.media import PropertyImage
-from backend.models.swarm_governance import (
-    AgentRegistry,
-    AgentRun,
-    AgentRunStatus,
-    Escalation,
-    EscalationStatus,
-    OperatorOverride,
-    OverrideAction,
-    TrustDecision,
-    TrustDecisionStatus,
-)
-from backend.models.trust_ledger import (
-    TrustAccount,
-    TrustAccountType,
-    TrustLedgerEntry,
-    TrustLedgerEntryType,
-    TrustTransaction,
+from backend.models.acquisition import (
+    AcquisitionIntelEvent,
+    AcquisitionOwner,
+    AcquisitionOwnerContact,
+    AcquisitionParcel,
+    AcquisitionPipeline,
+    AcquisitionProperty,
+    AcquisitionSTRSignal,
 )
 from backend.models.legal import (
     LegalEntity,
@@ -146,7 +135,6 @@ __all__ = [
     "GuestQuoteStatus",
     # Calendar / Availability
     "BlockedDay",
-    "PropertyStayRestriction",
     "ReservationHold",
     # Templating Engine
     "EmailTemplate",
@@ -175,6 +163,14 @@ __all__ = [
     # Concierge queue / RAG memory
     "ConciergeQueue",
     "PropertyKnowledge",
+    "OperationalDeliberationLog",
+    "Fee",
+    "Tax",
+    "PropertyTax",
+    "PropertyFee",
+    "PropertyImage",
+    "PropertyStayRestriction",
+    "PricingOverride",
     # Rule Engine
     "VRSRuleEngine",
     "AutomationEvent",
@@ -236,19 +232,11 @@ __all__ = [
     "VRSAddOn",
     "VRSAddOnPricingModel",
     "VRSAddOnScope",
-    "PropertyImage",
-    "AgentRegistry",
-    "AgentRun",
-    "AgentRunStatus",
-    "TrustDecision",
-    "TrustDecisionStatus",
-    "Escalation",
-    "EscalationStatus",
-    "OperatorOverride",
-    "OverrideAction",
-    "TrustAccount",
-    "TrustAccountType",
-    "TrustTransaction",
-    "TrustLedgerEntry",
-    "TrustLedgerEntryType",
+    "AcquisitionIntelEvent",
+    "AcquisitionOwner",
+    "AcquisitionOwnerContact",
+    "AcquisitionParcel",
+    "AcquisitionPipeline",
+    "AcquisitionProperty",
+    "AcquisitionSTRSignal",
 ]

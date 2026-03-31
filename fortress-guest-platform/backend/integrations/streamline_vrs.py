@@ -104,8 +104,13 @@ class StreamlineRateLimitError(StreamlineVRSError):
     pass
 
 
-# Strict per-request HTTP bounds; each RPC uses ``async with httpx.AsyncClient`` to avoid CLOSE_WAIT leaks.
-STREAMLINE_HTTP_TIMEOUT = httpx.Timeout(15.0, connect=5.0)
+def is_streamline_circuit_placeholder(payload: Any) -> bool:
+    """Detect the sentinel payload returned when the circuit breaker is open."""
+    return (
+        isinstance(payload, dict)
+        and payload.get("_circuit_open") is True
+        and payload.get("_stale") is True
+    )
 
 
 class StreamlineVRS:
@@ -1405,75 +1410,69 @@ class StreamlineVRS:
     # ================================================================
 
     async def sync_property_availability(self, db) -> Dict[str, Any]:
-        """Refresh the local Property.availability cache from Streamline."""
-        from sqlalchemy import select
+        """
+        Compatibility wrapper for the ARQ availability loop.
 
+        Syncs only blocked-day availability for properties already mapped into the
+        local database and returns the historical summary shape consumed by the
+        worker logs.
+        """
+        from sqlalchemy import select, text as sa_text_p3
         from backend.models import Property
 
         if not self.is_configured:
-            return {"status": "skipped", "reason": "Streamline VRS not configured"}
+            return {"status": "skipped", "reason": "Streamline VRS not configured", "synced": 0, "skipped": 0, "bookings_found": 0}
 
-        summary = {
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "synced": 0,
-            "skipped": 0,
-            "bookings_found": 0,
-            "errors": [],
-        }
+        summary = {"synced": 0, "skipped": 0, "bookings_found": 0}
         remote_properties = await self.fetch_properties()
-        streamline_ids = [
-            str(property_row.get("streamline_property_id") or "").strip()
-            for property_row in remote_properties
-            if property_row.get("streamline_property_id")
-        ]
-        if not streamline_ids:
-            return summary
 
-        local_properties = (
-            await db.execute(
-                select(Property).where(Property.streamline_property_id.in_(streamline_ids))
-            )
-        ).scalars().all()
-        properties_by_streamline_id = {
-            str(property_record.streamline_property_id): property_record
-            for property_record in local_properties
-            if property_record.streamline_property_id
-        }
-
-        cache_generated_at = datetime.now(timezone.utc)
-        cache_updated = False
-        for remote_property in remote_properties:
-            streamline_property_id = str(
-                remote_property.get("streamline_property_id") or ""
-            ).strip()
-            if not streamline_property_id:
-                continue
-            local_property = properties_by_streamline_id.get(streamline_property_id)
-            if local_property is None:
-                summary["skipped"] += 1
-                continue
-
+        for rp in remote_properties:
             try:
-                blocked_ranges = await self.fetch_blocked_days(int(streamline_property_id))
-                local_property.availability = build_property_availability_snapshot(
-                    property_id=str(local_property.id),
-                    property_slug=local_property.slug,
-                    blocked_ranges=blocked_ranges,
-                    generated_at=cache_generated_at,
+                sl_id = rp["streamline_property_id"]
+                unit_id = int(sl_id)
+                prop_result = await db.execute(
+                    select(Property).where(Property.streamline_property_id == sl_id)
                 )
-                summary["synced"] += 1
-                summary["bookings_found"] += len(blocked_ranges)
-                cache_updated = True
-            except StreamlineMethodNotAllowed:
-                summary["errors"].append("Availability sync is not enabled for this Streamline token")
-                break
-            except Exception as exc:
-                summary["errors"].append(
-                    f"Availability {remote_property.get('name')}: {exc}"
-                )
+                local_prop = prop_result.scalar_one_or_none()
+                if not local_prop:
+                    summary["skipped"] += 1
+                    continue
 
-        if cache_updated:
-            await db.commit()
+                blocked = await self.fetch_blocked_days(unit_id)
+                for b in blocked:
+                    if not b.get("start_date") or not b.get("end_date"):
+                        continue
+                    block_type = (b.get("type_name") or "reservation").lower().replace(" ", "_")
+                    await db.execute(
+                        sa_text_p3("""
+                            INSERT INTO blocked_days
+                                (id, property_id, start_date, end_date, block_type,
+                                 confirmation_code, source, created_at, updated_at)
+                            VALUES
+                                (gen_random_uuid(), :pid, :sd, :ed, :bt, :cc,
+                                 'streamline', NOW(), NOW())
+                            ON CONFLICT (property_id, start_date, end_date, block_type)
+                            DO UPDATE SET
+                                confirmation_code = EXCLUDED.confirmation_code,
+                                updated_at = NOW()
+                        """),
+                        {
+                            "pid": str(local_prop.id),
+                            "sd": b["start_date"],
+                            "ed": b["end_date"],
+                            "bt": block_type[:50],
+                            "cc": str(b.get("confirmation_id") or "")[:50] or None,
+                        },
+                    )
+                await db.commit()
+                summary["synced"] += 1
+                summary["bookings_found"] += len(blocked)
+            except StreamlineMethodNotAllowed:
+                break
+            except Exception:
+                await db.rollback()
+                raise
+
         return summary
 
     async def sync_all(self, db) -> Dict[str, Any]:
@@ -2180,6 +2179,11 @@ class StreamlineVRS:
                 owner_map = {}
                 for ow in owners_data:
                     owner_map[str(ow.get("owner_id", ""))] = ow
+                live_streamline_ids = {
+                    str(prop["streamline_property_id"])
+                    for prop in await self.fetch_properties()
+                    if str(prop.get("streamline_property_id", "")).strip()
+                }
 
                 all_props = await db.execute(
                     select(Property).where(Property.streamline_property_id.isnot(None))
@@ -2189,30 +2193,35 @@ class StreamlineVRS:
                 balance_count = 0
                 for prop in props_list:
                     try:
-                        unit_id = int(prop.streamline_property_id)
+                        streamline_id = str(prop.streamline_property_id or "").strip()
+                        if streamline_id not in live_streamline_ids:
+                            continue
+                        unit_id = int(streamline_id)
                         bal = await self.fetch_unit_owner_balance(unit_id)
-                        if bal:
-                            prop.owner_balance = bal
-                            ow_id = str(bal.get("owner_id", ""))
-                            if ow_id and ow_id in owner_map:
-                                ow = owner_map[ow_id]
-                                prop.owner_id = ow_id
-                                prop.owner_name = f"{ow.get('first_name', '')} {ow.get('last_name', '')}".strip()
-                            elif ow_id:
-                                prop.owner_id = ow_id
+                        if not bal or is_streamline_circuit_placeholder(bal):
+                            continue
 
-                            from sqlalchemy import text as sa_text
-                            owner_funds = self._safe_decimal(bal.get("owner_balance")) or Decimal("0")
-                            await db.execute(
-                                sa_text("""
-                                    INSERT INTO trust_balance (property_id, owner_funds, last_updated)
-                                    VALUES (:pid, :funds, NOW())
-                                    ON CONFLICT (property_id)
-                                    DO UPDATE SET owner_funds = :funds, last_updated = NOW()
-                                """),
-                                {"pid": prop.streamline_property_id, "funds": float(owner_funds)},
-                            )
-                            balance_count += 1
+                        prop.owner_balance = bal
+                        ow_id = str(bal.get("owner_id", ""))
+                        if ow_id and ow_id in owner_map:
+                            ow = owner_map[ow_id]
+                            prop.owner_id = ow_id
+                            prop.owner_name = f"{ow.get('first_name', '')} {ow.get('last_name', '')}".strip()
+                        elif ow_id:
+                            prop.owner_id = ow_id
+
+                        from sqlalchemy import text as sa_text
+                        owner_funds = self._safe_decimal(bal.get("owner_balance")) or Decimal("0")
+                        await db.execute(
+                            sa_text("""
+                                INSERT INTO trust_balance (property_id, owner_funds, last_updated)
+                                VALUES (:pid, :funds, NOW())
+                                ON CONFLICT (property_id)
+                                DO UPDATE SET owner_funds = :funds, last_updated = NOW()
+                            """),
+                            {"pid": prop.streamline_property_id, "funds": float(owner_funds)},
+                        )
+                        balance_count += 1
                     except StreamlineMethodNotAllowed:
                         break
                     except Exception as e:
@@ -2800,5 +2809,5 @@ class StreamlineVRS:
         }
 
 
-# Shared client for workers and reconciliation (one connection pool per process).
+# Shared client used by legacy call sites that expect a module-level singleton.
 streamline_vrs = StreamlineVRS()

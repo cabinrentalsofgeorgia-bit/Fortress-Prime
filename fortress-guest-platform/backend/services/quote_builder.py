@@ -84,7 +84,6 @@ def _require_rate_card(rate_card: Any) -> dict[str, Any]:
 
 
 def _min_nights_from_rate_entry(entry: dict[str, Any]) -> int:
-    """Minimum stay required for the rate row; default 1 when Streamline omits it."""
     raw = entry.get("min_nights")
     if raw is None:
         raw = entry.get("minimum_days")
@@ -98,7 +97,6 @@ def _min_nights_from_rate_entry(entry: dict[str, Any]) -> int:
 
 
 def _nightly_from_rate_card(rate_card: dict[str, Any], stay_date: date) -> Decimal | None:
-    """Find the applicable nightly rate from rate_card for a given date."""
     pair = _nightly_and_min_nights_from_rate_card(rate_card, stay_date)
     return pair[0] if pair else None
 
@@ -107,7 +105,6 @@ def _nightly_and_min_nights_from_rate_card(
     rate_card: dict[str, Any],
     stay_date: date,
 ) -> tuple[Decimal, int] | None:
-    """Nightly rent and Streamline min-stay for the matching rate row (yield rules)."""
     for entry in rate_card.get("rates", []):
         start = _parse_streamline_date(entry.get("start_date"))
         end = _parse_streamline_date(entry.get("end_date"))
@@ -134,13 +131,6 @@ def _fee_label(fee: dict[str, Any]) -> str:
 
 
 def _rate_card_cleaning_and_admin_fees(rate_card: dict[str, Any]) -> tuple[Decimal, Decimal]:
-    """
-    Extract cleaning and admin-style fees from the local rate_card JSON.
-
-    Cleaning: name/code/type/category contains ``clean``.
-    Admin: contains ``admin``, ``administration``, or ``management``.
-    Any other non-zero fee fails closed (prevents silent omission of charges).
-    """
     cleaning = Decimal("0.00")
     admin = Decimal("0.00")
     for fee in rate_card.get("fees", []):
@@ -155,10 +145,7 @@ def _rate_card_cleaning_and_admin_fees(rate_card: dict[str, Any]) -> tuple[Decim
         if "clean" in normalized_name:
             cleaning += normalized_amount
             continue
-        if any(
-            token in normalized_name
-            for token in ("admin", "administration", "management")
-        ):
+        if any(token in normalized_name for token in ("admin", "administration", "management")):
             admin += normalized_amount
             continue
         raise QuoteBuilderError(
@@ -169,7 +156,6 @@ def _rate_card_cleaning_and_admin_fees(rate_card: dict[str, Any]) -> tuple[Decim
 
 
 def _tax_rate_from_rate_card(rate_card: dict[str, Any]) -> Decimal:
-    """Sum percentage-type tax rates from the local ledger."""
     total = Decimal("0.00")
     for tax in rate_card.get("taxes", []):
         rate = tax.get("rate")
@@ -187,7 +173,6 @@ async def build_local_ledger_quote(
     check_out: date,
     db: AsyncSession,
 ) -> LocalLedgerQuote:
-    """Calculate a deterministic booking quote from the local pricing ledger."""
     rent_quote = await build_local_rent_quote(property_id, check_in, check_out, db)
     result = await db.execute(select(Property).where(Property.id == property_id))
     prop = result.scalar_one_or_none()
@@ -233,7 +218,6 @@ async def build_local_rent_quote(
     check_out: date,
     db: AsyncSession,
 ) -> LocalLedgerRentQuote:
-    """Calculate deterministic nightly rent without tax/fee dependencies."""
     result = await db.execute(select(Property).where(Property.id == property_id))
     prop = result.scalar_one_or_none()
     if not prop:
@@ -288,14 +272,10 @@ async def calculate_property_quote(
 
     Returns a dict with: property_id, property_name, nights, base_rent,
     fees, taxes, total_price, pricing_source, nightly_breakdown.
-
-    This function now prices exclusively from the local Postgres ledger.
-    `require_local_ledger` remains for call-site compatibility and is enforced.
     """
     del require_local_ledger
 
     quote = await build_local_ledger_quote(property_id, check_in, check_out, db)
-
     fee_total = (quote.cleaning + quote.admin_fee).quantize(TWO_PLACES, ROUND_HALF_UP)
     return {
         "property_id": str(quote.property_id),

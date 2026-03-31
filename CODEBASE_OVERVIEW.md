@@ -70,7 +70,7 @@ fortress-prime/
 ├── config/                       # Configuration files
 ├── backup-*/                     # Backup archives
 ├── app.py                        # Main Streamlit application
-├── docker-compose.yml            # Docker Compose config (Tier 2 HQ Edge)
+├── docker-compose.local.yml      # Legacy local dev compose, never production
 ├── Dockerfile.pulse-agent        # Pulse Agent container image
 ├── requirements.txt              # Python dependencies
 ├── PROJECT_MANIFEST.md           # Project status and objectives
@@ -182,10 +182,10 @@ fortress-prime/
 
 ## 🐳 Infrastructure
 
-### Docker Compose Setup (`docker-compose.yml`)
-**Tier 2 HQ Edge Configuration:**
+### Legacy Local Compose (`docker-compose.local.yml`)
+**Dev-only configuration for non-production machines:**
 
-1. **PostgreSQL Container**
+1. **Legacy PostgreSQL Container**
    - Image: `postgres:15-alpine`
    - Container: `fortress-postgres`
    - Data Persistence: `/mnt/fortress_data/postgres` (Synology DS1825+)

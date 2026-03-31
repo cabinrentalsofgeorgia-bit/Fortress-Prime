@@ -1,13 +1,14 @@
 """
 Legal Agent Mission API — triggers the ReAct orchestrator.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.core.database import AsyncSessionLocal
+from backend.core.security import require_manager_or_admin
 from backend.services.legal_agent_orchestrator import execute_legal_mission
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 class MissionRequest(BaseModel):

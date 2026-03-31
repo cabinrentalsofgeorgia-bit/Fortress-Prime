@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from backend.core.database import get_db
+from backend.core.security import require_manager_or_admin
 from backend.core.event_publisher import EventPublisher
 from backend.services.channel_manager import ChannelManager
 
@@ -38,13 +39,21 @@ async def _emit_ota_revenue_event(result: dict, source: str):
 
 
 @router.get("/status/{property_id}")
-async def channel_status(property_id: UUID, db: AsyncSession = Depends(get_db)):
+async def channel_status(
+    property_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_manager_or_admin),
+):
     """Get connection status for all channels for a property."""
     return await manager.get_channel_status(property_id)
 
 
 @router.post("/sync/{property_id}")
-async def sync_availability(property_id: UUID, db: AsyncSession = Depends(get_db)):
+async def sync_availability(
+    property_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_manager_or_admin),
+):
     """Push availability to all connected channels."""
     return await manager.sync_availability_to_channels(property_id, db)
 
@@ -54,13 +63,18 @@ async def channel_performance(
     start_date: date = Query(...),
     end_date: date = Query(...),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(require_manager_or_admin),
 ):
     """Revenue breakdown by booking channel."""
     return await manager.get_channel_performance(start_date, end_date, db)
 
 
 @router.get("/rate-parity/{property_id}")
-async def rate_parity(property_id: UUID, db: AsyncSession = Depends(get_db)):
+async def rate_parity(
+    property_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_manager_or_admin),
+):
     """Check rate consistency across channels."""
     return await manager.get_rate_parity(property_id, db)
 
@@ -72,6 +86,7 @@ async def block_dates(
     end_date: date = Query(...),
     reason: str = Query(default="owner_hold"),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(require_manager_or_admin),
 ):
     """Block dates across all channels."""
     return await manager.block_dates(property_id, start_date, end_date, reason)
@@ -83,6 +98,7 @@ async def unblock_dates(
     start_date: date = Query(...),
     end_date: date = Query(...),
     db: AsyncSession = Depends(get_db),
+    _user=Depends(require_manager_or_admin),
 ):
     """Unblock dates across all channels."""
     return await manager.unblock_dates(property_id, start_date, end_date)

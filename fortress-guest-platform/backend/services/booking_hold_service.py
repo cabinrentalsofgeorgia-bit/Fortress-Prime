@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
+from backend.core.event_publisher import publish_event
 from backend.integrations.stripe_payments import StripePayments
 from backend.models.guest import Guest
 from backend.models.property import Property
@@ -57,6 +58,25 @@ def _signed_quote_hold_error(code: str) -> BookingHoldError:
     }
     message, status = mapping.get(code, ("Invalid signed quote", 422))
     return BookingHoldError(message, status)
+
+
+async def _emit_reservation_confirmed(reservation: Any) -> None:
+    await publish_event(
+        "reservation.confirmed",
+        {
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "property_id": str(reservation.property_id) if reservation.property_id else None,
+            "guest_id": str(reservation.guest_id) if reservation.guest_id else None,
+            "booking_source": reservation.booking_source,
+            "status": reservation.status,
+            "check_in_date": reservation.check_in_date.isoformat() if reservation.check_in_date else None,
+            "check_out_date": reservation.check_out_date.isoformat() if reservation.check_out_date else None,
+            "total_amount": float(reservation.total_amount or 0),
+            "paid_amount": float(reservation.paid_amount or 0),
+        },
+        key=reservation.confirmation_code or str(reservation.id),
+    )
 
 
 async def create_checkout_hold(
@@ -235,11 +255,14 @@ async def finalize_hold_as_reservation(
     """
     _ = require_succeeded_intent  # API compatibility; client path always verifies PI with Stripe.
     try:
-        return await reservation_finalization_service.finalize_by_hold_id(
+        outcome = await reservation_finalization_service.finalize_by_hold_id(
             db,
             hold_id=hold_id,
             verification_mode="client",
         )
+        if not outcome.already_finalized:
+            await _emit_reservation_confirmed(outcome.reservation)
+        return outcome
     except BookingHoldError:
         await db.rollback()
         raise
@@ -284,6 +307,8 @@ async def convert_hold_to_reservation(
         payment_intent_id=normalized_payment_intent_id,
         already_finalized=outcome.already_finalized,
     )
+    if not outcome.already_finalized:
+        await _emit_reservation_confirmed(reservation)
     return reservation
 
 

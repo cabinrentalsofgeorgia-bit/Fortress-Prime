@@ -47,7 +47,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.database import get_db
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_manager_or_admin
 from backend.models.staff import StaffUser
 from backend.services.council_orchestrator import (
     council_orchestrator,
@@ -67,8 +67,6 @@ HYDRA_MODEL = getattr(settings, "ollama_deep_model", "deepseek-r1:70b")
 
 # ── Service / DB Endpoints ───────────────────────────────────────────
 QDRANT_URL = getattr(settings, "qdrant_url", "http://localhost:6333")
-EMBED_URL = getattr(settings, "embed_base_url", "http://192.168.0.100:11434")
-EMBED_MODEL = getattr(settings, "embed_model", "nomic-embed-text")
 
 DB_CFG = dict(
     host=os.getenv("FORTRESS_DB_HOST", "localhost"),
@@ -649,19 +647,16 @@ async def _search_single_collection(
 async def _exec_search_knowledge_base(query: str) -> Dict:
     """Federated search across fortress_knowledge, email_embeddings, and legal_library."""
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            embed_resp = await client.post(
-                f"{EMBED_URL}/api/embeddings",
-                json={"model": EMBED_MODEL, "prompt": query},
-            )
-            embed_resp.raise_for_status()
-            embedding = embed_resp.json().get("embedding")
-            if not embedding:
-                return _model_dump(ToolError(
-                    tool_error="Embedding generation failed",
-                    details="Embedding endpoint returned no vector",
-                ))
+        from backend.core.vector_db import embed_text as _embed_text
 
+        embedding = await _embed_text(query[:8000])
+        if not embedding:
+            return _model_dump(ToolError(
+                tool_error="Embedding generation failed",
+                details="Embedding endpoint returned no vector",
+            ))
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
             per_collection = 5
             search_tasks = [
                 _search_single_collection(client, coll, embedding, per_collection)
@@ -1917,7 +1912,11 @@ def _snapshot_payload_and_hash() -> tuple[dict, str]:
 
 
 @router.post("/stream")
-async def stream_intelligence(request: Request, body: StreamRequest):
+async def stream_intelligence(
+    request: Request,
+    body: StreamRequest,
+    _user=Depends(require_manager_or_admin),
+):
     """Agentic streaming endpoint with tool calling and GPU abort protection.
 
     OODA Loop:
@@ -2173,7 +2172,11 @@ async def stream_intelligence(request: Request, body: StreamRequest):
 
 
 @router.post("/council/execute")
-async def council_execute(request: Request, body: CouncilExecuteRequest):
+async def council_execute(
+    request: Request,
+    body: CouncilExecuteRequest,
+    _user=Depends(require_manager_or_admin),
+):
     """
     Stream council DAG execution progress to the frontend.
     """
@@ -2326,7 +2329,7 @@ async def council_execute(request: Request, body: CouncilExecuteRequest):
 
 
 @router.get("/models")
-async def list_models():
+async def list_models(_user=Depends(require_manager_or_admin)):
     """Return available inference models and routing metadata."""
     return {
         "models": [
@@ -2353,13 +2356,13 @@ async def list_models():
 
 
 @router.get("/tools")
-async def list_tools():
+async def list_tools(_user=Depends(require_manager_or_admin)):
     """Return the tool definitions available to the LLM."""
     return {"tools": TOOLS}
 
 
 @router.get("/market-snapshot/latest")
-async def market_snapshot_latest():
+async def market_snapshot_latest(_user=Depends(require_manager_or_admin)):
     """
     Read-only Gate D analytics contract payload.
     Returns payload hash + top-level sections for shadow dashboard rendering.
@@ -2403,6 +2406,7 @@ async def market_snapshot_latest():
 async def market_snapshot_canary_recommendation(
     body: MarketSnapshotCanaryRequest,
     db: AsyncSession = Depends(get_db),
+    _user=Depends(require_manager_or_admin),
 ):
     """
     Gate D canary bridge: send compact snapshot contract to Sovereign inference.

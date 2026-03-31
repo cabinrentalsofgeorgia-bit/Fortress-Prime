@@ -44,14 +44,14 @@ const KEYS = {
 export function useLegalCases() {
   return useQuery({
     queryKey: KEYS.cases,
-    queryFn: () => api.get<CasesListResponse>("/api/legal/cases"),
+    queryFn: () => api.get<CasesListResponse>("/api/internal/legal/cases"),
   });
 }
 
 export function useCaseDetail(slug: string) {
   return useQuery({
     queryKey: KEYS.caseDetail(slug),
-    queryFn: () => api.get<CaseDetailResponse>(`/api/legal/cases/${slug}`),
+    queryFn: () => api.get<CaseDetailResponse>(`/api/internal/legal/cases/${slug}`),
   });
 }
 
@@ -59,7 +59,7 @@ export function useCaseDeadlines(slug: string) {
   return useQuery({
     queryKey: KEYS.deadlines(slug),
     queryFn: () =>
-      api.get<DeadlinesResponse>(`/api/legal/cases/${slug}/deadlines`),
+      api.get<DeadlinesResponse>(`/api/internal/legal/cases/${slug}/deadlines`),
   });
 }
 
@@ -68,7 +68,7 @@ export function useCaseCorrespondence(slug: string) {
     queryKey: KEYS.correspondence(slug),
     queryFn: () =>
       api.get<CorrespondenceResponse>(
-        `/api/legal/cases/${slug}/correspondence`,
+        `/api/internal/legal/cases/${slug}/correspondence`,
       ),
   });
 }
@@ -77,14 +77,14 @@ export function useCaseTimeline(slug: string) {
   return useQuery({
     queryKey: KEYS.timeline(slug),
     queryFn: () =>
-      api.get<unknown[]>(`/api/legal/cases/${slug}/timeline`),
+      api.get<unknown[]>(`/api/internal/legal/cases/${slug}/timeline`),
   });
 }
 
 export function useCaseGraph(slug: string) {
   return useQuery({
     queryKey: KEYS.graph(slug),
-    queryFn: () => api.get<CaseGraphSnapshot>(`/api/legal/cases/${slug}/graph/snapshot`),
+    queryFn: () => api.get<CaseGraphSnapshot>(`/api/internal/legal/cases/${slug}/graph/snapshot`),
     enabled: !!slug,
   });
 }
@@ -98,14 +98,14 @@ export function useDiscoveryPacks(slug: string) {
     queryKey: KEYS.discoveryPacks(slug),
     queryFn: async () => {
       const packs = await api.get<DiscoveryDraftPacksResponse>(
-        `/api/legal/cases/${slug}/discovery/packs`,
+        `/api/internal/legal/cases/${slug}/discovery/packs`,
       );
       const latest = packs?.packs?.[0];
       if (!latest?.id) {
         return { ...packs, latest_pack: null };
       }
       const detail = await api.get<DiscoveryDraftPackDetail>(
-        `/api/legal/cases/${slug}/discovery/packs/${latest.id}`,
+        `/api/internal/legal/cases/${slug}/discovery/packs/${latest.id}`,
       );
       return { ...packs, latest_pack: detail };
     },
@@ -121,7 +121,7 @@ export function useDiscoveryPacks(slug: string) {
 export function useCaseExtractionPoll(slug: string) {
   return useQuery({
     queryKey: [...KEYS.caseDetail(slug), "poll"],
-    queryFn: () => api.get<CaseDetailResponse>(`/api/legal/cases/${slug}`),
+    queryFn: () => api.get<CaseDetailResponse>(`/api/internal/legal/cases/${slug}`),
     refetchInterval: (query) => {
       const status = query.state.data?.case?.extraction_status;
       if (status === "processing" || status === "queued") return 3000;
@@ -137,7 +137,7 @@ export function useTriggerExtraction(slug: string) {
   return useMutation({
     mutationFn: (body: { target: string; text?: string; correspondence_id?: number }) =>
       api.post<ExtractionQueuedResponse>(
-        `/api/legal/cases/${slug}/extract`,
+        `/api/internal/legal/cases/${slug}/extract`,
         body,
       ),
     onSuccess: () => {
@@ -163,7 +163,7 @@ export function useDeadlineReview(slug: string) {
       action: "approved" | "rejected";
     }) =>
       api.put<{ updated: boolean }>(
-        `/api/legal/deadlines/${deadlineId}`,
+        `/api/internal/legal/deadlines/${deadlineId}`,
         { review_status: action },
       ),
     onMutate: async ({ deadlineId, action }) => {
@@ -210,7 +210,7 @@ export function useCreateCorrespondence(slug: string) {
       recipient_email?: string;
     }) =>
       api.post<{ created: boolean; correspondence_id: number }>(
-        `/api/legal/cases/${slug}/correspondence`,
+        `/api/internal/legal/cases/${slug}/correspondence`,
         body,
       ),
     onSuccess: () => {
@@ -225,7 +225,7 @@ export function useRefreshGraphMutation(slug: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      api.post<GraphRefreshResponse>(`/api/legal/cases/${slug}/graph/refresh`),
+      api.post<GraphRefreshResponse>(`/api/internal/legal/cases/${slug}/graph/refresh`),
     onSuccess: () => {
       toast.success("Case graph refreshed");
       qc.invalidateQueries({ queryKey: KEYS.caseDetail(slug) });
@@ -240,7 +240,7 @@ export function useGenerateDiscoveryDraftPack(slug: string) {
   return useMutation({
     mutationFn: (body: { target_entity: string; max_items?: number }) =>
       api.post<DiscoveryDraftResponse>(
-        `/api/legal/cases/${slug}/discovery/draft-pack`,
+        `/api/internal/legal/cases/${slug}/discovery/draft-pack`,
         body,
       ),
     onSuccess: () => {
@@ -259,7 +259,7 @@ export function useDraftDiscoveryMutation(slug: string) {
 export function useRunSanctionsSweep(slug: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post(`/api/legal/cases/${slug}/sanctions/sweep`),
+    mutationFn: () => api.post(`/api/internal/legal/cases/${slug}/sanctions/sweep`),
     onSuccess: () => {
       toast.success("Sanctions sweep complete");
       qc.invalidateQueries({ queryKey: KEYS.sanctionsAlerts(slug) });
@@ -273,7 +273,7 @@ export function useGenerateDepositionKillSheet(slug: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: { deponent_entity: string }) =>
-      api.post(`/api/legal/cases/${slug}/deposition/kill-sheet`, body),
+      api.post(`/api/internal/legal/cases/${slug}/deposition/kill-sheet`, body),
     onSuccess: () => {
       toast.success("Deposition kill-sheet generated");
       qc.invalidateQueries({ queryKey: KEYS.depositionKillSheets(slug) });
@@ -296,7 +296,7 @@ export function useUpdateCorrespondenceStatus(slug: string) {
       status: "draft" | "approved" | "sent" | "cancelled";
     }) =>
       api.put<{ updated: boolean; id: number; status: string; sent_at: string | null }>(
-        `/api/legal/correspondence/${corrId}/status`,
+        `/api/internal/legal/correspondence/${corrId}/status`,
         { status },
       ),
     onSuccess: (_data, { status }) => {
@@ -314,7 +314,7 @@ export function useUpdateCorrespondenceStatus(slug: string) {
 
 export async function downloadCorrespondence(corrId: number): Promise<void> {
   try {
-    const res = await fetch(`/api/legal/correspondence/${corrId}/download`, {
+    const res = await fetch(`/api/internal/legal/correspondence/${corrId}/download`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("fgp_token") ?? ""}`,
       },
@@ -348,7 +348,7 @@ export function useSanctionsAlerts(slug: string) {
     queryKey: KEYS.sanctionsAlerts(slug),
     queryFn: () =>
       api.get<SanctionsAlertsResponse>(
-        `/api/legal/cases/${slug}/sanctions/alerts`,
+        `/api/internal/legal/cases/${slug}/sanctions/alerts`,
       ),
     enabled: !!slug,
     refetchInterval: 60_000,
@@ -360,7 +360,7 @@ export function useDepositionKillSheets(slug: string) {
     queryKey: KEYS.depositionKillSheets(slug),
     queryFn: () =>
       api.get<DepositionKillSheetsResponse>(
-        `/api/legal/cases/${slug}/deposition/kill-sheets`,
+        `/api/internal/legal/cases/${slug}/deposition/kill-sheets`,
       ),
     enabled: !!slug,
     refetchInterval: 60_000,
@@ -374,7 +374,7 @@ export async function downloadKillSheetMarkdown(
 ): Promise<void> {
   try {
     const res = await fetch(
-      `/api/legal/cases/${caseSlug}/deposition/kill-sheets/${sheetId}/export`,
+      `/api/internal/legal/cases/${caseSlug}/deposition/kill-sheets/${sheetId}/export`,
       {
         headers: {
           Accept: "text/markdown",
@@ -408,7 +408,7 @@ export async function downloadKillSheetMarkdown(
 export async function copyCorrespondenceContent(corrId: number): Promise<void> {
   try {
     const data = await api.get<{ content: string; filename: string }>(
-      `/api/legal/correspondence/${corrId}/content`,
+      `/api/internal/legal/correspondence/${corrId}/content`,
     );
     await navigator.clipboard.writeText(data.content);
     toast.success(`Copied ${data.filename} to clipboard`);

@@ -48,13 +48,11 @@ function clearToken() {
   localStorage.removeItem("fgp_token");
 }
 
-const STAFF_AUTH_PUBLIC_PREFIXES = ["/login", "/sso", "/owner-login"] as const;
-
-function shouldRedirectToStaffLogin(pathname: string, host: string): boolean {
-  if (isStorefrontHost(host)) return false;
-  return !STAFF_AUTH_PUBLIC_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
+function resolveUnauthorizedRedirect(pathname: string, host: string): string | null {
+  if (pathname.startsWith("/owner")) return "/owner-login";
+  if (isStorefrontHost(host)) return null;
+  if (pathname.startsWith("/login")) return null;
+  return "/login?expired=1";
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -95,16 +93,22 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       .then((d) => d?.detail || "Unauthorized")
       .catch(() => "Unauthorized");
     clearToken();
-    if (
-      typeof window !== "undefined" &&
-      shouldRedirectToStaffLogin(window.location.pathname, window.location.hostname)
-    ) {
+    if (typeof window !== "undefined") {
+      const redirectPath = resolveUnauthorizedRedirect(
+        window.location.pathname,
+        window.location.hostname,
+      );
+      if (window.location.pathname.startsWith("/owner")) {
+        localStorage.removeItem("fgp_owner_profile");
+      }
+      if (redirectPath) {
       window.dispatchEvent(
         new CustomEvent("fortress:auth-expired", {
           detail: { path, message: detail },
         }),
       );
-      window.location.href = "/login?expired=1";
+        window.location.href = redirectPath;
+      }
     }
     throw new ApiError(401, detail);
   }
@@ -135,16 +139,83 @@ export const api = {
 
   hunter: {
     queue: <T>(status = "pending_review", limit = 50) =>
-      request<T>("/api/hunter/queue", {
+      request<T>("/api/vrs/hunter/queue", {
         method: "GET",
         params: { status_filter: status, limit },
       }),
-    metrics: <T>() => request<T>("/api/hunter/metrics", { method: "GET" }),
+    metrics: <T>() => request<T>("/api/vrs/hunter/queue/stats", { method: "GET" }),
     activity: <T>(limit = 20) =>
       request<T>("/api/hunter/activity", {
         method: "GET",
         params: { limit },
       }),
+    dispatch: <T>(body: {
+      guest_id: string;
+      full_name: string;
+      target_score: number;
+    }) => request<T>("/api/vrs/hunter/dispatch", { method: "POST", body: JSON.stringify(body) }),
+    approve: <T>(entryId: string, reviewedBy = "operator") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ reviewed_by: reviewedBy }),
+      }),
+    approveVia: <T>(entryId: string, channel: "email" | "sms", reviewedBy = "operator") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ reviewed_by: reviewedBy, channel }),
+      }),
+    edit: <T>(entryId: string, finalMessage: string, reviewedBy = "operator") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/edit`, {
+        method: "POST",
+        body: JSON.stringify({
+          final_human_message: finalMessage,
+          reviewed_by: reviewedBy,
+        }),
+      }),
+    editVia: <T>(
+      entryId: string,
+      finalMessage: string,
+      channel: "email" | "sms",
+      reviewedBy = "operator",
+    ) =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/edit`, {
+        method: "POST",
+        body: JSON.stringify({
+          final_human_message: finalMessage,
+          reviewed_by: reviewedBy,
+          channel,
+        }),
+      }),
+    reject: <T>(entryId: string, reason?: string, reviewedBy = "operator") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({
+          reviewed_by: reviewedBy,
+          reason,
+        }),
+      }),
+    retry: <T>(entryId: string, reviewedBy = "operator") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/retry`, {
+        method: "POST",
+        body: JSON.stringify({
+          reviewed_by: reviewedBy,
+        }),
+      }),
+    retryVia: <T>(entryId: string, channel: "email" | "sms", reviewedBy = "operator") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/retry`, {
+        method: "POST",
+        body: JSON.stringify({
+          reviewed_by: reviewedBy,
+          channel,
+        }),
+      }),
+    audit: <T>(body: {
+      event_name: string;
+      resource_type?: string;
+      resource_id?: string;
+      outcome?: string;
+      metadata_json?: Record<string, unknown>;
+    }) => request<T>("/api/vrs/hunter/audit", { method: "POST", body: JSON.stringify(body) }),
   },
 };
 

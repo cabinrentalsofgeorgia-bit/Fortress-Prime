@@ -71,6 +71,7 @@ PERSONAS_DIR = os.getenv(
     "LEGAL_PERSONAS_DIR",
     "/home/admin/Fortress-Prime/personas/legal",
 )
+LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library"})
 
 from backend.core.config import settings as _cfg
 
@@ -239,6 +240,11 @@ class LegalPersona:
     def load(cls, filepath: str) -> "LegalPersona":
         with open(filepath, "r") as f:
             data = json.load(f)
+        vector_collection = data.get("vector_collection", "legal_library")
+        _validate_legal_persona_boundary(
+            slug=data.get("slug", os.path.basename(filepath)),
+            vector_collection=vector_collection,
+        )
         return cls(
             name=data["name"],
             slug=data["slug"],
@@ -251,7 +257,7 @@ class LegalPersona:
             focus_areas=data.get("focus_areas", []),
             trigger_events=data.get("trigger_events", []),
             godhead_prompt=data.get("godhead_prompt", ""),
-            vector_collection=data.get("vector_collection", "legal_library"),
+            vector_collection=vector_collection,
             created_at=data.get("created_at", ""),
         )
 
@@ -266,10 +272,23 @@ class LegalPersona:
             try:
                 p = cls.load(os.path.join(PERSONAS_DIR, fname))
                 personas.append(p)
+            except LegalPersonaBoundaryError:
+                raise
             except Exception as e:
                 logger.warning("Failed to load persona %s: %s", fname, e)
         personas.sort(key=lambda p: p.seat)
         return personas
+
+
+class LegalPersonaBoundaryError(RuntimeError):
+    """Raised when legal personas attempt to cross into hospitality retrieval."""
+
+
+def _validate_legal_persona_boundary(*, slug: str, vector_collection: str) -> None:
+    if vector_collection not in LEGAL_ALLOWED_VECTOR_COLLECTIONS:
+        raise LegalPersonaBoundaryError(
+            f"Legal persona '{slug}' attempted to access forbidden vector collection '{vector_collection}'."
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -418,33 +437,27 @@ async def _call_llm(
 
 
 def _extract_json_block(raw: str) -> dict:
-    """Robust JSON extraction that handles markdown fences and nested braces."""
+    """Robust JSON extraction that aggressively strips preamble and markdown."""
     cleaned = raw.strip()
 
-    # Fast path: if the response is already valid JSON (e.g. vLLM guided decoding),
-    # parse directly without brace surgery that breaks on braces inside strings.
+    # Fast path: vLLM guided decoding or perfect output.
     try:
         return json.loads(cleaned)
     except (json.JSONDecodeError, ValueError):
         pass
 
-    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
+    # Strip markdown fences if the model wrapped the payload.
+    fence = re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, re.DOTALL)
     if fence:
         cleaned = fence.group(1)
-    else:
-        start = cleaned.find("{")
-        if start == -1:
-            raise ValueError("No JSON object found in response")
-        depth, end = 0, start
-        for i in range(start, len(cleaned)):
-            if cleaned[i] == "{":
-                depth += 1
-            elif cleaned[i] == "}":
-                depth -= 1
-                if depth == 0:
-                    end = i
-                    break
-        cleaned = cleaned[start : end + 1]
+
+    # Aggressively strip any conversational preamble or trailing garbage.
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise ValueError("No JSON object found in response")
+
+    cleaned = cleaned[start : end + 1]
     cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
     return json.loads(cleaned)
 
@@ -544,32 +557,35 @@ async def analyze_with_persona(
     """Run a single persona's analysis against the case brief."""
     system_prompt = f"""{persona.godhead_prompt}
 
-Your worldview:
+YOUR WORLDVIEW:
 {persona.worldview}
 
-Your biases and focus:
+YOUR BIASES & FOCUS:
 {chr(10).join(f'- {b}' for b in persona.bias)}
-
-Focus areas:
 {chr(10).join(f'- {f}' for f in persona.focus_areas)}
+
+CRITICAL DIRECTIVE:
+You are an automated analytical engine operating on bare-metal hardware. You MUST output your ENTIRE response as a single, valid JSON object.
+- DO NOT wrap the JSON in markdown formatting (no ```json).
+- DO NOT include conversational filler, greetings, or explanations.
+- If you output anything other than raw, parsable JSON, the sovereign matrix will fail.
+
+REQUIRED JSON SCHEMA:
+{{
+  "signal": "STRONG_DEFENSE" | "DEFENSE" | "NEUTRAL" | "WEAK" | "VULNERABLE",
+  "conviction": <float between 0.0 and 1.0>,
+  "reasoning": "<your detailed analysis>",
+  "defense_arguments": ["<arg1>", "<arg2>"],
+  "risk_factors": ["<risk1>", "<risk2>"],
+  "recommended_actions": ["<action1>", "<action2>"]
+}}
 """
 
     user_prompt = f"""CASE BRIEF FOR ANALYSIS:
 {case_brief}
-
 {f"ADDITIONAL CONTEXT:{chr(10)}{context}" if context else ""}
 
-Analyze this case through your specialized lens and provide your assessment.
-
-Format your response as JSON:
-{{
-  "signal": "STRONG_DEFENSE | DEFENSE | NEUTRAL | WEAK | VULNERABLE",
-  "conviction": 0.85,
-  "reasoning": "Your detailed analysis...",
-  "defense_arguments": ["argument 1", "argument 2"],
-  "risk_factors": ["risk 1", "risk 2"],
-  "recommended_actions": ["action 1", "action 2"]
-}}
+Execute analysis and return the raw JSON object.
 """
 
     t0 = time.time()
@@ -580,71 +596,121 @@ Format your response as JSON:
 
     # PII sanitization gate for cloud-bound prompts
     if provider in _CLOUD_PROVIDERS:
-        cloud_system = _sanitize_for_cloud(system_prompt)
-        cloud_user = _sanitize_for_cloud(user_prompt)
+        base_system = _sanitize_for_cloud(system_prompt)
+        base_user = _sanitize_for_cloud(user_prompt)
     else:
-        cloud_system = system_prompt
-        cloud_user = user_prompt
+        base_system = system_prompt
+        base_user = user_prompt
 
-    if provider == "ANTHROPIC" and FRONTIER_GATEWAY_API_KEY:
-        api_key = FRONTIER_GATEWAY_API_KEY
-        text, model = await _call_llm(
-            cloud_system, cloud_user,
-            model=ANTHROPIC_MODEL,
-            base_url=ANTHROPIC_PROXY,
-            api_key=api_key,
-        )
-    elif provider == "GEMINI" and FRONTIER_GATEWAY_API_KEY:
-        text, model = await _call_llm(
-            cloud_system, cloud_user,
-            model=GEMINI_MODEL,
-            base_url=GEMINI_BASE_URL,
-            api_key=FRONTIER_GATEWAY_API_KEY,
-        )
-    elif provider == "XAI" and FRONTIER_GATEWAY_API_KEY:
-        text, model = await _call_llm(
-            cloud_system, cloud_user,
-            model=XAI_MODEL,
-            base_url=XAI_BASE_URL,
-            api_key=FRONTIER_GATEWAY_API_KEY,
-        )
-    elif provider == "XAI_FLAGSHIP" and FRONTIER_GATEWAY_API_KEY:
-        text, model = await _call_llm(
-            cloud_system, cloud_user,
-            model=XAI_MODEL_FLAGSHIP,
-            base_url=XAI_BASE_URL,
-            api_key=FRONTIER_GATEWAY_API_KEY,
-        )
-    elif provider == "VLLM_120B":
-        text, model = await _call_llm(
-            system_prompt, user_prompt,
-            model=VLLM_MODEL_120B,
-            base_url=VLLM_120B_URL,
-        )
-    elif provider == "HYDRA_32B":
-        text, model = await _call_llm(
-            system_prompt, user_prompt,
-            model=HYDRA_MODEL_32B,
-            base_url=HYDRA_32B_URL,
-        )
-    elif provider == "HYDRA_120B":
-        text, model = await _call_llm(
-            system_prompt, user_prompt,
+    async def _invoke_once(current_system: str, current_user: str) -> tuple[str, str]:
+        if provider == "ANTHROPIC" and FRONTIER_GATEWAY_API_KEY:
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=ANTHROPIC_MODEL,
+                base_url=ANTHROPIC_PROXY,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+            )
+        if provider == "GEMINI" and FRONTIER_GATEWAY_API_KEY:
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=GEMINI_MODEL,
+                base_url=GEMINI_BASE_URL,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+            )
+        if provider == "XAI" and FRONTIER_GATEWAY_API_KEY:
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=XAI_MODEL,
+                base_url=XAI_BASE_URL,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+            )
+        if provider == "XAI_FLAGSHIP" and FRONTIER_GATEWAY_API_KEY:
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=XAI_MODEL_FLAGSHIP,
+                base_url=XAI_BASE_URL,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+            )
+        if provider == "VLLM_120B":
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=VLLM_MODEL_120B,
+                base_url=VLLM_120B_URL,
+            )
+        if provider == "HYDRA_32B":
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=HYDRA_MODEL_32B,
+                base_url=HYDRA_32B_URL,
+            )
+        if provider == "HYDRA_120B":
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=HYDRA_MODEL_120B,
+                base_url=HYDRA_120B_URL,
+            )
+        if provider == "SWARM":
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=SWARM_MODEL,
+                base_url=SWARM_URL,
+            )
+        return await _call_llm(
+            current_system,
+            current_user,
             model=HYDRA_MODEL_120B,
             base_url=HYDRA_120B_URL,
         )
-    elif provider == "SWARM":
-        text, model = await _call_llm(
-            system_prompt, user_prompt,
-            model=SWARM_MODEL,
-            base_url=SWARM_URL,
+
+    repair_hint = (
+        "REPAIR_HINT:\n"
+        "Your previous response was rejected because it was not a single valid JSON object.\n"
+        "Return ONLY raw JSON matching the required schema.\n"
+        "Do not include prose, markdown fences, commentary, or any text before or after the JSON object."
+    )
+
+    text = ""
+    model = "none"
+    for attempt in range(1, 4):
+        current_user = base_user if attempt == 1 else (
+            f"{base_user}\n\n{repair_hint}\n\nINVALID_RESPONSE_EXCERPT:\n{text[:400]}"
         )
-    else:
-        text, model = await _call_llm(
-            system_prompt, user_prompt,
-            model=HYDRA_MODEL_120B,
-            base_url=HYDRA_120B_URL,
-        )
+        text, model = await _invoke_once(base_system, current_user)
+        try:
+            _extract_json_block(text)
+            break
+        except Exception as exc:
+            logger.warning(
+                "legal_council_retry_triggered",
+                extra={
+                    "seat": persona.seat,
+                    "persona": persona.name,
+                    "attempt": attempt,
+                    "provider": provider,
+                    "model": model,
+                    "error": str(exc)[:200],
+                    "raw_excerpt": _sanitize_str(text[:300]),
+                },
+            )
+            if attempt == 3:
+                logger.warning(
+                    "legal_council_retry_exhausted",
+                    extra={
+                        "seat": persona.seat,
+                        "persona": persona.name,
+                        "provider": provider,
+                        "model": model,
+                    },
+                )
+                break
 
     elapsed = time.time() - t0
     logger.info(
@@ -750,41 +816,20 @@ def _dedupe_top(items: List[str], limit: int) -> List[str]:
 # Context Freezer (Pillar 2 — Qdrant Evidence Locking)
 # ═══════════════════════════════════════════════════════════════════════
 
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
-EMBED_URL = os.getenv("EMBED_URL", "http://192.168.0.100/api/embeddings")
-EMBED_MODEL = "nomic-embed-text"
 LEGAL_COLLECTION = "legal_library"
 
 
 async def _embed_text(text: str) -> Optional[List[float]]:
-    """Embed text via nomic-embed-text through the Nginx LB."""
-    async with httpx.AsyncClient(timeout=30) as client:
-        try:
-            resp = await client.post(
-                EMBED_URL,
-                json={"model": EMBED_MODEL, "prompt": text[:8000]},
-            )
-            resp.raise_for_status()
-            vec = resp.json().get("embedding", [])
-            if len(vec) >= 384:
-                return vec
-            logger.warning("embed_dim_unexpected  got=%d", len(vec))
-        except Exception as e:
-            logger.warning("embed_failed_lb  error=%s", str(e)[:200])
+    """Embed via Ollama OpenAI-compatible /v1/embeddings (backend.core.vector_db)."""
+    from backend.core.vector_db import embed_text as _embed_vec
 
-        # Fallback: direct Ollama on Captain
-        try:
-            resp = await client.post(
-                "http://localhost:11434/api/embeddings",
-                json={"model": EMBED_MODEL, "prompt": text[:8000]},
-            )
-            resp.raise_for_status()
-            vec = resp.json().get("embedding", [])
-            if len(vec) >= 384:
-                return vec
-        except Exception as e:
-            logger.error("embed_failed_all  error=%s", str(e)[:200])
+    try:
+        vec = await _embed_vec(text[:8000])
+        if len(vec) == _cfg.embed_dim:
+            return vec
+        logger.warning("embed_dim_unexpected  got=%d", len(vec))
+    except Exception as e:
+        logger.warning("embed_failed  error=%s", str(e)[:200])
     return None
 
 
@@ -809,7 +854,7 @@ async def freeze_context(
         logger.warning("freeze_context_no_embedding — proceeding without RAG context")
         return [], []
 
-    headers = {"api-key": QDRANT_API_KEY} if QDRANT_API_KEY else {}
+    headers = {"api-key": _cfg.qdrant_api_key} if _cfg.qdrant_api_key else {}
     body = {
         "vector": query_vec,
         "limit": top_k,
@@ -820,7 +865,7 @@ async def freeze_context(
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
-                f"{QDRANT_URL}/collections/{LEGAL_COLLECTION}/points/search",
+                f"{_cfg.qdrant_url.rstrip('/')}/collections/{LEGAL_COLLECTION}/points/search",
                 json=body,
                 headers=headers,
             )

@@ -108,7 +108,7 @@ async def _fetch_capex_markup(db: AsyncSession, property_id: str) -> str:
     """Fetch the CapEx markup percentage from owner_markup_rules."""
     result = await db.execute(
         text("""
-            SELECT markup_pct
+            SELECT markup_percentage AS markup_pct
             FROM owner_markup_rules
             WHERE property_id::text = :pid
             LIMIT 1

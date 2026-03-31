@@ -60,6 +60,12 @@ fortress_prime:
         - "public.fin_reservations"
         - "public.fin_revenue_snapshots"
         - "public.fin_owner_balances"
+        - "crog_acquisition.parcels"
+        - "crog_acquisition.owners"
+        - "crog_acquisition.owner_contacts"
+        - "crog_acquisition.properties"
+        - "crog_acquisition.acquisition_pipeline"
+        - "crog_acquisition.intel_events"
 
       qdrant_collections:
         - "email_embeddings"      # Filtered by division = 'REAL_ESTATE'
@@ -72,6 +78,9 @@ fortress_prime:
         - "cabins/"
         - "src/guest_reply_engine.py"
         - "src/listing_doctor.py"
+        - "fortress-guest-platform/backend/services/acquisition_ingestion.py"
+        - "fortress-guest-platform/backend/api/admin_acquisition.py"
+        - "docs/paperclip/AGENTS.md"
 
       nas_paths:
         - "/mnt/fortress_nas/Communications/"
@@ -84,6 +93,12 @@ fortress_prime:
         - name: "Plaid"
           type: "Banking API"
           bridge: "division_b_property/plaid_client.py"
+        - name: "qPublic / County GIS"
+          type: "Parcel Intelligence"
+          bridge: "fortress-guest-platform/backend/services/acquisition_ingestion.py"
+        - name: "Firecrawl"
+          type: "Acquisition Scrape Extraction"
+          bridge: "fortress-guest-platform/backend/services/acquisition_ingestion.py"
 
       firewall: "NEVER access division_a or hedge_fund schemas."
 
@@ -308,6 +323,11 @@ fortress_prime:
         - "property management"
         - "owner statement"
         - "payout"
+        - "acquisition"
+        - "parcel"
+        - "qpublic"
+        - "str permit"
+        - "paperclip"
       dev:
         - "lot 9"
         - "construction"

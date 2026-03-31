@@ -110,7 +110,7 @@ export default function WarRoomPage({
     (async () => {
       try {
         const snapshot = await api.get<{ nodes: GraphNode[]; edges: GraphEdge[] }>(
-          `/api/legal/cases/${slug}/graph/snapshot`,
+          `/api/internal/legal/cases/${slug}/graph/snapshot`,
         );
         if (cancelled) return;
         setNodes(Array.isArray(snapshot?.nodes) ? snapshot.nodes : []);
@@ -137,7 +137,7 @@ export default function WarRoomPage({
         records_searched: number;
         inference_source: string;
         latency_ms?: number;
-      }>(`/api/legal/cases/${slug}/omni-search`, { query: q });
+      }>(`/api/internal/legal/cases/${slug}/omni-search`, { query: q });
       setChatHistory((prev) => [
         ...prev,
         {
@@ -161,7 +161,7 @@ export default function WarRoomPage({
     setStrikeResult(null);
     try {
       const res = await api.post<StrikeResult>(
-        `/api/legal/cases/${slug}/tactical-strike`,
+        `/api/internal/legal/cases/${slug}/tactical-strike`,
         { strike_type: strikeType },
       );
       setStrikeResult(res);
@@ -354,7 +354,7 @@ export default function WarRoomPage({
 
             <div className="mt-4">
               <EvidenceUpload slug={slug} onIngested={() => {
-                api.get<{ nodes: GraphNode[]; edges: GraphEdge[] }>(`/api/legal/cases/${slug}/graph/snapshot`)
+                api.get<{ nodes: GraphNode[]; edges: GraphEdge[] }>(`/api/internal/legal/cases/${slug}/graph/snapshot`)
                   .then((s) => {
                     setNodes(Array.isArray(s?.nodes) ? s.nodes : []);
                     setEdges(Array.isArray(s?.edges) ? s.edges : []);

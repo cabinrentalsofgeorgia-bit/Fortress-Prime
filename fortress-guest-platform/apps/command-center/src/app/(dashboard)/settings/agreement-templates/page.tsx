@@ -136,7 +136,10 @@ export default function AgreementTemplatesPage() {
   function handleSave() {
     if (editing === "new") {
       createMut.mutate(form);
-      return;
+    } else if (editing) {
+      updateMut.mutate({ id: editing.id, data: form });
+    } else {
+      createMut.mutate(form);
     }
 
     if (!editing) return;

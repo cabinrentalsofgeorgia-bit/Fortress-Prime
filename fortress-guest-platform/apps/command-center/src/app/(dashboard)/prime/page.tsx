@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { usePrimeSnapshot } from "@/lib/hooks";
+import { useAppStore } from "@/lib/store";
+import { canViewPrimeTelemetry } from "@/lib/roles";
 import { toast } from "sonner";
 import {
   AreaChart,
@@ -74,6 +76,17 @@ interface PrimeSnapshot {
   revenue_timeline: TimelineEntry[];
   recent_journals: JournalEntry[];
   payout_summary: Record<string, { count: number; total: number }>;
+  channex_attention?: {
+    recent: boolean;
+    last_alert_at: string | null;
+    request_id: string | null;
+    property_count: number | null;
+    healthy_count: number | null;
+    catalog_ready_count: number | null;
+    ari_ready_count: number | null;
+    duplicate_rate_plan_count: number | null;
+    reasons: string[];
+  } | null;
   system_pulse: {
     journal_entries_today: number;
     total_properties: number;
@@ -119,6 +132,8 @@ function fmt(n: number | undefined): string {
 }
 
 export default function FortressPrimeDashboard() {
+  const user = useAppStore((state) => state.user);
+  const canViewPrime = canViewPrimeTelemetry(user);
   const { data: snapshot } = usePrimeSnapshot();
   const prime = snapshot as PrimeSnapshot | undefined;
 
@@ -181,6 +196,9 @@ export default function FortressPrimeDashboard() {
   }, []);
 
   useEffect(() => {
+    if (!canViewPrime) {
+      return;
+    }
     let es: EventSource | null = null;
     let retryTimeout: ReturnType<typeof setTimeout>;
 
@@ -223,7 +241,7 @@ export default function FortressPrimeDashboard() {
       es?.close();
       clearTimeout(retryTimeout);
     };
-  }, [addEvent]);
+  }, [addEvent, canViewPrime]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -236,6 +254,11 @@ export default function FortressPrimeDashboard() {
   const acct2000 = prime?.accounts?.["2000"];
   const acct2100 = prime?.accounts?.["2100"];
   const pulse = prime?.system_pulse;
+  const channexAttention = prime?.channex_attention;
+  const effectiveConnected = canViewPrime ? connected : false;
+  const effectiveStreamError = canViewPrime
+    ? streamError
+    : "Manager role required for live Prime telemetry.";
 
   const chartData = (prime?.revenue_timeline ?? []).map((d) => ({
     day: d.day ? new Date(d.day).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "",
@@ -256,33 +279,58 @@ export default function FortressPrimeDashboard() {
           <p className="text-muted-foreground text-sm">
             Global Command & Telemetry Center
           </p>
+          {!canViewPrime ? (
+            <Badge variant="outline" className="mt-2 text-xs">
+              View-only role
+            </Badge>
+          ) : null}
         </div>
         <div className="flex items-center gap-2 text-xs font-mono">
           <Badge
-            variant={connected ? "default" : "destructive"}
+            variant={effectiveConnected ? "default" : "destructive"}
             className="gap-1"
           >
             <span className="relative flex h-1.5 w-1.5">
-              {connected && (
+              {effectiveConnected && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               )}
               <span
-                className={`relative inline-flex rounded-full h-1.5 w-1.5 ${connected ? "bg-emerald-500" : "bg-red-500"}`}
+                className={`relative inline-flex rounded-full h-1.5 w-1.5 ${effectiveConnected ? "bg-emerald-500" : "bg-red-500"}`}
               />
             </span>
-            {connected ? "Swarms Online" : "Reconnecting..."}
+            {effectiveConnected ? "Swarms Online" : "Reconnecting..."}
           </Badge>
         </div>
       </div>
 
       {/* KPI Strip */}
-      {streamError && (
+      {effectiveStreamError && (
         <Card className="border-destructive/40 bg-destructive/10">
           <CardContent className="py-3 text-xs text-destructive">
-            {streamError}
+            {effectiveStreamError}
           </CardContent>
         </Card>
       )}
+      {channexAttention ? (
+        <Card className={channexAttention.recent ? "border-amber-500/40 bg-amber-500/10" : "border-border/60 bg-muted/20"}>
+          <CardContent className="py-3 space-y-1">
+            <div className="flex items-center gap-2 text-sm">
+              <ShieldAlert className={channexAttention.recent ? "h-4 w-4 text-amber-400" : "h-4 w-4 text-muted-foreground"} />
+              <span className={channexAttention.recent ? "font-medium text-amber-300" : "font-medium text-foreground"}>
+                {channexAttention.recent ? "Recent Channex attention event" : "Last Channex attention event"}
+              </span>
+              <Badge variant="outline" className="text-xs">
+                {channexAttention.last_alert_at ? new Date(channexAttention.last_alert_at).toLocaleString() : "Unknown time"}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {channexAttention.reasons?.length
+                ? channexAttention.reasons.join(" • ")
+                : "A backend Channex attention signal was emitted without detailed reasons."}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-5">
         <Card>
           <CardContent className="pt-4 pb-3">

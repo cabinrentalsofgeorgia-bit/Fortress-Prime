@@ -15,21 +15,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from backend.core.database import get_db
-from backend.core.security import RoleChecker
-from backend.integrations.streamline_vrs import StreamlineVRS
+from backend.core.security import RoleChecker, require_admin
+from backend.integrations.streamline_vrs import (
+    StreamlineVRS,
+    is_streamline_circuit_placeholder,
+)
 from backend.models.staff import StaffRole, StaffUser
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 logger = structlog.get_logger()
-
-_INTEGRATIONS_STAFF_READ = RoleChecker(
-    [StaffRole.SUPER_ADMIN, StaffRole.MANAGER, StaffRole.REVIEWER]
-)
-_INTEGRATIONS_STAFF_MUTATE = RoleChecker([StaffRole.SUPER_ADMIN, StaffRole.MANAGER])
 
 
 @router.get("/streamline/status")
-async def streamline_status(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
+async def streamline_status():
     """Get Streamline VRS connection status and sync info."""
     vrs = StreamlineVRS()
     health = await vrs.health_check()
@@ -43,10 +41,7 @@ async def streamline_status(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
 
 
 @router.post("/streamline/sync")
-async def trigger_streamline_sync(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_MUTATE),
-    db: AsyncSession = Depends(get_db),
-):
+async def trigger_streamline_sync(db: AsyncSession = Depends(get_db)):
     """
     Manually trigger a full Streamline VRS sync.
     
@@ -68,7 +63,7 @@ async def trigger_streamline_sync(
 
 
 @router.get("/streamline/properties")
-async def preview_streamline_properties(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
+async def preview_streamline_properties():
     """
     Preview properties from Streamline without writing to database.
     Useful for verifying the connection before running a full sync.
@@ -87,7 +82,7 @@ async def preview_streamline_properties(_: StaffUser = Depends(_INTEGRATIONS_STA
 
 
 @router.get("/streamline/reservations")
-async def preview_streamline_reservations(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
+async def preview_streamline_reservations():
     """
     Preview upcoming reservations from Streamline without writing to database.
     """
@@ -108,10 +103,7 @@ async def preview_streamline_reservations(_: StaffUser = Depends(_INTEGRATIONS_S
 
 
 @router.post("/notes/backfill")
-async def backfill_reservation_notes(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_MUTATE),
-    db: AsyncSession = Depends(get_db),
-):
+async def backfill_reservation_notes(db: AsyncSession = Depends(get_db)):
     """
     Pull notes from Streamline for all reservations that don't have them yet.
     Uses GetReservationNotes per reservation.
@@ -163,10 +155,7 @@ async def backfill_reservation_notes(
 
 
 @router.post("/agreements/backfill")
-async def backfill_agreements(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_MUTATE),
-    db: AsyncSession = Depends(get_db),
-):
+async def backfill_agreements(db: AsyncSession = Depends(get_db)):
     """
     Generate rental agreements for all reservations that don't have one.
 
@@ -301,10 +290,7 @@ async def backfill_agreements(
 # ============================================================================
 
 @router.post("/prices/backfill")
-async def backfill_reservation_prices(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_MUTATE),
-    db: AsyncSession = Depends(get_db),
-):
+async def backfill_reservation_prices(db: AsyncSession = Depends(get_db)):
     """
     Enrich reservations with detailed financial data from GetReservationPrice.
     Populates: cleaning_fee, pet_fee, damage_waiver_fee, service_fee,
@@ -360,10 +346,7 @@ async def backfill_reservation_prices(
 # ============================================================================
 
 @router.post("/owners/sync")
-async def sync_owner_balances(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_MUTATE),
-    db: AsyncSession = Depends(get_db),
-):
+async def sync_owner_balances(db: AsyncSession = Depends(get_db)):
     """
     Pull current owner balance for every property from Streamline,
     update properties.owner_balance JSONB and trust_balance table.
@@ -383,6 +366,15 @@ async def sync_owner_balances(
     except Exception as e:
         owner_map = {}
         errors.append(f"GetOwnerList: {e}")
+    try:
+        live_streamline_ids = {
+            str(prop["streamline_property_id"])
+            for prop in await vrs.fetch_properties()
+            if str(prop.get("streamline_property_id", "")).strip()
+        }
+    except Exception as e:
+        live_streamline_ids = set()
+        errors.append(f"GetPropertyList: {e}")
 
     props_q = await db.execute(
         select(Property).where(Property.streamline_property_id.isnot(None))
@@ -391,9 +383,12 @@ async def sync_owner_balances(
 
     for prop in props:
         try:
-            unit_id = int(prop.streamline_property_id)
+            streamline_id = str(prop.streamline_property_id or "").strip()
+            if streamline_id not in live_streamline_ids:
+                continue
+            unit_id = int(streamline_id)
             bal = await vrs.fetch_unit_owner_balance(unit_id)
-            if not bal:
+            if not bal or is_streamline_circuit_placeholder(bal):
                 continue
 
             prop.owner_balance = bal
@@ -435,7 +430,7 @@ async def sync_owner_balances(
 
 
 @router.get("/owners/list")
-async def list_owners(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
+async def list_owners():
     """Fetch the owner directory from Streamline (live)."""
     vrs = StreamlineVRS()
     try:
@@ -450,7 +445,6 @@ async def list_owners(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
 @router.get("/owners/{owner_id}/statement")
 async def get_owner_statement(
     owner_id: int,
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_READ),
     unit_id: Optional[int] = Query(None),
     start: Optional[str] = Query(None),
     end: Optional[str] = Query(None),
@@ -478,10 +472,7 @@ async def get_owner_statement(
 # ============================================================================
 
 @router.post("/housekeeping/sync")
-async def sync_housekeeping(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_MUTATE),
-    db: AsyncSession = Depends(get_db),
-):
+async def sync_housekeeping(db: AsyncSession = Depends(get_db)):
     """
     Pull the full housekeeping/cleaning schedule from Streamline and
     create or update HousekeepingTask records.
@@ -590,10 +581,7 @@ async def sync_housekeeping(
 
 
 @router.get("/housekeeping/report")
-async def preview_housekeeping_report(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_READ),
-    unit_id: Optional[int] = Query(None),
-):
+async def preview_housekeeping_report(unit_id: Optional[int] = Query(None)):
     """Preview Streamline housekeeping report (live, no DB write)."""
     vrs = StreamlineVRS()
     try:
@@ -610,10 +598,7 @@ async def preview_housekeeping_report(
 # ============================================================================
 
 @router.post("/feedback/sync")
-async def sync_guest_feedback(
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_MUTATE),
-    db: AsyncSession = Depends(get_db),
-):
+async def sync_guest_feedback(db: AsyncSession = Depends(get_db)):
     """
     Pull all guest feedback from Streamline and insert as GuestReview records.
     Skips feedback already imported (by streamline_feedback_id).
@@ -723,7 +708,7 @@ async def sync_guest_feedback(
 
 
 @router.get("/feedback/preview")
-async def preview_feedback(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
+async def preview_feedback():
     """Preview all guest feedback from Streamline (live, no DB write)."""
     vrs = StreamlineVRS()
     try:
@@ -740,10 +725,7 @@ async def preview_feedback(_: StaffUser = Depends(_INTEGRATIONS_STAFF_READ)):
 # ============================================================================
 
 @router.get("/guests/{guest_email}/history")
-async def get_guest_history_by_email(
-    guest_email: str,
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_READ),
-):
+async def get_guest_history_by_email(guest_email: str):
     """
     Look up a guest by email and return their full reservation history
     from Streamline.
@@ -779,10 +761,7 @@ async def get_guest_history_by_email(
 
 
 @router.get("/reservation/{confirmation_code}/detail")
-async def get_reservation_detail(
-    confirmation_code: str,
-    _: StaffUser = Depends(_INTEGRATIONS_STAFF_READ),
-):
+async def get_reservation_detail(confirmation_code: str):
     """
     Fetch full reservation detail from Streamline including
     taxes, fees, commissions, payment folio, and housekeeping.

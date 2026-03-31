@@ -11,9 +11,10 @@ from sqlalchemy import select, desc, func, or_
 from pydantic import BaseModel, Field
 
 from backend.core.database import get_db
+from backend.core.security import require_manager_or_admin
 from backend.models import DamageClaim, Reservation, Property, Guest
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 
 class DamageClaimCreate(BaseModel):
@@ -363,10 +364,9 @@ async def _embed_claim_to_golden_memory(claim: DamageClaim, db) -> bool:
     import structlog
 
     from backend.core.config import settings
+    from backend.core.vector_db import embed_text as embed_text_vector
 
     logger = structlog.get_logger()
-    EMBED_URL = "http://192.168.0.100/api/embeddings"
-    EMBED_MODEL = "nomic-embed-text"
     COLLECTION = "fgp_golden_claims"
     VECTOR_DIM = 768
 
@@ -375,12 +375,17 @@ async def _embed_claim_to_golden_memory(claim: DamageClaim, db) -> bool:
     if not evidence and not draft:
         return False
 
-    embed_text = f"Damage: {evidence}. Response: {draft[:1000]}"
+    combined = f"Damage: {evidence}. Response: {draft[:1000]}"
 
     qdrant_url = settings.qdrant_url.rstrip("/")
     headers = {"api-key": settings.qdrant_api_key} if settings.qdrant_api_key else {}
 
     try:
+        vec = await embed_text_vector(combined[:8000])
+        if len(vec) != VECTOR_DIM:
+            logger.warning("golden_embed_dim_mismatch", expected=VECTOR_DIM, got=len(vec))
+            return False
+
         async with httpx.AsyncClient(timeout=30) as client:
             # Ensure collection exists
             check = await client.get(f"{qdrant_url}/collections/{COLLECTION}", headers=headers)
@@ -390,17 +395,6 @@ async def _embed_claim_to_golden_memory(claim: DamageClaim, db) -> bool:
                     json={"vectors": {"size": VECTOR_DIM, "distance": "Cosine"}},
                     headers=headers,
                 )
-
-            # Generate embedding
-            embed_resp = await client.post(
-                EMBED_URL,
-                json={"model": EMBED_MODEL, "prompt": embed_text[:8000]},
-            )
-            embed_resp.raise_for_status()
-            vec = embed_resp.json().get("embedding", [])
-            if len(vec) != VECTOR_DIM:
-                logger.warning("golden_embed_dim_mismatch", expected=VECTOR_DIM, got=len(vec))
-                return False
 
             # Deterministic point ID
             seed = f"golden_claim:{claim.id}"
@@ -414,7 +408,7 @@ async def _embed_claim_to_golden_memory(claim: DamageClaim, db) -> bool:
             payload = {
                 "claim_id": str(claim.id),
                 "claim_number": claim.claim_number or "",
-                "text": embed_text[:2000],
+                "text": combined[:2000],
                 "damage_description": evidence[:500],
                 "legal_draft": draft[:1000],
                 "resolution": (claim.resolution or "")[:500],

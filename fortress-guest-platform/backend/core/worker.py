@@ -29,6 +29,9 @@ from backend.services.async_jobs import (
     mark_job_succeeded,
     utcnow,
 )
+from backend.services.airdna_client import AirDNASyncJobPayload, run_airdna_sync
+from backend.services.acquisition_foia import FoiaIngestJobPayload, run_fannin_foia_ingest
+from backend.services.acquisition_ingestion import AcquisitionIngestionRequest, run_acquisition_ingestion_cycle
 from backend.services.scout_action_router import research_scout_action_router
 from backend.services.research_scout import ResearchScoutService
 from backend.services.seo_deploy_consumer import SEODeployWorker
@@ -420,6 +423,46 @@ async def startup(ctx: dict[str, Any]) -> None:
     else:
         logger.info("research_scout_disabled")
 
+    if settings.acquisition_worker_enabled:
+        acquisition_task = asyncio.create_task(
+            _acquisition_ingestion_loop(),
+            name="acquisition_ingestion_task",
+        )
+        ctx["acquisition_ingestion_task"] = acquisition_task
+        acquisition_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "acquisition_ingestion_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "acquisition_ingestion_started",
+            interval_seconds=settings.acquisition_worker_interval_seconds,
+            county_name=settings.acquisition_default_county,
+        )
+    else:
+        logger.info("acquisition_ingestion_disabled")
+
+    if settings.airdna_sync_enabled:
+        airdna_task = asyncio.create_task(
+            _airdna_sync_loop(),
+            name="airdna_sync_task",
+        )
+        ctx["airdna_sync_task"] = airdna_task
+        airdna_task.add_done_callback(
+            lambda completed_task: _log_background_task_result(
+                "airdna_sync_task",
+                completed_task,
+            ),
+        )
+        logger.info(
+            "airdna_sync_started",
+            interval_seconds=settings.airdna_sync_interval_seconds,
+            market=settings.airdna_market,
+        )
+    else:
+        logger.info("airdna_sync_disabled")
+
     if settings.concierge_shadow_draft_enabled:
         concierge_task = asyncio.create_task(
             _concierge_shadow_draft_loop(),
@@ -532,6 +575,16 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     if scout_task is not None:
         scout_task.cancel()
         await asyncio.gather(scout_task, return_exceptions=True)
+
+    acquisition_task = ctx.get("acquisition_ingestion_task")
+    if acquisition_task is not None:
+        acquisition_task.cancel()
+        await asyncio.gather(acquisition_task, return_exceptions=True)
+
+    airdna_task = ctx.get("airdna_sync_task")
+    if airdna_task is not None:
+        airdna_task.cancel()
+        await asyncio.gather(airdna_task, return_exceptions=True)
 
     concierge_task = ctx.get("concierge_shadow_draft_task")
     if concierge_task is not None:
@@ -667,6 +720,106 @@ async def _research_scout_loop() -> None:
             raise
         except Exception as exc:
             logger.error("research_scout_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
+async def _enqueue_acquisition_ingestion_if_idle() -> None:
+    if not settings.acquisition_worker_enabled:
+        logger.info("acquisition_ingestion_skip", reason="feature_disabled")
+        return
+
+    async with AsyncSessionLocal() as db:
+        queued = await count_jobs_by_status(
+            db,
+            status="queued",
+            job_name="acquisition_ingestion_cycle",
+        )
+        running = await count_jobs_by_status(
+            db,
+            status="running",
+            job_name="acquisition_ingestion_cycle",
+        )
+        if queued > 0 or running > 0:
+            logger.info(
+                "acquisition_ingestion_skip",
+                reason="job_already_in_flight",
+                queued=queued,
+                running=running,
+            )
+            return
+
+        payload = AcquisitionIngestionRequest().model_dump(mode="json")
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_acquisition_ingestion_job",
+            job_name="acquisition_ingestion_cycle",
+            payload=payload,
+            requested_by="system_acquisition_ingestion",
+            tenant_id=None,
+            request_id="acquisition-ingestion-observer",
+        )
+        logger.info("acquisition_ingestion_enqueued", job_id=str(job.id))
+
+
+async def _acquisition_ingestion_loop() -> None:
+    interval = max(900, int(settings.acquisition_worker_interval_seconds))
+    while True:
+        try:
+            await _enqueue_acquisition_ingestion_if_idle()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("acquisition_ingestion_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(interval)
+
+
+async def _enqueue_airdna_sync_if_idle() -> None:
+    if not settings.airdna_sync_enabled:
+        logger.info("airdna_sync_skip", reason="feature_disabled")
+        return
+
+    async with AsyncSessionLocal() as db:
+        queued = await count_jobs_by_status(
+            db,
+            status="queued",
+            job_name="airdna_str_signal_sync",
+        )
+        running = await count_jobs_by_status(
+            db,
+            status="running",
+            job_name="airdna_str_signal_sync",
+        )
+        if queued > 0 or running > 0:
+            logger.info(
+                "airdna_sync_skip",
+                reason="job_already_in_flight",
+                queued=queued,
+                running=running,
+            )
+            return
+
+        payload = AirDNASyncJobPayload().model_dump(mode="json")
+        job = await enqueue_async_job(
+            db,
+            worker_name="run_airdna_sync_job",
+            job_name="airdna_str_signal_sync",
+            payload=payload,
+            requested_by="system_airdna_sync",
+            tenant_id=None,
+            request_id="airdna-sync-observer",
+        )
+        logger.info("airdna_sync_enqueued", job_id=str(job.id))
+
+
+async def _airdna_sync_loop() -> None:
+    interval = max(900, int(settings.airdna_sync_interval_seconds))
+    while True:
+        try:
+            await _enqueue_airdna_sync_if_idle()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("airdna_sync_loop_error", error=str(exc)[:400])
         await asyncio.sleep(interval)
 
 
@@ -806,11 +959,12 @@ async def _with_job(job_id: str, job_try: int, runner) -> dict[str, Any]:
         job = await db.get(AsyncJobRun, job_id)
         if job is None:
             raise RuntimeError(f"Async job {job_id} not found")
+        job_name = str(job.job_name)
         await mark_job_running(db, job, attempts=job_try)
         try:
             result = await runner(db, job)
         except Exception as exc:
-            logger.exception("async_job_failed", job_id=job_id, job_name=job.job_name)
+            logger.exception("async_job_failed", job_id=job_id, job_name=job_name)
             await mark_job_failed(db, job, str(exc), attempts=job_try)
             raise
         await mark_job_succeeded(db, job, result)
@@ -956,6 +1110,46 @@ async def run_research_scout_job(ctx: dict[str, Any], job_id: str) -> dict[str, 
         )
         summary["actions"] = actions
         return {"research_scout": summary}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_acquisition_ingestion_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        payload = AcquisitionIngestionRequest.model_validate(job.payload_json or {})
+        summary = await run_acquisition_ingestion_cycle(db, payload)
+        return {"acquisition_ingestion": summary}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_fannin_foia_ingest_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        payload = FoiaIngestJobPayload.model_validate(job.payload_json or {})
+        file_bytes = Path(payload.spool_path).read_bytes()
+        try:
+            summary = await run_fannin_foia_ingest(
+                db,
+                filename=payload.filename,
+                file_bytes=file_bytes,
+                county_name=payload.county_name,
+                dry_run=payload.dry_run,
+            )
+        finally:
+            try:
+                Path(payload.spool_path).unlink(missing_ok=True)
+            except Exception:
+                pass
+        return {"foia_fannin_str_ingest": summary}
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_airdna_sync_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        payload = AirDNASyncJobPayload.model_validate(job.payload_json or {})
+        summary = await run_airdna_sync(db, payload)
+        return {"airdna_sync": summary}
 
     return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
 
@@ -1501,6 +1695,9 @@ class WorkerSettings:
         run_shadow_audit_job,
         run_seo_parity_observation_job,
         run_research_scout_job,
+        run_acquisition_ingestion_job,
+        run_fannin_foia_ingest_job,
+        run_airdna_sync_job,
         run_concierge_shadow_draft_job,
         run_hunter_queue_sweep_job,
         run_hunter_execute_job,

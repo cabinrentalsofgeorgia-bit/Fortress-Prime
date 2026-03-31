@@ -1,0 +1,49 @@
+services:
+  hermes:
+    container_name: fortress-hermes
+    image: fortress-hermes:cuda13
+    build:
+      context: ../../../fortress-guest-platform
+      dockerfile: ../deploy/compute/hermes/Dockerfile
+      args:
+        CUDA_IMAGE: ${HERMES_CUDA_IMAGE:-nvidia/cuda:13.0.0-runtime-ubuntu22.04}
+        HERMES_UID: ${HERMES_UID:-1000}
+        HERMES_GID: ${HERMES_GID:-1000}
+    restart: on-failure:3
+    env_file:
+      - ../../../fortress-guest-platform/.env
+      - ../../../fortress-guest-platform/.env.dgx
+      - ../../../.env.security
+    environment:
+      HERMES_PORT: ${HERMES_HOST_PORT:-8310}
+      HERMES_MEMORY_PATH: /app/memory
+      HERMES_SYSTEM_PROMPT_PATH: ${HERMES_SYSTEM_PROMPT_PATH:-/app/docs/paperclip/AGENTS.md}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      PYTHONUNBUFFERED: "1"
+    gpus: all
+    network_mode: host
+    command: >
+      sh -lc "uvicorn hermes_app:app --host 0.0.0.0 --port ${HERMES_HOST_PORT:-8310}"
+    volumes:
+      - type: bind
+        source: ${HERMES_MEMORY_HOST_PATH:-/opt/crog/hermes_memory}
+        target: /app/memory
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../../docs/paperclip/AGENTS.md
+        target: /app/docs/paperclip/AGENTS.md
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import os, urllib.request; urllib.request.urlopen(f"http://127.0.0.1:{os.getenv('HERMES_PORT', '8310')}/healthz", timeout=5).read()
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s

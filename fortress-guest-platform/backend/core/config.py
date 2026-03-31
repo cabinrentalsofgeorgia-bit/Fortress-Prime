@@ -12,8 +12,22 @@ from pydantic_settings import BaseSettings
 DEFAULT_HISTORIAN_BLUEPRINT_PATH = str(
     Path(__file__).resolve().parents[1] / "scripts" / "drupal_granular_blueprint.json"
 )
+DEFAULT_HERMES_SYSTEM_PROMPT_PATH = str(
+    Path(__file__).resolve().parents[3] / "docs" / "paperclip" / "AGENTS.md"
+)
 ALLOWED_POSTGRES_DATABASES = frozenset({"fortress_prod", "fortress_shadow"})
-ALLOWED_POSTGRES_HOST = "127.0.0.1"
+# Loopback plus dual-lane 200G RoCE /30 backplane (node-1 .1, node-2 .2 per lane).
+ALLOWED_POSTGRES_HOSTS = frozenset(
+    {
+        "127.0.0.1",
+        "localhost",
+        "::1",
+        "10.101.1.1",
+        "10.101.1.2",
+        "10.101.2.1",
+        "10.101.2.2",
+    }
+)
 ALLOWED_POSTGRES_PORT = 5432
 ALLOWED_POSTGRES_SCHEMES = frozenset({"postgres", "postgresql", "postgresql+asyncpg"})
 
@@ -21,6 +35,11 @@ ALLOWED_POSTGRES_SCHEMES = frozenset({"postgres", "postgresql", "postgresql+asyn
 class Settings(BaseSettings):
     environment: str = Field(default="development")
     debug: bool = Field(default=False)
+    db_auto_create_tables: bool = Field(
+        default=False,
+        alias="DB_AUTO_CREATE_TABLES",
+        description="Opt-in dev convenience flag for SQLAlchemy create_all() at startup.",
+    )
 
     # Database
     postgres_admin_uri: str = Field(
@@ -90,15 +109,19 @@ class Settings(BaseSettings):
 
     @field_validator("postgres_admin_uri", "postgres_api_uri")
     @classmethod
-    def _validate_local_postgres_contract(cls, value: str) -> str:
+    def _validate_sovereign_postgres_contract(cls, value: str) -> str:
         if not value:
             return value
 
         parsed = urlsplit(value)
         if parsed.scheme not in ALLOWED_POSTGRES_SCHEMES:
             raise ValueError("PostgreSQL URIs must use postgres/postgresql schemes only.")
-        if parsed.hostname != ALLOWED_POSTGRES_HOST:
-            raise ValueError(f"PostgreSQL host must be {ALLOWED_POSTGRES_HOST}.")
+        host = (parsed.hostname or "").strip().lower()
+        if host == "localhost":
+            host = "127.0.0.1"
+        if host not in ALLOWED_POSTGRES_HOSTS:
+            allowed = ", ".join(sorted(ALLOWED_POSTGRES_HOSTS))
+            raise ValueError(f"PostgreSQL host must be one of: {allowed}.")
         if parsed.port != ALLOWED_POSTGRES_PORT:
             raise ValueError(f"PostgreSQL port must be {ALLOWED_POSTGRES_PORT}.")
         if not parsed.username:
@@ -257,6 +280,86 @@ class Settings(BaseSettings):
         description="Authoritative Ray-governed NemoClaw control-plane base URL on the sovereign head node.",
     )
     nemoclaw_orchestrator_api_key: str = Field(default="")
+    paperclip_control_plane_url: str = Field(
+        default="",
+        alias="PAPERCLIP_CONTROL_PLANE_URL",
+        description="Paperclip control-plane base URL used for Fortress BYOA callback delivery.",
+    )
+    paperclip_control_plane_api_key: str = Field(
+        default="",
+        alias="PAPERCLIP_CONTROL_PLANE_API_KEY",
+        description="Paperclip API key used by the Fortress bridge to POST heartbeat-run callbacks.",
+    )
+    hermes_system_prompt_path: str = Field(
+        default=DEFAULT_HERMES_SYSTEM_PROMPT_PATH,
+        alias="HERMES_SYSTEM_PROMPT_PATH",
+        description="Absolute path to the AGENTS.md contract injected into Hermes/Paperclip execute payloads.",
+    )
+    hermes_memory_path: str = Field(
+        default="/app/memory",
+        alias="HERMES_MEMORY_PATH",
+        description="Persistent SQLite/FTS5 working directory mounted into the Hermes container.",
+    )
+    firecrawl_api_key: str = Field(
+        default="",
+        alias="FIRECRAWL_API_KEY",
+        description="Firecrawl API key used by the acquisition ingestion worker.",
+    )
+    firecrawl_base_url: str = Field(
+        default="https://api.firecrawl.dev",
+        alias="FIRECRAWL_BASE_URL",
+        description="Base URL for Firecrawl extract/scrape requests.",
+    )
+    firecrawl_timeout_seconds: float = Field(
+        default=120.0,
+        alias="FIRECRAWL_TIMEOUT_SECONDS",
+        description="HTTP timeout for Firecrawl ingestion requests.",
+    )
+    apollo_api_key: str = Field(
+        default="",
+        alias="APOLLO_API_KEY",
+        description="Apollo master API key used for owner contact enrichment.",
+    )
+    apollo_base_url: str = Field(
+        default="https://api.apollo.io/api/v1",
+        alias="APOLLO_BASE_URL",
+        description="Apollo API base URL for people search and enrichment.",
+    )
+    airdna_api_key: str = Field(
+        default="",
+        alias="AIRDNA_API_KEY",
+        description="AirDNA API key used for vendor-grade STR signal ingestion.",
+    )
+    airdna_base_url: str = Field(
+        default="",
+        alias="AIRDNA_BASE_URL",
+        description="AirDNA base URL for STR market sync calls.",
+    )
+    airdna_market_path: str = Field(
+        default="",
+        alias="AIRDNA_MARKET_PATH",
+        description="Relative AirDNA path used by the STR sync worker to fetch market or listing data.",
+    )
+    airdna_timeout_seconds: float = Field(
+        default=45.0,
+        alias="AIRDNA_TIMEOUT_SECONDS",
+        description="HTTP timeout for AirDNA market sync requests.",
+    )
+    airdna_market: str = Field(
+        default="Fannin County, Georgia",
+        alias="AIRDNA_MARKET",
+        description="Default AirDNA market label for the STR sync worker.",
+    )
+    airdna_sync_enabled: bool = Field(
+        default=False,
+        alias="AIRDNA_SYNC_ENABLED",
+        description="Enables recurring AirDNA STR signal sync jobs on the ARQ worker.",
+    )
+    airdna_sync_interval_seconds: int = Field(
+        default=21600,
+        alias="AIRDNA_SYNC_INTERVAL_SECONDS",
+        description="Seconds between recurring AirDNA STR sync enqueue attempts.",
+    )
     orchestrator_source: str = Field(default="spark_node_2_leader")
     inbound_agentic_loop_enabled: bool = Field(default=True)
     swarm_model: str = Field(default="qwen2.5:14b")
@@ -291,6 +394,46 @@ class Settings(BaseSettings):
         default="Blue Ridge, Georgia",
         alias="RESEARCH_SCOUT_MARKET",
         description="Primary market locality used by the Research Scout prompt.",
+    )
+    acquisition_worker_enabled: bool = Field(
+        default=False,
+        alias="ACQUISITION_WORKER_ENABLED",
+        description="Enables recurring CROG acquisition ingestion cycles on the ARQ worker.",
+    )
+    acquisition_worker_interval_seconds: int = Field(
+        default=21600,
+        alias="ACQUISITION_WORKER_INTERVAL_SECONDS",
+        description="Seconds between recurring acquisition ingestion enqueue attempts.",
+    )
+    acquisition_default_county: str = Field(
+        default="Fannin",
+        alias="ACQUISITION_DEFAULT_COUNTY",
+        description="Default county used when acquisition parcel records omit county_name.",
+    )
+    acquisition_qpublic_url: str = Field(
+        default="",
+        alias="ACQUISITION_QPUBLIC_URL",
+        description="qPublic or equivalent parcel-source URL for acquisition ingestion.",
+    )
+    acquisition_str_permits_url: str = Field(
+        default="",
+        alias="ACQUISITION_STR_PERMITS_URL",
+        description="County/municipal STR registry URL for acquisition ingestion.",
+    )
+    acquisition_ota_search_urls: str = Field(
+        default="",
+        alias="ACQUISITION_OTA_SEARCH_URLS",
+        description="Comma-separated OTA search URLs used for heuristic Airbnb/Vrbo sweeps.",
+    )
+    acquisition_ota_radius_meters: int = Field(
+        default=75,
+        alias="ACQUISITION_OTA_RADIUS_METERS",
+        description="Fallback PostGIS match radius for OTA listing coordinate resolution.",
+    )
+    acquisition_b2c_contact_provider: str = Field(
+        default="mock",
+        alias="ACQUISITION_B2C_CONTACT_PROVIDER",
+        description="B2C owner contact provider stage inserted after Apollo: mock|propertyradar|trellis.",
     )
     concierge_shadow_draft_enabled: bool = Field(
         default=False,
@@ -347,6 +490,10 @@ class Settings(BaseSettings):
     def swarm_seo_api_key(self) -> str:
         return self.seo_swarm_api_key
 
+    @property
+    def internal_api_bearer_token(self) -> str:
+        return (self.internal_api_token or self.swarm_api_key).strip()
+
     # AI Models — Cloud (fallback)
     openai_api_key: str = Field(default="")
     openai_model: str = Field(default="gpt-4o")
@@ -365,6 +512,18 @@ class Settings(BaseSettings):
     litellm_master_key: str = Field(
         default="fortress-dev-key",
         description="Bearer token used by internal services to authenticate to the LiteLLM proxy.",
+    )
+
+    # Internal service HTTP
+    internal_api_base_url: str = Field(
+        default="http://127.0.0.1:8100",
+        alias="INTERNAL_API_BASE_URL",
+        description="Trusted local Fortress API base URL used by sovereign workers (consumer, sweepers, rule engine).",
+    )
+    internal_api_token: str = Field(
+        default="",
+        alias="INTERNAL_API_TOKEN",
+        description="Bearer token for worker-to-API calls. Falls back to SWARM_API_KEY when unset.",
     )
 
     # Gateway
@@ -527,6 +686,12 @@ class Settings(BaseSettings):
     # Reservation Webhooks (HMAC shared secret for POST /api/webhooks/reservations)
     reservation_webhook_secret: str = Field(default="")
 
+    # Channex (or compatible headless channel manager) — POST /api/webhooks/channex
+    channex_webhook_secret: str = Field(default="", alias="CHANNEX_WEBHOOK_SECRET")
+    # Channex egress (availability push) — used by backend.workers.channex_egress
+    channex_api_base_url: str = Field(default="", alias="CHANNEX_API_BASE_URL")
+    channex_api_key: str = Field(default="", alias="CHANNEX_API_KEY")
+
     # Feature Flags
     enable_ai_responses: bool = Field(default=True)
     enable_auto_replies: bool = Field(default=False)
@@ -542,6 +707,7 @@ class Settings(BaseSettings):
     LEGAL_DISCOVERY_FOIA_ENABLED: bool = False  # Requires explicit override per case
     LEGAL_PROPORTIONALITY_MODE: str = "strict"  # 'strict' or 'advisory'
     LEGAL_GRAPH_MAX_NODES: int = 1500  # VRAM memory protection for the Swarm
+    LEGAL_VAULT_ROOT: str = "/mnt/fortress_nas/sectors/legal"
 
     # ==========================================
     # COURTLISTENER / JURISPRUDENCE ENGINE
@@ -564,6 +730,28 @@ class Settings(BaseSettings):
     sandbox_jailer_bin: str = Field(default="/usr/bin/jailer")
     sandbox_kernel_image: str = Field(default="")
     sandbox_rootfs_image: str = Field(default="")
+    sandbox_work_dir: str = Field(
+        default="/var/lib/fortress/fireclaw",
+        description="Per-run Fireclaw workspace root on the host (payload ext4 + FC config).",
+    )
+    sandbox_payload_mb: int = Field(
+        default=32,
+        ge=8,
+        le=256,
+        description="Size of the ephemeral ext4 payload volume (secondary drive) in MiB.",
+    )
+    sandbox_kernel_boot_args: str = Field(
+        default="",
+        description=(
+            "Kernel cmdline for Firecracker; empty uses a minimal virtio-root + serial console default."
+        ),
+    )
+    sandbox_interrogate_max_mb: int = Field(
+        default=48,
+        ge=1,
+        le=200,
+        description="Max upload size (MB) for Fireclaw interrogation mode (PDF/binary payload).",
+    )
 
     # Messaging
     max_message_length: int = Field(default=1600)
@@ -644,6 +832,63 @@ class Settings(BaseSettings):
 
     # Invites
     invite_expiry_hours: int = Field(default=72)
+
+    # System Health (sovereign telemetry: NVML, SNMP MikroTik, Synology mounts)
+    system_health_mikrotik_snmp_host: str = Field(
+        default="",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_HOST",
+        description="MikroTik (or switch) SNMP agent host. Empty disables SNMP interface polling.",
+    )
+    system_health_mikrotik_snmp_version: str = Field(
+        default="v2c",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_VERSION",
+        description="SNMP security model for telemetry polling: v2c or v3.",
+    )
+    system_health_mikrotik_snmp_community: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_COMMUNITY",
+        description="SNMPv2c community for MikroTik CRS / CRS812 telemetry.",
+    )
+    system_health_mikrotik_snmp_port: int = Field(
+        default=161,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_PORT",
+        description="SNMP UDP port (usually 161).",
+    )
+    system_health_mikrotik_snmp_if_indices: str = Field(
+        default="",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_IF_INDICES",
+        description="Comma-separated IF-MIB ifIndex values to poll (e.g. 1,2,3).",
+    )
+    system_health_mikrotik_snmp_v3_username: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_USERNAME",
+        description="SNMPv3 username for MikroTik telemetry polling.",
+    )
+    system_health_mikrotik_snmp_v3_auth_protocol: str | None = Field(
+        default="SHA",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_AUTH_PROTOCOL",
+        description="SNMPv3 auth protocol: SHA or MD5.",
+    )
+    system_health_mikrotik_snmp_v3_auth_key: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_AUTH_KEY",
+        description="SNMPv3 auth key for MikroTik telemetry polling.",
+    )
+    system_health_mikrotik_snmp_v3_priv_protocol: str | None = Field(
+        default="AES128",
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_PRIV_PROTOCOL",
+        description="SNMPv3 privacy protocol: AES128 or DES.",
+    )
+    system_health_mikrotik_snmp_v3_priv_key: str | None = Field(
+        default=None,
+        alias="SYSTEM_HEALTH_MIKROTIK_SNMP_V3_PRIV_KEY",
+        description="SNMPv3 privacy key for MikroTik telemetry polling.",
+    )
+    system_health_synology_mount_paths: str = Field(
+        default="/mnt/synology",
+        alias="SYSTEM_HEALTH_SYNOLOGY_MOUNT_PATHS",
+        description="Comma-separated mount paths for sovereign NAS capacity telemetry.",
+    )
 
     # Staff notifications
     staff_notification_email: str = Field(default="")

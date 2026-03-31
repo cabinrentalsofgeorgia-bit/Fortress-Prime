@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useMemo, useState } from "react";
+import {
+  buildAiForecastRequest,
+  buildAiListingRequest,
+  buildAiMaintenanceRequest,
+  useAiAsk,
+  useAiForecast,
+  useAiOptimizeListing,
+  useAiPredictMaintenance,
+} from "@/lib/ai-hooks";
+import { useConversations, useProperties, useReservations, useWorkOrders } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,11 +37,31 @@ interface AiResponse {
 export default function AiInsightsPage() {
   const [query, setQuery] = useState("");
   const [chat, setChat] = useState<AiResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [forecastLoading, setForecastLoading] = useState(false);
   const [forecast, setForecast] = useState<string | null>(null);
   const [maintenanceAlerts, setMaintenanceAlerts] = useState<string[] | null>(null);
   const [listingTips, setListingTips] = useState<string | null>(null);
+  const propertiesQuery = useProperties();
+  const reservationsQuery = useReservations();
+  const workOrdersQuery = useWorkOrders();
+  const conversationsQuery = useConversations();
+  const askAi = useAiAsk();
+  const forecastAi = useAiForecast();
+  const maintenanceAi = useAiPredictMaintenance();
+  const listingAi = useAiOptimizeListing();
+  const loading = askAi.isPending;
+  const forecastLoading = forecastAi.isPending;
+  const forecastRequest = useMemo(
+    () => buildAiForecastRequest(reservationsQuery.data),
+    [reservationsQuery.data],
+  );
+  const maintenanceRequest = useMemo(
+    () => buildAiMaintenanceRequest(workOrdersQuery.data, conversationsQuery.data),
+    [conversationsQuery.data, workOrdersQuery.data],
+  );
+  const listingRequest = useMemo(
+    () => buildAiListingRequest(propertiesQuery.data),
+    [propertiesQuery.data],
+  );
 
   async function handleAsk(e: React.FormEvent) {
     e.preventDefault();
@@ -40,31 +69,27 @@ export default function AiInsightsPage() {
     const userMsg: AiResponse = { role: "user", content: query.trim(), timestamp: new Date() };
     setChat((prev) => [...prev, userMsg]);
     setQuery("");
-    setLoading(true);
     try {
-      const res = await api.post<{ response: string }>("/api/ai/ask", { query: userMsg.content });
-      setChat((prev) => [...prev, { role: "ai", content: res.response ?? "No response", timestamp: new Date() }]);
+      const res = await askAi.mutateAsync({ question: userMsg.content });
+      setChat((prev) => [...prev, { role: "ai", content: res.answer ?? res.response ?? "No response", timestamp: new Date() }]);
     } catch {
       setChat((prev) => [...prev, { role: "ai", content: "AI engine is currently unavailable. Please check that the backend is running.", timestamp: new Date() }]);
     }
-    setLoading(false);
   }
 
   async function loadForecast() {
-    setForecastLoading(true);
     try {
-      const res = await api.get<{ forecast: string }>("/api/ai/forecast");
-      setForecast(res.forecast ?? "Revenue forecast data will appear here when the AI engine processes your historical data.");
+      const res = await forecastAi.mutateAsync(forecastRequest);
+      setForecast(res.summary ?? res.forecast ?? "Revenue forecast data will appear here when the AI engine processes your historical data.");
     } catch {
       setForecast("Revenue forecasting requires the AI engine to be running. Connect to Ollama to enable this feature.");
     }
-    setForecastLoading(false);
   }
 
   async function loadMaintenance() {
     try {
-      const res = await api.get<{ alerts: string[] }>("/api/ai/predict-maintenance");
-      setMaintenanceAlerts(res.alerts ?? ["No maintenance predictions available yet."]);
+      const res = await maintenanceAi.mutateAsync(maintenanceRequest);
+      setMaintenanceAlerts(res.alerts?.length ? res.alerts : res.analysis ? [res.analysis] : ["No maintenance predictions available yet."]);
     } catch {
       setMaintenanceAlerts(["Predictive maintenance requires work order history. Continue logging work orders to enable AI predictions."]);
     }
@@ -72,8 +97,8 @@ export default function AiInsightsPage() {
 
   async function loadListingTips() {
     try {
-      const res = await api.get<{ suggestions: string }>("/api/ai/optimize-listing");
-      setListingTips(res.suggestions ?? "Listing optimization suggestions will appear here.");
+      const res = await listingAi.mutateAsync(listingRequest);
+      setListingTips(res.suggestions ?? res.generated_description ?? "Listing optimization suggestions will appear here.");
     } catch {
       setListingTips("Listing optimization requires active properties with bookings. This feature analyzes your listing performance to suggest improvements.");
     }
@@ -146,7 +171,7 @@ export default function AiInsightsPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={loading}
               />
-              <Button size="icon" type="submit" disabled={loading || !query.trim()}>
+              <Button size="icon" type="submit" disabled={loading || !query.trim()} aria-label="Send question">
                 <Send className="h-4 w-4" />
               </Button>
             </form>
@@ -185,7 +210,7 @@ export default function AiInsightsPage() {
                 <Wrench className="h-4 w-4 text-orange-500" />
                 Predictive Maintenance
               </CardTitle>
-              <Button variant="outline" size="sm" onClick={loadMaintenance}>
+              <Button variant="outline" size="sm" onClick={loadMaintenance} disabled={maintenanceAi.isPending}>
                 Analyze
               </Button>
             </div>
@@ -217,7 +242,7 @@ export default function AiInsightsPage() {
               <CheckCircle className="h-5 w-5 text-blue-500" />
               Listing Optimization
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={loadListingTips}>
+            <Button variant="outline" size="sm" onClick={loadListingTips} disabled={listingAi.isPending}>
               Get Suggestions
             </Button>
           </div>

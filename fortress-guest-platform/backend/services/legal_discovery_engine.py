@@ -16,26 +16,50 @@ from uuid import UUID, uuid4
 
 import httpx
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import and_
-
+from backend.core.config import settings
 from backend.models.legal_discovery import DiscoveryDraftItem, DiscoveryDraftPack
 from backend.models.legal import DiscoveryDraftPack as DiscoveryDraftPackV2
 from backend.models.legal import DiscoveryDraftItem as DiscoveryDraftItemV2
-from backend.models.legal_graph import LegalCase
+from backend.models.legal_graph import CaseGraphEdge, CaseGraphNode, LegalCase
 from backend.models.legal_phase2 import JurisdictionRule
 from backend.services.ai_router import execute_resilient_inference
-from backend.services.legal_case_graph import get_case_graph_snapshot
-from backend.services.legal_case_graph import LegalCaseGraphBuilder
+from backend.services.legal_case_graph import (
+    LegalCaseGraphBuilder,
+    extract_raw_evidence_from_text,
+    get_case_graph_snapshot,
+)
 from backend.services.legal_hive_mind import get_approved_exemplars, inject_exemplars_into_prompt, get_godhead_exemplars
 
 logger = logging.getLogger(__name__)
 
 RULE_26_MAX_ITEMS = 25
-DISCOVERY_CHAT_URL = os.getenv("LEGAL_DISCOVERY_CHAT_URL", "http://192.168.0.100/v1/chat/completions")
-DISCOVERY_CHAT_MODEL = os.getenv("LEGAL_DISCOVERY_CHAT_MODEL", "qwen2.5:7b")
+
+
+def _normalize_chat_completions_url(raw_url: str) -> str:
+    value = (raw_url or "").strip().rstrip("/")
+    if not value:
+        value = getattr(settings, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
+    if value.endswith("/chat/completions"):
+        return value
+    if value.endswith("/v1"):
+        return f"{value}/chat/completions"
+    return f"{value}/v1/chat/completions"
+
+
+DISCOVERY_CHAT_URL = _normalize_chat_completions_url(
+    os.getenv("LEGAL_DISCOVERY_CHAT_URL", getattr(settings, "litellm_base_url", "http://127.0.0.1:4000/v1"))
+)
+DISCOVERY_CHAT_MODEL = os.getenv(
+    "LEGAL_DISCOVERY_CHAT_MODEL",
+    getattr(settings, "gemini_model", "gemini-2.5-pro"),
+)
+DISCOVERY_API_KEY = os.getenv(
+    "LEGAL_DISCOVERY_API_KEY",
+    str(getattr(settings, "litellm_master_key", "") or "").strip(),
+)
 
 
 PACK_TYPE_TO_RULE_TYPE = {
@@ -395,7 +419,10 @@ class LegalDiscoveryEngine:
 
         try:
             with httpx.Client(timeout=240.0) as client:
-                resp = client.post(DISCOVERY_CHAT_URL, json=llm_payload)
+                headers = {"Content-Type": "application/json"}
+                if DISCOVERY_API_KEY:
+                    headers["Authorization"] = f"Bearer {DISCOVERY_API_KEY}"
+                resp = client.post(DISCOVERY_CHAT_URL, json=llm_payload, headers=headers)
                 resp.raise_for_status()
                 llm_data = resp.json()
         except Exception as exc:
@@ -541,3 +568,274 @@ class LegalDiscoveryEngine:
                 }
             )
         return results
+
+    @staticmethod
+    async def ingest_raw_evidence(
+        db: AsyncSession,
+        *,
+        case_slug: str,
+        legacy_pack_id: UUID,
+        payload_text: str,
+        source_document: str | None = None,
+        source_ref: str | None = None,
+        v2_pack_id: UUID | None = None,
+        target_entity_for_v2_pack: str | None = None,
+    ) -> dict:
+        """Paperclip / API entrypoint — see `ingest_raw_evidence_to_graph_and_discovery`."""
+        return await ingest_raw_evidence_to_graph_and_discovery(
+            db,
+            case_slug=case_slug,
+            legacy_pack_id=legacy_pack_id,
+            payload_text=payload_text,
+            source_document=source_document,
+            source_ref=source_ref,
+            v2_pack_id=v2_pack_id,
+            target_entity_for_v2_pack=target_entity_for_v2_pack,
+        )
+
+
+async def ingest_raw_evidence_to_graph_and_discovery(
+    db: AsyncSession,
+    *,
+    case_slug: str,
+    legacy_pack_id: UUID,
+    payload_text: str,
+    source_document: str | None = None,
+    source_ref: str | None = None,
+    v2_pack_id: UUID | None = None,
+    target_entity_for_v2_pack: str | None = None,
+) -> dict:
+    """
+    Extract entities, graph edges, and claim/discovery lines from raw text and dual-write:
+    - `legal.case_graph_nodes` + `legal.case_graph_edges` (legacy)
+    - `legal.case_graph_nodes_v2` + `legal.case_graph_edges_v2`
+    - `legal.discovery_draft_items` under the given legacy pack
+    - `legal.discovery_draft_items_v2` under an existing or newly created v2 pack
+    """
+    slug = (case_slug or "").strip()
+    if not slug:
+        raise HTTPException(status_code=422, detail="case_slug is required")
+    if not (payload_text or "").strip():
+        raise HTTPException(status_code=422, detail="payload_text is required")
+
+    case_res = await db.execute(select(LegalCase).where(LegalCase.case_slug == slug))
+    legal_case = case_res.scalar_one_or_none()
+    if not legal_case:
+        raise HTTPException(status_code=404, detail=f"Legal case '{slug}' not found")
+
+    pack_res = await db.execute(
+        select(DiscoveryDraftPack).where(DiscoveryDraftPack.id == legacy_pack_id)
+    )
+    draft_pack = pack_res.scalar_one_or_none()
+    if not draft_pack:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Discovery draft pack '{legacy_pack_id}' not found",
+        )
+    if draft_pack.case_id != legal_case.id:
+        raise HTTPException(
+            status_code=422,
+            detail="legacy_pack_id does not belong to the given case_slug",
+        )
+
+    extraction = await extract_raw_evidence_from_text(
+        db,
+        payload_text,
+        source_document=source_document or "",
+        source_module="legal_discovery_raw_ingest",
+    )
+
+    prov_meta: dict = {
+        "ingest": "raw_evidence_bridge",
+        "source_ref": (source_ref or "").strip(),
+        "case_slug": slug,
+    }
+    if source_document and str(source_document).strip():
+        prov_meta["source_document"] = str(source_document).strip()
+
+    now = datetime.now(timezone.utc)
+    label_to_legacy: dict[str, UUID] = {}
+    label_to_v2: dict[str, str] = {}
+    nodes_persisted = 0
+
+    for ent in extraction.nodes:
+        label = str(ent.label or "").strip()
+        if not label or label in label_to_legacy:
+            continue
+        entity_type = str(ent.entity_type or "unknown").strip()
+        meta = dict(ent.metadata or {})
+        if getattr(ent, "source_document", None):
+            meta.setdefault("source_document", ent.source_document)
+        meta.update(prov_meta)
+
+        nid = uuid4()
+        db.add(
+            CaseGraphNode(
+                id=nid,
+                case_id=legal_case.id,
+                entity_type=entity_type,
+                label=label[:500],
+                node_metadata=meta,
+                created_at=now,
+            )
+        )
+        await db.flush()
+        label_to_legacy[label] = nid
+        nodes_persisted += 1
+
+        v2_id = str(uuid4())
+        await db.execute(
+            text(
+                """
+                INSERT INTO legal.case_graph_nodes_v2
+                    (id, case_slug, entity_type, entity_reference_id, label, properties_json)
+                VALUES
+                    (:id, :case_slug, :entity_type, NULL, :label, CAST(:props AS jsonb))
+                """
+            ),
+            {
+                "id": v2_id,
+                "case_slug": slug,
+                "entity_type": entity_type,
+                "label": label[:500],
+                "props": json.dumps({**meta, "legacy_graph_node_id": str(nid)}),
+            },
+        )
+        label_to_v2[label] = v2_id
+
+    edges_persisted = 0
+    for edge in extraction.edges:
+        sl = str(edge.source_label or "").strip()
+        tl = str(edge.target_label or "").strip()
+        if sl not in label_to_legacy or tl not in label_to_legacy:
+            continue
+        db.add(
+            CaseGraphEdge(
+                id=uuid4(),
+                case_id=legal_case.id,
+                source_node_id=label_to_legacy[sl],
+                target_node_id=label_to_legacy[tl],
+                relationship_type=str(edge.relationship_type or "related").strip(),
+                weight=float(edge.weight if edge.weight is not None else 0.5),
+                source_ref=(str(edge.source_ref).strip() or None)
+                if edge.source_ref is not None and str(edge.source_ref).strip()
+                else None,
+                created_at=now,
+            )
+        )
+        edges_persisted += 1
+        if sl in label_to_v2 and tl in label_to_v2:
+            await db.execute(
+                text(
+                    """
+                    INSERT INTO legal.case_graph_edges_v2
+                        (id, case_slug, source_node_id, target_node_id, relationship_type, weight, source_evidence_id)
+                    VALUES
+                        (:id, :case_slug, :src, :tgt, :rel, :weight, NULL)
+                    """
+                ),
+                {
+                    "id": str(uuid4()),
+                    "case_slug": slug,
+                    "src": label_to_v2[sl],
+                    "tgt": label_to_v2[tl],
+                    "rel": str(edge.relationship_type or "related").strip(),
+                    "weight": float(edge.weight if edge.weight is not None else 0.5),
+                },
+            )
+
+    max_item = await db.scalar(
+        select(func.max(DiscoveryDraftItem.item_number)).where(
+            DiscoveryDraftItem.pack_id == legacy_pack_id
+        )
+    )
+    next_item = int(max_item or 0)
+
+    if v2_pack_id is not None:
+        v2p_res = await db.execute(
+            select(DiscoveryDraftPackV2).where(DiscoveryDraftPackV2.id == v2_pack_id)
+        )
+        pack_v2 = v2p_res.scalar_one_or_none()
+        if not pack_v2:
+            raise HTTPException(
+                status_code=404,
+                detail=f"v2_pack_id not found: {v2_pack_id}",
+            )
+        if pack_v2.case_slug != slug:
+            raise HTTPException(
+                status_code=422,
+                detail="v2_pack_id does not match case_slug",
+            )
+        effective_v2_pack: UUID = v2_pack_id
+    else:
+        effective_v2_pack = uuid4()
+        target_ent = (target_entity_for_v2_pack or "RawEvidenceIngest").strip()[:255] or "RawEvidenceIngest"
+        db.add(
+            DiscoveryDraftPackV2(
+                id=effective_v2_pack,
+                case_slug=slug,
+                target_entity=target_ent,
+                status="DRAFT",
+                created_at=now,
+            )
+        )
+        await db.flush()
+
+    max_seq = await db.scalar(
+        select(func.max(DiscoveryDraftItemV2.sequence_number)).where(
+            DiscoveryDraftItemV2.pack_id == effective_v2_pack
+        )
+    )
+    seq = int(max_seq or 0)
+
+    claims_persisted = 0
+    claim_summaries: list[dict] = []
+
+    for claim in extraction.claims:
+        content = str(claim.content or "").strip()
+        if not content:
+            continue
+        next_item += 1
+        seq += 1
+        db.add(
+            DiscoveryDraftItem(
+                id=uuid4(),
+                pack_id=legacy_pack_id,
+                item_number=next_item,
+                content=content,
+                relevance_score=0.85,
+                proportionality_flag=False,
+                created_at=now,
+            )
+        )
+        cat = str(claim.category or "CLAIM").upper()
+        if cat not in {"INTERROGATORY", "RFP", "ADMISSION"}:
+            cat = "INTERROGATORY"
+        rationale = str(claim.rationale or "").strip() or "Extracted from raw evidence ingest."
+        db.add(
+            DiscoveryDraftItemV2(
+                id=uuid4(),
+                pack_id=effective_v2_pack,
+                category=cat,
+                content=content,
+                rationale_from_graph=rationale,
+                sequence_number=seq,
+            )
+        )
+        claims_persisted += 1
+        claim_summaries.append(
+            {"item_number": next_item, "sequence_number": seq, "category": cat, "preview": content[:240]}
+        )
+
+    await db.commit()
+
+    return {
+        "case_slug": slug,
+        "legacy_pack_id": str(legacy_pack_id),
+        "v2_pack_id": str(effective_v2_pack),
+        "nodes_persisted": nodes_persisted,
+        "edges_persisted": edges_persisted,
+        "claims_persisted": claims_persisted,
+        "node_labels": list(label_to_legacy.keys())[:50],
+        "claims": claim_summaries,
+    }

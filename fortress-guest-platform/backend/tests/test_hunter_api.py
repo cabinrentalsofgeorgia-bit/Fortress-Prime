@@ -1,354 +1,387 @@
+"""Reactivation Hunter API contract tests."""
+
 from __future__ import annotations
 
-import os
+from datetime import date, timedelta
+from decimal import Decimal
+from pathlib import Path
 import sys
 import types
-from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-fake_arq = types.ModuleType("arq")
-fake_arq.create_pool = lambda *args, **kwargs: None
-fake_arq_connections = types.ModuleType("arq.connections")
-fake_arq_connections.ArqRedis = type("ArqRedis", (), {})
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
-class _FakeRedisSettings:
-    def __init__(self, *args, **kwargs) -> None:
-        self.args = args
-        self.kwargs = kwargs
+def _install_stub_module(module_name: str, *class_names: str) -> None:
+    module = types.ModuleType(module_name)
+    for class_name in class_names:
+        setattr(module, class_name, type(class_name, (), {}))
+    sys.modules.setdefault(module_name, module)
 
 
-fake_arq_connections.RedisSettings = _FakeRedisSettings
-sys.modules.setdefault("arq", fake_arq)
-sys.modules.setdefault("arq.connections", fake_arq_connections)
+_install_stub_module(
+    "backend.models.financial_primitives",
+    "Fee",
+    "Tax",
+    "PropertyTax",
+    "PropertyFee",
+)
+_install_stub_module("backend.models.media", "PropertyImage")
+_install_stub_module("backend.models.property_stay_restriction", "PropertyStayRestriction")
+_install_stub_module("backend.models.pricing_override", "PricingOverride")
+_install_stub_module("backend.models.openshell_audit", "OpenShellAuditLog")
+_install_stub_module("backend.models.seo_redirect", "SeoRedirect")
+_install_stub_module("backend.models.seo_redirect_remap", "SeoRedirectRemapQueue")
+_install_stub_module("backend.models.async_job", "AsyncJobRun")
+_install_stub_module(
+    "backend.models.vrs_add_on",
+    "VRSAddOn",
+    "VRSAddOnPricingModel",
+    "VRSAddOnScope",
+)
 
-from backend.api import hunter as hunter_api
-from backend.api.hunter import router as hunter_router
+import backend.api.hunter as hunter_api
 from backend.core.database import get_db
-from backend.core.queue import get_arq_pool
-from backend.core.security import get_current_user
-from backend.models.hunter_recovery_op import HunterRecoveryOpStatus
-from backend.models.staff import StaffRole
+from backend.core.security import require_manager_or_admin
+from backend.core.security import require_operator_manager_admin
 
 
-def build_test_app() -> FastAPI:
+def build_hunter_test_app() -> FastAPI:
     app = FastAPI()
-    app.include_router(hunter_router, prefix="/api")
+    app.include_router(hunter_api.router, prefix="/api")
     return app
 
 
-class DummyScalarResult:
-    def __init__(self, value) -> None:
-        self._value = value
-
-    def scalars(self) -> "DummyScalarResult":
-        return self
-
-    def all(self):
-        return self._value
-
-    def scalar_one_or_none(self):
-        return self._value
-
-
-@pytest.mark.asyncio
-async def test_hunter_queue_supports_pending_review_alias() -> None:
-    app = build_test_app()
-    now = datetime(2026, 3, 26, 7, 25, tzinfo=timezone.utc)
-    rows = [
-        SimpleNamespace(
-            id=uuid4(),
-            session_fp="session-fp-queued",
-            property_id=uuid4(),
-            reservation_id=uuid4(),
-            guest_phone="+17065551212",
-            guest_email="queued@example.com",
-            campaign="reactivation",
-            payload={"source": "streamline"},
-            score=87,
-            status="queued",
-            last_error=None,
-            created_at=now,
-            updated_at=now,
-        ),
-        SimpleNamespace(
-            id=uuid4(),
-            session_fp="session-fp-processing",
-            property_id=None,
-            reservation_id=None,
-            guest_phone=None,
-            guest_email="processing@example.com",
-            campaign="reactivation",
-            payload={"source": "shadow"},
-            score=73,
-            status="processing",
-            last_error=None,
-            created_at=now,
-            updated_at=now,
-        ),
-    ]
-
-    class DummySession:
-        async def execute(self, _query):
-            return DummyScalarResult(rows)
+@pytest.fixture
+def app() -> FastAPI:
+    app = build_hunter_test_app()
+    session = AsyncMock()
+    session.add = MagicMock()
 
     async def override_get_db():
-        yield DummySession()
+        yield session
 
-    async def override_get_current_user():
+    async def override_user():
         return SimpleNamespace(
             id=uuid4(),
-            email="reviewer@example.com",
-            role=StaffRole.REVIEWER,
-            is_active=True,
+            email="operator@fortress.local",
+            role="operator",
         )
 
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/hunter/queue?status_filter=pending_review&limit=50")
-
-    app.dependency_overrides.clear()
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert [row["status"] for row in payload] == ["queued", "processing"]
-    assert payload[0]["guest_email"] == "queued@example.com"
-    assert payload[1]["payload"] == {"source": "shadow"}
-    assert payload[0]["session_fp"] == "session-fp-queued"
+    app.dependency_overrides[require_operator_manager_admin] = override_user
+    app.dependency_overrides[require_manager_or_admin] = override_user
+    app.state.test_session = session
+    return app
 
 
 @pytest.mark.asyncio
-async def test_hunter_execute_enqueues_job_and_marks_processing(monkeypatch: pytest.MonkeyPatch) -> None:
-    app = build_test_app()
-    entry = SimpleNamespace(
+async def test_get_reactivation_targets_returns_strict_payload(app: FastAPI) -> None:
+    today = date.today()
+    valid_guest = SimpleNamespace(
         id=uuid4(),
-        session_fp="abc123sessionfp00",
-        status="queued",
-        last_error=None,
+        full_name="Ada Lovelace",
+        email="ada@example.com",
+        lifetime_revenue=Decimal("12500.00"),
+        last_stay_date=today - timedelta(days=420),
+        lifetime_stays=4,
+        total_stays=4,
+        is_vip=True,
+        opt_in_marketing=True,
     )
-    events: list[str] = []
+    blank_email_guest = SimpleNamespace(
+        id=uuid4(),
+        full_name="No Email",
+        email="   ",
+        lifetime_revenue=Decimal("9000.00"),
+        last_stay_date=today - timedelta(days=400),
+        lifetime_stays=2,
+        total_stays=2,
+        is_vip=False,
+        opt_in_marketing=True,
+    )
 
-    class DummySession:
-        async def execute(self, _query):
-            return DummyScalarResult(entry)
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = [valid_guest, blank_email_guest]
+    app.state.test_session.execute = AsyncMock(return_value=result)
 
-        async def commit(self):
-            events.append("commit")
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/vrs/hunter/targets")
 
-    async def override_get_db():
-        yield DummySession()
+    body = response.json()
+    assert response.status_code == 200
+    assert len(body) == 1
+    assert body[0]["guest_id"] == str(valid_guest.id)
+    assert body[0]["full_name"] == "Ada Lovelace"
+    assert body[0]["email"] == "ada@example.com"
+    assert body[0]["lifetime_value"] == 12500.0
+    assert body[0]["days_dormant"] == 420
+    assert isinstance(body[0]["target_score"], int)
+    assert body[0]["target_score"] > 0
 
-    async def override_get_current_user():
-        return SimpleNamespace(
-            id=uuid4(),
-            email="reviewer@example.com",
-            role=StaffRole.REVIEWER,
-            is_active=True,
-        )
 
-    async def override_get_arq_pool():
-        return object()
+def test_target_score_caps_at_100_for_extreme_profiles() -> None:
+    guest = SimpleNamespace(
+        is_vip=True,
+        lifetime_stays=50,
+        total_stays=50,
+        opt_in_marketing=True,
+    )
 
-    async def fake_enqueue_async_job(
-        db,
-        *,
-        worker_name: str,
-        job_name: str,
-        payload: dict,
-        requested_by: str | None = None,
-        tenant_id: str | None = None,
-        request_id: str | None = None,
-        redis=None,
+    score = hunter_api._target_score(guest, revenue=200000.0, days_dormant=1200)
+
+    assert score == 100
+
+
+@pytest.mark.asyncio
+async def test_dispatch_reactivation_agent_queues_event(app: FastAPI) -> None:
+    with (
+        patch("backend.api.hunter.publish_vrs_event", new=AsyncMock(return_value=True)),
+        patch("backend.api.hunter.queue_depth", new=AsyncMock(return_value=7)),
+        patch("backend.api.hunter.record_audit_event", new=AsyncMock(return_value=None)),
     ):
-        events.append(f"enqueue:{worker_name}:{job_name}:{payload['session_fp']}:{requested_by}")
-        return SimpleNamespace(id="job-hunter-execute-123")
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/vrs/hunter/dispatch",
+                json={
+                    "guest_id": str(uuid4()),
+                    "full_name": "Ada Lovelace",
+                    "target_score": 91,
+                },
+            )
 
-    monkeypatch.setattr(hunter_api, "enqueue_async_job", fake_enqueue_async_job)
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
-    app.dependency_overrides[get_arq_pool] = override_get_arq_pool
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/api/hunter/execute",
-            json={"session_fp": "abc123sessionfp00"},
-        )
-
-    app.dependency_overrides.clear()
-
+    body = response.json()
     assert response.status_code == 202
-    assert events == [
-        "enqueue:run_hunter_execute_job:hunter_execute:abc123sessionfp00:reviewer@example.com",
-        "commit",
-    ]
-    assert entry.status == "processing"
-    assert response.json()["job_id"] == "job-hunter-execute-123"
+    assert body["status"] == "queued"
+    assert body["message"] == "Agent dispatched for Ada Lovelace"
+    assert body["queue_depth"] == 7
+    assert body["queue_key"] == "fortress:events:streamline"
+    assert body["event_id"].startswith("hunter:")
 
 
 @pytest.mark.asyncio
-async def test_hunter_dismiss_deletes_candidate(monkeypatch: pytest.MonkeyPatch) -> None:
-    app = build_test_app()
-    events: list[str] = []
+async def test_hunter_queue_stats_returns_status_counts(app: FastAPI) -> None:
+    def _count(value: int) -> MagicMock:
+        result = MagicMock()
+        result.scalar.return_value = value
+        return result
 
-    async def override_get_db():
-        yield object()
-
-    async def override_get_current_user():
-        return SimpleNamespace(
-            id=uuid4(),
-            email="reviewer@example.com",
-            role=StaffRole.REVIEWER,
-            is_active=True,
-        )
-
-    async def fake_delete_hunter_candidate(_db, session_fp: str) -> bool:
-        events.append(session_fp)
-        return True
-
-    monkeypatch.setattr(hunter_api, "delete_hunter_candidate", fake_delete_hunter_candidate)
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.delete("/api/hunter/queue/abc123sessionfp")
-
-    app.dependency_overrides.clear()
-
-    assert response.status_code == 204
-    assert events == ["abc123sessionfp"]
-
-
-@pytest.mark.asyncio
-async def test_hunter_operations_lists_recovery_ops() -> None:
-    app = build_test_app()
-    now = datetime(2026, 3, 26, 19, 0, tzinfo=timezone.utc)
-    rows = [
-        SimpleNamespace(
-            id=uuid4(),
-            cart_id="session-fp-1",
-            guest_name="Ada Guest",
-            cabin_name="Ridge Line Lodge",
-            cart_value=321.45,
-            status=HunterRecoveryOpStatus.DRAFT_READY,
-            ai_draft_body="Draft body",
-            assigned_worker="192.168.0.104",
-            created_at=now,
-        )
-    ]
-
-    class DummySession:
-        async def execute(self, _query):
-            return DummyScalarResult(rows)
-
-    async def override_get_db():
-        yield DummySession()
-
-    async def override_get_current_user():
-        return SimpleNamespace(
-            id=uuid4(),
-            email="reviewer@example.com",
-            role=StaffRole.REVIEWER,
-            is_active=True,
-        )
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/hunter/operations")
-
-    app.dependency_overrides.clear()
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload[0]["cart_id"] == "session-fp-1"
-    assert payload[0]["status"] == "DRAFT_READY"
-    assert payload[0]["assigned_worker"] == "192.168.0.104"
-
-
-@pytest.mark.asyncio
-async def test_hunter_approve_dispatches_recovery(monkeypatch: pytest.MonkeyPatch) -> None:
-    app = build_test_app()
-    op_id = uuid4()
-    op = SimpleNamespace(
-        id=op_id,
-        cart_id="abc123sessionfp00",
-        guest_name="Ada Guest",
-        cabin_name="Ridge Line Lodge",
-        cart_value=None,
-        status=HunterRecoveryOpStatus.DRAFT_READY,
-        ai_draft_body="Return for your stay.",
-        assigned_worker="192.168.0.104",
-        created_at=datetime(2026, 3, 26, 19, 5, tzinfo=timezone.utc),
+    app.state.test_session.execute = AsyncMock(
+        side_effect=[
+            _count(2),
+            _count(3),
+            _count(1),
+            _count(4),
+            _count(0),
+            _count(0),
+            _count(1),
+        ]
     )
-    guest = SimpleNamespace(email="ada@example.com", phone=None)
-    events: list[str] = []
-
-    class DummySession:
-        async def get(self, model, lookup_id):
-            assert lookup_id == op_id
-            return op
-
-        async def commit(self):
-            events.append("commit")
-
-    async def override_get_db():
-        yield DummySession()
-
-    async def override_get_current_user():
-        return SimpleNamespace(
-            id=uuid4(),
-            email="manager@example.com",
-            role=StaffRole.MANAGER,
-            is_active=True,
-        )
-
-    async def fake_resolve_recovery_guest_contact(db, *, cart_id: str):
-        events.append(f"resolve:{cart_id}")
-        return guest
-
-    async def fake_dispatch_recovery_contact(*, guest, op):
-        events.append(f"dispatch:{guest.email}:{op.cart_id}")
-        return "email"
-
-    async def fake_record_audit_event(**kwargs):
-        events.append(f"audit:{kwargs['tool_name']}:{kwargs['resource_id']}")
-        return None
-
-    monkeypatch.setattr(hunter_api, "_resolve_recovery_guest_contact", fake_resolve_recovery_guest_contact)
-    monkeypatch.setattr(hunter_api, "_dispatch_recovery_contact", fake_dispatch_recovery_contact)
-    monkeypatch.setattr(hunter_api, "record_audit_event", fake_record_audit_event)
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = override_get_current_user
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(f"/api/hunter/approve/{op_id}")
+        response = await client.get("/api/vrs/hunter/queue/stats")
 
-    app.dependency_overrides.clear()
+    body = response.json()
+    assert response.status_code == 200
+    assert body["pending_review"] == 2
+    assert body["approved"] == 3
+    assert body["edited"] == 1
+    assert body["rejected"] == 4
+    assert body["failed"] == 1
+    assert body["total"] == 11
+
+
+@pytest.mark.asyncio
+async def test_edit_hunter_queue_entry_updates_status_and_message(app: FastAPI) -> None:
+    queue_entry = SimpleNamespace(
+        id=uuid4(),
+        status="pending_review",
+        final_human_message=None,
+        original_ai_draft="Original Hunter draft.",
+        guest=SimpleNamespace(full_name="Ada Lovelace", email="ada@example.com"),
+        prop=SimpleNamespace(name="Fallen Timber"),
+        error_log=None,
+    )
+    app.state.test_session.commit = AsyncMock(return_value=None)
+
+    with (
+        patch("backend.api.hunter._load_agent_queue_entry", new=AsyncMock(return_value=queue_entry)),
+        patch("backend.api.hunter._deliver_hunter_message", new=AsyncMock(return_value=(True, None))),
+        patch("backend.api.hunter.record_audit_event", new=AsyncMock(return_value=None)),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/vrs/hunter/queue/{queue_entry.id}/edit",
+                json={"final_human_message": "Edited draft copy."},
+            )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert queue_entry.status == "delivered"
+    assert queue_entry.final_human_message == "Edited draft copy."
+    assert body["status"] == "delivered"
+    assert body["delivery_status"] == "sent"
+
+
+@pytest.mark.asyncio
+async def test_approve_hunter_queue_entry_marks_failed_when_delivery_fails(app: FastAPI) -> None:
+    queue_entry = SimpleNamespace(
+        id=uuid4(),
+        status="pending_review",
+        final_human_message=None,
+        original_ai_draft="Original Hunter draft.",
+        guest=SimpleNamespace(full_name="Ada Lovelace", email="ada@example.com"),
+        prop=SimpleNamespace(name="Fallen Timber"),
+        error_log=None,
+    )
+    app.state.test_session.commit = AsyncMock(return_value=None)
+
+    with (
+        patch("backend.api.hunter._load_agent_queue_entry", new=AsyncMock(return_value=queue_entry)),
+        patch(
+            "backend.api.hunter._deliver_hunter_message",
+            new=AsyncMock(return_value=(False, "SMTP is not configured.")),
+        ),
+        patch("backend.api.hunter.record_audit_event", new=AsyncMock(return_value=None)),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/vrs/hunter/queue/{queue_entry.id}/approve",
+                json={},
+            )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert queue_entry.status == "failed"
+    assert queue_entry.error_log == "SMTP is not configured."
+    assert body["status"] == "failed"
+    assert body["delivery_status"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_retry_hunter_queue_entry_retries_failed_delivery(app: FastAPI) -> None:
+    queue_entry = SimpleNamespace(
+        id=uuid4(),
+        status="failed",
+        final_human_message="Retry this Hunter message.",
+        original_ai_draft="Original Hunter draft.",
+        guest=SimpleNamespace(full_name="Ada Lovelace", email="ada@example.com"),
+        prop=SimpleNamespace(name="Fallen Timber"),
+        error_log="SMTP is not configured.",
+    )
+    app.state.test_session.commit = AsyncMock(return_value=None)
+
+    with (
+        patch("backend.api.hunter._load_agent_queue_entry", new=AsyncMock(return_value=queue_entry)),
+        patch("backend.api.hunter._deliver_hunter_message", new=AsyncMock(return_value=(True, None))),
+        patch("backend.api.hunter.record_audit_event", new=AsyncMock(return_value=None)),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/vrs/hunter/queue/{queue_entry.id}/retry",
+                json={},
+            )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert queue_entry.status == "delivered"
+    assert body["status"] == "delivered"
+    assert body["delivery_status"] == "sent"
+
+
+@pytest.mark.asyncio
+async def test_approve_hunter_queue_entry_can_send_via_sms(app: FastAPI) -> None:
+    queue_entry = SimpleNamespace(
+        id=uuid4(),
+        status="pending_review",
+        final_human_message=None,
+        original_ai_draft="Original Hunter draft.",
+        guest=SimpleNamespace(full_name="Ada Lovelace", email="ada@example.com"),
+        prop=SimpleNamespace(name="Fallen Timber"),
+        error_log=None,
+    )
+    app.state.test_session.commit = AsyncMock(return_value=None)
+    deliver_mock = AsyncMock(return_value=(True, None))
+
+    with (
+        patch("backend.api.hunter._load_agent_queue_entry", new=AsyncMock(return_value=queue_entry)),
+        patch("backend.api.hunter._deliver_hunter_message", new=deliver_mock),
+        patch("backend.api.hunter.record_audit_event", new=AsyncMock(return_value=None)),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/vrs/hunter/queue/{queue_entry.id}/approve",
+                json={"channel": "sms"},
+            )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["status"] == "delivered"
+    assert body["delivery_channel"] == "sms"
+    assert deliver_mock.await_args.args[3] == "sms"
+
+
+@pytest.mark.asyncio
+async def test_audit_hunter_console_event_returns_accepted(app: FastAPI) -> None:
+    audit_mock = AsyncMock(return_value=None)
+    with patch("backend.api.hunter.record_audit_event", new=audit_mock):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/vrs/hunter/audit",
+                json={
+                    "event_name": "hunter.export.targets.csv",
+                    "metadata_json": {"row_count": 12},
+                },
+            )
+
+    body = response.json()
+    assert response.status_code == 202
+    assert body["status"] == "accepted"
+    assert audit_mock.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_approve_hunter_queue_entry_emits_audit(app: FastAPI) -> None:
+    queue_entry = SimpleNamespace(
+        id=uuid4(),
+        status="pending_review",
+        guest_id=uuid4(),
+        final_human_message=None,
+        original_ai_draft="Original Hunter draft.",
+        guest=SimpleNamespace(full_name="Ada Lovelace", email="ada@example.com"),
+        prop=SimpleNamespace(name="Fallen Timber"),
+        error_log=None,
+    )
+    app.state.test_session.commit = AsyncMock(return_value=None)
+    audit_mock = AsyncMock(return_value=None)
+
+    with (
+        patch("backend.api.hunter._load_agent_queue_entry", new=AsyncMock(return_value=queue_entry)),
+        patch("backend.api.hunter._deliver_hunter_message", new=AsyncMock(return_value=(True, None))),
+        patch("backend.api.hunter.record_audit_event", new=audit_mock),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/vrs/hunter/queue/{queue_entry.id}/approve",
+                json={"channel": "email"},
+            )
 
     assert response.status_code == 200
-    assert op.status == HunterRecoveryOpStatus.DISPATCHED
-    assert events == [
-        "resolve:abc123sessionfp00",
-        "dispatch:ada@example.com:abc123sessionfp00",
-        "commit",
-        f"audit:email:{op_id}",
-    ]
-    assert response.json()["channel"] == "email"
+    assert audit_mock.await_count == 1
+    assert audit_mock.await_args.kwargs["action"] == "hunter.queue.approve"
+    assert audit_mock.await_args.kwargs["resource_id"] == str(queue_entry.id)

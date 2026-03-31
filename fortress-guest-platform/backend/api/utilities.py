@@ -17,12 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.encryption import get_fernet, encrypt as _shared_encrypt, decrypt as _shared_decrypt
-from backend.core.security import get_current_user, require_manager_or_admin
+from backend.core.security import require_operator_manager_admin, require_manager_or_admin
 from backend.models.property_utility import PropertyUtility, UtilityReading, SERVICE_TYPES
 from backend.models.staff import StaffUser
 
 logger = structlog.get_logger()
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 def _get_fernet() -> Fernet:
@@ -125,7 +125,7 @@ class CostSummary(BaseModel):
 
 
 @router.get("/types")
-async def list_service_types(_user: StaffUser = Depends(get_current_user)):
+async def list_service_types():
     return SERVICE_TYPES
 
 
@@ -134,7 +134,6 @@ async def list_property_utilities(
     property_id: UUID,
     is_active: Optional[bool] = None,
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
 ):
     q = select(PropertyUtility).where(PropertyUtility.property_id == property_id)
     if is_active is not None:
@@ -278,7 +277,7 @@ async def reveal_password(utility_id: UUID, db: AsyncSession = Depends(get_db), 
 
 
 @router.post("/{utility_id}/readings", response_model=ReadingResponse, status_code=201)
-async def add_reading(utility_id: UUID, data: ReadingCreate, db: AsyncSession = Depends(get_db), _user: StaffUser = Depends(get_current_user)):
+async def add_reading(utility_id: UUID, data: ReadingCreate, db: AsyncSession = Depends(get_db)):
     u = await db.get(PropertyUtility, utility_id)
     if not u:
         raise HTTPException(status_code=404, detail="Utility account not found")
@@ -305,7 +304,6 @@ async def list_readings(
     end: Optional[date] = None,
     limit: int = Query(365, le=3650),
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
 ):
     q = select(UtilityReading).where(UtilityReading.utility_id == utility_id)
     if start:
@@ -332,7 +330,6 @@ async def utility_cost_analytics(
     property_id: UUID,
     period: str = Query("mtd", pattern="^(mtd|ytd|last30|last90|last365)$"),
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
 ):
     now = date.today()
     if period == "mtd":
@@ -395,7 +392,6 @@ async def utility_cost_analytics(
 async def portfolio_cost_summary(
     period: str = Query("mtd", pattern="^(mtd|ytd|last30|last90|last365)$"),
     db: AsyncSession = Depends(get_db),
-    _user: StaffUser = Depends(get_current_user),
 ):
     """Cross-property utility cost summary for the whole portfolio."""
     now = date.today()

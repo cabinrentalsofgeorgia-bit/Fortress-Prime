@@ -53,7 +53,7 @@ export function DiscoveryDraftPanel({ slug }: DiscoveryDraftPanelProps) {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const response = await fetch(`/api/legal/cases/${slug}/discovery/draft-pack`, {
+        const response = await fetch(`/api/internal/legal/cases/${slug}/discovery/draft-pack`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

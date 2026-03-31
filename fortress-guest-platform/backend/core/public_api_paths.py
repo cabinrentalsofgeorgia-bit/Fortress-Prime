@@ -36,7 +36,7 @@ PUBLIC_PATH_PREFIXES = (
     "/api/seo-patches/live/",
     "/api/seo-remaps/grade-results",
     "/api/checkout/",
-    "/api/copilot-queue/",
+    "/api/email-bridge/",
     "/api/vrs/automations/",
     "/api/direct-booking/property/",
     "/api/direct-booking/fleet/",
@@ -50,15 +50,15 @@ PUBLIC_PATH_PREFIXES = (
     "/api/vrs/leads/",
     "/api/webhooks/",
     "/api/dispatch/",
-    "/api/internal/deck-key",
     "/api/intelligence/projection/",
     "/api/v1/history/restore/",
     "/api/swarm/financial/",
     "/api/swarm/webhooks/streamline/test",
-    "/api/chat/concierge",
     "/api/content/",
     "/api/storefront/intent/",
     "/api/storefront/concierge/",
+    "/api/paperclip/",
+    "/api/agent/tools/",
 )
 
 _UUID_PATH_SEGMENT = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
@@ -67,6 +67,7 @@ _PUBLIC_QUOTE_PATTERNS = (
     re.compile(rf"^/api/quotes/{_UUID_PATH_SEGMENT}/checkout$"),
 )
 _PUBLIC_METHOD_PATTERNS = (
+    ("POST", re.compile(r"^/api/agent/execute$")),
     ("POST", re.compile(r"^/api/seo/patches$")),
     ("POST", re.compile(r"^/api/seo-patches/patches$")),
     ("POST", re.compile(rf"^/api/seo/patches/{_UUID_PATH_SEGMENT}/rewrite$")),
