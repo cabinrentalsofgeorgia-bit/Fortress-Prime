@@ -1,0 +1,24 @@
+#!/bin/sh
+# Fireclaw guest init — must be installed as /sbin/init (executable).
+set -eu
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+# Device nodes for virtio disks (if not present in minimal rootfs)
+mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+
+# Root is virtio ext4 mounted read-only; use tmpfs for mount points.
+mount -t tmpfs tmpfs /mnt
+mkdir -p /mnt/payload
+if ! mount /dev/vdb /mnt/payload; then
+  printf '%s\n' "FIRECLAW_RESULT{\"exit_code\":1,\"stdout\":\"\",\"stderr\":\"mount /dev/vdb failed\"}"
+  exec reboot -f
+fi
+
+if [ -f /mnt/payload/user_code.py ]; then
+  /usr/bin/python3 /opt/agent/exec_user.py /mnt/payload/user_code.py || true
+else
+  /usr/bin/python3 /opt/agent/interrogate.py /mnt/payload || true
+fi
+
+exec reboot -f

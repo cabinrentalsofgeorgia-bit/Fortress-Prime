@@ -1,0 +1,163 @@
+apiVersion: fortress.prime/v1alpha1
+kind: PaperclipManifest
+metadata:
+  name: v1.0_paperclip_manifest
+  version: "1.0"
+  objective: sovereign-paperclip-control-plane
+  owner: spark-node-2
+  description: >
+    Canonical deployment contract for running the Paperclip control plane on the
+    sovereign k3s cluster while delegating execution to the existing Fortress
+    FastAPI bridge and Ray-governed NemoClaw matrix.
+
+spec:
+  cluster:
+    control_plane:
+      node_id: spark-node-2
+      host: 192.168.0.100
+      runtime: k3s
+      services:
+        paperclip_namespace: paperclip
+        paperclip_service: paperclip.paperclip.svc.cluster.local:3100
+        ingress_class: traefik
+      responsibilities:
+        - serve the Paperclip UI and API
+        - persist workforce state inside paperclip_db
+        - invoke the Fortress BYOA bridge through HTTP adapter webhooks
+        - receive async callback completion from the Fortress bridge
+    execution_plane:
+      fastapi_bridge:
+        host: 192.168.0.100
+        route: /api/paperclip/execute
+        auth: X-Swarm-Token
+      ray_matrix:
+        host: 192.168.0.100
+        route: /api/agent/execute
+        topology: single_head_multi_worker
+        authority_ref: deploy/compute/v1.0_nemoclaw_ray_manifest.yaml
+
+  architecture:
+    control_path:
+      - Command Center UI
+      - Cloudflare Tunnel path route /orchestrator/*
+      - Traefik strip-prefix ingress
+      - Paperclip UI and API
+      - paperclip_db
+    execution_path:
+      - Paperclip HTTP adapter worker
+      - Fortress FastAPI bridge
+      - NemoClaw Ray matrix
+      - Paperclip callback endpoint
+
+  runtime_contract:
+    image:
+      repository: ghcr.io/paperclipai/paperclip
+      tag: v2026.325.0-hotfix1
+      mutable_tags: prohibited
+    env:
+      required_config:
+        - HOST=0.0.0.0
+        - PORT=3100
+        - PAPERCLIP_HOME=/paperclip
+        - PAPERCLIP_INSTANCE_ID=fortress-prime
+        - PAPERCLIP_DEPLOYMENT_MODE=authenticated
+        - PAPERCLIP_SECRETS_STRICT_MODE=true
+      required_secrets:
+        - DATABASE_URL
+        - PAPERCLIP_SECRETS_MASTER_KEY
+    baked_runtime_hotfix:
+      required: true
+      mechanism: image_overlay
+      responsibilities:
+        - expose @paperclipai/adapter-utils/server-utils for both workspace and pnpm installs
+        - deep-merge assigneeAdapterOverrides.adapterConfig.env onto agent adapter env
+    storage:
+      pvc_name: paperclip-home
+      mount_path: /paperclip
+      persistence_required:
+        - uploaded_artifacts
+        - encrypted_secret_store
+        - local_workspace_state
+    network:
+      public_ingress: prohibited
+      service_type: ClusterIP
+      tunnel_entrypoint:
+        hostnames:
+          - crog-ai.com
+          - www.crog-ai.com
+        path_regex: ^/orchestrator(?:/.*)?$
+      ingress_behavior:
+        middleware: stripPrefix
+        stripped_prefix: /orchestrator
+        websocket_safe_path: required
+        nextjs_route_proxy_for_full_ui: prohibited
+
+  data_planes:
+    postgres:
+      host: 192.168.0.100
+      database: paperclip_db
+      owner_role: paperclip_admin
+      separation_rules:
+        - no shared credentials with fortress_prod
+        - no shared credentials with fortress_shadow
+        - no Fortress runtime access through Paperclip roles
+    tunnel:
+      config_ref: fortress-guest-platform/infra/gateway/config.yml
+      deployment_script: fortress-guest-platform/deploy/deploy_gateway_tunnel.sh
+    command_center:
+      route: /workforce
+      embedded_surface: /orchestrator/
+      iframe_only_for_control_plane: true
+
+  hard_gates:
+    - name: paperclip_db_provisioned
+      type: policy
+      required: true
+    - name: paperclip_runtime_secret_applied
+      type: kubernetes_secret
+      name_ref: paperclip-runtime
+      required: true
+    - name: paperclip_hotfix_image_built
+      type: image_build
+      file_ref: deploy/compute/paperclip-image-hotfix/Dockerfile
+      required: true
+    - name: tunnel_path_route_installed
+      type: cloudflared_config
+      file_ref: fortress-guest-platform/infra/gateway/config.yml
+      required: true
+    - name: strip_prefix_ingress_installed
+      type: kubernetes_ingress
+      file_ref: deploy/compute/paperclip/ingress.yaml
+      required: true
+    - name: byoa_bridge_callback_configured
+      type: env_contract
+      vars:
+        - SWARM_API_KEY
+        - PAPERCLIP_CONTROL_PLANE_URL
+        - PAPERCLIP_CONTROL_PLANE_API_KEY
+      required: true
+
+  rollout:
+    strategy: single_control_plane_canary
+    phases:
+      - name: provision_database
+        expected:
+          - paperclip_db exists
+          - paperclip_admin owns paperclip_db
+      - name: apply_k3s_control_plane
+        expected:
+          - paperclip namespace exists
+          - paperclip deployment reaches Ready
+          - baked hotfix image boots without startup wrapper
+      - name: install_tunnel_path_route
+        expected:
+          - /orchestrator/* reaches k3s ingress
+          - non-orchestrator Command Center traffic remains on :3001
+      - name: validate_byoa_dispatch
+        expected:
+          - /api/paperclip/execute returns 202 for valid swarm token
+          - callback posts back to Paperclip
+      - name: browser_glass_validation
+        expected:
+          - /workforce loads iframe successfully
+          - live logs stream without websocket degradation

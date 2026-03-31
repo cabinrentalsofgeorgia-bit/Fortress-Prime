@@ -1,3 +1,6 @@
+# Legacy local-only compose for ad hoc development.
+# Do not use on DGX Sparks or any production/bare-metal deployment.
+# Production runs via systemd units and host-native services only.
 version: '3.8'
 
 services:

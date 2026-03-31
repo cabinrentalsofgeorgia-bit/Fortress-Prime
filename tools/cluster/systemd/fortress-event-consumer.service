@@ -1,0 +1,21 @@
+[Unit]
+Description=Fortress Prime Kafka Event Consumer
+After=network.target postgresql.service docker.service fortress-backend.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+EnvironmentFile=/home/admin/Fortress-Prime/fortress-guest-platform/.env
+EnvironmentFile=/home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx
+ExecStart=/home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python -m backend.workers.event_consumer
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-event-consumer
+
+[Install]
+WantedBy=multi-user.target

@@ -4,9 +4,7 @@ These units codify the currently working live stack:
 
 - `fortress-backend.service` -> FastAPI on `:8100`
 - `fortress-dashboard.service` -> `frontend-next` on `:3001` via `next start`
-- `fortress-arq-worker.service` -> ARQ worker for async jobs and KB/vectorization enqueue targets
 - `fortress-event-consumer.service` -> Redis queue consumer for automation rules
-- `fortress-channex-egress.service` -> Kafka/Redpanda consumer for Channex availability pushes
 - `fortress-deadline-sweeper.timer` -> daily 06:00 emission of `deadline_approaching` legal events
 
 Both services load runtime configuration from:

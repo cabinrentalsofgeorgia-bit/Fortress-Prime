@@ -1,0 +1,19 @@
+[Unit]
+Description=Fortress Channex Egress Worker
+After=network-online.target fortress-backend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env
+EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx
+EnvironmentFile=-/home/admin/Fortress-Prime/.env.security
+ExecStart=/usr/local/bin/run-fortress-channex-egress.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

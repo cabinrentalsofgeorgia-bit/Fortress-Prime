@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Fortress Deadline Sweeper daily at 06:00
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+Unit=fortress-deadline-sweeper.service
+
+[Install]
+WantedBy=timers.target

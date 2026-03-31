@@ -1,0 +1,21 @@
+[Unit]
+Description=Fortress Prime Channex Egress Worker
+After=network.target postgresql.service docker.service fortress-backend.service fortress-event-consumer.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+EnvironmentFile=/home/admin/Fortress-Prime/fortress-guest-platform/.env
+EnvironmentFile=/home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx
+ExecStart=/home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python -m backend.workers.channex_egress
+Restart=always
+RestartSec=5
+SyslogIdentifier=fortress-channex-egress
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

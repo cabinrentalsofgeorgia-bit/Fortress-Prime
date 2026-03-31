@@ -15,7 +15,9 @@ dist
 build
 
 # Docker
+# Ignore both the retired root compose name and the dev-only local compose file.
 docker-compose.yml
+docker-compose.local.yml
 Dockerfile*
 
 # Logs
