@@ -165,7 +165,17 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    result = await db.execute(select(StaffUser).where(StaffUser.id == UUID(user_id)))
+    try:
+        staff_user_id = UUID(user_id)
+    except (TypeError, ValueError) as e:
+        logger.warning("jwt_subject_invalid_for_staff", sub=user_id, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    result = await db.execute(select(StaffUser).where(StaffUser.id == staff_user_id))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise HTTPException(
@@ -251,22 +261,87 @@ class RoleChecker:
 async def require_admin(
     user: StaffUser = Depends(get_current_user),
 ) -> StaffUser:
-    """Backward-compatible alias for super-admin-only routes."""
-    return await RoleChecker([StaffRole.SUPER_ADMIN])(user)
+    """Dependency that requires the user to have an elevated admin role."""
+    if user.role not in ("super_admin", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or super admin access required",
+        )
+    return user
 
 
 async def require_manager_or_admin(
     user: StaffUser = Depends(get_current_user),
 ) -> StaffUser:
-    """Backward-compatible alias for manager or super-admin routes."""
-    return await RoleChecker([StaffRole.SUPER_ADMIN, StaffRole.MANAGER])(user)
+    if user.role not in ("super_admin", "admin", "manager"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manager, admin, or super admin access required",
+        )
+    return user
 
 
 async def require_operator_manager_admin(
     user: StaffUser = Depends(get_current_user),
 ) -> StaffUser:
-    """Legacy operator access now resolves to manager or super-admin."""
-    return await RoleChecker([StaffRole.SUPER_ADMIN, StaffRole.MANAGER])(user)
+    if user.role not in ("super_admin", "admin", "manager", "reviewer", "operator"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Operator, reviewer, manager, admin, or super admin access required",
+        )
+    return user
+
+
+async def load_staff_user_from_token_string(
+    db: AsyncSession,
+    token: str,
+) -> StaffUser | None:
+    """Backward-compatible helper for websocket auth paths."""
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+        user_id: str | None = payload.get("sub")
+        if not user_id:
+            return None
+    except JWTError:
+        return None
+
+    try:
+        staff_user_id = UUID(user_id)
+    except (TypeError, ValueError):
+        return None
+
+    result = await db.execute(select(StaffUser).where(StaffUser.id == staff_user_id))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        return None
+    return user
+
+
+def staff_allowed_for_system_health_stream(user: StaffUser | None) -> bool:
+    """Compatibility guard for privileged hardware telemetry streams."""
+    if user is None:
+        return False
+    return user.role in {"super_admin", "admin", "manager", "reviewer", "operator"}
+
+
+class RoleChecker:
+    """Backward-compatible role dependency for older route modules."""
+
+    def __init__(self, allowed_roles: list[str] | tuple[str, ...]):
+        self.allowed_roles = tuple(allowed_roles)
+
+    async def __call__(
+        self,
+        user: StaffUser = Depends(get_current_user),
+    ) -> StaffUser:
+        if user.role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient role privileges",
+            )
+        return user
 
 
 # ---------------------------------------------------------------------------

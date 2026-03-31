@@ -99,6 +99,13 @@ def _user_dict(u: StaffUser) -> dict:
     }
 
 
+def _owner_cookie_secure(request: Request) -> bool:
+    host = (request.url.hostname or "").strip().lower()
+    if host in {"127.0.0.1", "localhost", "0.0.0.0"}:
+        return False
+    return settings.environment != "development"
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -499,7 +506,12 @@ async def request_magic_link(req: MagicLinkRequest, db: AsyncSession = Depends(g
 
 
 @router.post("/owner/verify-magic-link")
-async def verify_magic_link(req: MagicLinkVerify, response: Response, db: AsyncSession = Depends(get_db)):
+async def verify_magic_link(
+    req: MagicLinkVerify,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
     """Validates the raw token against the stored hash and issues a JWT via HttpOnly cookie."""
     token_hash = hashlib.sha256(req.token.encode()).hexdigest()
 
@@ -542,7 +554,7 @@ async def verify_magic_link(req: MagicLinkVerify, response: Response, db: AsyncS
         key="fgp_owner_token",
         value=access_token,
         httponly=True,
-        secure=settings.environment != "development",
+        secure=_owner_cookie_secure(request),
         samesite="lax",
         max_age=86400,
         path="/",
@@ -565,12 +577,13 @@ async def verify_magic_link(req: MagicLinkVerify, response: Response, db: AsyncS
 
 
 @router.post("/owner/logout")
-async def owner_logout(response: Response):
+async def owner_logout(request: Request, response: Response):
     """Clears the HttpOnly owner cookie. JavaScript cannot do this."""
     response.delete_cookie(
         key="fgp_owner_token",
         path="/",
         httponly=True,
+        secure=_owner_cookie_secure(request),
         samesite="lax",
     )
     return {"status": "logged_out"}
