@@ -119,15 +119,40 @@ export const api = {
 
   hunter: {
     queue: <T>(status = "pending_review", limit = 50) =>
-      request<T>("/api/hunter/queue", {
+      request<T>("/api/vrs/hunter/queue", {
         method: "GET",
         params: { status_filter: status, limit },
       }),
-    metrics: <T>() => request<T>("/api/hunter/metrics", { method: "GET" }),
+    metrics: <T>() => request<T>("/api/vrs/hunter/queue/stats", { method: "GET" }),
     activity: <T>(limit = 20) =>
-      request<T>("/api/hunter/activity", {
+      request<T>("/api/openshell/audit/log", {
         method: "GET",
         params: { limit },
+      }),
+    dispatch: <T>(body: unknown) =>
+      request<T>("/api/vrs/hunter/dispatch", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    approveVia: <T>(entryId: string, channel: "email" | "sms") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ channel }),
+      }),
+    editVia: <T>(entryId: string, finalMessage: string, channel: "email" | "sms") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/edit`, {
+        method: "POST",
+        body: JSON.stringify({ final_human_message: finalMessage, channel }),
+      }),
+    reject: <T>(entryId: string, reason?: string) =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/reject`, {
+        method: "POST",
+        body: JSON.stringify(reason ? { reason } : {}),
+      }),
+    retryVia: <T>(entryId: string, channel: "email" | "sms") =>
+      request<T>(`/api/vrs/hunter/queue/${entryId}/retry`, {
+        method: "POST",
+        body: JSON.stringify({ channel }),
       }),
   },
 };

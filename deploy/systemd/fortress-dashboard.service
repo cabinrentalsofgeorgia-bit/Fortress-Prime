@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=admin
-WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform/frontend-next
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform/apps/storefront
 EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env
 EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx
 EnvironmentFile=-/home/admin/Fortress-Prime/.env.security

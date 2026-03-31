@@ -104,6 +104,7 @@ export interface WorkOrder {
   id: string;
   ticket_number: string;
   property_id?: string;
+  property_name?: string;
   reservation_id?: string;
   guest_id?: string;
   title: string;
@@ -179,6 +180,147 @@ export interface VrsMessageStats {
   avg_ai_confidence: number;
   total_cost?: number;
   cost_per_message?: number;
+}
+
+export interface VrsHunterTarget {
+  guest_id: string;
+  full_name: string;
+  email: string;
+  lifetime_value: number;
+  last_stay_date: string;
+  days_dormant: number;
+  target_score: number;
+}
+
+export interface VrsHunterDispatchResponse {
+  status: "queued";
+  event_id: string;
+  message: string;
+  queue_depth: number;
+  queue_key: string;
+}
+
+export interface VrsHunterQueueItem {
+  id: string;
+  status: string;
+  delivery_channel?: "email" | "sms" | string | null;
+  original_ai_draft: string;
+  final_human_message?: string | null;
+  twilio_sid?: string | null;
+  error_log?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  guest?: {
+    id?: string | null;
+    full_name: string;
+    email?: string | null;
+    loyalty_tier?: string | null;
+    lifetime_value?: number | null;
+    last_stay_date?: string | null;
+  } | null;
+  property?: {
+    id?: string | null;
+    name: string;
+    slug: string;
+  } | null;
+}
+
+export interface VrsHunterQueueResponse {
+  items: VrsHunterQueueItem[];
+  total: number;
+  limit: number;
+  status_filter: string;
+}
+
+export interface VrsHunterQueueStats {
+  pending_review: number;
+  approved: number;
+  edited: number;
+  rejected: number;
+  sending: number;
+  delivered: number;
+  failed: number;
+  total: number;
+}
+
+export interface VrsHunterQueueActionResponse {
+  ok: boolean;
+  id: string;
+  status: string;
+  reviewed_by: string;
+  delivery_status?: string | null;
+  delivery_channel?: "email" | "sms" | string | null;
+}
+
+export interface VrsHunterAuditLogItem {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string | null;
+  tool_name?: string | null;
+  redaction_status: string;
+  model_route?: string | null;
+  outcome: string;
+  request_id?: string | null;
+  created_at: string;
+  entry_hash: string;
+  prev_hash?: string | null;
+  signature: string;
+  metadata_json: Record<string, unknown>;
+}
+
+export interface VrsConflictQueueItem {
+  id: string;
+  status: string;
+  created_at: string;
+  hold_reason?: string | null;
+  session_id?: string | null;
+  consensus_signal?: string | null;
+  consensus_conviction: number;
+  inbound_message?: string | null;
+  draft_reply?: string | null;
+  guest?: {
+    id?: string | null;
+    full_name?: string | null;
+    email?: string | null;
+  } | null;
+  property?: {
+    id?: string | null;
+    name?: string | null;
+    slug?: string | null;
+  } | null;
+  reservation?: {
+    id?: string | null;
+    confirmation_code?: string | null;
+  } | null;
+  message?: {
+    id?: string | null;
+    body?: string | null;
+  } | null;
+}
+
+export interface VrsConflictQueueResponse {
+  items: VrsConflictQueueItem[];
+  summary: {
+    held: number;
+    dispatched: number;
+    total_scanned: number;
+  };
+  synced?: boolean;
+}
+
+export interface VrsCouncilOpinion {
+  seat: number;
+  persona: string;
+  signal: string;
+  conviction: number;
+  reasoning: string;
+}
+
+export interface VrsAdjudicationDetail extends VrsConflictQueueItem {
+  council?: {
+    opinions: VrsCouncilOpinion[];
+  } | null;
 }
 
 export interface VrsReservationDetailResponse {
