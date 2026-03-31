@@ -17,10 +17,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
+from backend.core.security import require_manager_or_admin
 from backend.models.template import EmailTemplate
 from backend.services.template_engine import preview_template
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 TRIGGER_EVENTS = [
     "7_days_before_checkin",

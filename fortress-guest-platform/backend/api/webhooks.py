@@ -330,7 +330,8 @@ async def _run_nemoclaw_inbound_loop(
 def _validate_twilio_signature(request: Request, form_data: dict[str, str]) -> bool:
     token = (settings.twilio_auth_token or "").strip()
     if not token:
-        return True
+        logger.error("twilio_auth_token_missing")
+        return False
     signature = request.headers.get("X-Twilio-Signature", "")
     if not signature:
         return False
@@ -427,8 +428,12 @@ async def handle_incoming_sms(
 
     try:
         form_data = await request.form()
+        raw = {k: str(v) for k, v in form_data.items()}
+        if not _validate_twilio_signature(request, raw):
+            log.warning("twilio_signature_invalid")
+            return Response(status_code=403)
         twilio_client = TwilioClient()
-        parsed = twilio_client.parse_webhook(dict(form_data))
+        parsed = twilio_client.parse_webhook(raw)
 
         from_phone = parsed["from"]
         body = parsed["body"]
@@ -713,6 +718,10 @@ async def handle_sms_status(
     
     try:
         form_data = await request.form()
+        raw = {k: str(v) for k, v in form_data.items()}
+        if not _validate_twilio_signature(request, raw):
+            log.warning("twilio_status_signature_invalid")
+            return Response(status_code=403)
         message_sid = form_data.get("MessageSid")
         message_status = form_data.get("MessageStatus")
         error_code = form_data.get("ErrorCode")

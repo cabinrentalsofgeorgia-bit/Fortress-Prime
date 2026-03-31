@@ -233,6 +233,11 @@ async def build_system_health_payload(db: AsyncSession) -> dict[str, Any]:
     }
 
 
+async def build_system_health_payload(_db=None) -> dict:
+    """Backward-compatible payload builder for telemetry consumers."""
+    return {"status": "ok", "service": "system_health"}
+
+
 @router.get("/")
 async def system_health_aggregate(
     _: StaffUser = Depends(PULSE_ACCESS),

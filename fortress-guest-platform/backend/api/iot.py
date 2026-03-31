@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
+from backend.core.security import require_operator_manager_admin
 from backend.integrations.iot_manager import IoTManager
 from backend.models.iot_device import (
     DeviceEvent,
@@ -25,7 +26,7 @@ from backend.models.iot_device import (
 from pydantic import BaseModel
 
 logger = structlog.get_logger()
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 iot = IoTManager()
 
 

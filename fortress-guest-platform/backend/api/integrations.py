@@ -15,11 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from backend.core.database import get_db
-from backend.core.security import RoleChecker
-from backend.integrations.streamline_vrs import StreamlineVRS
-from backend.models.staff import StaffRole, StaffUser
+from backend.core.security import require_admin
+from backend.integrations.streamline_vrs import (
+    StreamlineVRS,
+    is_streamline_circuit_placeholder,
+)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 logger = structlog.get_logger()
 
 _INTEGRATIONS_STAFF_READ = RoleChecker(
@@ -383,6 +385,15 @@ async def sync_owner_balances(
     except Exception as e:
         owner_map = {}
         errors.append(f"GetOwnerList: {e}")
+    try:
+        live_streamline_ids = {
+            str(prop["streamline_property_id"])
+            for prop in await vrs.fetch_properties()
+            if str(prop.get("streamline_property_id", "")).strip()
+        }
+    except Exception as e:
+        live_streamline_ids = set()
+        errors.append(f"GetPropertyList: {e}")
 
     props_q = await db.execute(
         select(Property).where(Property.streamline_property_id.isnot(None))
@@ -391,9 +402,12 @@ async def sync_owner_balances(
 
     for prop in props:
         try:
-            unit_id = int(prop.streamline_property_id)
+            streamline_id = str(prop.streamline_property_id or "").strip()
+            if streamline_id not in live_streamline_ids:
+                continue
+            unit_id = int(streamline_id)
             bal = await vrs.fetch_unit_owner_balance(unit_id)
-            if not bal:
+            if not bal or is_streamline_circuit_placeholder(bal):
                 continue
 
             prop.owner_balance = bal

@@ -20,14 +20,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from backend.core.database import get_db
-from backend.core.queue import get_arq_pool
+from backend.core.security import require_operator_manager_admin
 from backend.models.message_queue import MessageQueue
 from backend.models.quote import Quote, QuoteOption
 from backend.services.async_jobs import enqueue_async_job, extract_request_actor
 from backend.services.email_service import is_email_configured, send_email
 
 logger = structlog.get_logger(service="copilot_queue")
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_operator_manager_admin)])
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────

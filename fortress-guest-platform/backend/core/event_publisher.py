@@ -41,6 +41,11 @@ class EventPublisher:
             log.error("Failed to publish to %s: %s", topic, e)
 
 
+async def publish_event(topic: str, payload: dict, key: str | None = None):
+    """Backward-compatible helper for bytecode-only callers."""
+    await EventPublisher.publish(topic, payload, key=key)
+
+
 async def close_event_publisher():
     """Gracefully stop the producer. Call from FastAPI shutdown."""
     if EventPublisher._producer:
