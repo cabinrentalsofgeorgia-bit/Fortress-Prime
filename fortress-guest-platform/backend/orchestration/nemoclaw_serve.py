@@ -368,6 +368,7 @@ try:
         )
         result_payload["draft_body"] = draft_body
         result_payload["draft_email"] = draft_body
+        result_payload["schema"] = "fortress.guest_concierge.draft_email.v1"
         action_log.append("draft_chars=" + str(len(draft_body)))
 
     print(json.dumps({
