@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Bath, BedDouble, CarFront, MapPinned, Users } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { LegacyBodyClasses } from "@/components/booking/legacy-body-classes";
 import { SovereignContextRibbon } from "@/components/booking/sovereign-context-ribbon";
 import { PropertyGallery } from "@/components/property-gallery";
@@ -44,6 +44,18 @@ interface PropertyPayload {
   availability?: PropertyCalendarPayload | null;
 }
 
+interface ArchivedPropertyPayload {
+  detail: string;
+  redirect_to: string;
+  property_slug: string;
+  property_name: string;
+}
+
+type PropertyFetchResult =
+  | { kind: "active"; property: PropertyPayload }
+  | { kind: "archived"; archived: ArchivedPropertyPayload }
+  | { kind: "missing" };
+
 interface UnifiedLiveSeoPayload {
   property_slug: string;
   property_name: string;
@@ -83,17 +95,21 @@ function formatFreshnessLabel(value: string | null | undefined): string | null {
   }).format(date);
 }
 
-async function fetchProperty(slug: string): Promise<PropertyPayload | null> {
+async function fetchProperty(slug: string): Promise<PropertyFetchResult> {
   try {
     const res = await fetch(buildBackendUrl(`/api/direct-booking/property/${encodeURIComponent(slug)}`), {
       next: { revalidate: PROPERTY_REVALIDATE_SECONDS },
     });
-    if (!res.ok) {
-      return null;
+    if (res.status === 410) {
+      const archived = (await res.json()) as ArchivedPropertyPayload;
+      return { kind: "archived", archived };
     }
-    return (await res.json()) as PropertyPayload;
+    if (!res.ok) {
+      return { kind: "missing" };
+    }
+    return { kind: "active", property: (await res.json()) as PropertyPayload };
   } catch {
-    return null;
+    return { kind: "missing" };
   }
 }
 
@@ -150,11 +166,14 @@ async function loadCabinPageData(slug: string) {
     fetchUnifiedLiveSeo(slug),
   ]);
 
-  if (!property) {
+  if (property.kind !== "active") {
+    if (property.kind === "archived") {
+      return { archived: property.archived };
+    }
     return null;
   }
 
-  return { property, seo };
+  return { property: property.property, seo };
 }
 
 export async function generateMetadata({
@@ -167,6 +186,15 @@ export async function generateMetadata({
 
   if (!data) {
     return { title: "Cabin Not Found" };
+  }
+  if ("archived" in data) {
+    return {
+      title: "Cabin Redirect",
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
   }
 
   const fallbackTitle = `${data.property.name} | Cabin Rentals of Georgia`;
@@ -204,6 +232,9 @@ export default async function CabinPage({
 
   if (!data) {
     notFound();
+  }
+  if ("archived" in data) {
+    permanentRedirect(data.archived.redirect_to || "/");
   }
 
   const { property, seo } = data;

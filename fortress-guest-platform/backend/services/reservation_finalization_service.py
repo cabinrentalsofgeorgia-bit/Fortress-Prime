@@ -15,8 +15,9 @@ from uuid import UUID
 
 import structlog
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import lazyload
 
 from backend.core.config import settings
 from backend.core.time import ensure_utc, utc_now
@@ -49,10 +50,16 @@ class _TransactionScope:
     async def __aenter__(self) -> object:
         if self._db.in_transaction():
             return self._db
-        begin_result = self._db.begin()
-        self._owns_transaction = True
-        self._context_manager = await begin_result if isawaitable(begin_result) else begin_result
-        return await self._context_manager.__aenter__()  # type: ignore[union-attr]
+        try:
+            begin_result = self._db.begin()
+            self._owns_transaction = True
+            self._context_manager = await begin_result if isawaitable(begin_result) else begin_result
+            return await self._context_manager.__aenter__()  # type: ignore[union-attr]
+        except InvalidRequestError:
+            # Some call sites trigger SQLAlchemy autobegin semantics before we enter
+            # the explicit transaction scope. In that case, operate within the
+            # existing transaction instead of failing the request.
+            return self._db
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> bool | None:
         if not self._owns_transaction or self._context_manager is None:
@@ -96,7 +103,12 @@ class ReservationFinalizationService:
         stripe_payment_intent_id: str | None = None,
         metadata_hold_id: str | None = None,
     ) -> FinalizeHoldResult:
-        stmt = select(ReservationHold).where(ReservationHold.id == hold_id).with_for_update()
+        stmt = (
+            select(ReservationHold)
+            .options(lazyload("*"))
+            .where(ReservationHold.id == hold_id)
+            .with_for_update()
+        )
         async with _transaction_scope(db):
             result = await db.execute(stmt)
             hold = result.scalar_one_or_none()
@@ -122,6 +134,7 @@ class ReservationFinalizationService:
             return None
         stmt = (
             select(ReservationHold)
+            .options(lazyload("*"))
             .where(ReservationHold.payment_intent_id == normalized)
             .with_for_update()
         )

@@ -9,6 +9,7 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +39,7 @@ from backend.services.reservation_engine import ReservationEngine
 router = APIRouter()
 stripe_payments = StripePayments()
 reservation_engine = ReservationEngine()
+ARCHIVED_PROPERTY_REDIRECT_PATH = "/availability"
 
 
 # ── Request/Response Models ──
@@ -311,6 +313,23 @@ async def get_booking_property(slug: str, db: AsyncSession = Depends(get_db)):
         )
     ).scalar_one_or_none()
     if property_record is None:
+        archived_record = (
+            await db.execute(
+                select(Property)
+                .where(Property.slug == slug)
+                .where(Property.is_active.is_(False))
+            )
+        ).scalar_one_or_none()
+        if archived_record is not None:
+            return JSONResponse(
+                status_code=410,
+                content={
+                    "detail": "Property has been archived",
+                    "redirect_to": ARCHIVED_PROPERTY_REDIRECT_PATH,
+                    "property_slug": archived_record.slug,
+                    "property_name": archived_record.name,
+                },
+            )
         raise HTTPException(404, "Property not found")
 
     return BookingPropertyResponse(
