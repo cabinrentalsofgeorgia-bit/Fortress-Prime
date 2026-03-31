@@ -67,24 +67,14 @@ from backend.models.seo_redirect import SeoRedirect
 from backend.models.seo_redirect_remap import SeoRedirectRemapQueue
 from backend.models.async_job import AsyncJobRun
 from backend.models.vrs_add_on import VRSAddOn, VRSAddOnPricingModel, VRSAddOnScope
-from backend.models.media import PropertyImage
-from backend.models.swarm_governance import (
-    AgentRegistry,
-    AgentRun,
-    AgentRunStatus,
-    Escalation,
-    EscalationStatus,
-    OperatorOverride,
-    OverrideAction,
-    TrustDecision,
-    TrustDecisionStatus,
-)
-from backend.models.trust_ledger import (
-    TrustAccount,
-    TrustAccountType,
-    TrustLedgerEntry,
-    TrustLedgerEntryType,
-    TrustTransaction,
+from backend.models.acquisition import (
+    AcquisitionIntelEvent,
+    AcquisitionOwner,
+    AcquisitionOwnerContact,
+    AcquisitionParcel,
+    AcquisitionPipeline,
+    AcquisitionProperty,
+    AcquisitionSTRSignal,
 )
 from backend.models.legal import (
     LegalEntity,
@@ -242,19 +232,11 @@ __all__ = [
     "VRSAddOn",
     "VRSAddOnPricingModel",
     "VRSAddOnScope",
-    "PropertyImage",
-    "AgentRegistry",
-    "AgentRun",
-    "AgentRunStatus",
-    "TrustDecision",
-    "TrustDecisionStatus",
-    "Escalation",
-    "EscalationStatus",
-    "OperatorOverride",
-    "OverrideAction",
-    "TrustAccount",
-    "TrustAccountType",
-    "TrustTransaction",
-    "TrustLedgerEntry",
-    "TrustLedgerEntryType",
+    "AcquisitionIntelEvent",
+    "AcquisitionOwner",
+    "AcquisitionOwnerContact",
+    "AcquisitionParcel",
+    "AcquisitionPipeline",
+    "AcquisitionProperty",
+    "AcquisitionSTRSignal",
 ]

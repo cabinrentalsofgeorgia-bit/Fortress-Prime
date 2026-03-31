@@ -1,10 +1,7 @@
 """
 Async database engine and session factory.
 """
-
-from collections.abc import AsyncIterator
-from typing import Any
-
+from sqlalchemy import text
 import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
@@ -18,27 +15,28 @@ logger = structlog.get_logger()
 class Base(DeclarativeBase):
     """Shared declarative base for Fortress Prime models."""
 
+# Backward-compatible alias for legacy service imports.
+async_session_maker = AsyncSessionLocal
+
+
+def get_session_factory():
+    """Backward-compatible accessor for legacy async session callers."""
+    return AsyncSessionLocal
+
 
 async_engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
-def get_async_engine() -> AsyncEngine:
-    """Build the runtime engine lazily so imports do not require live DB env."""
-    global async_engine
-
-    if async_engine is None:
-        async_engine = create_async_engine(
-            settings.database_url,
-            echo=False,
-            pool_size=32,
-            max_overflow=32,
-            pool_timeout=30,
-            pool_recycle=1800,
-            pool_pre_ping=True,
-            pool_use_lifo=True,
-        )
-    return async_engine
+async def init_db():
+    """Validate connectivity and optionally create tables in opt-in dev mode."""
+    async with async_engine.begin() as conn:
+        await conn.execute(text("SELECT 1"))
+        if settings.db_auto_create_tables:
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("database_tables_ensured")
+        else:
+            logger.info("database_connection_verified", auto_create_tables=False)
 
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:

@@ -3,26 +3,22 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
-from typing import Any
-from uuid import UUID, uuid4
-
-from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, String, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgresUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from enum import StrEnum
+from uuid import uuid4
+from sqlalchemy import Column, String, Boolean, TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from backend.core.database import Base
 
 
-class StaffRole(str, Enum):
-    """Hierarchy for Command Center access control."""
-
+class StaffRole(StrEnum):
     SUPER_ADMIN = "super_admin"
+    ADMIN = "admin"
     MANAGER = "manager"
     REVIEWER = "reviewer"
-
-
-STAFF_ROLE_VALUES: tuple[str, ...] = tuple(role.value for role in StaffRole)
+    OPERATOR = "operator"
+    STAFF = "staff"
+    MAINTENANCE = "maintenance"
 
 
 class StaffUser(Base):

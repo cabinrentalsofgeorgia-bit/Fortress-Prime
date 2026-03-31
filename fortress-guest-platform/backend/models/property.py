@@ -54,7 +54,7 @@ class Property(Base):
 
     # Metadata
     streamline_property_id = Column(String(100), index=True)
-    ota_metadata = Column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
+    ota_metadata = Column(JSONB)
     owner_id = Column(String(100))
     owner_name = Column(String(255))
     owner_balance = Column(JSONB)
@@ -66,6 +66,14 @@ class Property(Base):
     reservations = relationship("Reservation", back_populates="prop")
     work_orders = relationship("WorkOrder", back_populates="prop")
     guestbook_guides = relationship("GuestbookGuide", back_populates="prop")
+    # Legacy mappers may still be loaded from bytecode via run.py's .pyc fallback.
+    # Keep their reverse relationships defined so unrelated ORM queries, including
+    # login, do not fail during mapper configuration.
+    tax_links = relationship("PropertyTax", back_populates="property")
+    fee_links = relationship("PropertyFee", back_populates="property")
+    images = relationship("PropertyImage", back_populates="property")
+    stay_restrictions = relationship("PropertyStayRestriction", back_populates="prop")
+    pricing_overrides = relationship("PricingOverride", back_populates="property")
     default_housekeeper = relationship("StaffUser", foreign_keys=[default_housekeeper_id])
     images = relationship(
         "PropertyImage",
