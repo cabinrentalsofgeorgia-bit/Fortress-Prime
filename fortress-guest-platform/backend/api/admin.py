@@ -45,6 +45,7 @@ from backend.core.security import require_admin, require_manager_or_admin
 from backend.models.lead import Lead
 from backend.models.quote import Quote, QuoteOption
 from backend.models.staff import StaffUser
+from backend.services.channex_attention import get_latest_channex_attention_summary
 
 logger = structlog.get_logger(service="admin_api")
 
@@ -570,6 +571,12 @@ async def prime_snapshot(
         """))
         active_reservations = res_result.scalar() or 0
 
+        try:
+            channex_attention = await get_latest_channex_attention_summary(db)
+        except Exception as exc:
+            logger.warning("prime_snapshot_channex_attention_unavailable", error=str(exc)[:300])
+            channex_attention = None
+
         logger.info("prime_snapshot_served")
 
         return {
@@ -577,6 +584,7 @@ async def prime_snapshot(
             "revenue_timeline": revenue_timeline,
             "recent_journals": recent_journals,
             "payout_summary": payout_summary,
+            "channex_attention": channex_attention.model_dump() if channex_attention else None,
             "system_pulse": {
                 "journal_entries_today": today_entries,
                 "total_properties": total_properties,
