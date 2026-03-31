@@ -37,6 +37,6 @@
 ## Remaining Critical Failures Requiring Manual DB / Hardware / Design Intervention
 
 - Legal route ownership has now been adjudicated and isolated to `/api/internal/legal` for Command Center-only access. Any remaining references to the legacy public legal namespace should be treated as stale and retired.
-- Root `docker-compose.yml` is not aligned with the current sovereign stack. It still declares Postgres 15, legacy DB credentials, and hardcoded secrets.
+- The former root `docker-compose.yml`, now retired in favor of `docker-compose.local.yml` for local-only development, is not aligned with the current sovereign stack. It still declares Postgres 15, legacy DB credentials, and hardcoded secrets.
 - Env documentation is still incomplete relative to `backend/core/config.py`; the new `.env.example` fixes the missing base file but does not yet enumerate the full config surface.
 - Any live verification of Postgres/Qdrant/Redpanda/NemoClaw hardware paths still requires runtime infrastructure and real credentials beyond the static/code-level audit performed here.

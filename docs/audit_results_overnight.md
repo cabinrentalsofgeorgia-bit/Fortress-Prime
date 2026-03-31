@@ -86,7 +86,7 @@ Primary verification commands executed:
 - Example env coverage is still incomplete relative to `backend/core/config.py`:
   - `.env.example`: `12` aliased config vars documented, `82` aliased vars still undocumented
   - `.env.dgx.example`: `12` aliased config vars documented, `82` aliased vars still undocumented
-- Root `docker-compose.yml` is inconsistent with the declared sovereign stack:
+- Retired root `docker-compose.yml` was inconsistent with the declared sovereign stack before it was renamed to `docker-compose.local.yml` for local-only use:
   - uses `postgres:15-alpine`
   - uses legacy DB name/user `fortress_db` / `miner_bot`
   - contains hardcoded credentials
@@ -112,6 +112,6 @@ Primary verification commands executed:
 ## Manual Intervention / Still Critical
 
 - `backend/main.py` route ownership decision has been made: the legal/adjudication surface is isolated to `/api/internal/legal`, and stale legacy legal-route references should be retired rather than preserved.
-- Root `docker-compose.yml` is a legacy/insecure artifact and does not match the current Postgres 16 + fortress role model. It should not be treated as authoritative deployment config until rewritten or retired.
+- The former root `docker-compose.yml`, now retired in favor of `docker-compose.local.yml` for local-only use, is a legacy/insecure artifact and does not match the current Postgres 16 + fortress role model. Production deployment must continue to rely on systemd units and bare-metal services.
 - Env documentation remains partial. Creating `.env.example` fixed the missing base template, but the current config surface is much larger than what either example file documents.
 - The admin insights replacement contract note string is preserved to satisfy the existing regression contract, but the repository now also contains an `ai_insights` migration, so that note no longer reflects full repository reality.
