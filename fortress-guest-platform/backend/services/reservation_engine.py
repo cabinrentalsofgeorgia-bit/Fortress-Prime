@@ -10,7 +10,7 @@ Handles the complete booking lifecycle:
 - Automatic status transitions (check-in / check-out)
 - Occupancy reporting and full-text search
 """
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, date, timedelta, time
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID, uuid4
@@ -20,21 +20,11 @@ import string
 
 import structlog
 from sqlalchemy import select, and_, or_, func
-from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.blocked_day import BlockedDay
 from backend.models import Reservation, Guest, Property
-from backend.models.reservation_hold import ReservationHold
-from backend.core.time import combine_utc, utc_now
 
 logger = structlog.get_logger()
-OCCUPYING_AVAILABILITY_STATUSES = ("pending", "confirmed", "checked_in", "pending_payment")
-
-
-def _missing_runtime_table(exc: ProgrammingError) -> bool:
-    message = str(getattr(exc, "orig", exc)).lower()
-    return "does not exist" in message or "undefinedtable" in message
 
 
 class ReservationEngine:
@@ -135,18 +125,7 @@ class ReservationEngine:
 
         property_id = UUID(str(data["property_id"])) if not isinstance(data["property_id"], UUID) else data["property_id"]
 
-        exclude_hold = data.get("exclude_hold_id")
-        exclude_hold_uuid: Optional[UUID] = None
-        if exclude_hold is not None:
-            exclude_hold_uuid = UUID(str(exclude_hold)) if not isinstance(exclude_hold, UUID) else exclude_hold
-
-        available = await self.get_availability(
-            db,
-            property_id,
-            check_in,
-            check_out,
-            exclude_hold_id=exclude_hold_uuid,
-        )
+        available = await self.get_availability(db, property_id, check_in, check_out)
         if not available:
             raise ValueError("Property is not available for the requested dates")
 
@@ -157,10 +136,10 @@ class ReservationEngine:
         confirmation_code = await self.generate_confirmation_code(db)
         access_code = self._generate_access_code()
 
-        access_valid_from = combine_utc(
+        access_valid_from = datetime.combine(
             check_in, time(self.DEFAULT_CHECKIN_HOUR - self.ACCESS_CODE_EARLY_HOURS, 0)
         )
-        access_valid_until = combine_utc(
+        access_valid_until = datetime.combine(
             check_out, time(self.DEFAULT_CHECKOUT_HOUR + self.ACCESS_CODE_LATE_HOURS, 0)
         )
 
@@ -248,10 +227,10 @@ class ReservationEngine:
             if not available:
                 raise ValueError("Property is not available for the new dates")
 
-            reservation.access_code_valid_from = combine_utc(
+            reservation.access_code_valid_from = datetime.combine(
                 effective_in, time(self.DEFAULT_CHECKIN_HOUR - self.ACCESS_CODE_EARLY_HOURS, 0)
             )
-            reservation.access_code_valid_until = combine_utc(
+            reservation.access_code_valid_until = datetime.combine(
                 effective_out, time(self.DEFAULT_CHECKOUT_HOUR + self.ACCESS_CODE_LATE_HOURS, 0)
             )
 
@@ -268,7 +247,7 @@ class ReservationEngine:
                     value = Decimal(str(value))
                 setattr(reservation, field, value)
 
-        reservation.updated_at = utc_now()
+        reservation.updated_at = datetime.utcnow()
         await db.flush()
 
         self.log.info(
@@ -319,7 +298,7 @@ class ReservationEngine:
         refund_amount = (reservation.total_amount or Decimal("0")) * refund_pct
 
         cancel_note = (
-            f"CANCELLED {utc_now().isoformat()} | "
+            f"CANCELLED {datetime.utcnow().isoformat()} | "
             f"Policy: {policy} | Refund: ${refund_amount:.2f} | "
             f"Reason: {reason or 'Not specified'}"
         )
@@ -331,7 +310,7 @@ class ReservationEngine:
         reservation.access_code = None
         reservation.access_code_valid_from = None
         reservation.access_code_valid_until = None
-        reservation.updated_at = utc_now()
+        reservation.updated_at = datetime.utcnow()
 
         await db.flush()
 
@@ -367,13 +346,13 @@ class ReservationEngine:
                 f"Cannot check in — current status is '{reservation.status}', expected 'confirmed'"
             )
 
-        now = utc_now()
+        now = datetime.utcnow()
 
         if not reservation.access_code:
             reservation.access_code = self._generate_access_code()
 
         reservation.access_code_valid_from = now
-        reservation.access_code_valid_until = combine_utc(
+        reservation.access_code_valid_until = datetime.combine(
             reservation.check_out_date,
             time(self.DEFAULT_CHECKOUT_HOUR + self.ACCESS_CODE_LATE_HOURS, 0),
         )
@@ -416,7 +395,7 @@ class ReservationEngine:
                 f"Cannot check out — current status is '{reservation.status}'"
             )
 
-        now = utc_now()
+        now = datetime.utcnow()
 
         reservation.status = "checked_out"
         reservation.access_code_valid_until = now
@@ -456,42 +435,18 @@ class ReservationEngine:
         start_date: date,
         end_date: date,
         exclude_reservation_id: Optional[UUID] = None,
-        exclude_hold_id: Optional[UUID] = None,
-        include_active_holds: bool = True,
     ) -> bool:
         """
-        Return True if the property has no overlapping blocked days, occupying
-        reservations, and optionally no active non-expired checkout holds.
+        Return True if the property has no overlapping confirmed/checked-in
+        reservations for the requested window.
         """
-        blocked_stmt = (
-            select(func.count())
-            .select_from(BlockedDay)
-            .where(
-                and_(
-                    BlockedDay.property_id == property_id,
-                    BlockedDay.start_date < end_date,
-                    BlockedDay.end_date > start_date,
-                )
-            )
-        )
-        try:
-            blocked_count = (await db.execute(blocked_stmt)).scalar_one()
-        except ProgrammingError as exc:
-            if not _missing_runtime_table(exc):
-                raise
-            logger.warning("reservation_engine_blocked_days_table_missing")
-            await db.rollback()
-            blocked_count = 0
-        if int(blocked_count) > 0:
-            return False
-
         stmt = (
             select(func.count())
             .select_from(Reservation)
             .where(
                 and_(
                     Reservation.property_id == property_id,
-                    Reservation.status.in_(OCCUPYING_AVAILABILITY_STATUSES),
+                    Reservation.status.in_(["confirmed", "checked_in"]),
                     Reservation.check_in_date < end_date,
                     Reservation.check_out_date > start_date,
                 )
@@ -500,358 +455,13 @@ class ReservationEngine:
         if exclude_reservation_id:
             stmt = stmt.where(Reservation.id != exclude_reservation_id)
 
-        try:
-            result = await db.execute(stmt)
-            conflict_count = result.scalar_one()
-        except ProgrammingError as exc:
-            if not _missing_runtime_table(exc):
-                raise
-            logger.warning("reservation_engine_reservations_table_missing")
-            await db.rollback()
-            conflict_count = 0
-        if int(conflict_count) > 0:
-            return False
-
-        if not include_active_holds:
-            return True
-
-        now = utc_now()
-        hold_conds = [
-            ReservationHold.property_id == property_id,
-            ReservationHold.status == "active",
-            ReservationHold.expires_at > now,
-            ReservationHold.check_in_date < end_date,
-            ReservationHold.check_out_date > start_date,
-        ]
-        hold_stmt = select(func.count()).select_from(ReservationHold).where(and_(*hold_conds))
-        if exclude_hold_id is not None:
-            hold_stmt = hold_stmt.where(ReservationHold.id != exclude_hold_id)
-        try:
-            hold_count = (await db.execute(hold_stmt)).scalar_one()
-        except ProgrammingError as exc:
-            if not _missing_runtime_table(exc):
-                raise
-            logger.warning("reservation_engine_reservation_holds_table_missing")
-            await db.rollback()
-            hold_count = 0
-        return int(hold_count) == 0
+        result = await db.execute(stmt)
+        conflict_count = result.scalar_one()
+        return conflict_count == 0
 
     # ==================================================================
     # 7. CALENDAR
     # ==================================================================
-    def _resolve_nightly_rate(
-        self,
-        stay_date: date,
-        *,
-        base_rate: Decimal,
-    ) -> tuple[Decimal, str, Decimal]:
-        holiday = self._get_holiday(stay_date)
-        if holiday:
-            multiplier = self.HOLIDAY_MULTIPLIERS[holiday]
-            season_label = f"holiday_{holiday}"
-        else:
-            season_label = self._get_season(stay_date)
-            multiplier = self.SEASON_MULTIPLIERS[season_label]
-
-        nightly_rate = (base_rate * multiplier).quantize(
-            Decimal("0.01"),
-            rounding=ROUND_HALF_UP,
-        )
-        return nightly_rate, season_label, multiplier
-
-    async def get_blocked_dates_for_month(
-        self,
-        db: AsyncSession,
-        property_id: UUID,
-        month: int,
-        year: int,
-    ) -> Dict[str, Any]:
-        """Return flat blocked-date telemetry for a monthly availability view."""
-        first_day = date(year, month, 1)
-        _, last_day_num = calendar.monthrange(year, month)
-        last_day = date(year, month, last_day_num)
-        month_end_exclusive = last_day + timedelta(days=1)
-        blocked_dates: set[date] = set()
-
-        def add_range(start: date, end: date) -> None:
-            cursor = max(start, first_day)
-            stop = min(end, month_end_exclusive)
-            while cursor < stop:
-                blocked_dates.add(cursor)
-                cursor += timedelta(days=1)
-
-        blocked_rows = (
-            await db.execute(
-                select(BlockedDay.start_date, BlockedDay.end_date)
-                .where(
-                    and_(
-                        BlockedDay.property_id == property_id,
-                        BlockedDay.start_date < month_end_exclusive,
-                        BlockedDay.end_date > first_day,
-                    )
-                )
-            )
-        ).all()
-        for start_date, end_date in blocked_rows:
-            add_range(start_date, end_date)
-
-        reservation_rows = (
-            await db.execute(
-                select(Reservation.check_in_date, Reservation.check_out_date)
-                .where(
-                    and_(
-                        Reservation.property_id == property_id,
-                        Reservation.status.in_(OCCUPYING_AVAILABILITY_STATUSES),
-                        Reservation.check_in_date < month_end_exclusive,
-                        Reservation.check_out_date > first_day,
-                    )
-                )
-            )
-        ).all()
-        for check_in_date, check_out_date in reservation_rows:
-            add_range(check_in_date, check_out_date)
-
-        active_hold_rows = (
-            await db.execute(
-                select(ReservationHold.check_in_date, ReservationHold.check_out_date)
-                .where(
-                    and_(
-                        ReservationHold.property_id == property_id,
-                        ReservationHold.status == "active",
-                        ReservationHold.expires_at > utc_now(),
-                        ReservationHold.check_in_date < month_end_exclusive,
-                        ReservationHold.check_out_date > first_day,
-                    )
-                )
-            )
-        ).all()
-        for check_in_date, check_out_date in active_hold_rows:
-            add_range(check_in_date, check_out_date)
-
-        blocked_dates_list = [value.isoformat() for value in sorted(blocked_dates)]
-        return {
-            "property_id": str(property_id),
-            "month": month,
-            "year": year,
-            "start_date": first_day.isoformat(),
-            "end_date": last_day.isoformat(),
-            "blocked_dates": blocked_dates_list,
-            "blocked_dates_count": len(blocked_dates_list),
-            "available_dates_count": max(0, last_day_num - len(blocked_dates_list)),
-            "generated_at": utc_now().isoformat(),
-        }
-
-    async def get_calendar_v2(
-        self,
-        db: AsyncSession,
-        property_id: UUID,
-        month: int,
-        year: int,
-    ) -> Dict[str, Any]:
-        """Return a local month grid with availability state and nightly rate hints."""
-        first_day = date(year, month, 1)
-        _, last_day_num = calendar.monthrange(year, month)
-        last_day = date(year, month, last_day_num)
-        month_end_exclusive = last_day + timedelta(days=1)
-
-        prop = await db.get(Property, property_id)
-        base_rate = self.DEFAULT_BASE_RATE
-
-        blocked_payload = await self.get_blocked_dates_for_month(
-            db,
-            property_id,
-            month,
-            year,
-        )
-        blocked_dates = set(blocked_payload["blocked_dates"])
-        month_grid: Dict[str, Dict[str, Any]] = {}
-
-        cursor = first_day
-        while cursor <= last_day:
-            iso = cursor.isoformat()
-            is_blocked = iso in blocked_dates
-            nightly_rate, season_label, multiplier = self._resolve_nightly_rate(
-                cursor,
-                base_rate=base_rate,
-            )
-            month_grid[iso] = {
-                "date": iso,
-                "status": "blocked" if is_blocked else "available",
-                "available": not is_blocked,
-                "nightly_rate": None if is_blocked else float(nightly_rate),
-                "season": season_label,
-                "multiplier": float(multiplier),
-            }
-            cursor += timedelta(days=1)
-
-        return {
-            **blocked_payload,
-            "month_grid": month_grid,
-            "pricing_source": "local_ledger",
-            "availability_source": "local_blocked_days",
-        }
-
-    async def get_fleet_calendar_v2(
-        self,
-        db: AsyncSession,
-        month: int,
-        year: int,
-    ) -> Dict[str, Any]:
-        """Return a bulk month-grid response for the active portfolio."""
-        first_day = date(year, month, 1)
-        _, last_day_num = calendar.monthrange(year, month)
-        last_day = date(year, month, last_day_num)
-        month_end_exclusive = last_day + timedelta(days=1)
-        generated_at = utc_now().isoformat()
-
-        properties = list(
-            (
-                await db.execute(
-                    select(Property)
-                    .where(Property.is_active.is_(True))
-                    .order_by(Property.name.asc())
-                )
-            ).scalars().all()
-        )
-        if not properties:
-            return {
-                "month": month,
-                "year": year,
-                "start_date": first_day.isoformat(),
-                "end_date": last_day.isoformat(),
-                "generated_at": generated_at,
-                "property_count": 0,
-                "pricing_source": "local_ledger",
-                "availability_source": "local_blocked_days",
-                "properties": [],
-            }
-
-        property_ids = [prop.id for prop in properties]
-        blocked_by_property: Dict[UUID, set[date]] = {prop.id: set() for prop in properties}
-
-        def add_range(property_id: UUID, start: date, end: date) -> None:
-            target = blocked_by_property.setdefault(property_id, set())
-            cursor = max(start, first_day)
-            stop = min(end, month_end_exclusive)
-            while cursor < stop:
-                target.add(cursor)
-                cursor += timedelta(days=1)
-
-        blocked_rows = (
-            await db.execute(
-                select(BlockedDay.property_id, BlockedDay.start_date, BlockedDay.end_date)
-                .where(
-                    and_(
-                        BlockedDay.property_id.in_(property_ids),
-                        BlockedDay.start_date < month_end_exclusive,
-                        BlockedDay.end_date > first_day,
-                    )
-                )
-            )
-        ).all()
-        for property_id, start_date, end_date in blocked_rows:
-            add_range(property_id, start_date, end_date)
-
-        reservation_rows = (
-            await db.execute(
-                select(Reservation.property_id, Reservation.check_in_date, Reservation.check_out_date)
-                .where(
-                    and_(
-                        Reservation.property_id.in_(property_ids),
-                        Reservation.status.in_(OCCUPYING_AVAILABILITY_STATUSES),
-                        Reservation.check_in_date < month_end_exclusive,
-                        Reservation.check_out_date > first_day,
-                    )
-                )
-            )
-        ).all()
-        for property_id, check_in_date, check_out_date in reservation_rows:
-            add_range(property_id, check_in_date, check_out_date)
-
-        active_hold_rows = (
-            await db.execute(
-                select(ReservationHold.property_id, ReservationHold.check_in_date, ReservationHold.check_out_date)
-                .where(
-                    and_(
-                        ReservationHold.property_id.in_(property_ids),
-                        ReservationHold.status == "active",
-                        ReservationHold.expires_at > utc_now(),
-                        ReservationHold.check_in_date < month_end_exclusive,
-                        ReservationHold.check_out_date > first_day,
-                    )
-                )
-            )
-        ).all()
-        for property_id, check_in_date, check_out_date in active_hold_rows:
-            add_range(property_id, check_in_date, check_out_date)
-
-        fleet_rows: List[Dict[str, Any]] = []
-        for prop in properties:
-            blocked_dates = blocked_by_property.get(prop.id, set())
-            month_grid: Dict[str, Dict[str, Any]] = {}
-            available_days = 0
-            blocked_days = 0
-            average_accumulator = Decimal("0.00")
-
-            cursor = first_day
-            while cursor <= last_day:
-                iso = cursor.isoformat()
-                is_blocked = cursor in blocked_dates
-                nightly_rate, season_label, multiplier = self._resolve_nightly_rate(
-                    cursor,
-                    base_rate=self.DEFAULT_BASE_RATE,
-                )
-                if is_blocked:
-                    blocked_days += 1
-                else:
-                    available_days += 1
-                    average_accumulator += nightly_rate
-                month_grid[iso] = {
-                    "date": iso,
-                    "status": "blocked" if is_blocked else "available",
-                    "available": not is_blocked,
-                    "nightly_rate": None if is_blocked else float(nightly_rate),
-                    "season": season_label,
-                    "multiplier": float(multiplier),
-                }
-                cursor += timedelta(days=1)
-
-            average_nightly_rate = (
-                float((average_accumulator / available_days).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-                if available_days > 0
-                else 0.0
-            )
-            fleet_rows.append(
-                {
-                    "property_id": str(prop.id),
-                    "property_name": prop.name,
-                    "slug": prop.slug,
-                    "property_type": prop.property_type,
-                    "bedrooms": prop.bedrooms,
-                    "bathrooms": float(prop.bathrooms) if prop.bathrooms is not None else None,
-                    "max_guests": prop.max_guests,
-                    "address": prop.address,
-                    "month_grid": month_grid,
-                    "summary": {
-                        "available_days": available_days,
-                        "blocked_days": blocked_days,
-                        "average_nightly_rate": average_nightly_rate,
-                    },
-                }
-            )
-
-        return {
-            "month": month,
-            "year": year,
-            "start_date": first_day.isoformat(),
-            "end_date": last_day.isoformat(),
-            "generated_at": generated_at,
-            "property_count": len(fleet_rows),
-            "pricing_source": "local_ledger",
-            "availability_source": "local_blocked_days",
-            "properties": fleet_rows,
-        }
-
     async def get_calendar(
         self,
         db: AsyncSession,
@@ -944,15 +554,15 @@ class ReservationEngine:
         code = self._generate_access_code()
 
         reservation.access_code = code
-        reservation.access_code_valid_from = combine_utc(
+        reservation.access_code_valid_from = datetime.combine(
             reservation.check_in_date,
             time(self.DEFAULT_CHECKIN_HOUR - self.ACCESS_CODE_EARLY_HOURS, 0),
         )
-        reservation.access_code_valid_until = combine_utc(
+        reservation.access_code_valid_until = datetime.combine(
             reservation.check_out_date,
             time(self.DEFAULT_CHECKOUT_HOUR + self.ACCESS_CODE_LATE_HOURS, 0),
         )
-        reservation.updated_at = utc_now()
+        reservation.updated_at = datetime.utcnow()
         await db.flush()
 
         self.log.info(
@@ -1009,9 +619,16 @@ class ReservationEngine:
 
         cursor = check_in
         while cursor < check_out:
-            nightly_rate, season_label, multiplier = self._resolve_nightly_rate(
-                cursor,
-                base_rate=base_rate,
+            holiday = self._get_holiday(cursor)
+            if holiday:
+                multiplier = self.HOLIDAY_MULTIPLIERS[holiday]
+                season_label = f"holiday_{holiday}"
+            else:
+                season_label = self._get_season(cursor)
+                multiplier = self.SEASON_MULTIPLIERS[season_label]
+
+            nightly_rate = (base_rate * multiplier).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
             )
             nightly_breakdown.append({
                 "date": cursor.isoformat(),
@@ -1194,7 +811,7 @@ class ReservationEngine:
         Returns counts of each transition performed.
         """
         today = date.today()
-        now = utc_now()
+        now = datetime.utcnow()
         counts = {"auto_checkin": 0, "auto_checkout": 0, "no_show": 0}
 
         # --- auto check-in ---
@@ -1211,7 +828,7 @@ class ReservationEngine:
             if not res.access_code:
                 res.access_code = self._generate_access_code()
             res.access_code_valid_from = now
-            res.access_code_valid_until = combine_utc(
+            res.access_code_valid_until = datetime.combine(
                 res.check_out_date,
                 time(self.DEFAULT_CHECKOUT_HOUR + self.ACCESS_CODE_LATE_HOURS, 0),
             )
