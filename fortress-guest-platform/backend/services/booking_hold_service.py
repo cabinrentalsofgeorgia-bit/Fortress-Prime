@@ -96,6 +96,7 @@ async def create_checkout_hold(
     pets: int = 0,
     adults: int | None = None,
     children: int | None = None,
+    quote_ref: UUID | None = None,
 ) -> dict[str, Any]:
     prop = await db.get(Property, property_id)
     if not prop or not prop.is_active:
@@ -133,6 +134,10 @@ async def create_checkout_hold(
         except FastQuoteError as exc:
             raise BookingHoldError(exc.message, exc.http_status) from exc
         total = Decimal(str(snapshot["total"]))
+
+    # Embed quote_ref so it can be retrieved at confirm-hold time to link GuestQuote.
+    if quote_ref is not None:
+        snapshot["quote_ref"] = str(quote_ref)
 
     guest = None
     if guest_email:
