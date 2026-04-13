@@ -540,8 +540,80 @@ async def startup(ctx: dict[str, Any]) -> None:
             "streamline_availability_sync_started",
             interval_seconds=max(300, int(settings.streamline_sync_interval)),
         )
+        from backend.workers.drift_sentry import drift_sentry_loop
+        drift_task = asyncio.create_task(
+            drift_sentry_loop(),
+            name="drift_sentry_task",
+        )
+        ctx["drift_sentry_task"] = drift_task
+        drift_task.add_done_callback(
+            lambda t: _log_background_task_result("drift_sentry_task", t),
+        )
+        logger.info("drift_sentry_started_in_worker")
+
     else:
         logger.info("streamline_availability_sync_disabled", reason="streamline_not_configured")
+
+    from backend.workers.hermes_sync import hermes_sync_loop
+    hermes_task = asyncio.create_task(
+        hermes_sync_loop(),
+        name="hermes_sync_task",
+    )
+    ctx["hermes_sync_task"] = hermes_task
+    hermes_task.add_done_callback(
+        lambda t: _log_background_task_result("hermes_sync_task", t),
+    )
+    logger.info("hermes_sync_started_in_worker")
+
+    if settings.recursive_agent_loop_enabled:
+        from backend.workers.recursive_agent_loop import recursive_agent_loop
+        ral_task = asyncio.create_task(
+            recursive_agent_loop(),
+            name="recursive_agent_loop_task",
+        )
+        ctx["recursive_agent_loop_task"] = ral_task
+        ral_task.add_done_callback(
+            lambda t: _log_background_task_result("recursive_agent_loop_task", t),
+        )
+        logger.info("recursive_agent_loop_started_in_worker",
+                    interval=os.getenv("RECURSIVE_LOOP_INTERVAL", "1800"))
+    else:
+        logger.info("recursive_agent_loop_disabled")
+
+    if settings.legal_email_intake_enabled:
+        from backend.services.legal_email_intake import run_legal_intake_loop
+        legal_intake_task = asyncio.create_task(
+            run_legal_intake_loop(),
+            name="legal_intake_task",
+        )
+        ctx["legal_intake_task"] = legal_intake_task
+        legal_intake_task.add_done_callback(
+            lambda t: _log_background_task_result("legal_intake_task", t),
+        )
+        logger.info("legal_email_intake_started_in_worker",
+                    interval=settings.legal_email_poll_interval)
+    else:
+        logger.info("legal_email_intake_disabled")
+
+    reservation_confirmed_task = asyncio.create_task(
+        _reservation_confirmed_consumer_loop(),
+        name="reservation_confirmed_consumer_task",
+    )
+    ctx["reservation_confirmed_consumer_task"] = reservation_confirmed_task
+    reservation_confirmed_task.add_done_callback(
+        lambda t: _log_background_task_result("reservation_confirmed_consumer_task", t),
+    )
+    logger.info("reservation_confirmed_consumer_wired")
+
+    payout_sweep_task = asyncio.create_task(
+        _payout_sweep_loop(),
+        name="payout_sweep_task",
+    )
+    ctx["payout_sweep_task"] = payout_sweep_task
+    payout_sweep_task.add_done_callback(
+        lambda t: _log_background_task_result("payout_sweep_task", t),
+    )
+    logger.info("payout_sweep_loop_started")
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
@@ -605,6 +677,11 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     if availability_task is not None:
         availability_task.cancel()
         await asyncio.gather(availability_task, return_exceptions=True)
+
+    payout_sweep_task = ctx.get("payout_sweep_task")
+    if payout_sweep_task is not None:
+        payout_sweep_task.cancel()
+        await asyncio.gather(payout_sweep_task, return_exceptions=True)
 
     streamline_vrs = ctx.get("streamline_vrs")
     if streamline_vrs is not None:
@@ -925,6 +1002,30 @@ async def _hunter_queue_sweep_loop() -> None:
         except Exception as exc:
             logger.error("hunter_queue_sweep_loop_error", error=str(exc)[:400])
         await asyncio.sleep(interval)
+
+
+async def _payout_sweep_loop() -> None:
+    """
+    Daily payout sweep that runs at 6am ET. Checks every hour whether the
+    6am window has been hit and triggers the sweep once per day.
+    """
+    import pytz
+    _ET = pytz.timezone("America/New_York")
+    _last_sweep_date = None
+    while True:
+        try:
+            now_et = datetime.now(_ET)
+            today = now_et.date()
+            if now_et.hour >= 6 and _last_sweep_date != today:
+                from backend.services.payout_scheduler import run_payout_sweep
+                result = await run_payout_sweep()
+                _last_sweep_date = today
+                logger.info("payout_sweep_daily_complete", **{k: str(v) for k, v in result.items()})
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("payout_sweep_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(3600)  # check every hour
 
 
 async def _streamline_availability_sync_loop(streamline_vrs: StreamlineVRS) -> None:
@@ -1683,6 +1784,131 @@ async def run_deep_entity_swarm_job(ctx: dict[str, Any], job_id: str) -> dict[st
         return await run_deep_entity_swarm(db, payload=job.payload_json or {})
 
     return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def _reservation_confirmed_consumer_loop() -> None:
+    """
+    Redpanda/Kafka consumer for the ``reservation.confirmed`` topic.
+
+    Sends a booking confirmation email to the guest for every confirmed
+    reservation.  Runs as a long-lived background task started by the ARQ
+    worker startup hook — identical lifecycle to the other background loops.
+    """
+    import json
+
+    from aiokafka import AIOKafkaConsumer
+
+    from backend.core.event_publisher import REDPANDA_BROKER
+    from backend.models.property import Property
+    from backend.models.reservation import Reservation
+    from backend.services.smtp_dispatcher import SMTPDispatcher
+
+    TOPIC = "reservation.confirmed"
+    GROUP_ID = "arq-booking-confirmation-mailer"
+
+    logger.info(
+        "reservation_confirmed_consumer_starting", topic=TOPIC, group_id=GROUP_ID
+    )
+    dispatcher = SMTPDispatcher()
+
+    consumer = AIOKafkaConsumer(
+        TOPIC,
+        bootstrap_servers=REDPANDA_BROKER,
+        group_id=GROUP_ID,
+        value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+        auto_offset_reset="earliest",
+        enable_auto_commit=True,
+    )
+
+    try:
+        await consumer.start()
+        logger.info("reservation_confirmed_consumer_started", topic=TOPIC)
+
+        async for msg in consumer:
+            try:
+                payload: dict = msg.value or {}
+                reservation_id = payload.get("reservation_id")
+                if not reservation_id:
+                    continue
+
+                async with AsyncSessionLocal() as db:
+                    res = await db.get(Reservation, reservation_id)
+                    if not res:
+                        logger.warning(
+                            "reservation_confirmed_consumer_not_found",
+                            reservation_id=reservation_id,
+                        )
+                        continue
+
+                    guest_email = (res.guest_email or "").strip()
+                    if not guest_email:
+                        logger.warning(
+                            "reservation_confirmed_consumer_no_email",
+                            reservation_id=reservation_id,
+                        )
+                        continue
+
+                    prop = (
+                        await db.get(Property, res.property_id)
+                        if res.property_id
+                        else None
+                    )
+                    property_name = prop.name if prop else "Your Cabin"
+
+                    nights_val = None
+                    if hasattr(res, "nights_count") and res.nights_count:
+                        nights_val = res.nights_count
+                    elif res.check_in_date and res.check_out_date:
+                        nights_val = (res.check_out_date - res.check_in_date).days
+
+                    quote_data: dict = {
+                        "property_name": property_name,
+                        "confirmation_code": res.confirmation_code
+                        or payload.get("confirmation_code", ""),
+                        "check_in_date": (
+                            res.check_in_date.isoformat()
+                            if res.check_in_date
+                            else payload.get("check_in_date", "")
+                        ),
+                        "check_out_date": (
+                            res.check_out_date.isoformat()
+                            if res.check_out_date
+                            else payload.get("check_out_date", "")
+                        ),
+                        "nights": nights_val,
+                        "total_amount": float(
+                            res.total_amount or payload.get("total_amount", 0)
+                        ),
+                    }
+
+                    result = await dispatcher.send_confirmation(guest_email, quote_data)
+                    logger.info(
+                        "reservation_confirmation_email_dispatched",
+                        reservation_id=reservation_id,
+                        to=guest_email,
+                        success=result.get("success"),
+                        error=result.get("error"),
+                    )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.error(
+                    "reservation_confirmed_consumer_message_error",
+                    error=str(exc)[:400],
+                )
+
+    except asyncio.CancelledError:
+        logger.info("reservation_confirmed_consumer_cancelled")
+    except Exception as exc:
+        logger.error(
+            "reservation_confirmed_consumer_fatal", error=str(exc)[:400]
+        )
+    finally:
+        try:
+            await consumer.stop()
+        except Exception:
+            pass
+        logger.info("reservation_confirmed_consumer_stopped")
 
 
 class WorkerSettings:
