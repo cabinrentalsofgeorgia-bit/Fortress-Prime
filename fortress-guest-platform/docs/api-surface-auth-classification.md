@@ -151,6 +151,10 @@ Representative hardened groups include:
     `legal_graph`, `legal_discovery`, `legal_docgen`, `legal_strategy`,
     `legal_counsel_dispatch`, `legal_sanctions`, `legal_deposition`,
     `legal_agent`, `ediscovery`
+- Owner Statements (Phase A-F — added 2026-04-15):
+  - `/api/admin/payouts/statements/*` — 9 endpoints — `require_manager_or_admin` (router-level in `admin_statements_workflow.py`)
+  - `/api/admin/payouts/charges/*` — 5 endpoints — `require_manager_or_admin` (router-level in `admin_charges.py`)
+  - `/api/v1/admin/statements/{owner_id}` — 1 endpoint — **JWT-only, no role check** — known gap, see Residual Ambiguities §5
 
 ## Residual Ambiguities / Follow-Ups
 
@@ -218,6 +222,29 @@ Why documented:
 
 - this is a reminder that allowlist drift can quietly create unauthenticated
   HITL surfaces
+
+### 5. Owner Statement Computation Endpoint — JWT-Only (Phase A-F gap, added 2026-04-15)
+
+File:
+
+- `backend/api/admin_statements.py`
+
+Current behavior:
+
+- `router = APIRouter()` with no `dependencies` — no role check at router or route level
+- The endpoint `GET /api/v1/admin/statements/{owner_id}` is protected only by the
+  global JWT middleware (any valid staff token, any role)
+- All other statement endpoints in `admin_statements_workflow.py` and
+  `admin_charges.py` are correctly gated by `require_manager_or_admin`
+
+Recommended follow-up:
+
+- Add `dependencies=[Depends(require_manager_or_admin)]` to the `APIRouter()` in
+  `backend/api/admin_statements.py`
+- Add a focused authorization test to `backend/tests/test_route_authorization.py`
+
+Until fixed, any staff role (including `staff`, `reviewer`, `operator`) can invoke
+the what-if statement computation endpoint.
 
 ## Operational Rules Going Forward
 
