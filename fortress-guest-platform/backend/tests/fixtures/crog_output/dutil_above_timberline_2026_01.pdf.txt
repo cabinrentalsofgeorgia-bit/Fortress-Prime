@@ -1,0 +1,95 @@
+OWNER STATEMENT
+Dutil David
+2300 Riverchase Center Birmingham, AL 35244
+86 Huntington Way Blue Ridge Ga 30513
+APPROVED
+Aska Adventure Area Above the Timberline
+638 Bell Camp Ridge Blue Ridge GA 30513
+Year: 2026 Period: 1
+Account Summary
+Activity: From 01/01/2026 to 01/31/2026
+Period
+YTD
+Balance as of 01/01/2026
+$3,001.91
+Payment Received
+$3,001.91
+$3,001.91
+Gross Reservation Revenue
+$0.00
+$0.00
+Less Management Commission
+$0.00
+$0.00
+Additional Owner Income
+$0.00
+$0.00
+Owner Charges/Expenses
+($312.50)
+($312.50)
+Total Balance Due
+$2,689.41
+Payments to Owner
+($3,001.91)
+($3,001.91)
+Balance as of 01/31/2026 (includes minimum required balance)
+($312.50)
+Your payment amount of $3,001.91 has been processed.
+Reservations
+Res #
+Guest
+Start
+End
+Nights
+Gross Rent
+Mgmt Comm
+Net Amount
+Total:
+0
+$0.00
+$0.00
+$0.00
+* - This reservation carries over into the next statement or carried over from a previous statement.
+Owner Payments / Additional Owner Income
+Date
+Description
+Amount
+TOTAL:
+$0.00
+Owner Charges/Expenses
+Posted Date
+Type
+Description
+W.O./REF#
+Expense
+01/10/2026
+Maintenance
+HVAC service call
+$200.00
+01/15/2026
+Cleaning Fee
+Deep clean after owner stay
+$112.50
+TOTAL:
+($312.50)
+Payments To Owner
+Date
+Description
+ACH #
+CK #
+Amount
+TOTAL:
+($3,001.91)
+Scheduled Payments:
+$0.00
+Owner Reserve
+Date
+Type
+Description
+Amount
+Balance as of 01/01/2026:
+$0.00
+
+Balance as of 01/31/2026:
+$0.00
+(Owner Reserve sub-account not yet implemented — displayed as zero.)
