@@ -171,6 +171,34 @@ def _total_row_style() -> TableStyle:
     ])
 
 
+# ── Name formatting ──────────────────────────────────────────────────────────
+
+def _streamline_name(owner_name: str, owner_middle_name: str | None) -> str:
+    """Format owner name in Streamline's last-middle-first format.
+
+    Streamline renders "Knight Mitchell Gary" (last middle first, no comma).
+    Policy: Streamline is source of truth for name format (G.6, 2026-04-15).
+
+    Inputs:
+      owner_name        — stored as "First Last" (e.g., "Gary Knight")
+      owner_middle_name — stored separately, nullable (e.g., "Mitchell")
+
+    Parsing: splits owner_name on whitespace, treats first token as first name
+    and last token as last name. Names with 3+ words (compound first names,
+    suffixes) are handled by index — middle component is silently ignored from
+    the stored field; middle_name column carries the authoritative middle.
+    """
+    parts = owner_name.strip().split()
+    if len(parts) < 2:
+        # Fallback: single-word name — return as-is
+        return owner_name
+    first = parts[0]
+    last = parts[-1]
+    if owner_middle_name and owner_middle_name.strip():
+        return f"{last} {owner_middle_name.strip()} {first}"
+    return f"{last} {first}"
+
+
 # ── Main renderer ─────────────────────────────────────────────────────────────
 
 def _build_pdf_bytes(
@@ -539,7 +567,7 @@ async def render_owner_statement_pdf(
         total_charges=Decimal(str(period.total_charges)),
         total_payments=Decimal(str(period.total_payments)),
         total_owner_income=Decimal(str(period.total_owner_income)),
-        owner_name=opa.owner_name or "",
+        owner_name=_streamline_name(opa.owner_name or "", getattr(opa, "owner_middle_name", None)),
         owner_address=owner_address,
         prop_display_name=prop_display_name,
         prop_address=prop_address,

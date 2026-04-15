@@ -477,6 +477,28 @@ grep -A 10 "_COMMISSIONABLE_PATTERNS" \
 
 ---
 
+## Owner name rendering policy
+
+Streamline renders owner names as **"Last Middle First"** (no comma, space-delimited). CROG mirrors this format on owner statement PDFs (G.6, 2026-04-15).
+
+**Storage in `owner_payout_accounts`:**
+- `owner_name` — "First Last" (e.g., `"Gary Knight"`) — set at invite/onboarding
+- `owner_middle_name` — middle name when known, nullable (e.g., `"Mitchell"`) — fetched from `GetOwnerInfo` at enrollment
+
+**Rendering in `statement_pdf.py` (`_streamline_name` helper):**
+- With middle: `"Knight Mitchell Gary"`
+- Without middle: `"Knight Gary"` (graceful fallback)
+
+**Verification command:**
+```bash
+pdftotext /tmp/any_statement.pdf - | grep -i "knight"
+# Expected: Knight Mitchell Gary
+```
+
+**When enrolling new owners (G.7+):** call `StreamlineVRS.fetch_owner_info(sl_owner_id)` at invite-creation time, store `middle_name` in `owner_middle_name` on the OPA. The `fetch_owner_info` docstring lists the response keys including `first_name`, `last_name`, `middle_name`, and pre-assembled `display_name`.
+
+---
+
 ## How to use this doc
 
 - **Every Claude Code session reads this as Task 0** before any infrastructure-touching work.

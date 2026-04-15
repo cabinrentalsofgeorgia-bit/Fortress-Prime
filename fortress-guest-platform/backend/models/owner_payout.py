@@ -56,6 +56,7 @@ class OwnerPayoutAccount(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     property_id = Column(String(100), nullable=False, index=True)
     owner_name = Column(String(255), nullable=False)
+    owner_middle_name = Column(String(100), nullable=True)   # G.6: Streamline middle name
     owner_email = Column(String(255), nullable=True, index=True)
     stripe_account_id = Column(String(255), nullable=True)
     account_status = Column(
