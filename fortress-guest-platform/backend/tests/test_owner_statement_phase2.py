@@ -23,9 +23,9 @@ from typing import Optional
 
 import psycopg2
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,6 @@ def _make_opa(
     conn.close()
     return opa_id
 
-
 def _get_real_property() -> tuple:
     """Return (property_uuid, property_id_str) for the first active property."""
     conn = psycopg2.connect(DSN)
@@ -78,7 +77,6 @@ def _get_real_property() -> tuple:
     prop_id = cur.fetchone()[0]
     conn.close()
     return prop_id, str(prop_id)
-
 
 def _get_reservation_count_for_property(property_id_str: str) -> int:
     conn = psycopg2.connect(DSN)
@@ -91,7 +89,6 @@ def _get_reservation_count_for_property(property_id_str: str) -> int:
     count = cur.fetchone()[0]
     conn.close()
     return count
-
 
 # ── 3. Non-existent account → not_found ──────────────────────────────────────
 
@@ -112,7 +109,6 @@ async def test_nonexistent_account_raises_not_found():
             )
     assert exc_info.value.code == "not_found"
     assert "999999999" in exc_info.value.message
-
 
 # ── 4 & 7. Not-enrolled owner (no stripe_account_id) → not_enrolled ──────────
 
@@ -152,7 +148,6 @@ async def test_not_enrolled_owner_raises_not_enrolled():
     assert exc_info.value.code == "not_enrolled"
     assert "stripe" in exc_info.value.message.lower() or "onboard" in exc_info.value.message.lower()
 
-
 # ── 1. Zero reservations in period → zero totals, no crash ───────────────────
 
 @pytest.mark.asyncio
@@ -185,7 +180,6 @@ async def test_zero_reservations_returns_empty_statement():
     assert result.total_commission == Decimal("0.00")
     assert result.line_items == []
     assert result.source == "crog"
-
 
 # ── 5. commission_rate is read from DB ────────────────────────────────────────
 
@@ -226,7 +220,6 @@ async def test_commission_rate_comes_from_db():
     assert result.commission_rate_percent == Decimal("32.5000"), (
         f"Expected 32.5000, got {result.commission_rate_percent}"
     )
-
 
 # ── 6. Two owners with different rates → different net amounts ────────────────
 
@@ -286,7 +279,6 @@ async def test_different_db_rates_produce_different_nets():
 
     assert payout_30.net_owner_payout > payout_35.net_owner_payout
     assert payout_30.commission_amount < payout_35.commission_amount
-
 
 # ── 2. Multiple reservations → correct line items ────────────────────────────
 
@@ -361,7 +353,6 @@ async def test_multiple_reservations_correct_totals():
     assert result.commission_rate == Decimal("0.3000")
     assert result.commission_rate_percent == Decimal("30.0000")
 
-
 # ── 8. source is 'crog' ───────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -384,7 +375,6 @@ async def test_source_is_crog():
         )
 
     assert result.source == "crog"
-
 
 # ── 9. commission_rate_percent = commission_rate × 100 ───────────────────────
 

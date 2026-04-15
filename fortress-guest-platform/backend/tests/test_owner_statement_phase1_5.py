@@ -28,9 +28,9 @@ from unittest.mock import AsyncMock, patch
 
 import psycopg2
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── 1–3. Invite endpoint validation ──────────────────────────────────────────
 
@@ -47,7 +47,6 @@ def test_invite_request_rejects_missing_commission_rate():
         )
     assert "commission_rate_percent" in str(exc.value)
 
-
 def test_invite_request_rejects_negative_rate():
     from pydantic import ValidationError
     from backend.api.admin_payouts import OwnerInviteRequest
@@ -60,7 +59,6 @@ def test_invite_request_rejects_negative_rate():
             commission_rate_percent=-1.0,
         )
 
-
 def test_invite_request_rejects_rate_above_50():
     from pydantic import ValidationError
     from backend.api.admin_payouts import OwnerInviteRequest
@@ -72,7 +70,6 @@ def test_invite_request_rejects_rate_above_50():
             owner_name="Test Owner",
             commission_rate_percent=51.0,
         )
-
 
 # ── 4. Valid rates stored as correct fractions ────────────────────────────────
 
@@ -120,7 +117,6 @@ async def test_create_invite_stores_commission_rate_as_fraction():
             f"Expected {expected_frac} for input {pct}, got {stored}"
         )
 
-
 # ── 5. Legacy token (no commission_rate) fails clearly ───────────────────────
 
 @pytest.mark.asyncio
@@ -166,7 +162,6 @@ async def test_accept_invite_fails_on_legacy_token_without_rate():
 
     assert result["success"] is False
     assert "commission" in result["message"].lower() or "rate" in result["message"].lower()
-
 
 # ── 6. Full create→accept round-trip stores correct rate ─────────────────────
 
@@ -226,7 +221,6 @@ async def test_create_invite_and_accept_stores_commission_rate():
     assert row is not None, "owner_payout_accounts row not found"
     assert str(row[0]) == "0.3000", f"Expected 0.3000, got {row[0]}"
 
-
 # ── 7. Two owners with different rates produce different net amounts ──────────
 
 def test_different_commission_rates_produce_different_net_amounts():
@@ -251,7 +245,6 @@ def test_different_commission_rates_produce_different_net_amounts():
     diff = payout_30.net_owner_payout - payout_35.net_owner_payout
     assert diff == Decimal("100.00")
 
-
 # ── 8. calculate_owner_payout no longer has a default rate ───────────────────
 
 def test_calculate_owner_payout_requires_explicit_rate():
@@ -268,7 +261,6 @@ def test_calculate_owner_payout_requires_explicit_rate():
         "commission_rate should have no default — it was removed intentionally."
     )
 
-
 # ── 9. send_monthly_statement stub raises NotImplementedError ─────────────────
 
 @pytest.mark.asyncio
@@ -282,7 +274,6 @@ async def test_send_monthly_statement_raises_not_implemented():
     with pytest.raises(NotImplementedError) as exc:
         await send_monthly_statement(db=None, property_id="x", year=2026, month=3)  # type: ignore
     assert "65%" in str(exc.value) or "removed" in str(exc.value).lower() or "commission" in str(exc.value).lower()
-
 
 # ── 10. admin_statements get_owner_statement requires DB rate ─────────────────
 

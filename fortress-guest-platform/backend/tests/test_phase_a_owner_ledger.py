@@ -24,8 +24,9 @@ from decimal import Decimal
 
 import psycopg2
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+DSN = get_test_dsn()
 
 # The 14 known CROG properties by name (used for the active count test)
 KNOWN_PROPERTIES = {
@@ -35,7 +36,6 @@ KNOWN_PROPERTIES = {
     "Restoration Luxury", "Riverview Lodge", "Serendipity on Noontootla Creek",
     "Skyfall", "The Rivers Edge",
 }
-
 
 # ── A1: renting_state migration ───────────────────────────────────────────────
 
@@ -51,7 +51,6 @@ def test_exactly_one_pre_launch_among_known_properties():
     conn.close()
     assert count == 1, f"Expected exactly 1 pre_launch among known properties, got {count}"
 
-
 def test_thirteen_active_among_known_properties():
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -63,7 +62,6 @@ def test_thirteen_active_among_known_properties():
     count = cur.fetchone()[0]
     conn.close()
     assert count == 13, f"Expected 13 active known properties, got {count}"
-
 
 def test_renting_state_is_not_nullable():
     conn = psycopg2.connect(DSN)
@@ -77,7 +75,6 @@ def test_renting_state_is_not_nullable():
     assert row is not None, "renting_state column missing"
     assert row[0] == "NO", "renting_state must be NOT NULL"
 
-
 def test_restoration_luxury_is_pre_launch():
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -86,7 +83,6 @@ def test_restoration_luxury_is_pre_launch():
     conn.close()
     assert row is not None, "Restoration Luxury not found"
     assert row[0] == "pre_launch", f"Expected pre_launch, got {row[0]}"
-
 
 # ── A2: owner_balance_periods table ──────────────────────────────────────────
 
@@ -110,7 +106,6 @@ def test_owner_balance_periods_columns():
     }
     missing = required - cols
     assert not missing, f"Missing columns: {missing}"
-
 
 def test_ledger_equation_constraint_rejects_invalid_row():
     """
@@ -147,7 +142,6 @@ def test_ledger_equation_constraint_rejects_invalid_row():
     conn.close()
     assert "chk_obp_ledger_equation" in str(exc_info.value) or "check" in str(exc_info.value).lower()
 
-
 # ── A3: get_or_create_balance_period ─────────────────────────────────────────
 
 def _make_opa_for_period_tests(uid: str) -> int:
@@ -170,7 +164,6 @@ def _make_opa_for_period_tests(uid: str) -> int:
     conn.close()
     return opa_id
 
-
 @pytest.mark.asyncio
 async def test_get_or_create_new_period_zero_opening():
     from backend.core.database import AsyncSessionLocal
@@ -192,7 +185,6 @@ async def test_get_or_create_new_period_zero_opening():
     )
     assert Decimal(str(period.closing_balance)) == Decimal("0.00")
     assert period.status == "draft"
-
 
 @pytest.mark.asyncio
 async def test_get_or_create_carries_prior_closing_balance():
@@ -235,7 +227,6 @@ async def test_get_or_create_carries_prior_closing_balance():
     )
     assert Decimal(str(march.closing_balance)) == Decimal("1250.50")
 
-
 @pytest.mark.asyncio
 async def test_get_or_create_idempotent():
     from backend.core.database import AsyncSessionLocal
@@ -263,7 +254,6 @@ async def test_get_or_create_idempotent():
     assert second.id == first_id, (
         f"Expected same row id={first_id}, got id={second.id}"
     )
-
 
 # ── A4: compute_owner_statement renting_state check ──────────────────────────
 
@@ -314,7 +304,6 @@ async def test_compute_owner_statement_raises_property_not_renting():
     assert exc_info.value.code == "property_not_renting"
     assert "Restoration Luxury" in exc_info.value.message or "pre_launch" in exc_info.value.message
 
-
 @pytest.mark.asyncio
 async def test_compute_owner_statement_works_for_active_property():
     """
@@ -363,7 +352,6 @@ async def test_compute_owner_statement_works_for_active_property():
     assert result.reservation_count == 0
     assert result.source == "crog"
 
-
 # ── Phase A.5: offboarding counts and compute guard ──────────────────────────
 
 def test_post_offboarding_counts():
@@ -387,7 +375,6 @@ def test_post_offboarding_counts():
     assert n_offboarded == 44, f"Expected 44 offboarded, got {n_offboarded}"
     assert n_total == 58,      f"Expected 58 total, got {n_total}"
     assert n_active + n_pre_launch + n_offboarded == n_total
-
 
 def test_14_preserved_properties_have_correct_states():
     """Each of the 14 Streamline-active properties has the correct renting_state."""
@@ -423,7 +410,6 @@ def test_14_preserved_properties_have_correct_states():
         assert actual_state == expected_state, (
             f"{actual_name}: expected renting_state={expected_state!r}, got {actual_state!r}"
         )
-
 
 @pytest.mark.asyncio
 async def test_compute_raises_for_offboarded_property():
@@ -473,7 +459,6 @@ async def test_compute_raises_for_offboarded_property():
 
     assert exc_info.value.code == "property_not_renting"
     assert "offboarded" in exc_info.value.message
-
 
 @pytest.mark.asyncio
 async def test_all_13_active_properties_can_compute():

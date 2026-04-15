@@ -18,9 +18,9 @@ from decimal import Decimal
 
 import psycopg2
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── 1. Schema checks ─────────────────────────────────────────────────────────
 
@@ -52,7 +52,6 @@ def test_owner_statement_sends_columns():
     # sent_at should be nullable (filled in after successful send)
     assert cols["sent_at"][1] == "YES", "sent_at should be nullable"
 
-
 def test_owner_payout_accounts_new_columns():
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -72,7 +71,6 @@ def test_owner_payout_accounts_new_columns():
     assert "streamline_owner_id" in cols, "streamline_owner_id column missing"
     assert cols["streamline_owner_id"][1] == "YES", "streamline_owner_id must be nullable"
 
-
 def test_commission_rate_check_constraint_exists():
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -88,7 +86,6 @@ def test_commission_rate_check_constraint_exists():
     conn.close()
     assert row is not None, "chk_opa_commission_rate constraint missing"
     assert "0.5000" in row[0], f"Constraint text unexpected: {row[0]}"
-
 
 # ── 2. OwnerPayoutAccount ORM insert / read ──────────────────────────────────
 
@@ -128,7 +125,6 @@ async def test_owner_payout_account_insert_reads_back():
     # No stripe_account_id on this test row, so is_enrolled should be False
     assert loaded.is_enrolled is False
 
-
 def test_commission_rate_rejects_out_of_range():
     """The DB check constraint must reject commission_rate > 0.5 and < 0."""
     conn = psycopg2.connect(DSN)
@@ -144,7 +140,6 @@ def test_commission_rate_rejects_out_of_range():
         conn.commit()
     conn.rollback()
     conn.close()
-
 
 # ── 3. OwnerStatementSend ORM insert / read ───────────────────────────────────
 
@@ -219,7 +214,6 @@ async def test_owner_statement_send_insert_reads_back():
     assert loaded.comparison_diff_cents == 0
     assert loaded.is_test is True
     assert loaded.sent_at is None   # not sent yet
-
 
 @pytest.mark.asyncio
 async def test_owner_statement_send_error_row():

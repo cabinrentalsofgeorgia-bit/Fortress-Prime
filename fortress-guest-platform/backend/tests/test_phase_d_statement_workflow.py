@@ -54,9 +54,9 @@ from typing import Optional
 
 import psycopg2
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,6 @@ def _make_enrolled_opa(uid: str, prop_id: Optional[str] = None,
     conn.close()
     return opa_id
 
-
 def _make_unenrolled_opa(uid: str) -> int:
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -101,7 +100,6 @@ def _make_unenrolled_opa(uid: str) -> int:
     conn.close()
     return opa_id
 
-
 def _get_period_for_opa(opa_id: int, period_start: date, period_end: date):
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -112,7 +110,6 @@ def _get_period_for_opa(opa_id: int, period_start: date, period_end: date):
     row = cur.fetchone()
     conn.close()
     return row  # (id, status, closing_balance) or None
-
 
 # ── 1. Schema ─────────────────────────────────────────────────────────────────
 
@@ -126,7 +123,6 @@ def test_balance_periods_has_new_columns():
     assert "voided_at" in cols, "voided_at missing"
     assert "voided_by" in cols, "voided_by missing"
     assert "paid_by"   in cols, "paid_by missing"
-
 
 # ── 2–4. generate_monthly_statements basics ───────────────────────────────────
 
@@ -154,7 +150,6 @@ async def test_generate_creates_pending_approval_rows():
     row = _get_period_for_opa(opa_id, date(2099, 10, 1), date(2099, 10, 31))
     assert row is not None
     assert row[1] == "pending_approval"
-
 
 @pytest.mark.asyncio
 async def test_generate_skips_pre_launch_property():
@@ -187,7 +182,6 @@ async def test_generate_skips_pre_launch_property():
     row = _get_period_for_opa(opa_id, date(2099, 11, 1), date(2099, 11, 30))
     assert row is None
 
-
 @pytest.mark.asyncio
 async def test_generate_skips_unenrolled_owners():
     """Owners without a stripe_account_id should not appear at all in the run."""
@@ -210,7 +204,6 @@ async def test_generate_skips_unenrolled_owners():
     account_ids = {r.owner_payout_account_id for r in result.results}
     # Enrolled owner processed
     assert opa_enrolled in account_ids
-
 
 # ── 5. Idempotent ─────────────────────────────────────────────────────────────
 
@@ -235,7 +228,6 @@ async def test_generate_idempotent_for_draft():
 
     row2 = _get_period_for_opa(opa_id, *period)
     assert row2[0] == period_id_1, "Second call must not create a duplicate row"
-
 
 # ── 6–9. Skips locked rows ────────────────────────────────────────────────────
 
@@ -287,7 +279,6 @@ async def test_generate_skips_locked_status(locked_status):
     assert row[0] == locked_id
     assert str(row[2]) == str(locked_closing)
 
-
 # ── 10. dry_run ───────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -308,7 +299,6 @@ async def test_generate_dry_run_commits_nothing():
     assert result.dry_run is True
     # After dry_run, still no row
     assert _get_period_for_opa(opa_id, *period) is None
-
 
 # ── 11. One error does not block others ──────────────────────────────────────
 
@@ -355,7 +345,6 @@ async def test_generate_one_error_does_not_block_others():
     assert len(bad_outcomes) == 1
     assert bad_outcomes[0].status in ("error", "skipped_not_renting",
                                       "skipped_locked", "created", "updated")
-
 
 # ── 12. Happy path: full lifecycle ────────────────────────────────────────────
 
@@ -408,7 +397,6 @@ async def test_full_lifecycle_pending_to_emailed():
         assert period.status == "emailed"
         assert period.emailed_at is not None
 
-
 @pytest.mark.asyncio
 async def test_email_then_pay_also_works():
     """approved → emailed → mark_paid should succeed (order doesn't matter)."""
@@ -438,7 +426,6 @@ async def test_email_then_pay_also_works():
 
     assert final.status == "paid"
     assert final.emailed_at is not None
-
 
 # ── 13–20. Forbidden transitions ─────────────────────────────────────────────
 
@@ -470,7 +457,6 @@ async def test_forbidden_approve_a_draft():
     assert exc.value.code == "invalid_transition"
     assert "draft" in exc.value.message
 
-
 @pytest.mark.asyncio
 async def test_forbidden_void_a_paid_statement():
     from backend.core.database import AsyncSessionLocal
@@ -495,7 +481,6 @@ async def test_forbidden_void_a_paid_statement():
             await void_statement(db, pid, "test reason", "gary@crog.com")
 
     assert exc.value.code == "invalid_transition"
-
 
 @pytest.mark.asyncio
 async def test_forbidden_void_an_emailed_statement():
@@ -522,7 +507,6 @@ async def test_forbidden_void_an_emailed_statement():
 
     assert exc.value.code == "invalid_transition"
 
-
 @pytest.mark.asyncio
 async def test_forbidden_mark_paid_on_draft():
     from backend.core.database import AsyncSessionLocal
@@ -545,7 +529,6 @@ async def test_forbidden_mark_paid_on_draft():
 
         with pytest.raises(StatementWorkflowError):
             await mark_statement_paid(db, pid, "QB-REF", "gary@crog.com")
-
 
 @pytest.mark.asyncio
 async def test_forbidden_mark_emailed_on_draft():
@@ -570,7 +553,6 @@ async def test_forbidden_mark_emailed_on_draft():
         with pytest.raises(StatementWorkflowError):
             await mark_statement_emailed(db, pid)
 
-
 # ── 21–26. Endpoint validation ────────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -589,7 +571,6 @@ async def test_generate_endpoint_rejects_future_period():
     assert exc.value.status_code == 422
     assert "future" in exc.value.detail.lower()
 
-
 @pytest.mark.asyncio
 async def test_generate_endpoint_rejects_invalid_date_range():
     from backend.core.database import AsyncSessionLocal
@@ -604,7 +585,6 @@ async def test_generate_endpoint_rejects_invalid_date_range():
         with pytest.raises(HTTPException) as exc:
             await generate_statements(body=body, db=db)
     assert exc.value.status_code == 422
-
 
 @pytest.mark.asyncio
 async def test_approve_endpoint_409_wrong_status():
@@ -633,7 +613,6 @@ async def test_approve_endpoint_409_wrong_status():
             await approve(period_id=pid, db=db, user=user)
 
     assert exc.value.status_code == 409
-
 
 @pytest.mark.asyncio
 async def test_void_endpoint_409_for_paid():
@@ -665,7 +644,6 @@ async def test_void_endpoint_409_for_paid():
 
     assert exc.value.status_code == 409
 
-
 @pytest.mark.asyncio
 async def test_mark_paid_endpoint_409_for_draft():
     from backend.core.database import AsyncSessionLocal
@@ -696,7 +674,6 @@ async def test_mark_paid_endpoint_409_for_draft():
 
     assert exc.value.status_code == 409
 
-
 @pytest.mark.asyncio
 async def test_mark_emailed_endpoint_409_for_draft():
     from backend.core.database import AsyncSessionLocal
@@ -722,7 +699,6 @@ async def test_mark_emailed_endpoint_409_for_draft():
             await mark_emailed(period_id=pid, db=db)
 
     assert exc.value.status_code == 409
-
 
 # ── 27. Attribution ───────────────────────────────────────────────────────────
 
@@ -764,7 +740,6 @@ async def test_attributions_are_set_correctly():
         assert voided.voided_by == "gary@crog.com"
         assert voided.voided_at is not None
         assert voided.notes == "Test void reason"
-
 
 # ── 28. End-to-end integration ────────────────────────────────────────────────
 

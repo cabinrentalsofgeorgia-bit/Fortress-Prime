@@ -23,16 +23,15 @@ from decimal import Decimal
 import psycopg2
 import pypdf
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── PDF rendering helpers ─────────────────────────────────────────────────────
 
 def _minimal_ytd() -> dict:
     return {k: Decimal("0") for k in
             ("revenue", "commission", "charges", "payments", "owner_income")}
-
 
 def _empty_stmt():
     from backend.services.statement_computation import StatementResult
@@ -47,7 +46,6 @@ def _empty_stmt():
         commission_rate=Decimal("0.30"),
         commission_rate_percent=Decimal("30"),
     )
-
 
 def _render(
     *,
@@ -90,7 +88,6 @@ def _render(
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     return " ".join(p.extract_text() or "" for p in reader.pages)
 
-
 # ── 1. Owner name: last-middle-first format ───────────────────────────────────
 
 def test_owner_name_renders_in_streamline_format():
@@ -102,13 +99,11 @@ def test_owner_name_renders_in_streamline_format():
     # Note: "Gary" alone may appear in other fields, so check the combined form
     assert "Gary Knight" not in text
 
-
 def test_owner_name_without_middle_name():
     text = _render(owner_name="Dutil David")
     assert "Dutil David" in text
     # No stray space or extra separator
     assert "Dutil  David" not in text
-
 
 # ── 2. Property address: full one-line string ─────────────────────────────────
 
@@ -118,12 +113,10 @@ def test_property_address_renders_full_address_one_line():
         "Full property address must appear on one line"
     )
 
-
 def test_property_address_street_only_when_no_city():
     """When city/state/postal are absent, just the street renders."""
     text = _render(prop_address="638 Bell Camp Ridge")
     assert "638 Bell Camp Ridge" in text
-
 
 # ── 3. Reservations footnote: always present ─────────────────────────────────
 
@@ -133,7 +126,6 @@ def test_reservations_footnote_always_present():
     assert "carries over into the next statement" in text, (
         "Reservations footnote must always be present"
     )
-
 
 def test_reservations_footnote_present_with_reservations():
     """Footnote renders when there ARE reservations (no regression)."""
@@ -160,7 +152,6 @@ def test_reservations_footnote_present_with_reservations():
     text = _render(stmt=stmt)
     assert "carries over into the next statement" in text
 
-
 # ── 4. Payments To Owner: Description column ─────────────────────────────────
 
 def test_payments_to_owner_has_description_column():
@@ -175,7 +166,6 @@ def test_payments_to_owner_has_description_column():
         "Payments To Owner table must include a Description column header"
     )
 
-
 # ── 5. Company HQ address in header ──────────────────────────────────────────
 
 def test_company_hq_renders_in_header():
@@ -184,20 +174,17 @@ def test_company_hq_renders_in_header():
         "Company HQ address must appear in the PDF header"
     )
 
-
 def test_company_llc_line_not_in_header():
     text = _render()
     assert "Cabin Rentals of Georgia, LLC" not in text, (
         "Company LLC name must NOT appear (Phase E.6 removed it)"
     )
 
-
 def test_company_phone_not_in_header():
     text = _render()
     assert "455-5555" not in text, (
         "Company phone number must NOT appear (Phase E.6 removed it)"
     )
-
 
 # ── 6. Owner mailing address: single line ─────────────────────────────────────
 
@@ -207,7 +194,6 @@ def test_owner_address_renders_one_line():
     assert "PO Box 982 Morganton, GA 30560" in text.replace("\n", " "), (
         "Owner mailing address must be on a single line"
     )
-
 
 def test_owner_address_display_single_line_format():
     """OwnerPayoutAccount.mailing_address_display returns a single-line string."""
@@ -220,7 +206,6 @@ def test_owner_address_display_single_line_format():
     opa.mailing_address_postal_code = "30560"
     assert opa.mailing_address_display == "PO Box 982 Morganton, GA 30560"
 
-
 def test_owner_address_display_with_line2():
     from backend.models.owner_payout import OwnerPayoutAccount
     opa = OwnerPayoutAccount()
@@ -230,7 +215,6 @@ def test_owner_address_display_with_line2():
     opa.mailing_address_state = "GA"
     opa.mailing_address_postal_code = "30513"
     assert opa.mailing_address_display == "100 Oak Street Suite 4 Blue Ridge, GA 30513"
-
 
 # ── Integration: fetch_owner_info returns display_name ───────────────────────
 
@@ -248,7 +232,6 @@ def test_fetch_owner_info_returns_display_name():
         f"Expected 'Knight Mitchell Gary', got {info.get('display_name')!r}"
     )
 
-
 def test_fetch_owner_info_display_name_no_middle():
     """display_name omits middle when blank."""
     import asyncio
@@ -262,7 +245,6 @@ def test_fetch_owner_info_display_name_no_middle():
     assert info.get("display_name") == "Dutil David", (
         f"Expected 'Dutil David', got {info.get('display_name')!r}"
     )
-
 
 # ── Integration: demo fixture PDFs contain all E.6 strings ───────────────────
 
@@ -293,7 +275,6 @@ def test_knight_demo_pdf_passes_all_e6_checks():
 
     assert "Cabin Rentals of Georgia, LLC" not in text
     assert "455-5555" not in text
-
 
 def test_dutil_demo_pdf_passes_all_e6_checks():
     """The regenerated Dutil PDF contains all Phase E.6 expected strings."""

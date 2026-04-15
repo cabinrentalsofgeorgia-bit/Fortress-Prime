@@ -35,9 +35,9 @@ from typing import Optional
 import psycopg2
 import pypdf
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
 
@@ -80,7 +80,6 @@ def _make_opa(
     conn.commit()
     conn.close()
     return opa_id
-
 
 def _make_obp(
     opa_id: int,
@@ -129,12 +128,10 @@ def _make_obp(
     conn.close()
     return obp_id
 
-
 def _pdf_text(pdf_bytes: bytes) -> str:
     """Extract all text from a PDF bytes object."""
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     return " ".join(page.extract_text() or "" for page in reader.pages)
-
 
 def _make_property(uid: str) -> str:
     """Insert a minimal test property row and return its UUID string.
@@ -160,7 +157,6 @@ def _make_property(uid: str) -> str:
     conn.close()
     return prop_uuid
 
-
 # ── 1. Currency formatting ────────────────────────────────────────────────────
 
 def test_currency_formatting():
@@ -180,7 +176,6 @@ def test_currency_formatting():
     # Large positive
     assert _fmt(Decimal("64822.71")) == "$64,822.71"
 
-
 # ── 2. Status badge ───────────────────────────────────────────────────────────
 
 def test_status_badge_for_each_status():
@@ -199,7 +194,6 @@ def test_status_badge_for_each_status():
 
     text, _ = _status_badge("voided")
     assert text == "VOIDED"
-
 
 # ── 3. Valid PDF for zero-activity statement ─────────────────────────────────
 
@@ -222,7 +216,6 @@ async def test_valid_pdf_for_zero_activity_statement():
     assert "OWNER STATEMENT" in text
     assert "E Zero Test" in text
     assert "APPROVED" in text
-
 
 # ── 4. Negative closing balance renders in parentheses ───────────────────────
 
@@ -255,7 +248,6 @@ async def test_negative_closing_balance_renders_in_parens():
         f"Expected ($312.50) for negative closing balance, text snippet: "
         f"{text[:300]!r}"
     )
-
 
 # ── 5. Valid PDF for multi-reservation statement ──────────────────────────────
 
@@ -333,7 +325,6 @@ async def test_valid_pdf_for_multi_reservation_statement():
     assert f"E5-{uid}-A" in text, "First reservation code must appear in PDF"
     assert f"E5-{uid}-B" in text, "Second reservation code must appear in PDF"
 
-
 # ── 6. Cross-period reservation gets asterisk and footnote ───────────────────
 
 @pytest.mark.asyncio
@@ -403,7 +394,6 @@ async def test_cross_period_reservation_gets_asterisk_and_footnote():
         "Footnote about cross-period reservation must appear"
     )
 
-
 # ── 7. YTD column accumulates across periods ──────────────────────────────────
 
 @pytest.mark.asyncio
@@ -453,7 +443,6 @@ async def test_ytd_accumulates_across_periods():
         f"YTD commission $750.00 must appear in period 2 PDF; snippet: {text[:500]!r}"
     )
 
-
 # ── 8. Owner reserve renders zeros ───────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -473,7 +462,6 @@ async def test_owner_reserve_renders_zeros():
     # The section renders both balances as $0.00 (not yet implemented)
     assert "$0.00" in text
 
-
 # ── 9. PDF endpoint returns application/pdf ───────────────────────────────────
 
 @pytest.mark.asyncio
@@ -491,7 +479,6 @@ async def test_pdf_endpoint_returns_pdf_content_type():
     assert response.media_type == "application/pdf"
     assert response.body[:4] == b"%PDF"
 
-
 # ── 10. PDF endpoint 404 for missing period ───────────────────────────────────
 
 @pytest.mark.asyncio
@@ -505,7 +492,6 @@ async def test_pdf_endpoint_404_for_missing_period():
             await download_statement_pdf(period_id=999_999_999, db=db)
 
     assert exc.value.status_code == 404
-
 
 # ── 11. PDF endpoint filename in Content-Disposition ─────────────────────────
 
@@ -530,7 +516,6 @@ async def test_pdf_endpoint_filename_in_content_disposition():
     assert "owner_statement_" in cd
     assert "2090-02" in cd
     assert cd.endswith('.pdf"')
-
 
 # ── 12. Knight / Cherokee Sunrise fixture renders ─────────────────────────────
 
@@ -578,7 +563,6 @@ async def test_knight_cherokee_sunrise_fixture_renders(tmp_path):
 
     # Write to tmp_path (not crog_output/ — that is managed by the regeneration script)
     (tmp_path / "knight_cherokee_sunrise_2026_02.pdf").write_bytes(pdf_bytes)
-
 
 # ── 13. Dutil / Above the Timberline fixture renders ──────────────────────────
 

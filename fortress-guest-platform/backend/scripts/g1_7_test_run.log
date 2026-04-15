@@ -1,0 +1,234 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0
+rootdir: /home/admin/Fortress-Prime/fortress-guest-platform
+plugins: asyncio-1.3.0, langsmith-0.6.9, anyio-4.12.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 342 items
+
+backend/tests/test_acquisition_area6.py .....FF..F..                     [  3%]
+backend/tests/test_channel_mappings.py F.......F                         [  6%]
+backend/tests/test_fee_integrity.py FFFFFFFFFFFFFFF.............F...     [ 15%]
+backend/tests/test_housekeeping_area3.py ....F.FF.FF                     [ 18%]
+backend/tests/test_nas_storage.py ...FFFFFFFFF.F                         [ 22%]
+backend/tests/test_owner_portal_area2.py FF.F...                         [ 24%]
+backend/tests/test_owner_statement_phase1.py .....FF                     [ 26%]
+backend/tests/test_owner_statement_phase1_5.py ...FFF...s                [ 29%]
+backend/tests/test_owner_statement_phase2.py .FFFFsFF                    [ 32%]
+backend/tests/test_owner_statement_phase3.py ........F..                 [ 35%]
+backend/tests/test_phase_a_owner_ledger.py FF.F..FFFFFFFFF               [ 39%]
+backend/tests/test_phase_b_revenue_fixes.py .....FF......F........F      [ 46%]
+backend/tests/test_phase_c_owner_charges.py ........FFFF.F..FFFFFFFFFFFF [ 54%]
+FFF                                                                      [ 55%]
+backend/tests/test_phase_d_statement_workflow.py .FFFFFFFF.FFFFFFFF..FFF [ 62%]
+FFF                                                                      [ 63%]
+backend/tests/test_phase_e51_hygiene.py ........F...                     [ 66%]
+backend/tests/test_phase_e5_parity.py ......FFFFFFFF...FFF               [ 72%]
+backend/tests/test_phase_e6_visual_parity.py .................           [ 77%]
+backend/tests/test_phase_e_pdf.py ..FFFFFFF.FFF                          [ 81%]
+backend/tests/test_phase_f_cron.py .......................FFFFF          [ 89%]
+backend/tests/test_seo_area4.py FFFFFFFFF...                             [ 92%]
+backend/tests/test_stripe_connect_flow.py ....FF.....                    [ 96%]
+backend/tests/test_workorders_area5.py ....F.FF.F...                     [100%]
+
+=============================== warnings summary ===============================
+backend/tests/test_housekeeping_area3.py: 14 warnings
+backend/tests/test_phase_e_pdf.py: 6 warnings
+backend/tests/test_workorders_area5.py: 14 warnings
+  /home/admin/.local/lib/python3.12/site-packages/sqlalchemy/sql/schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+backend/tests/test_nas_storage.py::test_wo_nas_dir_creates_fallback_when_nas_absent
+  /home/admin/Fortress-Prime/fortress-guest-platform/backend/api/workorders.py:56: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class WorkOrderResponse(BaseModel):
+
+backend/tests/test_owner_statement_phase1_5.py::test_get_owner_statement_returns_422_if_no_payout_account
+  /home/admin/Fortress-Prime/fortress-guest-platform/backend/services/statement_computation.py:66: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class StatementLineItem(BaseModel):
+
+backend/tests/test_owner_statement_phase1_5.py: 14 warnings
+backend/tests/test_phase_d_statement_workflow.py: 1 warning
+  /home/admin/.local/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:319: PydanticDeprecatedSince20: `json_encoders` is deprecated. See https://docs.pydantic.dev/2.12/concepts/serialization/#custom-serializers for alternatives. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    warnings.warn(
+
+backend/tests/test_owner_statement_phase1_5.py::test_get_owner_statement_returns_422_if_no_payout_account
+  /home/admin/Fortress-Prime/fortress-guest-platform/backend/services/statement_computation.py:88: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class OwnerChargeLineItem(BaseModel):
+
+backend/tests/test_owner_statement_phase1_5.py::test_get_owner_statement_returns_422_if_no_payout_account
+  /home/admin/Fortress-Prime/fortress-guest-platform/backend/services/statement_computation.py:101: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class StatementResult(BaseModel):
+
+backend/tests/test_owner_statement_phase3.py::test_match_identical_totals
+  /home/admin/Fortress-Prime/fortress-guest-platform/backend/services/statement_comparison.py:46: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ComparisonResult(BaseModel):
+
+backend/tests/test_phase_d_statement_workflow.py::test_generate_creates_pending_approval_rows
+  /home/admin/Fortress-Prime/fortress-guest-platform/backend/services/statement_workflow.py:80: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class StatementGenerationOutcome(BaseModel):
+
+backend/tests/test_phase_d_statement_workflow.py::test_generate_creates_pending_approval_rows
+  /home/admin/Fortress-Prime/fortress-guest-platform/backend/services/statement_workflow.py:99: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class GenerateStatementsResult(BaseModel):
+
+backend/tests/test_phase_e51_hygiene.py::test_build_pdf_bytes_is_importable
+  /usr/lib/python3/dist-packages/reportlab/lib/rl_safe_eval.py:11: DeprecationWarning: ast.NameConstant is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    haveNameConstant = hasattr(ast,'NameConstant')
+
+backend/tests/test_stripe_connect_flow.py::test_stripe_express_account_creation
+  /home/admin/.local/lib/python3.12/site-packages/httpx/_config.py:51: DeprecationWarning: `verify=<str>` is deprecated. Use `verify=ssl.create_default_context(cafile=...)` or `verify=ssl.create_default_context(capath=...)` instead.
+    warnings.warn(message, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_acquisition_area6.py::test_stage_update_changes_stage
+FAILED backend/tests/test_acquisition_area6.py::test_dd_item_status_update - ...
+FAILED backend/tests/test_acquisition_area6.py::test_seed_due_diligence_is_idempotent
+FAILED backend/tests/test_channel_mappings.py::test_channel_mappings_table_exists_and_populated
+FAILED backend/tests/test_channel_mappings.py::test_channel_mapping_crud - Ty...
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[above-the-timberline-expected0]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[blue-ridge-lake-sanctuary-expected1]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[chase-mountain-dreams-expected2]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[cherokee-sunrise-on-noontootla-creek-expected3]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[cohutta-sunset-expected4]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[creekside-green-expected5]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[fallen-timber-lodge-expected6]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[high-hopes-expected7]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[restoration-luxury-expected8]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[riverview-lodge-expected9]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[serendipity-on-noontootla-creek-expected10]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[skyfall-expected11]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_cleaning_fee_matches_golden[the-rivers-edge-expected12]
+FAILED backend/tests/test_fee_integrity.py::TestGoldenCleaningFees::test_no_unknown_cabins_missing
+FAILED backend/tests/test_fee_integrity.py::TestProcessingFeeIntegrity::test_processing_fee_is_percentage_type
+FAILED backend/tests/test_fee_integrity.py::TestProcessingFeeIntegrity::test_processing_fee_not_flat_81
+FAILED backend/tests/test_housekeeping_area3.py::test_create_cleaner_direct
+FAILED backend/tests/test_housekeeping_area3.py::test_update_cleaner - TypeEr...
+FAILED backend/tests/test_housekeeping_area3.py::test_deactivate_cleaner - Ty...
+FAILED backend/tests/test_housekeeping_area3.py::test_assign_cleaner_sets_fk
+FAILED backend/tests/test_housekeeping_area3.py::test_assign_cleaner_legacy_name_without_fk
+FAILED backend/tests/test_nas_storage.py::test_work_order_photo_upload_writes_to_disk
+FAILED backend/tests/test_nas_storage.py::test_work_order_photo_download_serves_file
+FAILED backend/tests/test_nas_storage.py::test_work_order_photo_rejects_path_traversal
+FAILED backend/tests/test_nas_storage.py::test_work_order_photo_rejects_bad_content_type
+FAILED backend/tests/test_nas_storage.py::test_work_order_photo_rejects_oversized_file
+FAILED backend/tests/test_nas_storage.py::test_acquisition_document_upload_writes_to_disk
+FAILED backend/tests/test_nas_storage.py::test_acquisition_document_list - ps...
+FAILED backend/tests/test_nas_storage.py::test_acquisition_document_download_serves_file
+FAILED backend/tests/test_nas_storage.py::test_acquisition_document_rejects_invalid_doc_type
+FAILED backend/tests/test_nas_storage.py::test_acquisition_document_download_403_outside_roots
+FAILED backend/tests/test_owner_portal_area2.py::test_create_invite_writes_token
+FAILED backend/tests/test_owner_portal_area2.py::test_validate_token_valid - ...
+FAILED backend/tests/test_owner_portal_area2.py::test_accept_invite_writes_payout_account
+FAILED backend/tests/test_owner_statement_phase1.py::test_owner_statement_send_insert_reads_back
+FAILED backend/tests/test_owner_statement_phase1.py::test_owner_statement_send_error_row
+FAILED backend/tests/test_owner_statement_phase1_5.py::test_create_invite_stores_commission_rate_as_fraction
+FAILED backend/tests/test_owner_statement_phase1_5.py::test_accept_invite_fails_on_legacy_token_without_rate
+FAILED backend/tests/test_owner_statement_phase1_5.py::test_create_invite_and_accept_stores_commission_rate
+FAILED backend/tests/test_owner_statement_phase2.py::test_not_enrolled_owner_raises_not_enrolled
+FAILED backend/tests/test_owner_statement_phase2.py::test_zero_reservations_returns_empty_statement
+FAILED backend/tests/test_owner_statement_phase2.py::test_commission_rate_comes_from_db
+FAILED backend/tests/test_owner_statement_phase2.py::test_different_db_rates_produce_different_nets
+FAILED backend/tests/test_owner_statement_phase2.py::test_source_is_crog - ba...
+FAILED backend/tests/test_owner_statement_phase2.py::test_commission_rate_percent_is_rate_times_100
+FAILED backend/tests/test_owner_statement_phase3.py::test_property_not_found_raises_error
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_exactly_one_pre_launch_among_known_properties
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_thirteen_active_among_known_properties
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_restoration_luxury_is_pre_launch
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_get_or_create_new_period_zero_opening
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_get_or_create_carries_prior_closing_balance
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_get_or_create_idempotent
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_compute_owner_statement_raises_property_not_renting
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_compute_owner_statement_works_for_active_property
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_post_offboarding_counts
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_14_preserved_properties_have_correct_states
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_compute_raises_for_offboarded_property
+FAILED backend/tests/test_phase_a_owner_ledger.py::test_all_13_active_properties_can_compute
+FAILED backend/tests/test_phase_b_revenue_fixes.py::test_confirmed_owner_bookings_are_flagged
+FAILED backend/tests/test_phase_b_revenue_fixes.py::test_regular_guest_cancellations_not_flagged
+FAILED backend/tests/test_phase_b_revenue_fixes.py::test_owner_bookings_excluded_from_statement
+FAILED backend/tests/test_phase_b_revenue_fixes.py::test_reservation_54029_is_owner_booking
+FAILED backend/tests/test_phase_c_owner_charges.py::test_lock_returns_none_for_draft_period
+FAILED backend/tests/test_phase_c_owner_charges.py::test_lock_returns_period_for_approved
+FAILED backend/tests/test_phase_c_owner_charges.py::test_lock_returns_none_for_date_outside_period
+FAILED backend/tests/test_phase_c_owner_charges.py::test_create_charge_success
+FAILED backend/tests/test_phase_c_owner_charges.py::test_create_charge_rejected_unenrolled
+FAILED backend/tests/test_phase_c_owner_charges.py::test_create_charge_rejected_locked_period
+FAILED backend/tests/test_phase_c_owner_charges.py::test_list_charges_for_owner
+FAILED backend/tests/test_phase_c_owner_charges.py::test_list_charges_excludes_voided_by_default
+FAILED backend/tests/test_phase_c_owner_charges.py::test_patch_charge_description
+FAILED backend/tests/test_phase_c_owner_charges.py::test_patch_charge_rejected_if_voided
+FAILED backend/tests/test_phase_c_owner_charges.py::test_patch_charge_rejected_locked_period
+FAILED backend/tests/test_phase_c_owner_charges.py::test_void_charge_success
+FAILED backend/tests/test_phase_c_owner_charges.py::test_void_charge_already_voided
+FAILED backend/tests/test_phase_c_owner_charges.py::test_void_charge_rejected_locked_period
+FAILED backend/tests/test_phase_c_owner_charges.py::test_statement_no_charges
+FAILED backend/tests/test_phase_c_owner_charges.py::test_statement_three_charges_totaling
+FAILED backend/tests/test_phase_c_owner_charges.py::test_statement_charge_and_credit
+FAILED backend/tests/test_phase_c_owner_charges.py::test_statement_voided_charge_not_counted
+FAILED backend/tests/test_phase_c_owner_charges.py::test_statement_charge_outside_period_excluded
+FAILED backend/tests/test_phase_c_owner_charges.py::test_state_machine_locked_after_approval
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_creates_pending_approval_rows
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_skips_pre_launch_property
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_skips_unenrolled_owners
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_idempotent_for_draft
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_skips_locked_status[approved]
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_skips_locked_status[paid]
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_skips_locked_status[emailed]
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_skips_locked_status[voided]
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_generate_one_error_does_not_block_others
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_full_lifecycle_pending_to_emailed
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_email_then_pay_also_works
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_forbidden_approve_a_draft
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_forbidden_void_a_paid_statement
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_forbidden_void_an_emailed_statement
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_forbidden_mark_paid_on_draft
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_forbidden_mark_emailed_on_draft
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_approve_endpoint_409_wrong_status
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_void_endpoint_409_for_paid
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_mark_paid_endpoint_409_for_draft
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_mark_emailed_endpoint_409_for_draft
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_attributions_are_set_correctly
+FAILED backend/tests/test_phase_d_statement_workflow.py::test_end_to_end_generate_to_emailed_with_real_data
+FAILED backend/tests/test_phase_e51_hygiene.py::test_render_owner_statement_pdf_regression
+FAILED backend/tests/test_phase_e5_parity.py::test_pdf_header_shows_owner_address
+FAILED backend/tests/test_phase_e5_parity.py::test_pdf_header_shows_placeholder_when_address_missing
+FAILED backend/tests/test_phase_e5_parity.py::test_pdf_property_block_shows_group_prefix
+FAILED backend/tests/test_phase_e5_parity.py::test_pdf_property_block_no_group_shows_name_only
+FAILED backend/tests/test_phase_e5_parity.py::test_closing_balance_has_parenthetical
+FAILED backend/tests/test_phase_e5_parity.py::test_payment_processed_line_zero
+FAILED backend/tests/test_phase_e5_parity.py::test_payment_processed_line_nonzero
+FAILED backend/tests/test_phase_e5_parity.py::test_payment_processed_line_negative_amount
+FAILED backend/tests/test_phase_e5_parity.py::test_accept_invite_copies_address_to_opa
+FAILED backend/tests/test_phase_e5_parity.py::test_knight_cherokee_sunrise_fixture_2026_02
+FAILED backend/tests/test_phase_e5_parity.py::test_dutil_above_timberline_fixture_2026_01
+FAILED backend/tests/test_phase_e_pdf.py::test_valid_pdf_for_zero_activity_statement
+FAILED backend/tests/test_phase_e_pdf.py::test_negative_closing_balance_renders_in_parens
+FAILED backend/tests/test_phase_e_pdf.py::test_valid_pdf_for_multi_reservation_statement
+FAILED backend/tests/test_phase_e_pdf.py::test_cross_period_reservation_gets_asterisk_and_footnote
+FAILED backend/tests/test_phase_e_pdf.py::test_ytd_accumulates_across_periods
+FAILED backend/tests/test_phase_e_pdf.py::test_owner_reserve_renders_zeros - ...
+FAILED backend/tests/test_phase_e_pdf.py::test_pdf_endpoint_returns_pdf_content_type
+FAILED backend/tests/test_phase_e_pdf.py::test_pdf_endpoint_filename_in_content_disposition
+FAILED backend/tests/test_phase_e_pdf.py::test_knight_cherokee_sunrise_fixture_renders
+FAILED backend/tests/test_phase_e_pdf.py::test_dutil_above_timberline_fixture_renders
+FAILED backend/tests/test_phase_f_cron.py::test_send_test_endpoint_success - ...
+FAILED backend/tests/test_phase_f_cron.py::test_send_test_does_not_change_status
+FAILED backend/tests/test_phase_f_cron.py::test_send_test_subject_has_test_prefix
+FAILED backend/tests/test_phase_f_cron.py::test_send_test_body_has_warning - ...
+FAILED backend/tests/test_phase_f_cron.py::test_send_test_smtp_failure_returns_500
+FAILED backend/tests/test_seo_area4.py::test_seo_rubrics_seeded - AssertionEr...
+FAILED backend/tests/test_seo_area4.py::test_canonical_rubric_exists - Assert...
+FAILED backend/tests/test_seo_area4.py::test_rubric_payload_has_required_keys
+FAILED backend/tests/test_seo_area4.py::test_content_constraints_300_word_minimum
+FAILED backend/tests/test_seo_area4.py::test_title_rules_char_range - Asserti...
+FAILED backend/tests/test_seo_area4.py::test_meta_rules_char_range - Assertio...
+FAILED backend/tests/test_seo_area4.py::test_alt_tag_rules_max_chars - Assert...
+FAILED backend/tests/test_seo_area4.py::test_jsonld_requires_vacation_rental
+FAILED backend/tests/test_seo_area4.py::test_schema_requires_local_business
+FAILED backend/tests/test_stripe_connect_flow.py::test_full_invite_accept_flow_with_real_stripe
+FAILED backend/tests/test_stripe_connect_flow.py::test_validate_token_valid
+FAILED backend/tests/test_workorders_area5.py::test_create_vendor_direct - as...
+FAILED backend/tests/test_workorders_area5.py::test_update_vendor - TypeError...
+FAILED backend/tests/test_workorders_area5.py::test_deactivate_vendor - TypeE...
+FAILED backend/tests/test_workorders_area5.py::test_assign_vendor_to_work_order_sets_fk
+=========== 151 failed, 189 passed, 2 skipped, 58 warnings in 23.61s ===========

@@ -67,9 +67,9 @@ from typing import Optional
 
 import psycopg2
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -96,7 +96,6 @@ def _make_enrolled_opa(uid: str, prop_id: Optional[str] = None) -> int:
     conn.close()
     return opa_id
 
-
 def _make_unenrolled_opa(uid: str) -> int:
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -112,7 +111,6 @@ def _make_unenrolled_opa(uid: str) -> int:
     conn.commit()
     conn.close()
     return opa_id
-
 
 def _insert_charge(opa_id: int, amount: Decimal, posting_date: date,
                    description: str = "Test charge",
@@ -132,7 +130,6 @@ def _insert_charge(opa_id: int, amount: Decimal, posting_date: date,
     conn.close()
     return charge_id
 
-
 # ── 1–5: Schema checks ───────────────────────────────────────────────────────
 
 def test_owner_charges_table_columns():
@@ -147,7 +144,6 @@ def test_owner_charges_table_columns():
                 "created_at","created_by","voided_at","voided_by","void_reason"}
     assert not (required - cols), f"Missing columns: {required - cols}"
 
-
 def test_all_17_enum_values_in_db():
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -156,7 +152,6 @@ def test_all_17_enum_values_in_db():
     values = {r[0] for r in cur.fetchall()}
     conn.close()
     assert len(values) == 17, f"Expected 17 enum values, got {len(values)}"
-
 
 def test_amount_zero_rejected():
     uid = uuid.uuid4().hex[:8]
@@ -174,7 +169,6 @@ def test_amount_zero_rejected():
     conn.rollback()
     conn.close()
 
-
 def test_empty_description_rejected():
     uid = uuid.uuid4().hex[:8]
     opa_id = _make_enrolled_opa(uid)
@@ -190,7 +184,6 @@ def test_empty_description_rejected():
         conn.commit()
     conn.rollback()
     conn.close()
-
 
 def test_voided_at_without_voided_by_rejected():
     uid = uuid.uuid4().hex[:8]
@@ -208,20 +201,17 @@ def test_voided_at_without_voided_by_rejected():
     conn.rollback()
     conn.close()
 
-
 # ── 6–7: Python enum ──────────────────────────────────────────────────────────
 
 def test_owner_charge_type_has_17_values():
     from backend.models.owner_charge import OwnerChargeType
     assert len(list(OwnerChargeType)) == 17
 
-
 def test_owner_charge_type_display_names_not_empty():
     from backend.models.owner_charge import OwnerChargeType
     for t in OwnerChargeType:
         assert t.display_name, f"{t.value} has empty display_name"
         assert t.display_name.strip() == t.display_name
-
 
 # ── 8–14: is_charge_period_locked ────────────────────────────────────────────
 
@@ -236,7 +226,6 @@ async def test_lock_returns_none_when_no_period():
     async with AsyncSessionLocal() as db:
         result = await is_charge_period_locked(db, opa_id, date(2026, 3, 15))
     assert result is None
-
 
 @pytest.mark.asyncio
 async def test_lock_returns_none_for_draft_period():
@@ -261,7 +250,6 @@ async def test_lock_returns_none_for_draft_period():
 
         result = await is_charge_period_locked(db, opa_id, date(2026, 3, 15))
     assert result is None
-
 
 @pytest.mark.asyncio
 async def test_lock_returns_period_for_approved():
@@ -289,7 +277,6 @@ async def test_lock_returns_period_for_approved():
     assert locked is not None
     assert locked.id == period_id
 
-
 @pytest.mark.asyncio
 async def test_lock_returns_none_for_date_outside_period():
     from backend.core.database import AsyncSessionLocal
@@ -314,7 +301,6 @@ async def test_lock_returns_none_for_date_outside_period():
         # April 15 is outside March
         locked = await is_charge_period_locked(db, opa_id, date(2026, 4, 15))
     assert locked is None
-
 
 # ── 15–20: POST /api/admin/payouts/charges ───────────────────────────────────
 
@@ -343,7 +329,6 @@ async def test_create_charge_success():
     assert result["created_by"] == "admin@test.com"
     assert result["transaction_type"] == "maintenance"
 
-
 @pytest.mark.asyncio
 async def test_create_charge_account_not_found():
     from backend.core.database import AsyncSessionLocal
@@ -364,7 +349,6 @@ async def test_create_charge_account_not_found():
         with pytest.raises(HTTPException) as exc:
             await create_charge(body=body, db=db, user=user)
     assert exc.value.status_code == 404
-
 
 @pytest.mark.asyncio
 async def test_create_charge_rejected_unenrolled():
@@ -391,7 +375,6 @@ async def test_create_charge_rejected_unenrolled():
     assert exc.value.status_code == 422
     assert "onboarding" in str(exc.value.detail).lower() or "enrolled" in str(exc.value.detail).lower()
 
-
 def test_create_charge_rejects_zero_amount():
     from pydantic import ValidationError
     from backend.api.admin_charges import OwnerChargeCreateRequest
@@ -406,7 +389,6 @@ def test_create_charge_rejects_zero_amount():
             amount=Decimal("0"),
         )
 
-
 def test_create_charge_rejects_empty_description():
     from pydantic import ValidationError
     from backend.api.admin_charges import OwnerChargeCreateRequest
@@ -420,7 +402,6 @@ def test_create_charge_rejects_empty_description():
             description="",
             amount=Decimal("100"),
         )
-
 
 @pytest.mark.asyncio
 async def test_create_charge_rejected_locked_period():
@@ -457,7 +438,6 @@ async def test_create_charge_rejected_locked_period():
             await create_charge(body=body, db=db, user=user)
     assert exc.value.status_code == 409
 
-
 # ── 21–24: GET /api/admin/payouts/charges ────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -476,7 +456,6 @@ async def test_list_charges_for_owner():
                                     transaction_type=None, include_voided=False,
                                     limit=100, offset=0, db=db)
     assert result["total"] >= 2
-
 
 @pytest.mark.asyncio
 async def test_list_charges_excludes_voided_by_default():
@@ -508,7 +487,6 @@ async def test_list_charges_excludes_voided_by_default():
     assert without_voided["total"] == 0
     assert with_voided["total"] == 1
 
-
 # ── 25–27: PATCH /api/admin/payouts/charges/{id} ─────────────────────────────
 
 @pytest.mark.asyncio
@@ -528,7 +506,6 @@ async def test_patch_charge_description():
             body=OwnerChargePatchRequest(description="Updated desc"),
             db=db, user=user)
     assert result["description"] == "Updated desc"
-
 
 @pytest.mark.asyncio
 async def test_patch_charge_rejected_if_voided():
@@ -556,7 +533,6 @@ async def test_patch_charge_rejected_if_voided():
                 body=OwnerChargePatchRequest(description="new"),
                 db=db, user=user)
     assert exc.value.status_code == 422
-
 
 @pytest.mark.asyncio
 async def test_patch_charge_rejected_locked_period():
@@ -587,7 +563,6 @@ async def test_patch_charge_rejected_locked_period():
                                 db=db, user=user)
     assert exc.value.status_code == 409
 
-
 # ── 28–30: void ──────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -608,7 +583,6 @@ async def test_void_charge_success():
             db=db, user=user)
     assert result["voided_at"] is not None
     assert result["voided_by"] == "staff@test.com"
-
 
 @pytest.mark.asyncio
 async def test_void_charge_already_voided():
@@ -635,7 +609,6 @@ async def test_void_charge_already_voided():
                               body=VoidRequest(void_reason="second void"),
                               db=db, user=user)
     assert exc.value.status_code == 422
-
 
 @pytest.mark.asyncio
 async def test_void_charge_rejected_locked_period():
@@ -666,7 +639,6 @@ async def test_void_charge_rejected_locked_period():
                               db=db, user=user)
     assert exc.value.status_code == 409
 
-
 # ── 31–35: compute_owner_statement integration ───────────────────────────────
 
 @pytest.mark.asyncio
@@ -683,7 +655,6 @@ async def test_statement_no_charges():
             period_start=date(2099, 1, 1), period_end=date(2099, 1, 31))
     assert result.total_charges == Decimal("0.00")
     assert result.owner_charges == []
-
 
 @pytest.mark.asyncio
 async def test_statement_three_charges_totaling():
@@ -703,7 +674,6 @@ async def test_statement_three_charges_totaling():
     assert result.total_charges == Decimal("312.50")
     assert len(result.owner_charges) == 3
 
-
 @pytest.mark.asyncio
 async def test_statement_charge_and_credit():
     from backend.core.database import AsyncSessionLocal
@@ -719,7 +689,6 @@ async def test_statement_charge_and_credit():
             db, opa_id,
             period_start=date(2099, 3, 1), period_end=date(2099, 3, 31))
     assert result.total_charges == Decimal("150.00")
-
 
 @pytest.mark.asyncio
 async def test_statement_voided_charge_not_counted():
@@ -742,7 +711,6 @@ async def test_statement_voided_charge_not_counted():
             period_start=date(2099, 4, 1), period_end=date(2099, 4, 30))
     assert result.total_charges == Decimal("0.00")
 
-
 @pytest.mark.asyncio
 async def test_statement_charge_outside_period_excluded():
     from backend.core.database import AsyncSessionLocal
@@ -758,7 +726,6 @@ async def test_statement_charge_outside_period_excluded():
             db, opa_id,
             period_start=date(2099, 3, 1), period_end=date(2099, 3, 31))
     assert result.total_charges == Decimal("0.00")
-
 
 # ── 36–38: State machine integration ─────────────────────────────────────────
 

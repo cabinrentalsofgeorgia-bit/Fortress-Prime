@@ -34,8 +34,9 @@ from typing import Optional
 
 import psycopg2
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+DSN = get_test_dsn()
 
 _PERIOD = (date(2026, 3, 1), date(2026, 3, 31))
 

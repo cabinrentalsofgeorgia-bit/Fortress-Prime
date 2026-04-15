@@ -48,9 +48,9 @@ from decimal import Decimal
 import psycopg2
 import pypdf
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
-DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
-
+DSN = get_test_dsn()
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
 
@@ -99,7 +99,6 @@ def _make_opa(
     conn.close()
     return opa_id
 
-
 def _make_obp(opa_id: int, period_start: date, period_end: date, *,
               opening: Decimal = Decimal("0"), revenue: Decimal = Decimal("0"),
               commission: Decimal = Decimal("0"), charges: Decimal = Decimal("0"),
@@ -123,7 +122,6 @@ def _make_obp(opa_id: int, period_start: date, period_end: date, *,
     conn.close()
     return obp_id
 
-
 def _make_property_with_group(uid: str, group: str = None) -> str:
     """Insert a minimal test property with optional property_group, return UUID string."""
     import uuid as _uuid
@@ -140,11 +138,9 @@ def _make_property_with_group(uid: str, group: str = None) -> str:
     conn.close()
     return prop_uuid
 
-
 def _pdf_text(pdf_bytes: bytes) -> str:
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     return " ".join(p.extract_text() or "" for p in reader.pages)
-
 
 # ── 1–3. Schema ───────────────────────────────────────────────────────────────
 
@@ -164,7 +160,6 @@ def test_owner_payout_accounts_has_address_columns():
     assert "mailing_address_postal_code" in cols
     assert "mailing_address_country" in cols
 
-
 def test_properties_has_property_group_column():
     conn = psycopg2.connect(DSN)
     cur = conn.cursor()
@@ -174,7 +169,6 @@ def test_properties_has_property_group_column():
     """)
     assert cur.fetchone() is not None, "property_group column not found on properties"
     conn.close()
-
 
 def test_owner_magic_tokens_has_address_columns():
     conn = psycopg2.connect(DSN)
@@ -188,7 +182,6 @@ def test_owner_magic_tokens_has_address_columns():
     conn.close()
     assert "mailing_address_line1" in cols
     assert "mailing_address_city" in cols
-
 
 # ── 4–6. mailing_address_display property ────────────────────────────────────
 
@@ -207,7 +200,6 @@ def test_address_display_with_line2():
     assert display == "PO Box 982 Morganton, GA 30560"
     assert "\n" not in display
 
-
 def test_address_display_without_line2():
     """E6.6: single-line format, no blank lines for missing components."""
     from backend.models.owner_payout import OwnerPayoutAccount
@@ -222,7 +214,6 @@ def test_address_display_without_line2():
     assert display == "2300 Riverchase Center Birmingham, AL 35244"
     assert "\n" not in display
 
-
 def test_address_display_all_null():
     from backend.models.owner_payout import OwnerPayoutAccount
     opa = OwnerPayoutAccount()
@@ -233,7 +224,6 @@ def test_address_display_all_null():
     opa.mailing_address_postal_code = None
     opa.mailing_address_country = None
     assert opa.mailing_address_display == ""
-
 
 # ── 7–8. PDF header: mailing address ─────────────────────────────────────────
 
@@ -256,7 +246,6 @@ async def test_pdf_header_shows_owner_address():
     assert "Blue Ridge" in text
     assert "GA 30513" in text
 
-
 @pytest.mark.asyncio
 async def test_pdf_header_shows_placeholder_when_address_missing():
     from backend.core.database import AsyncSessionLocal
@@ -272,7 +261,6 @@ async def test_pdf_header_shows_placeholder_when_address_missing():
     assert "address missing" in text.lower(), (
         "Missing address must show [address missing] placeholder"
     )
-
 
 # ── 9–10. PDF property block: property group prefix ──────────────────────────
 
@@ -294,7 +282,6 @@ async def test_pdf_property_block_shows_group_prefix():
     # Both should appear together (group prefix then name)
     assert f"Aska Adventure Area {prop_name}".replace(" ", " ") in text.replace("\n", " ")
 
-
 @pytest.mark.asyncio
 async def test_pdf_property_block_no_group_shows_name_only():
     from backend.core.database import AsyncSessionLocal
@@ -313,7 +300,6 @@ async def test_pdf_property_block_no_group_shows_name_only():
     # Ensure no spurious leading-space version
     assert f"  {prop_name}" not in text
 
-
 # ── 11. Closing balance label ─────────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -331,7 +317,6 @@ async def test_closing_balance_has_parenthetical():
         "Closing balance label must include '(includes minimum required balance)'"
     )
 
-
 # ── 12–14. Payment-processed line ────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -346,7 +331,6 @@ async def test_payment_processed_line_zero():
         pdf_bytes = await render_owner_statement_pdf(db, obp_id)
     text = _pdf_text(pdf_bytes)
     assert "Your payment amount of $0.00 has been processed." in text
-
 
 @pytest.mark.asyncio
 async def test_payment_processed_line_nonzero():
@@ -365,7 +349,6 @@ async def test_payment_processed_line_nonzero():
         pdf_bytes = await render_owner_statement_pdf(db, obp_id)
     text = _pdf_text(pdf_bytes)
     assert "Your payment amount of $3,001.91 has been processed." in text
-
 
 @pytest.mark.asyncio
 async def test_payment_processed_line_negative_amount():
@@ -388,7 +371,6 @@ async def test_payment_processed_line_negative_amount():
     text = _pdf_text(pdf_bytes)
     assert "has been processed." in text
 
-
 # ── 15–18. Invite creation: address required ──────────────────────────────────
 
 def test_invite_rejects_missing_address():
@@ -408,7 +390,6 @@ def test_invite_rejects_missing_address():
         )
     assert "mailing_address_line1" in str(exc.value)
 
-
 def test_invite_rejects_missing_city():
     from pydantic import ValidationError
     from backend.api.admin_payouts import OwnerInviteRequest
@@ -426,7 +407,6 @@ def test_invite_rejects_missing_city():
         )
     assert "mailing_address_city" in str(exc.value)
 
-
 def test_invite_accepts_complete_address():
     from backend.api.admin_payouts import OwnerInviteRequest
 
@@ -442,7 +422,6 @@ def test_invite_accepts_complete_address():
     )
     assert req.mailing_address_line1 == "PO Box 982"
     assert req.mailing_address_country == "USA"  # default
-
 
 @pytest.mark.asyncio
 async def test_accept_invite_copies_address_to_opa():
@@ -502,7 +481,6 @@ async def test_accept_invite_copies_address_to_opa():
     assert row[2] == "GA"
     assert row[3] == "30540"
 
-
 # ── 19–20. Fixture comparison tests ──────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -535,7 +513,6 @@ async def test_knight_cherokee_sunrise_fixture_2026_02():
     assert "$64,822.71" in text
     assert "minimum required balance" in text
     assert "Your payment amount of $0.00 has been processed." in text
-
 
 @pytest.mark.asyncio
 async def test_dutil_above_timberline_fixture_2026_01():

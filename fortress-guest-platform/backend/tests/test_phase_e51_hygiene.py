@@ -26,18 +26,17 @@ import inspect
 from pathlib import Path
 
 import pytest
+from backend.tests.db_helpers import get_test_dsn
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 _CROG_OUTPUT = _FIXTURES / "crog_output"
 _SL_REF = _FIXTURES / "streamline_reference"
-
 
 # ── 1–4. Regeneration script structure ───────────────────────────────────────
 
 def test_regenerate_pdf_demos_imports():
     """Module must import without errors."""
     import backend.scripts.regenerate_pdf_demos  # noqa: F401
-
 
 def test_scenarios_list_has_two_entries():
     from backend.scripts.regenerate_pdf_demos import SCENARIOS
@@ -46,18 +45,15 @@ def test_scenarios_list_has_two_entries():
     assert "knight_cherokee_sunrise_2026_02" in stems
     assert "dutil_above_timberline_2026_01" in stems
 
-
 def test_main_function_exists():
     from backend.scripts.regenerate_pdf_demos import main
     assert callable(main)
     assert inspect.iscoroutinefunction(main), "main() must be an async function"
 
-
 def test_render_scenario_function_exists():
     from backend.scripts.regenerate_pdf_demos import _render_scenario
     assert callable(_render_scenario)
     assert inspect.iscoroutinefunction(_render_scenario)
-
 
 # ── 5–6. _owner_address_from_info helper ─────────────────────────────────────
 
@@ -76,7 +72,6 @@ def test_owner_address_from_info_full():
     assert result == "PO Box 982 Morganton, GA 30560"
     assert "\n" not in result
 
-
 def test_owner_address_from_info_empty_fields():
     from backend.scripts.regenerate_pdf_demos import _owner_address_from_info
     # All empty → should return ""
@@ -89,7 +84,6 @@ def test_owner_address_from_info_empty_fields():
     result = _owner_address_from_info(info)
     assert result == ""
 
-
 # ── 7–9. PDF renderer ─────────────────────────────────────────────────────────
 
 def test_build_pdf_bytes_is_importable():
@@ -98,7 +92,6 @@ def test_build_pdf_bytes_is_importable():
     assert not inspect.iscoroutinefunction(_build_pdf_bytes), (
         "_build_pdf_bytes must be a plain (sync) function, not a coroutine"
     )
-
 
 def test_build_pdf_bytes_signature_has_required_params():
     from backend.services.statement_pdf import _build_pdf_bytes
@@ -116,7 +109,6 @@ def test_build_pdf_bytes_signature_has_required_params():
     missing = required - params
     assert not missing, f"_build_pdf_bytes is missing parameters: {missing}"
 
-
 @pytest.mark.asyncio
 async def test_render_owner_statement_pdf_regression():
     """DB-backed render still works after the refactor."""
@@ -127,7 +119,7 @@ async def test_render_owner_statement_pdf_regression():
     from backend.core.database import AsyncSessionLocal
     from backend.services.statement_pdf import render_owner_statement_pdf
 
-    DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+    DSN = get_test_dsn()
     uid = uuid.uuid4().hex[:8]
     prop_id = f"e51-regression-{uid}"
 
@@ -160,7 +152,6 @@ async def test_render_owner_statement_pdf_regression():
 
     assert pdf_bytes[:4] == b"%PDF"
 
-
 # ── 10–12. Directory rules ────────────────────────────────────────────────────
 
 def test_crog_output_readme_has_do_not_rule():
@@ -171,7 +162,6 @@ def test_crog_output_readme_has_do_not_rule():
         "README must contain an explicit prohibition on tests writing to this directory"
     )
 
-
 def test_crog_output_gitignore_force_includes_pdfs():
     gitignore = _CROG_OUTPUT / ".gitignore"
     assert gitignore.exists(), "crog_output/.gitignore must exist"
@@ -179,7 +169,6 @@ def test_crog_output_gitignore_force_includes_pdfs():
     assert "!*.pdf" in text, (
         ".gitignore must contain '!*.pdf' to force-include PDFs in git"
     )
-
 
 def test_streamline_reference_readme_exists():
     readme = _SL_REF / "README.md"
