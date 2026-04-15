@@ -16,7 +16,7 @@
 
 1. `crog-ai.com` was served by an orphaned next-server on **port 3005** (SSH session, NOT systemd) — now fixed by `crog-ai-frontend.service` (G.2.3)  
 2. `infra/gateway/config.yml` in the repo claimed port 3001 — it is now a documented copy of `/etc/cloudflared/config.yml` (G.2.4)  
-3. `fortress-dashboard.service` is misnamed; it runs the **storefront** (apps/storefront) on port 3001, not the command center  
+3. `fortress-dashboard.service` was misnamed; ran the **storefront** on port 3001 with wrong FGP_BACKEND_URL (8100) — **deleted in G.2.5**; its misconfiguration won't bite future sessions  
 4. BFF proxy log strings hardcode `"FGP:8100"` even though FastAPI actually runs on **8000**  
 5. After any backend code change, `sudo systemctl restart fortress-backend` is **mandatory** — no autoreload  
 6. Two next-server proxy route files (`/api/[...path]` catch-all and `/api/vrs/[...path]`) can compete for the same path when a named sibling directory exists under `/api/admin/`
@@ -67,7 +67,7 @@ sudo ss -tlnp | grep -E ":3001|:3005|:8000|:8100|:9800"
 
 | Port | Process | Service | App |
 |---|---|---|---|
-| 3001 | `next-server (v16.1.6)` | `fortress-dashboard.service` (systemd ✓) | **apps/storefront** |
+| 3001 | **NOTHING** (G.2.5) | fortress-dashboard.service **DELETED** | Was storefront — misleading, removed |
 | 3005 | `next-server (v16.1.6)` | `crog-ai-frontend.service` (systemd ✓, G.2.3) | **apps/command-center** |
 | 3299/3399/3499 | `next-server (v14.2.35)` × 3 | **Orphaned SSH session** (session-2592.scope) ⚠️ | `/home/admin/cabin-rentals-of-georgia` — **do NOT kill** |
 | 8000 | `python` (uvicorn) | `fortress-backend.service` (systemd ✓) | FastAPI backend |
@@ -107,18 +107,20 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3005/api/admin/payouts
 
 ---
 
-### fortress-dashboard.service (port 3001 — storefront)
+### ~~fortress-dashboard.service~~ (DELETED — Phase G.2.5)
 
-```bash
-# Verify:
-sudo systemctl cat fortress-dashboard.service | grep -E "Description|WorkingDirectory|ExecStart"
-# Description=Fortress Guest Platform Dashboard
-# WorkingDirectory=.../apps/storefront
-```
+This service was stopped, disabled, and its unit file and launch script permanently deleted in G.2.5 (2026-04-15). Its misconfiguration won't bite future sessions.
 
-Despite the name "Dashboard", this service runs the **public storefront** (`apps/storefront`) on port 3001, NOT the admin command center. The `run-fortress-dashboard.sh` script has `APP_DIR="${ROOT_DIR}/fortress-guest-platform/apps/storefront"`.
+**What it was:** Ran `apps/storefront` (Next.js v16) on port 3001 via `run-fortress-dashboard.sh`. The name "Dashboard" implied it served the admin command center (it didn't). Its `FGP_BACKEND_URL` defaulted to port 8100 (nothing there). No Cloudflare tunnel routed to port 3001. Served no production domain.
 
-**⚠️ FGP_BACKEND_URL default bug:** `run-fortress-dashboard.sh` defaults `FGP_BACKEND_URL` to `http://127.0.0.1:8100` — which has nothing listening. If this script's env is ever used by the storefront BFF, it will fail. The correct default is port 8000.
+**Port 3001 is now free.** If something tries to connect to port 3001, it will be refused.
+
+**Note:** `backend/api/system_health.py` still checks port 3001 as "Command Center" — this will report it as down. Update that file to check port 3005 + `crog-ai-frontend.service` in a future pass.
+
+**Also deleted:**
+- `/etc/systemd/system/fortress-dashboard.service`
+- `/etc/systemd/system/fortress-frontend.service.d/env.conf` (orphan override dir — contained `FGP_BACKEND_URL=http://127.0.0.1:8100`)
+- `/usr/local/bin/run-fortress-dashboard.sh`
 
 ---
 
@@ -335,7 +337,7 @@ As of 2026-04-15, **6 next-server processes** are running (updated in G.2.3/G.2.
 | 1356961 | Apr 13 | v14.2.35 | 3299 | cabin-rentals-of-georgia project | **Do NOT kill** |
 | 1703735 | Apr 13 | v14.2.35 | 3399 | cabin-rentals-of-georgia project | **Do NOT kill** |
 | 1918044 | Apr 13 | v14.2.35 | 3499 | cabin-rentals-of-georgia project | **Do NOT kill** |
-| 2198017 | Today | v16.1.6 | 3001 | fortress-dashboard.service (systemd) | Leave |
+| 2198017 | Today | v16.1.6 | 3001 | ~~fortress-dashboard.service~~ (DELETED G.2.5) | Gone — port 3001 now free |
 | 2768669 | Today | v16.1.6 | 3005 | crog-ai-frontend.service (systemd, G.2.3) | Leave |
 
 PIDs rotate over time. To identify safe-to-kill processes:
@@ -357,7 +359,9 @@ done
 
 | Gap | Severity | Recommended Phase |
 |---|---|---|
-| **run-fortress-dashboard.sh has wrong FGP_BACKEND_URL default (8100 → should be 8000)** | MEDIUM | G.2.5 |
+| **`backend/api/system_health.py` checks port 3001 as "Command Center"** — will show as down after G.2.5 deletion; should be updated to check port 3005 + `crog-ai-frontend.service` | LOW | G.2.6 |
+| **`backend/api/contracts.py` and `agreements.py` default `VRS_URL` to 192.168.0.100:3001** — stale defaults; check if overridden by env var in production | LOW | verify in .env |
+| **Storefront (cabin-rentals-of-georgia) orphans on 3299/3399/3499** — Next.js v14.2.35 from `/home/admin/cabin-rentals-of-georgia`, orphaned SSH session, not tunnel-reachable | LOW | G.2.6 candidate: kill after confirming no consumer |
 | **cabin-rentals-of-georgia.com tunnel routes to dead port 8100** | LOW | Stale tunnel entry; domain served from other origin. Leave as-is until known safe to change. |
 | **BFF proxy log strings hardcode "FGP:8100"** (actual port is 8000) | LOW | Fix when touching proxy files |
 | **G.1.8 monkey-patch is fragile** — services with pre-cached AsyncSessionLocal bypass test isolation | MEDIUM | G.2.6 |
@@ -389,9 +393,13 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3005/api/admin/payouts
 ```
 
 ### After any storefront (`apps/storefront/`) code change
+
+**fortress-dashboard.service was deleted in G.2.5.** The storefront's production target is Vercel, not this box. If a local storefront dev server is needed, start manually:
 ```bash
-sudo systemctl restart fortress-dashboard
-sudo systemctl status fortress-dashboard | head -5
+cd /home/admin/Fortress-Prime/fortress-guest-platform/apps/storefront
+FGP_BACKEND_URL=http://127.0.0.1:8000 \
+  nohup node .next/standalone/apps/storefront/server.js \
+  --port <PORT> --hostname 127.0.0.1 > /tmp/storefront.log 2>&1 &
 ```
 
 ---

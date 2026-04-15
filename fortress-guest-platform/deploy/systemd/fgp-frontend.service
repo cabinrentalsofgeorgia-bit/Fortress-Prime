@@ -10,12 +10,13 @@ WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command
 ExecStart=/home/admin/.nvm/versions/node/v20.20.0/bin/node server.js
 Restart=always
 RestartSec=5
+UnsetEnvironment=HOSTNAME
 Environment=PATH=/home/admin/.nvm/versions/node/v20.20.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=PORT=3001
 Environment=HOSTNAME=0.0.0.0
 Environment=APP_MODE=command_center
 Environment=NEXT_PUBLIC_SITE_TYPE=sovereign_glass
-Environment=FGP_BACKEND_URL=http://127.0.0.1:8100
+Environment=FGP_BACKEND_URL=http://127.0.0.1:8000
 Environment=COMMAND_CENTER_URL=http://127.0.0.1:9800
 Environment=NEXT_PUBLIC_APP_URL=https://crog-ai.com
 Environment=NEXT_PUBLIC_API_URL=
