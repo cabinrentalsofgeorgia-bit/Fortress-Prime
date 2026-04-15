@@ -422,6 +422,28 @@ psql "$PSQL" -c "
   -- Expected: 0"
 ```
 
+### Property UUID divergence between fortress_guest and fortress_shadow
+
+The property UUIDs for Gary Knight's properties differ between the two databases. This is critical for any future cross-DB operations.
+
+| Property | fortress_guest UUID | fortress_shadow UUID |
+|---|---|---|
+| Fallen Timber Lodge | `1781fd69-a7e3-4df6-9216-c6152c9c19b6` | `93b2253d-7ae4-4d6f-8be2-125d33799c88` |
+| Cherokee Sunrise on Noontootla Creek | `099f273a-6d2b-4eeb-9474-80fd89c18071` | `50a9066d-fc2e-44c4-a716-25adb8fbad3e` |
+| Serendipity on Noontootla Creek | `bdef1b0d-8c7c-4126-a9d9-249b3d6b2621` | `63bf8847-9990-4a36-9943-b6c160ce1ec4` |
+
+Any future fortress_guest → fortress_shadow backfill must apply this mapping via a CASE expression on `property_id`. See `backend/scripts/g4_backfill_commit.sql` for the pattern.
+
+The `g4_backfill_commit.sql` script also handles: `phone_number` → `phone` column rename in guests, TIMESTAMP → TIMESTAMPTZ cast, and denormalized `guest_email`/`guest_name` columns populated via JOIN.
+
+### G.4 reservation backfill (staged, not yet executed)
+
+Backfill of Gary Knight's (sl_owner_id 146514) Q1 2026 reservations from fortress_guest → fortress_shadow scripted in G.4 (2026-04-15). Dry-run verified: 16 reservations + 16 linked guests, 0 conflicts. Gary runs `psql "$PSQL" -f backend/scripts/g4_backfill_commit.sql` to execute.
+
+Post-backfill: fortress_shadow.reservations → 73 rows (57 real + 16 backfilled). Gary then re-runs March 2026 statement generation in `/admin/statements` UI to get non-zero totals for manual comparison with Streamline.
+
+For future larger backfills (all 14 active properties, longer history): repeat the pattern from `g4_backfill_commit.sql` with expanded property UUID mappings and date range.
+
 ---
 
 ## How to use this doc
