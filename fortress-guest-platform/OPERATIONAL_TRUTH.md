@@ -404,6 +404,26 @@ FGP_BACKEND_URL=http://127.0.0.1:8000 \
 
 ---
 
+## Known operational facts
+
+### fortress_shadow reservation test fixtures (cleaned G.3.5)
+
+fortress_shadow.reservations contained **43 test fixtures** with prefixes `E5-`, `E6-`, `B6OWN-`, `B6REG-`, `E2E-` and far-future `check_in_dates` (2056–2099 range). These were Hermes parity test data that caused false discrepancies on the parity dashboard, resetting the "100 consecutive $0.00 deltas" gate. Also cleaned: 7 orphan rows in `parity_audits` and 7 in `financial_approvals` referencing those fixtures.
+
+**Cleaned in G.3.5 on 2026-04-15.** Cleanup scripts: `backend/scripts/g35_cleanup_commit.sql` (Gary runs once).
+
+**Rule going forward:** Future test data MUST NOT be inserted directly into fortress_shadow. Use fortress_shadow_test (G.1.7) for all test fixtures.
+
+```bash
+# Verify clean post-execution:
+psql "$PSQL" -c "
+  SELECT COUNT(*) AS far_future_test_fixtures FROM reservations
+  WHERE check_in_date >= '2027-01-01';
+  -- Expected: 0"
+```
+
+---
+
 ## How to use this doc
 
 - **Every Claude Code session reads this as Task 0** before any infrastructure-touching work.
