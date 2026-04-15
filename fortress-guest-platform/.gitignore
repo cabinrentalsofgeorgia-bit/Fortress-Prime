@@ -23,3 +23,7 @@ backend/tests/fixtures/crog_output/*.pdf
 /.env.production.local
 /.env.telemetry_backup
 /.vercelignore
+
+# Financial data — never commit PDFs or backup SQL from scripts/
+backend/scripts/*.pdf
+backend/scripts/g1_5_backup_*.sql
