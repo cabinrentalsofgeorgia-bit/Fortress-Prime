@@ -1,0 +1,117 @@
+BEGIN
+psql:/home/admin/Fortress-Prime/fortress-guest-platform/backend/scripts/g1_6_cleanup_fortress_shadow_committed.sql:37: NOTICE:  Connected to fortress_shadow — OK
+DO
+              label              |  n   
+---------------------------------+------
+ PRE owner_payout_accounts total | 1261
+(1 row)
+
+                label                |  n   
+-------------------------------------+------
+ PRE owner_payout_accounts test_rows | 1261
+(1 row)
+
+              label              |   n   
+---------------------------------+-------
+ PRE owner_balance_periods total | 17692
+(1 row)
+
+          label          |  n  
+-------------------------+-----
+ PRE owner_charges total | 311
+(1 row)
+
+              label              | n  
+---------------------------------+----
+ PRE owner_statement_sends total | 55
+(1 row)
+
+            label             |  n  
+------------------------------+-----
+ PRE owner_magic_tokens total | 401
+(1 row)
+
+                  label                   | n  
+------------------------------------------+----
+ STEP1 would delete owner_statement_sends | 55
+(1 row)
+
+DELETE 55
+                    label                    | n 
+---------------------------------------------+---
+ AFTER STEP1 owner_statement_sends remaining | 0
+(1 row)
+
+              label               |  n  
+----------------------------------+-----
+ STEP2 would delete owner_charges | 311
+(1 row)
+
+DELETE 311
+                label                | n 
+-------------------------------------+---
+ AFTER STEP2 owner_charges remaining | 0
+(1 row)
+
+                  label                   |   n   
+------------------------------------------+-------
+ STEP3 would delete owner_balance_periods | 17692
+(1 row)
+
+DELETE 17692
+                    label                    | n 
+---------------------------------------------+---
+ AFTER STEP3 owner_balance_periods remaining | 0
+(1 row)
+
+                  label                   |  n   
+------------------------------------------+------
+ STEP4 would delete owner_payout_accounts | 1261
+(1 row)
+
+DELETE 1261
+                    label                    | n 
+---------------------------------------------+---
+ AFTER STEP4 owner_payout_accounts remaining | 0
+(1 row)
+
+                 label                 |  n  
+---------------------------------------+-----
+ STEP5 would delete owner_magic_tokens | 401
+(1 row)
+
+DELETE 401
+                  label                   | n 
+------------------------------------------+---
+ AFTER STEP5 owner_magic_tokens remaining | 0
+(1 row)
+
+           label            | n 
+----------------------------+---
+ POST owner_payout_accounts | 0
+(1 row)
+
+           label            | n 
+----------------------------+---
+ POST owner_balance_periods | 0
+(1 row)
+
+       label        | n 
+--------------------+---
+ POST owner_charges | 0
+(1 row)
+
+           label            | n 
+----------------------------+---
+ POST owner_statement_sends | 0
+(1 row)
+
+          label          | n 
+-------------------------+---
+ POST owner_magic_tokens | 0
+(1 row)
+
+COMMIT
+EXECUTION COMPLETE — COMMIT executed. Data permanently modified.
+Backup: backend/scripts/g1_5_backup_20260415_093236.sql (11 MB)
+Restore: psql "$POSTGRES_ADMIN_URI" -f backend/scripts/g1_5_backup_20260415_093236.sql
