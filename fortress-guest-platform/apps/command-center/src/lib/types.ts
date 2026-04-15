@@ -181,6 +181,87 @@ export interface VrsMessageStats {
   cost_per_message?: number;
 }
 
+export interface VrsHunterTarget {
+  guest_id: string;
+  full_name: string;
+  email: string;
+  lifetime_value: number;
+  last_stay_date: string;
+  days_dormant: number;
+  target_score: number;
+}
+
+export interface VrsHunterDispatchResponse {
+  status: "queued";
+  event_id: string;
+  message: string;
+  queue_depth: number;
+  queue_key: string;
+}
+
+export interface VrsConflictQueueItem {
+  id: string;
+  status: string;
+  created_at: string;
+  hold_reason?: string | null;
+  corrective_scheduling?: string | null;
+  complaint_legitimacy?: string | null;
+  escalation_level?: string | null;
+  field_reality?: Record<string, unknown> | null;
+  session_id?: string | null;
+  consensus_signal?: string | null;
+  consensus_conviction: number;
+  inbound_message?: string | null;
+  draft_reply?: string | null;
+  guest?: {
+    id?: string | null;
+    full_name?: string | null;
+    email?: string | null;
+    phone_number?: string | null;
+  } | null;
+  property?: {
+    id?: string | null;
+    name?: string | null;
+    slug?: string | null;
+  } | null;
+  reservation?: {
+    id?: string | null;
+    confirmation_code?: string | null;
+  } | null;
+  message?: {
+    id?: string | null;
+    body?: string | null;
+  } | null;
+}
+
+export interface VrsConflictQueueResponse {
+  items: VrsConflictQueueItem[];
+  summary: {
+    held: number;
+    dispatched: number;
+    total_scanned: number;
+  };
+  synced?: boolean;
+}
+
+export interface VrsCouncilOpinion {
+  seat: number;
+  persona: string;
+  slug?: string;
+  signal: string;
+  conviction: number;
+  reasoning: string;
+}
+
+export interface VrsAdjudicationDetail extends VrsConflictQueueItem {
+  council?: {
+    opinions: VrsCouncilOpinion[];
+  } | null;
+  ledger_payload?: Record<string, unknown>;
+  live_triage?: Record<string, unknown> | null;
+  recommended_actions?: string[];
+}
+
 export interface VrsReservationDetailResponse {
   reservation: Reservation & {
     internal_notes?: string | null;
@@ -734,6 +815,55 @@ export interface ConversationThread {
   property_name?: string;
 }
 
+export interface AiAskRequest {
+  question: string;
+  context?: Record<string, unknown> | null;
+}
+
+export interface AiAskResponse {
+  answer?: string;
+  response?: string;
+  result?: string;
+  [key: string]: unknown;
+}
+
+export interface AiForecastRequest {
+  historical_data: Array<Record<string, unknown>>;
+  forecast_months: number;
+}
+
+export interface AiForecastResponse {
+  forecast?: string;
+  summary?: string;
+  [key: string]: unknown;
+}
+
+export interface AiOptimizeListingRequest {
+  property_name: string;
+  bedrooms: number;
+  bathrooms: number;
+  max_guests: number;
+  amenities: string[];
+  location: string;
+}
+
+export interface AiOptimizeListingResponse {
+  generated_description?: string;
+  suggestions?: string;
+  [key: string]: unknown;
+}
+
+export interface AiPredictMaintenanceRequest {
+  work_orders: Array<Record<string, unknown>>;
+  messages: Array<Record<string, unknown>>;
+}
+
+export interface AiPredictMaintenanceResponse {
+  analysis?: string;
+  alerts?: string[];
+  [key: string]: unknown;
+}
+
 export interface MessageTemplate {
   id: string;
   name: string;
@@ -978,6 +1108,37 @@ export interface SystemHealthResponse {
   databases: SystemHealthDatabases;
   /** C2 pulse merged in by `/api/telemetry/ws/system-health` stream. */
   pulse?: CommandC2PulseResponse;
+}
+
+// ---------------------------------------------------------------------------
+// NeMo Command Center (Trust Ledger)
+// ---------------------------------------------------------------------------
+
+export interface NemoCommandCenterLedgerEntry {
+  account_name: string;
+  amount_cents: number;
+  entry_type: "debit" | "credit";
+}
+
+export interface NemoCommandCenterTransaction {
+  id: string;
+  streamline_event_id: string;
+  timestamp: string;
+  signature: string | null;
+  previous_signature: string | null;
+  entries: NemoCommandCenterLedgerEntry[];
+}
+
+export interface NemoCommandCenterHashChain {
+  status: "ok" | "broken";
+  verified_count: number;
+  broken_at: string | null;
+}
+
+export interface NemoCommandCenterResponse {
+  hash_chain: NemoCommandCenterHashChain;
+  transactions: NemoCommandCenterTransaction[];
+  total_transaction_count: number;
 }
 
 export interface CommandC2RootResponse {
@@ -1435,4 +1596,228 @@ export interface FunnelHQResponse {
   recovery: FunnelHQRecoveryRow[];
   ledger_ready: boolean;
   enticement_forge: FunnelHQEnticementForge;
+}
+
+/** GET /api/telemetry/checkout-parity — Step 1 Telemetry Launch console */
+export interface CheckoutParityAuditRow {
+  id: string;
+  reservation_id: string;
+  confirmation_id: string;
+  local_total: number;
+  streamline_total: number;
+  delta: number;
+  status: "confirmed" | "discrepancy";
+  local_breakdown: Record<string, unknown>;
+  streamline_breakdown: Record<string, unknown>;
+  created_at: string | null;
+}
+
+export interface CheckoutParityRevenueSplit {
+  total_rent: number;
+  total_fees: number;
+  total_taxes: number;
+  total_deposits: number;
+  commissionable_total: number;
+  pass_through_total: number;
+}
+
+export interface CheckoutParityResponse {
+  consecutive_confirmed: number;
+  total_confirmed: number;
+  total_discrepancy: number;
+  target_gate: number;
+  gate_progress_pct: number;
+  hermes_mode: string;
+  recent_audits: CheckoutParityAuditRow[];
+  revenue_split: CheckoutParityRevenueSplit;
+  last_audit_at: string | null;
+  system_status: "NOMINAL" | "RECOVERING" | "ALERT" | "AWAITING_DATA";
+}
+
+// ── Phase G.2: Owner Statement Workflow ──────────────────────────────────────
+
+export type StatementPeriodStatus =
+  | "draft"
+  | "pending_approval"
+  | "approved"
+  | "paid"
+  | "emailed"
+  | "voided";
+
+/** OwnerBalancePeriod — one row per owner per calendar period. */
+export interface OwnerBalancePeriod {
+  id: number;
+  owner_payout_account_id: number;
+  period_start: string;       // ISO date
+  period_end: string;         // ISO date
+  opening_balance: string;    // Decimal as string
+  closing_balance: string;
+  total_revenue: string;
+  total_commission: string;
+  total_charges: string;
+  total_payments: string;
+  total_owner_income: string;
+  status: StatementPeriodStatus;
+  created_at: string | null;
+  updated_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  paid_at: string | null;
+  paid_by: string | null;
+  emailed_at: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  notes: string | null;
+}
+
+/** Per-reservation payout line item inside a statement. */
+export interface StatementLineItem {
+  reservation_id: string;
+  confirmation_code: string;
+  description: string;
+  check_in: string;
+  check_out: string;
+  nights: number;
+  gross_revenue: number;
+  pass_through_total: number;
+  commission_rate_pct: number;
+  commission_amount: number;
+  cc_processing_fee: number;
+  net_owner_payout: number;
+}
+
+/** Statement computation result returned inline with the detail endpoint. */
+export interface StatementComputedResult {
+  owner_id: string;
+  owner_name: string | null;
+  property_id: string;
+  property_name: string;
+  period_start: string;
+  period_end: string;
+  commission_rate_pct: number;
+  reservation_count: number;
+  total_gross_revenue: number;
+  total_commission: number;
+  total_cc_processing: number;
+  total_pass_through: number;
+  total_net_payout: number;
+  reservations: StatementLineItem[];
+  source: string;
+  error?: string; // present when computation failed
+}
+
+/** Response from GET /api/admin/payouts/statements/{id} */
+export interface OwnerBalancePeriodDetail {
+  balance_period: OwnerBalancePeriod;
+  statement: StatementComputedResult | { error: string };
+}
+
+/** Response from GET /api/admin/payouts/statements */
+export interface StatementListResponse {
+  statements: OwnerBalancePeriod[];
+  total: number;
+}
+
+/** One outcome row inside GenerateStatementsResult. */
+export interface StatementGenerationOutcome {
+  owner_payout_account_id: number;
+  owner_name: string | null;
+  property_id: string;
+  outcome: "created" | "skipped" | "error";
+  reason?: string;
+  period_id?: number;
+}
+
+/** Response from POST /api/admin/payouts/statements/generate */
+export interface GenerateStatementsResult {
+  period_start: string;
+  period_end: string;
+  total_owners_processed: number;
+  total_drafts_created: number;
+  total_skipped: number;
+  total_errors: number;
+  dry_run: boolean;
+  results: StatementGenerationOutcome[];
+}
+
+export interface StatementListFilters {
+  status?: string;
+  period_start?: string;
+  period_end?: string;
+  owner_payout_account_id?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface GenerateStatementsRequest {
+  period_start: string;
+  period_end: string;
+  dry_run?: boolean;
+}
+
+export interface VoidStatementRequest {
+  reason: string;
+}
+
+export interface MarkPaidRequest {
+  payment_reference: string;
+}
+
+export interface SendTestRequest {
+  override_email: string;
+  note?: string;
+}
+
+/** OwnerCharge — manual expense/credit entry. */
+export interface OwnerCharge {
+  id: number;
+  owner_payout_account_id: number;
+  owner_name: string | null;
+  property_name: string | null;
+  posting_date: string | null;
+  transaction_type: string;
+  transaction_type_display: string;
+  description: string;
+  amount: string; // Decimal as string
+  reference_id: string | null;
+  created_at: string | null;
+  created_by: string;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
+}
+
+/** Response from GET /api/admin/payouts/charges */
+export interface ChargeListResponse {
+  charges: OwnerCharge[];
+  total: number;
+}
+
+export interface ChargeListFilters {
+  owner_payout_account_id?: number;
+  period_start?: string;
+  period_end?: string;
+  include_voided?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CreateOwnerChargeRequest {
+  owner_payout_account_id: number;
+  posting_date: string;
+  transaction_type: string;
+  description: string;
+  amount: number;
+  reference_id?: string;
+}
+
+export interface UpdateOwnerChargeRequest {
+  description?: string;
+  posting_date?: string;
+  amount?: number;
+  reference_id?: string;
+}
+
+export interface VoidOwnerChargeRequest {
+  void_reason: string;
 }

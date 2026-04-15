@@ -31,7 +31,11 @@ import type {
   StreamlineQuotePropertyCatalogResponse,
   StreamlineRefreshResponse,
   VrsAddOn,
+  VrsAdjudicationDetail,
+  VrsConflictQueueResponse,
+  VrsHunterDispatchResponse,
   SystemHealthResponse,
+  NemoCommandCenterResponse,
   CommandC2ActionResponse,
   CommandC2PulseResponse,
   CommandC2RootResponse,
@@ -50,6 +54,8 @@ import type {
   SeoRedirectRemapFilters,
   SeoRedirectRemapQueueResponse,
   SeoRedirectRemapReviewResponse,
+  VrsHunterTarget,
+  CheckoutParityResponse,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -68,8 +74,8 @@ export function useDashboardStats() {
 // ---------------------------------------------------------------------------
 export function useProperties() {
   return useQuery<Property[]>({
-    queryKey: ["properties"],
-    queryFn: () => api.get("/api/properties/"),
+    queryKey: ["properties", { limit: 1000 }],
+    queryFn: () => api.get("/api/properties/", { limit: 1000 }),
   });
 }
 
@@ -101,6 +107,7 @@ export function useReservations(params?: Record<string, string | number | boolea
   return useQuery<Reservation[]>({
     queryKey: ["reservations", params],
     queryFn: () => api.get("/api/reservations/", params),
+    staleTime: 0,
   });
 }
 
@@ -109,6 +116,7 @@ export function useReservation(id: string) {
     queryKey: ["reservations", id],
     queryFn: () => api.get(`/api/reservations/${id}`),
     enabled: !!id,
+    staleTime: 0,
   });
 }
 
@@ -189,7 +197,7 @@ export function useStranglerCurrentReservation(phoneNumber: string) {
       if (error instanceof ApiError && error.status === 404) return false;
       return failureCount < 2;
     },
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 
@@ -217,7 +225,7 @@ export function useStranglerReservationHistory(phoneNumber: string, maxPages = 5
       }
       return Math.min(5_000, 1_000 * attempt);
     },
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 
@@ -239,6 +247,7 @@ export function useArrivingToday() {
     queryKey: ["reservations", "arriving-today"],
     queryFn: () => api.get("/api/reservations/arriving/today"),
     refetchInterval: 60_000,
+    staleTime: 0,
   });
 }
 
@@ -247,6 +256,7 @@ export function useDepartingToday() {
     queryKey: ["reservations", "departing-today"],
     queryFn: () => api.get("/api/reservations/departing/today"),
     refetchInterval: 60_000,
+    staleTime: 0,
   });
 }
 
@@ -367,7 +377,7 @@ export function useUnreadMessages() {
 export function useWorkOrders(params?: Record<string, string | number | boolean | undefined>) {
   return useQuery<WorkOrder[]>({
     queryKey: ["work-orders", params],
-    queryFn: () => api.get("/api/workorders/", params),
+    queryFn: () => api.get("/api/work-orders/", params),
   });
 }
 
@@ -375,7 +385,7 @@ export function useCreateWorkOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { property_id: string; title: string; description: string; category?: string; priority?: string }) =>
-      api.post("/api/workorders/", data),
+      api.post("/api/work-orders/", data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["work-orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
@@ -389,7 +399,7 @@ export function useUpdateWorkOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string; status?: string; assigned_to?: string; priority?: string; resolution_notes?: string }) =>
-      api.patch(`/api/workorders/${id}`, data),
+      api.patch(`/api/work-orders/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["work-orders"] });
       toast.success("Work order updated");
@@ -1090,6 +1100,26 @@ export function useReservationOptions() {
   });
 }
 
+export function useChargeDamageClaim() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, amount, note }: { id: string; amount: number; note?: string }) =>
+      api.post<{ charged: boolean; stripe_charge_id?: string; amount_charged?: number; moto_fallback?: boolean; message?: string }>(
+        `/api/damage-claims/${id}/charge`,
+        { amount, note },
+      ),
+    onSuccess: (data) => {
+      if (data.charged) {
+        qc.invalidateQueries({ queryKey: ["damage-claims"] });
+        toast.success(`Guest charged $${data.amount_charged?.toFixed(2)} — Stripe ID: ${data.stripe_charge_id}`);
+      } else if (data.moto_fallback) {
+        toast.warning(data.message || "No saved payment method — use MOTO terminal");
+      }
+    },
+    onError: (err: Error) => toast.error(`Charge failed: ${err.message}`),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Housekeeping (Enhanced)
 // ---------------------------------------------------------------------------
@@ -1502,6 +1532,15 @@ export function useSystemHealth() {
   });
 }
 
+export function useNemoCommandCenter() {
+  return useQuery<NemoCommandCenterResponse>({
+    queryKey: ["nemo-command-center"],
+    queryFn: () => api.get<NemoCommandCenterResponse>("/api/trust-ledger/command-center"),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
+
 export function useCommandC2Root() {
   return useQuery<CommandC2RootResponse>({
     queryKey: ["command-c2", "root"],
@@ -1635,6 +1674,16 @@ export function useHistoricalRecoverySummary(hours = 24) {
   });
 }
 
+export function useCheckoutParity() {
+  return useQuery<CheckoutParityResponse>({
+    queryKey: ["checkout-parity"],
+    queryFn: () => api.get<CheckoutParityResponse>("/api/telemetry/checkout-parity"),
+    refetchInterval: 10_000,
+    retry: 2,
+    staleTime: 5_000,
+  });
+}
+
 export function useParityDashboard() {
   return useQuery<ParityDashboardResponse>({
     queryKey: ["parity-dashboard"],
@@ -1754,10 +1803,189 @@ export function useRefreshStreamlineQuoteCache() {
   });
 }
 
+// ── Taylor Quote System ────────────────────────────────────────────────────────
+
+export type TaylorPropertyOption = {
+  property_id: string;
+  property_name: string;
+  slug: string;
+  bedrooms: number;
+  bathrooms: number;
+  max_guests: number;
+  hero_image_url: string | null;
+  base_rent: number;
+  taxes: number;
+  fees: number;
+  total_amount: number;
+  nights: number;
+  pricing_source: string;
+  booking_url: string;
+};
+
+export type TaylorQuoteRequestRecord = {
+  id: string;
+  status: "pending_approval" | "sent" | "expired";
+  guest_email: string;
+  check_in: string;
+  check_out: string;
+  nights: number;
+  adults: number;
+  children: number;
+  pets: number;
+  available_property_count: number;
+  property_options: TaylorPropertyOption[];
+  approved_by: string | null;
+  sent_at: string | null;
+  created_at: string;
+};
+
+export function useTaylorPendingQuotes() {
+  return useQuery<{ requests: TaylorQuoteRequestRecord[]; total: number }>({
+    queryKey: ["taylor-quote-requests"],
+    queryFn: () => api.get("/api/quotes/taylor/pending"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useCreateTaylorQuoteRequest() {
+  const qc = useQueryClient();
+  return useMutation<
+    TaylorQuoteRequestRecord,
+    Error,
+    {
+      guest_email: string;
+      check_in: string;
+      check_out: string;
+      adults: number;
+      children: number;
+      pets: number;
+    }
+  >({
+    mutationFn: (payload) => api.post("/api/quotes/taylor/request", payload),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["taylor-quote-requests"] });
+      const count = data.available_property_count ?? data.property_options?.length ?? 0;
+      if (count > 0) {
+        toast.success(`Quote created — ${count} available cabin${count !== 1 ? "s" : ""} found`);
+      } else {
+        toast.warning("No available cabins found for those dates");
+      }
+    },
+    onError: (err) => toast.error(err.message || "Failed to create quote request"),
+  });
+}
+
+export function useApproveTaylorQuote() {
+  const qc = useQueryClient();
+  return useMutation<
+    { status: string; guest_email: string; property_count: number },
+    Error,
+    { requestId: string }
+  >({
+    mutationFn: ({ requestId }) =>
+      api.post(`/api/quotes/taylor/${requestId}/approve`, {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["taylor-quote-requests"] });
+      toast.success(`Quote sent to ${data.guest_email} (${data.property_count} cabin${data.property_count !== 1 ? "s" : ""})`);
+    },
+    onError: (err) => toast.error(err.message || "Failed to send quote"),
+  });
+}
+
 export function useVrsMessageStats() {
   return useQuery({
     queryKey: ["vrs", "message-stats"],
     queryFn: () => api.get<VrsMessageStats>("/api/messages/stats"),
+  });
+}
+
+export function useVrsHunterTargets(enabled = true) {
+  return useQuery<VrsHunterTarget[]>({
+    queryKey: ["vrs", "hunter-targets"],
+    queryFn: () => api.get<VrsHunterTarget[]>("/api/vrs/hunter/targets"),
+    enabled,
+    refetchInterval: 30_000,
+    staleTime: 10_000,
+  });
+}
+
+export function useDispatchHunterTarget() {
+  const qc = useQueryClient();
+  return useMutation<
+    VrsHunterDispatchResponse,
+    Error,
+    { guestId: string; fullName: string; targetScore: number }
+  >({
+    mutationFn: ({ guestId, fullName, targetScore }) =>
+      api.hunter.dispatch<VrsHunterDispatchResponse>({
+        guest_id: guestId,
+        full_name: fullName,
+        target_score: targetScore,
+      }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "hunter-queue-stats"] });
+      toast.success(data.message || "Hunter dispatch queued");
+    },
+    onError: (err) => toast.error(err.message || "Failed to dispatch AI agent"),
+  });
+}
+
+export function useSyncVrsLedger(limit = 25) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<VrsConflictQueueResponse>(`/api/vrs/sync?limit=${limit}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vrs", "conflict-queue"] });
+      toast.success("Ledger synced");
+    },
+    onError: (err: Error) => toast.error(err.message || "Ledger sync failed"),
+  });
+}
+
+export function useVrsConflictQueue(limit = 25) {
+  return useQuery<VrsConflictQueueResponse>({
+    queryKey: ["vrs", "conflict-queue", limit],
+    queryFn: () => api.get("/api/vrs/queue", { limit, held_only: true }),
+    refetchInterval: 15_000,
+    staleTime: 5_000,
+  });
+}
+
+export function useVrsAdjudicationDetail(id: string | undefined) {
+  return useQuery<VrsAdjudicationDetail>({
+    queryKey: ["vrs", "adjudication", id],
+    queryFn: () => api.get(`/api/vrs/adjudications/${id}`),
+    enabled: !!id,
+    staleTime: 5_000,
+  });
+}
+
+export function useOverrideVrsDispatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+      consensusConviction,
+      minimumConviction = 0,
+    }: {
+      id: string;
+      body?: string;
+      consensusConviction?: number;
+      minimumConviction?: number;
+    }) =>
+      api.post(`/api/vrs/adjudications/${id}/override-dispatch`, {
+        body,
+        consensus_conviction: consensusConviction,
+        minimum_conviction: minimumConviction,
+      }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ["vrs", "conflict-queue"] });
+      qc.invalidateQueries({ queryKey: ["vrs", "adjudication", variables.id] });
+      toast.success("Override dispatched");
+    },
+    onError: (err: Error) => toast.error(err.message || "Override dispatch failed"),
   });
 }
 
@@ -1766,6 +1994,7 @@ export function useVrsReservationFull(id: string | undefined) {
     queryKey: ["vrs", "reservation", id],
     queryFn: () => api.get(`/api/reservations/${id}`),
     enabled: !!id,
+    staleTime: 0,
   });
 }
 
@@ -2113,6 +2342,193 @@ export function useAsyncJobArchivePrune() {
     },
     onError: (err) =>
       toast.error(err.message || "Async job archive prune failed"),
+  });
+}
+
+export interface AdminInsightItem {
+  id: string;
+  title: string;
+  summary: string;
+  metrics: Record<string, unknown>;
+}
+
+export interface AdminInsightsResponse {
+  items: AdminInsightItem[];
+  count: number;
+  requested_limit: number;
+  source_table_present: boolean;
+  live_data_supported: boolean;
+  status: string;
+  message: string;
+}
+
+export function useAdminInsights(limit = 4) {
+  return useQuery<AdminInsightsResponse>({
+    queryKey: ["admin", "insights", limit],
+    queryFn: () => api.get("/api/admin/insights", { limit }),
+    staleTime: 60_000,
+  });
+}
+
+export interface ChannexSyncResult {
+  property_id: string;
+  slug: string;
+  property_name: string;
+  action: string;
+  channex_listing_id: string | null;
+  match_strategy: string | null;
+  error: string | null;
+}
+
+export interface ChannexSyncInventoryRequest {
+  dry_run: boolean;
+  limit?: number;
+  property_ids?: string[];
+}
+
+export interface ChannexSyncInventoryResponse {
+  status: string;
+  dry_run: boolean;
+  scanned_count: number;
+  created_count: number;
+  mapped_count: number;
+  failed_count: number;
+  results: ChannexSyncResult[];
+}
+
+export interface ChannexHealthPropertyStatus {
+  property_id: string;
+  streamline_property_id: string;
+  slug: string;
+  property_name: string;
+  channex_listing_id: string | null;
+  shell_present: boolean;
+  preferred_room_type_present: boolean;
+  preferred_rate_plan_present: boolean;
+  room_type_count: number;
+  rate_plan_count: number;
+  duplicate_rate_plan_count: number;
+  ari_availability_present: boolean;
+  ari_restrictions_present: boolean;
+  healthy: boolean;
+}
+
+export interface ChannexHealthResponse {
+  property_count: number;
+  healthy_count: number;
+  shell_ready_count: number;
+  catalog_ready_count: number;
+  ari_ready_count: number;
+  duplicate_rate_plan_count: number;
+  properties: ChannexHealthPropertyStatus[];
+}
+
+export interface ChannexHistoryItem {
+  id: string;
+  action: string;
+  outcome: string;
+  actor_email: string | null;
+  created_at: string;
+  request_id: string | null;
+  property_count: number | null;
+  remediated_count: number | null;
+  failed_count: number | null;
+  ari_window_days: number | null;
+  results: Array<{
+    property_id?: string;
+    slug?: string;
+    property_name?: string;
+    shell_action?: string;
+    catalog_action?: string;
+    ari_action?: string;
+    error?: string | null;
+  }>;
+}
+
+export interface ChannexHistoryResponse {
+  count: number;
+  recent_success_count: number;
+  recent_partial_failure_count: number;
+  recent_remediated_property_count: number;
+  recent_failed_property_count: number;
+  last_run_at: string | null;
+  last_success_at: string | null;
+  items: ChannexHistoryItem[];
+}
+
+export interface ChannexRemediationResult {
+  property_id: string;
+  slug: string;
+  property_name: string;
+  channex_listing_id: string | null;
+  shell_action: string;
+  catalog_action: string;
+  ari_action: string;
+  room_type_id: string | null;
+  rate_plan_id: string | null;
+  error: string | null;
+}
+
+export interface ChannexRemediationRequest {
+  property_ids?: string[];
+  ari_window_days: number;
+}
+
+export interface ChannexRemediationResponse {
+  status: string;
+  property_count: number;
+  remediated_count: number;
+  failed_count: number;
+  results: ChannexRemediationResult[];
+}
+
+export function useChannexSyncInventory() {
+  const qc = useQueryClient();
+  return useMutation<
+    ChannexSyncInventoryResponse,
+    Error,
+    ChannexSyncInventoryRequest
+  >({
+    mutationFn: (payload) => api.post("/api/admin/channex/sync-inventory", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "channex", "health"] });
+      qc.invalidateQueries({ queryKey: ["admin", "channex", "history"] });
+      toast.success("Channex inventory sync completed");
+    },
+    onError: (err) => toast.error(err.message || "Failed to sync Channex inventory"),
+  });
+}
+
+export function useChannexHealth() {
+  return useQuery<ChannexHealthResponse>({
+    queryKey: ["admin", "channex", "health"],
+    queryFn: () => api.get("/api/admin/channex/health"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useChannexHistory(limit = 20) {
+  return useQuery<ChannexHistoryResponse>({
+    queryKey: ["admin", "channex", "history", limit],
+    queryFn: () => api.get("/api/admin/channex/history", { limit }),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useChannexRemediation() {
+  const qc = useQueryClient();
+  return useMutation<
+    ChannexRemediationResponse,
+    Error,
+    ChannexRemediationRequest
+  >({
+    mutationFn: (payload) => api.post("/api/admin/channex/remediate", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "channex", "health"] });
+      qc.invalidateQueries({ queryKey: ["admin", "channex", "history"] });
+      toast.success("Channex remediation completed");
+    },
+    onError: (err) => toast.error(err.message || "Failed to remediate Channex fleet"),
   });
 }
 
@@ -2798,5 +3214,371 @@ export function useSetDefcon() {
       }
     },
     onError: (err) => toast.error(err.message || "DEFCON switch failed"),
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// Financial Approvals — NeMo Triage
+// ---------------------------------------------------------------------------
+
+export interface ApprovalReservationContext {
+  confirmation_code: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  check_in: string | null;
+  check_out: string | null;
+  total_amount_cents: number | null;
+  booking_source: string | null;
+}
+
+export interface PendingApproval {
+  id: string;
+  reservation_id: string;
+  status: string;
+  discrepancy_type: string;
+  local_total_cents: number;
+  streamline_total_cents: number;
+  delta_cents: number;
+  context_payload: Record<string, unknown>;
+  resolution_strategy: string | null;
+  stripe_invoice_id: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  reservation: ApprovalReservationContext | null;
+}
+
+export interface ExecuteApprovalResponse {
+  id: string;
+  status: string;
+  resolution_strategy: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  delta_cents: number;
+  stripe_invoice_id: string | null;
+}
+
+export function usePendingApprovals() {
+  return useQuery<PendingApproval[]>({
+    queryKey: ["financial-approvals", "pending"],
+    queryFn: () => api.get("/api/v1/financial-approvals/pending"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useExecuteApproval() {
+  const qc = useQueryClient();
+  return useMutation<
+    ExecuteApprovalResponse,
+    Error,
+    { approvalId: string; strategy: "absorb" | "invoice" }
+  >({
+    mutationFn: ({ approvalId, strategy }) =>
+      api.post(`/api/v1/financial-approvals/${approvalId}/execute`, { strategy }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ["financial-approvals"] });
+      toast.success(
+        variables.strategy === "invoice"
+          ? "Stripe invoice sent to guest"
+          : "Variance absorbed into ledger",
+      );
+    },
+    onError: (err) => toast.error(err.message || "Approval execution failed"),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Admin Payouts
+// ---------------------------------------------------------------------------
+
+export interface PayoutSummaryRow {
+  property_id: string;
+  owner_name: string;
+  owner_email: string | null;
+  account_status: string;
+  stripe_account_id: string | null;
+  payout_schedule: string;
+  payout_day_of_week: number | null;
+  payout_day_of_month: number | null;
+  last_payout_at: string | null;
+  next_scheduled_payout: string | null;
+  minimum_payout_threshold: number;
+  outstanding_amount: number | null;
+  last_transfer_id: string | null;
+  last_transfer_status: string | null;
+}
+
+export function useAdminPendingPayouts() {
+  return useQuery<PayoutSummaryRow[]>({
+    queryKey: ["admin-pending-payouts"],
+    queryFn: () => api.get("/api/admin/payouts/pending"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useSendOwnerPayout() {
+  const qc = useQueryClient();
+  return useMutation<
+    { triggered: boolean; payout_ledger_id: number; owner_amount: number },
+    Error,
+    { propertyId: string }
+  >({
+    mutationFn: ({ propertyId }) =>
+      api.post(`/api/admin/payouts/${propertyId}/send`),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin-pending-payouts"] });
+      toast.success(`Payout initiated — $${data.owner_amount?.toFixed(2)} queued (ledger #${data.payout_ledger_id})`);
+    },
+    onError: (err) => toast.error(`Payout failed: ${err.message}`),
+  });
+}
+
+export function useUpdatePayoutSchedule() {
+  const qc = useQueryClient();
+  return useMutation<
+    { updated: boolean },
+    Error,
+    {
+      propertyId: string;
+      payout_schedule: string;
+      payout_day_of_week?: number | null;
+      payout_day_of_month?: number | null;
+      minimum_payout_threshold?: number | null;
+    }
+  >({
+    mutationFn: ({ propertyId, ...body }) =>
+      api.patch(`/api/admin/payouts/${propertyId}/schedule`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-pending-payouts"] });
+      toast.success("Payout schedule updated");
+    },
+    onError: (err) => toast.error(`Schedule update failed: ${err.message}`),
+  });
+}
+
+export function useTriggerPayoutSweep() {
+  const qc = useQueryClient();
+  return useMutation<{ processed: number; total_amount: number; errors: string[] }, Error>({
+    mutationFn: () => api.post("/api/admin/payouts/sweep"),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin-pending-payouts"] });
+      toast.success(`Sweep complete — ${data.processed} payout(s) processed, $${data.total_amount?.toFixed(2)} total`);
+    },
+    onError: (err) => toast.error(`Sweep failed: ${err.message}`),
+  });
+}
+
+// ── Phase G.2: Owner Statement Workflow hooks ─────────────────────────────────
+import type {
+  OwnerBalancePeriod,
+  OwnerBalancePeriodDetail,
+  StatementListResponse,
+  StatementListFilters,
+  GenerateStatementsRequest,
+  GenerateStatementsResult,
+  OwnerCharge,
+  ChargeListResponse,
+  ChargeListFilters,
+  CreateOwnerChargeRequest,
+  UpdateOwnerChargeRequest,
+} from "./types";
+
+// Statement list — GET /api/admin/payouts/statements
+export function useAdminStatements(filters: StatementListFilters = {}) {
+  return useQuery<StatementListResponse>({
+    queryKey: ["admin-statements", filters],
+    queryFn: () =>
+      api.get("/api/admin/payouts/statements", {
+        ...(filters.status !== undefined && { status: filters.status }),
+        ...(filters.period_start !== undefined && { period_start: filters.period_start }),
+        ...(filters.period_end !== undefined && { period_end: filters.period_end }),
+        ...(filters.owner_payout_account_id !== undefined && {
+          owner_payout_account_id: filters.owner_payout_account_id,
+        }),
+        ...(filters.limit !== undefined && { limit: filters.limit }),
+        ...(filters.offset !== undefined && { offset: filters.offset }),
+      }),
+    refetchInterval: false,
+  });
+}
+
+// Statement detail — GET /api/admin/payouts/statements/{id}
+export function useAdminStatement(periodId: number | null) {
+  return useQuery<OwnerBalancePeriodDetail>({
+    queryKey: ["admin-statement", periodId],
+    queryFn: () => api.get(`/api/admin/payouts/statements/${periodId}`),
+    enabled: !!periodId,
+  });
+}
+
+// Generate statements — POST /api/admin/payouts/statements/generate
+export function useGenerateStatements() {
+  const qc = useQueryClient();
+  return useMutation<GenerateStatementsResult, Error, GenerateStatementsRequest>({
+    mutationFn: (body) => api.post("/api/admin/payouts/statements/generate", body),
+    onSuccess: (data) => {
+      if (!data.dry_run) {
+        qc.invalidateQueries({ queryKey: ["admin-statements"] });
+        toast.success(
+          `Generated ${data.total_drafts_created} statement draft(s) for ${data.period_start} → ${data.period_end}`
+        );
+      }
+    },
+    onError: (err) => toast.error(`Generation failed: ${err.message}`),
+  });
+}
+
+// Approve — POST /api/admin/payouts/statements/{id}/approve
+export function useApproveStatement() {
+  const qc = useQueryClient();
+  return useMutation<OwnerBalancePeriod, Error, { periodId: number }>({
+    mutationFn: ({ periodId }) => api.post(`/api/admin/payouts/statements/${periodId}/approve`),
+    onSuccess: (_data, { periodId }) => {
+      qc.invalidateQueries({ queryKey: ["admin-statements"] });
+      qc.invalidateQueries({ queryKey: ["admin-statement", periodId] });
+      toast.success("Statement approved");
+    },
+    onError: (err) => toast.error(`Approve failed: ${err.message}`),
+  });
+}
+
+// Void — POST /api/admin/payouts/statements/{id}/void
+export function useVoidStatement() {
+  const qc = useQueryClient();
+  return useMutation<OwnerBalancePeriod, Error, { periodId: number; reason: string }>({
+    mutationFn: ({ periodId, reason }) =>
+      api.post(`/api/admin/payouts/statements/${periodId}/void`, { reason }),
+    onSuccess: (_data, { periodId }) => {
+      qc.invalidateQueries({ queryKey: ["admin-statements"] });
+      qc.invalidateQueries({ queryKey: ["admin-statement", periodId] });
+      toast.success("Statement voided");
+    },
+    onError: (err) => toast.error(`Void failed: ${err.message}`),
+  });
+}
+
+// Mark paid — POST /api/admin/payouts/statements/{id}/mark-paid
+export function useMarkStatementPaid() {
+  const qc = useQueryClient();
+  return useMutation<
+    OwnerBalancePeriod,
+    Error,
+    { periodId: number; payment_reference: string }
+  >({
+    mutationFn: ({ periodId, payment_reference }) =>
+      api.post(`/api/admin/payouts/statements/${periodId}/mark-paid`, { payment_reference }),
+    onSuccess: (_data, { periodId }) => {
+      qc.invalidateQueries({ queryKey: ["admin-statements"] });
+      qc.invalidateQueries({ queryKey: ["admin-statement", periodId] });
+      toast.success("Statement marked as paid");
+    },
+    onError: (err) => toast.error(`Mark paid failed: ${err.message}`),
+  });
+}
+
+// Mark emailed — POST /api/admin/payouts/statements/{id}/mark-emailed
+export function useMarkStatementEmailed() {
+  const qc = useQueryClient();
+  return useMutation<OwnerBalancePeriod, Error, { periodId: number }>({
+    mutationFn: ({ periodId }) =>
+      api.post(`/api/admin/payouts/statements/${periodId}/mark-emailed`),
+    onSuccess: (_data, { periodId }) => {
+      qc.invalidateQueries({ queryKey: ["admin-statements"] });
+      qc.invalidateQueries({ queryKey: ["admin-statement", periodId] });
+      toast.success("Statement marked as emailed");
+    },
+    onError: (err) => toast.error(`Mark emailed failed: ${err.message}`),
+  });
+}
+
+// Send test email — POST /api/admin/payouts/statements/{id}/send-test
+export function useSendTestStatement() {
+  return useMutation<
+    { success: boolean; sent_to: string; message: string },
+    Error,
+    { periodId: number; override_email: string; note?: string }
+  >({
+    mutationFn: ({ periodId, override_email, note }) =>
+      api.post(`/api/admin/payouts/statements/${periodId}/send-test`, {
+        override_email,
+        ...(note ? { note } : {}),
+      }),
+    onSuccess: (data) => toast.success(`Test email sent to ${data.sent_to}`),
+    onError: (err) => toast.error(`Test send failed: ${err.message}`),
+  });
+}
+
+// ── Owner Charges hooks ───────────────────────────────────────────────────────
+
+// List charges — GET /api/admin/payouts/charges
+export function useAdminCharges(filters: ChargeListFilters = {}) {
+  return useQuery<ChargeListResponse>({
+    queryKey: ["admin-charges", filters],
+    queryFn: () =>
+      api.get("/api/admin/payouts/charges", {
+        ...(filters.owner_payout_account_id !== undefined && {
+          owner_payout_account_id: filters.owner_payout_account_id,
+        }),
+        ...(filters.period_start !== undefined && { period_start: filters.period_start }),
+        ...(filters.period_end !== undefined && { period_end: filters.period_end }),
+        ...(filters.include_voided !== undefined && {
+          include_voided: filters.include_voided,
+        }),
+        ...(filters.limit !== undefined && { limit: filters.limit }),
+      }),
+    enabled: filters.owner_payout_account_id !== undefined || Object.keys(filters).length === 0,
+  });
+}
+
+// Single charge — GET /api/admin/payouts/charges/{id}
+export function useAdminCharge(chargeId: number | null) {
+  return useQuery<OwnerCharge>({
+    queryKey: ["admin-charge", chargeId],
+    queryFn: () => api.get(`/api/admin/payouts/charges/${chargeId}`),
+    enabled: !!chargeId,
+  });
+}
+
+// Create charge — POST /api/admin/payouts/charges
+export function useCreateOwnerCharge() {
+  const qc = useQueryClient();
+  return useMutation<OwnerCharge, Error, CreateOwnerChargeRequest>({
+    mutationFn: (body) => api.post("/api/admin/payouts/charges", body),
+    onSuccess: (_data) => {
+      qc.invalidateQueries({ queryKey: ["admin-charges"] });
+      qc.invalidateQueries({ queryKey: ["admin-statements"] });
+      toast.success("Charge created");
+    },
+    onError: (err) => toast.error(`Create charge failed: ${err.message}`),
+  });
+}
+
+// Update charge — PATCH /api/admin/payouts/charges/{id}
+export function useUpdateOwnerCharge() {
+  const qc = useQueryClient();
+  return useMutation<OwnerCharge, Error, { chargeId: number } & UpdateOwnerChargeRequest>({
+    mutationFn: ({ chargeId, ...body }) =>
+      api.patch(`/api/admin/payouts/charges/${chargeId}`, body),
+    onSuccess: (_data, { chargeId }) => {
+      qc.invalidateQueries({ queryKey: ["admin-charges"] });
+      qc.invalidateQueries({ queryKey: ["admin-charge", chargeId] });
+      toast.success("Charge updated");
+    },
+    onError: (err) => toast.error(`Update charge failed: ${err.message}`),
+  });
+}
+
+// Void charge — POST /api/admin/payouts/charges/{id}/void
+export function useVoidOwnerCharge() {
+  const qc = useQueryClient();
+  return useMutation<OwnerCharge, Error, { chargeId: number; void_reason: string }>({
+    mutationFn: ({ chargeId, void_reason }) =>
+      api.post(`/api/admin/payouts/charges/${chargeId}/void`, { void_reason }),
+    onSuccess: (_data, { chargeId }) => {
+      qc.invalidateQueries({ queryKey: ["admin-charges"] });
+      qc.invalidateQueries({ queryKey: ["admin-charge", chargeId] });
+      toast.success("Charge voided");
+    },
+    onError: (err) => toast.error(`Void charge failed: ${err.message}`),
   });
 }
