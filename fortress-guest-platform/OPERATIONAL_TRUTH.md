@@ -446,6 +446,37 @@ For future larger backfills (all 14 active properties, longer history): repeat t
 
 ---
 
+## Statement classification policy
+
+**Streamline is the source of truth for what's commissionable vs pass-through.** CROG's job is parity, not opinion. When CROG and Streamline disagree on classification, Streamline wins. `_COMMISSIONABLE_PATTERNS` in `backend/services/statement_computation.py` reflects observed Streamline behavior and must be updated to match whenever a parity discrepancy is found.
+
+**Verification command:**
+```bash
+grep -A 10 "_COMMISSIONABLE_PATTERNS" \
+  backend/services/statement_computation.py
+```
+
+### Currently commissionable (verified against Streamline 2026-04-15)
+- **Base rent** — from `nightly_rate` column (stores TOTAL booking rent, not per-night rate; G.5 Fix 1)
+- **Additional person fees** — `required_fees` entries whose name contains "additional person"
+- **Additional party fees** — `required_fees` entries whose name contains "additional party"
+- **Extra guest fees** — `required_fees` entries whose name contains "extra guest"
+- **Extra person fees** — `required_fees` entries whose name contains "extra person"
+
+### Currently pass-through (excluded from commission base)
+- Cleaning fees, ADW (accidental damage waiver), processing fees
+- Lodging tax, DOT tax, state/county taxes
+- **Pet fees** (removed from commissionable in G.5.1 — Streamline treats them as pass-through at Fallen Timber Lodge; removal confirmed March 2026 parity)
+- Pet cleaning fees
+- Security deposits
+- Anything not matching the commissionable list above (safe default)
+
+### History
+- G.5 (2026-04-15): Fixed `nightly_rate × nights` multiplication bug; added required_fees parsing
+- G.5.1 (2026-04-15): Removed "pet" from commissionable after Streamline parity check showed Pet Fee is pass-through. Confirmed exact parity: CROG = Streamline = $6,209 for Gary Knight's March 2026 Fallen Timber Lodge statement.
+
+---
+
 ## How to use this doc
 
 - **Every Claude Code session reads this as Task 0** before any infrastructure-touching work.

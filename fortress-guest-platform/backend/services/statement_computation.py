@@ -248,9 +248,11 @@ def _bucketed_items_from_reservation(res: Reservation) -> list[BucketedItem]:
                                   item_type="tax", bucket=TaxBucket.LODGING))
 
     # ── Fix 2: parse required_fees from streamline_financial_detail JSON ──────
-    # Commissionable keywords (extra-guest / additional-party surcharges)
+    # Commissionable keywords (extra-guest / additional-party surcharges).
+    # Streamline is the source of truth for classification; CROG's job is parity,
+    # not opinion. Pet fees removed in G.5.1 — Streamline treats them as
+    # pass-through (verified against March 2026 Fallen Timber Lodge statements).
     _COMMISSIONABLE_PATTERNS = (
-        "pet",
         "additional person",
         "additional party",
         "extra guest",
