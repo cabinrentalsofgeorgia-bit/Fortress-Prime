@@ -1,15 +1,44 @@
-# Staff UI (Next.js Command Center) must use port 3001. Do NOT point crog-ai.com at :8100
-# (FastAPI) or browsers will see OpenAPI/JSON instead of /login.
-tunnel: ${CLOUDFLARE_TUNNEL_ID}
-credentials-file: /etc/cloudflared/${CLOUDFLARE_TUNNEL_ID}.json
+# =============================================================================
+# Cloudflare Tunnel Configuration — Documentation Copy
+# =============================================================================
+#
+# This file documents the production Cloudflare tunnel config.
+# The ACTIVE config is at /etc/cloudflared/config.yml on the DGX Spark node.
+# Cloudflared reads /etc/cloudflared/config.yml — THIS FILE IS NOT LOADED.
+#
+# Last reconciled: 2026-04-15 (Phase G.2.4)
+#
+# If the production config changes, update this file too. Drift is allowed
+# but will be caught by the OPERATIONAL_TRUTH.md verification command:
+#   sudo diff /etc/cloudflared/config.yml \
+#             <(grep -v '^#' infra/gateway/config.yml | sed '/^$/d')
+# =============================================================================
+
+tunnel: aa7222a3-c1c9-4ee3-97c8-fb46b41a654e
+credentials-file: /etc/cloudflared/aa7222a3-c1c9-4ee3-97c8-fb46b41a654e.json
+protocol: http2
 
 ingress:
-  - hostname: www.crog-ai.com
-    service: http://127.0.0.1:3001
   - hostname: crog-ai.com
-    service: http://127.0.0.1:3001
-  - hostname: staging.cabin-rentals-of-georgia.com
-    service: http://127.0.0.1:3000
-  - hostname: api.cabin-rentals-of-georgia.com
+    service: http://127.0.0.1:3005
+  - hostname: www.crog-ai.com
+    service: http://127.0.0.1:3005
+  - hostname: console.crog-ai.com
+    service: http://127.0.0.1:3005
+  - hostname: fortress.crog-ai.com
+    service: http://127.0.0.1:9800
+  - hostname: api.crog-ai.com
+    service: http://127.0.0.1:9800
+  - hostname: cabin-rentals-of-georgia.com
     service: http://127.0.0.1:8100
+  - hostname: www.cabin-rentals-of-georgia.com
+    service: http://127.0.0.1:8100
+  - hostname: api.cabin-rentals-of-georgia.com
+    service: http://127.0.0.1:8000
+  - hostname: ssh.crog-ai.com
+    service: ssh://localhost:22
+  - hostname: grafana.crog-ai.com
+    service: http://127.0.0.1:3000
+  - hostname: staging.cabin-rentals-of-georgia.com
+    service: http://127.0.0.1:8000
   - service: http_status:404

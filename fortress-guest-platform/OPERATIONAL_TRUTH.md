@@ -14,8 +14,8 @@
 
 ~60 minutes of G.2.1 deployment debugging traced to:
 
-1. `crog-ai.com` is served by an orphaned next-server on **port 3005** (SSH session, NOT systemd)  
-2. `infra/gateway/config.yml` in the repo claims port 3001 — that is the *intended* config, not the running one  
+1. `crog-ai.com` was served by an orphaned next-server on **port 3005** (SSH session, NOT systemd) — now fixed by `crog-ai-frontend.service` (G.2.3)  
+2. `infra/gateway/config.yml` in the repo claimed port 3001 — it is now a documented copy of `/etc/cloudflared/config.yml` (G.2.4)  
 3. `fortress-dashboard.service` is misnamed; it runs the **storefront** (apps/storefront) on port 3001, not the command center  
 4. BFF proxy log strings hardcode `"FGP:8100"` even though FastAPI actually runs on **8000**  
 5. After any backend code change, `sudo systemctl restart fortress-backend` is **mandatory** — no autoreload  
@@ -27,25 +27,34 @@
 
 ### Cloudflare tunnel (actual running config)
 
-**File:** `/etc/cloudflared/config.yml` (read-only via sudo; this is the live config, NOT `infra/gateway/config.yml`)
+**Authoritative file:** `/etc/cloudflared/config.yml` (live, read via sudo)  
+**Repo documentation copy:** `infra/gateway/config.yml` (reconciled in G.2.4 — see note below)
 
-```
-Verify: sudo grep -A2 "crog-ai.com\|cabin-rentals\|grafana" /etc/cloudflared/config.yml
+```bash
+# Verify:
+sudo grep -A2 "crog-ai.com\|cabin-rentals\|grafana" /etc/cloudflared/config.yml
+
+# Verify repo copy matches production:
+sudo diff /etc/cloudflared/config.yml \
+          <(grep -v '^#' infra/gateway/config.yml | sed '/^[[:space:]]*$/d')
+# Expected: one blank-line difference only (whitespace, not content)
 ```
 
 | Hostname | Routes to | Notes |
 |---|---|---|
-| `crog-ai.com` | `http://127.0.0.1:3005` | Next.js command center (orphaned process) |
+| `crog-ai.com` | `http://127.0.0.1:3005` | Next.js command center (`crog-ai-frontend.service`) |
 | `www.crog-ai.com` | `http://127.0.0.1:3005` | Same |
 | `console.crog-ai.com` | `http://127.0.0.1:3005` | Same |
 | `fortress.crog-ai.com` | `http://127.0.0.1:9800` | Python master_console (fortress-console.service) |
 | `api.crog-ai.com` | `http://127.0.0.1:9800` | Same |
-| `cabin-rentals-of-georgia.com` | `http://127.0.0.1:8100` | **DEAD ENTRY** — nothing runs on 8100; domain is served by Cloudflare CDN from a separate origin (legacy Drupal) |
+| `cabin-rentals-of-georgia.com` | `http://127.0.0.1:8100` | **DEAD TUNNEL ENTRY** — nothing on 8100; domain serves via Cloudflare CDN from a different origin. Tunnel entry is stale. |
+| `www.cabin-rentals-of-georgia.com` | `http://127.0.0.1:8100` | Same dead entry |
+| `api.cabin-rentals-of-georgia.com` | `http://127.0.0.1:8000` | FastAPI directly |
 | `staging.cabin-rentals-of-georgia.com` | `http://127.0.0.1:8000` | FastAPI directly (dev/staging) |
 | `grafana.crog-ai.com` | `http://127.0.0.1:3000` | Grafana |
 | `ssh.crog-ai.com` | `ssh://localhost:22` | SSH tunnel |
 
-**⚠️ STALE DOC WARNING:** `infra/gateway/config.yml` (repo file) claims `crog-ai.com → port 3001`. This is the intended future state, NOT the live state. The live config is `/etc/cloudflared/config.yml`.
+**`infra/gateway/config.yml` note (G.2.4):** The in-repo file was rewritten on 2026-04-15 to mirror `/etc/cloudflared/config.yml`. It is a documentation copy only — cloudflared does not read it. Drift between the two is expected as the production config changes; use the diff command above to check.
 
 ---
 
@@ -58,10 +67,11 @@ sudo ss -tlnp | grep -E ":3001|:3005|:8000|:8100|:9800"
 
 | Port | Process | Service | App |
 |---|---|---|---|
-| 3001 | `next-server (v16.1.6)` pid 2198017 | `fortress-dashboard.service` (systemd ✓) | **apps/storefront** |
-| 3005 | `next-server (v16.1.6)` pid 2323282 | **None — orphaned SSH session** ⚠️ | **apps/command-center** |
+| 3001 | `next-server (v16.1.6)` | `fortress-dashboard.service` (systemd ✓) | **apps/storefront** |
+| 3005 | `next-server (v16.1.6)` | `crog-ai-frontend.service` (systemd ✓, G.2.3) | **apps/command-center** |
+| 3299/3399/3499 | `next-server (v14.2.35)` × 3 | **Orphaned SSH session** (session-2592.scope) ⚠️ | `/home/admin/cabin-rentals-of-georgia` — **do NOT kill** |
 | 8000 | `python` (uvicorn) | `fortress-backend.service` (systemd ✓) | FastAPI backend |
-| 8100 | **NOTHING** | — | Dead port referenced in many stale configs |
+| 8100 | **NOTHING** | — | Dead port in tunnel config |
 | 9800 | `python3` | `fortress-console.service` (systemd ✓) | master_console.py (internal tool) |
 
 ---
@@ -109,6 +119,32 @@ sudo systemctl cat fortress-dashboard.service | grep -E "Description|WorkingDire
 Despite the name "Dashboard", this service runs the **public storefront** (`apps/storefront`) on port 3001, NOT the admin command center. The `run-fortress-dashboard.sh` script has `APP_DIR="${ROOT_DIR}/fortress-guest-platform/apps/storefront"`.
 
 **⚠️ FGP_BACKEND_URL default bug:** `run-fortress-dashboard.sh` defaults `FGP_BACKEND_URL` to `http://127.0.0.1:8100` — which has nothing listening. If this script's env is ever used by the storefront BFF, it will fail. The correct default is port 8000.
+
+---
+
+### cabin-rentals-of-georgia.com — separate project (ports 3299/3399/3499)
+
+**⚠️ DO NOT KILL** these processes. They serve a separate project and are not fortress orphans.
+
+```bash
+# Identify these processes (they run from /home/admin/cabin-rentals-of-georgia):
+ps aux | grep "next-server" | grep -v grep
+# Re-verify CWDs:
+for p in $(ps aux | grep "next-server v14" | grep -v grep | awk '{print $2}'); do
+  echo "PID $p: $(sudo readlink /proc/$p/cwd 2>/dev/null)"
+done
+# Expected CWD: /home/admin/cabin-rentals-of-georgia (NOT fortress-guest-platform)
+```
+
+**Verified 2026-04-15 (G.2.3/G.2.4):**
+- PIDs 1356961, 1703735, 1918044 (rotate over time)
+- Next.js **v14.2.35** (the fortress apps use v16.1.6 — version difference is one identification signal)
+- CWD: `/home/admin/cabin-rentals-of-georgia` (separate repo)
+- Ports: 3299, 3399, 3499 (not tunnel-routed — these are local dev/staging, not production)
+- **Process management: None — orphaned SSH session (session-2592.scope)**
+- Tunnel routes: `cabin-rentals-of-georgia.com` → 8100 (dead/stale tunnel entry, unrelated to these ports)
+
+**How to identify them after process churn:** Any `next-server v14.x` process whose CWD is `/home/admin/cabin-rentals-of-georgia`. Never kill a process without confirming its CWD is not the cabin-rentals-of-georgia directory.
 
 ---
 
@@ -291,19 +327,28 @@ git -C ~/Fortress-Prime branch --show-current
 ps aux | grep next-server | grep -v grep
 ```
 
-As of 2026-04-15, **6 next-server processes** are running:
-- 1 from Apr 11 (v16.1.6, not listening on any port — zombie)
-- 3 from Apr 13 (v14.2.35 — old major version, not listening)
-- 1 started 11:45 today by systemd (fortress-dashboard → storefront, port 3001)
-- 1 started 12:05 today by SSH session (command-center, port 3005)
+As of 2026-04-15, **6 next-server processes** are running (updated in G.2.3/G.2.4):
 
-**Periodic cleanup needed.** Kill any process not bound to a tracked port:
+| PID | Age | Version | Port | Owner | Action |
+|---|---|---|---|---|---|
+| 1135123 | Apr 11 | v16.1.6 | None | fortress (apps/command-center) | Kill — zombie, serves nothing |
+| 1356961 | Apr 13 | v14.2.35 | 3299 | cabin-rentals-of-georgia project | **Do NOT kill** |
+| 1703735 | Apr 13 | v14.2.35 | 3399 | cabin-rentals-of-georgia project | **Do NOT kill** |
+| 1918044 | Apr 13 | v14.2.35 | 3499 | cabin-rentals-of-georgia project | **Do NOT kill** |
+| 2198017 | Today | v16.1.6 | 3001 | fortress-dashboard.service (systemd) | Leave |
+| 2768669 | Today | v16.1.6 | 3005 | crog-ai-frontend.service (systemd, G.2.3) | Leave |
+
+PIDs rotate over time. To identify safe-to-kill processes:
 ```bash
-# Find PIDs listening on ports you care about:
-sudo ss -tlnp | grep -E ":3001|:3005" | grep -oE 'pid=[0-9]+' | cut -d= -f2
-
-# Kill everything else (check each PID before killing):
-ps aux | grep next-server | grep -v grep | awk '{print $2}'
+# Find fortress next-servers not bound to a tracked port:
+for PID in $(ps aux | grep "next-server v16" | grep -v grep | awk '{print $2}'); do
+  PORT=$(sudo ss -tlnp 2>/dev/null | grep "pid=$PID")
+  if [ -z "$PORT" ]; then
+    CWD=$(sudo readlink /proc/$PID/cwd 2>/dev/null)
+    echo "STALE: PID $PID, CWD=$CWD — safe to kill IF CWD is fortress"
+  fi
+done
+# Never kill a process whose CWD is /home/admin/cabin-rentals-of-georgia
 ```
 
 ---
@@ -312,12 +357,12 @@ ps aux | grep next-server | grep -v grep | awk '{print $2}'
 
 | Gap | Severity | Recommended Phase |
 |---|---|---|
-| **infra/gateway/config.yml is stale** — claims port 3001, live is 3005 | MEDIUM | G.2.4: update or delete |
 | **run-fortress-dashboard.sh has wrong FGP_BACKEND_URL default (8100 → should be 8000)** | MEDIUM | G.2.5 |
-| **cabin-rentals-of-georgia.com Cloudflare tunnel entry routes to dead port 8100** | LOW (not serving from this box anyway) | G.2.4 |
+| **cabin-rentals-of-georgia.com tunnel routes to dead port 8100** | LOW | Stale tunnel entry; domain served from other origin. Leave as-is until known safe to change. |
 | **BFF proxy log strings hardcode "FGP:8100"** (actual port is 8000) | LOW | Fix when touching proxy files |
 | **G.1.8 monkey-patch is fragile** — services with pre-cached AsyncSessionLocal bypass test isolation | MEDIUM | G.2.6 |
-| **~5 stale next-server processes accumulating** | LOW | Manual cleanup |
+| **cabin-rentals-of-georgia next-servers on 3299/3399/3499 are orphaned** (no systemd) | LOW | Not fortress scope — separate project decision |
+| **crog-ai-frontend.service binds to 0.0.0.0:3005 instead of 127.0.0.1** (unit has HOSTNAME=127.0.0.1 but Next.js ignores it when HOSTNAME env is set via UnsetEnvironment first) | LOW | Functional via Cloudflare tunnel; fix HOSTNAME binding in a future pass |
 | **Bucket C: ~90 untracked/modified files on fix/storefront-quote-light-mode** | MEDIUM | Separate reconciliation phase |
 | **fortress_shadow has 0 real OPAs** — G.2 UI shows empty state until G.3 owner enrollment | BLOCKER for G.3 | G.3 |
 
