@@ -499,6 +499,28 @@ pdftotext /tmp/any_statement.pdf - | grep -i "knight"
 
 ---
 
+## Opening balance backfill policy
+
+CROG initialises each owner's first `OwnerBalancePeriod` with `opening_balance = $0.00` (prior period chain: `balance_period.py:89`). For owners migrated from Streamline with non-zero historical balances, the opening balance must be seeded from Streamline before the first CROG statement is meaningful.
+
+**Mechanism:** Direct `UPDATE owner_balance_periods SET opening_balance = <X>, closing_balance = opening_balance + total_revenue - total_commission - total_charges - total_payments + total_owner_income`. Both columns must be updated together to satisfy the ledger `CHECK` constraint.
+
+**Verification source:** `StreamlineVRS.fetch_unit_owner_balance(unit_id)` returns `{"owner_balance": <negative_running_balance>}`. The magnitude of the current balance minus the current period's net gives the opening balance:
+```
+opening_balance = |current_balance| - |period_net|
+# Or: current_balance + period_net_to_owner (using signed values)
+```
+
+**Backfilled in G.7 (2026-04-15):**
+- Gary Knight (OPA 1824) × Fallen Timber Lodge (sl unit 70209):
+  - Opening balance as of 2026-03-01: **$500,702.41**
+  - Verified: Streamline API returned -$504,738.26 current; -$504,738.26 + $4,035.85 (March net) = -$500,702.41 ✓
+  - SQL: `backend/scripts/g7_opening_balance_commit.sql`
+
+**For future enrollment (G.8+):** At invite-creation time, call `fetch_unit_owner_balance(sl_unit_id)` and seed the initial OBP's `opening_balance` from Streamline's current balance. This eliminates the manual backfill step.
+
+---
+
 ## How to use this doc
 
 - **Every Claude Code session reads this as Task 0** before any infrastructure-touching work.
