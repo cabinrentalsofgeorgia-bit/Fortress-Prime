@@ -198,12 +198,26 @@ def _bucketed_items_from_reservation(res: Reservation) -> list[BucketedItem]:
 
     Mirrors _build_bucketed_items_from_reservation in admin_statements.py.
     This is intentionally a private helper — callers use compute_owner_statement.
+
+    Fix G.5 (2026-04-15):
+      - Fix 1: nightly_rate is the TOTAL base rent for the booking period
+        (Streamline price_breakdown.price_nightly stores the booking total,
+        not the per-night rate). Do NOT multiply by nights_count.
+      - Fix 2: Parse streamline_financial_detail.required_fees JSON and
+        classify additional commissionable items (pet fees, extra-guest /
+        additional-party fees) that have no dedicated DB column.
+        Classification policy (strict — extend only at Gary's direction):
+          COMMISSIONABLE: name contains "pet", "additional person",
+            "additional party", "extra guest", or "extra person" (case-insensitive)
+          PASS-THROUGH: everything else (cleaning, ADW, processing, DOT, etc.)
+          MALFORMED: missing name / value, or non-numeric value →
+            log WARNING, treat as pass-through (safe default)
     """
     items: list[BucketedItem] = []
 
+    # ── Fix 1: use nightly_rate directly (it stores TOTAL base rent, not per-night) ──
     nightly_rate = Decimal(str(res.nightly_rate or 0))
-    nights = res.nights_count or (res.check_out_date - res.check_in_date).days
-    rent = nightly_rate * Decimal(str(nights)) if nightly_rate > 0 else Decimal(str(res.total_amount or 0))
+    rent = nightly_rate if nightly_rate > 0 else Decimal(str(res.total_amount or 0))
     if rent > 0:
         items.append(BucketedItem(name="Base Rent", amount=rent,
                                   item_type="rent", bucket=TaxBucket.LODGING))
@@ -232,6 +246,99 @@ def _bucketed_items_from_reservation(res: Reservation) -> list[BucketedItem]:
     if tax > 0:
         items.append(BucketedItem(name="Taxes", amount=tax,
                                   item_type="tax", bucket=TaxBucket.LODGING))
+
+    # ── Fix 2: parse required_fees from streamline_financial_detail JSON ──────
+    # Commissionable keywords (extra-guest / additional-party surcharges)
+    _COMMISSIONABLE_PATTERNS = (
+        "pet",
+        "additional person",
+        "additional party",
+        "extra guest",
+        "extra person",
+    )
+
+    fin_detail = res.streamline_financial_detail
+    if isinstance(fin_detail, dict) and not fin_detail.get("_stale"):
+        raw_fees = fin_detail.get("required_fees")
+        if isinstance(raw_fees, list):
+            for entry in raw_fees:
+                # Validate structure — malformed → warning + pass-through
+                if not isinstance(entry, dict):
+                    logger.warning(
+                        "required_fees_entry_not_dict",
+                        reservation_confirmation_code=res.confirmation_code,
+                        raw_entry=entry,
+                        classified_as="pass-through",
+                        match_rule="malformed-not-dict",
+                    )
+                    continue
+
+                fee_name = entry.get("name")
+                fee_value = entry.get("value")
+
+                if not isinstance(fee_name, str) or not fee_name.strip():
+                    logger.warning(
+                        "required_fees_entry_missing_name",
+                        reservation_confirmation_code=res.confirmation_code,
+                        raw_entry=entry,
+                        classified_as="pass-through",
+                        match_rule="malformed-missing-name",
+                    )
+                    continue
+
+                try:
+                    fee_amount = Decimal(str(fee_value))
+                except Exception:
+                    logger.warning(
+                        "required_fees_entry_non_numeric_value",
+                        reservation_confirmation_code=res.confirmation_code,
+                        fee_name=fee_name,
+                        raw_value=fee_value,
+                        classified_as="pass-through",
+                        match_rule="malformed-non-numeric-value",
+                    )
+                    continue
+
+                if fee_amount <= 0:
+                    # Zero / negative fees are uncommon and non-commissionable
+                    continue
+
+                name_lower = fee_name.strip().lower()
+                matched_rule = None
+                for pattern in _COMMISSIONABLE_PATTERNS:
+                    if pattern in name_lower:
+                        matched_rule = pattern
+                        break
+
+                if matched_rule is not None:
+                    logger.info(
+                        "required_fees_classified",
+                        reservation_confirmation_code=res.confirmation_code,
+                        fee_name=fee_name,
+                        fee_value=float(fee_amount),
+                        classified_as="commissionable",
+                        match_rule=matched_rule,
+                    )
+                    items.append(BucketedItem(
+                        name=fee_name.strip(),
+                        amount=fee_amount,
+                        item_type="addon",
+                        bucket=TaxBucket.LODGING,
+                    ))
+                else:
+                    logger.info(
+                        "required_fees_classified",
+                        reservation_confirmation_code=res.confirmation_code,
+                        fee_name=fee_name,
+                        fee_value=float(fee_amount),
+                        classified_as="pass-through",
+                        match_rule="default-pass-through",
+                    )
+                    # Pass-through items from required_fees are already accounted
+                    # for in the dedicated columns (cleaning_fee, damage_waiver_fee,
+                    # service_fee, tax_amount). Do NOT double-count them.
+                    # The loop is for commissionable items only; pass-through entries
+                    # here are logged for audit but not added to items.
 
     return items
 
