@@ -68,45 +68,31 @@ sudo ss -tlnp | grep -E ":3001|:3005|:8000|:8100|:9800"
 
 ### crog-ai.com — command center (port 3005)
 
-```bash
-# Verify port:
-sudo ss -tlnp | grep :3005
+**Process management: `crog-ai-frontend.service` (systemd, `Restart=always`).** Created in G.2.3 (2026-04-15). Cutover from orphaned SSH session to systemd performed by Gary after G.2.3 commit. Unit file: `/etc/systemd/system/crog-ai-frontend.service`. Repo copy: `deploy/systemd/crog-ai-frontend.service`.
 
-# Verify CWD (replace PID):
+```bash
+# Verify port and service:
+sudo ss -tlnp | grep :3005
+sudo systemctl status crog-ai-frontend.service | head -10
+
+# Verify CWD:
 PID=$(sudo ss -tlnp | grep ":3005 " | grep -oE 'pid=[0-9]+' | cut -d= -f2)
 sudo readlink /proc/$PID/cwd
-# → /home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center
-
-# Verify it is NOT systemd (it will show a transient session scope):
-sudo systemctl status $PID 2>&1 | head -3
-# → ● session-NNNN.scope - Session NNNN of User admin
-#   Transient: yes
+# → /home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center
 ```
 
-**Process management: NONE.** The process is a child of an SSH session (`session-NNNN.scope`).
-It will die if the session disconnects, and will NOT auto-restart on reboot or crash.
-
-**Restart sequence (manual):**
+**Restart sequence (after code change):**
 ```bash
 # 1. Build new artifact
 cd /home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center
 npm run build
 
-# 2. Kill old process
-OLD_PID=$(sudo ss -tlnp | grep ":3005 " | grep -oE 'pid=[0-9]+' | cut -d= -f2)
-sudo kill $OLD_PID
-
-# 3. Start new process (runs detached from current shell)
-nohup node .next/standalone/apps/command-center/server.js \
-  --port 3005 --hostname 0.0.0.0 \
-  > /home/admin/logs/fortress/command-center.log 2>&1 &
-disown
-
-# 4. Verify
-sleep 5
-sudo ss -tlnp | grep :3005
+# 2. Restart via systemd
+sudo systemctl restart crog-ai-frontend.service
+sleep 8
+sudo systemctl status crog-ai-frontend.service | head -5
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3005/api/admin/payouts/statements
-# Expected: 401 or 403 (not 200 HTML)
+# Expected: 403 (proxy live, backend auth required)
 ```
 
 ---
@@ -326,7 +312,6 @@ ps aux | grep next-server | grep -v grep | awk '{print $2}'
 
 | Gap | Severity | Recommended Phase |
 |---|---|---|
-| **crog-ai.com next-server has no systemd unit** — orphaned process, dies on SSH close or reboot | HIGH | G.2.3 |
 | **infra/gateway/config.yml is stale** — claims port 3001, live is 3005 | MEDIUM | G.2.4: update or delete |
 | **run-fortress-dashboard.sh has wrong FGP_BACKEND_URL default (8100 → should be 8000)** | MEDIUM | G.2.5 |
 | **cabin-rentals-of-georgia.com Cloudflare tunnel entry routes to dead port 8100** | LOW (not serving from this box anyway) | G.2.4 |
@@ -351,13 +336,11 @@ sudo systemctl status fortress-backend | head -5
 ```bash
 cd /home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center
 npm run build
-OLD_PID=$(sudo ss -tlnp | grep ":3005 " | grep -oE 'pid=[0-9]+' | cut -d= -f2)
-sudo kill $OLD_PID
-nohup node .next/standalone/apps/command-center/server.js \
-  --port 3005 --hostname 0.0.0.0 \
-  > /home/admin/logs/fortress/command-center.log 2>&1 &
-disown
-sleep 5 && sudo ss -tlnp | grep :3005
+sudo systemctl restart crog-ai-frontend.service
+sleep 8
+sudo systemctl status crog-ai-frontend.service | head -5
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3005/api/admin/payouts/statements
+# Expected: 403
 ```
 
 ### After any storefront (`apps/storefront/`) code change
