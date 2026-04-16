@@ -1660,6 +1660,10 @@ export interface OwnerBalancePeriod {
   status: StatementPeriodStatus;
   /** H.2a: true = Stripe-linked OPA AND statement is approved/paid. false = not payable yet. */
   pay_enabled: boolean;
+  /** I.5: Stripe Transfer ID once paid. */
+  stripe_transfer_id: string | null;
+  /** I.5: Amount transferred to owner (closing - opening). */
+  paid_amount: string | null;
   created_at: string | null;
   updated_at: string | null;
   approved_at: string | null;

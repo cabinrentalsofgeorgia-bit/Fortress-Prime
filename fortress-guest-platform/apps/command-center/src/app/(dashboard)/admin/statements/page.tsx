@@ -6,6 +6,7 @@ import {
   useApproveStatement,
   useVoidStatement,
   useMarkStatementEmailed,
+  usePayOwner,
   useGenerateStatements,
 } from "@/lib/hooks";
 import { toast } from "sonner";
@@ -54,6 +55,7 @@ import {
   Ban,
   CheckCircle2,
   ChevronRight,
+  CreditCard,
   Download,
   Eye,
   FileText,
@@ -423,6 +425,85 @@ function MarkEmailedDialog({ period, onClose }: MarkEmailedDialogProps) {
   );
 }
 
+// ── Pay Dialog ────────────────────────────────────────────────────────────────
+
+interface PayDialogProps { period: OwnerBalancePeriod | null; onClose: () => void; }
+
+function PayDialog({ period, onClose }: PayDialogProps) {
+  const payMutation = usePayOwner();
+  if (!period) return null;
+
+  const payoutAmount = parseFloat(period.closing_balance) - parseFloat(period.opening_balance);
+  const canPay = period.pay_enabled && payoutAmount > 0 &&
+    (period.status === "approved" || period.status === "emailed");
+
+  return (
+    <Dialog open={!!period} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-blue-600" />
+            Pay Owner via Stripe
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+            <div><span className="text-muted-foreground">OPA:</span> #{period.owner_payout_account_id}</div>
+            <div><span className="text-muted-foreground">Period:</span> {fmtDate(period.period_start)} → {fmtDate(period.period_end)}</div>
+            <div><span className="text-muted-foreground">Opening balance:</span> {fmtCurrency(period.opening_balance)}</div>
+            <div><span className="text-muted-foreground">Closing balance:</span> {fmtCurrency(period.closing_balance)}</div>
+            <div className="pt-1 font-semibold text-base">
+              <span className="text-muted-foreground font-normal">Transfer amount: </span>
+              <span className={payoutAmount > 0 ? "text-emerald-600" : "text-red-600"}>
+                {fmtCurrency(payoutAmount.toFixed(2))}
+              </span>
+            </div>
+          </div>
+          {payoutAmount <= 0 && (
+            <p className="text-sm text-red-600">No positive net income this period — nothing to transfer.</p>
+          )}
+          {payoutAmount > 0 && (
+            <p className="text-sm text-muted-foreground">
+              This will initiate a real Stripe Transfer to the owner&apos;s connected account.
+              Idempotency key: <code className="text-xs bg-muted px-1 rounded">pay-obp-{period.id}</code>
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={payMutation.isPending}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!canPay || payMutation.isPending}
+              onClick={() =>
+                payMutation.mutate(
+                  { periodId: period.id },
+                  {
+                    onSuccess: (data) => {
+                      const amt = (data as { paid_amount?: string }).paid_amount;
+                      toast.success(`Payment of ${fmtCurrency(amt ?? "0")} sent to OPA #${period.owner_payout_account_id}`);
+                      onClose();
+                    },
+                    onError: (err) => {
+                      toast.error(`Payment failed: ${err.message}`);
+                    },
+                  }
+                )
+              }
+            >
+              {payMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Processing…</>
+              ) : (
+                <><CreditCard className="h-3.5 w-3.5 mr-1" /> Confirm Payment</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Per-row Actions ───────────────────────────────────────────────────────────
 
 function RowActions({
@@ -430,14 +511,25 @@ function RowActions({
   onApprove,
   onVoid,
   onEmail,
+  onPay,
 }: {
   row: OwnerBalancePeriod;
   onApprove: () => void;
   onVoid: () => void;
   onEmail: () => void;
+  onPay: () => void;
 }) {
   const s = row.status;
   const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
+
+  const payoutAmount = parseFloat(row.closing_balance) - parseFloat(row.opening_balance);
+  const payActive = row.pay_enabled && payoutAmount > 0 && (s === "approved" || s === "emailed");
+  const payTitle = !row.pay_enabled
+    ? "Stripe not connected (secondary OPA)"
+    : payoutAmount <= 0
+    ? "No net income this period"
+    : "Pay owner via Stripe";
+
   return (
     <div className="flex items-center justify-end gap-0.5">
       {(s === "pending_approval" || s === "draft") && (
@@ -453,10 +545,19 @@ function RowActions({
         </Button>
       )}
       {(s === "approved" || s === "emailed") && (
-        <Button size="sm" variant="ghost" className="h-7 px-1.5 text-muted-foreground cursor-not-allowed opacity-40"
-          disabled title={row.pay_enabled ? "Pay (I.5)" : "Pay — Stripe not connected (I.5)"}
-          onClick={(e) => e.stopPropagation()}>
-          <span className="text-xs font-medium">Pay</span>
+        <Button
+          size="sm" variant="ghost"
+          className={cn(
+            "h-7 px-1.5",
+            payActive
+              ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+              : "text-muted-foreground cursor-not-allowed opacity-40"
+          )}
+          disabled={!payActive}
+          title={payTitle}
+          onClick={payActive ? stop(onPay) : (e) => e.stopPropagation()}
+        >
+          <CreditCard className="h-3.5 w-3.5" />
         </Button>
       )}
       {s !== "voided" && s !== "paid" && (
@@ -495,6 +596,7 @@ export default function AdminStatementsPage() {
   const [approveTarget, setApproveTarget] = useState<OwnerBalancePeriod | null>(null);
   const [voidTarget, setVoidTarget] = useState<OwnerBalancePeriod | null>(null);
   const [emailTarget, setEmailTarget] = useState<OwnerBalancePeriod | null>(null);
+  const [payTarget, setPayTarget] = useState<OwnerBalancePeriod | null>(null);
 
   const filters: StatementListFilters = {
     ...(filterStatus !== "all" && { status: filterStatus }),
@@ -709,6 +811,7 @@ export default function AdminStatementsPage() {
                           onApprove={() => setApproveTarget(row)}
                           onVoid={() => setVoidTarget(row)}
                           onEmail={() => setEmailTarget(row)}
+                          onPay={() => setPayTarget(row)}
                         />
                         <Button
                           size="sm"
@@ -737,6 +840,7 @@ export default function AdminStatementsPage() {
       <ApproveDialog period={approveTarget} onClose={() => setApproveTarget(null)} />
       <VoidDialog period={voidTarget} onClose={() => setVoidTarget(null)} />
       <MarkEmailedDialog period={emailTarget} onClose={() => setEmailTarget(null)} />
+      <PayDialog period={payTarget} onClose={() => setPayTarget(null)} />
     </div>
   );
 }

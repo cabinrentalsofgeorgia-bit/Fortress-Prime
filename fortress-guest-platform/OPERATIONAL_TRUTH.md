@@ -661,8 +661,8 @@ voided → read-only
 | Status | Actions |
 |---|---|
 | `draft` / `pending_approval` | Approve ✓ / Void ✗ / PDF ↓ / View → |
-| `approved` | Mark Emailed ✉ / Pay (disabled, I.5) / Void ✗ / PDF ↓ / View → |
-| `emailed` | Pay (disabled, I.5) / Void ✗ / PDF ↓ / View → |
+| `approved` | Mark Emailed ✉ / Pay 💳 (active when pay_enabled+net>0) / Void ✗ / PDF ↓ / View → |
+| `emailed` | Pay 💳 (active when pay_enabled+net>0) / Void ✗ / PDF ↓ / View → |
 | `paid` | PDF ↓ / View → |
 | `voided` | PDF ↓ / View → |
 
@@ -676,8 +676,29 @@ voided → read-only
 ### Mark Emailed note
 `POST /mark-emailed` transitions status only (no actual email send). Full statement email to owner is deferred — `POST /statements/send-all` returns 501.
 
-### Pay button
-Visible on `approved` / `emailed` rows, always disabled until I.5 (Pay Owner) ships. `pay_enabled` field gates tooltip text.
+### Pay button (I.5, 2026-04-16)
+
+Pay button is now **active** (not disabled) when `pay_enabled=true` AND `payoutAmount > 0`.
+
+**Payout amount** = `closing_balance - opening_balance` (net period change only, not cumulative balance).
+
+**Stripe mechanism:** `stripe.Transfer.create(destination=opa.stripe_account_id, ...)` with idempotency key `pay-obp-{obp_id}`.
+
+**Status transition:** `approved/emailed → paid` on success.
+
+**Double-pay protection (2 layers):**
+1. Stripe idempotency key — `pay-obp-{obp_id}` prevents duplicate transfers at Stripe layer
+2. OBP status guard — `PayoutValidationError(already_paid)` raised if `status=paid` before Stripe call
+
+**Stripe Transfer failure:** OBP stays in `approved/emailed` — safe to retry. Stripe error message surfaced in API response.
+
+**Blocked transfers:** Gary's Stripe account `acct_1TMYCpK5ULr6Eoss` needs `transfers` capability enabled. Account is in test mode but onboarding not complete. **Action required:** Gary must complete Stripe Express onboarding to enable transfers.
+
+**payout tracking:** OBP columns `stripe_transfer_id` (VARCHAR 100) and `paid_amount` (NUMERIC 12,2) added in migration `i5a1_obp_payout_columns`.
+
+**Negative balance:** `closing < opening` → `PayoutValidationError(no_net_income)` → Pay button disabled with tooltip "No net income this period".
+
+**Secondary OPAs (Cherokee 1826, Serendipity 1827):** `stripe_account_id=NULL` → `pay_enabled=False` → Pay button disabled with tooltip "Stripe not connected". Payout aggregation through primary OPA deferred.
 
 ---
 

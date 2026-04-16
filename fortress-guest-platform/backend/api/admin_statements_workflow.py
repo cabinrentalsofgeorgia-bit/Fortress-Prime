@@ -8,7 +8,8 @@ Endpoints:
   GET  /api/admin/payouts/statements/{id}                  — full detail
   POST /api/admin/payouts/statements/{id}/approve          — pending_approval → approved
   POST /api/admin/payouts/statements/{id}/void             — → voided
-  POST /api/admin/payouts/statements/{id}/mark-paid        — approved → paid
+  POST /api/admin/payouts/statements/{id}/pay              — approved/emailed → paid (Stripe Transfer)
+  POST /api/admin/payouts/statements/{id}/mark-paid        — approved → paid (manual reference)
   POST /api/admin/payouts/statements/{id}/mark-emailed     — approved/paid → emailed
   GET  /api/admin/payouts/statements/{id}/pdf              — download PDF
   POST /api/admin/payouts/statements/{id}/send-test        — F4: manual test send
@@ -40,6 +41,11 @@ from backend.models.property import Property
 from backend.models.staff import StaffUser
 from backend.services.email_service import is_email_configured, send_email
 from backend.services.statement_computation import compute_owner_statement
+from backend.services.owner_payout_service import (
+    PayOwnerResult,
+    PayoutValidationError,
+    pay_owner_for_statement,
+)
 from backend.services.statement_workflow import (
     GenerateStatementsResult,
     StatementWorkflowError,
@@ -148,6 +154,9 @@ def _period_dict(period: OwnerBalancePeriod, *, stripe_account_id: Optional[str]
         "total_owner_income": str(period.total_owner_income),
         "status": period.status,
         "pay_enabled": pay_enabled,
+        # I.5: Stripe payout tracking
+        "stripe_transfer_id": getattr(period, "stripe_transfer_id", None),
+        "paid_amount": str(period.paid_amount) if getattr(period, "paid_amount", None) is not None else None,
         "created_at": period.created_at.isoformat() if period.created_at else None,
         "updated_at": period.updated_at.isoformat() if period.updated_at else None,
         "approved_at": period.approved_at.isoformat() if period.approved_at else None,
@@ -313,6 +322,41 @@ async def void(
         raise _workflow_error_to_http(exc)
     stripe_id = await _stripe_id_for_period(db, period)
     return _period_dict(period, stripe_account_id=stripe_id)
+
+
+@router.post("/statements/{period_id}/pay")
+async def pay_owner(
+    period_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: StaffUser = Depends(get_current_user),
+):
+    """
+    Initiate a Stripe Connect Transfer for this statement period.
+
+    Payout amount = closing_balance - opening_balance (net period change).
+    Idempotency key: "pay-obp-{period_id}" — safe to retry on network errors.
+    Transitions OBP status: approved/emailed → paid on success.
+    """
+    try:
+        result: PayOwnerResult = await pay_owner_for_statement(
+            db, period_id=period_id, admin_email=user.email
+        )
+    except PayoutValidationError as exc:
+        raise HTTPException(status_code=400, detail={"code": exc.code, "message": exc.message})
+
+    if not result.success:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "STRIPE_ERROR", "message": result.error},
+        )
+
+    period = await db.get(OwnerBalancePeriod, period_id)
+    stripe_id = await _stripe_id_for_period(db, period)  # type: ignore[arg-type]
+    return {
+        **_period_dict(period, stripe_account_id=stripe_id),  # type: ignore[arg-type]
+        "stripe_transfer_id": result.stripe_transfer_id,
+        "paid_amount": str(result.amount),
+    }
 
 
 @router.post("/statements/{period_id}/mark-paid")

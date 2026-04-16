@@ -3476,6 +3476,21 @@ export function useMarkStatementPaid() {
   });
 }
 
+// Pay owner — POST /api/admin/payouts/statements/{id}/pay (I.5)
+export function usePayOwner() {
+  const qc = useQueryClient();
+  return useMutation<OwnerBalancePeriod & { stripe_transfer_id?: string; paid_amount?: string }, Error, { periodId: number }>({
+    mutationFn: ({ periodId }) =>
+      api.post(`/api/admin/payouts/statements/${periodId}/pay`),
+    onSuccess: (_data, { periodId }) => {
+      qc.invalidateQueries({ queryKey: ["admin-statements"] });
+      qc.invalidateQueries({ queryKey: ["admin-statement", periodId] });
+      // Toast handled by caller (needs amount context)
+    },
+    onError: (err) => toast.error(`Payment failed: ${err.message}`),
+  });
+}
+
 // Mark emailed — POST /api/admin/payouts/statements/{id}/mark-emailed
 export function useMarkStatementEmailed() {
   const qc = useQueryClient();

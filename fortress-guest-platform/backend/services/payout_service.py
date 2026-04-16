@@ -110,20 +110,27 @@ async def initiate_transfer(
     amount: float,
     description: str,
     metadata: Optional[dict] = None,
+    idempotency_key: Optional[str] = None,
 ) -> Optional[dict]:
-    """Transfer funds from the CROG platform account to the owner's connected account."""
+    """Transfer funds from the CROG platform account to the owner's connected account.
+
+    idempotency_key: pass "pay-obp-{obp_id}" for statement payouts to prevent double-sends.
+    """
     stripe = _get_stripe()
     if not stripe.api_key:
         logger.warning("stripe_not_configured", action="initiate_transfer")
         return None
     try:
-        transfer = stripe.Transfer.create(
+        create_kwargs: dict = dict(
             amount=int(amount * 100),
             currency="usd",
             destination=account_id,
             description=description,
             metadata=metadata or {},
         )
+        if idempotency_key:
+            create_kwargs["idempotency_key"] = idempotency_key
+        transfer = stripe.Transfer.create(**create_kwargs)
         logger.info(
             "stripe_transfer_initiated",
             transfer_id=transfer.id,

@@ -112,6 +112,9 @@ class OwnerBalancePeriod(Base):
     approved_by = Column(String(255), nullable=True)
     paid_at     = Column(TIMESTAMP(timezone=True), nullable=True)
     paid_by     = Column(String(255), nullable=True)
+    # I.5 (2026-04-16): Stripe payout tracking
+    stripe_transfer_id = Column(String(100), nullable=True)
+    paid_amount        = Column(Numeric(12, 2), nullable=True)
     emailed_at  = Column(TIMESTAMP(timezone=True), nullable=True)
     voided_at   = Column(TIMESTAMP(timezone=True), nullable=True)
     voided_by   = Column(String(255), nullable=True)
