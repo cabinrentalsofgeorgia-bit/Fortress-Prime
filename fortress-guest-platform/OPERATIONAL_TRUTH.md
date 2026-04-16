@@ -521,6 +521,30 @@ opening_balance = |current_balance| - |period_net|
 
 ---
 
+## Streamline reservation type codes
+
+Source: `reservations.streamline_financial_detail->>'type_id'` (integer stored as string).  
+Mapping in `backend/services/statement_computation.py` (`_SL_TYPE_CODES`). Extend when new codes appear in data.
+
+| `type_id` | Display code | Meaning |
+|---|---|---|
+| `2` | **STA** | Standard/Stay — in-person or phone booking |
+| `7` | **POS** | Point of Sale — online/channel booking |
+
+Observed in March 2026 Fallen Timber Lodge data (H.1, 2026-04-16):
+- 53765 (type_id=2) → STA
+- 53790 (type_id=7) → POS
+- 53952 (type_id=7) → POS
+
+Unknown `type_id` values render as `""` (empty string — safe fallback).
+
+**Verification:**
+```bash
+pdftotext /tmp/any_statement.pdf - | grep -E "STA|POS"
+```
+
+---
+
 ## How to use this doc
 
 - **Every Claude Code session reads this as Task 0** before any infrastructure-touching work.

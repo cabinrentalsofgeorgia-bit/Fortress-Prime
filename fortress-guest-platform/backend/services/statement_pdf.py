@@ -375,7 +375,9 @@ def _build_pdf_bytes(
     story.append(Spacer(1, 0.04 * inch))
 
     has_crossover = any(li.crosses_period_boundary for li in stmt.line_items)
-    res_header = ["Res #", "Guest", "Start", "End", "Nights",
+    # H.1: "Type" column added between Res # and Guest to match Streamline layout.
+    # Values come from StatementLineItem.reservation_type (STA, POS, …).
+    res_header = ["Res #", "Type", "Guest", "Start", "End", "Nights",
                   "Gross Rent", "Mgmt Comm", "Net Amount"]
     res_rows = [res_header]
 
@@ -384,7 +386,8 @@ def _build_pdf_bytes(
         guest = li.description.split("—")[-1].strip() if "—" in li.description else li.description
         res_rows.append([
             li.confirmation_code + mark,
-            guest[:25],
+            getattr(li, "reservation_type", ""),   # H.1: STA / POS / ""
+            guest[:22],
             li.check_in.strftime("%m/%d/%y"),
             li.check_out.strftime("%m/%d/%y"),
             str(li.nights),
@@ -395,14 +398,15 @@ def _build_pdf_bytes(
 
     # Total row
     res_rows.append([
-        "Total:", "", "", "",
+        "Total:", "", "", "", "",
         str(sum(li.nights for li in stmt.line_items)),
         _fmt(stmt.total_gross),
         _fmt(stmt.total_commission),
         _fmt(stmt.total_net_to_owner),
     ])
 
-    res_cw = [W * w for w in [0.14, 0.20, 0.10, 0.10, 0.07, 0.13, 0.13, 0.13]]
+    # Column widths adjusted to accommodate "Type" column (sum = 1.0).
+    res_cw = [W * w for w in [0.12, 0.06, 0.17, 0.10, 0.10, 0.07, 0.13, 0.13, 0.12]]
     res_tbl = Table(res_rows, colWidths=res_cw)
     res_tbl.setStyle(_tbl_style())
     res_tbl.setStyle(_total_row_style())

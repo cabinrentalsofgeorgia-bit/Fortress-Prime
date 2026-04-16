@@ -80,9 +80,21 @@ class StatementLineItem(BaseModel):
     commission_amount: Decimal    # management commission (gross × rate)
     cc_processing_fee: Decimal    # CC processing fee
     net_to_owner: Decimal         # gross - commission - cc_processing_fee
+    # H.1: Streamline reservation type code (STA, POS, …)
+    # Source: streamline_financial_detail->>'type_id' mapped via _SL_TYPE_CODES.
+    reservation_type: str = ""
 
     class Config:
         json_encoders = {Decimal: str}
+
+
+# ── Streamline reservation type code mapping (H.1) ───────────────────────────
+# Source: streamline_financial_detail.type_id observed in March 2026 data.
+# Extend when new codes appear.
+_SL_TYPE_CODES: dict[str, str] = {
+    "2": "STA",   # Standard/Stay
+    "7": "POS",   # Point of Sale / online booking
+}
 
 
 class OwnerChargeLineItem(BaseModel):
@@ -560,6 +572,11 @@ async def compute_owner_statement(
         guest_name = getattr(res, "guest_name", "") or ""
         description = f"{property_name}" + (f" — {guest_name}" if guest_name else "")
 
+        # Extract Streamline type code from financial detail JSON (H.1)
+        fin = res.streamline_financial_detail or {}
+        type_id_raw = str(fin.get("type_id", "") or "").strip()
+        res_type = _SL_TYPE_CODES.get(type_id_raw, "")
+
         line_items.append(StatementLineItem(
             reservation_id=str(res.id),
             confirmation_code=res.confirmation_code or "",
@@ -573,6 +590,7 @@ async def compute_owner_statement(
             cc_processing_fee=Decimal("0.00"),
             net_to_owner=period_net,
             crosses_period_boundary=crosses,
+            reservation_type=res_type,
         ))
 
         total_gross += period_gross
