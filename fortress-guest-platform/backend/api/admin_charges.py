@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid as _uuid_mod
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional
+from typing import Literal, Optional
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -36,6 +36,11 @@ from backend.models.property import Property
 from backend.models.staff import StaffUser
 from backend.models.vendor import Vendor
 from backend.services.owner_emails import send_owner_charge_notification
+from backend.services.obp_recompute import (
+    OBPFinalizedError,
+    RecomputeResult,
+    recompute_obp_for_charge_event,
+)
 
 logger = structlog.get_logger(service="admin_charges_api")
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
@@ -168,6 +173,8 @@ def _charge_dict(
     vendor_name: Optional[str] = None,
     notification_sent: Optional[bool] = None,
     notification_error: Optional[str] = None,
+    obp_recomputed: Optional[dict] = None,
+    recompute_error: Optional[dict] = None,
 ) -> dict:
     return {
         "id": charge.id,
@@ -193,6 +200,9 @@ def _charge_dict(
         # Notification fields — only present on create response when send_notification=True
         **({"notification_sent": notification_sent, "notification_error": notification_error}
            if notification_sent is not None else {}),
+        # OBP recompute result (I.4) — present on all mutation responses
+        "obp_recomputed": obp_recomputed,
+        "recompute_error": recompute_error,
     }
 
 
@@ -215,6 +225,65 @@ async def _enrich(
         vendor = await db.get(Vendor, charge.vendor_id)
         vendor_name = vendor.name if vendor else None
     return owner_name, property_name, vendor_name
+
+
+# ── Recompute helper (I.4) ────────────────────────────────────────────────────
+
+async def _run_recompute(
+    db: AsyncSession,
+    charge_id: int,
+    event_type: Literal["create", "update", "void"],
+) -> tuple[Optional[dict], Optional[dict]]:
+    """
+    Run OBP recompute after a charge mutation, then commit the recompute.
+    Returns (obp_recomputed_dict, recompute_error_dict).
+
+    Charge is already committed before this function is called.
+    The recompute is a separate transaction — charge save is always safe.
+    """
+    try:
+        result: Optional[RecomputeResult] = await recompute_obp_for_charge_event(
+            db, charge_id=charge_id, event_type=event_type
+        )
+        await db.commit()  # commit the OBP update (separate from charge commit)
+        if result is None:
+            return None, None
+        return {
+            "obp_id": result.obp_id,
+            "old_closing": str(result.old_closing),
+            "new_closing": str(result.new_closing),
+            "delta": str(result.delta),
+            "old_total_charges": str(result.old_total_charges),
+            "new_total_charges": str(result.new_total_charges),
+        }, None
+    except OBPFinalizedError as exc:
+        logger.warning(
+            "charge_recompute_skipped_finalized",
+            charge_id=charge_id,
+            obp_id=exc.obp_id,
+            obp_status=exc.obp_status,
+            event_type=event_type,
+        )
+        return None, {
+            "code": "OBP_FINALIZED",
+            "obp_id": exc.obp_id,
+            "status": exc.obp_status,
+            "message": (
+                "Charge saved but statement is finalized. "
+                "Un-finalize the statement to reflect this charge."
+            ),
+        }
+    except Exception as exc:
+        logger.error(
+            "charge_recompute_failed",
+            charge_id=charge_id,
+            event_type=event_type,
+            error=str(exc)[:200],
+        )
+        return None, {
+            "code": "RECOMPUTE_FAILED",
+            "message": str(exc)[:200],
+        }
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -311,9 +380,14 @@ async def create_charge(
             notification_error = str(exc)[:200]
             logger.error("owner_charge_notification_error", charge_id=charge.id, error=notification_error)
 
+    # OBP recompute (I.4) — runs after charge commit, in separate transaction
+    obp_recomputed, recompute_error = await _run_recompute(db, int(charge.id), "create")  # type: ignore[arg-type]
+
     return _charge_dict(charge, owner_name, property_name, vendor_name,
                         notification_sent=notification_sent,
-                        notification_error=notification_error)
+                        notification_error=notification_error,
+                        obp_recomputed=obp_recomputed,
+                        recompute_error=recompute_error)
 
 
 @router.get("/charges")
@@ -412,7 +486,9 @@ async def update_charge(
     await db.refresh(charge)
     owner_name, property_name, vendor_name = await _enrich(db, charge)
     logger.info("owner_charge_updated", charge_id=charge_id, fields=list(updates.keys()))
-    return _charge_dict(charge, owner_name, property_name, vendor_name)
+    obp_recomputed, recompute_error = await _run_recompute(db, charge_id, "update")
+    return _charge_dict(charge, owner_name, property_name, vendor_name,
+                        obp_recomputed=obp_recomputed, recompute_error=recompute_error)
 
 
 @router.post("/charges/{charge_id}/void")
@@ -442,4 +518,6 @@ async def void_charge(
     await db.refresh(charge)
     owner_name, property_name, vendor_name = await _enrich(db, charge)
     logger.info("owner_charge_voided", charge_id=charge_id, voided_by=user.email)
-    return _charge_dict(charge, owner_name, property_name, vendor_name)
+    obp_recomputed, recompute_error = await _run_recompute(db, charge_id, "void")
+    return _charge_dict(charge, owner_name, property_name, vendor_name,
+                        obp_recomputed=obp_recomputed, recompute_error=recompute_error)

@@ -589,7 +589,7 @@ for the affected OPA+period automatically.
 - PDF rendering: vendor name appended to description `"{desc[:20]}… — {vendor[:16]}"` when vendor linked.
 - UI: collapsible vendor section (trade → vendor two-step dropdown), markup %, computed owner amount display.
 - Migration: `i1a2_add_vendor_and_markup` (revises `i1a1_add_owner_charge_types`).
-- Same I.4 recompute gap: OBP stored `closing_balance` does not auto-update on charge post.
+- I.4 recompute gap is **CLOSED** — see "Event-driven OBP recompute" section below.
 
 ### Email notifications (I.1b, 2026-04-16)
 
@@ -600,6 +600,28 @@ for the affected OPA+period automatically.
 - Response includes `notification_sent: bool` and `notification_error: str|null` when flag is set
 - Frontend: "Email and Close" button (secondary) alongside "Save and Close" in Post Charge modal
 - NO portal link (portal has no statement view yet), NO HTML email, NO retry/bounce handling
+
+### Event-driven OBP recompute (I.4, 2026-04-16)
+
+`backend/services/obp_recompute.py` — `recompute_obp_for_charge_event(db, charge_id, event_type)`
+
+**Policy:**
+- Full rebuild from source records on every charge mutation (create / update / void)
+- Row-level lock (`SELECT FOR UPDATE`) — concurrent-write safe
+- Separate transaction: charge commits first; recompute runs after in a second transaction — charge is always saved even if recompute fails
+- Finalized OBPs (`approved`, `paid`, `emailed`) raise `OBPFinalizedError` — charge saves, API surface exposes `recompute_error` with code `OBP_FINALIZED`
+- `draft` and `pending_approval` OBPs are recomputable
+- Voided OBPs: no-op (not an error)
+- No OBP for the charge's period: no-op (charge logged, OBP must be generated first)
+
+**Response fields added to all charge mutation endpoints (I.4):**
+- `obp_recomputed: {obp_id, old_closing, new_closing, delta, old_total_charges, new_total_charges} | null`
+- `recompute_error: {code, message, ...} | null`
+
+**Current callers:** POST/PATCH/void on `/api/admin/payouts/charges`  
+**Future callers:** I.2 (owner payments), I.3 (credits), I.5 (payouts)
+
+**Retroactive cleanup (I.4 script):** All 3 OBPs (25680, 25681, 25682) were already current — delta=$0 for all. No stale balances existed.
 
 ### File attachments
 
