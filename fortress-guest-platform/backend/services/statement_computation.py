@@ -92,8 +92,9 @@ class StatementLineItem(BaseModel):
 # Source: streamline_financial_detail.type_id observed in March 2026 data.
 # Extend when new codes appear.
 _SL_TYPE_CODES: dict[str, str] = {
-    "2": "STA",   # Standard/Stay
-    "7": "POS",   # Point of Sale / online booking
+    "2": "STA",      # Standard/Stay — in-person or phone booking
+    "7": "POS",      # Point of Sale — online/channel booking
+    "40": "HAFamOLB", # HomeAway Family Online Booking (H.2, 2026-04-16)
 }
 
 
@@ -404,6 +405,8 @@ async def compute_owner_statement(
     owner_payout_account_id: int,
     period_start: date,
     period_end: date,
+    *,
+    require_stripe_enrollment: bool = True,
 ) -> StatementResult:
     """
     Compute an owner statement from Crog-VRS data.
@@ -411,9 +414,14 @@ async def compute_owner_statement(
     commission_rate is read from owner_payout_accounts.commission_rate for the
     given owner_payout_account_id.  It is never defaulted or hardcoded.
 
+    Pass require_stripe_enrollment=False for admin backfill scripts that create
+    OBPs for owners whose stripe_account_id is intentionally NULL (e.g. multi-
+    property owners sharing a single Stripe Connect account).
+
     Raises StatementComputationError for:
         'not_found'          — no row for owner_payout_account_id
         'not_enrolled'       — row exists but stripe_account_id is NULL
+                               (only raised when require_stripe_enrollment=True)
         'no_commission_rate' — commission_rate is NULL (impossible post-migration,
                                but defended against explicitly)
 
@@ -441,7 +449,7 @@ async def compute_owner_statement(
             ),
         )
 
-    if not opa.stripe_account_id:
+    if require_stripe_enrollment and not opa.stripe_account_id:
         raise StatementComputationError(
             code="not_enrolled",
             message=(

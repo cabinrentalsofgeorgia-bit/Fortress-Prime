@@ -511,13 +511,16 @@ opening_balance = |current_balance| - |period_net|
 # Or: current_balance + period_net_to_owner (using signed values)
 ```
 
-**Backfilled in G.7 (2026-04-15):**
-- Gary Knight (OPA 1824) × Fallen Timber Lodge (sl unit 70209):
-  - Opening balance as of 2026-03-01: **$500,702.41**
-  - Verified: Streamline API returned -$504,738.26 current; -$504,738.26 + $4,035.85 (March net) = -$500,702.41 ✓
-  - SQL: `backend/scripts/g7_opening_balance_commit.sql`
+**Backfilled in G.7/H.2 (2026-04-15/16):**
+- Gary Knight (OPA 1824) × Fallen Timber Lodge (sl unit 70209): opening $500,702.41 / closing $504,738.26 → `g7_opening_balance_commit.sql`
+- Gary Knight (OPA 1826) × Cherokee Sunrise (sl unit 306758): opening $64,822.71 / closing $64,822.71 (no March reservations) → `h2_opening_balance_commit.sql`
+- Gary Knight (OPA 1827) × Serendipity (sl unit 70222): opening $306,170.38 / closing $308,517.68 → `h2_opening_balance_commit.sql`
 
-**For future enrollment (G.8+):** At invite-creation time, call `fetch_unit_owner_balance(sl_unit_id)` and seed the initial OBP's `opening_balance` from Streamline's current balance. This eliminates the manual backfill step.
+**Stripe multi-property constraint:** `uq_owner_payout_accounts_stripe_account_id` is UNIQUE. Gary's secondary OPAs (1826, 1827) have `stripe_account_id=NULL`. `generate_monthly_statements` filters `stripe_account_id IS NOT NULL` — use `h2_generate_obps.py` pattern (query by `streamline_owner_id`) for owners with secondary OPAs.
+
+**`require_stripe_enrollment` flag:** `compute_owner_statement` and `render_owner_statement_pdf` accept `require_stripe_enrollment=False` (H.2, 2026-04-16) to bypass the Stripe check for backfill/admin paths. API endpoints always use the default (`True`).
+
+**For future enrollment (H.3+):** At invite-creation time, call `fetch_unit_owner_balance(sl_unit_id)` and seed the initial OBP's `opening_balance` from Streamline's current balance. This eliminates the manual backfill step.
 
 ---
 
@@ -530,17 +533,23 @@ Mapping in `backend/services/statement_computation.py` (`_SL_TYPE_CODES`). Exten
 |---|---|---|
 | `2` | **STA** | Standard/Stay — in-person or phone booking |
 | `7` | **POS** | Point of Sale — online/channel booking |
+| `40` | **HAFamOLB** | HomeAway Family Online Booking |
 
 Observed in March 2026 Fallen Timber Lodge data (H.1, 2026-04-16):
 - 53765 (type_id=2) → STA
 - 53790 (type_id=7) → POS
 - 53952 (type_id=7) → POS
 
+Observed in March 2026 Serendipity data (H.2, 2026-04-16):
+- 53870 (type_id=40) → HAFamOLB
+- 54020 (type_id=40) → HAFamOLB
+- 54012 (type_id=2) → STA
+
 Unknown `type_id` values render as `""` (empty string — safe fallback).
 
 **Verification:**
 ```bash
-pdftotext /tmp/any_statement.pdf - | grep -E "STA|POS"
+pdftotext /tmp/any_statement.pdf - | grep -E "STA|POS|HAFamOLB"
 ```
 
 ---

@@ -544,12 +544,15 @@ async def render_owner_statement_pdf(
     prop_display_name = f"{prop_group} {prop_name}".strip() if prop_group else prop_name
     owner_address = opa.mailing_address_display
 
-    # Compute live statement (reservations + charges)
+    # Compute live statement (reservations + charges).
+    # require_stripe_enrollment=False: multi-property owners may have stripe_account_id
+    # NULL on secondary OPAs (single Stripe account shared; primary OPA holds the link).
     stmt = await compute_owner_statement(
         db,
         owner_payout_account_id=period.owner_payout_account_id,
         period_start=period.period_start,
         period_end=period.period_end,
+        require_stripe_enrollment=False,
     )
 
     # YTD totals
