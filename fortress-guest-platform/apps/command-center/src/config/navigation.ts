@@ -33,21 +33,20 @@ const COMMAND_ROLES: Role[] = ["super_admin", "ops_manager"];
 const LEGAL_ROLES: Role[] = ["super_admin", "legal"];
 
 export const commandHierarchy: NavGroup[] = [
-  // 1. SHADOW OPS — strangler-fig monitoring
+  // 1. IRON DOME — inbound triage & digital awareness (everything flows through here)
   {
-    sector: "SHADOW OPS",
+    sector: "IRON DOME",
     allowedRoles: COMMAND_ROLES,
     items: [
-      { label: "Fortress Prime", href: "/command", type: "route", allowedRoles: COMMAND_ROLES },
-      { label: "Checkout Parity", href: "/command/checkout-parity", type: "route", allowedRoles: COMMAND_ROLES },
-      { label: "System Health", href: "/system-health", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Iron Dome Ledger", href: "/prime", type: "route", isMono: true, allowedRoles: ["super_admin"] },
       {
-        label: "Switch DEFCON Mode",
-        actionId: "switch-defcon-mode",
-        type: "action",
+        label: "NeMo Command Center",
+        href: "/nemo-command-center",
+        type: "route",
         isMono: true,
         allowedRoles: ["super_admin"],
       },
+      { label: "Email Intake", href: "/email-intake", type: "route", allowedRoles: COMMAND_ROLES },
     ],
   },
 
@@ -56,12 +55,12 @@ export const commandHierarchy: NavGroup[] = [
     sector: "CROG-VRS",
     allowedRoles: OPS_ROLES,
     items: [
-      // Operations
-      { label: "Operations Dashboard", href: "/analytics", type: "route", allowedRoles: OPS_ROLES },
+      // Sales & Bookings
+      { label: "Quotes", href: "/vrs/quotes", type: "route", allowedRoles: COMMAND_ROLES },
       { label: "Reservations & Calendar", href: "/reservations", type: "route", allowedRoles: OPS_ROLES },
       { label: "Guest CRM", href: "/guests", type: "route", allowedRoles: OPS_ROLES },
       { label: "Communications", href: "/messages", type: "route", allowedRoles: OPS_ROLES },
-      // Properties
+      // Properties & Operations
       { label: "Property Fleet", href: "/properties", type: "route", allowedRoles: OPS_ROLES },
       { label: "Housekeeping Dispatch", href: "/housekeeping", type: "route", allowedRoles: OPS_ROLES },
       { label: "Work Orders & Maintenance", href: "/work-orders", type: "route", allowedRoles: OPS_ROLES },
@@ -85,39 +84,46 @@ export const commandHierarchy: NavGroup[] = [
         isMono: true,
         allowedRoles: ["super_admin", "ops_manager"],
       },
-      { label: "Quotes", href: "/vrs/quotes", type: "route", allowedRoles: COMMAND_ROLES },
     ],
   },
 
-  // 3. STAKEHOLDERS — property acquisition & business development
+  // 3. STRANGLER DASHBOARD — Streamline migration monitoring
   {
-    sector: "STAKEHOLDERS",
+    sector: "STRANGLER DASHBOARD",
     allowedRoles: COMMAND_ROLES,
     items: [
-      { label: "Growth Deck", href: "/analytics/insights", type: "route", allowedRoles: COMMAND_ROLES },
-      { label: "Acquisition Pipeline", href: "/acquisition/pipeline", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Migration Monitor", href: "/command", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Checkout Parity", href: "/command/checkout-parity", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "System Health", href: "/system-health", type: "route", allowedRoles: COMMAND_ROLES },
+      {
+        label: "Switch DEFCON Mode",
+        actionId: "switch-defcon-mode",
+        type: "action",
+        isMono: true,
+        allowedRoles: ["super_admin"],
+      },
     ],
   },
 
-  // 4. PAPERCLIP AI — autonomous intelligence
+  // 4. PAPERCLIP AI — autonomous intelligence layer
   {
     sector: "PAPERCLIP AI",
     allowedRoles: COMMAND_ROLES,
     items: [
-      { label: "Adjudication Glass", href: "/vrs", type: "route", allowedRoles: COMMAND_ROLES },
-      { label: "Reactivation Hunter", href: "/vrs/hunter", type: "route", allowedRoles: COMMAND_ROLES },
-      { label: "Dispatch Radar", href: "/ai-engine", type: "route", allowedRoles: COMMAND_ROLES },
-      { label: "Market Canary", href: "/intelligence", type: "route", allowedRoles: COMMAND_ROLES },
-      { label: "Rule Engine", href: "/automations", type: "route", isMono: true, allowedRoles: COMMAND_ROLES },
+      { label: "Booking Adjudication", href: "/vrs", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Guest Reactivation", href: "/vrs/hunter", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Revenue Optimizer", href: "/ai-engine", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Market Intelligence", href: "/intelligence", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Automation Rules", href: "/automations", type: "route", isMono: true, allowedRoles: COMMAND_ROLES },
       {
-        label: "Sync Adjudication Ledger",
+        label: "Sync Ledger",
         actionId: "sync-vrs-ledger",
         type: "action",
         isMono: true,
         allowedRoles: COMMAND_ROLES,
       },
       {
-        label: "Dispatch Hunter Target",
+        label: "Dispatch Target",
         actionId: "dispatch-hunter-target",
         type: "action",
         isMono: true,
@@ -126,19 +132,13 @@ export const commandHierarchy: NavGroup[] = [
     ],
   },
 
-  // 5. IRON DOME — email triage & routing
+  // 5. STAKEHOLDERS — property acquisition & business development
   {
-    sector: "IRON DOME",
+    sector: "STAKEHOLDERS",
     allowedRoles: COMMAND_ROLES,
     items: [
-      { label: "Iron Dome Ledger", href: "/prime", type: "route", isMono: true, allowedRoles: ["super_admin"] },
-      {
-        label: "NeMo Command Center",
-        href: "/nemo-command-center",
-        type: "route",
-        isMono: true,
-        allowedRoles: ["super_admin"],
-      },
+      { label: "Growth Deck", href: "/analytics/insights", type: "route", allowedRoles: COMMAND_ROLES },
+      { label: "Acquisition Pipeline", href: "/acquisition/pipeline", type: "route", allowedRoles: COMMAND_ROLES },
     ],
   },
 
@@ -149,7 +149,6 @@ export const commandHierarchy: NavGroup[] = [
     items: [
       { label: "Active Dockets", href: "/legal", type: "route", allowedRoles: LEGAL_ROLES },
       { label: "E-Discovery Vault", href: "/vault", type: "route", allowedRoles: LEGAL_ROLES },
-      { label: "Email Intake", href: "/email-intake", type: "route", allowedRoles: LEGAL_ROLES },
       { label: "Agreements & Contracts", href: "/agreements", type: "route", allowedRoles: LEGAL_ROLES },
       { label: "Damage Claims", href: "/damage-claims", type: "route", allowedRoles: LEGAL_ROLES },
     ],

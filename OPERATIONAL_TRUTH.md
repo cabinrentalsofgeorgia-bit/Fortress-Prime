@@ -1,18 +1,36 @@
 # OPERATIONAL TRUTH
 
-## Command center navigation (NAV.1, 2026-04-16)
+## Command center navigation architecture
 
-Navigation reorganized from 5 scattered sectors to 7 coherent sectors:
+Data flow principle:
+Inbound → Awareness → Action → Intelligence → Growth
 
-1. SHADOW OPS — strangler-fig monitoring
-2. CROG-VRS — property management (operations, properties, owner management, finance)
-3. STAKEHOLDERS — property acquisition & business development
-4. PAPERCLIP AI — autonomous intelligence
-5. IRON DOME — email triage & routing
+IRON DOME (awareness) → CROG-VRS (action) → PAPERCLIP AI (intelligence)
+     ↑                                              ↓
+     └──────────── feedback loop ──────────────────┘
+
+Sector order reflects this flow:
+1. IRON DOME — digital intelligence, inbound triage, NAS awareness
+2. CROG-VRS — property management operations
+   Sub-groups: Sales & Bookings → Properties & Operations →
+   Owner Management → Finance
+3. STRANGLER DASHBOARD — Streamline migration monitoring
+   (permanent until all Streamline dependencies severed)
+4. PAPERCLIP AI — autonomous intelligence layer
+5. STAKEHOLDERS — property acquisition & business development
 6. FORTRESS LEGAL — legal operations
 7. SYSTEM — admin infrastructure
 
-Owner management consolidated: Onboard Owner, Owner Statements, Owner Charges all under CROG-VRS.
+Label philosophy: descriptive over code names. This is a
+multi-enterprise system; labels should be self-explanatory
+to any user, not just the developer who named them.
 
-Duplicate routes removed: Cabin Profiles (/properties), Field Logistics (/work-orders),
-cross-sector Owner Statements/Charges duplicates from SHADOW OPS and STAKEHOLDERS.
+STRANGLER DASHBOARD is mission-critical infrastructure,
+not temporary. Parallel operation with Streamline continues
+until every feature is parity-validated and cut over.
+
+History: NAV.1 (2026-04-16) reorganized from 5 to 7 sectors,
+consolidated owner management under CROG-VRS, removed duplicates.
+NAV.2 (2026-04-16) promoted Iron Dome to #1, renamed SHADOW OPS
+to STRANGLER DASHBOARD, made PAPERCLIP AI labels descriptive,
+moved Email Intake from FORTRESS LEGAL to IRON DOME.
