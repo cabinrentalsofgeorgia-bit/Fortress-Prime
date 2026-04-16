@@ -37,8 +37,10 @@ class OwnerChargeType(str, PyEnum):
     """
     Transaction types for owner charges.
 
-    Starter set of 17 values from Streamline's owner charge workflow.
-    See NOTES.md for the deliberate exclusions and how to add new types.
+    21 values matching Streamline's owner charge workflow (excludes the
+    "(Select Transaction Code)" placeholder which is UI-only).
+    Added I.1 (2026-04-16): STATEMENT_MARKER, ROOM_REVENUE, HACIENDA_TAX,
+    CHARGE_EXPIRED_OWNER.
     """
     CLEANING_FEE               = "cleaning_fee"
     MAINTENANCE                = "maintenance"
@@ -57,6 +59,11 @@ class OwnerChargeType(str, PyEnum):
     CREDIT_FROM_MANAGEMENT     = "credit_from_management"
     PAY_TO_OLD_OWNER           = "pay_to_old_owner"
     MISC_GUEST_CHARGES         = "misc_guest_charges"
+    # Added I.1 (2026-04-16) — Streamline parity
+    STATEMENT_MARKER           = "statement_marker"
+    ROOM_REVENUE               = "room_revenue"
+    HACIENDA_TAX               = "hacienda_tax"
+    CHARGE_EXPIRED_OWNER       = "charge_expired_owner"
 
     @property
     def display_name(self) -> str:
@@ -83,6 +90,11 @@ _DISPLAY_NAMES: dict[OwnerChargeType, str] = {
     OwnerChargeType.CREDIT_FROM_MANAGEMENT:     "Credit From Management",
     OwnerChargeType.PAY_TO_OLD_OWNER:           "Pay To Old Owner",
     OwnerChargeType.MISC_GUEST_CHARGES:         "Miscellaneous Guest Charges",
+    # Added I.1 (2026-04-16)
+    OwnerChargeType.STATEMENT_MARKER:           "Statement Marker",
+    OwnerChargeType.ROOM_REVENUE:               "Room Revenue",
+    OwnerChargeType.HACIENDA_TAX:               "Hacienda Tax",
+    OwnerChargeType.CHARGE_EXPIRED_OWNER:       "Charge Expired Owner",
 }
 
 _CHARGE_TYPE_ENUM = SqlEnum(

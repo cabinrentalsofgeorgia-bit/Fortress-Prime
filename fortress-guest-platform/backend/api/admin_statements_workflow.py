@@ -2,6 +2,7 @@
 Admin Statement Workflow API — lifecycle management for OwnerBalancePeriods.
 
 Endpoints:
+  GET  /api/admin/payouts/accounts                         — list owner payout accounts (OPAs)
   POST /api/admin/payouts/statements/generate              — create/update drafts
   GET  /api/admin/payouts/statements                       — list periods
   GET  /api/admin/payouts/statements/{id}                  — full detail
@@ -52,6 +53,44 @@ from backend.services.statement_workflow import (
 logger = structlog.get_logger(service="admin_statements_workflow")
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 _UTC = timezone.utc
+
+
+# ── OPA list (for UI dropdowns) ───────────────────────────────────────────────
+
+@router.get("/accounts")
+async def list_owner_payout_accounts(db: AsyncSession = Depends(get_db)):
+    """
+    Return all owner payout accounts for UI dropdowns.
+    Includes property name resolved from properties table.
+    """
+    import uuid as _uuid
+
+    result = await db.execute(
+        select(OwnerPayoutAccount).order_by(OwnerPayoutAccount.owner_name)
+    )
+    opas = result.scalars().all()
+
+    items = []
+    for opa in opas:
+        prop_name: Optional[str] = None
+        try:
+            prop_uuid = _uuid.UUID(opa.property_id)
+            prop = await db.get(Property, prop_uuid)
+            prop_name = prop.name if prop else None
+        except ValueError:
+            pass
+        items.append({
+            "id": opa.id,
+            "owner_name": opa.owner_name,
+            "owner_email": opa.owner_email,
+            "property_id": opa.property_id,
+            "property_name": prop_name,
+            "commission_rate": str(opa.commission_rate) if opa.commission_rate is not None else None,
+            "streamline_owner_id": opa.streamline_owner_id,
+            "stripe_account_id": opa.stripe_account_id,
+            "account_status": opa.account_status,
+        })
+    return {"accounts": items, "total": len(items)}
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────

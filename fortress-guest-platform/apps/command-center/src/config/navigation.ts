@@ -62,6 +62,12 @@ export const commandHierarchy: NavGroup[] = [
         allowedRoles: COMMAND_ROLES,
       },
       {
+        label: "Owner Charges",
+        href: "/admin/owner-charges",
+        type: "route",
+        allowedRoles: COMMAND_ROLES,
+      },
+      {
         label: "Switch DEFCON Mode",
         actionId: "switch-defcon-mode",
         type: "action",
@@ -186,6 +192,12 @@ export const commandHierarchy: NavGroup[] = [
       {
         label: "Owner Statements",
         href: "/admin/statements",
+        type: "route",
+        allowedRoles: ["super_admin", "ops_manager"],
+      },
+      {
+        label: "Owner Charges",
+        href: "/admin/owner-charges",
         type: "route",
         allowedRoles: ["super_admin", "ops_manager"],
       },

@@ -554,6 +554,46 @@ pdftotext /tmp/any_statement.pdf - | grep -E "STA|POS|HAFamOLB"
 
 ---
 
+## Owner charges workflow
+
+Owner charges are manual expense/credit entries posted against an owner's statement period.
+Implemented in I.1 (2026-04-16).
+
+**Page:** `/admin/owner-charges`  
+**API endpoints:** `POST/GET/PATCH /api/admin/payouts/charges`, `POST /api/admin/payouts/charges/{id}/void`  
+**OPA list:** `GET /api/admin/payouts/accounts` (for UI dropdowns)
+
+### Transaction codes (21 total — Streamline parity)
+
+Source of truth: `backend/models/owner_charge.py` (`OwnerChargeType` enum).  
+Frontend mirror: `apps/command-center/src/lib/owner-charge-codes.ts`.  
+DB enum: `owner_charge_type_enum` in `owner_charges.transaction_type`.
+
+17 original + 4 added I.1: Statement Marker, Room Revenue, Hacienda Tax, Charge Expired Owner.  
+Migration: `i1a1_add_owner_charge_types` (revises `g6a1_add_owner_middle_name`).
+
+### Closing balance update behavior
+
+**Posting a charge does NOT automatically update OBP stored balances.**  
+The PDF endpoint (`render_owner_statement_pdf`) recomputes charges live — the PDF is always current.  
+The `total_charges` and `closing_balance` columns on `owner_balance_periods` only update when
+`generate_monthly_statements` is run (or `h2_generate_obps.py` equivalent for backfill OPAs).
+
+Follow-up filed: add a charge-post trigger or event that calls `generate_monthly_statements`
+for the affected OPA+period automatically.
+
+### File attachments
+
+NOT YET SUPPORTED. Deferred for future phase (I.2+). Requires storage + security design.
+
+### E2E validation (I.1, 2026-04-16, Fallen Timber Lodge OBP 25680)
+
+Test charge posted: $100, Maintenance, 2026-03-15, OPA 1824.  
+Appeared in PDF: ✓ | Closing moved $504,738.26 → $504,638.26: ✓ | Void worked: ✓  
+Post-void PDF: charge absent ✓ | OBP restored to $504,738.26 ✓
+
+---
+
 ## How to use this doc
 
 - **Every Claude Code session reads this as Task 0** before any infrastructure-touching work.

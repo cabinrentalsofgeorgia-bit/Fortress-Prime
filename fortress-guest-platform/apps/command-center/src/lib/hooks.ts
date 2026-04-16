@@ -3582,3 +3582,31 @@ export function useVoidOwnerCharge() {
     onError: (err) => toast.error(`Void charge failed: ${err.message}`),
   });
 }
+
+// ── Owner Payout Accounts (OPA) list hook ─────────────────────────────────────
+
+export interface AdminOPA {
+  id: number;
+  owner_name: string | null;
+  owner_email: string | null;
+  property_id: string;
+  property_name: string | null;
+  commission_rate: string | null;
+  streamline_owner_id: number | null;
+  stripe_account_id: string | null;
+  account_status: string;
+}
+
+export interface AdminOPAListResponse {
+  accounts: AdminOPA[];
+  total: number;
+}
+
+// List all owner payout accounts — GET /api/admin/payouts/accounts
+export function useAdminOPAs() {
+  return useQuery<AdminOPAListResponse>({
+    queryKey: ["admin-opas"],
+    queryFn: () => api.get("/api/admin/payouts/accounts"),
+    staleTime: 60_000,
+  });
+}
