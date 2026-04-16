@@ -422,12 +422,24 @@ def _build_pdf_bytes(
     story.append(Spacer(1, 0.12 * inch))
 
     # ── 5. Owner Payments / Additional Owner Income ───────────────────────────
+    # Negative owner_charges (payments from owner, admin credits) render here.
+    # Positive owner_charges render in Section 6 (Owner Charges/Expenses).
+    pos_charges = [ch for ch in stmt.owner_charges if ch.amount > Decimal("0")]
+    neg_charges = [ch for ch in stmt.owner_charges if ch.amount < Decimal("0")]
+    pos_total = sum((ch.amount for ch in pos_charges), Decimal("0.00"))
+    neg_total_abs = sum((abs(ch.amount) for ch in neg_charges), Decimal("0.00"))
+
     story.append(Paragraph("Owner Payments / Additional Owner Income", S["section"]))
     story.append(Spacer(1, 0.04 * inch))
 
     oi_rows = [["Date", "Description", "Amount"]]
-    # Currently total_owner_income is always 0 (not yet implemented)
-    oi_rows.append(["TOTAL:", "", _fmt(owner_inc)])
+    for ch in neg_charges:
+        oi_rows.append([
+            ch.posting_date.strftime("%m/%d/%Y"),
+            ch.description[:50],
+            _fmt(abs(ch.amount)),
+        ])
+    oi_rows.append(["TOTAL:", "", _fmt(owner_inc + neg_total_abs)])
 
     oi_tbl = Table(oi_rows, colWidths=[W * 0.18, W * 0.62, W * 0.20])
     oi_tbl.setStyle(_tbl_style())
@@ -435,16 +447,14 @@ def _build_pdf_bytes(
     story.append(oi_tbl)
     story.append(Spacer(1, 0.12 * inch))
 
-    # ── 6. Owner Charges/Expenses ─────────────────────────────────────────────
+    # ── 6. Owner Charges/Expenses (positive amounts only) ─────────────────────
     story.append(Paragraph("Owner Charges/Expenses", S["section"]))
     story.append(Spacer(1, 0.04 * inch))
 
     ch_header = ["Posted Date", "Type", "Description", "W.O./REF#", "Expense"]
     ch_rows = [ch_header]
-    for ch in stmt.owner_charges:
+    for ch in pos_charges:
         # Append vendor name to description when linked (I.1a).
-        # Truncate base description to 20 chars when vendor present to ensure
-        # the vendor name fits within the column; 40 chars otherwise.
         if ch.vendor_name:
             base = ch.description[:20] + ("…" if len(ch.description) > 20 else "")
             desc_display = f"{base} — {ch.vendor_name[:16]}"
@@ -457,7 +467,7 @@ def _build_pdf_bytes(
             ch.reference_id or "",
             _fmt(ch.amount),
         ])
-    ch_rows.append(["TOTAL:", "", "", "", _fmt(-charges)])
+    ch_rows.append(["TOTAL:", "", "", "", _fmt(-pos_total)])
 
     ch_cw = [W * w for w in [0.15, 0.18, 0.35, 0.13, 0.19]]
     ch_tbl = Table(ch_rows, colWidths=ch_cw)

@@ -40,10 +40,11 @@ class OwnerChargeType(str, PyEnum):
     """
     Transaction types for owner charges.
 
-    21 values matching Streamline's owner charge workflow (excludes the
+    22 values matching Streamline's owner charge workflow (excludes the
     "(Select Transaction Code)" placeholder which is UI-only).
     Added I.1 (2026-04-16): STATEMENT_MARKER, ROOM_REVENUE, HACIENDA_TAX,
     CHARGE_EXPIRED_OWNER.
+    Added I.2 (2026-04-16): OWNER_PAYMENT_RECEIVED.
     """
     CLEANING_FEE               = "cleaning_fee"
     MAINTENANCE                = "maintenance"
@@ -67,6 +68,8 @@ class OwnerChargeType(str, PyEnum):
     ROOM_REVENUE               = "room_revenue"
     HACIENDA_TAX               = "hacienda_tax"
     CHARGE_EXPIRED_OWNER       = "charge_expired_owner"
+    # Added I.2 (2026-04-16) — payment from owner (stored as negative amount)
+    OWNER_PAYMENT_RECEIVED     = "owner_payment_received"
 
     @property
     def display_name(self) -> str:
@@ -98,6 +101,8 @@ _DISPLAY_NAMES: dict[OwnerChargeType, str] = {
     OwnerChargeType.ROOM_REVENUE:               "Room Revenue",
     OwnerChargeType.HACIENDA_TAX:               "Hacienda Tax",
     OwnerChargeType.CHARGE_EXPIRED_OWNER:       "Charge Expired Owner",
+    # Added I.2 (2026-04-16)
+    OwnerChargeType.OWNER_PAYMENT_RECEIVED:     "Owner Payment Received",
 }
 
 _CHARGE_TYPE_ENUM = SqlEnum(

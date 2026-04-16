@@ -1,7 +1,7 @@
 /**
  * Owner charge transaction type codes — mirrors backend OwnerChargeType enum.
  * Source of truth: backend/models/owner_charge.py OwnerChargeType
- * Last sync: I.1 (2026-04-16) — 21 values matching Streamline parity.
+ * Last sync: I.2 (2026-04-16) — 22 values. Added: owner_payment_received.
  *
  * Ordering: Streamline's canonical order with "(Select)" placeholder first.
  * Never mutate this list without a corresponding Alembic migration.
@@ -17,7 +17,7 @@ export interface OwnerChargeCode {
 /** Placeholder entry for the unset state in the form dropdown. */
 export const CHARGE_CODE_PLACEHOLDER = "(Select Transaction Code)";
 
-/** All 21 valid transaction codes in Streamline canonical order. */
+/** All 22 valid transaction codes in Streamline canonical order. */
 export const OWNER_CHARGE_CODES: OwnerChargeCode[] = [
   { value: "third_party_ota_commission",  label: "3rd Party OTA Commission" },
   { value: "advertising_fee",             label: "Advertising Fee" },
@@ -40,7 +40,28 @@ export const OWNER_CHARGE_CODES: OwnerChargeCode[] = [
   { value: "misc_guest_charges",          label: "Miscellaneous Guest Charges" },
   { value: "pay_to_old_owner",            label: "Pay To Old Owner" },
   { value: "supplies",                    label: "Supplies" },
+  // Added I.2 (2026-04-16) — payment from owner (stored as negative amount)
+  { value: "owner_payment_received",      label: "Owner Payment Received" },
 ];
+
+/**
+ * Codes that represent a payment FROM the owner to management.
+ * Always stored as negative amounts (credit to owner balance).
+ * Shown in "Receive Payment" modal and "Owner Payments" PDF section.
+ */
+export const PAYMENT_CODES: ReadonlySet<string> = new Set([
+  "owner_payment_received",
+]);
+
+/**
+ * Codes that represent an admin credit/adjustment in the owner's favor.
+ * Always stored as negative amounts (credit to owner balance).
+ * Shown in "Credit Account" modal and "Owner Payments" PDF section.
+ */
+export const CREDIT_CODES: ReadonlySet<string> = new Set([
+  "credit_from_management",
+  "adjust_owner_revenue",
+]);
 
 /** Look up display label for a raw enum value (e.g. from API response). */
 export function chargeCodeLabel(value: string): string {

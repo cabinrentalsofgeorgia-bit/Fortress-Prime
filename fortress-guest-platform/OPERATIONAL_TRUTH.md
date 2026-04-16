@@ -565,14 +565,19 @@ Implemented in I.1 (2026-04-16).
 **API endpoints:** `POST/GET/PATCH /api/admin/payouts/charges`, `POST /api/admin/payouts/charges/{id}/void`  
 **OPA list:** `GET /api/admin/payouts/accounts` (for UI dropdowns)
 
-### Transaction codes (21 total — Streamline parity)
+### Transaction codes (22 total — Streamline parity)
 
 Source of truth: `backend/models/owner_charge.py` (`OwnerChargeType` enum).  
 Frontend mirror: `apps/command-center/src/lib/owner-charge-codes.ts`.  
 DB enum: `owner_charge_type_enum` in `owner_charges.transaction_type`.
 
 17 original + 4 added I.1: Statement Marker, Room Revenue, Hacienda Tax, Charge Expired Owner.  
-Migration: `i1a1_add_owner_charge_types` (revises `g6a1_add_owner_middle_name`).
+1 added I.2: Owner Payment Received (`owner_payment_received`).  
+Migration: `i23a1_add_payment_credit_codes` (revises `i5a1_obp_payout_columns`).
+
+**Code categories (I.2/I.3, 2026-04-16):**  
+`PAYMENT_CODES` = `{owner_payment_received}` — payment FROM owner → stored negative, appears in PDF Section 5.  
+`CREDIT_CODES` = `{credit_from_management, adjust_owner_revenue}` — admin credit → stored negative, appears in PDF Section 5.
 
 ### Closing balance update behavior
 
@@ -620,8 +625,7 @@ for the affected OPA+period automatically.
 - `obp_recomputed: {obp_id, old_closing, new_closing, delta, old_total_charges, new_total_charges} | null`
 - `recompute_error: {code, message, ...} | null`
 
-**Current callers:** POST/PATCH/void on `/api/admin/payouts/charges`  
-**Future callers:** I.2 (owner payments), I.3 (credits), I.5 (payouts)
+**Current callers:** POST/PATCH/void on `/api/admin/payouts/charges`
 
 **Retroactive cleanup (I.4 script):** All 3 OBPs (25680, 25681, 25682) were already current — delta=$0 for all. No stale balances existed.
 
@@ -639,6 +643,39 @@ Post-void PDF: charge absent ✓ | OBP restored to $504,738.26 ✓
 
 Test charge: $100 vendor amount × 20% markup = $120 owner amount, vendor ActiveV_0b2a98 (plumbing), OPA 1824.  
 Owner amount correct ($120.00 = $100 × 1.20): ✓ | Vendor name on PDF ("… — ActiveV_0b2a98"): ✓ | Voided cleanly: ✓
+
+### Payments and credits (I.2/I.3, 2026-04-16)
+
+**Sign convention:**  
+- Positive `amount` = charge (debit from owner — reduces closing balance)  
+- Negative `amount` = payment or credit (credit to owner — increases closing balance)  
+- Zero `amount` = rejected by `chk_oc_amount_not_zero` constraint
+
+**I.4 recompute:** Handles negatives natively — `total_charges` sums all active owner_charges including negative entries. Negative total_charges → closing_balance increases.
+
+**UI (three action buttons on /admin/owner-charges):**  
+- "Post Charge" — all codes, amount positive (can enter negative manually via raw field)  
+- "Receive Payment" — codes filtered to PAYMENT_CODES, user enters positive, stored as negative  
+- "Credit Account" — codes filtered to CREDIT_CODES, user enters positive, stored as negative  
+- Type filter tab: All / Charges / Payments / Credits (client-side filter by sign + code category)  
+- Negative amounts displayed in green as ($x.xx) in the table
+
+**PDF (I.2/I.3):**  
+- Positive owner_charges → Section 6 "Owner Charges/Expenses" (debit column)  
+- Negative owner_charges → Section 5 "Owner Payments / Additional Owner Income" (credit column)  
+- Account Summary "Owner Charges/Expenses" row still shows net `total_charges` effect (which may be positive if credits exceed charges)
+
+**Backend:** No changes to API or schemas — `amount != 0` constraint already allowed negatives since I.1.  
+`vendor_amount` must still be positive (raw invoice amount); markup computes positive owner-facing amount for vendor-sourced charges.
+
+### E2E validation (I.2/I.3, 2026-04-16, Fallen Timber Lodge OBP 25680)
+
+Baseline: `total_charges=0.00`, `closing_balance=504738.26`  
+Payment posted (-$200, `owner_payment_received`): `new_total_charges=-200`, `new_closing=504938.26` ✓  
+Credit posted (-$50, `credit_from_management`): `new_total_charges=-250`, `new_closing=504988.26` ✓  
+PDF: both entries in Section 5 "Owner Payments / Additional Owner Income" ($200 + $50 = $250 total) ✓  
+Void payment (id=362): OBP `504988.26 → 504788.26` ✓  
+Void credit (id=363): OBP `504788.26 → 504738.26` ✓ — baseline fully restored
 
 ---
 
