@@ -582,6 +582,15 @@ The `total_charges` and `closing_balance` columns on `owner_balance_periods` onl
 Follow-up filed: add a charge-post trigger or event that calls `generate_monthly_statements`
 for the affected OPA+period automatically.
 
+### Vendor + markup (I.1a, 2026-04-16)
+
+- `owner_charges` now has `vendor_id` (nullable UUID FK → vendors), `markup_percentage` (default 0.00), `vendor_amount` (nullable).
+- Math: `amount = vendor_amount × (1 + markup_percentage/100)`. Owner sees `amount`. Manager keeps `amount - vendor_amount`.
+- PDF rendering: vendor name appended to description `"{desc[:20]}… — {vendor[:16]}"` when vendor linked.
+- UI: collapsible vendor section (trade → vendor two-step dropdown), markup %, computed owner amount display.
+- Migration: `i1a2_add_vendor_and_markup` (revises `i1a1_add_owner_charge_types`).
+- Same I.4 recompute gap: OBP stored `closing_balance` does not auto-update on charge post.
+
 ### File attachments
 
 NOT YET SUPPORTED. Deferred for future phase (I.2+). Requires storage + security design.
@@ -591,6 +600,11 @@ NOT YET SUPPORTED. Deferred for future phase (I.2+). Requires storage + security
 Test charge posted: $100, Maintenance, 2026-03-15, OPA 1824.  
 Appeared in PDF: ✓ | Closing moved $504,738.26 → $504,638.26: ✓ | Void worked: ✓  
 Post-void PDF: charge absent ✓ | OBP restored to $504,738.26 ✓
+
+### E2E validation (I.1a, 2026-04-16, Fallen Timber Lodge OBP 25680)
+
+Test charge: $100 vendor amount × 20% markup = $120 owner amount, vendor ActiveV_0b2a98 (plumbing), OPA 1824.  
+Owner amount correct ($120.00 = $100 × 1.20): ✓ | Vendor name on PDF ("… — ActiveV_0b2a98"): ✓ | Voided cleanly: ✓
 
 ---
 

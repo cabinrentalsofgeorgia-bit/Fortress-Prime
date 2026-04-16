@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useAdminCharges,
   useCreateOwnerCharge,
   useUpdateOwnerCharge,
   useVoidOwnerCharge,
   useAdminOPAs,
+  useVendors,
   type AdminOPA,
+  type Vendor,
 } from "@/lib/hooks";
 import type { OwnerCharge, ChargeListFilters, CreateOwnerChargeRequest } from "@/lib/types";
 import {
@@ -48,7 +50,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertTriangle, Loader2, PlusCircle, Pencil, Ban } from "lucide-react";
+import { AlertTriangle, Loader2, PlusCircle, Pencil, Ban, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -92,10 +94,11 @@ interface ChargeModalProps {
   open: boolean;
   onClose: () => void;
   opas: AdminOPA[];
+  vendors: Vendor[];
   existing?: OwnerCharge | null;
 }
 
-function ChargeModal({ open, onClose, opas, existing }: ChargeModalProps) {
+function ChargeModal({ open, onClose, opas, vendors, existing }: ChargeModalProps) {
   const isEdit = !!existing;
 
   const [opaId, setOpaId] = useState<string>(existing ? String(existing.owner_payout_account_id) : "");
@@ -108,25 +111,46 @@ function ChargeModal({ open, onClose, opas, existing }: ChargeModalProps) {
   const [referenceId, setReferenceId] = useState<string>(existing?.reference_id ?? "");
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Vendor + markup state (I.1a)
+  const [showVendor, setShowVendor] = useState<boolean>(!!existing?.vendor_id);
+  const [selectedTrade, setSelectedTrade] = useState<string>("");
+  const [vendorId, setVendorId] = useState<string>(existing?.vendor_id ?? "");
+  const [vendorAmount, setVendorAmount] = useState<string>(
+    existing?.vendor_amount ? String(parseFloat(existing.vendor_amount)) : ""
+  );
+  const [markupPct, setMarkupPct] = useState<string>(
+    existing?.markup_percentage ? String(parseFloat(existing.markup_percentage)) : "0"
+  );
+
   const createMutation = useCreateOwnerCharge();
   const updateMutation = useUpdateOwnerCharge();
-
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
+  // Derived: distinct trades and filtered vendor list
+  const trades = useMemo(() => [...new Set(vendors.map((v) => v.trade).filter(Boolean))].sort() as string[], [vendors]);
+  const filteredVendors = useMemo(
+    () => (selectedTrade ? vendors.filter((v) => v.trade === selectedTrade) : vendors),
+    [vendors, selectedTrade]
+  );
+
+  // Computed owner amount when vendor is used
+  const computedOwnerAmount = useMemo(() => {
+    const va = parseFloat(vendorAmount);
+    const mp = parseFloat(markupPct || "0");
+    if (!isNaN(va) && va > 0 && !isNaN(mp)) {
+      return (va * (1 + mp / 100)).toFixed(2);
+    }
+    return null;
+  }, [vendorAmount, markupPct]);
+
   function resetForm() {
-    setOpaId("");
-    setTxType("");
-    setDescription("");
-    setPostedDate(todayIso());
-    setAmount("");
-    setReferenceId("");
-    setFormError(null);
+    setOpaId(""); setTxType(""); setDescription(""); setPostedDate(todayIso());
+    setAmount(""); setReferenceId(""); setFormError(null);
+    setShowVendor(false); setSelectedTrade(""); setVendorId("");
+    setVendorAmount(""); setMarkupPct("0");
   }
 
-  function handleClose() {
-    resetForm();
-    onClose();
-  }
+  function handleClose() { resetForm(); onClose(); }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -136,8 +160,18 @@ function ChargeModal({ open, onClose, opas, existing }: ChargeModalProps) {
     if (!isEdit && !txType) { setFormError("Select a transaction type."); return; }
     if (!description.trim()) { setFormError("Description is required."); return; }
     if (!postedDate) { setFormError("Posted date is required."); return; }
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum === 0) { setFormError("Amount must be a non-zero number."); return; }
+
+    // Vendor validation
+    if (showVendor && !isEdit) {
+      if (!vendorId) { setFormError("Select a vendor or collapse the vendor section."); return; }
+      const va = parseFloat(vendorAmount);
+      if (isNaN(va) || va <= 0) { setFormError("Vendor amount must be a positive number."); return; }
+    } else if (!showVendor || isEdit) {
+      const amountNum = parseFloat(amount);
+      if (!isEdit && (isNaN(amountNum) || amountNum === 0)) {
+        setFormError("Amount must be a non-zero number."); return;
+      }
+    }
 
     try {
       if (isEdit && existing) {
@@ -145,7 +179,9 @@ function ChargeModal({ open, onClose, opas, existing }: ChargeModalProps) {
           chargeId: existing.id,
           description: description.trim(),
           posting_date: postedDate,
-          amount: amountNum,
+          ...(showVendor && vendorAmount
+            ? { vendor_amount: parseFloat(vendorAmount), markup_percentage: parseFloat(markupPct || "0") }
+            : { amount: parseFloat(amount) }),
           reference_id: referenceId.trim() || undefined,
         });
       } else {
@@ -154,8 +190,14 @@ function ChargeModal({ open, onClose, opas, existing }: ChargeModalProps) {
           posting_date: postedDate,
           transaction_type: txType,
           description: description.trim(),
-          amount: amountNum,
           reference_id: referenceId.trim() || undefined,
+          ...(showVendor && vendorId
+            ? {
+                vendor_id: vendorId,
+                vendor_amount: parseFloat(vendorAmount),
+                markup_percentage: parseFloat(markupPct || "0"),
+              }
+            : { amount: parseFloat(amount) }),
         };
         await createMutation.mutateAsync(body);
       }
@@ -166,10 +208,11 @@ function ChargeModal({ open, onClose, opas, existing }: ChargeModalProps) {
   }
 
   const selectedOpa = opas.find((o) => String(o.id) === opaId);
+  const selectedVendor = vendors.find((v) => v.id === vendorId);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PlusCircle className="h-5 w-5" />
@@ -183,118 +226,167 @@ function ChargeModal({ open, onClose, opas, existing }: ChargeModalProps) {
             <div className="space-y-1.5">
               <Label>Owner / Property <span className="text-red-500">*</span></Label>
               <Select value={opaId} onValueChange={setOpaId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select owner…" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select owner…" /></SelectTrigger>
                 <SelectContent>
                   {opas.map((o) => (
-                    <SelectItem key={o.id} value={String(o.id)}>
-                      {opaLabel(o)}
-                    </SelectItem>
+                    <SelectItem key={o.id} value={String(o.id)}>{opaLabel(o)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {selectedOpa && !selectedOpa.stripe_account_id && (
                 <p className="text-xs text-amber-600 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  Stripe not linked — backend may reject charge posting.
+                  <AlertTriangle className="h-3 w-3" />Stripe not linked — backend may reject charge posting.
                 </p>
               )}
             </div>
           )}
-
           {isEdit && (
             <div className="rounded-md bg-muted/50 p-2 text-sm text-muted-foreground">
               {existing?.owner_name} — {existing?.property_name}
             </div>
           )}
 
-          {/* Transaction Type (create only) */}
+          {/* Transaction Type */}
           {!isEdit && (
             <div className="space-y-1.5">
               <Label>Transaction Type <span className="text-red-500">*</span></Label>
               <Select value={txType} onValueChange={setTxType}>
-                <SelectTrigger>
-                  <SelectValue placeholder={CHARGE_CODE_PLACEHOLDER} />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={CHARGE_CODE_PLACEHOLDER} /></SelectTrigger>
                 <SelectContent>
                   {OWNER_CHARGE_CODES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           )}
-
           {isEdit && (
             <div className="space-y-1.5">
               <Label>Transaction Type</Label>
-              <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm">
-                {chargeCodeLabel(existing?.transaction_type ?? "")}
-              </div>
-              <p className="text-xs text-muted-foreground">Transaction type cannot be changed after posting.</p>
+              <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm">{chargeCodeLabel(existing?.transaction_type ?? "")}</div>
+              <p className="text-xs text-muted-foreground">Cannot be changed after posting.</p>
             </div>
           )}
 
           {/* Description */}
           <div className="space-y-1.5">
             <Label>Description <span className="text-red-500">*</span></Label>
-            <Textarea
-              rows={2}
-              maxLength={500}
-              placeholder="Appears on owner statement PDF…"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            <Textarea rows={2} maxLength={500} placeholder="Appears on owner statement PDF…"
+              value={description} onChange={(e) => setDescription(e.target.value)} />
+            {selectedVendor && !description.includes(selectedVendor.name) && (
+              <p className="text-xs text-muted-foreground">
+                Vendor name will be appended automatically on PDF: "{description || "…"} — {selectedVendor.name}"
+              </p>
+            )}
           </div>
 
-          {/* Posted Date + Amount */}
+          {/* Vendor section (collapsible, optional) */}
+          {!isEdit && (
+            <div className="rounded-md border">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+                onClick={() => { setShowVendor(!showVendor); if (showVendor) { setVendorId(""); setVendorAmount(""); setMarkupPct("0"); } }}
+              >
+                <span>Vendor &amp; Markup <span className="text-muted-foreground font-normal">(optional)</span></span>
+                {showVendor ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+              {showVendor && (
+                <div className="px-3 pb-3 space-y-3 border-t pt-3">
+                  {/* Trade filter */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Trade</Label>
+                    <Select value={selectedTrade} onValueChange={(v) => { setSelectedTrade(v); setVendorId(""); }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="All trades" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All trades</SelectItem>
+                        {trades.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Vendor */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Vendor <span className="text-red-500">*</span></Label>
+                    <Select value={vendorId} onValueChange={setVendorId}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select vendor…" /></SelectTrigger>
+                      <SelectContent>
+                        {filteredVendors.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.name}{v.trade ? <span className="text-muted-foreground ml-1">({v.trade})</span> : null}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Vendor Amount + Markup + Computed */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Vendor Amount (USD) <span className="text-red-500">*</span></Label>
+                      <Input type="number" step="0.01" placeholder="100.00" className="h-8 text-xs"
+                        value={vendorAmount} onChange={(e) => setVendorAmount(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Markup %</Label>
+                      <Input type="number" step="0.01" min="0" max="100" placeholder="0" className="h-8 text-xs"
+                        value={markupPct} onChange={(e) => setMarkupPct(e.target.value)} />
+                    </div>
+                  </div>
+                  {computedOwnerAmount && (
+                    <div className="rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2">
+                      <span className="text-xs text-muted-foreground">Owner amount: </span>
+                      <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">${computedOwnerAmount}</span>
+                      <span className="text-xs text-muted-foreground ml-2">(= ${vendorAmount} × {(1 + parseFloat(markupPct || "0") / 100).toFixed(4)})</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isEdit && existing?.vendor_id && (
+            <div className="rounded-md bg-muted/50 p-2 text-sm space-y-1">
+              <div><span className="text-muted-foreground text-xs">Vendor:</span> {existing.vendor_name ?? existing.vendor_id.slice(0,8)}</div>
+              <div><span className="text-muted-foreground text-xs">Vendor Amount:</span> ${existing.vendor_amount ? parseFloat(existing.vendor_amount).toFixed(2) : "—"}</div>
+              <div><span className="text-muted-foreground text-xs">Markup:</span> {parseFloat(existing.markup_percentage).toFixed(2)}%</div>
+            </div>
+          )}
+
+          {/* Posted Date + Amount (when no vendor selected) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Posted Date <span className="text-red-500">*</span></Label>
-              <Input
-                type="date"
-                value={postedDate}
-                onChange={(e) => setPostedDate(e.target.value)}
-              />
+              <Input type="date" value={postedDate} onChange={(e) => setPostedDate(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Amount (USD) <span className="text-red-500">*</span></Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="100.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">+&thinsp;charge&nbsp;/&nbsp;&minus;&thinsp;credit</p>
-            </div>
+            {(!showVendor || isEdit) && (
+              <div className="space-y-1.5">
+                <Label>Amount (USD) <span className="text-red-500">*</span></Label>
+                <Input type="number" step="0.01" placeholder="100.00"
+                  value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <p className="text-xs text-muted-foreground">+&thinsp;charge&nbsp;/&nbsp;&minus;&thinsp;credit</p>
+              </div>
+            )}
+            {showVendor && !isEdit && computedOwnerAmount && (
+              <div className="space-y-1.5">
+                <Label>Owner Amount</Label>
+                <Input value={`$${computedOwnerAmount}`} disabled className="bg-muted/50" />
+              </div>
+            )}
           </div>
 
           {/* W.O. / REF # */}
           <div className="space-y-1.5">
             <Label>W.O. / REF # <span className="text-muted-foreground">(optional)</span></Label>
-            <Input
-              placeholder="Work order or reference number"
-              maxLength={100}
-              value={referenceId}
-              onChange={(e) => setReferenceId(e.target.value)}
-            />
+            <Input placeholder="Work order or reference number" maxLength={100}
+              value={referenceId} onChange={(e) => setReferenceId(e.target.value)} />
           </div>
 
           {formError && (
             <p className="text-sm text-red-500 flex items-center gap-1">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              {formError}
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />{formError}
             </p>
           )}
-
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={handleClose} disabled={isLoading}>
-              Cancel
-            </Button>
+            <Button type="button" variant="ghost" onClick={handleClose} disabled={isLoading}>Cancel</Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               {isEdit ? "Save Changes" : "Post Charge"}
@@ -395,9 +487,11 @@ export default function OwnerChargesPage() {
   const [voidTarget, setVoidTarget] = useState<OwnerCharge | null>(null);
 
   const { data: opasData } = useAdminOPAs();
+  const { data: vendorsData } = useVendors();
   const { data: chargesData, isLoading, isError } = useAdminCharges(filters);
 
   const opas = opasData?.accounts ?? [];
+  const vendors = vendorsData?.vendors ?? [];
   const charges = chargesData?.charges ?? [];
   const total = chargesData?.total ?? 0;
 
@@ -560,6 +654,7 @@ export default function OwnerChargesPage() {
                   <TableHead>Owner</TableHead>
                   <TableHead>Property</TableHead>
                   <TableHead>Transaction Type</TableHead>
+                  <TableHead>Vendor</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -586,7 +681,8 @@ export default function OwnerChargesPage() {
                       <TableCell className="text-sm">
                         <span className="font-medium">{c.transaction_type_display}</span>
                       </TableCell>
-                      <TableCell className="text-sm max-w-[220px] truncate" title={c.description}>
+                      <TableCell className="text-sm text-muted-foreground">{c.vendor_name ?? "—"}</TableCell>
+                      <TableCell className="text-sm max-w-[180px] truncate" title={c.description}>
                         {c.description}
                       </TableCell>
                       <TableCell className={cn("text-right text-sm font-mono", amountColor)}>
@@ -641,11 +737,13 @@ export default function OwnerChargesPage() {
         open={showPostModal}
         onClose={() => setShowPostModal(false)}
         opas={opas}
+        vendors={vendors}
       />
       <ChargeModal
         open={!!editCharge}
         onClose={() => setEditCharge(null)}
         opas={opas}
+        vendors={vendors}
         existing={editCharge}
       />
       <VoidModal

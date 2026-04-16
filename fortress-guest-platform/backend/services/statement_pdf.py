@@ -442,10 +442,18 @@ def _build_pdf_bytes(
     ch_header = ["Posted Date", "Type", "Description", "W.O./REF#", "Expense"]
     ch_rows = [ch_header]
     for ch in stmt.owner_charges:
+        # Append vendor name to description when linked (I.1a).
+        # Truncate base description to 20 chars when vendor present to ensure
+        # the vendor name fits within the column; 40 chars otherwise.
+        if ch.vendor_name:
+            base = ch.description[:20] + ("…" if len(ch.description) > 20 else "")
+            desc_display = f"{base} — {ch.vendor_name[:16]}"
+        else:
+            desc_display = ch.description[:40]
         ch_rows.append([
             ch.posting_date.strftime("%m/%d/%Y"),
             ch.transaction_type_display[:20],
-            ch.description[:35],
+            desc_display,
             ch.reference_id or "",
             _fmt(ch.amount),
         ])

@@ -16,13 +16,14 @@ falls in a finalized period.
 """
 from __future__ import annotations
 
+import uuid as _uuid_mod
 from datetime import date, datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,6 +34,7 @@ from backend.models.owner_charge import OwnerCharge, OwnerChargeType
 from backend.models.owner_payout import OwnerPayoutAccount
 from backend.models.property import Property
 from backend.models.staff import StaffUser
+from backend.models.vendor import Vendor
 
 logger = structlog.get_logger(service="admin_charges_api")
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
@@ -86,15 +88,44 @@ class OwnerChargeCreateRequest(BaseModel):
     posting_date: date
     transaction_type: OwnerChargeType
     description: str = Field(..., min_length=1, max_length=500)
-    amount: Decimal
+    # amount is required only when no vendor is given; when vendor_id is set
+    # the server computes amount = vendor_amount * (1 + markup_percentage/100).
+    amount: Optional[Decimal] = None
     reference_id: Optional[str] = Field(None, max_length=100)
+
+    # Vendor + markup fields (I.1a)
+    vendor_id: Optional[_uuid_mod.UUID] = None
+    markup_percentage: Decimal = Field(Decimal("0.00"), ge=0, le=100)
+    vendor_amount: Optional[Decimal] = None
 
     @field_validator("amount")
     @classmethod
-    def _amount_not_zero(cls, v: Decimal) -> Decimal:
-        if v == Decimal("0"):
+    def _amount_not_zero(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v == Decimal("0"):
             raise ValueError("amount must not be zero; use void to cancel a charge")
         return v
+
+    @field_validator("vendor_amount")
+    @classmethod
+    def _vendor_amount_positive(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v <= Decimal("0"):
+            raise ValueError("vendor_amount must be positive")
+        return v
+
+    @model_validator(mode="after")
+    def _cross_field_validation(self) -> "OwnerChargeCreateRequest":
+        if self.vendor_id is not None and self.vendor_amount is None:
+            raise ValueError("vendor_amount is required when vendor_id is provided")
+        if self.vendor_id is None and self.amount is None:
+            raise ValueError("amount is required when no vendor is provided")
+        return self
+
+    def computed_amount(self) -> Decimal:
+        """Return the owner-facing charge amount."""
+        if self.vendor_id and self.vendor_amount is not None:
+            factor = Decimal("1") + self.markup_percentage / Decimal("100")
+            return (self.vendor_amount * factor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return self.amount  # type: ignore[return-value]
 
 
 class OwnerChargePatchRequest(BaseModel):
@@ -102,12 +133,21 @@ class OwnerChargePatchRequest(BaseModel):
     posting_date: Optional[date] = None
     amount: Optional[Decimal] = None
     reference_id: Optional[str] = Field(None, max_length=100)
+    markup_percentage: Optional[Decimal] = Field(None, ge=0, le=100)
+    vendor_amount: Optional[Decimal] = None
 
     @field_validator("amount")
     @classmethod
     def _amount_not_zero(cls, v: Optional[Decimal]) -> Optional[Decimal]:
         if v is not None and v == Decimal("0"):
             raise ValueError("amount must not be zero")
+        return v
+
+    @field_validator("vendor_amount")
+    @classmethod
+    def _vendor_amount_positive(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+        if v is not None and v <= Decimal("0"):
+            raise ValueError("vendor_amount must be positive")
         return v
 
 
@@ -121,6 +161,7 @@ def _charge_dict(
     charge: OwnerCharge,
     owner_name: Optional[str] = None,
     property_name: Optional[str] = None,
+    vendor_name: Optional[str] = None,
 ) -> dict:
     return {
         "id": charge.id,
@@ -133,6 +174,11 @@ def _charge_dict(
         "description": charge.description,
         "amount": str(charge.amount),
         "reference_id": charge.reference_id,
+        # Vendor + markup fields (I.1a)
+        "vendor_id": str(charge.vendor_id) if charge.vendor_id else None,
+        "vendor_name": vendor_name,
+        "markup_percentage": str(charge.markup_percentage) if charge.markup_percentage is not None else "0.00",
+        "vendor_amount": str(charge.vendor_amount) if charge.vendor_amount is not None else None,
         "created_at": charge.created_at.isoformat() if charge.created_at else None,
         "created_by": charge.created_by,
         "voided_at": charge.voided_at.isoformat() if charge.voided_at else None,
@@ -143,20 +189,23 @@ def _charge_dict(
 
 async def _enrich(
     db: AsyncSession, charge: OwnerCharge
-) -> tuple[Optional[str], Optional[str]]:
-    """Return (owner_name, property_name) for display purposes."""
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Return (owner_name, property_name, vendor_name) for display purposes."""
     opa = await db.get(OwnerPayoutAccount, charge.owner_payout_account_id)
     owner_name = opa.owner_name if opa else None
     property_name: Optional[str] = None
     if opa:
-        import uuid as _uuid
         try:
-            prop_uuid = _uuid.UUID(opa.property_id)
+            prop_uuid = _uuid_mod.UUID(str(opa.property_id))
             prop = await db.get(Property, prop_uuid)
-            property_name = prop.name if prop else opa.property_id
+            property_name = prop.name if prop else str(opa.property_id)
         except ValueError:
-            property_name = opa.property_id
-    return owner_name, property_name
+            property_name = str(opa.property_id)
+    vendor_name: Optional[str] = None
+    if charge.vendor_id:
+        vendor = await db.get(Vendor, charge.vendor_id)
+        vendor_name = vendor.name if vendor else None
+    return owner_name, property_name, vendor_name
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -179,10 +228,19 @@ async def create_charge(
             "Charges can only be posted to enrolled owners.",
         )
 
+    # Verify vendor exists (if provided)
+    vendor_name: Optional[str] = None
+    if body.vendor_id is not None:
+        vendor = await db.get(Vendor, body.vendor_id)
+        if not vendor:
+            raise HTTPException(404, f"Vendor {body.vendor_id} not found")
+        if not vendor.active:
+            raise HTTPException(422, f"Vendor '{vendor.name}' is inactive")
+        vendor_name = vendor.name
+
     # Verify property is active (not offboarded)
-    import uuid as _uuid
     try:
-        prop_uuid = _uuid.UUID(opa.property_id)
+        prop_uuid = _uuid_mod.UUID(str(opa.property_id))
         prop = await db.get(Property, prop_uuid)
         if prop and getattr(prop, "renting_state", "active") not in ("active", "pre_launch"):
             raise HTTPException(
@@ -200,28 +258,36 @@ async def create_charge(
     if locked_period:
         raise _locked_error(locked_period)
 
+    # Compute final owner-facing amount
+    owner_amount = body.computed_amount()
+
     charge = OwnerCharge(
         owner_payout_account_id=body.owner_payout_account_id,
         posting_date=body.posting_date,
         transaction_type=body.transaction_type.value,
         description=body.description,
-        amount=body.amount,
+        amount=owner_amount,
         reference_id=body.reference_id,
+        vendor_id=body.vendor_id,
+        markup_percentage=body.markup_percentage,
+        vendor_amount=body.vendor_amount,
         created_by=user.email,
     )
     db.add(charge)
     await db.commit()
     await db.refresh(charge)
 
-    owner_name, property_name = await _enrich(db, charge)
+    owner_name, property_name, _ = await _enrich(db, charge)
     logger.info(
         "owner_charge_created",
         charge_id=charge.id,
         owner=owner_name,
         amount=float(charge.amount),
         type=charge.transaction_type,
+        vendor=vendor_name,
+        markup=float(body.markup_percentage),
     )
-    return _charge_dict(charge, owner_name, property_name)
+    return _charge_dict(charge, owner_name, property_name, vendor_name)
 
 
 @router.get("/charges")
@@ -257,8 +323,8 @@ async def list_charges(
 
     items = []
     for c in charges:
-        owner_name, property_name = await _enrich(db, c)
-        items.append(_charge_dict(c, owner_name, property_name))
+        owner_name, property_name, vendor_name = await _enrich(db, c)
+        items.append(_charge_dict(c, owner_name, property_name, vendor_name))
 
     return {"charges": items, "total": len(items)}
 
@@ -268,8 +334,8 @@ async def get_charge(charge_id: int, db: AsyncSession = Depends(get_db)):
     charge = await db.get(OwnerCharge, charge_id)
     if not charge:
         raise HTTPException(404, f"Charge {charge_id} not found")
-    owner_name, property_name = await _enrich(db, charge)
-    return _charge_dict(charge, owner_name, property_name)
+    owner_name, property_name, vendor_name = await _enrich(db, charge)
+    return _charge_dict(charge, owner_name, property_name, vendor_name)
 
 
 @router.patch("/charges/{charge_id}")
@@ -306,11 +372,21 @@ async def update_charge(
     for field, value in updates.items():
         setattr(charge, field, value)  # type: ignore[arg-type]
 
+    # If vendor_amount or markup_percentage updated, recompute amount
+    if "vendor_amount" in updates or "markup_percentage" in updates:
+        va = charge.vendor_amount
+        mp = charge.markup_percentage
+        if va is not None:
+            factor = Decimal("1") + Decimal(str(mp)) / Decimal("100")
+            charge.amount = (Decimal(str(va)) * factor).quantize(  # type: ignore[assignment]
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+
     await db.commit()
     await db.refresh(charge)
-    owner_name, property_name = await _enrich(db, charge)
+    owner_name, property_name, vendor_name = await _enrich(db, charge)
     logger.info("owner_charge_updated", charge_id=charge_id, fields=list(updates.keys()))
-    return _charge_dict(charge, owner_name, property_name)
+    return _charge_dict(charge, owner_name, property_name, vendor_name)
 
 
 @router.post("/charges/{charge_id}/void")
@@ -338,6 +414,6 @@ async def void_charge(
     charge.void_reason = body.void_reason  # type: ignore[assignment]
     await db.commit()
     await db.refresh(charge)
-    owner_name, property_name = await _enrich(db, charge)
+    owner_name, property_name, vendor_name = await _enrich(db, charge)
     logger.info("owner_charge_voided", charge_id=charge_id, voided_by=user.email)
-    return _charge_dict(charge, owner_name, property_name)
+    return _charge_dict(charge, owner_name, property_name, vendor_name)

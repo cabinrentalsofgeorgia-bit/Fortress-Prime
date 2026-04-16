@@ -14,6 +14,7 @@ period to correct errors.
 """
 from __future__ import annotations
 
+import uuid as _uuid
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
@@ -28,6 +29,8 @@ from sqlalchemy import (
     Text,
     TIMESTAMP,
 )
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from backend.core.database import Base
@@ -132,6 +135,22 @@ class OwnerCharge(Base):
     amount          = Column(Numeric(12, 2), nullable=False)  # +ve = charge, -ve = credit
     reference_id    = Column(String(100), nullable=True)
     originating_work_order_id = Column(BigInteger, nullable=True)
+
+    # Vendor attribution + markup (I.1a, 2026-04-16)
+    # vendor_id is nullable — not all charges have a vendor (e.g. Statement Marker)
+    # markup_percentage defaults to 0.00 (no markup)
+    # amount = vendor_amount * (1 + markup_percentage / 100) when vendor_id is set
+    vendor_id         = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("vendors.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    markup_percentage = Column(Numeric(5, 2), nullable=False, default=0)
+    vendor_amount     = Column(Numeric(12, 2), nullable=True)
+
+    # Lazy relationship — load vendor when accessed
+    vendor = relationship("Vendor", foreign_keys=[vendor_id], lazy="select")
 
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     created_by = Column(String(255), nullable=False)

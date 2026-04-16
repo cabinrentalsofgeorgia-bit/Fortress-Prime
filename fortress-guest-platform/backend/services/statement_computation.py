@@ -106,6 +106,8 @@ class OwnerChargeLineItem(BaseModel):
     description: str
     amount: Decimal                    # positive = expense/charge, negative = credit
     reference_id: Optional[str] = None
+    # Vendor attribution (I.1a, 2026-04-16) — name embedded for PDF rendering
+    vendor_name: Optional[str] = None
 
     class Config:
         json_encoders = {Decimal: str}
@@ -367,6 +369,8 @@ async def _fetch_charges(
     period_end: date,
 ) -> "tuple[list[OwnerChargeLineItem], Decimal]":
     """Fetch non-voided owner charges and return (line_items, total)."""
+    from backend.models.vendor import Vendor  # local import avoids circular dep
+
     result = await db.execute(
         select(OwnerCharge)
         .where(
@@ -386,6 +390,13 @@ async def _fetch_charges(
             display = OwnerChargeType(ch.transaction_type).display_name
         except ValueError:
             display = str(ch.transaction_type)
+
+        # Resolve vendor name if linked (I.1a)
+        vendor_name: Optional[str] = None
+        if ch.vendor_id:
+            vendor = await db.get(Vendor, ch.vendor_id)
+            vendor_name = vendor.name if vendor else None
+
         items.append(OwnerChargeLineItem(
             posting_date=ch.posting_date,
             transaction_type=str(ch.transaction_type),
@@ -393,6 +404,7 @@ async def _fetch_charges(
             description=ch.description,
             amount=Decimal(str(ch.amount)),
             reference_id=ch.reference_id,
+            vendor_name=vendor_name,
         ))
         total += Decimal(str(ch.amount))
     return items, total

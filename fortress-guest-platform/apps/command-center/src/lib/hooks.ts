@@ -3583,6 +3583,32 @@ export function useVoidOwnerCharge() {
   });
 }
 
+// ── Vendors hook ─────────────────────────────────────────────────────────────
+
+export interface Vendor {
+  id: string;
+  name: string;
+  trade: string | null;
+  phone: string | null;
+  email: string | null;
+  active: boolean;
+  hourly_rate: number | null;
+}
+
+export interface VendorListResponse {
+  vendors: Vendor[];
+  total: number;
+}
+
+// List active vendors — GET /api/vendors?active_only=true
+export function useVendors(activeOnly = true) {
+  return useQuery<VendorListResponse>({
+    queryKey: ["vendors", activeOnly],
+    queryFn: () => api.get("/api/vendors", { active_only: activeOnly }),
+    staleTime: 300_000, // vendors rarely change; 5-min cache
+  });
+}
+
 // ── Owner Payout Accounts (OPA) list hook ─────────────────────────────────────
 
 export interface AdminOPA {

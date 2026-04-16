@@ -1780,6 +1780,11 @@ export interface OwnerCharge {
   description: string;
   amount: string; // Decimal as string
   reference_id: string | null;
+  // Vendor + markup fields (I.1a)
+  vendor_id: string | null;
+  vendor_name: string | null;
+  markup_percentage: string; // Decimal as string, default "0.00"
+  vendor_amount: string | null; // Decimal as string
   created_at: string | null;
   created_by: string;
   voided_at: string | null;
@@ -1807,8 +1812,12 @@ export interface CreateOwnerChargeRequest {
   posting_date: string;
   transaction_type: string;
   description: string;
-  amount: number;
+  amount?: number;             // required when no vendor; computed when vendor set
   reference_id?: string;
+  // Vendor + markup (I.1a)
+  vendor_id?: string;
+  markup_percentage?: number;  // default 0
+  vendor_amount?: number;
 }
 
 export interface UpdateOwnerChargeRequest {
