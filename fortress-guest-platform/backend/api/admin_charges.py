@@ -35,6 +35,7 @@ from backend.models.owner_payout import OwnerPayoutAccount
 from backend.models.property import Property
 from backend.models.staff import StaffUser
 from backend.models.vendor import Vendor
+from backend.services.owner_emails import send_owner_charge_notification
 
 logger = structlog.get_logger(service="admin_charges_api")
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
@@ -97,6 +98,9 @@ class OwnerChargeCreateRequest(BaseModel):
     vendor_id: Optional[_uuid_mod.UUID] = None
     markup_percentage: Decimal = Field(Decimal("0.00"), ge=0, le=100)
     vendor_amount: Optional[Decimal] = None
+
+    # Email notification flag (I.1b)
+    send_notification: bool = False
 
     @field_validator("amount")
     @classmethod
@@ -162,6 +166,8 @@ def _charge_dict(
     owner_name: Optional[str] = None,
     property_name: Optional[str] = None,
     vendor_name: Optional[str] = None,
+    notification_sent: Optional[bool] = None,
+    notification_error: Optional[str] = None,
 ) -> dict:
     return {
         "id": charge.id,
@@ -184,6 +190,9 @@ def _charge_dict(
         "voided_at": charge.voided_at.isoformat() if charge.voided_at else None,
         "voided_by": charge.voided_by,
         "void_reason": charge.void_reason,
+        # Notification fields — only present on create response when send_notification=True
+        **({"notification_sent": notification_sent, "notification_error": notification_error}
+           if notification_sent is not None else {}),
     }
 
 
@@ -286,8 +295,25 @@ async def create_charge(
         type=charge.transaction_type,
         vendor=vendor_name,
         markup=float(body.markup_percentage),
+        send_notification=body.send_notification,
     )
-    return _charge_dict(charge, owner_name, property_name, vendor_name)
+
+    # Fire email notification if requested (I.1b)
+    notification_sent: Optional[bool] = None
+    notification_error: Optional[str] = None
+    if body.send_notification:
+        try:
+            notification_sent = await send_owner_charge_notification(db, charge_id=charge.id)
+            if not notification_sent:
+                notification_error = "Email not sent — SMTP not configured or owner has no email"
+        except Exception as exc:
+            notification_sent = False
+            notification_error = str(exc)[:200]
+            logger.error("owner_charge_notification_error", charge_id=charge.id, error=notification_error)
+
+    return _charge_dict(charge, owner_name, property_name, vendor_name,
+                        notification_sent=notification_sent,
+                        notification_error=notification_error)
 
 
 @router.get("/charges")

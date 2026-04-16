@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   useAdminCharges,
   useCreateOwnerCharge,
@@ -51,6 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AlertTriangle, Loader2, PlusCircle, Pencil, Ban, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -125,6 +126,8 @@ function ChargeModal({ open, onClose, opas, vendors, existing }: ChargeModalProp
   const createMutation = useCreateOwnerCharge();
   const updateMutation = useUpdateOwnerCharge();
   const isLoading = createMutation.isPending || updateMutation.isPending;
+  // Tracks which button submitted the form (I.1b)
+  const sendNotifRef = useRef(false);
 
   // Derived: distinct trades and filtered vendor list
   const trades = useMemo(() => [...new Set(vendors.map((v) => v.trade).filter(Boolean))].sort() as string[], [vendors]);
@@ -153,6 +156,8 @@ function ChargeModal({ open, onClose, opas, vendors, existing }: ChargeModalProp
   function handleClose() { resetForm(); onClose(); }
 
   async function handleSubmit(e: React.FormEvent) {
+    const sendNotification = sendNotifRef.current;
+    sendNotifRef.current = false; // reset immediately
     e.preventDefault();
     setFormError(null);
 
@@ -191,6 +196,7 @@ function ChargeModal({ open, onClose, opas, vendors, existing }: ChargeModalProp
           transaction_type: txType,
           description: description.trim(),
           reference_id: referenceId.trim() || undefined,
+          send_notification: sendNotification,
           ...(showVendor && vendorId
             ? {
                 vendor_id: vendorId,
@@ -199,7 +205,19 @@ function ChargeModal({ open, onClose, opas, vendors, existing }: ChargeModalProp
               }
             : { amount: parseFloat(amount) }),
         };
-        await createMutation.mutateAsync(body);
+        const result = await createMutation.mutateAsync(body);
+
+        // Handle notification result toast (I.1b)
+        if (sendNotification) {
+          const ownerEmail = opas.find((o) => String(o.id) === opaId)?.owner_email ?? "owner";
+          if (result.notification_sent) {
+            toast.success(`Charge posted. Notification sent to ${ownerEmail}.`);
+          } else {
+            toast.warning(
+              `Charge posted but notification failed: ${result.notification_error ?? "unknown error"}. You can retry later.`
+            );
+          }
+        }
       }
       handleClose();
     } catch (err) {
@@ -385,11 +403,28 @@ function ChargeModal({ open, onClose, opas, vendors, existing }: ChargeModalProp
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />{formError}
             </p>
           )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={handleClose} disabled={isLoading}>Cancel</Button>
-            <Button type="submit" disabled={isLoading}>
+          <div className="flex justify-end gap-2 pt-2 flex-wrap">
+            <Button type="button" variant="ghost" onClick={handleClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            {!isEdit && (
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={isLoading}
+                onClick={() => { sendNotifRef.current = true; }}
+              >
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+                Email and Close
+              </Button>
+            )}
+            <Button
+              type="submit"
+              disabled={isLoading}
+              onClick={() => { sendNotifRef.current = false; }}
+            >
               {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-              {isEdit ? "Save Changes" : "Post Charge"}
+              {isEdit ? "Save Changes" : "Save and Close"}
             </Button>
           </div>
         </form>

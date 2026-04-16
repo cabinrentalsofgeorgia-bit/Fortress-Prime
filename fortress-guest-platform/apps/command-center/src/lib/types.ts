@@ -1790,6 +1790,9 @@ export interface OwnerCharge {
   voided_at: string | null;
   voided_by: string | null;
   void_reason: string | null;
+  // Email notification (I.1b) — only present on create response when send_notification=true
+  notification_sent?: boolean;
+  notification_error?: string | null;
 }
 
 /** Response from GET /api/admin/payouts/charges */
@@ -1818,6 +1821,8 @@ export interface CreateOwnerChargeRequest {
   vendor_id?: string;
   markup_percentage?: number;  // default 0
   vendor_amount?: number;
+  // Email notification (I.1b)
+  send_notification?: boolean;
 }
 
 export interface UpdateOwnerChargeRequest {

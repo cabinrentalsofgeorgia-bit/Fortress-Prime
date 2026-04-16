@@ -1,7 +1,8 @@
 """
 Owner Email Notifications
 ==========================
-  1. booking_alert  — sent to the property owner when a new reservation is confirmed
+  1. booking_alert         — sent to the property owner when a new reservation is confirmed
+  2. charge_notification   — sent when a charge is posted (I.1b, 2026-04-16)
 
 The monthly statement email was removed in Phase 1.5 of the Area 2 gap remediation
 (2026-04-14). It used a hardcoded 65% owner split which was incorrect — rates are
@@ -132,6 +133,124 @@ async def send_booking_alert(
         confirmation_code=confirmation_code,
         property_id=property_id,
     )
+    return sent
+
+
+async def send_owner_charge_notification(
+    db: AsyncSession,
+    *,
+    charge_id: int,
+) -> bool:
+    """
+    Send a plain-text notification to the owner when a charge is posted.
+
+    Returns True if email was dispatched.
+    Returns False (never raises) if:
+      - OPA has no email
+      - SMTP not configured
+      - send_email fails
+
+    I.1b, 2026-04-16. No portal link (portal has no statement view yet).
+    """
+    if not is_email_configured():
+        logger.warning("owner_charge_notification_skipped", reason="smtp_not_configured", charge_id=charge_id)
+        return False
+
+    # Load charge + OPA + property + optional vendor via raw SQL (async-safe)
+    charge_result = await db.execute(text("""
+        SELECT
+            oc.id,
+            oc.posting_date,
+            oc.transaction_type,
+            oc.description,
+            oc.amount,
+            oc.reference_id,
+            oc.vendor_id,
+            oc.vendor_amount,
+            oc.markup_percentage,
+            opa.owner_name,
+            opa.owner_email,
+            opa.property_id
+        FROM owner_charges oc
+        JOIN owner_payout_accounts opa ON opa.id = oc.owner_payout_account_id
+        WHERE oc.id = :charge_id
+    """), {"charge_id": charge_id})
+    row = charge_result.fetchone()
+
+    if row is None:
+        logger.warning("owner_charge_notification_skipped", reason="charge_not_found", charge_id=charge_id)
+        return False
+
+    if not row.owner_email:
+        logger.info("owner_charge_notification_skipped", reason="no_owner_email", charge_id=charge_id)
+        return False
+
+    # Resolve property name
+    prop_result = await db.execute(text(
+        "SELECT name FROM properties WHERE id::text = :pid LIMIT 1"
+    ), {"pid": str(row.property_id)})
+    prop_row = prop_result.fetchone()
+    property_name = prop_row.name if prop_row else "Your Property"
+
+    # Resolve vendor name (if linked)
+    vendor_name: str = ""
+    if row.vendor_id:
+        v_result = await db.execute(text(
+            "SELECT name FROM vendors WHERE id = :vid LIMIT 1"
+        ), {"vid": row.vendor_id})
+        v_row = v_result.fetchone()
+        if v_row:
+            vendor_name = v_row.name
+
+    # Format transaction type for display
+    try:
+        from backend.models.owner_charge import OwnerChargeType
+        tx_display = OwnerChargeType(row.transaction_type).display_name
+    except ValueError:
+        tx_display = str(row.transaction_type).replace("_", " ").title()
+
+    vendor_line = f"Vendor: {vendor_name}\n" if vendor_name else ""
+    ref_line = f"Reference: {row.reference_id}\n" if row.reference_id else ""
+
+    subject = f"Owner Charge Posted — {property_name}"
+
+    text_body = (
+        f"A new charge has been posted to your owner account.\n\n"
+        f"Property:          {property_name}\n"
+        f"Posted Date:       {row.posting_date.strftime('%B %d, %Y')}\n"
+        f"Transaction Type:  {tx_display}\n"
+        f"Description:       {row.description}\n"
+        f"{vendor_line}"
+        f"{ref_line}"
+        f"Amount:            ${float(row.amount):,.2f}\n\n"
+        f"This charge will appear on your next owner statement.\n"
+        f"If you have questions, please contact us.\n\n"
+        f"—\nCabin Rentals of Georgia\n"
+    )
+
+    # Plain-text HTML (preserves formatting in most email clients)
+    html_body = (
+        f"<pre style=\"font-family:monospace,monospace;font-size:14px;"
+        f"line-height:1.6;max-width:520px;\">{text_body}</pre>"
+    )
+
+    sent = send_email(row.owner_email, subject, html_body, text_body)
+
+    if sent:
+        logger.info(
+            "owner_charge_notification_sent",
+            charge_id=charge_id,
+            to=row.owner_email,
+            subject=subject,
+            property=property_name,
+        )
+    else:
+        logger.warning(
+            "owner_charge_notification_failed",
+            charge_id=charge_id,
+            to=row.owner_email,
+        )
+
     return sent
 
 

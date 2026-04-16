@@ -3540,6 +3540,8 @@ export function useAdminCharge(chargeId: number | null) {
 }
 
 // Create charge — POST /api/admin/payouts/charges
+// I.1b: when send_notification=true the response includes notification_sent + notification_error.
+// Callers that need the notification result should use the return value of mutateAsync().
 export function useCreateOwnerCharge() {
   const qc = useQueryClient();
   return useMutation<OwnerCharge, Error, CreateOwnerChargeRequest>({
@@ -3547,7 +3549,11 @@ export function useCreateOwnerCharge() {
     onSuccess: (_data) => {
       qc.invalidateQueries({ queryKey: ["admin-charges"] });
       qc.invalidateQueries({ queryKey: ["admin-statements"] });
-      toast.success("Charge created");
+      // When send_notification was used (I.1b), caller handles the toast via mutateAsync result.
+      // For plain save (no notification), fire the default toast here.
+      if (_data.notification_sent === undefined) {
+        toast.success("Charge created");
+      }
     },
     onError: (err) => toast.error(`Create charge failed: ${err.message}`),
   });

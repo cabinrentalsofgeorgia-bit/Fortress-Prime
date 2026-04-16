@@ -591,6 +591,16 @@ for the affected OPA+period automatically.
 - Migration: `i1a2_add_vendor_and_markup` (revises `i1a1_add_owner_charge_types`).
 - Same I.4 recompute gap: OBP stored `closing_balance` does not auto-update on charge post.
 
+### Email notifications (I.1b, 2026-04-16)
+
+- `POST /api/admin/payouts/charges` accepts `send_notification: bool` (default `false`)
+- When `true`, dispatches `send_owner_charge_notification()` (in `backend/services/owner_emails.py`) after successful charge create
+- Email: plain text, subject `"Owner Charge Posted — {property.name}"`; recipient: `OPA.owner_email`
+- Non-blocking: charge saves regardless of email result; 201 always returned
+- Response includes `notification_sent: bool` and `notification_error: str|null` when flag is set
+- Frontend: "Email and Close" button (secondary) alongside "Save and Close" in Post Charge modal
+- NO portal link (portal has no statement view yet), NO HTML email, NO retry/bounce handling
+
 ### File attachments
 
 NOT YET SUPPORTED. Deferred for future phase (I.2+). Requires storage + security design.
