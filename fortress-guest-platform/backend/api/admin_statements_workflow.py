@@ -126,7 +126,14 @@ class SendTestRequest(BaseModel):
     )
 
 
-def _period_dict(period: OwnerBalancePeriod) -> dict:
+_PAY_ENABLED_STATUSES = frozenset(["approved", "paid"])
+
+
+def _period_dict(period: OwnerBalancePeriod, *, stripe_account_id: Optional[str] = None) -> dict:
+    # pay_enabled: statement is both Stripe-ready AND in a payable lifecycle state.
+    # OPAs without stripe_account_id (secondary OPAs sharing a primary's Stripe account)
+    # will have pay_enabled=False until I.5 payout aggregation is implemented.
+    pay_enabled = bool(stripe_account_id and period.status in _PAY_ENABLED_STATUSES)
     return {
         "id": period.id,
         "owner_payout_account_id": period.owner_payout_account_id,
@@ -140,6 +147,7 @@ def _period_dict(period: OwnerBalancePeriod) -> dict:
         "total_payments": str(period.total_payments),
         "total_owner_income": str(period.total_owner_income),
         "status": period.status,
+        "pay_enabled": pay_enabled,
         "created_at": period.created_at.isoformat() if period.created_at else None,
         "updated_at": period.updated_at.isoformat() if period.updated_at else None,
         "approved_at": period.approved_at.isoformat() if period.approved_at else None,
@@ -156,6 +164,14 @@ def _period_dict(period: OwnerBalancePeriod) -> dict:
 def _workflow_error_to_http(exc: StatementWorkflowError) -> HTTPException:
     status = 404 if exc.code == "not_found" else 409
     return HTTPException(status_code=status, detail=exc.message)
+
+
+async def _stripe_id_for_period(db: AsyncSession, period: OwnerBalancePeriod) -> Optional[str]:
+    """Return stripe_account_id for the OPA that owns this period, or None."""
+    opa = await db.get(OwnerPayoutAccount, period.owner_payout_account_id)
+    if opa and opa.stripe_account_id:
+        return str(opa.stripe_account_id)
+    return None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -219,7 +235,24 @@ async def list_statements(
 
     result = await db.execute(q)
     periods = result.scalars().all()
-    return {"statements": [_period_dict(p) for p in periods], "total": len(periods)}
+
+    # Preload OPAs to populate pay_enabled without N+1 queries
+    opa_ids = {p.owner_payout_account_id for p in periods}
+    opa_map: dict[int, str | None] = {}
+    if opa_ids:
+        opa_result = await db.execute(
+            select(OwnerPayoutAccount).where(OwnerPayoutAccount.id.in_(opa_ids))
+        )
+        for opa in opa_result.scalars().all():
+            opa_map[int(opa.id)] = str(opa.stripe_account_id) if opa.stripe_account_id else None
+
+    return {
+        "statements": [
+            _period_dict(p, stripe_account_id=opa_map.get(int(p.owner_payout_account_id)))
+            for p in periods
+        ],
+        "total": len(periods),
+    }
 
 
 @router.get("/statements/{period_id}")
@@ -244,8 +277,9 @@ async def get_statement(period_id: int, db: AsyncSession = Depends(get_db)):
     except Exception as exc:
         line_items_data = {"error": str(exc)[:300]}
 
+    stripe_id = await _stripe_id_for_period(db, period)
     return {
-        "balance_period": _period_dict(period),
+        "balance_period": _period_dict(period, stripe_account_id=stripe_id),
         "statement": line_items_data,
     }
 
@@ -261,7 +295,8 @@ async def approve(
         period = await approve_statement(db, period_id, user.email)
     except StatementWorkflowError as exc:
         raise _workflow_error_to_http(exc)
-    return _period_dict(period)
+    stripe_id = await _stripe_id_for_period(db, period)
+    return _period_dict(period, stripe_account_id=stripe_id)
 
 
 @router.post("/statements/{period_id}/void")
@@ -276,7 +311,8 @@ async def void(
         period = await void_statement(db, period_id, body.reason, user.email)
     except StatementWorkflowError as exc:
         raise _workflow_error_to_http(exc)
-    return _period_dict(period)
+    stripe_id = await _stripe_id_for_period(db, period)
+    return _period_dict(period, stripe_account_id=stripe_id)
 
 
 @router.post("/statements/{period_id}/mark-paid")
@@ -293,7 +329,8 @@ async def mark_paid(
         )
     except StatementWorkflowError as exc:
         raise _workflow_error_to_http(exc)
-    return _period_dict(period)
+    stripe_id = await _stripe_id_for_period(db, period)
+    return _period_dict(period, stripe_account_id=stripe_id)
 
 
 @router.post("/statements/{period_id}/mark-emailed")
@@ -306,7 +343,8 @@ async def mark_emailed(
         period = await mark_statement_emailed(db, period_id)
     except StatementWorkflowError as exc:
         raise _workflow_error_to_http(exc)
-    return _period_dict(period)
+    stripe_id = await _stripe_id_for_period(db, period)
+    return _period_dict(period, stripe_account_id=stripe_id)
 
 
 # ── Phase E: PDF download ──────────────────────────────────────────────────────

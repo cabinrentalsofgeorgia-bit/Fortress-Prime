@@ -44,6 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  AlertTriangle,
   ArrowLeft,
   ChevronRight,
   Eye,
@@ -464,7 +465,17 @@ export default function AdminStatementsPage() {
                       {fmtDate(row.period_start)} → {fmtDate(row.period_end)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={row.status} />
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge status={row.status} />
+                        {!row.pay_enabled && (
+                          <span
+                            title="Statement ready to view but not payable: Stripe not connected for this property owner."
+                            className="inline-flex text-amber-500"
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {fmtCurrency(row.total_revenue)}

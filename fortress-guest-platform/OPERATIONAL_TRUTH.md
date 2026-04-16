@@ -516,7 +516,9 @@ opening_balance = |current_balance| - |period_net|
 - Gary Knight (OPA 1826) × Cherokee Sunrise (sl unit 306758): opening $64,822.71 / closing $64,822.71 (no March reservations) → `h2_opening_balance_commit.sql`
 - Gary Knight (OPA 1827) × Serendipity (sl unit 70222): opening $306,170.38 / closing $308,517.68 → `h2_opening_balance_commit.sql`
 
-**Stripe multi-property constraint:** `uq_owner_payout_accounts_stripe_account_id` is UNIQUE. Gary's secondary OPAs (1826, 1827) have `stripe_account_id=NULL`. `generate_monthly_statements` filters `stripe_account_id IS NOT NULL` — use `h2_generate_obps.py` pattern (query by `streamline_owner_id`) for owners with secondary OPAs.
+**Stripe multi-property constraint:** `uq_owner_payout_accounts_stripe_account_id` is UNIQUE. Gary's secondary OPAs (1826, 1827) have `stripe_account_id=NULL`.
+
+**H.2a (2026-04-16): `generate_monthly_statements` no longer filters on `stripe_account_id IS NOT NULL`.** All active OPAs generate OBPs regardless of Stripe status. Stripe-readiness is surfaced via `pay_enabled` in OBP responses: `pay_enabled = stripe_account_id IS NOT NULL AND status IN (approved, paid)`. Secondary OPAs get `pay_enabled=False` until I.5 payout aggregation is implemented. The `compute_owner_statement` call in the generation loop also uses `require_stripe_enrollment=False`.
 
 **`require_stripe_enrollment` flag:** `compute_owner_statement` and `render_owner_statement_pdf` accept `require_stripe_enrollment=False` (H.2, 2026-04-16) to bypass the Stripe check for backfill/admin paths. API endpoints always use the default (`True`).
 

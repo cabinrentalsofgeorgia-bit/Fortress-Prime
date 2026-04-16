@@ -130,11 +130,12 @@ async def generate_monthly_statements(
     # The property_id on OwnerPayoutAccount is VARCHAR while properties.id is UUID,
     # so a direct SQLAlchemy join would need explicit casting. Query accounts first,
     # then resolve the property per-account inside the loop.
-    opa_result = await db.execute(
-        select(OwnerPayoutAccount).where(
-            OwnerPayoutAccount.stripe_account_id.isnot(None)
-        )
-    )
+    #
+    # H.2a (2026-04-16): removed stripe_account_id IS NOT NULL filter.
+    # OPAs without Stripe accounts (Cherokee, Serendipity secondary OPAs) now get
+    # OBPs generated normally. Stripe-readiness is surfaced at payout time (I.5),
+    # not statement-generation time.
+    opa_result = await db.execute(select(OwnerPayoutAccount))
     opas = opa_result.scalars().all()
 
     outcomes: list[StatementGenerationOutcome] = []
@@ -201,9 +202,13 @@ async def generate_monthly_statements(
                 skipped += 1
                 continue
 
-            # e. Compute the statement
+            # e. Compute the statement.
+            # require_stripe_enrollment=False: secondary OPAs (Cherokee, Serendipity)
+            # have stripe_account_id=NULL but must still get OBPs generated. Stripe
+            # readiness is surfaced via pay_enabled in responses, not here.
             stmt = await compute_owner_statement(
-                db, opa.id, period_start, period_end
+                db, opa.id, period_start, period_end,
+                require_stripe_enrollment=False,
             )
 
             # Update balance period totals from computed statement
