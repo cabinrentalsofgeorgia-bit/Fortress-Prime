@@ -642,6 +642,45 @@ Owner amount correct ($120.00 = $100 × 1.20): ✓ | Vendor name on PDF ("… �
 
 ---
 
+## Statement approval workflow (I.7, 2026-04-16)
+
+Statement lifecycle:
+```
+pending_approval → approved → emailed → paid
+          ↓            ↓          ↓
+        voided       voided     voided
+paid → read-only
+voided → read-only
+```
+
+**UI:** `/admin/statements` — status tabs (default: Pending Approval), per-row action buttons.  
+**Default filter:** Pending Approval (most actionable).
+
+### Per-row actions (status-driven)
+
+| Status | Actions |
+|---|---|
+| `draft` / `pending_approval` | Approve ✓ / Void ✗ / PDF ↓ / View → |
+| `approved` | Mark Emailed ✉ / Pay (disabled, I.5) / Void ✗ / PDF ↓ / View → |
+| `emailed` | Pay (disabled, I.5) / Void ✗ / PDF ↓ / View → |
+| `paid` | PDF ↓ / View → |
+| `voided` | PDF ↓ / View → |
+
+### Backend endpoints (G.2 era)
+- `POST /api/admin/payouts/statements/{id}/approve`
+- `POST /api/admin/payouts/statements/{id}/void` (requires `reason`)
+- `POST /api/admin/payouts/statements/{id}/mark-emailed`
+- `POST /api/admin/payouts/statements/{id}/mark-paid` (requires `payment_reference`)
+- `GET  /api/admin/payouts/statements/{id}/pdf`
+
+### Mark Emailed note
+`POST /mark-emailed` transitions status only (no actual email send). Full statement email to owner is deferred — `POST /statements/send-all` returns 501.
+
+### Pay button
+Visible on `approved` / `emailed` rows, always disabled until I.5 (Pay Owner) ships. `pay_enabled` field gates tooltip text.
+
+---
+
 ## How to use this doc
 
 - **Every Claude Code session reads this as Task 0** before any infrastructure-touching work.

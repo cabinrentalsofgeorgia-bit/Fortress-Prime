@@ -3,8 +3,12 @@
 import { useState } from "react";
 import {
   useAdminStatements,
+  useApproveStatement,
+  useVoidStatement,
+  useMarkStatementEmailed,
   useGenerateStatements,
 } from "@/lib/hooks";
+import { toast } from "sonner";
 import type {
   OwnerBalancePeriod,
   StatementListFilters,
@@ -43,13 +47,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertTriangle,
   ArrowLeft,
+  Ban,
+  CheckCircle2,
   ChevronRight,
+  Download,
   Eye,
   FileText,
   Loader2,
+  Mail,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
@@ -278,6 +287,198 @@ function GenerateModal({ open, onClose }: GenerateModalProps) {
   );
 }
 
+// ── Approve Dialog ────────────────────────────────────────────────────────────
+
+interface ApproveDialogProps { period: OwnerBalancePeriod | null; onClose: () => void; }
+
+function ApproveDialog({ period, onClose }: ApproveDialogProps) {
+  const approve = useApproveStatement();
+  if (!period) return null;
+  return (
+    <Dialog open={!!period} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            Approve Statement
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+            <div><span className="text-muted-foreground">OPA:</span> #{period.owner_payout_account_id}</div>
+            <div><span className="text-muted-foreground">Period:</span> {fmtDate(period.period_start)} → {fmtDate(period.period_end)}</div>
+            <div><span className="text-muted-foreground">Opening:</span> {fmtCurrency(period.opening_balance)} → Closing: {fmtCurrency(period.closing_balance)}</div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Approving confirms the statement is accurate. This transitions the statement from{" "}
+            <span className="font-medium text-amber-600">Pending Approval</span> to{" "}
+            <span className="font-medium text-emerald-600">Approved</span>.
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={approve.isPending}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={approve.isPending}
+              onClick={() => approve.mutate({ periodId: period.id }, { onSuccess: onClose })}
+            >
+              {approve.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Approving…</> : "Approve"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Void Dialog ───────────────────────────────────────────────────────────────
+
+interface VoidDialogProps { period: OwnerBalancePeriod | null; onClose: () => void; }
+
+function VoidDialog({ period, onClose }: VoidDialogProps) {
+  const [reason, setReason] = useState("");
+  const voidStmt = useVoidStatement();
+  if (!period) return null;
+
+  function handleClose() { setReason(""); onClose(); }
+
+  return (
+    <Dialog open={!!period} onOpenChange={(o) => !o && handleClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <Ban className="h-5 w-5" />
+            Void Statement
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+            <div><span className="text-muted-foreground">OPA:</span> #{period.owner_payout_account_id}</div>
+            <div><span className="text-muted-foreground">Period:</span> {fmtDate(period.period_start)} → {fmtDate(period.period_end)}</div>
+          </div>
+          <p className="text-sm text-muted-foreground">Voiding is irreversible. Provide a reason for the audit trail.</p>
+          <div className="space-y-1.5">
+            <Label>Reason <span className="text-red-500">*</span></Label>
+            <Textarea rows={2} maxLength={500} placeholder="Reason for voiding…"
+              value={reason} onChange={(e) => setReason(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={handleClose} disabled={voidStmt.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive" size="sm"
+              disabled={!reason.trim() || voidStmt.isPending}
+              onClick={() => voidStmt.mutate({ periodId: period.id, reason: reason.trim() }, { onSuccess: handleClose })}
+            >
+              {voidStmt.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Voiding…</> : "Void Statement"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Mark Emailed Dialog ───────────────────────────────────────────────────────
+
+interface MarkEmailedDialogProps { period: OwnerBalancePeriod | null; onClose: () => void; }
+
+function MarkEmailedDialog({ period, onClose }: MarkEmailedDialogProps) {
+  const markEmailed = useMarkStatementEmailed();
+  if (!period) return null;
+  return (
+    <Dialog open={!!period} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Mark Statement as Emailed
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+            <div><span className="text-muted-foreground">OPA:</span> #{period.owner_payout_account_id}</div>
+            <div><span className="text-muted-foreground">Period:</span> {fmtDate(period.period_start)} → {fmtDate(period.period_end)}</div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            This records the statement as emailed in the audit trail (status → Emailed).
+            Actual email delivery to the owner is handled separately.
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={markEmailed.isPending}>
+              Cancel
+            </Button>
+            <Button
+              size="sm" disabled={markEmailed.isPending}
+              onClick={() => markEmailed.mutate({ periodId: period.id }, { onSuccess: onClose })}
+            >
+              {markEmailed.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Updating…</> : "Mark as Emailed"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Per-row Actions ───────────────────────────────────────────────────────────
+
+function RowActions({
+  row,
+  onApprove,
+  onVoid,
+  onEmail,
+}: {
+  row: OwnerBalancePeriod;
+  onApprove: () => void;
+  onVoid: () => void;
+  onEmail: () => void;
+}) {
+  const s = row.status;
+  const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
+  return (
+    <div className="flex items-center justify-end gap-0.5">
+      {(s === "pending_approval" || s === "draft") && (
+        <Button size="sm" variant="ghost" className="h-7 px-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+          onClick={stop(onApprove)} title="Approve">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {s === "approved" && (
+        <Button size="sm" variant="ghost" className="h-7 px-1.5 text-teal-700 hover:text-teal-800"
+          onClick={stop(onEmail)} title="Mark Emailed">
+          <Mail className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {(s === "approved" || s === "emailed") && (
+        <Button size="sm" variant="ghost" className="h-7 px-1.5 text-muted-foreground cursor-not-allowed opacity-40"
+          disabled title={row.pay_enabled ? "Pay (I.5)" : "Pay — Stripe not connected (I.5)"}
+          onClick={(e) => e.stopPropagation()}>
+          <span className="text-xs font-medium">Pay</span>
+        </Button>
+      )}
+      {s !== "voided" && s !== "paid" && (
+        <Button size="sm" variant="ghost" className="h-7 px-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+          onClick={stop(onVoid)} title="Void">
+          <Ban className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      <a
+        href={`/api/admin/payouts/statements/${row.id}/pdf`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Button size="sm" variant="ghost" className="h-7 px-1.5" title="View PDF">
+          <Download className="h-3.5 w-3.5" />
+        </Button>
+      </a>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 const ALL_STATUSES: StatementPeriodStatus[] = [
@@ -286,10 +487,14 @@ const ALL_STATUSES: StatementPeriodStatus[] = [
 
 export default function AdminStatementsPage() {
   const router = useRouter();
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("pending_approval");
   const [filterStart, setFilterStart] = useState("");
   const [filterEnd, setFilterEnd] = useState("");
   const [showGenerate, setShowGenerate] = useState(false);
+  // Workflow dialog targets
+  const [approveTarget, setApproveTarget] = useState<OwnerBalancePeriod | null>(null);
+  const [voidTarget, setVoidTarget] = useState<OwnerBalancePeriod | null>(null);
+  const [emailTarget, setEmailTarget] = useState<OwnerBalancePeriod | null>(null);
 
   const filters: StatementListFilters = {
     ...(filterStatus !== "all" && { status: filterStatus }),
@@ -498,18 +703,27 @@ export default function AdminStatementsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/admin/statements/${row.id}`);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                        <ChevronRight className="h-3 w-3 ml-0.5 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center justify-end">
+                        <RowActions
+                          row={row}
+                          onApprove={() => setApproveTarget(row)}
+                          onVoid={() => setVoidTarget(row)}
+                          onEmail={() => setEmailTarget(row)}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-1.5 ml-0.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/admin/statements/${row.id}`);
+                          }}
+                          title="View detail"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <ChevronRight className="h-3 w-3 ml-0.5 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -520,6 +734,9 @@ export default function AdminStatementsPage() {
       </Card>
 
       <GenerateModal open={showGenerate} onClose={() => setShowGenerate(false)} />
+      <ApproveDialog period={approveTarget} onClose={() => setApproveTarget(null)} />
+      <VoidDialog period={voidTarget} onClose={() => setVoidTarget(null)} />
+      <MarkEmailedDialog period={emailTarget} onClose={() => setEmailTarget(null)} />
     </div>
   );
 }
