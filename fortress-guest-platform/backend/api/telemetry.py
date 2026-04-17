@@ -1181,6 +1181,146 @@ async def trigger_semrush_parity_observation(
 
 
 # ---------------------------------------------------------------------------
+# Checkout Parity Console — live parity_audits feed for Step 1 Telemetry Launch
+# ---------------------------------------------------------------------------
+
+class CheckoutParityAuditRow(BaseModel):
+    id: str
+    reservation_id: str
+    confirmation_id: str
+    local_total: float
+    streamline_total: float
+    delta: float
+    status: str
+    local_breakdown: dict = Field(default_factory=dict)
+    streamline_breakdown: dict = Field(default_factory=dict)
+    created_at: datetime | None = None
+
+
+class RevenueSplitSummary(BaseModel):
+    total_rent: float = 0.0
+    total_fees: float = 0.0
+    total_taxes: float = 0.0
+    total_deposits: float = 0.0
+    commissionable_total: float = 0.0
+    pass_through_total: float = 0.0
+
+
+class CheckoutParityPayload(BaseModel):
+    consecutive_confirmed: int
+    total_confirmed: int
+    total_discrepancy: int
+    target_gate: int = 100
+    gate_progress_pct: float
+    hermes_mode: str
+    recent_audits: list[CheckoutParityAuditRow]
+    revenue_split: RevenueSplitSummary
+    last_audit_at: datetime | None = None
+    system_status: str
+
+
+@router.get("/checkout-parity")
+async def checkout_parity_console(
+    _: StaffUser = Depends(RoleChecker([StaffRole.SUPER_ADMIN, StaffRole.MANAGER, StaffRole.REVIEWER])),
+    db: AsyncSession = Depends(get_db),
+    limit: int = 50,
+) -> CheckoutParityPayload:
+    from backend.models.parity_audit import ParityAudit
+
+    recent_q = (
+        select(ParityAudit)
+        .order_by(desc(ParityAudit.created_at))
+        .limit(limit)
+    )
+    result = await db.execute(recent_q)
+    rows = result.scalars().all()
+
+    total_q = select(
+        func.count().filter(ParityAudit.status == "confirmed").label("confirmed"),
+        func.count().filter(ParityAudit.status == "discrepancy").label("discrepancy"),
+    )
+    counts = (await db.execute(total_q)).one()
+    total_confirmed = counts.confirmed or 0
+    total_discrepancy = counts.discrepancy or 0
+
+    consecutive = 0
+    if rows:
+        for row in rows:
+            if row.status == "confirmed":
+                consecutive += 1
+            else:
+                break
+
+    rent_total = 0.0
+    fee_total = 0.0
+    tax_total = 0.0
+    deposit_total = 0.0
+    for row in rows:
+        breakdown = row.local_breakdown or {}
+        for item in breakdown.get("items", []):
+            item_type = (item.get("fee_type") or item.get("type") or "").lower()
+            amount = float(item.get("amount", 0))
+            if item_type == "rent":
+                rent_total += amount
+            elif item_type == "tax":
+                tax_total += amount
+            elif item_type == "deposit":
+                deposit_total += amount
+            else:
+                fee_total += amount
+
+    commissionable = rent_total
+    pass_through = fee_total + tax_total + deposit_total
+
+    gate_pct = min(100.0, (consecutive / 100) * 100) if consecutive >= 0 else 0.0
+    hermes_mode = "READ_ONLY" if not getattr(settings, "HERMES_EXECUTOR_ENABLED", False) else "EXECUTOR"
+
+    if total_discrepancy == 0 and total_confirmed > 0:
+        system_status = "NOMINAL"
+    elif total_discrepancy > 0 and consecutive >= 10:
+        system_status = "RECOVERING"
+    elif total_discrepancy > 0:
+        system_status = "ALERT"
+    else:
+        system_status = "AWAITING_DATA"
+
+    recent_audits = [
+        CheckoutParityAuditRow(
+            id=str(r.id),
+            reservation_id=str(r.reservation_id),
+            confirmation_id=r.confirmation_id,
+            local_total=float(r.local_total),
+            streamline_total=float(r.streamline_total),
+            delta=float(r.delta),
+            status=r.status,
+            local_breakdown=r.local_breakdown or {},
+            streamline_breakdown=r.streamline_breakdown or {},
+            created_at=r.created_at,
+        )
+        for r in rows
+    ]
+
+    return CheckoutParityPayload(
+        consecutive_confirmed=consecutive,
+        total_confirmed=total_confirmed,
+        total_discrepancy=total_discrepancy,
+        gate_progress_pct=gate_pct,
+        hermes_mode=hermes_mode,
+        recent_audits=recent_audits,
+        revenue_split=RevenueSplitSummary(
+            total_rent=round(rent_total, 2),
+            total_fees=round(fee_total, 2),
+            total_taxes=round(tax_total, 2),
+            total_deposits=round(deposit_total, 2),
+            commissionable_total=round(commissionable, 2),
+            pass_through_total=round(pass_through, 2),
+        ),
+        last_audit_at=rows[0].created_at if rows else None,
+        system_status=system_status,
+    )
+
+
+# ---------------------------------------------------------------------------
 # WebSocket: 1 Hz system health stream for Command Center (same payload as REST)
 # ---------------------------------------------------------------------------
 _SYSTEM_HEALTH_WS_INTERVAL_SEC = 1.0

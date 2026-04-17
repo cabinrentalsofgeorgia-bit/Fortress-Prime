@@ -74,7 +74,9 @@ async def stripe_webhook(
     if event_type == "payment_intent.succeeded":
         obj = event["data"]["object"]
         metadata = obj.get("metadata") or {}
-        if metadata.get("source") == "direct_booking_hold":
+        source = metadata.get("source", "")
+
+        if source == "direct_booking_hold":
             payment_intent_id = str(obj.get("id") or "").strip()
             meta_hold = metadata.get("hold_id") or metadata.get("reservation_hold_id")
             meta_hold = str(meta_hold).strip() if meta_hold else None
@@ -150,6 +152,15 @@ async def stripe_webhook(
                 )
             return {"status": "ok", "event_type": event_type}
 
+        if source == "storefront_checkout":
+            await _process_storefront_settlement(obj, metadata, db)
+            return {"status": "ok", "event_type": event_type}
+
+    if event_type == "invoice.paid":
+        invoice_obj = event["data"]["object"]
+        await _process_invoice_paid(invoice_obj, db)
+        return {"status": "ok", "event_type": event_type}
+
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
 
@@ -205,6 +216,130 @@ async def _process_guest_quote_payment(
             "guest_quote_webhook_processing_failed",
             guest_quote_id=guest_quote_id,
             error=str(exc)[:300],
+        )
+
+
+async def _process_invoice_paid(
+    invoice_obj: dict,
+    db: AsyncSession,
+) -> None:
+    """
+    Handle ``invoice.paid`` — clear the Accounts Receivable trust entry
+    for a FinancialApproval invoice and stamp an immutable audit trail.
+
+    Idempotent: skips if the approval is not in ``approved`` status or
+    if the ``context_payload`` already contains a ``payment_cleared_at``
+    timestamp.
+    """
+    from datetime import datetime, timezone
+
+    from sqlalchemy import select
+
+    from backend.models.financial_approval import FinancialApproval
+    from backend.services.trust_ledger import post_invoice_clearing_entry
+
+    stripe_invoice_id = str(invoice_obj.get("id", "")).strip()
+    if not stripe_invoice_id:
+        return
+
+    metadata = invoice_obj.get("metadata") or {}
+    source = metadata.get("source", "")
+    if source != "financial_approval_invoice":
+        return
+
+    try:
+        result = await db.execute(
+            select(FinancialApproval).where(
+                FinancialApproval.stripe_invoice_id == stripe_invoice_id,
+            )
+        )
+        approval = result.scalars().first()
+
+        if approval is None:
+            approval_id_from_meta = metadata.get("approval_id", "")
+            if approval_id_from_meta:
+                from uuid import UUID
+
+                result = await db.execute(
+                    select(FinancialApproval).where(
+                        FinancialApproval.id == UUID(approval_id_from_meta),
+                    )
+                )
+                approval = result.scalars().first()
+
+        if approval is None:
+            logger.warning(
+                "invoice_paid_approval_not_found",
+                stripe_invoice_id=stripe_invoice_id,
+                metadata=metadata,
+            )
+            return
+
+        existing_ctx = approval.context_payload or {}
+        if existing_ctx.get("payment_cleared_at"):
+            logger.info(
+                "invoice_paid_already_cleared",
+                stripe_invoice_id=stripe_invoice_id,
+                approval_id=str(approval.id),
+            )
+            return
+
+        amount_paid_cents = int(invoice_obj.get("amount_paid", 0))
+        if amount_paid_cents <= 0:
+            logger.warning(
+                "invoice_paid_zero_amount",
+                stripe_invoice_id=stripe_invoice_id,
+                approval_id=str(approval.id),
+            )
+            return
+
+        await post_invoice_clearing_entry(
+            db,
+            amount_cents=amount_paid_cents,
+            stripe_invoice_id=stripe_invoice_id,
+        )
+
+        now = datetime.now(timezone.utc)
+        receipt_url = str(
+            invoice_obj.get("hosted_invoice_url")
+            or invoice_obj.get("invoice_pdf")
+            or ""
+        )
+        charge_id = ""
+        charge_obj = invoice_obj.get("charge")
+        if isinstance(charge_obj, str):
+            charge_id = charge_obj
+        elif isinstance(charge_obj, dict):
+            charge_id = charge_obj.get("id", "")
+
+        updated_ctx = {
+            **existing_ctx,
+            "payment_cleared_at": now.isoformat(),
+            "payment_amount_cents": amount_paid_cents,
+            "stripe_receipt_url": receipt_url,
+            "stripe_charge_id": charge_id,
+            "stripe_invoice_status": str(invoice_obj.get("status", "")),
+            "cleared_by": "stripe_invoice_paid_webhook",
+        }
+        approval.context_payload = updated_ctx
+
+        await db.commit()
+
+        logger.info(
+            "invoice_paid_ledger_cleared",
+            approval_id=str(approval.id),
+            stripe_invoice_id=stripe_invoice_id,
+            amount_paid_cents=amount_paid_cents,
+            reservation_id=approval.reservation_id,
+            receipt_url=receipt_url,
+        )
+
+    except Exception as exc:
+        await db.rollback()
+        logger.error(
+            "invoice_paid_processing_failed",
+            stripe_invoice_id=stripe_invoice_id,
+            error=str(exc)[:400],
         )
 
 
@@ -400,3 +535,250 @@ async def _process_capital_call_funding(
             staging_id=staging_id,
             error=str(exc),
         )
+
+
+# ---------------------------------------------------------------------------
+# Storefront Checkout → Reservation + Streamline Write-Back
+# ---------------------------------------------------------------------------
+
+
+async def _process_storefront_settlement(
+    payment_object: dict,
+    metadata: dict,
+    db: AsyncSession,
+) -> None:
+    """
+    Handle payment_intent.succeeded for storefront_checkout source.
+
+    1. Find-or-create the Guest record
+    2. Create a confirmed Reservation via ReservationEngine
+    3. Optionally bridge to Streamline if settlement bridge is enabled
+    """
+    from datetime import date as date_type
+    from decimal import Decimal
+    from uuid import UUID
+
+    from sqlalchemy import select
+
+    from backend.models.guest import Guest
+    from backend.services.reservation_engine import ReservationEngine
+
+    payment_intent_id = str(payment_object.get("id", "")).strip()
+    amount_cents = int(payment_object.get("amount_received") or payment_object.get("amount", 0))
+    guest_email = metadata.get("guest_email", "").strip()
+    guest_name = metadata.get("guest_name", "").strip()
+    phone = metadata.get("phone", "").strip()
+    property_id_str = metadata.get("property_id", "").strip()
+    arrival_str = metadata.get("arrival", "")
+    departure_str = metadata.get("departure", "")
+    adults = int(metadata.get("adults", 2))
+    children = int(metadata.get("children", 0))
+    pets = int(metadata.get("pets", 0))
+
+    if not property_id_str or not arrival_str or not departure_str:
+        logger.warning(
+            "storefront_settlement_missing_metadata",
+            payment_intent_id=payment_intent_id,
+            metadata=metadata,
+        )
+        return
+
+    property_id = UUID(property_id_str)
+    check_in = date_type.fromisoformat(arrival_str)
+    check_out = date_type.fromisoformat(departure_str)
+
+    existing = await db.execute(
+        text(
+            "SELECT id FROM reservations "
+            "WHERE price_breakdown->>'stripe_payment_intent_id' = :pi "
+            "LIMIT 1"
+        ),
+        {"pi": payment_intent_id},
+    )
+    if existing.scalar() is not None:
+        logger.info(
+            "storefront_settlement_already_processed",
+            payment_intent_id=payment_intent_id,
+        )
+        return
+
+    guest_result = await db.execute(
+        select(Guest).where(Guest.email == guest_email).limit(1)
+    )
+    guest = guest_result.scalars().first()
+
+    if guest is None:
+        name_parts = guest_name.split(" ", 1)
+        guest = Guest(
+            first_name=name_parts[0] if name_parts else "Guest",
+            last_name=name_parts[1] if len(name_parts) > 1 else "",
+            email=guest_email or f"storefront-{payment_intent_id[:8]}@placeholder.local",
+            phone_number=phone or "0000000000",
+        )
+        db.add(guest)
+        await db.flush()
+        logger.info(
+            "storefront_guest_created",
+            guest_id=str(guest.id),
+            email=guest_email,
+        )
+
+    total_amount = Decimal(str(amount_cents)) / Decimal("100")
+
+    engine = ReservationEngine()
+    try:
+        reservation = await engine.create_reservation(
+            db,
+            data={
+                "guest_id": guest.id,
+                "property_id": property_id,
+                "check_in_date": check_in,
+                "check_out_date": check_out,
+                "num_guests": adults + children,
+                "num_adults": adults,
+                "num_children": children,
+                "num_pets": pets,
+                "booking_source": "storefront_checkout",
+                "total_amount": total_amount,
+                "paid_amount": total_amount,
+                "balance_due": Decimal("0.00"),
+                "currency": "USD",
+                "internal_notes": f"Stripe PI: {payment_intent_id}",
+            },
+        )
+    except ValueError as exc:
+        logger.error(
+            "storefront_reservation_creation_failed",
+            payment_intent_id=payment_intent_id,
+            error=str(exc),
+        )
+        return
+
+    reservation.guest_email = guest_email
+    reservation.guest_name = guest_name
+    reservation.guest_phone = phone
+    reservation.price_breakdown = {
+        "stripe_payment_intent_id": payment_intent_id,
+        "amount_cents": amount_cents,
+        "source": "storefront_checkout",
+    }
+
+    from backend.api.storefront_checkout import retrieve_ledger_line_items, retrieve_tax_snapshot
+
+    tax_snap = await retrieve_tax_snapshot(payment_intent_id)
+    if tax_snap:
+        reservation.tax_breakdown = tax_snap
+        logger.info(
+            "tax_breakdown_persisted",
+            reservation_id=str(reservation.id),
+            payment_intent_id=payment_intent_id,
+        )
+
+    cached_items = await retrieve_ledger_line_items(payment_intent_id)
+    if cached_items:
+        reservation.price_breakdown = {
+            "stripe_payment_intent_id": payment_intent_id,
+            "amount_cents": amount_cents,
+            "source": "storefront_checkout",
+            "line_items": cached_items,
+        }
+        logger.info(
+            "ledger_line_items_persisted",
+            reservation_id=str(reservation.id),
+            item_count=len(cached_items),
+        )
+
+    reservation.security_deposit_required = pets > 0
+    if pets > 0:
+        reservation.security_deposit_amount = Decimal("250.00")
+        reservation.security_deposit_status = "pending"
+
+    from backend.services.trust_ledger import post_checkout_trust_entry
+
+    try:
+        await post_checkout_trust_entry(
+            db,
+            reservation_id=str(reservation.id),
+            amount_cents=amount_cents,
+            stripe_pi_id=payment_intent_id,
+        )
+        logger.info(
+            "trust_ledger_entry_posted",
+            reservation_id=str(reservation.id),
+            amount_cents=amount_cents,
+        )
+    except Exception as exc:
+        logger.warning(
+            "trust_ledger_entry_failed",
+            reservation_id=str(reservation.id),
+            error=str(exc)[:300],
+        )
+
+    await db.commit()
+
+    logger.info(
+        "storefront_reservation_confirmed",
+        payment_intent_id=payment_intent_id,
+        reservation_id=str(reservation.id),
+        confirmation_code=reservation.confirmation_code,
+        property_id=str(property_id),
+        total_amount=float(total_amount),
+    )
+
+    if settings.streamline_sovereign_bridge_settlement_enabled:
+        from backend.services.sovereign_inventory_manager import (
+            sovereign_inventory_manager,
+        )
+
+        try:
+            bridge = await sovereign_inventory_manager.finalize_legacy_reservation(
+                db,
+                reservation_id=reservation.id,
+                stripe_payment_intent_id=payment_intent_id,
+            )
+            logger.info(
+                "storefront_legacy_sync_attempt",
+                reservation_id=str(reservation.id),
+                legacy_notified=bridge.legacy_notified,
+                detail=bridge.detail,
+            )
+        except Exception as exc:
+            logger.warning(
+                "storefront_legacy_sync_deferred",
+                reservation_id=str(reservation.id),
+                error=str(exc)[:300],
+            )
+            qid = await sovereign_inventory_manager.queue_strike20_settlement_for_reconciliation(
+                db,
+                reservation_id=reservation.id,
+                stripe_payment_intent_id=payment_intent_id,
+                failure_reason=str(exc)[:500],
+            )
+            if qid > 0:
+                logger.info(
+                    "storefront_settlement_replay_queued",
+                    deferred_api_write_id=qid,
+                    reservation_id=str(reservation.id),
+                )
+
+            from backend.models.pending_sync import PendingSync
+            pending = PendingSync(
+                reservation_id=reservation.id,
+                property_id=property_id,
+                sync_type="create_reservation",
+                status="pending",
+                payload={
+                    "confirmation_code": reservation.confirmation_code,
+                    "stripe_payment_intent_id": payment_intent_id,
+                    "guest_email": guest_email,
+                    "check_in": str(check_in),
+                    "check_out": str(check_out),
+                    "amount_cents": amount_cents,
+                },
+            )
+            db.add(pending)
+            await db.commit()
+            logger.info(
+                "hermes_pending_sync_buffered",
+                reservation_id=str(reservation.id),
+            )

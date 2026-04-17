@@ -708,11 +708,32 @@ function SecurityDepositCard({
   onToggled: (resp: DepositToggleResponse) => void;
 }) {
   const [toggling, setToggling] = useState(false);
+  const [depositAction, setDepositAction] = useState<"initiate" | "capture" | "release" | null>(null);
 
   const isRequired = deposit?.is_required ?? false;
   const amount = deposit?.amount ?? 500;
   const status = deposit?.status ?? "none";
   const showPendingFlag = isRequired && status === "none";
+
+  const handleDepositAction = async (action: "initiate" | "capture" | "release") => {
+    if (!reservationId || depositAction) return;
+    setDepositAction(action);
+    try {
+      const resp = await api.post<{ security_deposit_status: string; stripe_pi?: string; amount?: number }>(
+        `/api/reservations/${reservationId}/deposit/${action}`
+      );
+      onToggled({
+        reservation_id: reservationId,
+        security_deposit_required: isRequired,
+        security_deposit_amount: resp.amount ?? amount,
+        security_deposit_status: resp.security_deposit_status,
+      } as DepositToggleResponse);
+    } catch {
+      // Error handled by api wrapper
+    } finally {
+      setDepositAction(null);
+    }
+  };
 
   const handleToggle = async () => {
     if (!reservationId || toggling) return;
@@ -783,17 +804,36 @@ function SecurityDepositCard({
               Card vaulted. {usd(amount)} hold will execute 24 hours prior to arrival.
             </p>
           )}
+          {(status === "none" || status === "pending" || status === "scheduled") && isRequired && (
+            <div className="pt-1">
+              <button
+                disabled={!!depositAction}
+                onClick={() => handleDepositAction("initiate")}
+                className="px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-400 border border-blue-500/30 text-xs font-medium hover:bg-blue-500/25 transition-colors disabled:opacity-50"
+              >
+                {depositAction === "initiate" ? "Initiating…" : "Initiate Hold"}
+              </button>
+            </div>
+          )}
           {status === "authorized" && (
             <div className="space-y-2">
               <p className="text-xs text-amber-400">
                 {usd(amount)} hold active on guest&apos;s card. Expires in 7 days from authorization.
               </p>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 text-xs font-medium hover:bg-red-500/25 transition-colors">
-                  Capture for Damage
+                <button
+                  disabled={!!depositAction}
+                  onClick={() => handleDepositAction("capture")}
+                  className="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 text-xs font-medium hover:bg-red-500/25 transition-colors disabled:opacity-50"
+                >
+                  {depositAction === "capture" ? "Capturing…" : "Capture for Damage"}
                 </button>
-                <button className="px-3 py-1.5 rounded-lg bg-zinc-700/50 text-zinc-400 border border-zinc-600/30 text-xs font-medium hover:bg-zinc-700 transition-colors">
-                  Release Hold
+                <button
+                  disabled={!!depositAction}
+                  onClick={() => handleDepositAction("release")}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-700/50 text-zinc-400 border border-zinc-600/30 text-xs font-medium hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                >
+                  {depositAction === "release" ? "Releasing…" : "Release Hold"}
                 </button>
               </div>
             </div>

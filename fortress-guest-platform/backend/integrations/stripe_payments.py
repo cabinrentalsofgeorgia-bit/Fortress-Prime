@@ -85,6 +85,115 @@ class StripePayments:
         intent = stripe.PaymentIntent.retrieve(payment_intent_id)
         return str(getattr(intent, "status", "") or "")
 
+    async def create_deposit_intent(
+        self,
+        customer_id: str,
+        amount_cents: int,
+        reservation_id: str,
+        description: str,
+    ) -> dict:
+        """
+        Create a manual-capture PaymentIntent for a security deposit hold.
+        The card is authorized (hold placed) but NOT charged until capture_deposit_intent().
+        setup_future_usage saves the payment method for subsequent off-session charges.
+        """
+        self._require_configured()
+        intent = stripe.PaymentIntent.create(
+            amount=amount_cents,
+            currency="usd",
+            customer=customer_id,
+            capture_method="manual",
+            setup_future_usage="off_session",
+            payment_method_types=["card"],
+            description=description,
+            metadata={
+                "reservation_id": reservation_id,
+                "purpose": "security_deposit",
+                "source": "fortress_deposit_flow",
+            },
+        )
+        logger.info(
+            "stripe_deposit_intent_created",
+            intent_id=intent.id,
+            amount_cents=amount_cents,
+            reservation_id=reservation_id,
+        )
+        return {
+            "payment_intent_id": intent.id,
+            "client_secret": intent.client_secret,
+            "status": intent.status,
+            "amount_cents": amount_cents,
+        }
+
+    async def capture_deposit_intent(self, payment_intent_id: str) -> dict:
+        """Capture an authorized deposit hold — charges the guest's card."""
+        self._require_configured()
+        intent = stripe.PaymentIntent.capture(payment_intent_id)
+        logger.info(
+            "stripe_deposit_captured",
+            intent_id=intent.id,
+            status=intent.status,
+            amount_received=intent.amount_received,
+        )
+        return {
+            "payment_intent_id": intent.id,
+            "status": intent.status,
+            "amount_captured": intent.amount_received,
+        }
+
+    async def cancel_deposit_intent(self, payment_intent_id: str) -> dict:
+        """Cancel an authorized deposit hold — releases the hold with no charge."""
+        self._require_configured()
+        intent = stripe.PaymentIntent.cancel(payment_intent_id)
+        logger.info(
+            "stripe_deposit_released",
+            intent_id=intent.id,
+            status=intent.status,
+        )
+        return {
+            "payment_intent_id": intent.id,
+            "status": intent.status,
+        }
+
+    async def charge_off_session(
+        self,
+        customer_id: str,
+        amount_cents: int,
+        description: str,
+        metadata: dict | None = None,
+    ) -> dict:
+        """
+        Create and immediately confirm a PaymentIntent off-session using the
+        customer's default saved payment method. Used for damage claim charges.
+        Returns payment_intent_id, status, and payment_method_id on success.
+        Raises stripe.error.CardError if the card declines.
+        """
+        self._require_configured()
+        intent = stripe.PaymentIntent.create(
+            amount=amount_cents,
+            currency="usd",
+            customer=customer_id,
+            confirm=True,
+            off_session=True,
+            payment_method_types=["card"],
+            description=description,
+            metadata=metadata or {},
+        )
+        pm_id = str(getattr(intent, "payment_method", "") or "")
+        logger.info(
+            "stripe_off_session_charge",
+            intent_id=intent.id,
+            amount_cents=amount_cents,
+            customer_id=customer_id,
+            status=intent.status,
+        )
+        return {
+            "payment_intent_id": intent.id,
+            "status": intent.status,
+            "payment_method_id": pm_id,
+            "amount_cents": amount_cents,
+        }
+
     async def create_moto_intent(
         self,
         amount_cents: int,
@@ -212,6 +321,89 @@ class StripePayments:
             "product_id": product.id,
             "price_id": price.id,
             "amount_cents": amount_cents,
+        }
+
+    async def get_or_create_customer(
+        self,
+        email: str,
+        name: str = "",
+        stripe_customer_id: str | None = None,
+    ) -> str:
+        """Return an existing Stripe Customer ID or create a new one."""
+        self._require_configured()
+
+        if stripe_customer_id:
+            try:
+                cust = stripe.Customer.retrieve(stripe_customer_id)
+                if not getattr(cust, "deleted", False):
+                    return cust.id
+            except stripe.error.InvalidRequestError:
+                pass
+
+        existing = stripe.Customer.list(email=email, limit=1)
+        if existing.data:
+            return existing.data[0].id
+
+        cust = stripe.Customer.create(email=email, name=name or email)
+        logger.info(
+            "stripe_customer_created",
+            customer_id=cust.id,
+            email=email,
+        )
+        return cust.id
+
+    async def create_invoice(
+        self,
+        customer_id: str,
+        amount_cents: int,
+        description: str,
+        reservation_id: str,
+        approval_id: str,
+    ) -> dict:
+        """
+        Create and send a Stripe Invoice for a parity discrepancy.
+
+        Returns ``{"invoice_id", "hosted_url", "amount_cents", "status"}``.
+        """
+        self._require_configured()
+
+        invoice = stripe.Invoice.create(
+            customer=customer_id,
+            collection_method="send_invoice",
+            days_until_due=7,
+            description=description,
+            metadata={
+                "reservation_id": reservation_id,
+                "approval_id": approval_id,
+                "source": "financial_approval_invoice",
+            },
+            auto_advance=True,
+        )
+
+        stripe.InvoiceItem.create(
+            customer=customer_id,
+            invoice=invoice.id,
+            amount=amount_cents,
+            currency="usd",
+            description=description,
+        )
+
+        finalized = stripe.Invoice.finalize_invoice(invoice.id)
+        stripe.Invoice.send_invoice(finalized.id)
+
+        logger.info(
+            "stripe_invoice_created_and_sent",
+            invoice_id=finalized.id,
+            amount_cents=amount_cents,
+            customer_id=customer_id,
+            reservation_id=reservation_id,
+            approval_id=approval_id,
+        )
+        return {
+            "invoice_id": finalized.id,
+            "hosted_url": finalized.hosted_invoice_url,
+            "amount_cents": amount_cents,
+            "status": finalized.status,
         }
 
     async def handle_webhook(self, payload: bytes, sig_header: str) -> dict:

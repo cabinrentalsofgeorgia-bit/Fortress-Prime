@@ -35,8 +35,17 @@ class Fee(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String(255), nullable=False, unique=True, index=True)
-    flat_amount = Column(Numeric(12, 2), nullable=False)
+    flat_amount = Column(Numeric(12, 2), nullable=False, server_default="0")
+    fee_type = Column(
+        String(20), nullable=False, server_default="flat",
+        doc="'flat' = flat_amount is the charge; 'percentage' = percentage_rate applied to pre-processing subtotal (rent + all flat fees)",
+    )
+    percentage_rate = Column(
+        Numeric(6, 3), nullable=True,
+        doc="Used when fee_type='percentage'. Rate in whole-number percent (e.g. 3.000 = 3%).",
+    )
     is_pet_fee = Column(Boolean, nullable=False, default=False, server_default="false")
+    is_optional = Column(Boolean, nullable=False, default=False, server_default="false")
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)

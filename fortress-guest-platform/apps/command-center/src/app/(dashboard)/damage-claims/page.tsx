@@ -7,6 +7,7 @@ import {
   useCreateDamageClaim,
   useGenerateLegalDraft,
   useApproveDamageClaim,
+  useChargeDamageClaim,
   useSendDamageClaim,
   useUpdateDamageClaim,
   useReservationOptions,
@@ -48,6 +49,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertTriangle,
   Camera,
+  CreditCard,
   FileText,
   Plus,
   Shield,
@@ -90,6 +92,9 @@ interface DamageClaim {
   inspection_date: string | null;
   resolution: string | null;
   resolution_amount: number | null;
+  stripe_charge_id?: string | null;
+  amount_charged?: number | null;
+  charge_executed_at?: string | null;
   created_at: string;
   confirmation_code?: string | null;
   check_in_date?: string | null;
@@ -158,6 +163,7 @@ export default function DamageClaimsPage() {
   const generateDraft = useGenerateLegalDraft();
   const approveClaim = useApproveDamageClaim();
   const sendClaim = useSendDamageClaim();
+  const chargeClaim = useChargeDamageClaim();
   const updateClaim = useUpdateDamageClaim();
   const { data: inspections } = useInspectionHistory({ limit: 25 });
   const { data: inspSummary } = useInspectionSummary();
@@ -171,6 +177,8 @@ export default function DamageClaimsPage() {
   const [activeTab, setActiveTab] = useState("claims");
   const [editingDescription, setEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState("");
+  const [showChargeModal, setShowChargeModal] = useState(false);
+  const [chargeAmount, setChargeAmount] = useState("");
 
   const claimsList = Array.isArray(claims) ? (claims as DamageClaim[]) : [];
   const claimStats = stats as ClaimStats | undefined;
@@ -963,6 +971,25 @@ export default function DamageClaimsPage() {
                         Mark Resolved
                       </Button>
                     )}
+                    {["approved", "sent", "resolved"].includes(selectedClaim.status) && !selectedClaim.stripe_charge_id && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setChargeAmount(String(selectedClaim.resolution_amount ?? selectedClaim.estimated_cost ?? ""));
+                          setShowChargeModal(true);
+                        }}
+                      >
+                        <CreditCard className="mr-1.5 h-4 w-4" />
+                        Charge Guest
+                      </Button>
+                    )}
+                    {selectedClaim.stripe_charge_id && (
+                      <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 px-2 py-1 text-xs font-mono">
+                        <CreditCard className="mr-1 h-3 w-3" />
+                        Charged ${selectedClaim.amount_charged?.toFixed(2)} · {selectedClaim.stripe_charge_id}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -970,6 +997,79 @@ export default function DamageClaimsPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Charge Guest Modal */}
+      <Dialog open={showChargeModal} onOpenChange={setShowChargeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-destructive" />
+              Charge Guest
+            </DialogTitle>
+          </DialogHeader>
+          {selectedClaim && (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">
+                This will immediately charge the guest&apos;s saved payment method off-session via Stripe. This action cannot be undone.
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="charge-amount">Charge Amount ($)</Label>
+                <Input
+                  id="charge-amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={chargeAmount}
+                  onChange={(e) => setChargeAmount(e.target.value)}
+                  placeholder="0.00"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Estimated cost: ${selectedClaim.estimated_cost?.toFixed(2) ?? "—"}
+                  {selectedClaim.resolution_amount ? ` · Resolution amount: $${selectedClaim.resolution_amount.toFixed(2)}` : ""}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setShowChargeModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={!chargeAmount || Number(chargeAmount) <= 0 || chargeClaim.isPending}
+                  onClick={() => {
+                    chargeClaim.mutate(
+                      { id: selectedClaim.id, amount: Number(chargeAmount), note: undefined },
+                      {
+                        onSuccess: (data) => {
+                          setShowChargeModal(false);
+                          if (data?.charged) {
+                            setSelectedClaim((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    stripe_charge_id: data.stripe_charge_id,
+                                    amount_charged: data.amount_charged,
+                                    charge_executed_at: new Date().toISOString(),
+                                  }
+                                : null
+                            );
+                          }
+                        },
+                      }
+                    );
+                  }}
+                >
+                  {chargeClaim.isPending ? (
+                    <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Charging…</>
+                  ) : (
+                    <><CreditCard className="mr-1.5 h-4 w-4" /> Confirm Charge</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
