@@ -10,6 +10,7 @@ import {
   useAdminApproveCapex,
   useAdminRejectCapex,
   useDispatchCapitalCall,
+  useAsyncJobArchivePrune,
   useChannexHealth,
   useChannexHistory,
   useChannexRemediation,
@@ -17,6 +18,7 @@ import {
   useOnboardOwner,
   useAdminMarketingBudgets,
   type AdminInsightItem,
+  type AsyncJobArchivePruneResult,
   type ChannexSyncResult,
   type ChannexHealthPropertyStatus,
   type ChannexHistoryItem,
@@ -26,6 +28,7 @@ import {
   type OnboardOwnerPayload,
   type OnboardOwnerResponse,
 } from "@/lib/hooks";
+import Link from "next/link";
 import { RoleGatedAction } from "@/components/access/role-gated-action";
 import { useAppStore } from "@/lib/store";
 import { canManageAdminOps, canManageContracts, canManageDisputes } from "@/lib/roles";
@@ -1756,6 +1759,18 @@ export default function AdminOperationsGlass() {
           ) : null}
         </div>
         <div className="flex gap-2">
+          <Link href="/admin/payouts">
+            <Button variant="outline">
+              <PiggyBank className="h-4 w-4 mr-2" />
+              Owner Payouts
+            </Button>
+          </Link>
+          <Link href="/admin/statements">
+            <Button variant="outline">
+              <FileText className="h-4 w-4 mr-2" />
+              Owner Statements
+            </Button>
+          </Link>
           <RoleGatedAction allowed={canOperate} reason="Admin role required.">
             <Button
               variant="outline"

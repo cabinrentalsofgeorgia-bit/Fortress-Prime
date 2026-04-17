@@ -82,6 +82,10 @@ class BookingRequest(BaseModel):
         default=None,
         description="First-party storefront session UUID (intent lane); used only after submit to bridge fingerprint → guest.",
     )
+    quote_ref: UUID | None = Field(
+        default=None,
+        description="GuestQuote.id from the /quote/[id] landing page. When present the quote is marked accepted and linked to the reservation after payment.",
+    )
 
     @field_validator("pets", mode="before")
     @classmethod
@@ -692,6 +696,7 @@ async def create_booking(body: BookingRequest, request: Request, db: AsyncSessio
             pets=body.pets,
             adults=body.adults,
             children=body.children,
+            quote_ref=body.quote_ref,
         )
     except BookingHoldError as exc:
         raise HTTPException(exc.status_code, exc.args[0]) from exc
@@ -739,6 +744,9 @@ async def create_booking(body: BookingRequest, request: Request, db: AsyncSessio
 @router.post("/confirm-hold")
 async def confirm_hold(body: ConfirmHoldRequest, db: AsyncSession = Depends(get_db)):
     """Finalize a hold into a confirmed reservation after Stripe reports success."""
+    import logging
+    _log = logging.getLogger("direct_booking.confirm_hold")
+
     try:
         hold_uuid = UUID(body.hold_id)
     except ValueError as exc:
@@ -750,6 +758,35 @@ async def confirm_hold(body: ConfirmHoldRequest, db: AsyncSession = Depends(get_
         raise HTTPException(exc.status_code, exc.args[0]) from exc
 
     reservation = outcome.reservation
+
+    # ── Link GuestQuote to reservation when quote_ref was present ────────────
+    # The quote_ref is stored inside the hold's quote_snapshot so it survives
+    # across the hold → reservation transition.
+    if not outcome.already_finalized:
+        try:
+            hold_row = await db.get(ReservationHold, hold_uuid)
+            quote_ref_str = (hold_row.quote_snapshot or {}).get("quote_ref") if hold_row else None
+            if quote_ref_str:
+                from backend.models.vrs_quotes import GuestQuote, GuestQuoteStatus
+                from datetime import datetime as _dt
+                gq = await db.get(GuestQuote, UUID(quote_ref_str))
+                if gq and gq.status == GuestQuoteStatus.PENDING:
+                    gq.status = GuestQuoteStatus.ACCEPTED
+                    gq.accepted_at = _dt.utcnow()
+                    gq.source_snapshot = {
+                        **(gq.source_snapshot or {}),
+                        "reservation_id": str(reservation.id),
+                        "confirmation_code": reservation.confirmation_code,
+                    }
+                    await db.commit()
+                    _log.info(
+                        "guest_quote_linked_to_reservation quote_ref=%s reservation_id=%s",
+                        quote_ref_str,
+                        reservation.id,
+                    )
+        except Exception as exc:
+            _log.warning("guest_quote_linkage_failed error=%s", exc)
+
     return {
         "reservation_id": str(reservation.id),
         "confirmation_code": reservation.confirmation_code,

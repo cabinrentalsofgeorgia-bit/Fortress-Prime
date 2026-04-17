@@ -141,7 +141,7 @@ function QueueRow({
         {item.inbound_message || "No inbound intelligence captured on ledger."}
       </p>
       <div className="mt-3 flex items-center justify-between gap-2 text-xs">
-        <span className="text-muted-foreground">{holdReasonLabel(item.hold_reason)}</span>
+        <span className="text-muted-foreground">{holdReasonLabel(item.hold_reason ?? undefined)}</span>
         <span className="font-medium text-foreground">
           {(item.consensus_conviction * 100).toFixed(2)}%
         </span>
@@ -400,7 +400,7 @@ export function VrsCommandCenter() {
                     Hold Reason
                   </p>
                   <p className="mt-2 text-sm font-medium">
-                    {holdReasonLabel(current?.hold_reason)}
+                    {holdReasonLabel(current?.hold_reason ?? undefined)}
                   </p>
                 </div>
                 <div className="rounded-lg border p-3">

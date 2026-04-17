@@ -270,9 +270,9 @@ class ResearchScoutService:
             },
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "tools": [{"google_search": {}}],
+            # Gemini rejects responseMimeType=application/json when google_search grounding is enabled.
             "generationConfig": {
                 "temperature": 0.2,
-                "responseMimeType": "application/json",
             },
         }
 

@@ -85,6 +85,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers,
     credentials: "include",
     redirect: "follow",
+    cache: "no-store",
   });
 
   if (res.status === 401) {

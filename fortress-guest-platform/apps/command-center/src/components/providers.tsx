@@ -7,6 +7,30 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 
+/** Registers after hydration so server/client HTML match (avoids extension-mutated <head> script mismatches). */
+function ChunkReloadListener() {
+  useEffect(() => {
+    let retried = false;
+    const onError = (e: ErrorEvent) => {
+      if (retried) return;
+      const msg = (e.message || "").toLowerCase();
+      const src = (e.filename || "").toLowerCase();
+      if (
+        msg.includes("loading chunk") ||
+        msg.includes("loading css chunk") ||
+        msg.includes("failed to fetch") ||
+        (src.includes("/_next/") && msg.includes("syntaxerror"))
+      ) {
+        retried = true;
+        window.location.reload();
+      }
+    };
+    window.addEventListener("error", onError);
+    return () => window.removeEventListener("error", onError);
+  }, []);
+  return null;
+}
+
 function NetworkBanner() {
   const [offline, setOffline] = useState(false);
 
@@ -61,6 +85,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <ChunkReloadListener />
         <NetworkBanner />
         {children}
         <Toaster richColors position="bottom-right" />

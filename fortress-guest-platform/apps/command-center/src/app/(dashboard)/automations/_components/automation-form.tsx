@@ -27,7 +27,6 @@ import { Save, FlaskConical, Loader2 } from "lucide-react";
 import { useCreateRule, useUpdateRule, useTestRule } from "@/lib/hooks";
 import { AutomationFormSchema } from "@/lib/schemas/automations";
 import type {
-  AutomationFormSubmitValues,
   AutomationFormValues,
 } from "@/lib/schemas/automations";
 import type { AutomationRule } from "@/lib/types";
@@ -129,9 +128,10 @@ export function AutomationForm({
     }
   }, [editingRule, reset]);
 
-  function onSubmit(data: AutomationFormSubmitValues) {
+  function onSubmit(data: AutomationFormValues) {
     const payload = {
       ...data,
+      is_active: data.is_active ?? false,
       conditions: {
         operator: data.conditions.operator,
         rules: data.conditions.rules.map((r) => ({
