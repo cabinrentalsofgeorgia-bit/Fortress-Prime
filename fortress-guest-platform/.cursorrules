@@ -48,4 +48,18 @@ Kills Mock Data: Rule #3 stops Cursor from generating components filled with con
 
 Protects the SEO Estate: Rule #4 forces the AI to recognize your legacy Drupal architecture. It will not accidentally overwrite your drupal_granular_blueprint.json logic or break the [...slug]/page.tsx catch-all route we just built.
 
-Shall I hold position while you drop this into the root of fortress-guest-platform, or are we pivoting straight back to executing the 70B Bulk SEO Generation run?
+## CRITICAL: SOVEREIGN LEDGER & IMMUTABILITY LAWS
+
+These rules are non-negotiable. Violation will corrupt the financial audit trail and may trigger Postgres kernel-level exceptions that crash the calling transaction.
+
+### NO MUTATION
+The `trust_transactions` and `trust_ledger_entries` tables are **strictly append-only**. Postgres `BEFORE UPDATE OR DELETE` triggers (`trg_immutable_trust_transactions`, `trg_immutable_trust_ledger_entries`) will `RAISE EXCEPTION` on any attempt to modify or remove rows. **Never** write ORM code, raw SQL, Alembic migration steps, or ad-hoc scripts that attempt to `UPDATE` or `DELETE` records in these tables. The database kernel will reject it. If you need to correct a ledger error, post a **reversal entry** (a new offsetting debit/credit pair) — never mutate the original.
+
+### HASH CHAIN INTEGRITY
+Every new `TrustTransaction` is cryptographically signed using the SHA-256 hash of the previous transaction's signature via `_sign_transaction()` in `backend/services/trust_ledger.py`. The payload format is: `f"{prev_sig}|{txn.streamline_event_id}|{txn.id}|{txn.timestamp.isoformat()}"`. **Always** route financial entries through the posting functions in `backend/services/trust_ledger.py` (`post_checkout_trust_entry`, `post_invoice_clearing_entry`, `post_variance_trust_entry`). **Never** insert into `trust_transactions` or `trust_ledger_entries` manually or via raw SQL. Doing so will break the hash chain and trigger a `CRITICAL BREACH` alert from the Hermes daily auditor (`backend/workers/hermes_daily_auditor.py`).
+
+### IDEMPOTENCY FIRST
+Webhook handlers (Stripe in `backend/api/stripe_webhooks.py`, Streamline in `backend/api/reservation_webhooks.py`) must handle `sqlalchemy.exc.IntegrityError` on the `uq_trust_transactions_streamline_event_id` unique constraint gracefully. The trust ledger's `_add_trust_transaction_idempotent()` already does this — it catches the collision and returns the existing `TrustTransaction`. Webhook endpoints **must** interpret a duplicate-hit return as success and respond with **HTTP 200 OK** to prevent Stripe/Streamline retry storms. Never re-raise `IntegrityError` from an idempotent trust posting path.
+
+### ZERO TRUST: STRIPE IS THE SOURCE OF TRUTH FOR FUNDS
+**Stripe** is the absolute, authoritative source of truth for all guest payment transactions. Trust ledger entries for guest payments (`post_checkout_trust_entry`, `post_invoice_clearing_entry`) are triggered **exclusively** by Stripe webhook events (`payment_intent.succeeded`, `invoice.paid`). **Streamline** (the legacy PMS) is used only for: (1) payload vaulting to `StreamlinePayloadVault` for audit/reconciliation, (2) reservation metadata upserts, and (3) variance matching via the Hermes daily auditor. **Never** create trust ledger payment entries based on Streamline data alone.
