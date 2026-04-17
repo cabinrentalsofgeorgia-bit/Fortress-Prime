@@ -11,9 +11,29 @@ Each adapter implements a common interface for:
   - Message sync
   - iCal fallback for smaller channels
 
-NOTE: Airbnb, Vrbo, and Booking.com APIs require partnership applications.
-These adapters are implemented against their documented API specs and will
-work once credentials are provisioned.
+DEPRECATION NOTICE (2026-04-14)
+--------------------------------
+These OTA-direct adapters (AirbnbAdapter, VrboAdapter, BookingComAdapter) are
+DEPRECATED and are NOT the canonical channel distribution layer.
+
+The canonical channel layer is Channex (staging.channex.io) which handles
+Airbnb, VRBO, and Booking.com distribution via its aggregator API. All
+availability and rate pushes go through:
+  - backend/services/channex_ari.py        — ARI push (availability + rates)
+  - backend/workers/channex_egress.py      — Kafka consumer driving ARI sync
+  - backend/api/channels.py                — REST endpoints backed by Channex
+  - backend/services/channex_sync.py       — Property mapping management
+
+These direct-OTA adapters remain in the codebase as scaffolding for a future
+direct-API path (once OTA partner credentials are provisioned) but their
+push_availability and push_rates methods now raise NotImplementedError rather
+than silently returning {"status": "pushed"} without doing any work.
+
+The iCal adapter (ICalAdapter) is still functional and used directly.
+
+To fully replace: set AIRBNB_CLIENT_ID/SECRET, VRBO_API_KEY/SECRET,
+BOOKINGCOM_USERNAME/PASSWORD in .env, then implement real HTTP calls in each
+adapter's push methods.
 """
 
 import os
@@ -88,26 +108,28 @@ class AirbnbAdapter(ChannelAdapter):
 
     async def push_availability(self, property_id, listing_id, dates):
         if not self.configured:
-            return {"status": "skipped", "reason": "airbnb_not_configured"}
-
-        calendar_ops = []
-        for d in dates:
-            calendar_ops.append({
-                "listing_id": listing_id,
-                "dates": [d["date"]],
-                "availability": "available" if d.get("available", True) else "unavailable",
-                "min_nights": d.get("min_nights", 1),
-            })
-
-        logger.info("airbnb_availability_push", listing_id=listing_id, dates=len(dates))
-        return {"status": "pushed", "channel": "airbnb", "listing_id": listing_id, "dates_pushed": len(dates)}
+            raise NotImplementedError(
+                "AirbnbAdapter.push_availability: AIRBNB_CLIENT_ID and "
+                "AIRBNB_CLIENT_SECRET are not configured. Use Channex "
+                "(channex_ari.py) for availability distribution instead."
+            )
+        raise NotImplementedError(
+            "AirbnbAdapter.push_availability: Direct Airbnb API integration "
+            "is not yet implemented. Availability is distributed via Channex. "
+            "To implement: wire Airbnb Connectivity API calendar batch update."
+        )
 
     async def push_rates(self, property_id, listing_id, rates):
         if not self.configured:
-            return {"status": "skipped", "reason": "airbnb_not_configured"}
-
-        logger.info("airbnb_rate_push", listing_id=listing_id, rates=len(rates))
-        return {"status": "pushed", "channel": "airbnb", "listing_id": listing_id, "rates_pushed": len(rates)}
+            raise NotImplementedError(
+                "AirbnbAdapter.push_rates: AIRBNB_CLIENT_ID and "
+                "AIRBNB_CLIENT_SECRET are not configured. Use Channex "
+                "(channex_ari.py) for rate distribution instead."
+            )
+        raise NotImplementedError(
+            "AirbnbAdapter.push_rates: Direct Airbnb API integration "
+            "is not yet implemented. Rates are distributed via Channex."
+        )
 
     async def fetch_reservations(self, listing_id, start_date=None, end_date=None):
         if not self.configured:
@@ -158,15 +180,25 @@ class VrboAdapter(ChannelAdapter):
 
     async def push_availability(self, property_id, listing_id, dates):
         if not self.configured:
-            return {"status": "skipped", "reason": "vrbo_not_configured"}
-        logger.info("vrbo_availability_push", listing_id=listing_id, dates=len(dates))
-        return {"status": "pushed", "channel": "vrbo", "listing_id": listing_id, "dates_pushed": len(dates)}
+            raise NotImplementedError(
+                "VrboAdapter.push_availability: VRBO_API_KEY and VRBO_API_SECRET "
+                "are not configured. Use Channex (channex_ari.py) instead."
+            )
+        raise NotImplementedError(
+            "VrboAdapter.push_availability: Direct VRBO/Expedia API integration "
+            "is not yet implemented. Availability is distributed via Channex."
+        )
 
     async def push_rates(self, property_id, listing_id, rates):
         if not self.configured:
-            return {"status": "skipped", "reason": "vrbo_not_configured"}
-        logger.info("vrbo_rate_push", listing_id=listing_id, rates=len(rates))
-        return {"status": "pushed", "channel": "vrbo", "listing_id": listing_id, "rates_pushed": len(rates)}
+            raise NotImplementedError(
+                "VrboAdapter.push_rates: VRBO_API_KEY and VRBO_API_SECRET "
+                "are not configured. Use Channex (channex_ari.py) instead."
+            )
+        raise NotImplementedError(
+            "VrboAdapter.push_rates: Direct VRBO/Expedia API integration "
+            "is not yet implemented. Rates are distributed via Channex."
+        )
 
     async def fetch_reservations(self, listing_id, start_date=None, end_date=None):
         if not self.configured:
@@ -203,15 +235,25 @@ class BookingComAdapter(ChannelAdapter):
 
     async def push_availability(self, property_id, listing_id, dates):
         if not self.configured:
-            return {"status": "skipped", "reason": "booking_com_not_configured"}
-        logger.info("bookingcom_availability_push", listing_id=listing_id, dates=len(dates))
-        return {"status": "pushed", "channel": "booking_com", "listing_id": listing_id, "dates_pushed": len(dates)}
+            raise NotImplementedError(
+                "BookingComAdapter.push_availability: BOOKINGCOM_USERNAME and "
+                "BOOKINGCOM_PASSWORD are not configured. Use Channex instead."
+            )
+        raise NotImplementedError(
+            "BookingComAdapter.push_availability: Direct Booking.com API integration "
+            "is not yet implemented. Availability is distributed via Channex."
+        )
 
     async def push_rates(self, property_id, listing_id, rates):
         if not self.configured:
-            return {"status": "skipped", "reason": "booking_com_not_configured"}
-        logger.info("bookingcom_rate_push", listing_id=listing_id, rates=len(rates))
-        return {"status": "pushed", "channel": "booking_com", "listing_id": listing_id, "rates_pushed": len(rates)}
+            raise NotImplementedError(
+                "BookingComAdapter.push_rates: BOOKINGCOM_USERNAME and "
+                "BOOKINGCOM_PASSWORD are not configured. Use Channex instead."
+            )
+        raise NotImplementedError(
+            "BookingComAdapter.push_rates: Direct Booking.com API integration "
+            "is not yet implemented. Rates are distributed via Channex."
+        )
 
     async def fetch_reservations(self, listing_id, start_date=None, end_date=None):
         if not self.configured:
