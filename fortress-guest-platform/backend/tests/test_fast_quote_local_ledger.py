@@ -9,7 +9,11 @@ import uuid
 import pytest
 
 from backend.models.pricing import QuoteRequest
-from backend.services.pricing_service import PricingError, calculate_fast_quote
+from backend.services.pricing_service import (
+    PricingError,
+    _build_fee_line_items,
+    calculate_fast_quote,
+)
 from backend.services.quote_builder import LocalLedgerRentQuote
 
 
@@ -33,7 +37,15 @@ async def test_calculate_fast_quote_uses_local_ledger_breakdown() -> None:
         )
     )
     tax = SimpleNamespace(name="Fannin County Lodging Tax", percentage_rate=Decimal("12.00"))
-    fee = SimpleNamespace(name="Standard Cleaning Fee", flat_amount=Decimal("150.00"), is_pet_fee=False)
+    fee = SimpleNamespace(
+        id=uuid.uuid4(),
+        name="Standard Cleaning Fee",
+        flat_amount=Decimal("150.00"),
+        is_pet_fee=False,
+        is_optional=False,
+        fee_type="flat",
+        percentage_rate=None,
+    )
 
     with patch(
         "backend.services.pricing_service.SovereignYieldAuthority.validate_stay_constraints",
@@ -61,6 +73,14 @@ async def test_calculate_fast_quote_uses_local_ledger_breakdown() -> None:
         "backend.services.pricing_service._load_applicable_fees",
         new_callable=AsyncMock,
         return_value=[fee],
+    ), patch(
+        "backend.services.pricing_service._load_optional_fee_ids",
+        new_callable=AsyncMock,
+        return_value=set(),
+    ), patch(
+        "backend.services.pricing_service._load_active_learned_rules",
+        new_callable=AsyncMock,
+        return_value=[],
     ):
         response = await calculate_fast_quote(request, db)
 
@@ -109,7 +129,15 @@ async def test_calculate_fast_quote_applies_pricing_override_discount() -> None:
         created_at=None,
     )
     tax = SimpleNamespace(name="Fannin County Lodging Tax", percentage_rate=Decimal("12.00"))
-    fee = SimpleNamespace(name="Standard Cleaning Fee", flat_amount=Decimal("150.00"), is_pet_fee=False)
+    fee = SimpleNamespace(
+        id=uuid.uuid4(),
+        name="Standard Cleaning Fee",
+        flat_amount=Decimal("150.00"),
+        is_pet_fee=False,
+        is_optional=False,
+        fee_type="flat",
+        percentage_rate=None,
+    )
 
     with patch(
         "backend.services.pricing_service.SovereignYieldAuthority.validate_stay_constraints",
@@ -141,6 +169,14 @@ async def test_calculate_fast_quote_applies_pricing_override_discount() -> None:
         "backend.services.pricing_service._load_applicable_fees",
         new_callable=AsyncMock,
         return_value=[fee],
+    ), patch(
+        "backend.services.pricing_service._load_optional_fee_ids",
+        new_callable=AsyncMock,
+        return_value=set(),
+    ), patch(
+        "backend.services.pricing_service._load_active_learned_rules",
+        new_callable=AsyncMock,
+        return_value=[],
     ):
         response = await calculate_fast_quote(request, db)
 
@@ -185,3 +221,85 @@ async def test_calculate_fast_quote_raises_on_yield_violation() -> None:
     ):
         with pytest.raises(PricingError, match="blackout"):
             await calculate_fast_quote(request, db)
+
+
+def test_build_fee_line_items_excludes_optional_until_selected() -> None:
+    fid_m = uuid.uuid4()
+    fid_o = uuid.uuid4()
+    fee_mandatory = SimpleNamespace(
+        id=fid_m,
+        name="Standard Cleaning Fee",
+        flat_amount=Decimal("100.00"),
+        is_pet_fee=False,
+        is_optional=False,
+        fee_type="flat",
+        percentage_rate=None,
+    )
+    fee_optional = SimpleNamespace(
+        id=fid_o,
+        name="Firewood Bundle",
+        flat_amount=Decimal("50.00"),
+        is_pet_fee=False,
+        is_optional=True,
+        fee_type="flat",
+        percentage_rate=None,
+    )
+    items, total, _ = _build_fee_line_items(
+        pets=0,
+        fees=[fee_mandatory, fee_optional],
+        optional_fee_ids={str(fid_o)},
+        selected_optional_ids=set(),
+    )
+    assert total == Decimal("100.00")
+    assert len(items) == 1
+    assert items[0].description == "Standard Cleaning Fee"
+
+    items2, total2, _ = _build_fee_line_items(
+        pets=0,
+        fees=[fee_mandatory, fee_optional],
+        optional_fee_ids={str(fid_o)},
+        selected_optional_ids={str(fid_o)},
+    )
+    assert total2 == Decimal("150.00")
+    assert len(items2) == 2
+
+
+def test_build_fee_line_items_hard_intercept_check_in_without_optional_flag() -> None:
+    """Early/late check-in/out must not be mandatory even if ORM is_optional is false."""
+    fid_m = uuid.uuid4()
+    fid_early = uuid.uuid4()
+    fee_mandatory = SimpleNamespace(
+        id=fid_m,
+        name="Standard Cleaning Fee",
+        flat_amount=Decimal("100.00"),
+        is_pet_fee=False,
+        is_optional=False,
+        fee_type="flat",
+        percentage_rate=None,
+    )
+    fee_early = SimpleNamespace(
+        id=fid_early,
+        name="Early Check-In",
+        flat_amount=Decimal("75.00"),
+        is_pet_fee=False,
+        is_optional=False,
+        fee_type="flat",
+        percentage_rate=None,
+    )
+    items, total, _ = _build_fee_line_items(
+        pets=0,
+        fees=[fee_mandatory, fee_early],
+        optional_fee_ids=set(),
+        selected_optional_ids=set(),
+    )
+    assert total == Decimal("100.00")
+    assert all("Early" not in i.description for i in items)
+
+    items_sel, total_sel, _ = _build_fee_line_items(
+        pets=0,
+        fees=[fee_mandatory, fee_early],
+        optional_fee_ids=set(),
+        selected_optional_ids={str(fid_early)},
+    )
+    assert total_sel == Decimal("175.00")
+    assert any("Early Check-In" in i.description for i in items_sel)

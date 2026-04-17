@@ -111,6 +111,7 @@ async def test_finalize_legacy_reservation_dispatches_when_enabled() -> None:
     rid = uuid.uuid4()
     pid = uuid.uuid4()
     db = AsyncMock()
+    from decimal import Decimal
     reservation = SimpleNamespace(
         id=rid,
         property_id=pid,
@@ -119,6 +120,10 @@ async def test_finalize_legacy_reservation_dispatches_when_enabled() -> None:
         check_out_date=date(2026, 8, 5),
         guest_email="g@t.com",
         guest_name="Test Guest",
+        total_amount=Decimal("1500.00"),
+        paid_amount=Decimal("1500.00"),
+        num_guests=2,
+        pets=0,
     )
     prop = SimpleNamespace(streamline_property_id="77")
     db.get = AsyncMock(side_effect=[reservation, prop])
@@ -167,6 +172,7 @@ async def test_queue_strike20_settlement_for_reconciliation_enqueues_when_config
     rid = uuid.uuid4()
     pid = uuid.uuid4()
     db = AsyncMock()
+    from decimal import Decimal
     reservation = SimpleNamespace(
         id=rid,
         property_id=pid,
@@ -175,6 +181,10 @@ async def test_queue_strike20_settlement_for_reconciliation_enqueues_when_config
         check_out_date=date(2026, 9, 4),
         guest_email="g@t.com",
         guest_name="Guest",
+        total_amount=Decimal("1200.00"),
+        paid_amount=Decimal("1200.00"),
+        num_guests=2,
+        pets=0,
     )
     prop = SimpleNamespace(streamline_property_id="55")
     db.get = AsyncMock(side_effect=[reservation, prop])

@@ -29,14 +29,28 @@ class DummyResult:
 
 @pytest.mark.asyncio
 async def test_get_booking_property_includes_cached_availability() -> None:
+    """Verify the property endpoint surfaces cached blocked dates from the snapshot.
+
+    Uses the current month as anchor so the test is not sensitive to the calendar
+    date at runtime. The blocked range is always the 10th–12th of the current month.
+    """
     app = build_test_app()
     property_id = uuid.uuid4()
+
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    # Build a blocked range in the *current* month so get_property_availability_month
+    # (which defaults to the current month) will find and return those dates.
+    blocked_10 = date(today.year, today.month, 10)
+    blocked_11 = date(today.year, today.month, 11)
+    blocked_12 = date(today.year, today.month, 12)
+
     availability = build_property_availability_snapshot(
         property_id=str(property_id),
         property_slug="ridge-line-lodge",
-        blocked_ranges=[{"start_date": date(2026, 3, 10), "end_date": date(2026, 3, 12)}],
-        generated_at=datetime(2026, 3, 24, 12, 0, tzinfo=timezone.utc),
-        anchor_date=date(2026, 3, 24),
+        blocked_ranges=[{"start_date": blocked_10, "end_date": blocked_12}],
+        generated_at=now,
+        anchor_date=today,
     )
     property_record = SimpleNamespace(
         id=property_id,
@@ -73,4 +87,7 @@ async def test_get_booking_property_includes_cached_availability() -> None:
     payload = response.json()
     assert payload["availability"]["property_id"] == str(property_id)
     assert payload["availability"]["property_slug"] == "ridge-line-lodge"
-    assert payload["availability"]["blocked_dates"] == ["2026-03-10", "2026-03-11"]
+    assert payload["availability"]["blocked_dates"] == [
+        blocked_10.isoformat(),
+        blocked_11.isoformat(),
+    ]

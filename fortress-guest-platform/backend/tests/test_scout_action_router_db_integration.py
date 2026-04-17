@@ -224,6 +224,13 @@ async def test_router_preserves_seeded_targets_in_isolated_schema(
         "_ensure_pricing_signal",
         fake_ensure_pricing_signal,
     )
+    # Route findings opens its own session via async_session_maker; redirect it to
+    # the isolated schema so patches are visible in the verify session below.
+    monkeypatch.setattr(
+        scout_action_router_module,
+        "async_session_maker",
+        isolated_session_maker,
+    )
 
     fid = uuid.uuid4()
     seeded_property_id: uuid.UUID | None = None
@@ -251,7 +258,9 @@ async def test_router_preserves_seeded_targets_in_isolated_schema(
         db.add(
             IntelligenceLedgerEntry(
                 id=fid,
-                category="local_event",
+                # Use "content_gap" so _should_create_seo() returns True
+                # (LOCAL_EVENT_TERMS don't match "Strict Target Test" title/summary)
+                category="content_gap",
                 confidence_score=0.9,
                 title="Strict Target Test",
                 summary="Only target the seeded ID",
