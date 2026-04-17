@@ -67,6 +67,17 @@ from backend.models.seo_redirect import SeoRedirect
 from backend.models.seo_redirect_remap import SeoRedirectRemapQueue
 from backend.models.async_job import AsyncJobRun
 from backend.models.vrs_add_on import VRSAddOn, VRSAddOnPricingModel, VRSAddOnScope
+from backend.models.taylor_quote import TaylorQuoteRequest, TaylorQuoteStatus
+from backend.models.shadow_discrepancy import ShadowDiscrepancy
+from backend.models.learned_rule import LearnedRule
+from backend.models.streamline_payload_vault import StreamlinePayloadVault
+from backend.models.financial_approval import FinancialApproval
+from backend.models.channel_mapping import ChannelMapping
+from backend.models.cleaner import Cleaner
+from backend.models.vendor import Vendor
+from backend.models.owner_payout import OwnerPayoutAccount, OwnerStatementSend
+from backend.models.owner_balance_period import OwnerBalancePeriod, StatementPeriodStatus
+from backend.models.owner_charge import OwnerCharge, OwnerChargeType
 from backend.models.acquisition import (
     AcquisitionIntelEvent,
     AcquisitionOwner,
@@ -232,6 +243,8 @@ __all__ = [
     "VRSAddOn",
     "VRSAddOnPricingModel",
     "VRSAddOnScope",
+    "TaylorQuoteRequest",
+    "TaylorQuoteStatus",
     "AcquisitionIntelEvent",
     "AcquisitionOwner",
     "AcquisitionOwnerContact",
@@ -239,4 +252,21 @@ __all__ = [
     "AcquisitionPipeline",
     "AcquisitionProperty",
     "AcquisitionSTRSignal",
+    # Shadow Ledger
+    "ShadowDiscrepancy",
+    # Godhead Memory Ledger
+    "LearnedRule",
+    # Streamline Data Vault
+    "StreamlinePayloadVault",
+    # Financial Approval Queue
+    "FinancialApproval",
+    "ChannelMapping",
+    "Cleaner",
+    "Vendor",
+    "OwnerPayoutAccount",
+    "OwnerStatementSend",
+    "OwnerBalancePeriod",
+    "StatementPeriodStatus",
+    "OwnerCharge",
+    "OwnerChargeType",
 ]
