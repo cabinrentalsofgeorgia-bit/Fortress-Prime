@@ -36,8 +36,8 @@ SPARK_04_IP = os.getenv("SPARK_04_IP", "192.168.0.108")  # Sovereign — Swarm W
 
 # Fabric LAN (200G RoCEv2 NDR, MTU 9000) — compute-path only
 FABRIC_NODES = {
-    "captain":   {"mgmt": SPARK_01_IP, "fabric": os.getenv("FABRIC_CAPTAIN", "10.10.10.2")},
-    "muscle":    {"mgmt": SPARK_02_IP, "fabric": os.getenv("FABRIC_MUSCLE", "10.10.10.1")},
+    "captain":   {"mgmt": SPARK_01_IP, "fabric": os.getenv("FABRIC_CAPTAIN", "10.101.1.2")},
+    "muscle":    {"mgmt": SPARK_02_IP, "fabric": os.getenv("FABRIC_MUSCLE", "10.101.1.1")},
     "ocular":    {"mgmt": SPARK_03_IP, "fabric": os.getenv("FABRIC_OCULAR", "10.10.10.3")},
     "sovereign": {"mgmt": SPARK_04_IP, "fabric": os.getenv("FABRIC_SOVEREIGN", "10.10.10.4")},
 }
@@ -188,3 +188,20 @@ def get_inference_client(mode: str = None) -> tuple:
     else:
         # Default: SWARM (production)
         return OpenAI(base_url=SWARM_ENDPOINT, api_key="not-needed"), SWARM_MODEL
+
+
+# =============================================================================
+# OLLAMA ENDPOINTS — Sentinel & RAG Embedding Nodes
+# =============================================================================
+
+def get_ollama_endpoints() -> list:
+    """
+    Return list of Ollama endpoints for all active Spark nodes.
+    Used by fortress_sentinel.py for distributed embedding.
+    """
+    return [
+        f"http://{SPARK_01_IP}:11434",  # Captain
+        f"http://{SPARK_02_IP}:11434",  # Muscle
+        f"http://{SPARK_03_IP}:11434",  # Ocular
+        f"http://{SPARK_04_IP}:11434",  # Sovereign
+    ]
