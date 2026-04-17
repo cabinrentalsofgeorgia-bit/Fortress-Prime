@@ -5,6 +5,11 @@ Uses the existing authenticated StreamlineVRS integration for upstream RPC calls
 then normalizes and caches rate cards and blocked-day payloads in Redis so the
 Command Center can render live availability and pricing without browser-side
 scraping or third-party embeds.
+
+fetch_live_quote() provides async parity auditing by extracting the exact
+fee/tax array from Streamline's GetReservationPrice for a given confirmation_id,
+parsing it into DisplayFee objects, and returning the Streamline total for
+comparison against the local ledger.
 """
 from __future__ import annotations
 
@@ -17,6 +22,7 @@ from typing import Any
 from uuid import UUID
 
 import redis.asyncio as aioredis
+import structlog
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +30,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.integrations.streamline_vrs import StreamlineVRS
 from backend.models.property import Property
+from backend.services.ledger import classify_item
+
+live_quote_logger = structlog.get_logger(service="live_quote")
 
 TWO_PLACES = Decimal("0.01")
 DEFAULT_TAX_RATE = Decimal("0.13")
@@ -34,6 +43,29 @@ PROPERTY_CATALOG_TTL_SECONDS = 900
 RATE_CARD_TTL_SECONDS = 900
 BLOCKED_DAYS_TTL_SECONDS = 300
 QUOTE_TTL_SECONDS = 300
+LIVE_QUOTE_TTL_SECONDS = 300
+
+
+@dataclass(frozen=True)
+class DisplayFee:
+    """A single fee/tax/deposit parsed from Streamline's GetReservationPrice."""
+    name: str
+    amount: Decimal
+    fee_type: str
+    streamline_id: str
+    is_taxable: bool
+    bucket: str
+
+
+@dataclass(frozen=True)
+class LiveQuoteResult:
+    """Parsed result from Streamline's GetReservationPrice for parity auditing."""
+    confirmation_id: str
+    fees: list[DisplayFee]
+    streamline_total: Decimal
+    streamline_taxes: Decimal
+    streamline_rent: Decimal
+    raw_payload: dict[str, Any]
 
 BEDROOM_BASE_RATES: dict[int, Decimal] = {
     1: Decimal("149.00"),
@@ -163,6 +195,35 @@ class StreamlineClient:
             self._redis = None
         await self._vrs.close()
 
+    async def _vault_log(
+        self,
+        event_type: str,
+        raw_payload: Any,
+        reservation_id: str | None = None,
+    ) -> None:
+        """Write raw Streamline API response to the payload vault.
+
+        Uses its own session so a vault write failure never disrupts the
+        caller's transaction or control flow.
+        """
+        try:
+            from backend.core.database import AsyncSessionLocal
+            from backend.models.streamline_payload_vault import StreamlinePayloadVault
+
+            async with AsyncSessionLocal() as session:
+                session.add(StreamlinePayloadVault(
+                    event_type=event_type,
+                    raw_payload=raw_payload if isinstance(raw_payload, (dict, list)) else {},
+                    reservation_id=reservation_id,
+                ))
+                await session.commit()
+        except Exception as exc:
+            live_quote_logger.warning(
+                "vault_write_failed",
+                event_type=event_type,
+                error=str(exc)[:200],
+            )
+
     async def _get_cached_json(self, cache_key: str) -> dict[str, Any] | None:
         redis = await self._get_redis()
         payload = await redis.get(cache_key)
@@ -261,6 +322,7 @@ class StreamlineClient:
         }
 
         remote_properties = await self._vrs.fetch_properties()
+        await self._vault_log("fetch_properties", remote_properties)
         merged_properties: list[dict[str, Any]] = []
 
         for remote in remote_properties:
@@ -322,6 +384,7 @@ class StreamlineClient:
 
         source = "streamline_live"
         rate_card = await self._vrs.fetch_property_rates(resolved.streamline_unit_id)
+        await self._vault_log("fetch_property_rates", rate_card)
         if not rate_card and isinstance(resolved.property_record.rate_card, dict):
             rate_card = resolved.property_record.rate_card
             source = "database_rate_card_fallback"
@@ -356,6 +419,7 @@ class StreamlineClient:
             start_date=start_date,
             end_date=end_date,
         )
+        await self._vault_log("fetch_blocked_days", blocks)
         payload = {
             "blocked_days": blocks,
             "source": "streamline_live",
@@ -492,6 +556,29 @@ class StreamlineClient:
             "cache_hit": False,
         }
 
+    def _fees_from_property_record(
+        self,
+        prop: Property,
+        pets: int,
+    ) -> Decimal:
+        """
+        Read the flat fee total from the property's stored cleaning_fee column.
+
+        GetPropertyRates returns a daily_rate_list for all properties and carries
+        no fee data. The cleaning_fee column is populated from historical reservation
+        data (seeded by migration j5e6f7a8b9c0) and kept current by the Streamline
+        sync.  Returns Decimal("0.00") when no fee is configured.
+        """
+        cleaning = Decimal(str(prop.cleaning_fee or "0"))
+        live_quote_logger.debug(
+            "fees_from_property_record",
+            property_id=str(prop.id),
+            property_name=prop.name,
+            cleaning_fee=str(cleaning),
+            pets=pets,
+        )
+        return cleaning.quantize(TWO_PLACES, ROUND_HALF_UP)
+
     async def get_deterministic_quote(
         self,
         property_id: str | UUID,
@@ -511,7 +598,7 @@ class StreamlineClient:
         cache_key = (
             "streamline:quote:"
             f"{resolved.streamline_unit_id}:{check_in.isoformat()}:{check_out.isoformat()}:"
-            f"{adults}:{children}:{pets}:v1"
+            f"{adults}:{children}:{pets}:v2"
         )
         if not force_refresh:
             cached = await self._get_cached_json(cache_key)
@@ -557,6 +644,20 @@ class StreamlineClient:
             cursor += timedelta(days=1)
 
         fees = _fees_from_rate_card(rate_card)
+        live_quote_logger.debug(
+            "deterministic_quote_fee_debug",
+            property_id=str(resolved.property_record.id),
+            property_name=resolved.property_record.name,
+            payload_shape=rate_card.get("payload_shape"),
+            rate_card_fee_count=len(rate_card.get("fees", [])),
+            fees_from_rate_card=str(fees),
+            cache_key=cache_key,
+        )
+        if fees == Decimal("0.00"):
+            # GetPropertyRates returns a daily_rate_list for these properties —
+            # that format carries no fee data. Read the cleaning_fee stored on
+            # the property record (seeded from historical reservation history).
+            fees = self._fees_from_property_record(resolved.property_record, pets)
         tax_rate = _tax_rate_from_rate_card(rate_card)
         taxes = ((base_rent + fees) * tax_rate).quantize(TWO_PLACES, ROUND_HALF_UP)
         total = (base_rent + fees + taxes).quantize(TWO_PLACES, ROUND_HALF_UP)
@@ -614,3 +715,115 @@ class StreamlineClient:
             "end_date": end_date.isoformat(),
             "refreshed_at": _timestamp(),
         }
+
+    # ------------------------------------------------------------------
+    # Live Quote — async parity auditing via GetReservationPrice
+    # ------------------------------------------------------------------
+
+    async def fetch_live_quote(
+        self,
+        confirmation_id: str,
+    ) -> LiveQuoteResult | None:
+        """Fetch the exact fee/tax array from Streamline for parity comparison.
+
+        Returns None if Streamline is unreachable or returns no data.
+        """
+        cache_key = f"streamline:live-quote:{confirmation_id}:v1"
+        cached = await self._get_cached_json(cache_key)
+        if cached is not None:
+            return self._parse_live_quote(confirmation_id, cached)
+
+        raw = await self._vrs.fetch_reservation_price(confirmation_id)
+        await self._vault_log("fetch_reservation_price", raw, reservation_id=confirmation_id)
+        if not raw:
+            live_quote_logger.warning(
+                "live_quote_empty_response",
+                confirmation_id=confirmation_id,
+            )
+            return None
+
+        await self._set_cached_json(cache_key, raw, LIVE_QUOTE_TTL_SECONDS)
+        return self._parse_live_quote(confirmation_id, raw)
+
+    @staticmethod
+    def _safe_decimal(value: Any) -> Decimal:
+        if value is None or value == "":
+            return Decimal("0.00")
+        try:
+            return Decimal(str(value)).quantize(TWO_PLACES, ROUND_HALF_UP)
+        except Exception:
+            return Decimal("0.00")
+
+    @staticmethod
+    def _parse_live_quote(
+        confirmation_id: str,
+        data: dict[str, Any],
+    ) -> LiveQuoteResult:
+        fees: list[DisplayFee] = []
+
+        required_fees = data.get("required_fees", [])
+        if isinstance(required_fees, dict):
+            required_fees = [required_fees]
+        for fee in required_fees:
+            if not fee.get("active"):
+                continue
+            name = str(fee.get("name") or "").strip()
+            amount = StreamlineClient._safe_decimal(fee.get("value"))
+            if not name or amount == Decimal("0.00"):
+                continue
+            bucket = classify_item("fee", name).value
+            fees.append(DisplayFee(
+                name=name,
+                amount=amount,
+                fee_type="fee",
+                streamline_id=str(fee.get("id") or fee.get("fee_id") or ""),
+                is_taxable=True,
+                bucket=bucket,
+            ))
+
+        taxes_section = data.get("taxes_detail", [])
+        if isinstance(taxes_section, dict):
+            taxes_section = [taxes_section]
+        for tax in taxes_section if isinstance(taxes_section, list) else []:
+            name = str(tax.get("name") or "").strip()
+            amount = StreamlineClient._safe_decimal(tax.get("value") or tax.get("amount"))
+            if not name or amount == Decimal("0.00"):
+                continue
+            fees.append(DisplayFee(
+                name=name,
+                amount=amount,
+                fee_type="tax",
+                streamline_id=str(tax.get("id") or tax.get("tax_id") or ""),
+                is_taxable=False,
+                bucket="tax",
+            ))
+
+        security_deposits = data.get("security_deposits", [])
+        if isinstance(security_deposits, dict):
+            security_deposits = [security_deposits]
+        for dep in security_deposits if isinstance(security_deposits, list) else []:
+            name = str(dep.get("name") or "Security Deposit").strip()
+            amount = StreamlineClient._safe_decimal(dep.get("value") or dep.get("amount"))
+            if amount == Decimal("0.00"):
+                continue
+            fees.append(DisplayFee(
+                name=name,
+                amount=amount,
+                fee_type="deposit",
+                streamline_id=str(dep.get("id") or ""),
+                is_taxable=False,
+                bucket="exempt",
+            ))
+
+        streamline_total = StreamlineClient._safe_decimal(data.get("total"))
+        streamline_taxes = StreamlineClient._safe_decimal(data.get("taxes"))
+        streamline_rent = StreamlineClient._safe_decimal(data.get("price"))
+
+        return LiveQuoteResult(
+            confirmation_id=confirmation_id,
+            fees=fees,
+            streamline_total=streamline_total,
+            streamline_taxes=streamline_taxes,
+            streamline_rent=streamline_rent,
+            raw_payload=data,
+        )

@@ -83,6 +83,22 @@ from backend.integrations.rate_limiter import streamline_limiter
 
 logger = structlog.get_logger()
 
+STREAMLINE_HTTP_TIMEOUT = httpx.Timeout(connect=10, read=60, write=30, pool=30)
+
+_ADMIN_FEE_KEYWORDS = frozenset([
+    "damage waiver", "adw", "accidental damage",
+    "processing fee", "processing", "administrative fee", "admin fee",
+])
+
+
+def _classify_streamline_fee(name: str) -> str:
+    """Classify a Streamline fee as 'admin' or 'lodging' for tax-bucket routing."""
+    lower = name.strip().lower()
+    for kw in _ADMIN_FEE_KEYWORDS:
+        if kw in lower:
+            return "admin"
+    return "lodging"
+
 
 class StreamlineVRSError(Exception):
     """Base exception for Streamline VRS integration errors."""
@@ -510,16 +526,17 @@ class StreamlineVRS:
             taxes: List[Dict[str, Any]] = []
             payload_shape = type(data).__name__
 
-            if isinstance(data, list):
-                payload_shape = "daily_rate_list"
-                for row in data:
+            def _extract_daily_rates(raw: List[Any]) -> List[Dict[str, Any]]:
+                """Normalize Streamline daily-format rate items to the internal schema."""
+                result = []
+                for row in raw:
                     if not isinstance(row, dict):
                         continue
                     rate_date = row.get("date")
                     nightly_rate = row.get("rate")
                     if not rate_date or nightly_rate in (None, ""):
                         continue
-                    rates.append(
+                    result.append(
                         {
                             "name": row.get("season", "") or "streamline_daily_rate",
                             "startdate": rate_date,
@@ -532,10 +549,28 @@ class StreamlineVRS:
                             "change_over": row.get("changeOver"),
                         }
                     )
+                return result
+
+            if isinstance(data, list):
+                # Bare list: only daily rate data, no fee/tax metadata.
+                payload_shape = "daily_rate_list"
+                rates = _extract_daily_rates(data)
+
             elif isinstance(data, dict):
-                rates = data.get("rate", [])
-                if isinstance(rates, dict):
-                    rates = [rates]
+                # Dict wrapper: may contain daily-rate OR season-range items in
+                # "rate", plus fee and tax line items in "fee"/"tax".
+                raw_rates = data.get("rate", [])
+                if isinstance(raw_rates, dict):
+                    raw_rates = [raw_rates]
+
+                # Detect daily format by the presence of a "date" field on the
+                # first item (daily: {"date":…,"rate":…} vs season: {"startdate":…,"price_nightly":…}).
+                first = next((r for r in raw_rates if isinstance(r, dict)), {})
+                if first.get("date") is not None:
+                    payload_shape = "daily_rate_list"
+                    rates = _extract_daily_rates(raw_rates)
+                else:
+                    rates = raw_rates
 
                 fees = data.get("fee", [])
                 if isinstance(fees, dict):
@@ -544,6 +579,15 @@ class StreamlineVRS:
                 taxes = data.get("tax", [])
                 if isinstance(taxes, dict):
                     taxes = [taxes]
+
+                self.log.debug(
+                    "property_rates_dict_shape",
+                    unit_id=unit_id,
+                    payload_shape=payload_shape,
+                    raw_fee_count=len(fees),
+                    raw_tax_count=len(taxes),
+                    fee_names=[f.get("name") for f in fees],
+                )
             else:
                 return {}
 
@@ -568,6 +612,7 @@ class StreamlineVRS:
                         "amount": f.get("amount"),
                         "type": f.get("type_name", ""),
                         "taxable": f.get("taxable"),
+                        "category": _classify_streamline_fee(f.get("name", "")),
                     }
                     for f in fees
                 ],
@@ -617,9 +662,9 @@ class StreamlineVRS:
         Returns list of booking blocks with dates and types.
         """
         if not start_date:
-            start_date = date.today() - timedelta(days=7)
+            start_date = date.today() - timedelta(days=30)
         if not end_date:
-            end_date = date.today() + timedelta(days=365)
+            end_date = date.today() + timedelta(days=730)
 
         self.log.info(
             "streamline_blocked_days_callsite",
@@ -908,9 +953,44 @@ class StreamlineVRS:
             raw = [raw]
         return [self._map_reservation(r) for r in raw]
 
+    @staticmethod
+    def detect_owner_booking(r: Dict) -> bool:
+        """
+        Return True when any of Streamline's three owner-booking signals are present.
+
+        Signals checked (ANY one is sufficient):
+          1. maketype_name == 'O'
+          2. type_name == 'OWN'
+          3. flags array contains a flag named 'OWNER RES' (case-insensitive)
+
+        Works with responses from both GetReservations (list) and
+        GetReservationInfo (detail) — only the signals present in the given
+        dict are evaluated; missing keys default to non-owner.
+
+        Every code path that needs to evaluate "is this an owner booking?"
+        must call this method rather than duplicating the logic.
+        """
+        if r.get("maketype_name", "") == "O":
+            return True
+        if r.get("type_name", "") == "OWN":
+            return True
+        flags_wrapper = r.get("flags", {})
+        if isinstance(flags_wrapper, dict):
+            flag_list = flags_wrapper.get("flag", [])
+        else:
+            flag_list = []
+        if isinstance(flag_list, dict):
+            flag_list = [flag_list]
+        flag_names = {
+            str(f.get("name", "")).upper()
+            for f in flag_list
+            if isinstance(f, dict)
+        }
+        return "OWNER RES" in flag_names
+
     def _map_reservation(self, r: Dict) -> Dict[str, Any]:
         """Map Streamline reservation JSON to our schema.
-        
+
         Actual API fields (GetReservations return_full:true):
           confirmation_id, unit_id, startdate, enddate, status_code,
           occupants, occupants_small, pets, price_total, price_paidsum,
@@ -967,6 +1047,11 @@ class StreamlineVRS:
             "access_code": r.get("kabacode"),
             "special_requests": r.get("client_comments", ""),
             "source": r.get("hear_about_name") or r.get("maketype_name", ""),
+            # detect_owner_booking() checks all three Streamline owner signals:
+            #   maketype_name=='O', type_name=='OWN', 'OWNER RES' flag.
+            # This replaces the earlier single-signal check and correctly
+            # catches reservation 54029 (maketype_name='A', type_name='OWN').
+            "is_owner_booking": self.detect_owner_booking(r),
             "guest_first_name": r.get("first_name", ""),
             "guest_last_name": r.get("last_name", ""),
             "guest_email": r.get("email", ""),
@@ -1115,6 +1200,71 @@ class StreamlineVRS:
 
         self.log.info("owners_fetched", count=len(owners))
         return owners
+
+    async def fetch_owner_info(self, owner_id: int) -> Dict[str, Any]:
+        """
+        Fetch full owner record including mailing address.
+        RPC Method: GetOwnerInfo
+
+        Returns a dict with keys:
+          owner_id, first_name, last_name, email,
+          address1, address2, city, state, zip, country,
+          mobile_phone, company
+          units: list of {id, name} dicts for each unit this owner manages.
+
+        Returns {} if the owner is not found or the call fails.
+        """
+        try:
+            data = await self._call("GetOwnerInfo", {"owner_id": str(owner_id)})
+        except Exception as exc:
+            self.log.warning("fetch_owner_info_failed", owner_id=owner_id, error=str(exc)[:120])
+            return {}
+
+        # GetOwnerInfo returns the owner record under key "id" (not "owner_id")
+        if not isinstance(data, dict) or not data.get("id"):
+            return {}
+
+        # Normalise address2 and other optional fields — Streamline returns {} for empty
+        def _str(v: Any) -> str:
+            return str(v) if v and not isinstance(v, dict) else ""
+
+        # Unpack units list
+        raw_units = data.get("units", {})
+        units_list: list[dict] = []
+        if isinstance(raw_units, dict):
+            raw_unit = raw_units.get("unit", [])
+            if isinstance(raw_unit, dict):
+                raw_unit = [raw_unit]
+            for u in raw_unit:
+                if isinstance(u, dict):
+                    units_list.append({"id": u.get("id"), "name": _str(u.get("name"))})
+
+        first  = _str(data.get("first_name"))
+        last   = _str(data.get("last_name"))
+        middle = _str(data.get("middle_name"))
+
+        # Streamline displays names in last-first-middle order on statements.
+        # Assemble accordingly; omit middle when blank.
+        parts = [p for p in [last, middle, first] if p]
+        display_name = " ".join(parts) if parts else _str(data.get("email"))
+
+        return {
+            "owner_id":    data.get("id"),    # GetOwnerInfo returns "id", not "owner_id"
+            "first_name":  first,
+            "last_name":   last,
+            "middle_name": middle,
+            "display_name": display_name,     # last-middle-first, e.g. "Knight Mitchell Gary"
+            "email":       _str(data.get("email")),
+            "address1":    _str(data.get("address1")),
+            "address2":    _str(data.get("address2")),
+            "city":        _str(data.get("city")),
+            "state":       _str(data.get("state_name")),
+            "zip":         _str(data.get("zip")),
+            "country":     _str(data.get("country_name")) or "USA",
+            "mobile_phone": _str(data.get("mobile_phone")),
+            "company":     _str(data.get("company_name")),
+            "units":       units_list,
+        }
 
     # ================================================================
     # GUEST REVIEWS
@@ -1777,6 +1927,7 @@ class StreamlineVRS:
                                     access_code=rr.get("access_code"),
                                     special_requests=rr.get("special_requests"),
                                     booking_source=rr.get("source") or "streamline",
+                                    is_owner_booking=bool(rr.get("is_owner_booking", False)),
                                     streamline_reservation_id=sl_res_id,
                                 )
                                 db.add(new_res)
@@ -2688,10 +2839,17 @@ class StreamlineVRS:
           taxes: float
           total: float
           price: float (nightly total)
+
+        Fees that don't match any known category are captured in
+        ``price_breakdown["unrecognized_fees"]`` so they are never
+        silently dropped.
         """
         fees = price_data.get("required_fees", [])
         if isinstance(fees, dict):
             fees = [fees]
+
+        unrecognized_fees: list[dict] = []
+
         for fee in fees:
             if not fee.get("active"):
                 continue
@@ -2707,6 +2865,18 @@ class StreamlineVRS:
                 res.damage_waiver_fee = amount
             elif "processing" in name or "service" in name or "booking" in name:
                 res.service_fee = amount
+            else:
+                unrecognized_fees.append({
+                    "name": fee.get("name"),
+                    "amount": float(amount),
+                    "streamline_fee_id": fee.get("id"),
+                    "raw": fee,
+                })
+
+        if unrecognized_fees:
+            breakdown = res.price_breakdown if isinstance(res.price_breakdown, dict) else {}
+            breakdown["unrecognized_fees"] = unrecognized_fees
+            res.price_breakdown = breakdown
 
         tax_total = StreamlineVRS._safe_decimal(price_data.get("taxes"))
         if tax_total:
