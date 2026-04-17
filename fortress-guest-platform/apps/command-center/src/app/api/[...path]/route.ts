@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBackendBaseUrl } from "@/lib/server/backend-url";
 
+/** BFF must never serve stale API data (staff dashboard expects live reservation state). */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const COMMAND_CENTER =
   process.env.COMMAND_CENTER_URL || "http://127.0.0.1:9800";
 const INTERNAL_TUNNEL_SIGNATURE =
@@ -31,7 +35,7 @@ const PUBLIC_FGP_PATH_PREFIXES = [
   "/api/guestbook/",
   "/api/agreements/public/",
   "/api/direct-booking/",
-  "/api/quotes/",
+  "/api/quotes/streamline/properties",
   "/api/seo/",
   "/api/seo-patches/",
   "/api/checkout/",
@@ -170,6 +174,7 @@ async function proxy(
       body: body && body.byteLength > 0 ? Buffer.from(body) : undefined,
       redirect: "follow",
       signal: AbortSignal.timeout(expectsEventStream ? 180_000 : 60_000),
+      cache: "no-store",
     });
 
     const status = res.status;
@@ -204,6 +209,16 @@ async function proxy(
 
     const cacheControl = res.headers.get("cache-control");
     if (cacheControl) responseHeaders.set("Cache-Control", cacheControl);
+
+    if (
+      request.method === "GET" &&
+      (contentType.includes("json") || contentType.includes("application/problem"))
+    ) {
+      responseHeaders.set(
+        "Cache-Control",
+        "private, no-store, no-cache, must-revalidate",
+      );
+    }
 
     const isEventStream = contentType.includes("text/event-stream");
     const isBinary =

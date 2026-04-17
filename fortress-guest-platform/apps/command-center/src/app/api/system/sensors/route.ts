@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildBackendUrl } from "@/lib/server/backend-url";
+import { getFortressIngressHeaders } from "@/lib/server/fortress-ingress-headers";
 
 const UPSTREAM = buildBackendUrl("/api/system/sensors/email");
 
@@ -7,6 +8,7 @@ function forwardHeaders(request: NextRequest): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/json",
     "Content-Type": "application/json",
+    ...getFortressIngressHeaders(request),
   };
   const cookie = request.cookies.get("fortress_session")?.value;
   if (cookie) headers["Cookie"] = `fortress_session=${cookie}`;

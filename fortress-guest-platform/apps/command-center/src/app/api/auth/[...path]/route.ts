@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildBackendUrl } from "@/lib/server/backend-url";
+import { getFortressIngressHeaders } from "@/lib/server/fortress-ingress-headers";
 
 async function proxy(
   request: NextRequest,
@@ -12,6 +13,7 @@ async function proxy(
 
   const headers: Record<string, string> = {
     "Content-Type": request.headers.get("content-type") || "application/json",
+    ...getFortressIngressHeaders(request),
   };
   const auth = request.headers.get("authorization");
   if (auth) headers["Authorization"] = auth;
