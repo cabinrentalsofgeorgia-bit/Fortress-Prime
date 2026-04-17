@@ -1043,3 +1043,84 @@ async def get_live_payload(
     db: AsyncSession = Depends(get_db),
 ) -> LiveSEOPayloadResponse:
     return await _load_deployed_live_payload(db, property_slug)
+
+
+# ── Pipeline stats (internal dashboard KPIs) ─────────────────────────────────
+
+class SEOPipelineStatsResponse(BaseModel):
+    """Real-time SEO pipeline counters for the Command Center dashboard."""
+    # Patch queue counts
+    drafts_created: int
+    pending_review: int
+    deployed_count: int
+    needs_rewrite: int
+    # Rubric health
+    active_rubrics: int
+    # Property coverage
+    properties_with_draft: int
+    properties_without_draft: int
+    total_active_properties: int
+    # Aggregate quality
+    avg_godhead_score: float | None
+
+
+@router.get("/pipeline-stats", response_model=SEOPipelineStatsResponse)
+async def seo_pipeline_stats(db: AsyncSession = Depends(get_db)) -> SEOPipelineStatsResponse:
+    """
+    Returns internal SEO pipeline metrics for Command Center KPI cards.
+    No auth required — counts only, no PII.
+    """
+    # Patch status counts
+    status_rows = (
+        await db.execute(
+            select(SEOPatch.status, func.count(SEOPatch.id)).group_by(SEOPatch.status)
+        )
+    ).all()
+    counts: dict[str, int] = {row_status: row_count for row_status, row_count in status_rows}
+
+    # Active rubrics
+    active_rubrics = (
+        await db.execute(select(func.count(SEORubric.id)).where(SEORubric.status == "active"))
+    ).scalar_one() or 0
+
+    # Property coverage — active properties
+    total_active_props = (
+        await db.execute(
+            select(func.count(Property.id)).where(Property.is_active.is_(True))
+        )
+    ).scalar_one() or 0
+
+    ACTIVE_STATUSES = ("drafted", "grading", "needs_rewrite", "pending_human", "deployed")
+    props_with_draft = (
+        await db.execute(
+            select(func.count(SEOPatch.property_id.distinct())).where(
+                SEOPatch.status.in_(ACTIVE_STATUSES),
+                SEOPatch.property_id.isnot(None),
+            )
+        )
+    ).scalar_one() or 0
+
+    # Average godhead score for deployed patches
+    avg_score_row = (
+        await db.execute(
+            select(func.avg(SEOPatch.godhead_score)).where(
+                SEOPatch.status == "deployed",
+                SEOPatch.godhead_score.isnot(None),
+            )
+        )
+    ).scalar_one()
+    avg_score = round(float(avg_score_row), 3) if avg_score_row is not None else None
+
+    return SEOPipelineStatsResponse(
+        drafts_created=counts.get("drafted", 0) + counts.get("grading", 0)
+            + counts.get("needs_rewrite", 0) + counts.get("pending_human", 0)
+            + counts.get("deployed", 0) + counts.get("rejected", 0),
+        pending_review=counts.get("pending_human", 0),
+        deployed_count=counts.get("deployed", 0),
+        needs_rewrite=counts.get("needs_rewrite", 0),
+        active_rubrics=int(active_rubrics),
+        properties_with_draft=int(props_with_draft),
+        properties_without_draft=max(0, int(total_active_props) - int(props_with_draft)),
+        total_active_properties=int(total_active_props),
+        avg_godhead_score=avg_score,
+    )
