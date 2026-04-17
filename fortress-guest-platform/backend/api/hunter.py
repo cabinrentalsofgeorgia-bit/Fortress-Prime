@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.core.database import get_db
 from backend.models.agent_queue import AgentQueue
+from backend.models.hunter_recovery_op import HunterRecoveryOp, HunterRecoveryOpStatus
 from backend.core.security import require_manager_or_admin, require_operator_manager_admin
 from backend.models.guest import Guest
 from backend.models.staff import StaffUser
@@ -728,4 +729,105 @@ async def audit_hunter_console_event(
         db=db,
     )
     return {"status": "accepted"}
+
+
+# ---------------------------------------------------------------------------
+# Recovery Ops — hunter_recovery_ops table (cart abandonment recovery)
+# ---------------------------------------------------------------------------
+
+class HunterRecoveryOpResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    cart_id: str
+    guest_name: str | None = None
+    cabin_name: str | None = None
+    cart_value: float | None = None
+    status: str
+    ai_draft_body: str | None = None
+    assigned_worker: str | None = None
+    created_at: str
+
+    @classmethod
+    def from_orm_row(cls, row: HunterRecoveryOp) -> "HunterRecoveryOpResponse":
+        return cls(
+            id=str(row.id),
+            cart_id=row.cart_id,
+            guest_name=row.guest_name,
+            cabin_name=row.cabin_name,
+            cart_value=float(row.cart_value) if row.cart_value is not None else None,
+            status=row.status.value if isinstance(row.status, HunterRecoveryOpStatus) else str(row.status),
+            ai_draft_body=row.ai_draft_body,
+            assigned_worker=row.assigned_worker,
+            created_at=row.created_at.isoformat() if row.created_at else "",
+        )
+
+
+class HunterRecoveryApproveResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: str
+    message: str
+    channel: str
+
+
+@router.get("/hunter/operations", response_model=list[HunterRecoveryOpResponse])
+async def list_hunter_recovery_operations(
+    limit: int = Query(default=100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+    _user: StaffUser = Depends(require_manager_or_admin),
+):
+    result = await db.execute(
+        select(HunterRecoveryOp)
+        .order_by(HunterRecoveryOp.created_at.desc())
+        .limit(limit)
+    )
+    rows = result.scalars().all()
+    return [HunterRecoveryOpResponse.from_orm_row(row) for row in rows]
+
+
+@router.post("/hunter/approve/{op_id}", response_model=HunterRecoveryApproveResponse)
+async def approve_hunter_recovery_op(
+    op_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: StaffUser = Depends(require_manager_or_admin),
+):
+    try:
+        op_uuid = UUID(op_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Recovery operation not found") from exc
+
+    row = await db.get(HunterRecoveryOp, op_uuid)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Recovery operation not found")
+    if row.status != HunterRecoveryOpStatus.DRAFT_READY:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot approve operation with status '{row.status.value}'",
+        )
+
+    row.status = HunterRecoveryOpStatus.DISPATCHED
+    await db.commit()
+    await record_audit_event(
+        actor_id=str(user.id),
+        actor_email=user.email,
+        action="hunter.recovery_op.approved",
+        resource_type="hunter_recovery_op",
+        resource_id=op_id,
+        purpose="internal_revenue_recovery",
+        tool_name="hunter_ops_queue",
+        model_route="tool",
+        outcome="success",
+        metadata_json={
+            "cart_id": row.cart_id,
+            "guest_name": row.guest_name,
+            "assigned_worker": row.assigned_worker,
+        },
+        db=db,
+    )
+    return HunterRecoveryApproveResponse(
+        status="dispatched",
+        message=f"Recovery operation approved for {row.guest_name or row.cart_id}.",
+        channel=row.assigned_worker or "email",
+    )
 
