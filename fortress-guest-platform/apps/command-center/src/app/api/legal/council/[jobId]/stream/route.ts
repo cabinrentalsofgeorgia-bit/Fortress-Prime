@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { buildBackendUrl } from "@/lib/server/backend-url";
+import { getFortressIngressHeaders } from "@/lib/server/fortress-ingress-headers";
 
 const SESSION_COOKIE = "fortress_session";
 
@@ -13,7 +14,7 @@ export async function GET(
 ) {
   const { jobId } = await params;
   const upstreamUrl = new URL(
-    buildBackendUrl(`/api/legal/council/${encodeURIComponent(jobId)}/stream`),
+    buildBackendUrl(`/api/internal/legal/council/${encodeURIComponent(jobId)}/stream`),
   );
   const cursor = request.nextUrl.searchParams.get("cursor");
   if (cursor) {
@@ -22,6 +23,7 @@ export async function GET(
 
   const headers: Record<string, string> = {
     Accept: "text/event-stream",
+    ...getFortressIngressHeaders(request),
   };
 
   let token: string | null = null;

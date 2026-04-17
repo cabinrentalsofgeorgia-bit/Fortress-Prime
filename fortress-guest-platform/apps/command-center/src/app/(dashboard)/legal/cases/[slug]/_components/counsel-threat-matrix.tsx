@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useMemo } from "react";
 import { RoleGatedAction } from "@/components/access/role-gated-action";
 import { useAppStore } from "@/lib/store";
 import { canManageLegalOps } from "@/lib/roles";
@@ -33,26 +32,26 @@ const SIGNAL_LABEL: Record<string, string> = {
 export function CounselThreatMatrix({ slug }: { slug: string }) {
   const user = useAppStore((state) => state.user);
   const canOperate = canManageLegalOps(user);
-  const [result, setResult] = useState<DeliberationResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  const council = useCouncilStream(slug);
 
   const handleDeliberate = async () => {
     toast.info("Convening the Counsel of 9 — this may take several minutes...");
     try {
-      const data = await api.post<DeliberationResult>(
-        `/api/internal/legal/cases/${slug}/deliberate`,
-      );
-      setResult(data);
+      await council.start();
       toast.success("Counsel deliberation complete");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Deliberation failed");
     }
   };
 
-  const isRunning = council.connectionState !== "idle" &&
+  const isRunning =
+    council.connectionState !== "idle" &&
     council.connectionState !== "done" &&
     council.connectionState !== "stopped" &&
     council.connectionState !== "error";
+  const consensus = council.consensus ?? council.finalResult;
+  const opinions = council.opinions;
+  const liveSummary = useMemo(() => council.streamLines.slice(-8), [council.streamLines]);
 
   return (
     <Card>
@@ -66,10 +65,10 @@ export function CounselThreatMatrix({ slug }: { slug: string }) {
             <Button
               size="sm"
               onClick={handleDeliberate}
-              disabled={!canOperate || loading}
+              disabled={!canOperate || isRunning}
               className="text-xs h-7"
             >
-              {loading ? (
+              {isRunning ? (
                 <>
                   <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                   Deliberating...
