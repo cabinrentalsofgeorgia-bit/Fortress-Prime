@@ -76,7 +76,13 @@ LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library", "legal_ediscovery
 from backend.core.config import settings as _cfg
 
 _LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:8002/v1").rstrip("/")
-_LITELLM_KEY = getattr(_cfg, "litellm_master_key", "sk-fortress-master-123")
+_raw_litellm_key = getattr(_cfg, "litellm_master_key", None) or os.getenv("LITELLM_MASTER_KEY")
+if not _raw_litellm_key:
+    raise RuntimeError(
+        "LITELLM_MASTER_KEY is not configured — set litellm_master_key in settings "
+        "or export LITELLM_MASTER_KEY env var before starting the service"
+    )
+_LITELLM_KEY = _raw_litellm_key
 
 # ── Frontier model endpoints (all route through local LiteLLM gateway) ──────
 ANTHROPIC_PROXY   = os.getenv("ANTHROPIC_PROXY_URL",  _LITELLM_BASE).rstrip("/")
