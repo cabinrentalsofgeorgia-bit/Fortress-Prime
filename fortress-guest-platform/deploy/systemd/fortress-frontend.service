@@ -12,13 +12,15 @@ Group=admin
 WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center
 EnvironmentFile=-/home/admin/Fortress-Prime/fortress-guest-platform/.env
 EnvironmentFile=-/home/admin/Fortress-Prime/.env.security
+# Clear inherited machine hostname so Next standalone binds 0.0.0.0 (not 127.0.0.1).
+UnsetEnvironment=HOSTNAME
 Environment=PATH=/home/admin/.nvm/versions/node/v20.20.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=NODE_ENV=production
 Environment=PORT=3001
 Environment=HOSTNAME=0.0.0.0
 Environment=APP_MODE=command_center
 Environment=NEXT_PUBLIC_SITE_TYPE=sovereign_glass
-Environment=FGP_BACKEND_URL=http://127.0.0.1:8100
+Environment=FGP_BACKEND_URL=http://127.0.0.1:8000
 Environment=COMMAND_CENTER_URL=http://127.0.0.1:9800
 Environment=NEXT_PUBLIC_APP_URL=https://crog-ai.com
 # Staff glass: keep empty — all browser API calls must go through same-origin /api BFF (fortress_session + Bearer bridge).

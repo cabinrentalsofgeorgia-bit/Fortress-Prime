@@ -72,6 +72,52 @@ These helpers currently gate the following dashboard areas:
   - `legal/cases/[slug]/_components/counsel-threat-matrix`
   - `legal/cases/[slug]/_components/deposition-war-room`
 
+## Owner Statements (Phase A-F additions — 2026-04-15)
+
+Phase A-F added 15 new endpoints across three route files. All are mounted under
+staff-protected prefixes and require at minimum a valid staff JWT. Role-level
+enforcement varies by file — see known gap below.
+
+### Endpoint table
+
+| Frontend Helper | Intended Surface | Frontend Roles | Backend Route | Backend Dependency | Parity Status | Notes |
+|---|---|---|---|---|---|---|
+| `canManageAdminOps()` | Statement generate (draft creation) | `super_admin`, `admin` | `POST /api/admin/payouts/statements/generate` | `require_manager_or_admin` (router-level) | Aligned | Body: `{ period_start, period_end, dry_run? }` |
+| `canManageAdminOps()` | Statement list | `super_admin`, `admin` | `GET /api/admin/payouts/statements` | `require_manager_or_admin` (router-level) | Aligned | Filters: status, period_start, period_end, owner_payout_account_id, limit, offset |
+| `canManageAdminOps()` | Statement detail | `super_admin`, `admin` | `GET /api/admin/payouts/statements/{period_id}` | `require_manager_or_admin` (router-level) | Aligned | Returns balance row + live line items |
+| `canManageAdminOps()` | Statement approve | `super_admin`, `admin` | `POST /api/admin/payouts/statements/{period_id}/approve` | `require_manager_or_admin` (router-level) | Aligned | Transitions pending_approval → approved |
+| `canManageAdminOps()` | Statement void | `super_admin`, `admin` | `POST /api/admin/payouts/statements/{period_id}/void` | `require_manager_or_admin` (router-level) | Aligned | Body: `{ reason: string }` |
+| `canManageAdminOps()` | Statement mark-paid | `super_admin`, `admin` | `POST /api/admin/payouts/statements/{period_id}/mark-paid` | `require_manager_or_admin` (router-level) | Aligned | Body: `{ payment_reference: string }` |
+| `canManageAdminOps()` | Statement mark-emailed | `super_admin`, `admin` | `POST /api/admin/payouts/statements/{period_id}/mark-emailed` | `require_manager_or_admin` (router-level) | Aligned | Usually called by email cron |
+| `canManageAdminOps()` | Statement PDF download | `super_admin`, `admin` | `GET /api/admin/payouts/statements/{period_id}/pdf` | `require_manager_or_admin` (router-level) | Aligned | Returns binary PDF |
+| `canManageAdminOps()` | Statement test send | `super_admin`, `admin` | `POST /api/admin/payouts/statements/{period_id}/send-test` | `require_manager_or_admin` (router-level) | Aligned | Body: `{ override_email, note? }` |
+| `canManageAdminOps()` | Statement computation (what-if) | `super_admin`, `admin` | `GET /api/v1/admin/statements/{owner_id}` | **JWT only — no role check** | **GAP** | See known gap below |
+| `canManageAdminOps()` | Owner charge create | `super_admin`, `admin` | `POST /api/admin/payouts/charges` | `require_manager_or_admin` (router-level) | Aligned | |
+| `canManageAdminOps()` | Owner charges list | `super_admin`, `admin` | `GET /api/admin/payouts/charges` | `require_manager_or_admin` (router-level) | Aligned | |
+| `canManageAdminOps()` | Owner charge detail | `super_admin`, `admin` | `GET /api/admin/payouts/charges/{charge_id}` | `require_manager_or_admin` (router-level) | Aligned | |
+| `canManageAdminOps()` | Owner charge update | `super_admin`, `admin` | `PATCH /api/admin/payouts/charges/{charge_id}` | `require_manager_or_admin` (router-level) | Aligned | |
+| `canManageAdminOps()` | Owner charge void | `super_admin`, `admin` | `POST /api/admin/payouts/charges/{charge_id}/void` | `require_manager_or_admin` (router-level) | Aligned | |
+
+### Source verification
+
+Auth guards verified by reading source:
+- `backend/api/admin_statements_workflow.py` line 53: `router = APIRouter(dependencies=[Depends(require_manager_or_admin)])`
+- `backend/api/admin_charges.py` line 38: `router = APIRouter(dependencies=[Depends(require_manager_or_admin)])`
+- `backend/api/admin_statements.py` line 34: `router = APIRouter()` — **no role dependency**
+
+### Known parity gap
+
+`GET /api/v1/admin/statements/{owner_id}` (`admin_statements.py`) has no
+`require_manager_or_admin` dependency — only the global JWT middleware enforces
+authentication. Any valid staff token (including `staff` and `reviewer` roles)
+can call this endpoint.
+
+**Recommended fix:** Add `dependencies=[Depends(require_manager_or_admin)]` to the
+`APIRouter()` in `backend/api/admin_statements.py`. Until then, treat this endpoint
+as manager/admin in the UI only — backend enforcement is JWT-only.
+
+---
+
 ## Important Parity Notes
 
 ### 1. `super_admin` handling is now normalized in core elevated dependencies

@@ -1,0 +1,27 @@
+[Unit]
+Description=Fortress Prime — Nightly LLM Fine-Tune Job
+Documentation=file:///home/admin/Fortress-Prime/src/nightly_finetune.py
+# Must start after the backend so the DB is reachable for the export step.
+# vLLM container is stopped inside the script itself before training.
+After=network-online.target fortress-backend.service docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+
+# The script can take up to 6 hours on 70B; systemd must not kill it early.
+TimeoutStartSec=21600
+
+ExecStart=/home/admin/Fortress-Prime/deploy/systemd/run-fortress-nightly-finetune.sh
+
+# Training is write-heavy — keep stdout/stderr in the journal.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nightly-finetune
+
+# GPU training requires elevated memory limits.
+LimitNOFILE=65536
+LimitMEMLOCK=infinity

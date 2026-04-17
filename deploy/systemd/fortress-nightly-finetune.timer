@@ -1,0 +1,15 @@
+[Unit]
+Description=Run Fortress Prime nightly fine-tune at 02:00
+Documentation=file:///home/admin/Fortress-Prime/src/nightly_finetune.py
+
+[Timer]
+# 02:00 local time — after Hermes daily auditor (06:00) and before peak hours.
+OnCalendar=*-*-* 02:00:00
+# Jitter up to 10 minutes so multiple timers don't fire simultaneously.
+RandomizedDelaySec=600
+# Run immediately on next boot if a scheduled run was missed.
+Persistent=true
+Unit=fortress-nightly-finetune.service
+
+[Install]
+WantedBy=timers.target

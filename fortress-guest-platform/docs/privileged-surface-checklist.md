@@ -102,6 +102,35 @@ Every privileged surface should be aligned across:
 - lower roles need to inspect but not mutate
 - the page intentionally supports view-only operational awareness
 
+## Phase A-F Owner Statement Endpoints (checklist status — audited 2026-04-15)
+
+The 15 endpoints added by Phase A-F have been checked against this checklist.
+Results:
+
+| Endpoint | Router-level auth | Route-level role | Audit write | Notes |
+|---|---|---|---|---|
+| `POST /api/admin/payouts/statements/generate` | `require_manager_or_admin` ✓ | N/A (router covers) | No | Dry-run support |
+| `GET /api/admin/payouts/statements` | `require_manager_or_admin` ✓ | N/A | No | |
+| `GET /api/admin/payouts/statements/{id}` | `require_manager_or_admin` ✓ | N/A | No | |
+| `POST /api/admin/payouts/statements/{id}/approve` | `require_manager_or_admin` ✓ | `get_current_user` ✓ | No | Uses `user.email` for approved_by attribution |
+| `POST /api/admin/payouts/statements/{id}/void` | `require_manager_or_admin` ✓ | `get_current_user` ✓ | No | Uses `user.email` for voided_by attribution |
+| `POST /api/admin/payouts/statements/{id}/mark-paid` | `require_manager_or_admin` ✓ | `get_current_user` ✓ | No | |
+| `POST /api/admin/payouts/statements/{id}/mark-emailed` | `require_manager_or_admin` ✓ | N/A | No | |
+| `GET /api/admin/payouts/statements/{id}/pdf` | `require_manager_or_admin` ✓ | N/A | No | Binary response — no audit write |
+| `POST /api/admin/payouts/statements/{id}/send-test` | `require_manager_or_admin` ✓ | N/A | No | |
+| `GET /api/v1/admin/statements/{owner_id}` | **None** ✗ | None | No | **GAP — JWT only** |
+| `POST /api/admin/payouts/charges` | `require_manager_or_admin` ✓ | N/A | No | |
+| `GET /api/admin/payouts/charges` | `require_manager_or_admin` ✓ | N/A | No | |
+| `GET /api/admin/payouts/charges/{id}` | `require_manager_or_admin` ✓ | N/A | No | |
+| `PATCH /api/admin/payouts/charges/{id}` | `require_manager_or_admin` ✓ | N/A | No | |
+| `POST /api/admin/payouts/charges/{id}/void` | `require_manager_or_admin` ✓ | N/A | No | |
+
+**Follow-up items from this audit:**
+
+1. `GET /api/v1/admin/statements/{owner_id}` — add `require_manager_or_admin` dependency
+2. Consider `record_audit_event(...)` calls for approve, void, mark-paid actions (these change financial state)
+3. Add route authorization tests for all 15 endpoints in `backend/tests/test_route_authorization.py`
+
 ## Anti-Patterns
 
 - Adding a new privileged button without `RoleGatedAction`

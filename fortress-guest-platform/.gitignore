@@ -1,2 +1,29 @@
 node_modules/
 .turbo/
+.vercel
+backend/tests/fixtures/crog_output/*.pdf
+
+# Phase G.0.8: one-off fix/sync scripts (not production code)
+/check_duplicates.py
+/force_sync_schema.py
+/genesis_backfill.py
+/live_fire_test.py
+/patch_final_columns.py
+/backend/fix_missing_tables.py
+/backend/fix_missing_tables_v2.py
+/backend/robust_fix.py
+/backend/sync_db.py
+/backend/sync_db_all.py
+/scripts/cancel_native_test_reservations.py
+/scripts/e2e_sovereign_ledger_test.py
+/scripts/trigger_reconcile_revenue.py
+
+# Env backups and secrets
+/.env.backup
+/.env.production.local
+/.env.telemetry_backup
+/.vercelignore
+
+# Financial data — never commit PDFs or backup SQL from scripts/
+backend/scripts/*.pdf
+backend/scripts/g1_5_backup_*.sql
