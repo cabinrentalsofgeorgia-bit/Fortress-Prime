@@ -2,6 +2,7 @@
 Application configuration using Pydantic Settings.
 """
 
+import os
 from pathlib import Path
 from urllib.parse import SplitResult, urlsplit, urlunsplit
 
@@ -15,7 +16,11 @@ DEFAULT_HISTORIAN_BLUEPRINT_PATH = str(
 DEFAULT_HERMES_SYSTEM_PROMPT_PATH = str(
     Path(__file__).resolve().parents[3] / "docs" / "paperclip" / "AGENTS.md"
 )
-ALLOWED_POSTGRES_DATABASES = frozenset({"fortress_prod", "fortress_shadow"})
+# fortress_shadow_test is the dedicated test database (Phase G.1.5).
+# It mirrors fortress_shadow's schema but is safe to write test fixtures to.
+ALLOWED_POSTGRES_DATABASES = frozenset(
+    {"fortress_prod", "fortress_shadow", "fortress_db", "fortress_shadow_test"}
+)
 # Loopback plus dual-lane 200G RoCE /30 backplane (node-1 .1, node-2 .2 per lane).
 ALLOWED_POSTGRES_HOSTS = frozenset(
     {
@@ -233,6 +238,26 @@ class Settings(BaseSettings):
         return urlsplit(runtime_uri).path.removeprefix("/")
 
     @property
+    def test_database_url(self) -> str | None:
+        """Async DSN for the isolated test database (fortress_shadow_test).
+
+        Set TEST_DATABASE_URL to redirect conftest fixtures away from the
+        production fortress_shadow DB. When unset, tests fall back to the
+        runtime DB (fortress_shadow) with a warning emitted by conftest.
+
+        The URL must use fortress_api as the role (runtime user), not
+        fortress_admin — so tests exercise the same permission surface as
+        the application.
+
+        Example:
+            TEST_DATABASE_URL=postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow_test
+        """
+        raw = os.getenv("TEST_DATABASE_URL", "").strip()
+        if not raw:
+            return None
+        return self._rewrite_database_driver(raw, async_driver=True)
+
+    @property
     def sovereign_quote_signing_enabled(self) -> bool:
         return bool(self.sovereign_quote_signing_key.strip())
 
@@ -246,6 +271,14 @@ class Settings(BaseSettings):
     # Command Center
     command_center_url: str = Field(default="http://localhost:9800")
     frontend_url: str = Field(default="https://crog-ai.com")
+    command_center_ingress_hosts: str = Field(
+        default="",
+        alias="COMMAND_CENTER_INGRESS_HOSTS",
+        description=(
+            "Comma-separated extra hostnames allowed for Command Center /api ingress "
+            "(e.g. LAN staging: 192.168.0.100,192.168.0.114)."
+        ),
+    )
 
     # AI Models — Local (DGX)
     ollama_base_url: str = Field(default="http://192.168.0.100:11434")
@@ -434,6 +467,11 @@ class Settings(BaseSettings):
         default="mock",
         alias="ACQUISITION_B2C_CONTACT_PROVIDER",
         description="B2C owner contact provider stage inserted after Apollo: mock|propertyradar|trellis.",
+    )
+    recursive_agent_loop_enabled: bool = Field(
+        default=True,
+        alias="RECURSIVE_AGENT_LOOP_ENABLED",
+        description="Enables the cross-vertical recursive intelligence flywheel (V1/V2/V3 signal bus).",
     )
     concierge_shadow_draft_enabled: bool = Field(
         default=False,
@@ -675,6 +713,14 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
     stripe_connect_webhook_secret: str = Field(default="")
     stripe_dispute_webhook_secret: str = Field(default="")
+    stripe_connect_client_id: str = Field(
+        default="",
+        alias="STRIPE_CONNECT_CLIENT_ID",
+        description=(
+            "Stripe Connect application client_id (ca_...). "
+            "Required for Standard OAuth Connect. Not needed for Express accounts."
+        ),
+    )
     reservation_hold_ttl_minutes: int = Field(
         default=15,
         description="Checkout hold duration before reservation_holds expire.",
@@ -685,6 +731,14 @@ class Settings(BaseSettings):
 
     # Reservation Webhooks (HMAC shared secret for POST /api/webhooks/reservations)
     reservation_webhook_secret: str = Field(default="")
+
+    # Streamline inbound webhook (POST /api/webhooks/streamline) — optional dedicated secret.
+    # When empty, HMAC verification uses reservation_webhook_secret (same as /reservations).
+    streamline_webhook_secret: str = Field(
+        default="",
+        alias="STREAMLINE_WEBHOOK_SECRET",
+        description="HMAC secret for Streamline payload vault webhooks; falls back to reservation_webhook_secret.",
+    )
 
     # Channex (or compatible headless channel manager) — POST /api/webhooks/channex
     channex_webhook_secret: str = Field(default="", alias="CHANNEX_WEBHOOK_SECRET")
@@ -708,6 +762,16 @@ class Settings(BaseSettings):
     LEGAL_PROPORTIONALITY_MODE: str = "strict"  # 'strict' or 'advisory'
     LEGAL_GRAPH_MAX_NODES: int = 1500  # VRAM memory protection for the Swarm
     LEGAL_VAULT_ROOT: str = "/mnt/fortress_nas/sectors/legal"
+    nas_work_orders_root: str = Field(
+        default="/mnt/fortress_nas/work_orders",
+        alias="NAS_WORK_ORDERS_ROOT",
+        description="NAS mount path for work order photo storage.",
+    )
+    nas_acquisitions_root: str = Field(
+        default="/mnt/fortress_nas/acquisitions",
+        alias="NAS_ACQUISITIONS_ROOT",
+        description="NAS mount path for acquisition document storage.",
+    )
 
     # ==========================================
     # COURTLISTENER / JURISPRUDENCE ENGINE
@@ -762,7 +826,7 @@ class Settings(BaseSettings):
     message_send_start_hour: int = Field(default=8)
     message_send_end_hour: int = Field(default=21)
 
-    # Email / SMTP
+    # Email / SMTP (kept for IMAP inbound paths that still reference smtp_user)
     smtp_host: str = Field(default="smtp.gmail.com")
     smtp_port: int = Field(default=587)
     smtp_user: str = Field(default="")
@@ -770,6 +834,11 @@ class Settings(BaseSettings):
     email_from_name: str = Field(default="Cabin Rentals of Georgia")
     email_from_address: str = Field(default="")
     email_user: str = Field(default="")
+
+    # Gmail API (OAuth2) — outbound sending via Gmail API instead of SMTP
+    gmail_client_id: str = Field(default="", alias="GMAIL_CLIENT_ID")
+    gmail_client_secret: str = Field(default="", alias="GMAIL_CLIENT_SECRET")
+    gmail_refresh_token: str = Field(default="", alias="GMAIL_REFRESH_TOKEN")
 
     # IMAP (Email Bridge)
     imap_host: str = Field(default="imap.gmail.com")
@@ -782,6 +851,15 @@ class Settings(BaseSettings):
     mailplus_imap_host: str = Field(default="")
     mailplus_imap_port: int = Field(default=993)
     mailplus_imap_password: str = Field(default="")
+
+    # Legal Email Intake (dedicated MailPlus inbox for legal correspondence)
+    legal_mailplus_host: str = Field(default="", alias="LEGAL_MAILPLUS_HOST")
+    legal_mailplus_port: int = Field(default=993, alias="LEGAL_MAILPLUS_PORT")
+    legal_mailplus_user: str = Field(default="", alias="LEGAL_MAILPLUS_USER")
+    legal_mailplus_password: str = Field(default="", alias="LEGAL_MAILPLUS_PASSWORD")
+    legal_mailplus_folder: str = Field(default="INBOX", alias="LEGAL_MAILPLUS_FOLDER")
+    legal_email_poll_interval: int = Field(default=120, alias="LEGAL_EMAIL_POLL_INTERVAL")
+    legal_email_intake_enabled: bool = Field(default=False, alias="LEGAL_EMAIL_INTAKE_ENABLED")
 
     # Twilio
     twilio_account_sid: str = Field(default="")
@@ -894,10 +972,37 @@ class Settings(BaseSettings):
     staff_notification_email: str = Field(default="")
     staff_notification_phone: str = Field(default="")
 
+    # ── Owner Statement System (Phase F) ─────────────────────────────────────
+    #
+    # CROG_STATEMENTS_PARALLEL_MODE (default: True)
+    #   When True, the send_approved_statements_job cron fires but does NOT
+    #   send any emails to real owners. Statements are generated normally on
+    #   the 12th but the 15th send is suppressed. Set to False ONLY after
+    #   Phase G validation has completed and the product owner has approved
+    #   the production cutover.
+    crog_statements_parallel_mode: bool = Field(
+        default=True,
+        alias="CROG_STATEMENTS_PARALLEL_MODE",
+    )
+    #
+    # OWNER_STATEMENT_ALERT_EMAIL (required for monitoring)
+    #   Email address that receives a run-summary after every cron fire
+    #   (both the generation job and the send job). Leave empty to disable
+    #   alert emails (useful in dev environments).
+    owner_statement_alert_email: str = Field(
+        default="",
+        alias="OWNER_STATEMENT_ALERT_EMAIL",
+    )
+
     # Keywords
     urgent_keywords_list: str = Field(default="emergency,urgent,broken,flood,fire,leak,police")
 
-    @field_validator("stripe_secret_key", "stripe_webhook_secret", mode="before")
+    @field_validator(
+        "stripe_secret_key",
+        "stripe_webhook_secret",
+        "stripe_connect_client_id",
+        mode="before",
+    )
     @classmethod
     def _normalize_stripe_secrets(cls, value: str) -> str:
         return (value or "").strip()
