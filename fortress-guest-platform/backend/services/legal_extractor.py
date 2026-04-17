@@ -130,6 +130,7 @@ async def _call_llm(
     base_url: str,
     model: str,
     user_prompt: str,
+    api_key: str | None = None,
 ) -> tuple[dict[str, Any], str] | tuple[None, None]:
     payload = {
         "model": model,
@@ -141,9 +142,13 @@ async def _call_llm(
         "max_tokens": 2500,
     }
 
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
     async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
         try:
-            resp = await client.post(f"{base_url.rstrip('/')}/chat/completions", json=payload)
+            resp = await client.post(f"{base_url.rstrip('/')}/chat/completions", json=payload, headers=headers)
             if resp.status_code != 200:
                 logger.warning("legal_extract_llm_non200", base_url=base_url, model=model, status=resp.status_code)
                 return None, None
@@ -227,8 +232,9 @@ async def extract_entities(
 
     hydra_url = settings.dgx_reasoner_url
     hydra_model = settings.dgx_reasoner_model or "deepseek-r1:70b"
-    swarm_url = (settings.litellm_base_url or "http://127.0.0.1:4000/v1").rstrip("/")
-    swarm_model = settings.ollama_fast_model or "qwen2.5:7b"
+    swarm_url = (settings.litellm_base_url or "http://127.0.0.1:8002/v1").rstrip("/")
+    # Use deepseek-chat via LiteLLM gateway — registered and verified working
+    swarm_model = "deepseek-chat"
 
     user_prompt = (
         f"Case slug: {case_slug}\n"
@@ -240,7 +246,8 @@ async def extract_entities(
     if entities:
         return entities, model_used or hydra_model
 
-    entities, model_used = await _call_llm(base_url=swarm_url, model=swarm_model, user_prompt=user_prompt)
+    swarm_key = settings.litellm_master_key or None
+    entities, model_used = await _call_llm(base_url=swarm_url, model=swarm_model, user_prompt=user_prompt, api_key=swarm_key)
     if entities:
         return entities, model_used or swarm_model
 

@@ -125,6 +125,7 @@ from backend.api import blogs as blogs_api
 from backend.api import financial_approvals as financial_approvals_api
 from backend.api import storefront_checkout as storefront_checkout_api
 from backend.api import trust_ledger_command_center as trust_ledger_command_center_api
+from backend.api import shadow_router as shadow_router_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -618,6 +619,7 @@ app.include_router(activities_api.router, prefix="/api/v1/activities", tags=["Ac
 app.include_router(blogs_api.router, prefix="/api/v1/blogs", tags=["Blogs"])
 app.include_router(financial_approvals_api.router, prefix="/api/v1/financial-approvals", tags=["Financial Approvals"])
 app.include_router(storefront_checkout_api.router, prefix="/api/v1/checkout", tags=["Storefront Checkout"])
+app.include_router(shadow_router_api.router, prefix="/api/v1/shadow", tags=["Shadow Router"])
 app.include_router(
     trust_ledger_command_center_api.router,
     prefix="/api/trust-ledger/command-center",
