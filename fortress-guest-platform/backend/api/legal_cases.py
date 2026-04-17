@@ -132,23 +132,28 @@ def _compute_deadline_fields(d: dict) -> dict:
 
 @router.get("/cases", summary="List all legal cases")
 async def list_cases():
-    async with LegacySession() as session:
-        result = await session.execute(text("""
-            SELECT c.*,
-                   d.consensus_signal  AS live_ai_status,
-                   d.trigger_type      AS latest_action,
-                   d.timestamp         AS last_ai_review
-            FROM legal.cases c
-            LEFT JOIN LATERAL (
-                SELECT consensus_signal, trigger_type, timestamp
-                FROM legal_cmd.deliberation_events
-                WHERE case_slug = c.case_slug
-                ORDER BY timestamp DESC
-                LIMIT 1
-            ) d ON true
-            ORDER BY c.critical_date ASC NULLS LAST, c.id
-        """))
-        rows = result.fetchall()
+    try:
+        async with LegacySession() as session:
+            result = await session.execute(text("""
+                SELECT c.*,
+                       d.consensus_signal  AS live_ai_status,
+                       d.trigger_type      AS latest_action,
+                       d.timestamp         AS last_ai_review
+                FROM legal.cases c
+                LEFT JOIN LATERAL (
+                    SELECT consensus_signal, trigger_type, timestamp
+                    FROM legal_cmd.deliberation_events
+                    WHERE case_slug = c.case_slug
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                ) d ON true
+                ORDER BY c.critical_date ASC NULLS LAST, c.id
+            """))
+            rows = result.fetchall()
+    except Exception as exc:
+        # Missing DB, schema, or GRANTs on fortress_db should not brick the Command Center shell.
+        logger.warning("legal_cases_list_failed", error=str(exc)[:500])
+        return {"cases": []}
 
     cases = []
     for row in rows:
@@ -1435,28 +1440,30 @@ async def build_case_chronology(slug: str, background_tasks: BackgroundTasks):
 
 @router.post("/cases/{slug}/deliberate", summary="Convene the Counsel of 9")
 async def deliberate_case(slug: str):
-    """Run the Counsel of 9 deliberation against the case graph + chronology."""
-    from backend.services.legal_council import run_council_deliberation
+    """
+    Enqueue a Council of 9 deliberation via ARQ and return the job_id so the
+    frontend can subscribe to the Redis-backed SSE stream at
+    GET /api/legal/council/{job_id}/stream.
+    """
     from backend.services.legal_case_graph import get_case_graph_snapshot
     from backend.services.legal_chronology import get_chronology
-    import json as _json
+    from backend.services.async_jobs import enqueue_async_job
 
-    async with AsyncSessionLocal() as db:
-        snapshot = await get_case_graph_snapshot(db, case_slug=slug)
-        timeline = await get_chronology(db, slug)
+    async with AsyncSessionLocal() as graph_db:
+        snapshot = await get_case_graph_snapshot(graph_db, case_slug=slug)
+        try:
+            timeline = await get_chronology(graph_db, slug)
+        except Exception:
+            timeline = []   # chronology_events table may not exist yet
 
     nodes = snapshot.get("nodes", [])
     edges = snapshot.get("edges", [])
-    node_lines = []
+    node_lines, edge_lines, label_by_id = [], [], {}
     for n in nodes:
         label = n.label if hasattr(n, "label") else n.get("label", "?")
         etype = n.entity_type if hasattr(n, "entity_type") else n.get("entity_type", "?")
         node_lines.append(f"[{etype}] {label}")
-    edge_lines = []
-    label_by_id = {}
-    for n in nodes:
         nid = str(n.id if hasattr(n, "id") else n.get("id", "?"))
-        label = n.label if hasattr(n, "label") else n.get("label", "?")
         label_by_id[nid] = label
     for e in edges:
         src = label_by_id.get(str(e.source_node_id if hasattr(e, "source_node_id") else e.get("source_node_id", "?")), "?")
@@ -1464,9 +1471,8 @@ async def deliberate_case(slug: str):
         rel = e.relationship_type if hasattr(e, "relationship_type") else e.get("relationship_type", "?")
         edge_lines.append(f"{src} --({rel})--> {tgt}")
 
-    chrono_lines = []
-    for ev in timeline:
-        chrono_lines.append(f"{ev.get('event_date','?')}: {ev.get('event_description','')}")
+    chrono_lines = [f"{ev.get('event_date','?')}: {ev.get('event_description','')}"
+                    for ev in timeline]
 
     case_brief = (
         f"Case: {slug}\n\n"
@@ -1475,16 +1481,26 @@ async def deliberate_case(slug: str):
         f"CHRONOLOGY:\n" + "\n".join(chrono_lines)
     )
 
-    import uuid as _uuid
-    result = await run_council_deliberation(
-        session_id=str(_uuid.uuid4()),
-        case_brief=case_brief,
-        context=f"Graph: {len(nodes)} entities, {len(edges)} edges. Timeline: {len(timeline)} events.",
-        case_slug=slug,
-        trigger_type="GLASS_DELIBERATE",
-    )
-
-    return result
+    async with AsyncSessionLocal() as job_db:
+        job = await enqueue_async_job(
+            job_db,
+            worker_name="run_legal_council_job",
+            job_name="legal_council",
+            payload={
+                "case_slug": slug,
+                "case_brief": case_brief,
+                "context": f"Graph: {len(nodes)} entities, {len(edges)} edges. Timeline: {len(timeline)} events.",
+                "trigger_type": "GLASS_DELIBERATE",
+            },
+        )
+    job_id = str(job.id)
+    return {
+        "job_id": job_id,
+        "status": "queued",
+        "case_slug": slug,
+        "stream_url": f"/api/internal/legal/council/{job_id}/stream",
+        "status_url": f"/api/async/jobs/{job_id}",
+    }
 
 
 @router.get("/cases/{slug}/chronology", summary="Get master chronology timeline")

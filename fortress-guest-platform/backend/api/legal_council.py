@@ -173,6 +173,82 @@ async def get_session_state(session_id: str):
     return session
 
 
+@router.get("/council/{job_id}/stream")
+async def stream_council_job(job_id: str, request: Request, cursor: str | None = None):
+    """
+    Redis-backed SSE stream for an ARQ council deliberation job.
+
+    Replays stored events (from cursor) then subscribes to live pub/sub.
+    The frontend EventSource connects here after POST /cases/{slug}/deliberate
+    returns {"job_id": "..."}.
+    """
+    from backend.core.council_stream import (
+        create_council_redis,
+        replay_council_events,
+        is_terminal_event,
+    )
+
+    async def generate():
+        redis = await create_council_redis()
+        try:
+            # 1. Replay buffered events (handles reconnect with ?cursor=)
+            history = await replay_council_events(redis, job_id, after_id=cursor)
+            for stream_id, event in history:
+                yield f"id: {stream_id}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+                if is_terminal_event(event):
+                    return
+
+            # 2. Subscribe to live channel for remaining events
+            pubsub = redis.pubsub()
+            channel = f"council_stream:{job_id}"
+            await pubsub.subscribe(channel)
+            try:
+                timeout = 0
+                while not await request.is_disconnected():
+                    msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if msg and msg.get("type") == "message":
+                        raw = msg.get("data", "{}")
+                        try:
+                            envelope = json.loads(raw)
+                            event = envelope.get("event", envelope)
+                            stream_id = envelope.get("stream_id", "")
+                        except Exception:
+                            event = {"type": "raw", "data": raw}
+                            stream_id = ""
+                        if stream_id:
+                            yield f"id: {stream_id}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+                        else:
+                            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                        timeout = 0
+                        if is_terminal_event(event):
+                            return
+                    else:
+                        timeout += 1
+                        if timeout % 15 == 0:
+                            yield ": heartbeat\n\n"
+                        if timeout > 600:   # 10 minutes idle → close
+                            yield f"data: {json.dumps({'type':'timeout','job_id':job_id})}\n\n"
+                            return
+            finally:
+                await pubsub.unsubscribe(channel)
+                await pubsub.close()
+        except Exception as exc:
+            logger.exception("council_stream_error  job_id=%s  error=%s", job_id, str(exc)[:200])
+            yield f"data: {json.dumps({'type':'error','message':str(exc)[:200],'job_id':job_id})}\n\n"
+        finally:
+            await redis.close()
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-store",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
 @router.get("/council/personas")
 async def get_personas():
     """List all 9 Legal Council personas with their profiles."""

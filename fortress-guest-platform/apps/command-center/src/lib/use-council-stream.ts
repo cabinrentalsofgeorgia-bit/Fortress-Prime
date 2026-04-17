@@ -624,7 +624,7 @@ export function useCouncilStream(
 
     const requestConfig = buildStartRequest
       ? buildStartRequest(caseSlug)
-      : { url: `/api/legal/cases/${caseSlug}/deliberate` };
+      : { url: `/api/internal/legal/cases/${caseSlug}/deliberate` };
     const response = await api.post<CouncilStartResponse>(
       requestConfig.url,
       requestConfig.body,

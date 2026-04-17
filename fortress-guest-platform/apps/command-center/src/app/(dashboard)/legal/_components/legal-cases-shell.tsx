@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Scale, ChevronRight, Clock } from "lucide-react";
+import { Scale, ChevronRight, Clock, Mail } from "lucide-react";
 import { useLegalCases } from "@/lib/legal-hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,13 +48,22 @@ export function LegalCasesShell() {
             Active litigation, deadlines, and AI extraction intelligence.
           </p>
         </div>
-        <Link
-          href="/legal/council"
-          className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
-        >
-          Council of 9
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/legal/email-intake"
+            className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+          >
+            <Mail className="h-4 w-4" />
+            Email Intake
+          </Link>
+          <Link
+            href="/legal/council"
+            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+          >
+            Council of 9
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       {isLoading && (
