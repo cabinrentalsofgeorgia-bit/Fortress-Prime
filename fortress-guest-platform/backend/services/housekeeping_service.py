@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import structlog
 from sqlalchemy import (
-    Column, String, Integer, Text, Date, Time, TIMESTAMP, ForeignKey,
+    Boolean, Column, String, Integer, Text, Date, Time, TIMESTAMP, ForeignKey,
     select, and_,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -55,6 +55,13 @@ class HousekeepingTask(Base):
         index=True,
     )  # pending | in_progress | completed | cancelled
     assigned_to = Column(String(255), nullable=True)
+    # Structured cleaner FK (migration 8bc70dafda91)
+    legacy_assigned_to = Column(String(255), nullable=True)
+    assigned_cleaner_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("cleaners.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     cleaning_type = Column(
         String(20),
         nullable=False,
@@ -217,16 +224,24 @@ class HousekeepingService:
     # 4. Assign a cleaner
     # ------------------------------------------------------------------
     async def assign_cleaner(
-        self, turnover_id: UUID, cleaner_name: str
+        self,
+        turnover_id: UUID,
+        cleaner_name: str,
+        cleaner_id: Optional[UUID] = None,
     ) -> HousekeepingTask:
-        """Assign (or reassign) a staff member to a housekeeping task."""
+        """Assign (or reassign) a cleaner to a housekeeping task.
 
+        If *cleaner_id* is provided the FK is set; *cleaner_name* is always
+        written to the legacy ``assigned_to`` column for backwards compatibility.
+        """
         task = await self.db.get(HousekeepingTask, turnover_id)
         if not task:
             raise ValueError(f"Housekeeping task {turnover_id} not found")
 
         previous = task.assigned_to
         task.assigned_to = cleaner_name
+        if cleaner_id is not None:
+            task.assigned_cleaner_id = cleaner_id  # type: ignore[assignment]
         if task.status == "pending":
             task.status = "in_progress"
         await self.db.flush()
@@ -235,6 +250,7 @@ class HousekeepingService:
             "cleaner_assigned",
             task_id=str(turnover_id),
             cleaner=cleaner_name,
+            cleaner_id=str(cleaner_id) if cleaner_id else None,
             previous=previous,
         )
         return task
@@ -475,4 +491,5 @@ class HousekeepingService:
             "actual_minutes": task.actual_minutes,
             "notes": task.notes,
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "assigned_cleaner_id": str(task.assigned_cleaner_id) if task.assigned_cleaner_id else None,
         }
