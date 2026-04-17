@@ -19,7 +19,7 @@ logger = structlog.get_logger()
 
 
 def is_email_configured() -> bool:
-    return bool(settings.smtp_user and settings.smtp_password)
+    return bool(settings.smtp_host and settings.smtp_user)
 
 
 def send_email(

@@ -3,31 +3,49 @@ SMTP Dispatcher — Async-safe email delivery for the Agentic Sales Engine.
 
 Wraps the existing synchronous email_service.send_email() in
 asyncio.to_thread so it never blocks the FastAPI event loop (Rule 5).
-Combines TemplateEngine (branded HTML letterhead + Magic Link CTA)
-with SMTP delivery in a single call.
+Renders the booking_confirmation.html Jinja2 template for confirmations
+and a plain-text HTML wrapper for quote emails.
 
 Supports:
   - send_quote()        — Branded quote email with optional CTA
-  - send_confirmation() — Booking confirmation with PDF attachments
+  - send_confirmation() — Booking confirmation via booking_confirmation.html
 """
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import structlog
 
 from backend.services.email_service import is_email_configured, send_email
-from backend.services.template_engine import TemplateEngine
+from backend.services.template_engine import render_template
 
 logger = structlog.get_logger(service="smtp_dispatcher")
 
+_TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
+
+
+def _load_confirmation_template() -> str:
+    """Read booking_confirmation.html; return a fallback string if missing."""
+    path = _TEMPLATES_DIR / "booking_confirmation.html"
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        logger.warning("booking_confirmation_template_missing", path=str(path))
+        return (
+            "<p>Thank you for your booking at <strong>{{ property_name }}</strong>.<br>"
+            "Confirmation: {{ confirmation_code }}<br>"
+            "Check-in: {{ check_in }} — Check-out: {{ check_out }}</p>"
+        )
+
 
 class SMTPDispatcher:
-    """Async-safe SMTP dispatcher with branded HTML wrapping."""
+    """Async-safe SMTP dispatcher with Jinja2 template rendering."""
 
     def __init__(self):
-        self._engine = TemplateEngine()
+        pass
 
     async def send_quote(
         self,
@@ -65,9 +83,16 @@ class SMTPDispatcher:
             return result
 
         try:
-            html_body = self._engine.wrap_email(
-                text_content,
-                checkout_url=checkout_url,
+            cta = (
+                f'<p><a href="{checkout_url}" style="background:#1e293b;color:#fff;'
+                f'padding:12px 24px;text-decoration:none;border-radius:4px;'
+                f'font-weight:600;">View Quote</a></p>'
+                if checkout_url
+                else ""
+            )
+            html_body = (
+                f"<html><body style='font-family:sans-serif;color:#1e293b;'>"
+                f"<p>{text_content}</p>{cta}</body></html>"
             )
 
             sent = await asyncio.to_thread(
@@ -130,7 +155,19 @@ class SMTPDispatcher:
             return result
 
         try:
-            html_body = self._engine.wrap_confirmation(quote_data)
+            template_str = _load_confirmation_template()
+            html_body = render_template(
+                template_str,
+                {
+                    "property_name": quote_data.get("property_name", "Your Cabin"),
+                    "confirmation_code": quote_data.get("confirmation_code", ""),
+                    "check_in": quote_data.get("check_in_date", ""),
+                    "check_out": quote_data.get("check_out_date", ""),
+                    "nights": quote_data.get("nights", ""),
+                    "total": f"{float(quote_data.get('total_amount', 0)):.2f}",
+                    "year": datetime.utcnow().year,
+                },
+            )
             subject = f"Booking Confirmed — {quote_data.get('property_name', 'Your Cabin')}"
             text_body = (
                 f"Thank you for securing your dates at {quote_data.get('property_name', 'our cabin')}! "

@@ -23,17 +23,21 @@ CONTROL_ACCESS = RoleChecker([StaffRole.SUPER_ADMIN, StaffRole.MANAGER])
 C2_HOST_LABEL = "Captain-DGX"
 
 VERIFY_SCRIPT_PATH = Path("/home/admin/Fortress-Prime/scripts/verify_captain_cloudflared.sh")
-DOCKER_SERVICES = (
-    "vllm-server",
-    "qdrant-db",
-    "fortress-backend",
-    "fortress-worker",
+# Docker: `docker inspect` State.Status (typically "running").
+# Backend + ARQ worker: systemd units on Captain (`systemctl is-active`), not Docker containers.
+DOCKER_PULSE_SERVICES = (
+    "vllm-70b-captain",
+    "fortress-qdrant",
 )
+SYSTEMD_PULSE_SERVICES = {
+    "fortress-backend": "fortress-backend.service",
+    "fortress-worker": "fortress-arq-worker.service",
+}
 RESTARTABLE_SERVICES = {
-    "vllm-server": ("docker", "vllm-server"),
-    "qdrant-db": ("docker", "qdrant-db"),
-    "fortress-backend": ("docker", "fortress-backend"),
-    "fortress-worker": ("docker", "fortress-worker"),
+    "vllm-70b-captain": ("docker", "vllm-70b-captain"),
+    "fortress-qdrant": ("docker", "fortress-qdrant"),
+    "fortress-backend": ("systemd", "fortress-backend.service"),
+    "fortress-worker": ("systemd", "fortress-arq-worker.service"),
     "cloudflared": ("systemd", "cloudflared.service"),
 }
 
@@ -143,6 +147,19 @@ async def _run_command_output_async(args: list[str], *, timeout: int = 15) -> st
     return (await _run_command_async(args, timeout=timeout)).stdout.strip()
 
 
+def _parse_nvidia_smi_csv_int(segment: str) -> int | None:
+    """Parse a single CSV field from nvidia-smi; GB10 may report [N/A] for memory."""
+    raw = segment.strip()
+    if raw.startswith("[") and raw.endswith("]"):
+        raw = raw[1:-1].strip()
+    if not raw or raw.upper() in ("N/A", "NA", "UNKNOWN"):
+        return None
+    try:
+        return int(float(raw))
+    except ValueError:
+        return None
+
+
 async def get_nvidia_vitals() -> GPUMetrics:
     """Extracts VRAM, temperature, and utilization via nvidia-smi."""
     try:
@@ -155,15 +172,20 @@ async def get_nvidia_vitals() -> GPUMetrics:
             timeout=10,
         )
         first_row = output.splitlines()[0].strip()
-        used, total, temp, util = [segment.strip() for segment in first_row.split(",")]
-        used_int = int(used)
-        total_int = int(total)
-        temp_int = int(temp)
-        util_int = int(util)
+        parts = [segment.strip() for segment in first_row.split(",")]
+        if len(parts) < 4:
+            raise ValueError(f"unexpected nvidia-smi csv: {first_row!r}")
+        used_int = _parse_nvidia_smi_csv_int(parts[0])
+        total_int = _parse_nvidia_smi_csv_int(parts[1])
+        temp_int = _parse_nvidia_smi_csv_int(parts[2])
+        util_int = _parse_nvidia_smi_csv_int(parts[3])
+        pct: float | None = None
+        if used_int is not None and total_int is not None and total_int > 0:
+            pct = round((used_int / total_int) * 100, 1)
         return GPUMetrics(
             vram_used=used_int,
             vram_total=total_int,
-            vram_percent=round((used_int / total_int) * 100, 1) if total_int else 0.0,
+            vram_percent=pct,
             temp=temp_int,
             utilization=util_int,
         )
@@ -171,17 +193,42 @@ async def get_nvidia_vitals() -> GPUMetrics:
         return GPUMetrics(error="NVIDIA_SMI_OFFLINE", details=str(exc))
 
 
-def get_docker_status() -> dict[str, str]:
-    """Checks the health of critical local AI stack containers."""
+def _systemctl_pulse_status(unit: str) -> str:
+    """Map `systemctl is-active` to pulse labels; use ``running`` when active (matches Docker wording)."""
+    try:
+        proc = subprocess.run(
+            ["systemctl", "is-active", unit],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        state = proc.stdout.strip()
+        if state == "active":
+            return "running"
+        # Type=notify / slow start: still healthy for C2 display while coming up.
+        if state == "activating":
+            return "running"
+        if state:
+            return state
+        return "missing"
+    except Exception:
+        return "missing"
+
+
+def get_pulse_services_status() -> dict[str, str]:
+    """Docker containers + local systemd units exposed as a single map for `/pulse`."""
     statuses: dict[str, str] = {}
-    for service in DOCKER_SERVICES:
+    for name in DOCKER_PULSE_SERVICES:
         try:
-            statuses[service] = _run_command_output(
-                ["docker", "inspect", "-f", "{{.State.Status}}", service],
+            statuses[name] = _run_command_output(
+                ["docker", "inspect", "-f", "{{.State.Status}}", name],
                 timeout=10,
             )
         except Exception:
-            statuses[service] = "missing"
+            statuses[name] = "missing"
+    for key, unit in SYSTEMD_PULSE_SERVICES.items():
+        statuses[key] = _systemctl_pulse_status(unit)
     return statuses
 
 
@@ -200,7 +247,7 @@ def get_system_vitals() -> SystemVitals:
 async def build_pulse_response() -> PulseResponse:
     """Host vitals used by C2 `/pulse` and staff dashboard aggregates."""
     gpu = await get_nvidia_vitals()
-    services = await asyncio.to_thread(get_docker_status)
+    services = await asyncio.to_thread(get_pulse_services_status)
     system = await asyncio.to_thread(get_system_vitals)
     uptime = await _run_command_output_async(["uptime", "-p"], timeout=10)
     cpu_load = await asyncio.to_thread(psutil.cpu_percent)

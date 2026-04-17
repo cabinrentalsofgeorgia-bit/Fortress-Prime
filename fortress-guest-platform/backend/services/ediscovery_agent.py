@@ -39,7 +39,10 @@ logger = structlog.get_logger()
 # Legacy DB connection — fortress_db (read-only for e-discovery)
 # ═══════════════════════════════════════════════════════════════════════
 
-_LEGACY_DB_URL = settings.database_url.replace("/fortress_guest", "/fortress_db")
+# Runtime API DB is typically fortress_shadow; legacy legal/ediscovery lives in fortress_db.
+_LEGACY_DB_URL = (
+    settings.database_url.replace("/fortress_guest", "/fortress_db").replace("/fortress_shadow", "/fortress_db")
+)
 if _LEGACY_DB_URL.startswith("postgresql://"):
     _LEGACY_DB_URL = _LEGACY_DB_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 elif not _LEGACY_DB_URL.startswith("postgresql+asyncpg://"):

@@ -196,6 +196,12 @@ export default function CommandCenterPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button asChild className="bg-emerald-700 text-white hover:bg-emerald-600">
+              <Link href="/command/checkout-parity">
+                Checkout Parity
+                <Shield className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
             <Button asChild className="bg-cyan-700 text-white hover:bg-cyan-600">
               <Link href="/command/sovereign-pulse">
                 VRS Recovery
