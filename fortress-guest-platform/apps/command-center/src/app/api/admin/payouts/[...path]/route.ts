@@ -29,7 +29,7 @@ async function forwardToBackend(
   const { path } = await params;
   const pathString = path.join("/");
   const url = new URL(request.url);
-  const target = `${buildBackendUrl(`/api/vrs/${pathString}`)}${url.search}`;
+  const target = `${buildBackendUrl(`/api/admin/payouts/${pathString}`)}${url.search}`;
 
   const token = extractToken(request);
   const rawCookies = request.headers.get("cookie") || "";
@@ -55,7 +55,7 @@ async function forwardToBackend(
 
   try {
     console.log(
-      `[BFF] ${request.method} /api/vrs/${pathString} → FGP:8100` +
+      `[BFF] ${request.method} /api/admin/payouts/${pathString} → FGP:8100` +
         ` | auth=${token ? `Bearer(${token.slice(0, 8)}…)` : "NONE"}` +
         `${token ? " | cookie-injected" : ""}`,
     );
@@ -68,12 +68,12 @@ async function forwardToBackend(
 
     if (upstream.status === 401) {
       console.error(
-        `[BFF] AUTH FAILURE 401 ← FGP:8100 | path=/api/vrs/${pathString}` +
+        `[BFF] AUTH FAILURE 401 ← FGP:8100 | path=/api/admin/payouts/${pathString}` +
           ` | token=${token ? "present" : "MISSING"}`,
       );
     } else {
       console.log(
-        `[BFF] ${request.method} /api/vrs/${pathString} ← ${upstream.status}` +
+        `[BFF] ${request.method} /api/admin/payouts/${pathString} ← ${upstream.status}` +
           ` (${upstream.headers.get("content-type") || "unknown"})`,
       );
     }
@@ -83,7 +83,7 @@ async function forwardToBackend(
       headers: upstream.headers,
     });
   } catch (err) {
-    console.error(`[BFF] ${request.method} /api/vrs/${pathString} proxy error:`, err);
+    console.error(`[BFF] ${request.method} /api/admin/payouts/${pathString} proxy error:`, err);
     return NextResponse.json({ detail: "Backend unreachable" }, { status: 502 });
   }
 }

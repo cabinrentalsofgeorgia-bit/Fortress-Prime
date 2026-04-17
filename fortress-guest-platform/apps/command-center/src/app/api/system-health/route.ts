@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildBackendUrl } from "@/lib/server/backend-url";
+import { getFortressIngressHeaders } from "@/lib/server/fortress-ingress-headers";
 
 const HEALTH_BACKEND = process.env.HEALTH_BACKEND_URL || buildBackendUrl("/api/system/health");
 
@@ -8,7 +9,8 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
 
   const headers: Record<string, string> = {
-    "Accept": "application/json",
+    Accept: "application/json",
+    ...getFortressIngressHeaders(request),
   };
   if (cookie) {
     headers["Cookie"] = `fortress_session=${cookie}`;

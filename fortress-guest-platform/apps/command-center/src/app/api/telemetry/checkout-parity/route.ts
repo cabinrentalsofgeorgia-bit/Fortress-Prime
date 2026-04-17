@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildBackendUrl } from "@/lib/server/backend-url";
 import { getFortressIngressHeaders } from "@/lib/server/fortress-ingress-headers";
 
-const UPSTREAM = buildBackendUrl("/api/telemetry/parity-dashboard");
+const UPSTREAM = buildBackendUrl("/api/telemetry/checkout-parity");
 
 function forwardHeaders(request: NextRequest): Record<string, string> {
   const headers: Record<string, string> = {
@@ -40,6 +40,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: "Parity dashboard unreachable", detail: msg }, { status: 502 });
+    return NextResponse.json(
+      { error: "Checkout parity console unreachable", detail: msg },
+      { status: 502 },
+    );
   }
 }

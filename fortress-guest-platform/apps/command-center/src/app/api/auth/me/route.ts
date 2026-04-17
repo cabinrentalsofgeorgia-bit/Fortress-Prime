@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildBackendUrl } from "@/lib/server/backend-url";
+import { getFortressIngressHeaders } from "@/lib/server/fortress-ingress-headers";
 
 const SESSION_COOKIE = "fortress_session";
 
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
 
   const headers: Record<string, string> = {
     Accept: "application/json",
+    ...getFortressIngressHeaders(request),
   };
 
   const authHeader = request.headers.get("authorization");
