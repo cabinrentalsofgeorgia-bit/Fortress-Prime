@@ -40,6 +40,14 @@ class WorkOrder(Base):
     
     # Assignment
     assigned_to = Column(String(255))
+    # Structured vendor FK (migration f3a91b8c2e47)
+    legacy_assigned_to = Column(String(255))
+    assigned_vendor_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("vendors.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     assigned_at = Column(TIMESTAMP)
     
     # Resolution
