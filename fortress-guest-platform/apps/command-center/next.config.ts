@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
         "staging.cabin-rentals-of-georgia.com",
         "beta.cabin-rentals-of-georgia.com",
         "cabin-rentals-of-georgia.vercel.app",
+        "localhost:3001",
+        "192.168.0.100:3001",
+        "192.168.0.114:3001",
         ...staffHostsForServerActions(),
       ],
     },
@@ -39,6 +42,10 @@ const nextConfig: NextConfig = {
         source: "/cabin/:slug",
         destination: "/cabins/:slug",
       },
+      // Legacy API path (no hyphen): old client chunks still call /api/workorders/ — backend is /api/work-orders/
+      { source: "/api/workorders", destination: "/api/work-orders" },
+      { source: "/api/workorders/", destination: "/api/work-orders/" },
+      { source: "/api/workorders/:path*", destination: "/api/work-orders/:path*" },
     ];
   },
   async headers() {
