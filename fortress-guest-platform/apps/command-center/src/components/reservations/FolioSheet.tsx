@@ -53,25 +53,25 @@ interface FolioStay {
 
 interface FolioLineItem {
   label: string;
-  amount: number;
+  amount_cents: number;
   category: string;
 }
 
 interface FolioSecurityDeposit {
   is_required: boolean;
-  amount: number;
+  amount_cents: number;
   status: string;
   stripe_payment_intent: string | null;
   updated_at: string | null;
 }
 
 interface FolioFinancials {
-  total_amount: number;
-  paid_amount: number;
-  balance_due: number;
-  nightly_rate: number;
-  cleaning_fee: number;
-  tax_amount: number;
+  total_amount_cents: number;
+  paid_amount_cents: number;
+  balance_due_cents: number;
+  nightly_rate_cents: number;
+  cleaning_fee_cents: number;
+  tax_amount_cents: number;
   currency: string;
   line_items: FolioLineItem[];
   security_deposit?: FolioSecurityDeposit;
@@ -146,6 +146,10 @@ interface ReservationFolio {
 
 function usd(amount: number | null | undefined): string {
   return `$${(amount ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function centsToUsd(cents: number | null | undefined): string {
+  return usd((cents ?? 0) / 100);
 }
 
 function statusColor(status: string | null | undefined): string {
@@ -277,7 +281,7 @@ export function FolioSheet({ reservationId, open, onOpenChange }: FolioSheetProp
                     const flags: { label: string; color: string }[] = [];
                     const depositFlag = fin?.security_deposit?.is_required && fin?.security_deposit?.status === "none";
                     if (depositFlag) flags.push({ label: "DEPOSIT PENDING", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" });
-                    if ((fin?.balance_due ?? 0) > 0) flags.push({ label: "BALANCE DUE", color: "bg-red-500/20 text-red-400 border-red-500/30" });
+                    if ((fin?.balance_due_cents ?? 0) > 0) flags.push({ label: "BALANCE DUE", color: "bg-red-500/20 text-red-400 border-red-500/30" });
                     if ((folio.damage_claims?.length ?? 0) > 0) flags.push({ label: `${folio.damage_claims.length} DAMAGE CLAIM${folio.damage_claims.length > 1 ? "S" : ""}`, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" });
                     if (folio.agreement && folio.agreement.status !== "signed") flags.push({ label: "AGREEMENT UNSIGNED", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" });
                     if (folio.aggregation_errors && folio.aggregation_errors.length > 0) flags.push({ label: "PARTIAL DATA", color: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30" });
@@ -298,12 +302,12 @@ export function FolioSheet({ reservationId, open, onOpenChange }: FolioSheetProp
                 {/* RIGHT — Financial summary block */}
                 <div className="shrink-0 text-right space-y-1.5 pl-6 border-l border-zinc-800/60">
                   <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">Balance Due</p>
-                  <p className={`text-3xl font-bold tabular-nums leading-none ${(fin?.balance_due ?? 0) > 0 ? "text-amber-400" : "text-emerald-400"}`}>
-                    {usd(fin?.balance_due)}
+                  <p className={`text-3xl font-bold tabular-nums leading-none ${(fin?.balance_due_cents ?? 0) > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                    {centsToUsd(fin?.balance_due_cents)}
                   </p>
                   <div className="pt-2 space-y-0.5">
-                    <p className="text-xs text-zinc-500">Total <span className="text-zinc-300 font-medium ml-1">{usd(fin?.total_amount)}</span></p>
-                    <p className="text-xs text-zinc-500">Paid <span className="text-emerald-400 font-medium ml-1">{usd(fin?.paid_amount)}</span></p>
+                    <p className="text-xs text-zinc-500">Total <span className="text-zinc-300 font-medium ml-1">{centsToUsd(fin?.total_amount_cents)}</span></p>
+                    <p className="text-xs text-zinc-500">Paid <span className="text-emerald-400 font-medium ml-1">{centsToUsd(fin?.paid_amount_cents)}</span></p>
                   </div>
                 </div>
               </div>
@@ -465,14 +469,14 @@ export function FolioSheet({ reservationId, open, onOpenChange }: FolioSheetProp
               {/* Summary KPIs */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  ["Total", fin?.total_amount],
-                  ["Paid", fin?.paid_amount],
-                  ["Balance", fin?.balance_due],
+                  ["Total", fin?.total_amount_cents],
+                  ["Paid", fin?.paid_amount_cents],
+                  ["Balance", fin?.balance_due_cents],
                 ].map(([label, val]) => (
                   <div key={label as string} className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-center">
                     <p className="text-xs text-zinc-500 uppercase">{label as string}</p>
                     <p className={`text-lg font-semibold ${(label as string) === "Balance" && (val as number ?? 0) > 0 ? "text-amber-400" : "text-white"}`}>
-                      {usd(val as number)}
+                      {centsToUsd(val as number)}
                     </p>
                   </div>
                 ))}
@@ -489,14 +493,14 @@ export function FolioSheet({ reservationId, open, onOpenChange }: FolioSheetProp
                           <span className="text-zinc-300">{item.label}</span>
                           <Badge variant="outline" className="text-[10px] border-zinc-700 text-zinc-500">{item.category}</Badge>
                         </div>
-                        <span className={item.amount < 0 ? "text-emerald-400" : "text-white"}>
-                          {item.amount < 0 ? "−" : ""}{usd(Math.abs(item.amount))}
+                        <span className={item.amount_cents < 0 ? "text-emerald-400" : "text-white"}>
+                          {item.amount_cents < 0 ? "−" : ""}{centsToUsd(Math.abs(item.amount_cents))}
                         </span>
                       </div>
                     ))}
                     <div className="pt-2 mt-2 border-t border-zinc-800 flex items-center justify-between text-sm font-semibold">
                       <span className="text-zinc-300">Net Total</span>
-                      <span className="text-white">{usd(fin?.total_amount)}</span>
+                      <span className="text-white">{centsToUsd(fin?.total_amount_cents)}</span>
                     </div>
                   </div>
                 ) : (
@@ -711,7 +715,7 @@ function SecurityDepositCard({
   const [depositAction, setDepositAction] = useState<"initiate" | "capture" | "release" | null>(null);
 
   const isRequired = deposit?.is_required ?? false;
-  const amount = deposit?.amount ?? 500;
+  const amount = (deposit?.amount_cents ?? 50000) / 100;
   const status = deposit?.status ?? "none";
   const showPendingFlag = isRequired && status === "none";
 
