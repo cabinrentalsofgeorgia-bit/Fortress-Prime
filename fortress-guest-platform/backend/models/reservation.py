@@ -51,6 +51,9 @@ class Reservation(Base):
     
     # Booking Details
     booking_source = Column(String(100))  # airbnb, vrbo, direct, etc
+    # True when Streamline's maketype_name == 'O' (owner-stay reservation).
+    # Owner bookings contribute $0.00 to owner statements.
+    is_owner_booking = Column(Boolean, nullable=False, default=False, server_default="false")
     total_amount = Column(DECIMAL(10, 2))
     paid_amount = Column(DECIMAL(10, 2))
     balance_due = Column(DECIMAL(10, 2))
@@ -82,6 +85,9 @@ class Reservation(Base):
     # Full price/payment detail from GetReservationPrice
     streamline_financial_detail = Column(JSONB)
 
+    # Exact tax breakdown at booking time (from LedgerTaxBreakdown.to_dict())
+    tax_breakdown = Column(JSONB)
+
     # Vector Embedding (stored in Qdrant fgp_knowledge, reference here)
     qdrant_point_id = Column(UUID(as_uuid=True))
 
@@ -91,6 +97,7 @@ class Reservation(Base):
     security_deposit_status = Column(String(20), default="none", server_default="none", nullable=False)
     security_deposit_stripe_pi = Column(String(255))
     security_deposit_updated_at = Column(DateTime(timezone=True))
+    security_deposit_payment_method_id = Column(String(255))
 
     # Metadata
     streamline_reservation_id = Column(String(100))

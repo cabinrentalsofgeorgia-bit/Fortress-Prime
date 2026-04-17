@@ -4,6 +4,7 @@ Checkout hold lifecycle: advisory-locked hold row, Stripe PaymentIntent, convert
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -60,6 +61,30 @@ def _signed_quote_hold_error(code: str) -> BookingHoldError:
     return BookingHoldError(message, status)
 
 
+async def _send_owner_booking_alert(reservation: Any) -> None:
+    """Fire-and-forget: send booking alert email to property owner."""
+    try:
+        from backend.core.database import AsyncSessionLocal
+        from backend.services.owner_emails import send_booking_alert
+        nights = 0
+        if reservation.check_in_date and reservation.check_out_date:
+            nights = (reservation.check_out_date - reservation.check_in_date).days
+        async with AsyncSessionLocal() as db:
+            await send_booking_alert(
+                db,
+                reservation_id=str(reservation.id),
+                property_id=str(reservation.property_id) if reservation.property_id else "",
+                confirmation_code=reservation.confirmation_code or "",
+                guest_name=getattr(reservation, "guest_name", "") or "",
+                check_in_date=reservation.check_in_date,
+                check_out_date=reservation.check_out_date,
+                total_amount=Decimal(str(reservation.total_amount or 0)),
+                nights=nights,
+            )
+    except Exception as exc:
+        logger.warning("owner_booking_alert_error", error=str(exc)[:200])
+
+
 async def _emit_reservation_confirmed(reservation: Any) -> None:
     await publish_event(
         "reservation.confirmed",
@@ -77,6 +102,8 @@ async def _emit_reservation_confirmed(reservation: Any) -> None:
         },
         key=reservation.confirmation_code or str(reservation.id),
     )
+    # Fire-and-forget owner booking alert email
+    asyncio.ensure_future(_send_owner_booking_alert(reservation))
 
 
 async def create_checkout_hold(
@@ -96,6 +123,7 @@ async def create_checkout_hold(
     pets: int = 0,
     adults: int | None = None,
     children: int | None = None,
+    quote_ref: UUID | None = None,
 ) -> dict[str, Any]:
     prop = await db.get(Property, property_id)
     if not prop or not prop.is_active:
@@ -133,6 +161,10 @@ async def create_checkout_hold(
         except FastQuoteError as exc:
             raise BookingHoldError(exc.message, exc.http_status) from exc
         total = Decimal(str(snapshot["total"]))
+
+    # Embed quote_ref so it can be retrieved at confirm-hold time to link GuestQuote.
+    if quote_ref is not None:
+        snapshot["quote_ref"] = str(quote_ref)
 
     guest = None
     if guest_email:
