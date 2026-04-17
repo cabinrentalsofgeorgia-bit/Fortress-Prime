@@ -270,6 +270,65 @@ class AcquisitionPipeline(Base):
     )
 
     property = relationship("AcquisitionProperty", back_populates="pipeline")
+    documents = relationship(
+        "AcquisitionDocument",
+        back_populates="pipeline",
+        order_by="AcquisitionDocument.created_at",
+        cascade="all, delete-orphan",
+    )
+    due_diligence = relationship(
+        "AcquisitionDueDiligence",
+        back_populates="pipeline",
+        order_by="AcquisitionDueDiligence.display_order",
+        cascade="all, delete-orphan",
+    )
+
+
+class AcquisitionDueDiligence(Base):
+    """Per-pipeline checklist item for property acquisition due diligence."""
+
+    __tablename__ = "due_diligence"
+    __table_args__ = (
+        UniqueConstraint("pipeline_id", "item_key", name="uq_dd_pipeline_item"),
+        Index("ix_dd_pipeline_id", "pipeline_id"),
+        Index("ix_dd_status", "status"),
+        {"schema": ACQUISITION_SCHEMA},
+    )
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        server_default=text("uuid_generate_v4()"),
+    )
+    pipeline_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(f"{ACQUISITION_SCHEMA}.acquisition_pipeline.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    item_key = Column(String(80), nullable=False)
+    label = Column(String(255), nullable=False)
+    display_order = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    # pending | passed | failed | waived
+    status = Column(String(20), nullable=False, default="pending", server_default=text("'pending'"))
+    notes = Column(Text, nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    completed_by = Column(String(255), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utcnow,
+        onupdate=_utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+    pipeline = relationship("AcquisitionPipeline", back_populates="due_diligence")
 
 
 class AcquisitionIntelEvent(Base):
@@ -331,8 +390,48 @@ class AcquisitionSTRSignal(Base):
     property = relationship("AcquisitionProperty", back_populates="str_signals")
 
 
+class AcquisitionDocument(Base):
+    """Document uploaded to the acquisition pipeline vault (stored on NAS)."""
+
+    __tablename__ = "acquisition_documents"
+    __table_args__ = (
+        Index("ix_acq_docs_pipeline_id", "pipeline_id"),
+        {"schema": ACQUISITION_SCHEMA},
+    )
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        server_default=text("uuid_generate_v4()"),
+    )
+    pipeline_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(f"{ACQUISITION_SCHEMA}.acquisition_pipeline.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    file_name = Column(String(255), nullable=False)
+    nfs_path = Column(Text, nullable=False)
+    mime_type = Column(String(100), nullable=False, default="application/octet-stream",
+                       server_default=text("'application/octet-stream'"))
+    file_hash = Column(String(64), nullable=True)
+    file_size_bytes = Column(Integer, nullable=True)
+    doc_type = Column(String(50), nullable=False, default="general", server_default=text("'general'"))
+    uploaded_by = Column(String(255), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+    pipeline = relationship("AcquisitionPipeline", back_populates="documents")
+
+
 __all__ = [
     "ACQUISITION_SCHEMA",
+    "AcquisitionDocument",
+    "AcquisitionDueDiligence",
     "AcquisitionIntelEvent",
     "AcquisitionOwner",
     "AcquisitionOwnerContact",
