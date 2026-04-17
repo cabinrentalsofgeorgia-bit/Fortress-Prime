@@ -28,17 +28,45 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  async rewrites() {
+  async redirects() {
     return [
       {
-        source: "/cabin/:location/:slug",
-        destination: "/cabins/:slug",
-      },
-      {
-        source: "/cabin/:slug",
-        destination: "/cabins/:slug",
+        source: "/cabins/above-it-all-lodge",
+        destination: "/availability",
+        permanent: true,
       },
     ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // 1. THE FRONT DOOR: Retreat the homepage back to Drupal
+        {
+          source: "/",
+          destination: "https://legacy.cabin-rentals-of-georgia.com/",
+        },
+        // 2. THE REVENUE PROTECTORS: Keep the money zones on Drupal
+        {
+          source: "/cabins/:path*",
+          destination: "https://legacy.cabin-rentals-of-georgia.com/cabins/:path*",
+        },
+        {
+          source: "/availability",
+          destination: "https://legacy.cabin-rentals-of-georgia.com/availability",
+        },
+        {
+          source: "/checkout/:path*",
+          destination: "https://legacy.cabin-rentals-of-georgia.com/checkout/:path*",
+        }
+      ],
+      // 3. THE SAFETY NET: Catch unhandled legacy pages
+      fallback: [
+        {
+          source: "/:path*",
+          destination: "https://legacy.cabin-rentals-of-georgia.com/:path*",
+        },
+      ],
+    };
   },
   async headers() {
     return [

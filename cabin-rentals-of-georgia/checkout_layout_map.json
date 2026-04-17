@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "source": "https://www.cabin-rentals-of-georgia.com/blue-ridge-cabins/creekside-green",
+    "extracted_at": "2026-04-02T23:40:44.647574Z",
+    "viewport": "1280x900"
+  },
+  "cabin_page_layout": {
+    "sections": [
+      {
+        "id": "search_form",
+        "label": "Search / Date Selection Form",
+        "position": {
+          "top": 339.796875,
+          "left": 170,
+          "width": 940,
+          "height": 3
+        },
+        "field_count": 8
+      }
+    ],
+    "form_fields": [
+      {
+        "tag": "input",
+        "name": "arrival[date]",
+        "type": "text",
+        "id": "edit-arrival-datepicker-popup-0",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "16px",
+          "fontFamily": "Georgia, \"Times New Roman\", Times, serif",
+          "color": "rgb(255, 255, 255)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(255, 255, 255)",
+          "borderWidth": "0px",
+          "borderRadius": "20px 0px 0px 20px",
+          "padding": "1px 2px 1px 15px",
+          "width": "145px",
+          "height": "29px"
+        }
+      },
+      {
+        "tag": "input",
+        "name": "departure[date]",
+        "type": "text",
+        "id": "edit-departure-datepicker-popup-0",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "16px",
+          "fontFamily": "Georgia, \"Times New Roman\", Times, serif",
+          "color": "rgb(255, 255, 255)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(255, 255, 255)",
+          "borderWidth": "0px",
+          "borderRadius": "20px 0px 0px 20px",
+          "padding": "1px 2px 1px 15px",
+          "width": "145px",
+          "height": "29px"
+        }
+      },
+      {
+        "tag": "input",
+        "name": "difference",
+        "type": "hidden",
+        "id": "",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "color": "rgb(0, 0, 0)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(0, 0, 0)",
+          "borderWidth": "0px",
+          "borderRadius": "0px",
+          "padding": "0px 0px 0px 0px",
+          "width": "auto",
+          "height": "auto"
+        }
+      },
+      {
+        "tag": "input",
+        "name": "dest",
+        "type": "hidden",
+        "id": "",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "color": "rgb(0, 0, 0)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(0, 0, 0)",
+          "borderWidth": "0px",
+          "borderRadius": "0px",
+          "padding": "0px 0px 0px 0px",
+          "width": "auto",
+          "height": "auto"
+        }
+      },
+      {
+        "tag": "input",
+        "name": "search_by",
+        "type": "hidden",
+        "id": "",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "color": "rgb(0, 0, 0)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(0, 0, 0)",
+          "borderWidth": "0px",
+          "borderRadius": "0px",
+          "padding": "0px 0px 0px 0px",
+          "width": "auto",
+          "height": "auto"
+        }
+      },
+      {
+        "tag": "input",
+        "name": "op",
+        "type": "submit",
+        "id": "edit-submit",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "22.4px",
+          "fontFamily": "\"Fanwood Text\", serif",
+          "color": "rgb(255, 255, 255)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(255, 255, 255)",
+          "borderWidth": "0px",
+          "borderRadius": "20px",
+          "padding": "1px 6px 1px 6px",
+          "width": "110px",
+          "height": "31px"
+        }
+      },
+      {
+        "tag": "input",
+        "name": "form_build_id",
+        "type": "hidden",
+        "id": "",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "color": "rgb(0, 0, 0)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(0, 0, 0)",
+          "borderWidth": "0px",
+          "borderRadius": "0px",
+          "padding": "0px 0px 0px 0px",
+          "width": "auto",
+          "height": "auto"
+        }
+      },
+      {
+        "tag": "input",
+        "name": "form_id",
+        "type": "hidden",
+        "id": "",
+        "placeholder": "",
+        "label": "",
+        "css": {
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "color": "rgb(0, 0, 0)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(0, 0, 0)",
+          "borderWidth": "0px",
+          "borderRadius": "0px",
+          "padding": "0px 0px 0px 0px",
+          "width": "auto",
+          "height": "auto"
+        }
+      }
+    ],
+    "booking_elements": [],
+    "travelex": null,
+    "computed_styles": {
+      "main_content": {
+        "width": "649.234px",
+        "maxWidth": "none",
+        "padding": "1px 1px 30px 1px",
+        "margin": "0px 0px -1px 0px"
+      },
+      "content_column": {
+        "width": "609.234px",
+        "float": "none",
+        "padding": "0px 0px 0px 0px"
+      },
+      "sidebar_column": {
+        "width": "318.766px",
+        "float": "none",
+        "padding": "1px 1px 30px 1px"
+      },
+      "page_title": {
+        "fontFamily": "\"Fanwood Text\", serif",
+        "fontSize": "35.2px",
+        "fontWeight": "400",
+        "fontStyle": "italic",
+        "lineHeight": "35.2px",
+        "color": "rgb(124, 44, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "marginTop": "15px",
+        "marginBottom": "10px",
+        "paddingTop": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "borderColor": "rgb(124, 44, 0)",
+        "borderWidth": "0px",
+        "borderRadius": "0px",
+        "textAlign": "start",
+        "textDecoration": "none",
+        "textTransform": "none",
+        "letterSpacing": "normal"
+      },
+      "form_label": {
+        "fontFamily": "\"Fanwood Text\", serif",
+        "fontSize": "19.2px",
+        "fontWeight": "400",
+        "fontStyle": "normal",
+        "lineHeight": "32px",
+        "color": "rgb(83, 62, 39)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "marginTop": "0px",
+        "marginBottom": "0px",
+        "paddingTop": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "borderColor": "rgb(83, 62, 39)",
+        "borderWidth": "0px",
+        "borderRadius": "0px",
+        "textAlign": "start",
+        "textDecoration": "none",
+        "textTransform": "none",
+        "letterSpacing": "normal"
+      },
+      "form_input": {
+        "fontFamily": "Georgia, \"Times New Roman\", Times, serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "fontStyle": "normal",
+        "lineHeight": "29px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "marginTop": "0px",
+        "marginBottom": "0px",
+        "paddingTop": "1px",
+        "paddingBottom": "1px",
+        "paddingLeft": "15px",
+        "paddingRight": "2px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "borderRadius": "20px 0px 0px 20px",
+        "textAlign": "start",
+        "textDecoration": "none",
+        "textTransform": "none",
+        "letterSpacing": "normal"
+      },
+      "form_select": {
+        "fontFamily": "Arial",
+        "fontSize": "13.3333px",
+        "fontWeight": "400",
+        "fontStyle": "normal",
+        "lineHeight": "normal",
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(239, 239, 239)",
+        "marginTop": "0px",
+        "marginBottom": "0px",
+        "paddingTop": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "borderColor": "rgb(118, 118, 118)",
+        "borderWidth": "1px",
+        "borderRadius": "0px",
+        "textAlign": "start",
+        "textDecoration": "none",
+        "textTransform": "none",
+        "letterSpacing": "normal"
+      },
+      "submit_button": {
+        "fontFamily": "\"Fanwood Text\", serif",
+        "fontSize": "22.4px",
+        "fontWeight": "400",
+        "fontStyle": "italic",
+        "lineHeight": "30px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "marginTop": "0px",
+        "marginBottom": "0px",
+        "paddingTop": "1px",
+        "paddingBottom": "1px",
+        "paddingLeft": "6px",
+        "paddingRight": "6px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "borderRadius": "20px",
+        "textAlign": "center",
+        "textDecoration": "none",
+        "textTransform": "none",
+        "letterSpacing": "normal"
+      },
+      "section_heading": {
+        "fontFamily": "\"Fanwood Text\", serif",
+        "fontSize": "30px",
+        "fontWeight": "400",
+        "fontStyle": "italic",
+        "lineHeight": "30px",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "marginTop": "23px",
+        "marginBottom": "21px",
+        "paddingTop": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "borderRadius": "0px",
+        "textAlign": "left",
+        "textDecoration": "none",
+        "textTransform": "none",
+        "letterSpacing": "normal"
+      }
+    },
+    "section_order": [
+      {
+        "label": "Search/Date Form",
+        "selector": "#crog-search-cabins-form",
+        "y_position": 340
+      },
+      {
+        "label": "Page Title",
+        "selector": "h1.title, h1",
+        "y_position": 428
+      }
+    ]
+  },
+  "booking_form_detail": {
+    "guest_fields": [],
+    "total_block": null,
+    "addons": [],
+    "travelex_text": "",
+    "terms_text": ""
+  },
+  "booking_state_after_dates": {
+    "guest_fields": [],
+    "total_block": null,
+    "addons": [],
+    "travelex_text": "",
+    "terms_text": ""
+  },
+  "form_element_styles": {
+    "body": {
+      "fontFamily": "\"Fanwood Text\", serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "fontStyle": "normal",
+      "lineHeight": "20.8px",
+      "color": "rgb(83, 62, 39)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(83, 62, 39)",
+      "borderWidth": "0px",
+      "borderRadius": "0px",
+      "padding": "0px 0px 0px 20px",
+      "margin": "0px 0px 0px 0px"
+    },
+    "h1": {
+      "fontFamily": "\"Fanwood Text\", serif",
+      "fontSize": "35.2px",
+      "fontWeight": "400",
+      "fontStyle": "italic",
+      "lineHeight": "35.2px",
+      "color": "rgb(124, 44, 0)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "borderColor": "rgb(124, 44, 0)",
+      "borderWidth": "0px",
+      "borderRadius": "0px",
+      "padding": "0px 0px 0px 0px",
+      "margin": "15px 0px 15px 0px"
+    }
+  }
+}

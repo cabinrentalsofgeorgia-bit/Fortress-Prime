@@ -375,7 +375,7 @@ export function useUnreadMessages() {
 export function useWorkOrders(params?: Record<string, string | number | boolean | undefined>) {
   return useQuery<WorkOrder[]>({
     queryKey: ["work-orders", params],
-    queryFn: () => api.get("/api/workorders/", params),
+    queryFn: () => api.get("/api/work-orders/", params),
   });
 }
 
@@ -383,7 +383,7 @@ export function useCreateWorkOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { property_id: string; title: string; description: string; category?: string; priority?: string }) =>
-      api.post("/api/workorders/", data),
+      api.post("/api/work-orders/", data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["work-orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
@@ -397,7 +397,7 @@ export function useUpdateWorkOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string; status?: string; assigned_to?: string; priority?: string; resolution_notes?: string }) =>
-      api.patch(`/api/workorders/${id}`, data),
+      api.patch(`/api/work-orders/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["work-orders"] });
       toast.success("Work order updated");

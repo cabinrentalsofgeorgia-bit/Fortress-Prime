@@ -69,6 +69,7 @@ const MIRRORED_NODE_RICH_TEXT_CSS = `
   }
 `;
 
+export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
 export async function generateStaticParams(): Promise<Array<{ slug: string[] }>> {
