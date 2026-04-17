@@ -71,69 +71,90 @@ PERSONAS_DIR = os.getenv(
     "LEGAL_PERSONAS_DIR",
     "/home/admin/Fortress-Prime/personas/legal",
 )
-LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library"})
+LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library", "legal_ediscovery"})
 
 from backend.core.config import settings as _cfg
 
-_LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:4000/v1").rstrip("/")
-_LITELLM_KEY = getattr(_cfg, "litellm_master_key", "")
+_LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:8002/v1").rstrip("/")
+_LITELLM_KEY = getattr(_cfg, "litellm_master_key", "sk-fortress-master-123")
 
-ANTHROPIC_PROXY = os.getenv("ANTHROPIC_PROXY_URL", _LITELLM_BASE).rstrip("/")
-GEMINI_BASE_URL = os.getenv(
-    "GEMINI_BASE_URL",
-    _LITELLM_BASE,
-).rstrip("/")
-XAI_BASE_URL = os.getenv("XAI_BASE_URL", _LITELLM_BASE).rstrip("/")
-HYDRA_URL = os.getenv("HYDRA_FALLBACK_URL", _LITELLM_BASE).rstrip("/")
-SWARM_URL = os.getenv("SWARM_URL", _LITELLM_BASE).rstrip("/")
+# ── Frontier model endpoints (all route through local LiteLLM gateway) ──────
+ANTHROPIC_PROXY   = os.getenv("ANTHROPIC_PROXY_URL",  _LITELLM_BASE).rstrip("/")
+OPENAI_BASE_URL   = os.getenv("OPENAI_BASE_URL",       _LITELLM_BASE).rstrip("/")
+XAI_BASE_URL      = os.getenv("XAI_BASE_URL",          _LITELLM_BASE).rstrip("/")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL",     _LITELLM_BASE).rstrip("/")
+GEMINI_BASE_URL   = os.getenv("GEMINI_BASE_URL",       _LITELLM_BASE).rstrip("/")
 
-HYDRA_32B_URL = os.getenv("HYDRA_32B_URL", "http://192.168.0.105:11434/v1").rstrip("/")
-HYDRA_120B_URL = os.getenv("HYDRA_120B_URL", "http://192.168.0.106:11434/v1").rstrip("/")
-VLLM_120B_URL = os.getenv("VLLM_120B_URL", "http://192.168.0.106:8000/v1").rstrip("/")
+# ── Local sovereign endpoints (Ollama on DGX Sparks) ────────────────────────
+# spark-node-2 local Ollama — use 127.0.0.1 to avoid network interface latency
+_LOCAL_OLLAMA = "http://127.0.0.1:11434/v1"
+SPARK2_URL      = os.getenv("SPARK2_URL",      _LOCAL_OLLAMA).rstrip("/")
+SPARK_LOCAL_URL = os.getenv("SPARK_LOCAL_URL", _LOCAL_OLLAMA).rstrip("/")
+# Legacy Hydra URLs (all fall back to local Ollama on spark-node-2)
+HYDRA_URL       = os.getenv("HYDRA_FALLBACK_URL", _LOCAL_OLLAMA).rstrip("/")
+SWARM_URL       = os.getenv("SWARM_URL",          _LOCAL_OLLAMA).rstrip("/")
+HYDRA_32B_URL   = os.getenv("HYDRA_32B_URL",      _LOCAL_OLLAMA).rstrip("/")
+HYDRA_120B_URL  = os.getenv("HYDRA_120B_URL",     _LOCAL_OLLAMA).rstrip("/")
+VLLM_120B_URL   = os.getenv("VLLM_120B_URL",      _LOCAL_OLLAMA).rstrip("/")
 
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
-XAI_MODEL = os.getenv("XAI_MODEL", "grok-3")
-XAI_MODEL_FLAGSHIP = os.getenv("XAI_MODEL_FLAGSHIP", "grok-4-0709")
-VLLM_MODEL_120B = os.getenv("VLLM_MODEL_120B", "openai/gpt-oss-120b")
-HYDRA_MODEL_32B = os.getenv("HYDRA_MODEL_32B", "qwen3:32b")
-HYDRA_MODEL_120B = os.getenv("HYDRA_MODEL_120B", "gpt-oss:120b")
-SWARM_MODEL = os.getenv("SWARM_MODEL", "qwen2.5:7b")
-HYDRA_MODEL = HYDRA_MODEL_120B
+# ── Model name constants ─────────────────────────────────────────────────────
+ANTHROPIC_MODEL        = os.getenv("ANTHROPIC_MODEL",        "claude-sonnet-4-6")
+ANTHROPIC_OPUS_MODEL   = os.getenv("ANTHROPIC_OPUS_MODEL",   "claude-opus-4-6")
+OPENAI_MODEL           = os.getenv("OPENAI_MODEL",           "gpt-4o")
+XAI_MODEL              = os.getenv("XAI_MODEL",              "grok-4")
+XAI_MODEL_FLAGSHIP     = os.getenv("XAI_MODEL_FLAGSHIP",     "grok-4")
+DEEPSEEK_MODEL         = os.getenv("DEEPSEEK_MODEL",         "deepseek-chat")
+DEEPSEEK_REASONER_MODEL= os.getenv("DEEPSEEK_REASONER_MODEL","deepseek-reasoner")
+GEMINI_MODEL           = os.getenv("GEMINI_MODEL",           "gemini-2.5-pro")
+SPARK2_MODEL       = os.getenv("SPARK2_MODEL",     "qwen2.5:7b")
+SPARK_LOCAL_MODEL  = os.getenv("SPARK_LOCAL_MODEL","qwen2.5:7b")
+SWARM_MODEL        = os.getenv("SWARM_MODEL",      "qwen2.5:7b")
+# Legacy Hydra model names (fall through to qwen2.5:7b via Spark2)
+VLLM_MODEL_120B  = os.getenv("VLLM_MODEL_120B",   "qwen2.5:7b")
+HYDRA_MODEL_32B  = os.getenv("HYDRA_MODEL_32B",   "qwen2.5:7b")
+HYDRA_MODEL_120B = os.getenv("HYDRA_MODEL_120B",  "qwen2.5:7b")
+HYDRA_MODEL      = HYDRA_MODEL_120B
 
 ALLOW_CLOUD_LLM = os.getenv("ALLOW_CLOUD_LLM", "false").lower() == "true"
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_AI_API_KEY", ""))
-XAI_API_KEY = os.getenv("XAI_API_KEY", "")
+GEMINI_API_KEY  = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_AI_API_KEY", ""))
+XAI_API_KEY     = os.getenv("XAI_API_KEY", "")
 FRONTIER_GATEWAY_API_KEY = os.getenv("LITELLM_MASTER_KEY", _LITELLM_KEY)
 
-# Anthropic=2, Gemini=2, xAI=2, Local-32B(Ocular)=2, Local-120B(Sovereign)=1
+# ── All 9 seats use distinct frontier models via LiteLLM gateway ─────────────
+# Seat 9 = Chief Justice → Claude Opus (most capable, reserved for synthesis)
+# Seats 5-8 = distributed across claude-sonnet, gpt-4o, grok-4, deepseek-reasoner
+# Seats 1-4 = original frontier assignments
 SEAT_ROUTING = {
-    1: {"provider": "ANTHROPIC",    "role": "The Senior Litigator"},
-    2: {"provider": "ANTHROPIC",    "role": "The Contract Auditor"},
-    3: {"provider": "GEMINI",       "role": "The Statutory Scholar"},
-    4: {"provider": "HYDRA_32B",    "role": "The E-Discovery Forensic"},
-    5: {"provider": "XAI",          "role": "The Devil's Advocate"},
-    6: {"provider": "HYDRA_32B",    "role": "The Compliance Officer"},
-    7: {"provider": "VLLM_120B",    "role": "The Local Counsel"},
-    8: {"provider": "GEMINI",       "role": "The Risk Assessor"},
-    9: {"provider": "XAI_FLAGSHIP", "role": "The Chief Justice"},
+    1: {"provider": "ANTHROPIC",          "role": "The Senior Litigator"},   # Claude Sonnet
+    2: {"provider": "OPENAI",             "role": "The Contract Auditor"},   # GPT-4o
+    3: {"provider": "XAI",               "role": "The Statutory Scholar"},  # Grok-4
+    4: {"provider": "DEEPSEEK_REASONER",  "role": "The E-Discovery Forensic"},# DeepSeek-Reasoner
+    5: {"provider": "ANTHROPIC",          "role": "The Devil's Advocate"},   # Claude Sonnet
+    6: {"provider": "OPENAI",             "role": "The Compliance Officer"}, # GPT-4o
+    7: {"provider": "XAI",               "role": "The Local Counsel"},      # Grok-4
+    8: {"provider": "DEEPSEEK_REASONER",  "role": "The Risk Assessor"},     # DeepSeek-Reasoner
+    9: {"provider": "ANTHROPIC_OPUS",     "role": "The Chief Justice"},     # Claude Opus
 }
 
-_LLM_SEMAPHORE = asyncio.Semaphore(9)
+_LLM_SEMAPHORE = asyncio.Semaphore(3)   # max 3 concurrent LiteLLM calls
 
-PERSONA_TIMEOUT_SECONDS = 600
+# DeepSeek-Reasoner needs 2000+ tokens for chain-of-thought before outputting JSON;
+# other frontier models complete in 10-60s with 1200 tokens
+PERSONA_TIMEOUT_SECONDS = 180
 
-HTTPX_TIMEOUT = httpx.Timeout(connect=60.0, read=600.0, write=10.0, pool=10.0)
-HTTPX_FALLBACK_TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
+HTTPX_TIMEOUT = httpx.Timeout(connect=15.0, read=180.0, write=10.0, pool=10.0)
+HTTPX_FALLBACK_TIMEOUT = httpx.Timeout(connect=10.0, read=150.0, write=10.0, pool=10.0)
 
-_OLLAMA_ENDPOINTS = {HYDRA_32B_URL, HYDRA_120B_URL, HYDRA_URL, SWARM_URL}
+_OLLAMA_ENDPOINTS = {HYDRA_32B_URL, HYDRA_120B_URL, HYDRA_URL, SWARM_URL,
+                     SPARK2_URL, SPARK_LOCAL_URL}
 _OLLAMA_CTX_LIMITS: dict[str, int] = {
-    HYDRA_120B_URL: 8192,
-    HYDRA_32B_URL: 16384,
+    SPARK2_URL: 8192,
+    SPARK_LOCAL_URL: 8192,
 }
 _OLLAMA_CTX_DEFAULT = 8192
 
-_CLOUD_PROVIDERS = {"ANTHROPIC", "GEMINI", "XAI", "XAI_FLAGSHIP"}
+_CLOUD_PROVIDERS = {"ANTHROPIC", "ANTHROPIC_OPUS", "OPENAI", "XAI", "XAI_FLAGSHIP",
+                    "DEEPSEEK", "DEEPSEEK_REASONER", "GEMINI"}
 
 logger.info(
     "legal_council_config  allow_cloud=%s  anthropic=%s  xai=%s  hydra_32b=%s  hydra_120b=%s  vllm_120b=%s",
@@ -148,6 +169,46 @@ _PII_PATTERNS = [
     (re.compile(r"\b(?:192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})\b"), "[IP_REDACTED]"),
     (re.compile(r"(?i)\b(?:password|passwd|secret_key|api_key|token)\s*[:=]\s*\S+"), "[CREDENTIAL_REDACTED]"),
 ]
+
+
+_capture_log = logging.getLogger("legal_council.capture")
+
+
+async def _capture_council_training(
+    *,
+    seat: int,
+    persona_name: str,
+    model_used: str,
+    user_prompt: str,
+    response: str,
+) -> None:
+    """
+    Fire-and-forget: write a frontier persona opinion to llm_training_captures
+    so the nightly distillation job can use frontier outputs to train local models.
+    """
+    try:
+        from sqlalchemy import text as _text
+        from backend.core.database import AsyncSessionLocal
+
+        async def _insert() -> None:
+            async with AsyncSessionLocal() as session:
+                await session.execute(_text("""
+                    INSERT INTO llm_training_captures
+                        (source_module, model_used, user_prompt, assistant_resp, status)
+                    VALUES
+                        (:module, :model, :prompt, :response, 'pending')
+                    ON CONFLICT DO NOTHING
+                """), {
+                    "module":   f"legal_council_of_9/seat_{seat}/{persona_name}"[:120],
+                    "model":    model_used[:120],
+                    "prompt":   user_prompt[:32_000],
+                    "response": response[:32_000],
+                })
+                await session.commit()
+
+        asyncio.create_task(_insert())
+    except Exception as exc:
+        _capture_log.warning("council_training_capture_failed  error=%s", str(exc)[:200])
 
 
 def _sanitize_for_cloud(text: str) -> str:
@@ -387,6 +448,8 @@ async def _call_llm(
             if base_url not in (HYDRA_120B_URL, VLLM_120B_URL):
                 try:
                     fb_user = f"/no_think\n{user_prompt}" if HYDRA_MODEL_120B in _REASONING_MODELS else user_prompt
+                    # Use reduced max_tokens for local fallback to avoid slow generation
+                    local_max_tokens = min(max_tokens, 768)
                     fb_payload: dict[str, Any] = {
                         "model": HYDRA_MODEL_120B,
                         "messages": [
@@ -394,7 +457,7 @@ async def _call_llm(
                             {"role": "user", "content": fb_user},
                         ],
                         "temperature": temperature,
-                        "max_tokens": max_tokens,
+                        "max_tokens": local_max_tokens,
                         "options": {"num_ctx": _OLLAMA_CTX_LIMITS.get(HYDRA_120B_URL, 8192)},
                     }
                     async with httpx.AsyncClient(timeout=HTTPX_FALLBACK_TIMEOUT) as fb_client:
@@ -418,7 +481,7 @@ async def _call_llm(
                         {"role": "user", "content": user_prompt},
                     ],
                     "temperature": temperature,
-                    "max_tokens": max_tokens,
+                    "max_tokens": min(max_tokens, 768),   # cap for speed
                     "options": {"num_ctx": _OLLAMA_CTX_DEFAULT},
                 }
                 async with httpx.AsyncClient(timeout=HTTPX_FALLBACK_TIMEOUT) as sw_client:
@@ -635,6 +698,55 @@ Execute analysis and return the raw JSON object.
                 base_url=XAI_BASE_URL,
                 api_key=FRONTIER_GATEWAY_API_KEY,
             )
+        if provider == "OPENAI" and FRONTIER_GATEWAY_API_KEY:
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=OPENAI_MODEL,
+                base_url=OPENAI_BASE_URL,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+            )
+        if provider == "DEEPSEEK" and FRONTIER_GATEWAY_API_KEY:
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=DEEPSEEK_MODEL,
+                base_url=DEEPSEEK_BASE_URL,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+            )
+        if provider == "DEEPSEEK_REASONER" and FRONTIER_GATEWAY_API_KEY:
+            # DeepSeek-Reasoner uses chain-of-thought tokens before outputting JSON.
+            # Needs max_tokens≥2000 to complete the reasoning + structured answer.
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=DEEPSEEK_REASONER_MODEL,
+                base_url=DEEPSEEK_BASE_URL,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+                max_tokens=2500,
+            )
+        if provider == "ANTHROPIC_OPUS" and FRONTIER_GATEWAY_API_KEY:
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=ANTHROPIC_OPUS_MODEL,
+                base_url=ANTHROPIC_PROXY,
+                api_key=FRONTIER_GATEWAY_API_KEY,
+            )
+        if provider == "SPARK2":
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=SPARK2_MODEL,
+                base_url=SPARK2_URL,
+            )
+        if provider == "SPARK_LOCAL":
+            return await _call_llm(
+                current_system,
+                current_user,
+                model=SPARK_LOCAL_MODEL,
+                base_url=SPARK_LOCAL_URL,
+            )
         if provider == "VLLM_120B":
             return await _call_llm(
                 current_system,
@@ -663,11 +775,12 @@ Execute analysis and return the raw JSON object.
                 model=SWARM_MODEL,
                 base_url=SWARM_URL,
             )
+        # Ultimate fallback → Spark2 local (always reachable)
         return await _call_llm(
             current_system,
             current_user,
-            model=HYDRA_MODEL_120B,
-            base_url=HYDRA_120B_URL,
+            model=SPARK2_MODEL,
+            base_url=SPARK2_URL,
         )
 
     repair_hint = (
@@ -686,6 +799,15 @@ Execute analysis and return the raw JSON object.
         text, model = await _invoke_once(base_system, current_user)
         try:
             _extract_json_block(text)
+            # Training capture: write frontier opinion for local model distillation
+            if text and provider in _CLOUD_PROVIDERS:
+                asyncio.ensure_future(_capture_council_training(
+                    seat=persona.seat,
+                    persona_name=persona.name,
+                    model_used=f"council/{provider.lower()}/{model}",
+                    user_prompt=base_user[:16000],
+                    response=text[:16000],
+                ))
             break
         except Exception as exc:
             logger.warning(
@@ -816,7 +938,9 @@ def _dedupe_top(items: List[str], limit: int) -> List[str]:
 # Context Freezer (Pillar 2 — Qdrant Evidence Locking)
 # ═══════════════════════════════════════════════════════════════════════
 
-LEGAL_COLLECTION = "legal_library"
+# legal_ediscovery holds 859+ vectorised chunks for active cases (indexed by process_vault_upload)
+# legal_library has only 3 points (stale/legacy) — use legal_ediscovery for context freezing
+LEGAL_COLLECTION = "legal_ediscovery"
 
 
 async def _embed_text(text: str) -> Optional[List[float]]:
@@ -836,6 +960,7 @@ async def _embed_text(text: str) -> Optional[List[float]]:
 async def freeze_context(
     case_brief: str,
     top_k: int = 20,
+    case_slug: Optional[str] = None,
 ) -> Tuple[List[str], List[str]]:
     """
     Pillar 2: Context Freezing.
@@ -855,12 +980,15 @@ async def freeze_context(
         return [], []
 
     headers = {"api-key": _cfg.qdrant_api_key} if _cfg.qdrant_api_key else {}
-    body = {
+    body: Dict[str, Any] = {
         "vector": query_vec,
         "limit": top_k,
         "with_payload": True,
         "with_vector": False,
     }
+    # Filter to the specific case when querying legal_ediscovery
+    if case_slug and LEGAL_COLLECTION == "legal_ediscovery":
+        body["filter"] = {"must": [{"key": "case_slug", "match": {"value": case_slug}}]}
 
     try:
         async with httpx.AsyncClient(timeout=15) as client:
@@ -884,7 +1012,7 @@ async def freeze_context(
         text = payload.get("text", "")
         if point_id and text:
             vector_ids.append(point_id)
-            source = payload.get("source_file", payload.get("filename", "unknown"))
+            source = payload.get("file_name", payload.get("source_file", payload.get("filename", "unknown")))
             context_chunks.append(f"[{source}] {text}")
 
     logger.info(
@@ -910,15 +1038,19 @@ def _build_roster_snapshot() -> Dict[str, Any]:
     nas_roster = load_active_roster()
 
     model_map = {
-        "ANTHROPIC": ANTHROPIC_MODEL,
-        "GEMINI": GEMINI_MODEL,
-        "XAI": XAI_MODEL,
-        "XAI_FLAGSHIP": XAI_MODEL_FLAGSHIP,
-        "HYDRA": HYDRA_MODEL,
-        "HYDRA_32B": HYDRA_MODEL_32B,
-        "HYDRA_120B": HYDRA_MODEL_120B,
-        "VLLM_120B": VLLM_MODEL_120B,
-        "SWARM": SWARM_MODEL,
+        "ANTHROPIC":         ANTHROPIC_MODEL,
+        "ANTHROPIC_OPUS":    ANTHROPIC_OPUS_MODEL,
+        "OPENAI":            OPENAI_MODEL,
+        "XAI":               XAI_MODEL,
+        "XAI_FLAGSHIP":      XAI_MODEL_FLAGSHIP,
+        "DEEPSEEK":          DEEPSEEK_MODEL,
+        "DEEPSEEK_REASONER": DEEPSEEK_REASONER_MODEL,
+        "GEMINI":            GEMINI_MODEL,
+        "HYDRA":             HYDRA_MODEL,
+        "HYDRA_32B":         HYDRA_MODEL_32B,
+        "HYDRA_120B":        HYDRA_MODEL_120B,
+        "VLLM_120B":         VLLM_MODEL_120B,
+        "SWARM":             SWARM_MODEL,
     }
 
     seats = []
@@ -1034,7 +1166,7 @@ async def run_council_deliberation(
         return
 
     # ── Pillar 2: Context Freezing ────────────────────────────────────
-    vector_ids, context_chunks = await freeze_context(case_brief, top_k=20)
+    vector_ids, context_chunks = await freeze_context(case_brief, top_k=20, case_slug=case_slug or None)
 
     frozen_context = "\n\n".join(context_chunks) if context_chunks else context
     if context and context_chunks:

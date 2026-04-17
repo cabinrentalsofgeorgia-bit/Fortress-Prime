@@ -6,16 +6,60 @@ when credentials are available.
 """
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
 import httpx
+import structlog
 
 from backend.core.config import settings
 from backend.services.openshell_audit import record_audit_event
 from backend.services.privacy_router import sanitize_for_cloud
 from backend.services.swarm_service import submit_chat_completion
+
+_capture_log = structlog.get_logger(service="ai_router.capture")
+
+
+async def _capture_interaction(
+    *,
+    source_module: str,
+    prompt: str,
+    response: str,
+    model_label: str,
+    db: Any | None = None,
+) -> None:
+    """
+    Write a frontier-model interaction to llm_training_captures.
+
+    Fire-and-forget — never raises.  Called after every successful cloud
+    fallback so the nightly fine-tune job has fresh teacher data.
+    The table is bootstrapped by nightly_distillation_exporter on first run.
+    """
+    try:
+        from sqlalchemy import text
+        from backend.core.database import AsyncSessionLocal
+
+        async def _insert() -> None:
+            async with AsyncSessionLocal() as session:
+                await session.execute(text("""
+                    INSERT INTO llm_training_captures
+                        (source_module, model_used, user_prompt, assistant_resp, status)
+                    VALUES
+                        (:module, :model, :prompt, :response, 'pending')
+                    ON CONFLICT DO NOTHING
+                """), {
+                    "module":   source_module[:120],
+                    "model":    model_label[:120],
+                    "prompt":   prompt[:32_000],
+                    "response": response[:32_000],
+                })
+                await session.commit()
+
+        asyncio.create_task(_insert())
+    except Exception as exc:
+        _capture_log.warning("distillation_capture_failed", error=str(exc)[:200])
 
 
 @dataclass
@@ -180,6 +224,14 @@ async def execute_resilient_inference(
                 "redaction_count": privacy_decision.redaction_count,
                 "removed_fields": privacy_decision.removed_fields,
             },
+            db=db,
+        )
+        # Capture for nightly distillation flywheel (fire-and-forget)
+        await _capture_interaction(
+            source_module=source_module or "resilient_inference",
+            prompt=safe_prompt,
+            response=text,
+            model_label=f"godhead/{settings.openai_model}",
             db=db,
         )
         return result
