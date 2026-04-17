@@ -546,8 +546,80 @@ async def startup(ctx: dict[str, Any]) -> None:
             "streamline_availability_sync_started",
             interval_seconds=max(300, int(settings.streamline_sync_interval)),
         )
+        from backend.workers.drift_sentry import drift_sentry_loop
+        drift_task = asyncio.create_task(
+            drift_sentry_loop(),
+            name="drift_sentry_task",
+        )
+        ctx["drift_sentry_task"] = drift_task
+        drift_task.add_done_callback(
+            lambda t: _log_background_task_result("drift_sentry_task", t),
+        )
+        logger.info("drift_sentry_started_in_worker")
+
     else:
         logger.info("streamline_availability_sync_disabled", reason="streamline_not_configured")
+
+    from backend.workers.hermes_sync import hermes_sync_loop
+    hermes_task = asyncio.create_task(
+        hermes_sync_loop(),
+        name="hermes_sync_task",
+    )
+    ctx["hermes_sync_task"] = hermes_task
+    hermes_task.add_done_callback(
+        lambda t: _log_background_task_result("hermes_sync_task", t),
+    )
+    logger.info("hermes_sync_started_in_worker")
+
+    if settings.recursive_agent_loop_enabled:
+        from backend.workers.recursive_agent_loop import recursive_agent_loop
+        ral_task = asyncio.create_task(
+            recursive_agent_loop(),
+            name="recursive_agent_loop_task",
+        )
+        ctx["recursive_agent_loop_task"] = ral_task
+        ral_task.add_done_callback(
+            lambda t: _log_background_task_result("recursive_agent_loop_task", t),
+        )
+        logger.info("recursive_agent_loop_started_in_worker",
+                    interval=os.getenv("RECURSIVE_LOOP_INTERVAL", "1800"))
+    else:
+        logger.info("recursive_agent_loop_disabled")
+
+    if settings.legal_email_intake_enabled:
+        from backend.services.legal_email_intake import run_legal_intake_loop
+        legal_intake_task = asyncio.create_task(
+            run_legal_intake_loop(),
+            name="legal_intake_task",
+        )
+        ctx["legal_intake_task"] = legal_intake_task
+        legal_intake_task.add_done_callback(
+            lambda t: _log_background_task_result("legal_intake_task", t),
+        )
+        logger.info("legal_email_intake_started_in_worker",
+                    interval=settings.legal_email_poll_interval)
+    else:
+        logger.info("legal_email_intake_disabled")
+
+    reservation_confirmed_task = asyncio.create_task(
+        _reservation_confirmed_consumer_loop(),
+        name="reservation_confirmed_consumer_task",
+    )
+    ctx["reservation_confirmed_consumer_task"] = reservation_confirmed_task
+    reservation_confirmed_task.add_done_callback(
+        lambda t: _log_background_task_result("reservation_confirmed_consumer_task", t),
+    )
+    logger.info("reservation_confirmed_consumer_wired")
+
+    payout_sweep_task = asyncio.create_task(
+        _payout_sweep_loop(),
+        name="payout_sweep_task",
+    )
+    ctx["payout_sweep_task"] = payout_sweep_task
+    payout_sweep_task.add_done_callback(
+        lambda t: _log_background_task_result("payout_sweep_task", t),
+    )
+    logger.info("payout_sweep_loop_started")
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
@@ -611,6 +683,11 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     if availability_task is not None:
         availability_task.cancel()
         await asyncio.gather(availability_task, return_exceptions=True)
+
+    payout_sweep_task = ctx.get("payout_sweep_task")
+    if payout_sweep_task is not None:
+        payout_sweep_task.cancel()
+        await asyncio.gather(payout_sweep_task, return_exceptions=True)
 
     streamline_vrs = ctx.get("streamline_vrs")
     if streamline_vrs is not None:
@@ -931,6 +1008,30 @@ async def _hunter_queue_sweep_loop() -> None:
         except Exception as exc:
             logger.error("hunter_queue_sweep_loop_error", error=str(exc)[:400])
         await asyncio.sleep(interval)
+
+
+async def _payout_sweep_loop() -> None:
+    """
+    Daily payout sweep that runs at 6am ET. Checks every hour whether the
+    6am window has been hit and triggers the sweep once per day.
+    """
+    import pytz
+    _ET = pytz.timezone("America/New_York")
+    _last_sweep_date = None
+    while True:
+        try:
+            now_et = datetime.now(_ET)
+            today = now_et.date()
+            if now_et.hour >= 6 and _last_sweep_date != today:
+                from backend.services.payout_scheduler import run_payout_sweep
+                result = await run_payout_sweep()
+                _last_sweep_date = today
+                logger.info("payout_sweep_daily_complete", **{k: str(v) for k, v in result.items()})
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("payout_sweep_loop_error", error=str(exc)[:400])
+        await asyncio.sleep(3600)  # check every hour
 
 
 async def _streamline_availability_sync_loop(streamline_vrs: StreamlineVRS) -> None:
@@ -1682,6 +1783,166 @@ async def run_seo_remap_grading_job(ctx: dict[str, Any], job_id: str) -> dict[st
     return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
 
 
+async def run_work_order_sync_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    """
+    On-demand Streamline work order sync.
+
+    Fetches all maintenance tickets from Streamline VRS, upserts new ones into
+    work_orders, and updates status on existing ones.  This mirrors the Phase 4
+    logic in StreamlineVRS.run_full_sync() but is callable independently.
+
+    Payload options (all optional):
+      dry_run (bool) – log targets but skip DB writes; default: false
+    """
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        from backend.integrations.streamline_vrs import StreamlineVRS
+        from backend.models.workorder import WorkOrder
+        from backend.models.property import Property
+        from sqlalchemy import select
+
+        payload = job.payload_json or {}
+        dry_run = bool(payload.get("dry_run", False))
+
+        vrs = StreamlineVRS()
+        if not vrs.is_configured:
+            return {"error": "Streamline VRS not configured", "synced": 0}
+
+        remote_wos = await vrs.fetch_work_orders()
+        created, updated, skipped = 0, 0, 0
+
+        for rwo in remote_wos:
+            sl_id = str(rwo.get("streamline_id", "")).strip()
+            if not sl_id:
+                skipped += 1
+                continue
+
+            if dry_run:
+                logger.info("work_order_sync_dry_run", streamline_id=sl_id, subject=rwo.get("subject"))
+                skipped += 1
+                continue
+
+            result = await db.execute(select(WorkOrder).where(WorkOrder.title == f"SL-{sl_id}"))
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                if rwo.get("status"):
+                    existing.status = rwo["status"]  # type: ignore[assignment]
+                updated += 1
+            else:
+                prop_result = await db.execute(
+                    select(Property).where(Property.streamline_property_id == str(rwo.get("unit_id", "")))
+                )
+                prop = prop_result.scalar_one_or_none()
+                from backend.models.workorder import WorkOrder as WO
+                wo = WO(
+                    ticket_number=f"SL-{sl_id}",
+                    title=f"SL-{sl_id}",
+                    description=rwo.get("description") or rwo.get("subject", "No description"),
+                    category=rwo.get("category", "other") or "other",
+                    priority=rwo.get("priority", "medium") or "medium",
+                    status="open",
+                    property_id=prop.id if prop else None,
+                    created_by="streamline_sync",
+                )
+                db.add(wo)
+                created += 1
+
+        if not dry_run:
+            await db.commit()
+
+        return {
+            "dry_run": dry_run,
+            "fetched": len(remote_wos),
+            "created": created,
+            "updated": updated,
+            "skipped": skipped,
+        }
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def run_seo_property_sweep_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
+    """
+    Sweep all active properties without an active SEO draft and submit them to
+    the extraction pipeline. Each property gets one SEOPatch in "drafted" status
+    per rubric. Properties already in ACTIVE_PATCH_STATUSES are skipped.
+
+    Payload options (all optional):
+      limit  (int)  – max properties to process; default: all
+      dry_run (bool) – log targets but skip extraction; default: false
+    """
+    async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
+        from backend.services.seo_extraction_service import SEOExtractionSwarm
+        from backend.models.seo_patch import SEOPatch, SEORubric
+        from backend.models.property import Property
+        from sqlalchemy import select, exists as sa_exists
+
+        ACTIVE_PATCH_STATUSES = (
+            "drafted", "grading", "needs_rewrite", "pending_human", "deployed",
+        )
+
+        payload = job.payload_json or {}
+        limit = int(payload["limit"]) if payload.get("limit") is not None else None
+        dry_run = bool(payload.get("dry_run", False))
+
+        # Find active rubric
+        rubric = (
+            await db.execute(
+                select(SEORubric).where(SEORubric.status == "active").order_by(SEORubric.created_at.desc()).limit(1)
+            )
+        ).scalar_one_or_none()
+
+        if rubric is None:
+            return {"error": "No active rubric found — run seed_seo_rubrics.py first", "processed": 0}
+
+        # Properties that already have an active patch
+        subq = select(SEOPatch.property_id).where(
+            SEOPatch.status.in_(ACTIVE_PATCH_STATUSES),
+            SEOPatch.property_id.isnot(None),
+        ).scalar_subquery()
+
+        q = (
+            select(Property)
+            .where(Property.is_active.is_(True))
+            .where(~Property.id.in_(subq))
+            .order_by(Property.name)
+        )
+        if limit:
+            q = q.limit(limit)
+
+        result = await db.execute(q)
+        properties = result.scalars().all()
+
+        if dry_run:
+            return {
+                "dry_run": True,
+                "targets": [{"id": str(p.id), "name": p.name} for p in properties],
+                "count": len(properties),
+            }
+
+        swarm = SEOExtractionSwarm(db)
+        processed, skipped = 0, 0
+        for prop in properties:
+            try:
+                result = await swarm.generate_initial_seo_draft(prop.id)
+                if result:
+                    processed += 1
+                else:
+                    skipped += 1
+            except Exception as exc:
+                logger.warning("seo_sweep_property_failed", property_id=str(prop.id), error=str(exc)[:200])
+                skipped += 1
+
+        return {
+            "processed": processed,
+            "skipped": skipped,
+            "total_candidates": len(properties),
+            "rubric_id": str(rubric.id),
+        }
+
+    return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
 async def run_deep_entity_swarm_job(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
     async def runner(db, job: AsyncJobRun) -> dict[str, Any]:
         from backend.services.deep_entity_swarm import run_deep_entity_swarm
@@ -1689,6 +1950,131 @@ async def run_deep_entity_swarm_job(ctx: dict[str, Any], job_id: str) -> dict[st
         return await run_deep_entity_swarm(db, payload=job.payload_json or {})
 
     return await _with_job(job_id, int(ctx.get("job_try", 1)), runner)
+
+
+async def _reservation_confirmed_consumer_loop() -> None:
+    """
+    Redpanda/Kafka consumer for the ``reservation.confirmed`` topic.
+
+    Sends a booking confirmation email to the guest for every confirmed
+    reservation.  Runs as a long-lived background task started by the ARQ
+    worker startup hook — identical lifecycle to the other background loops.
+    """
+    import json
+
+    from aiokafka import AIOKafkaConsumer
+
+    from backend.core.event_publisher import REDPANDA_BROKER
+    from backend.models.property import Property
+    from backend.models.reservation import Reservation
+    from backend.services.smtp_dispatcher import SMTPDispatcher
+
+    TOPIC = "reservation.confirmed"
+    GROUP_ID = "arq-booking-confirmation-mailer"
+
+    logger.info(
+        "reservation_confirmed_consumer_starting", topic=TOPIC, group_id=GROUP_ID
+    )
+    dispatcher = SMTPDispatcher()
+
+    consumer = AIOKafkaConsumer(
+        TOPIC,
+        bootstrap_servers=REDPANDA_BROKER,
+        group_id=GROUP_ID,
+        value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+        auto_offset_reset="earliest",
+        enable_auto_commit=True,
+    )
+
+    try:
+        await consumer.start()
+        logger.info("reservation_confirmed_consumer_started", topic=TOPIC)
+
+        async for msg in consumer:
+            try:
+                payload: dict = msg.value or {}
+                reservation_id = payload.get("reservation_id")
+                if not reservation_id:
+                    continue
+
+                async with AsyncSessionLocal() as db:
+                    res = await db.get(Reservation, reservation_id)
+                    if not res:
+                        logger.warning(
+                            "reservation_confirmed_consumer_not_found",
+                            reservation_id=reservation_id,
+                        )
+                        continue
+
+                    guest_email = (res.guest_email or "").strip()
+                    if not guest_email:
+                        logger.warning(
+                            "reservation_confirmed_consumer_no_email",
+                            reservation_id=reservation_id,
+                        )
+                        continue
+
+                    prop = (
+                        await db.get(Property, res.property_id)
+                        if res.property_id
+                        else None
+                    )
+                    property_name = prop.name if prop else "Your Cabin"
+
+                    nights_val = None
+                    if hasattr(res, "nights_count") and res.nights_count:
+                        nights_val = res.nights_count
+                    elif res.check_in_date and res.check_out_date:
+                        nights_val = (res.check_out_date - res.check_in_date).days
+
+                    quote_data: dict = {
+                        "property_name": property_name,
+                        "confirmation_code": res.confirmation_code
+                        or payload.get("confirmation_code", ""),
+                        "check_in_date": (
+                            res.check_in_date.isoformat()
+                            if res.check_in_date
+                            else payload.get("check_in_date", "")
+                        ),
+                        "check_out_date": (
+                            res.check_out_date.isoformat()
+                            if res.check_out_date
+                            else payload.get("check_out_date", "")
+                        ),
+                        "nights": nights_val,
+                        "total_amount": float(
+                            res.total_amount or payload.get("total_amount", 0)
+                        ),
+                    }
+
+                    result = await dispatcher.send_confirmation(guest_email, quote_data)
+                    logger.info(
+                        "reservation_confirmation_email_dispatched",
+                        reservation_id=reservation_id,
+                        to=guest_email,
+                        success=result.get("success"),
+                        error=result.get("error"),
+                    )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.error(
+                    "reservation_confirmed_consumer_message_error",
+                    error=str(exc)[:400],
+                )
+
+    except asyncio.CancelledError:
+        logger.info("reservation_confirmed_consumer_cancelled")
+    except Exception as exc:
+        logger.error(
+            "reservation_confirmed_consumer_fatal", error=str(exc)[:400]
+        )
+    finally:
+        try:
+            await consumer.stop()
+        except Exception:
+            pass
+        logger.info("reservation_confirmed_consumer_stopped")
 
 
 class WorkerSettings:
@@ -1721,10 +2107,24 @@ class WorkerSettings:
         run_seo_redirect_batch_job,
         run_seo_fallback_swarm_job,
         run_seo_remap_grading_job,
+        run_seo_property_sweep_job,
+        run_work_order_sync_job,
         run_deep_entity_swarm_job,
         refactor_legacy_html_task,
         ingest_property_media,
+        # Phase F — Owner Statement jobs (also registered as cron below)
+        generate_monthly_statements_job,
+        send_approved_statements_job,
     ]
+    # Phase F cron schedule — times in America/New_York (ARQ evaluates against
+    # the WorkerSettings.timezone attribute, so cron values are local ET times)
+    #   12th at 06:00 ET — generate draft statements for previous month
+    #   15th at 09:30 ET — email all approved-but-not-yet-emailed statements
+    cron_jobs = [
+        arq_cron(generate_monthly_statements_job, day=12, hour=6,  minute=0,  second=0, run_at_startup=False),
+        arq_cron(send_approved_statements_job,    day=15, hour=9,  minute=30, second=0, run_at_startup=False),
+    ]
+    timezone = _pytz.timezone("America/New_York")
     redis_settings = get_arq_redis_settings()
     queue_name = settings.arq_queue_name
     max_jobs = settings.arq_concurrency
