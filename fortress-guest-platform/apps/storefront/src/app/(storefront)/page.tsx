@@ -4,6 +4,14 @@ import path from "node:path";
 
 import { LegacyBodyClasses } from "@/components/booking/legacy-body-classes";
 import { HomepageBookingWidget } from "@/components/booking/homepage-booking-widget";
+import { StorefrontHero } from "@/components/storefront/storefront-hero";
+import { StorefrontNavigation } from "@/components/storefront/storefront-navigation";
+import {
+  STOREFRONT_HOME_HERO,
+  STOREFRONT_NAV_GROUPS,
+  STOREFRONT_UTILITY_LINKS,
+  STOREFRONT_CONTACT,
+} from "@/lib/storefront-homepage-content";
 import { getStorefrontHomeData } from "@/lib/storefront-home";
 
 const LEGACY_HOME_ARCHIVE_PATH = path.join(
@@ -218,14 +226,13 @@ export default async function StorefrontHomepage() {
       ))}
       <style dangerouslySetInnerHTML={{ __html: LEGACY_HOME_INLINE_CSS }} />
       <div className="legacy-homepage">
-        {legacyMarkup ? (
-          <div dangerouslySetInnerHTML={{ __html: legacyMarkup.top }} />
-        ) : (
-          <div className="legacy-homepage-fallback">
-            <h1>North Georgia Cabins in Blue Ridge, GA</h1>
-            <p>Search live cabin availability and pricing across the Cabin Rentals of Georgia collection.</p>
-          </div>
-        )}
+        <StorefrontNavigation
+          groups={STOREFRONT_NAV_GROUPS}
+          utilityLinks={STOREFRONT_UTILITY_LINKS}
+          phoneLabel={STOREFRONT_CONTACT.phoneLabel}
+          phoneHref={STOREFRONT_CONTACT.phoneHref}
+        />
+        <StorefrontHero payload={STOREFRONT_HOME_HERO} />
         <div id="search-bar">
           <div className="region region-search-bar">
             <div id="block-crog-search-cabin-search" className="block block-crog-search">

@@ -7,6 +7,7 @@ import {
 
 type CatchAllParams = { slug: string[] };
 
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function normalizeJoinedSlug(parts: string[]): string {

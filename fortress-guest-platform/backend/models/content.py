@@ -43,6 +43,34 @@ class TaxonomyCategory(Base):
         return f"<TaxonomyCategory slug={self.slug!r}>"
 
 
+class LegacyPage(Base):
+    """Migrated Drupal node pages served by the /api/v1/pages endpoint."""
+
+    __tablename__ = "legacy_pages"
+    __table_args__ = (
+        Index("ix_legacy_pages_slug", "slug", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    body_value: Mapped[str | None] = mapped_column(Text)
+    body_summary: Mapped[str | None] = mapped_column(Text)
+    body_format: Mapped[str | None] = mapped_column(String(50), default="full_html")
+    entity_type: Mapped[str] = mapped_column(String(50), default="node")
+    bundle: Mapped[str] = mapped_column(String(100), default="page")
+    language: Mapped[str] = mapped_column(String(10), default="en")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<LegacyPage slug={self.slug!r}>"
+
+
 class MarketingArticle(Base):
     """Migrated article vessel for sovereign category and guide pages."""
 
