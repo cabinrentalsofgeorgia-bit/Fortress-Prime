@@ -35,6 +35,12 @@ from backend.api import paperclip_bridge as paperclip_bridge_api
 from backend.api import direct_booking as direct_booking_api
 from backend.api import guest_portal_api
 from backend.api import channel_mgr
+from backend.api import channel_mappings as channel_mappings_api
+from backend.api import cleaners as cleaners_api
+from backend.api import vendors as vendors_api
+from backend.api import acquisition_pipeline as acquisition_pipeline_api
+from backend.api import admin_charges as admin_charges_api
+from backend.api import admin_statements_workflow as admin_stmts_workflow_api
 from backend.api import ai_superpowers
 from backend.api import stripe_webhooks
 from backend.api import stripe_connect_webhooks
@@ -60,6 +66,7 @@ from backend.api import admin_acquisition as admin_acquisition_api
 from backend.api import admin_acquisition_foia as admin_acquisition_foia_api
 from backend.api import admin_channex as admin_channex_api
 from backend.api import admin_insights as admin_insights_api
+from backend.api import admin_statements as admin_statements_api
 from backend.api import rule_engine as rule_engine_api
 from backend.api import intelligence as intelligence_api
 from backend.api import intelligence_feed as intelligence_feed_api
@@ -78,6 +85,8 @@ from backend.api import legal_tactical as legal_tactical_api
 from backend.api import legal_sanctions as legal_sanctions_api
 from backend.api import legal_deposition as legal_deposition_api
 from backend.api import legal_agent as legal_agent_api
+from backend.api import legal_email_intake_api
+from backend.api import admin_payouts as admin_payouts_api
 from backend.api import verses as verses_api
 from backend.api import seo_patches as seo_patches_api
 from backend.api import wealth as wealth_api
@@ -89,6 +98,7 @@ from backend.api import system_sensors as system_sensors_api
 from backend.api import system_health as system_health_api
 from backend.api import system_nodes as system_nodes_api
 from backend.api import system_dashboard as system_dashboard_api
+from backend.api import internal_health as internal_health_api
 from backend.api import ops as ops_api
 from backend.api import vrs_health as vrs_health_api
 from backend.api import vrs_treasury as vrs_treasury_api
@@ -97,6 +107,10 @@ from backend.api import concierge as concierge_api
 from backend.api import dispatch as contact_form
 from backend.api import internal_deck as internal_deck_api
 from backend.api import redirect_vanguard_admin as redirect_vanguard_admin_api
+from backend.api import storefront_calendar as storefront_calendar_api
+from backend.api import storefront_catalog as storefront_catalog_api
+from backend.api import tax_reports as tax_reports_api
+from backend.api import storefront_demand as storefront_demand_api
 from backend.api import storefront_concierge as storefront_concierge_api
 from backend.api import storefront_intent as storefront_intent_api
 from backend.api import disagg_admin as disagg_admin_api
@@ -105,6 +119,9 @@ from backend.api import command_c2 as command_c2_api
 from backend.api import sovereign_pulse as sovereign_pulse_api
 from backend.api import funnel_hq as funnel_hq_api
 from backend.api import openshell_audit as openshell_audit_api
+from backend.api import legacy_pages as legacy_pages_api
+from backend.api import activities as activities_api
+from backend.api import blogs as blogs_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -161,8 +178,25 @@ def _expand_host_variants(value: str | None) -> set[str]:
     return variants
 
 
+def _extra_command_center_ingress_hosts() -> set[str]:
+    raw = (settings.command_center_ingress_hosts or "").strip()
+    if not raw:
+        return set()
+    out: set[str] = set()
+    for part in raw.split(","):
+        p = part.strip()
+        if not p:
+            continue
+        out.add(_normalize_host(p))
+    return out
+
+
 def _command_center_hosts() -> set[str]:
-    return _expand_host_variants(settings.frontend_url) | _expand_host_variants(settings.command_center_url)
+    return (
+        _expand_host_variants(settings.frontend_url)
+        | _expand_host_variants(settings.command_center_url)
+        | _extra_command_center_ingress_hosts()
+    )
 
 
 def _storefront_hosts() -> set[str]:
@@ -200,6 +234,14 @@ def _requires_internal_ingress(request: Request) -> bool:
     return path.startswith("/api/") and not is_public_api_path(path, request.method)
 
 
+_TRUSTED_CF_ACCESS_CLIENT_ID = "9046745d856ea018e6a8d9d8bd1eea7f.access"
+
+
+def _has_trusted_cf_access_token(request: Request) -> bool:
+    client_id = (request.headers.get("cf-access-client-id") or "").strip()
+    return client_id == _TRUSTED_CF_ACCESS_CLIENT_ID
+
+
 def _is_allowed_internal_request(request: Request) -> bool:
     if not _requires_internal_ingress(request):
         return True
@@ -209,6 +251,9 @@ def _is_allowed_internal_request(request: Request) -> bool:
         return False
 
     if _has_valid_internal_tunnel_signature(request):
+        return True
+
+    if _has_trusted_cf_access_token(request):
         return True
 
     origin_host = _request_origin_host(request)
@@ -409,6 +454,10 @@ app.add_middleware(
         "https://crog-ai.com",
         "https://www.crog-ai.com",
         "https://api.cabin-rentals-of-georgia.com",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://192.168.0.100:3001",
+        "http://192.168.0.114:3001",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -432,6 +481,7 @@ async def health_check():
 # Register API Routers
 # ---------------------------------------------------------------------------
 app.include_router(auth_api.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(internal_health_api.router, tags=["Internal Health"])
 app.include_router(properties.router, prefix="/api/properties", tags=["Properties"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["Reservations"])
 app.include_router(guests.router, prefix="/api/guests", tags=["Guests"])
@@ -463,6 +513,10 @@ app.include_router(owner_portal.router, prefix="/api/owner", tags=["Owner Portal
 app.include_router(direct_booking_api.router, prefix="/api/direct-booking", tags=["Direct Booking"])
 app.include_router(guest_portal_api.router, prefix="/api/guest-portal", tags=["Guest Portal"])
 app.include_router(channel_mgr.router, prefix="/api/channel-manager", tags=["Channel Manager"])
+app.include_router(channel_mappings_api.router, prefix="/api/channel-mappings", tags=["Channel Mappings"])
+app.include_router(cleaners_api.router, prefix="/api/cleaners", tags=["Cleaners"])
+app.include_router(vendors_api.router, prefix="/api/vendors", tags=["Vendors"])
+app.include_router(acquisition_pipeline_api.router, prefix="/api/acquisition", tags=["Acquisition Pipeline"])
 app.include_router(ai_superpowers.router, prefix="/api/ai", tags=["AI Superpowers"])
 app.include_router(iot_api.router, prefix="/api/iot", tags=["IoT"])
 app.include_router(search_api.router, prefix="/api/search", tags=["Search"])
@@ -488,6 +542,10 @@ app.include_router(admin_acquisition_api.router, prefix="/api/admin", tags=["Adm
 app.include_router(admin_acquisition_foia_api.router, tags=["Admin"])
 app.include_router(admin_channex_api.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(admin_insights_api.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_statements_api.router, prefix="/api/v1/admin", tags=["Owner Statements"])
+app.include_router(admin_payouts_api.router, prefix="/api/admin/payouts", tags=["Admin Payouts"])
+app.include_router(admin_charges_api.router, prefix="/api/admin/payouts", tags=["Admin Owner Charges"])
+app.include_router(admin_stmts_workflow_api.router, prefix="/api/admin/payouts", tags=["Admin Statement Workflow"])
 app.include_router(rule_engine_api.router, prefix="/api/rules", tags=["Rule Engine"])
 app.include_router(intelligence_api.router, prefix="/api/intelligence", tags=["Intelligence"])
 app.include_router(intelligence_feed_api.router, prefix="/api/intelligence/feed", tags=["Intelligence Feed"])
@@ -510,6 +568,7 @@ app.include_router(legal_tactical_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, 
 app.include_router(legal_sanctions_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Sanctions"])
 app.include_router(legal_deposition_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Deposition"])
 app.include_router(legal_agent_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Agent"])
+app.include_router(legal_email_intake_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Email Intake"])
 app.include_router(verses_api.router, prefix="/api/verses", tags=["Verses In Bloom"])
 app.include_router(seo_patches_api.router, prefix="/api/seo", tags=["SEO"])
 app.include_router(
@@ -535,7 +594,11 @@ app.include_router(concierge_api.router, tags=["Concierge"])
 app.include_router(contact_form.router, prefix="/api/dispatch", tags=["Autonomous Dispatch"])
 app.include_router(internal_deck_api.router, prefix="/api/internal", tags=["Internal Deck"])
 app.include_router(redirect_vanguard_admin_api.router, prefix="/api/internal", tags=["Redirect Vanguard"])
+app.include_router(storefront_calendar_api.router, prefix="/api/v1/calendar", tags=["Storefront Calendar"])
+app.include_router(storefront_catalog_api.router, prefix="/api/storefront/catalog", tags=["Storefront Catalog"])
+app.include_router(tax_reports_api.router, prefix="/api/v1/tax-reports", tags=["Tax Reports"])
 app.include_router(storefront_intent_api.router, prefix="/api/storefront/intent", tags=["Storefront Intent"])
+app.include_router(storefront_demand_api.router, prefix="/api/storefront/demand", tags=["Storefront Demand"])
 app.include_router(storefront_concierge_api.router, prefix="/api/storefront/concierge", tags=["Storefront Concierge"])
 app.include_router(disagg_admin_api.router, prefix="/api/disagg/admin", tags=["Disagg Admin"])
 app.include_router(telemetry_api.router, prefix="/api/telemetry", tags=["Telemetry"])
@@ -543,6 +606,9 @@ app.include_router(command_c2_api.router, prefix="/api/telemetry", tags=["Comman
 app.include_router(sovereign_pulse_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
 app.include_router(funnel_hq_api.router, prefix="/api/telemetry", tags=["Sovereign Pulse"])
 app.include_router(openshell_audit_api.router, prefix="/api/openshell/audit", tags=["OpenShell Audit"])
+app.include_router(legacy_pages_api.router, prefix="/api/v1/pages", tags=["Legacy Pages"])
+app.include_router(activities_api.router, prefix="/api/v1/activities", tags=["Activities"])
+app.include_router(blogs_api.router, prefix="/api/v1/blogs", tags=["Blogs"])
 
 
 # ---------------------------------------------------------------------------
