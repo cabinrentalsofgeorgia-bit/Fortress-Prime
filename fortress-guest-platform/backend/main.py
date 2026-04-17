@@ -379,6 +379,15 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
         logger.info("database_initialized")
+
+        from backend.core.schema_audit import run_schema_audit
+        from backend.core.database import get_async_engine
+        await run_schema_audit(get_async_engine())
+    except RuntimeError as e:
+        if "SCHEMA AUDIT FAILED" in str(e):
+            logger.critical("startup_aborted_schema_mismatch", error=str(e))
+            raise
+        logger.warning("database_init_skipped", error=str(e), note="App will run without DB - configure DATABASE_URL")
     except Exception as e:
         logger.warning("database_init_skipped", error=str(e), note="App will run without DB - configure DATABASE_URL")
 
