@@ -549,13 +549,18 @@ class DirectBookingEngine:
         db: AsyncSession,
     ) -> CancellationResult:
         """
-        Cancel a confirmed reservation with policy-aware refund calculation.
+        Cancel a confirmed reservation with ledger-aware refund calculation.
 
-        Policies:
-        - 30+ days before check-in: full refund
-        - 14-29 days: 50% refund
-        - < 14 days: no refund (except cleaning fee)
+        Delegates to the unified refund engine (``calculate_refund_ledger``)
+        which reads the Universal Ledger line items from the booking for
+        cents-precise refund calculation.  Policy tiers:
+
+        - >= 30 days: full refund of all refundable items
+        - 14-29 days: 50% lodging, 100% cleaning, recalculated taxes
+        - < 14 days: cleaning fee + associated taxes only
         """
+        from backend.services.refund_engine import calculate_refund_ledger
+
         result = await db.execute(
             select(Reservation).where(Reservation.id == booking_id)
         )
@@ -578,26 +583,21 @@ class DirectBookingEngine:
             )
 
         days_until = (reservation.check_in_date - date.today()).days
-        total = reservation.total_amount or Decimal("0")
+        refund_cents = calculate_refund_ledger(reservation, days_until)
+        refund = Decimal(refund_cents) / Decimal(100)
 
         if days_until >= 30:
             policy = CancellationPolicy.FULL_REFUND
-            refund = total
         elif days_until >= 14:
             policy = CancellationPolicy.PARTIAL_REFUND
-            refund = (total * Decimal("0.50")).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
         else:
             policy = CancellationPolicy.NO_REFUND
-            cleaning = self._get_cleaning_fee(2)
-            refund = cleaning
 
         reservation.status = "cancelled"
         reservation.internal_notes = (
             f"{reservation.internal_notes or ''}\n"
             f"[{datetime.utcnow().isoformat()}] Cancelled by guest: {reason} "
-            f"| Policy: {policy.value} | Refund: ${refund}"
+            f"| Policy: {policy.value} | Refund: ${refund:.2f} ({refund_cents}¢)"
         ).strip()
 
         await db.commit()
@@ -606,7 +606,7 @@ class DirectBookingEngine:
             "booking_cancelled",
             confirmation_code=reservation.confirmation_code,
             policy=policy.value,
-            refund=str(refund),
+            refund_cents=refund_cents,
             reason=reason,
         )
 
@@ -616,7 +616,7 @@ class DirectBookingEngine:
             policy_applied=policy.value,
             message=(
                 f"Reservation {reservation.confirmation_code} cancelled. "
-                f"Refund of ${refund} will be processed within 5-10 business days."
+                f"Refund of ${refund:.2f} will be processed within 5-10 business days."
             ),
         )
 

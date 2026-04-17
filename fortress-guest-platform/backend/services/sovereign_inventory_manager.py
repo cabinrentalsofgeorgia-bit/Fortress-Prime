@@ -51,7 +51,7 @@ def _sovereign_settlement_extra_params(
     *,
     notes_extra: str = "",
 ) -> dict[str, str]:
-    return {
+    params: dict[str, str] = {
         "unit_id": str(unit_id),
         "startdate": reservation.check_in_date.strftime("%m/%d/%Y"),
         "enddate": reservation.check_out_date.strftime("%m/%d/%Y"),
@@ -64,6 +64,20 @@ def _sovereign_settlement_extra_params(
             extra_note=notes_extra,
         ),
     }
+
+    if reservation.total_amount is not None:
+        from decimal import Decimal, ROUND_HALF_UP
+
+        total_cents = int(
+            (Decimal(str(reservation.total_amount)) * 100)
+            .to_integral_value(rounding=ROUND_HALF_UP)
+        )
+        total_dollars = f"{total_cents / 100:.2f}"
+        params["price"] = total_dollars
+        params["rent_amount"] = total_dollars
+        params["price_type"] = "fixed"
+
+    return params
 
 
 def _streamline_settlement_queue_payload(

@@ -290,13 +290,14 @@ class ReservationEngine:
         """
         Cancel a reservation with audit trail.
 
-        Cancellation policy (Blue Ridge standard):
-        - 30+ days before check-in: full refund
-        - 14-29 days: 50 % refund
-        - <14 days: no refund
+        Cancellation policy delegated to the unified refund engine
+        (``calculate_refund_ledger``) which reads the Universal Ledger
+        line items from the booking for cents-precise refund calculation.
 
         Returns the updated reservation with cancellation notes.
         """
+        from backend.services.refund_engine import calculate_refund_ledger
+
         reservation = await db.get(Reservation, reservation_id)
         if reservation is None:
             raise ValueError(f"Reservation {reservation_id} not found")
@@ -305,22 +306,19 @@ class ReservationEngine:
             raise ValueError(f"Reservation is already {reservation.status}")
 
         days_until = (reservation.check_in_date - date.today()).days
+        refund_cents = calculate_refund_ledger(reservation, days_until)
+        refund_dollars = Decimal(refund_cents) / Decimal(100)
 
         if days_until >= 30:
-            refund_pct = Decimal("1.00")
             policy = "full_refund"
         elif days_until >= 14:
-            refund_pct = Decimal("0.50")
             policy = "partial_refund"
         else:
-            refund_pct = Decimal("0.00")
             policy = "no_refund"
-
-        refund_amount = (reservation.total_amount or Decimal("0")) * refund_pct
 
         cancel_note = (
             f"CANCELLED {utc_now().isoformat()} | "
-            f"Policy: {policy} | Refund: ${refund_amount:.2f} | "
+            f"Policy: {policy} | Refund: ${refund_dollars:.2f} ({refund_cents}¢) | "
             f"Reason: {reason or 'Not specified'}"
         )
 
@@ -339,7 +337,7 @@ class ReservationEngine:
             "reservation_cancelled",
             reservation_id=str(reservation_id),
             policy=policy,
-            refund_amount=str(refund_amount),
+            refund_cents=refund_cents,
             days_until_checkin=days_until,
         )
         return reservation
