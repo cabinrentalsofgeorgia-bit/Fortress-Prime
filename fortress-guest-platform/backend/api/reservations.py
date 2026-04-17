@@ -75,8 +75,15 @@ def _et_today():
     return datetime.now(pytz.timezone("America/New_York")).date()
 
 
+def _normalize_reservation_status(raw: object) -> str:
+    """Lowercase + underscores so UI/TapeChart match Streamline casing (e.g. Confirmed → confirmed)."""
+    s = str(raw or "").strip().lower().replace(" ", "_")
+    return s if s else "confirmed"
+
+
 def _enrich_reservation(r: Reservation, guest: Guest = None, prop: Property = None) -> dict:
     data = {c.name: getattr(r, c.name) for c in r.__table__.columns}
+    data["status"] = _normalize_reservation_status(data.get("status"))
     today = _et_today()
     data["is_current"] = bool(r.check_in_date and r.check_out_date and r.check_in_date <= today <= r.check_out_date)
     data["is_arriving_today"] = r.check_in_date == today
@@ -490,6 +497,158 @@ async def toggle_security_deposit(
     )
 
 
+# ── Security Deposit Hold / Capture / Release ────────────────────
+
+class DepositActionResponse(BaseModel):
+    reservation_id: str
+    security_deposit_status: str
+    stripe_pi: Optional[str] = None
+    amount: Optional[float] = None
+
+
+@router.post("/{reservation_id}/deposit/initiate")
+async def initiate_security_deposit(
+    reservation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Place a manual-capture PaymentIntent authorization hold for the security deposit.
+    Transitions status: none/pending/scheduled → authorized.
+    Requires the guest to have a stripe_customer_id (created at booking).
+    """
+    from backend.integrations.stripe_payments import StripePayments
+    from backend.models import Guest
+
+    reservation = await db.get(Reservation, reservation_id)
+    if not reservation:
+        raise HTTPException(404, "Reservation not found")
+    if not reservation.security_deposit_required:
+        raise HTTPException(400, "Security deposit is not required for this reservation")
+    if reservation.security_deposit_status == "authorized":
+        raise HTTPException(400, "Deposit hold already active")
+    if reservation.security_deposit_status in ("captured", "released"):
+        raise HTTPException(400, f"Deposit already finalized: {reservation.security_deposit_status}")
+
+    guest = await db.get(Guest, reservation.guest_id)
+    if not guest:
+        raise HTTPException(404, "Guest not found")
+
+    stripe = StripePayments()
+    customer_id = await stripe.get_or_create_customer(
+        email=reservation.guest_email or guest.email,
+        name=reservation.guest_name or f"{guest.first_name} {guest.last_name}",
+        stripe_customer_id=guest.stripe_customer_id or None,
+    )
+
+    # Save back if newly created
+    if not guest.stripe_customer_id:
+        guest.stripe_customer_id = customer_id
+
+    amount_cents = int(float(reservation.security_deposit_amount or 500.00) * 100)
+    result = await stripe.create_deposit_intent(
+        customer_id=customer_id,
+        amount_cents=amount_cents,
+        reservation_id=str(reservation_id),
+        description=f"Security deposit — {reservation.confirmation_code}",
+    )
+
+    reservation.security_deposit_stripe_pi = result["payment_intent_id"]
+    reservation.security_deposit_status = "authorized"
+    reservation.security_deposit_updated_at = datetime.utcnow()
+    await db.commit()
+
+    _log.info(
+        "security_deposit_initiated",
+        reservation_id=str(reservation_id),
+        intent_id=result["payment_intent_id"],
+        amount_cents=amount_cents,
+    )
+    return DepositActionResponse(
+        reservation_id=str(reservation_id),
+        security_deposit_status="authorized",
+        stripe_pi=result["payment_intent_id"],
+        amount=float(reservation.security_deposit_amount or 500.00),
+    )
+
+
+@router.post("/{reservation_id}/deposit/capture")
+async def capture_security_deposit(
+    reservation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Capture the authorized deposit hold — charges the guest's card.
+    Transitions status: authorized → captured.
+    """
+    from backend.integrations.stripe_payments import StripePayments
+
+    reservation = await db.get(Reservation, reservation_id)
+    if not reservation:
+        raise HTTPException(404, "Reservation not found")
+    if reservation.security_deposit_status != "authorized":
+        raise HTTPException(400, f"Cannot capture deposit in status: {reservation.security_deposit_status}")
+    if not reservation.security_deposit_stripe_pi:
+        raise HTTPException(400, "No active deposit PaymentIntent found")
+
+    stripe = StripePayments()
+    result = await stripe.capture_deposit_intent(reservation.security_deposit_stripe_pi)
+
+    reservation.security_deposit_status = "captured"
+    reservation.security_deposit_updated_at = datetime.utcnow()
+    await db.commit()
+
+    _log.info(
+        "security_deposit_captured",
+        reservation_id=str(reservation_id),
+        intent_id=reservation.security_deposit_stripe_pi,
+        amount_captured=result.get("amount_captured"),
+    )
+    return DepositActionResponse(
+        reservation_id=str(reservation_id),
+        security_deposit_status="captured",
+        stripe_pi=reservation.security_deposit_stripe_pi,
+        amount=result.get("amount_captured", 0) / 100,
+    )
+
+
+@router.post("/{reservation_id}/deposit/release")
+async def release_security_deposit(
+    reservation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Cancel the authorized deposit hold — releases the hold with no charge.
+    Transitions status: authorized → released.
+    """
+    from backend.integrations.stripe_payments import StripePayments
+
+    reservation = await db.get(Reservation, reservation_id)
+    if not reservation:
+        raise HTTPException(404, "Reservation not found")
+    if reservation.security_deposit_status != "authorized":
+        raise HTTPException(400, f"Cannot release deposit in status: {reservation.security_deposit_status}")
+    if not reservation.security_deposit_stripe_pi:
+        raise HTTPException(400, "No active deposit PaymentIntent found")
+
+    stripe = StripePayments()
+    await stripe.cancel_deposit_intent(reservation.security_deposit_stripe_pi)
+
+    reservation.security_deposit_status = "released"
+    reservation.security_deposit_updated_at = datetime.utcnow()
+    await db.commit()
+
+    _log.info(
+        "security_deposit_released",
+        reservation_id=str(reservation_id),
+        intent_id=reservation.security_deposit_stripe_pi,
+    )
+    return DepositActionResponse(
+        reservation_id=str(reservation_id),
+        security_deposit_status="released",
+        stripe_pi=reservation.security_deposit_stripe_pi,
+    )
+
+
 # ── Unified Folio Aggregator ─────────────────────────────────────
 
 
@@ -577,22 +736,22 @@ async def _aggregate_folio(
 
     folio_deposit = FolioSecurityDeposit(
         is_required=bool(getattr(res, "security_deposit_required", False)),
-        amount=_f(getattr(res, "security_deposit_amount", 500.00)) or 500.00,
+        amount_cents=getattr(res, "security_deposit_amount", 500.00),
         status=_s(getattr(res, "security_deposit_status", "none")) or "none",
         stripe_payment_intent=getattr(res, "security_deposit_stripe_pi", None),
         updated_at=_sd(getattr(res, "security_deposit_updated_at", None)),
     )
 
     folio_financials = FolioFinancials(
-        total_amount=_f(res.total_amount),
-        paid_amount=_f(res.paid_amount),
-        balance_due=_f(res.balance_due),
-        nightly_rate=_f(res.nightly_rate),
-        cleaning_fee=_f(res.cleaning_fee),
-        pet_fee=_f(res.pet_fee),
-        damage_waiver_fee=_f(res.damage_waiver_fee),
-        service_fee=_f(res.service_fee),
-        tax_amount=_f(res.tax_amount),
+        total_amount_cents=res.total_amount,
+        paid_amount_cents=res.paid_amount,
+        balance_due_cents=res.balance_due,
+        nightly_rate_cents=res.nightly_rate,
+        cleaning_fee_cents=res.cleaning_fee,
+        pet_fee_cents=res.pet_fee,
+        damage_waiver_fee_cents=res.damage_waiver_fee,
+        service_fee_cents=res.service_fee,
+        tax_amount_cents=res.tax_amount,
         currency=_s(res.currency) or "USD",
         price_breakdown=res.price_breakdown if isinstance(res.price_breakdown, dict) else None,
         streamline_financial_detail=res.streamline_financial_detail if isinstance(res.streamline_financial_detail, dict) else None,

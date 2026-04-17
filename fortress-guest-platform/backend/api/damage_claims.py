@@ -472,3 +472,98 @@ async def send_claim_response(
     claim.status = "sent"
     await db.commit()
     return {"ok": True, "sent_via": via, "claim_number": claim.claim_number}
+
+
+class DamageChargeRequest(BaseModel):
+    amount: float = Field(..., gt=0, description="Amount to charge in dollars")
+    note: Optional[str] = None
+
+
+@router.post("/{claim_id}/charge")
+async def charge_damage_claim(
+    claim_id: UUID,
+    body: DamageChargeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_manager_or_admin),
+):
+    """
+    Execute an off-session Stripe charge against the guest for a damage claim.
+    Requires the guest to have a stripe_customer_id with a saved default payment method.
+    If no saved method exists, returns moto_fallback=true so staff can use the MOTO terminal.
+    """
+    import stripe as stripe_lib
+    from backend.integrations.stripe_payments import StripePayments
+
+    claim = await db.get(DamageClaim, claim_id)
+    if not claim:
+        raise HTTPException(404, "Claim not found")
+    if claim.status not in ("approved", "sent", "resolved"):
+        raise HTTPException(400, f"Claim must be approved/sent/resolved before charging (current: {claim.status})")
+    if claim.stripe_charge_id:
+        raise HTTPException(400, f"Claim already charged: {claim.stripe_charge_id}")
+
+    guest = await db.get(Guest, claim.guest_id)
+    if not guest or not guest.stripe_customer_id:
+        return {
+            "charged": False,
+            "moto_fallback": True,
+            "reason": "no_saved_payment_method",
+            "message": "Guest has no saved payment method — use the MOTO terminal to collect card details.",
+        }
+
+    amount_cents = int(round(body.amount * 100))
+    reservation = await db.get(Reservation, claim.reservation_id) if claim.reservation_id else None
+    conf_code = reservation.confirmation_code if reservation else str(claim_id)[:8]
+
+    try:
+        stripe = StripePayments()
+        result = await stripe.charge_off_session(
+            customer_id=guest.stripe_customer_id,
+            amount_cents=amount_cents,
+            description=f"Damage claim {claim.claim_number} — {conf_code}",
+            metadata={
+                "claim_id": str(claim.id),
+                "claim_number": claim.claim_number or "",
+                "reservation_id": str(claim.reservation_id or ""),
+                "source": "fortress_damage_charge",
+            },
+        )
+    except stripe_lib.error.CardError as e:
+        raise HTTPException(402, f"Card declined: {e.user_message or str(e)}")
+    except stripe_lib.error.InvalidRequestError as e:
+        if "no attached payment source" in str(e).lower() or "no default payment method" in str(e).lower():
+            return {
+                "charged": False,
+                "moto_fallback": True,
+                "reason": "no_default_payment_method",
+                "message": "Guest has no default payment method on file — use the MOTO terminal.",
+            }
+        raise HTTPException(400, f"Stripe error: {str(e)}")
+
+    staff_email = (current_user or {}).get("email") or (current_user or {}).get("sub") or "staff"
+    claim.stripe_charge_id = result["payment_intent_id"]
+    claim.amount_charged = body.amount
+    claim.charge_payment_method_id = result.get("payment_method_id") or ""
+    claim.charge_executed_at = datetime.utcnow()
+    claim.charge_executed_by = staff_email
+    claim.status = "resolved"
+    claim.resolution_amount = body.amount
+    if body.note:
+        claim.resolution = body.note
+    claim.resolved_at = datetime.utcnow()
+    await db.commit()
+
+    logger.info(
+        "damage_claim_charged",
+        claim_id=str(claim.id),
+        claim_number=claim.claim_number,
+        stripe_charge_id=result["payment_intent_id"],
+        amount=body.amount,
+        staff=staff_email,
+    )
+    return {
+        "charged": True,
+        "stripe_charge_id": result["payment_intent_id"],
+        "amount_charged": body.amount,
+        "claim_number": claim.claim_number,
+    }

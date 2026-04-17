@@ -24,6 +24,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.core.database import Base
 from backend.core.time import utc_now
 
+# Import swarm_governance before TrustTransaction so TrustDecision exists in the
+# registry when SQLAlchemy resolves the string relationship (avoids mapper init failure).
+from backend.models import swarm_governance as _swarm_governance  # noqa: F401
+
 
 def _enum_column(enum_cls: type[enum.Enum], name: str) -> SqlEnum:
     return SqlEnum(
@@ -79,8 +83,13 @@ class TrustTransaction(Base):
 
     __tablename__ = "trust_transactions"
     __table_args__ = (
-        Index("ix_trust_transactions_streamline_event_id", "streamline_event_id"),
+        UniqueConstraint(
+            "streamline_event_id",
+            name="uq_trust_transactions_streamline_event_id",
+        ),
+        UniqueConstraint("signature", name="uq_trust_transactions_signature"),
         Index("ix_trust_transactions_decision_timestamp", "decision_id", "timestamp"),
+        Index("ix_trust_transactions_previous_signature", "previous_signature"),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -89,11 +98,11 @@ class TrustTransaction(Base):
         default=uuid4,
         server_default=text("gen_random_uuid()"),
     )
-    streamline_event_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    decision_id: Mapped[UUID] = mapped_column(
+    streamline_event_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    decision_id: Mapped[UUID | None] = mapped_column(
         PostgresUUID(as_uuid=True),
         ForeignKey("trust_decisions.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -102,6 +111,8 @@ class TrustTransaction(Base):
         server_default=text("now()"),
         index=True,
     )
+    signature: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    previous_signature: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     decision: Mapped["TrustDecision"] = relationship(
         "TrustDecision",

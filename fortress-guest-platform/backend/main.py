@@ -122,6 +122,9 @@ from backend.api import openshell_audit as openshell_audit_api
 from backend.api import legacy_pages as legacy_pages_api
 from backend.api import activities as activities_api
 from backend.api import blogs as blogs_api
+from backend.api import financial_approvals as financial_approvals_api
+from backend.api import storefront_checkout as storefront_checkout_api
+from backend.api import trust_ledger_command_center as trust_ledger_command_center_api
 from backend.core.tenant import TenantMiddleware
 
 # Configure structured logging
@@ -416,6 +419,9 @@ async def lifespan(app: FastAPI):
 
     kb_sync_task = asyncio.create_task(_deferred_kb_sync_enqueue())
 
+    from backend.workers.hermes_daily_auditor import hermes_daily_auditor_loop
+    auditor_task = asyncio.create_task(hermes_daily_auditor_loop())
+
     # Streamline full sync (sync_all) runs in a dedicated process:
     # systemd fortress-sync-worker → python -m backend.sync
     logger.info("streamline_full_sync_delegated_to_sync_worker")
@@ -423,6 +429,7 @@ async def lifespan(app: FastAPI):
     yield
 
     kb_sync_task.cancel()
+    auditor_task.cancel()
     if app.state.arq_pool is not None:
         await app.state.arq_pool.aclose()
     from backend.core.http_client import close_shared_client
@@ -609,6 +616,13 @@ app.include_router(openshell_audit_api.router, prefix="/api/openshell/audit", ta
 app.include_router(legacy_pages_api.router, prefix="/api/v1/pages", tags=["Legacy Pages"])
 app.include_router(activities_api.router, prefix="/api/v1/activities", tags=["Activities"])
 app.include_router(blogs_api.router, prefix="/api/v1/blogs", tags=["Blogs"])
+app.include_router(financial_approvals_api.router, prefix="/api/v1/financial-approvals", tags=["Financial Approvals"])
+app.include_router(storefront_checkout_api.router, prefix="/api/v1/checkout", tags=["Storefront Checkout"])
+app.include_router(
+    trust_ledger_command_center_api.router,
+    prefix="/api/trust-ledger/command-center",
+    tags=["Trust Ledger Command Center"],
+)
 
 
 # ---------------------------------------------------------------------------

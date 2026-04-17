@@ -45,6 +45,13 @@ class DamageClaim(Base):
     resolution_amount = Column(DECIMAL(10, 2))
     resolved_at = Column(TIMESTAMP)
 
+    # Stripe charge execution
+    stripe_charge_id = Column(String(255))
+    amount_charged = Column(DECIMAL(10, 2))
+    charge_payment_method_id = Column(String(255))
+    charge_executed_at = Column(TIMESTAMP(timezone=True))
+    charge_executed_by = Column(String(255))
+
     # Vector embedding (stored in Qdrant fgp_golden_claims)
     qdrant_point_id = Column(UUID(as_uuid=True))
 
