@@ -1,0 +1,296 @@
+{
+  "url": "https://www.cabin-rentals-of-georgia.com/blue-ridge-cabins/above-the-timberline/above-the-timberline",
+  "page_title": "Blue Ridge Cabins | Cabin Rentals of Georgia",
+  "scraped_at": "2026-04-02T19:13:38.212887Z",
+  "canonical_order": [
+    "header",
+    "title",
+    "like_save_buttons",
+    "description",
+    "amenities",
+    "calendar",
+    "rates_text",
+    "videos",
+    "photo_grid"
+  ],
+  "sections_found": [
+    "title",
+    "like_save_buttons",
+    "description",
+    "calendar",
+    "rates_text",
+    "videos",
+    "photo_grid"
+  ],
+  "sections_missing": [
+    "header",
+    "amenities"
+  ],
+  "section_count": 7,
+  "sections": [
+    {
+      "order": 2,
+      "section_id": "title",
+      "label": "Cabin Title",
+      "selector": "#page-title",
+      "html_tag": "h1",
+      "classes": [
+        "title"
+      ],
+      "text_preview": "Blue Ridge Cabins",
+      "children_count": 0,
+      "assets": [],
+      "data": {
+        "title_text": "Blue Ridge Cabins"
+      }
+    },
+    {
+      "order": 3,
+      "section_id": "like_save_buttons",
+      "label": "Like / Save Buttons",
+      "selector": "[class*='favorite']",
+      "html_tag": "div",
+      "classes": [
+        "favorites-form-wrapper"
+      ],
+      "text_preview": " |  | ",
+      "children_count": 44,
+      "assets": [],
+      "data": {
+        "button_type": "favorite",
+        "count": 44
+      }
+    },
+    {
+      "order": 4,
+      "section_id": "description",
+      "label": "Description / Body Text",
+      "selector": "div[class~=body]",
+      "html_tag": "div",
+      "classes": [
+        "views-field",
+        "views-field-body"
+      ],
+      "text_preview": "We had a wonderful time! Coffee on the deck overlooking the beautiful views, card games with family, pool games, and hot tub relaxation! This cabin is a wonderful place to have lots of laughs, R & R, and create memories. We will back soon!",
+      "children_count": 1,
+      "assets": [],
+      "data": {}
+    },
+    {
+      "order": 6,
+      "section_id": "calendar",
+      "label": "Availability Calendar",
+      "selector": "h2:contains('Availab')",
+      "html_tag": "h2",
+      "classes": [],
+      "text_preview": "Search Available Cabins",
+      "children_count": 0,
+      "assets": [],
+      "data": {}
+    },
+    {
+      "order": 7,
+      "section_id": "rates_text",
+      "label": "Rates Text / Pricing Notes",
+      "selector": "div (fuzzy match on rates keywords)",
+      "html_tag": "div",
+      "classes": [
+        "view",
+        "view-cabins",
+        "view-id-cabins",
+        "view-display-id-block_2",
+        "view-dom-id-8b08c8d98e89c06c9d773ef5338b5991"
+      ],
+      "text_preview": "Sort by Number of Bedrooms Number of Guests Rate (Low to High) Rate (High to Low) Cabin Name 27 Cherokee Sunrise on Noontootla Creek 2 Bedroom Sleeps 4 from $225/night 24 Creekside Green 2 Bedroom Sleeps 6 from $185/night 33 Aska Escape Lodge 3 Bedroom Sleeps 6 from $265/night 30 Blue Ridge Lake Sanctuary 3 Bedroom Sleeps 6 from $225/night 29 Cohutta Sunset 3 Bedroom Sleeps 6 from $315/night 36 Above The Timberline 4 Bedroom Sleeps 8 from $325/night 30 Chase Mountain Dreams 4 Bedroom Sleeps 10 from $245/night 43 High Hopes 4 Bedroom Sleeps 8 from $299/night 48 Skyfall 4 Bedroom Sleeps 8 from $…",
+      "children_count": 0,
+      "assets": [],
+      "data": {
+        "rates_html": "<div class=\"view view-cabins view-id-cabins view-display-id-block_2 view-dom-id-8b08c8d98e89c06c9d773ef5338b5991\"><div class=\"view-filters\"><form accept-charset=\"UTF-8\" action=\"/cabins/all/%2A\" class=\"ctools-auto-submit-full-form\" id=\"views-exposed-form-cabins-block-2\" method=\"get\"><div><div class=\"views-exposed-form\"><div class=\"views-exposed-widgets clearfix\"><div class=\"views-exposed-widget views-widget-sort-sort_bef_combine\" id=\"edit-sort-bef-combine-wrapper\"><div class=\"views-widget\"><div class=\"form-item form-type-select form-item-sort-bef-combine\"> <label for=\"edit-sort-bef-combine\">Sort by </label> <select class=\"form-select\" id=\"edit-sort-bef-combine\" name=\"sort_bef_combine\"><option selected=\"selected\" value=\"name ASC\">Number of Bedrooms</option><option value=\"field_sleeps_int_value ASC\">Number of Guests</option><option value=\"field_minimum_rate_value ASC\">Rate (Low to High)</option><option value=\"field_minimum_rate_value DESC\">Rate (High to Low)</option><option value=\"title_1 ASC\">Cabin Name</option></select></div></div></div><div class=\"views-exposed-widget views-submit-button\"> <input class=\"ctools-use-ajax ctools-auto-submit-click js-hide form-submit\" id=\"edit-submit-cabins\" type=\"submit\" value=\"Apply\"/></div></div></div></div></form></div><div class=\"view-content\"><div class=\"views-row views-row-1 views-row-odd views-row-first\"><div class=\"views-field views-field-field-property-image\"><div class=\"field-content\"><div style=\"display: none;\"></div><div class=\"favorites-form-wrapper\" id=\"favorites-form-wrapper-2357\"><form accept-charset=\"UTF-8\" action=\"/blue-ridge-cabins/above-the-timberline/above-the-timberline\" class=\"favorites-form\" id=\"crog-favorites-icon-form-2357\" method=\"post\"><div><input name=\"nid\" type=\"hidden\" value=\"2357\"/><input name=\"fid\" type=\"hidden\" value=\"\"/><input name=\"token\" type=\"hidden\" value=\"\"/><input name=\"limit\" type=\"hidden\" value=\"\"/><div class=\"favorites-icon\" id=\"favorites-icon-2357\"><input class=\"form-submit\" id=\"edit-favorit"
+      }
+    },
+    {
+      "order": 8,
+      "section_id": "videos",
+      "label": "Videos Section",
+      "selector": ".video-embed-field or iframe[youtube]",
+      "html_tag": "iframe",
+      "classes": [],
+      "text_preview": "Video Embeds",
+      "children_count": 1,
+      "assets": [
+        {
+          "type": "video_embed",
+          "src": "https://www.youtube.com/channel/UCi4BOs7O9xcsAUIMpG0OKlg"
+        }
+      ],
+      "data": {
+        "video_urls": [
+          "https://www.youtube.com/channel/UCi4BOs7O9xcsAUIMpG0OKlg"
+        ]
+      }
+    },
+    {
+      "order": 9,
+      "section_id": "photo_grid",
+      "label": "Photo Gallery / Grid",
+      "selector": "img[gallery|photo|cabin] (heuristic)",
+      "html_tag": "img",
+      "classes": [],
+      "text_preview": "157 gallery-like images found",
+      "children_count": 157,
+      "assets": [
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/cabins_listing_large2/public/main_property_image/10.02.2018.01.jpg?itok=LtRBcM4G",
+          "alt": "Cherokee Sunrise on Noontootla Creek | Cabin Rentals of Georgia | Screened-in Porch overlooking 30 acres with fire table and comfortable seating in early evening"
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/cabins_listing_large2/public/main_property_image/10.02.2018.01.jpg?itok=LtRBcM4G",
+          "alt": "Cherokee Sunrise on Noontootla Creek | Cabin Rentals of Georgia | Screened-in Porch overlooking 30 acres with fire table and comfortable seating in early evening"
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_internet_0.png?itok=1xCVc7R7",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_video_games_0.png?itok=QYnX_DnN",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_billiards_0.png?itok=Ab3N51Xn",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_keurig2.png?itok=0ngOmVk5",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_gas_grill.png?itok=sN_AonU4",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_no_smoking_0.png?itok=NeT0yzPv",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/cabins_listing_large2/public/main_property_image/Creekside%20Bliss-43.jpg?itok=49R7-9Rl",
+          "alt": "Creekside Green | Cabin Rentals of Georgia | Stunning Fire Pit and Seating on the Edge of Fightingtown Creek"
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/cabins_listing_large2/public/main_property_image/Creekside%20Bliss-43.jpg?itok=49R7-9Rl",
+          "alt": "Creekside Green | Cabin Rentals of Georgia | Stunning Fire Pit and Seating on the Edge of Fightingtown Creek"
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_pets.png?itok=P4rhB6nx",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_internet_0.png?itok=1xCVc7R7",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_video_games_0.png?itok=QYnX_DnN",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_keurig2.png?itok=0ngOmVk5",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_gas_grill.png?itok=sN_AonU4",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_outdoor_fireplace_0.png?itok=_uj4-E_K",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_indoor_fireplace_0.png?itok=qwPGU-6x",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_no_smoking_0.png?itok=NeT0yzPv",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/cabins_listing_large2/public/main_property_image/original_156981713.jpeg?itok=JdZUVmEY",
+          "alt": "Aska Escape Lodge | Blue Ridge Cabins | Cabin Rentals of Georgia | Dining Area for 6 guests in open floor plan with living area and fireplace with cathedral ceiling, antler chandeliers, and a wall of windows looking at the wooded view "
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/cabins_listing_large2/public/main_property_image/original_156981713.jpeg?itok=JdZUVmEY",
+          "alt": "Aska Escape Lodge | Blue Ridge Cabins | Cabin Rentals of Georgia | Dining Area for 6 guests in open floor plan with living area and fireplace with cathedral ceiling, antler chandeliers, and a wall of windows looking at the wooded view "
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_pets.png?itok=P4rhB6nx",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_internet_0.png?itok=1xCVc7R7",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_video_games_0.png?itok=QYnX_DnN",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_hot_tub_0.png?itok=sSgKb9Pf",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_billiards_0.png?itok=Ab3N51Xn",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_keurig2.png?itok=0ngOmVk5",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_gas_grill.png?itok=sN_AonU4",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_outdoor_fireplace_0.png?itok=_uj4-E_K",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_indoor_fireplace_0.png?itok=qwPGU-6x",
+          "alt": ""
+        },
+        {
+          "type": "image",
+          "src": "https://www.cabin-rentals-of-georgia.com/sites/default/files/styles/icon_small/public/icons/icon_no_smoking_0.png?itok=NeT0yzPv",
+          "alt": ""
+        }
+      ],
+      "data": {}
+    }
+  ]
+}
