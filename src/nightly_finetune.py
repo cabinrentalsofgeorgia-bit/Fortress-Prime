@@ -74,6 +74,7 @@ NUM_EPOCHS           = int(os.getenv("FINETUNE_EPOCHS",        "1"))
 LEARNING_RATE        = float(os.getenv("FINETUNE_LR",          "2e-4"))
 PUSH_OLLAMA          = os.getenv("FINETUNE_PUSH_OLLAMA",       "false").lower() == "true"
 VLLM_CONTAINER       = os.getenv("VLLM_CONTAINER_NAME",        "vllm-70b-captain")
+MIN_DATE             = date.fromisoformat(os.getenv("FINETUNE_MIN_DATE", "2026-04-18"))
 
 # LoRA target modules for Llama architecture
 LORA_TARGET_MODULES = [
@@ -169,7 +170,10 @@ def load_training_data(rolling_days: int) -> list[dict]:
     today = date.today()
     records: list[dict] = []
     for offset in range(rolling_days):
-        day = (today - timedelta(days=offset)).isoformat()
+        day_date = today - timedelta(days=offset)
+        if day_date < MIN_DATE:
+            continue  # never consume pre-filter data
+        day = day_date.isoformat()
         path = INTERACTION_LOG_DIR / f"{day}.jsonl"
         if not path.exists():
             continue
