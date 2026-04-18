@@ -33,7 +33,10 @@ Environment variables (loaded from .env / .env.dgx by run-fortress-nightly-finet
     FINETUNE_EPOCHS         default: 1
     FINETUNE_LR             default: 2e-4
     FINETUNE_PUSH_OLLAMA    default: false
-    VLLM_CONTAINER_NAME     default: vllm-70b-captain
+    VLLM_BRIDGE_SERVICE     default: fortress-vllm-bridge
+    VLLM_HEALTH_URL         default: http://127.0.0.1:18001/v1/models
+    VLLM_STOP_TIMEOUT       default: 60   (seconds to wait for EngineCore to die)
+    VLLM_START_TIMEOUT      default: 120  (seconds to wait for vLLM to come back)
     DATABASE_URL            required for exporter
 """
 from __future__ import annotations
@@ -73,7 +76,10 @@ MAX_SEQ_LEN          = int(os.getenv("FINETUNE_MAX_SEQ_LEN",   "4096"))
 NUM_EPOCHS           = int(os.getenv("FINETUNE_EPOCHS",        "1"))
 LEARNING_RATE        = float(os.getenv("FINETUNE_LR",          "2e-4"))
 PUSH_OLLAMA          = os.getenv("FINETUNE_PUSH_OLLAMA",       "false").lower() == "true"
-VLLM_CONTAINER       = os.getenv("VLLM_CONTAINER_NAME",        "vllm-70b-captain")
+VLLM_BRIDGE_SERVICE  = os.getenv("VLLM_BRIDGE_SERVICE",        "fortress-vllm-bridge")
+VLLM_HEALTH_URL      = os.getenv("VLLM_HEALTH_URL",            "http://127.0.0.1:18001/v1/models")
+VLLM_STOP_TIMEOUT    = int(os.getenv("VLLM_STOP_TIMEOUT",      "60"))
+VLLM_START_TIMEOUT   = int(os.getenv("VLLM_START_TIMEOUT",     "120"))
 MIN_DATE             = date.fromisoformat(os.getenv("FINETUNE_MIN_DATE", "2026-04-18"))
 
 # LoRA target modules for Llama architecture
@@ -112,34 +118,101 @@ def _ensure_training_deps() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Docker container management
+# vLLM native-process management
+# vLLM runs as VLLM::EngineCore (native python3 process, not Docker) on this
+# deployment. The docker container model assumed in the original stub was wrong
+# for the GB10/DGX Spark setup where vLLM is managed via systemd
+# (fortress-vllm-bridge.service) + a direct uvicorn/asyncio process.
 # ---------------------------------------------------------------------------
-def _docker_running(container: str) -> bool:
-    try:
-        out = subprocess.check_output(
-            ["docker", "inspect", "--format", "{{.State.Running}}", container],
-            stderr=subprocess.DEVNULL, timeout=10,
-        )
-        return out.strip() == b"true"
-    except subprocess.CalledProcessError:
-        return False
+def _vllm_enginecore_running() -> bool:
+    """True if any VLLM::EngineCore process is alive."""
+    result = subprocess.run(
+        ["pgrep", "-f", "VLLM::EngineCore"],
+        capture_output=True,
+    )
+    return result.returncode == 0
 
 
-def _stop_vllm(container: str) -> bool:
-    if not _docker_running(container):
-        log.info("vLLM container %s not running, skip stop.", container)
+def _stop_vllm() -> bool:
+    """
+    Stop vLLM for training.
+
+    1. Stop fortress-vllm-bridge (systemd) — halts HTTP ingress.
+    2. Send SIGTERM to VLLM::EngineCore and wait up to VLLM_STOP_TIMEOUT.
+    3. Escalate to SIGKILL if SIGTERM is ignored.
+    4. Raise RuntimeError if the process still lives — caller must abort
+       training rather than OOM the GPU.
+
+    Returns True if vLLM was running and was stopped, False if it was
+    already not running.
+    """
+    if not _vllm_enginecore_running():
+        log.info("VLLM::EngineCore not running — nothing to stop.")
         return False
-    log.info("Stopping vLLM container %s to free GPU memory …", container)
-    subprocess.run(["docker", "stop", "-t", "30", container], check=True, timeout=60)
+
+    log.info("Stopping %s service (HTTP bridge) …", VLLM_BRIDGE_SERVICE)
+    subprocess.run(
+        ["sudo", "systemctl", "stop", VLLM_BRIDGE_SERVICE],
+        check=True, timeout=30,
+    )
+
+    log.info("Sending SIGTERM to VLLM::EngineCore …")
+    subprocess.run(["pkill", "-TERM", "-f", "VLLM::EngineCore"], check=False)
+
+    deadline = time.time() + VLLM_STOP_TIMEOUT
+    while time.time() < deadline:
+        if not _vllm_enginecore_running():
+            log.info("VLLM::EngineCore exited cleanly — GPU memory freed.")
+            return True
+        time.sleep(2)
+
+    # Process survived SIGTERM — escalate
+    log.warning("EngineCore still alive after %ds, escalating to SIGKILL …", VLLM_STOP_TIMEOUT)
+    subprocess.run(["pkill", "-KILL", "-f", "VLLM::EngineCore"], check=False)
     time.sleep(5)
-    log.info("vLLM container stopped.")
+
+    if _vllm_enginecore_running():
+        raise RuntimeError(
+            f"VLLM::EngineCore refused to die after SIGTERM + SIGKILL "
+            f"(waited {VLLM_STOP_TIMEOUT}s). GPU memory not freed — "
+            "aborting training to avoid OOM."
+        )
+
+    log.info("VLLM::EngineCore killed (SIGKILL) — GPU memory freed.")
     return True
 
 
-def _start_vllm(container: str) -> None:
-    log.info("Restarting vLLM container %s …", container)
-    subprocess.run(["docker", "start", container], check=True, timeout=30)
-    log.info("vLLM container restarted.")
+def _start_vllm() -> None:
+    """
+    Restart vLLM via systemd bridge service and verify the health endpoint
+    responds before returning. Raises RuntimeError if vLLM doesn't come up
+    within VLLM_START_TIMEOUT seconds — caller writes an error file.
+    """
+    import urllib.request
+
+    log.info("Starting %s service …", VLLM_BRIDGE_SERVICE)
+    subprocess.run(
+        ["sudo", "systemctl", "start", VLLM_BRIDGE_SERVICE],
+        check=True, timeout=30,
+    )
+
+    log.info("Waiting for vLLM health at %s (timeout=%ds) …", VLLM_HEALTH_URL, VLLM_START_TIMEOUT)
+    deadline = time.time() + VLLM_START_TIMEOUT
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(VLLM_HEALTH_URL, timeout=5) as resp:
+                if resp.status == 200:
+                    log.info("vLLM health confirmed — bridge and EngineCore up.")
+                    return
+        except Exception:
+            pass
+        time.sleep(5)
+
+    raise RuntimeError(
+        f"vLLM did not become healthy at {VLLM_HEALTH_URL} within "
+        f"{VLLM_START_TIMEOUT}s after starting {VLLM_BRIDGE_SERVICE}. "
+        "Check: journalctl -u fortress-vllm-bridge"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -444,8 +517,18 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
     # --- Step 3: Install deps ---
     _ensure_training_deps()
 
-    # --- Step 4: Stop vLLM ---
-    vllm_was_running = _stop_vllm(VLLM_CONTAINER)
+    # --- Step 4: Stop vLLM to free GPU memory ---
+    vllm_was_running = False
+    try:
+        vllm_was_running = _stop_vllm()
+    except RuntimeError as exc:
+        # GPU not freed — abort cleanly rather than OOM during training
+        log.error("Cannot free GPU memory for training: %s", exc)
+        adapter_out.mkdir(parents=True, exist_ok=True)
+        (adapter_out / "training.error").write_text(
+            f"vLLM stop failed — training aborted to avoid OOM.\n{exc}"
+        )
+        return 1
 
     exit_code = 0
     try:
@@ -469,9 +552,21 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
         except Exception:
             pass
     finally:
-        # Always restart vLLM even if training failed
+        # Always attempt to restart vLLM even if training failed
         if vllm_was_running:
-            _start_vllm(VLLM_CONTAINER)
+            try:
+                _start_vllm()
+            except RuntimeError as exc:
+                import traceback as _tb
+                log.error("vLLM failed to restart after training: %s", exc)
+                try:
+                    adapter_out.mkdir(parents=True, exist_ok=True)
+                    (adapter_out / "vllm_restart.error").write_text(
+                        f"vLLM restart failed after training.\n{exc}\n\n{_tb.format_exc()}"
+                    )
+                except Exception:
+                    pass
+                exit_code = max(exit_code, 1)
 
     log.info("Nightly fine-tune job complete. exit_code=%d", exit_code)
     return exit_code
