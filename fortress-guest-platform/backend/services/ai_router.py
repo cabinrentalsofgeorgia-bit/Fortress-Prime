@@ -400,6 +400,23 @@ async def execute_resilient_inference(
             breaker_state="closed",
             latency_ms=int((time.perf_counter() - start) * 1000),
         )
+        # Phase 4e.3: judge evaluation (JUDGE_ENABLED=false default → zero overhead)
+        _judge_decision = _judge_reasoning = None
+        try:
+            from backend.services.judge_runtime import JUDGE_ENABLED, judge_response as _judge
+            if JUDGE_ENABLED:
+                _jd = await _judge(label_task_type, prompt, text)
+                _judge_decision  = _jd.decision
+                _judge_reasoning = _jd.reasoning
+                if _jd.decision == "escalate":
+                    _capture_log.info("judge_escalated task=%s model=%s latency=%dms",
+                                      label_task_type, _jd.judge_model, _jd.latency_ms)
+                elif _jd.decision == "uncertain":
+                    _capture_log.info("judge_uncertain task=%s model=%s latency=%dms",
+                                      label_task_type, _jd.judge_model, _jd.latency_ms)
+        except Exception:
+            pass  # judge never blocks response
+
         await record_audit_event(
             actor_id=None,
             action="ai_inference",
@@ -419,6 +436,10 @@ async def execute_resilient_inference(
             },
             db=db,
         )
+
+        # Pass judge decision to capture (for training signal)
+        result._judge_decision  = _judge_decision   # type: ignore[attr-defined]
+        result._judge_reasoning = _judge_reasoning  # type: ignore[attr-defined]
         return result
     except Exception as exc:  # noqa: BLE001
         errors.append(f"ollama:{exc}")
@@ -506,6 +527,9 @@ async def execute_resilient_inference(
         )
         # Capture for nightly distillation flywheel (fire-and-forget)
         # served_by_endpoint = actual cloud endpoint returned by _call_openai
+        # Extract judge decision from sovereign result if it ran before fallback
+        _prev_judge_dec = getattr(result, "_judge_decision",  None)
+        _prev_judge_rsn = getattr(result, "_judge_reasoning", None)
         await _capture_interaction(
             source_module=source_module or "resilient_inference",
             prompt=safe_prompt,
@@ -515,6 +539,8 @@ async def execute_resilient_inference(
             served_by_endpoint=_cloud_endpoint,
             served_vector_store=None,  # RAG integration Phase 5a
             task_type=label_task_type,
+            judge_decision=_prev_judge_dec,
+            judge_reasoning=_prev_judge_rsn,
         )
         return result
     except Exception as exc:  # noqa: BLE001
