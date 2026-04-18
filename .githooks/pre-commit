@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — Fortress-Prime client-side secret scanner
+#
+# Scans staged files for secrets before every commit.
+# Bypass with: git commit --no-verify (intentional — drift_alarm catches slips)
+# Add inline marker to skip a single known-safe line: # secret-hook:allow
+
+set -uo pipefail
+
+# ---------------------------------------------------------------------------
+# Patterns — split literals to avoid this script self-triggering
+# ---------------------------------------------------------------------------
+_M_PREFIX="190Antioch"           # split — hook must not self-trigger
+_M_SUFFIX="CemeteryRD"
+_MINER_BOT_PW="${_M_PREFIX}${_M_SUFFIX}"
+_PK_BEGIN="-----BEGIN"            # split — same reason
+_PK_END="PRIVATE KEY-----"
+
+# Lines containing any of these strings are skipped (false positive allowlist)
+_ALLOW_PATTERNS=(
+    "Fortress-Prime-Test-Password-"
+    "REPLACE_ME"
+    "REPLACE_WITH_ROTATED_SECRET"
+    "secret-hook:allow"
+    "<see MINER_BOT_DB_PASSWORD"
+    "REPLACE_ME_WITH_REAL_PASSWORD"
+)
+
+MAX_FILE_BYTES=$(( 10 * 1024 * 1024 ))  # 10MB
+
+ERRORS=0
+HEADER_PRINTED=0
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+_print_header() {
+    if [ "$HEADER_PRINTED" -eq 0 ]; then
+        echo ""
+        echo "╔══════════════════════════════════════════════════╗"
+        echo "║  Pre-commit secret scan — BLOCKED                ║"
+        echo "╚══════════════════════════════════════════════════╝"
+        HEADER_PRINTED=1
+    fi
+}
+
+_redact() {
+    local m="$1"
+    local len="${#m}"
+    if [ "$len" -le 6 ]; then
+        echo "[REDACTED]"
+    else
+        echo "${m:0:3}[...]${m:$((len-3)):3}"
+    fi
+}
+
+_flag() {
+    local file="$1" lineno="$2" match="$3" kind="$4"
+    _print_header
+    printf "  ✗ %s:%s  [%s]  %s\n" "$file" "$lineno" "$kind" "$(_redact "$match")"
+    ERRORS=$(( ERRORS + 1 ))
+}
+
+_is_allowlisted() {
+    local line="$1"
+    for pat in "${_ALLOW_PATTERNS[@]}"; do
+        [[ "$line" == *"$pat"* ]] && return 0
+    done
+    return 1
+}
+
+_is_binary() {
+    # Fast null-byte check
+    LC_ALL=C grep -qP '\x00' "$1" 2>/dev/null
+}
+
+# ---------------------------------------------------------------------------
+# Get staged files (added or modified, not deleted, not binary)
+# ---------------------------------------------------------------------------
+mapfile -t STAGED < <(git diff --staged --diff-filter=AM --name-only 2>/dev/null)
+
+[ "${#STAGED[@]}" -eq 0 ] && exit 0
+
+# ---------------------------------------------------------------------------
+# Check 1: Large files (stat only — very fast)
+# ---------------------------------------------------------------------------
+for f in "${STAGED[@]}"; do
+    [ -f "$f" ] || continue
+    size=$(stat -c %s "$f" 2>/dev/null || stat -f %z "$f" 2>/dev/null || echo 0)
+    if [ "$size" -gt "$MAX_FILE_BYTES" ]; then
+        _print_header
+        printf "  ✗ %s  [LARGE FILE]  %dMB (limit 10MB)\n" "$f" $(( size / 1024 / 1024 ))
+        ERRORS=$(( ERRORS + 1 ))
+    fi
+done
+
+# ---------------------------------------------------------------------------
+# Check 2: Secret patterns — scan staged content via git show
+# ---------------------------------------------------------------------------
+for f in "${STAGED[@]}"; do
+    [ -f "$f" ] || continue
+    _is_binary "$f" && continue
+
+    lineno=0
+    while IFS= read -r line; do
+        lineno=$(( lineno + 1 ))
+        _is_allowlisted "$line" && continue
+
+        # sk-fortress-* Fortress API key
+        if [[ "$line" =~ sk-fortress-([a-zA-Z0-9]{20,}) ]]; then
+            _flag "$f" "$lineno" "sk-fortress-${BASH_REMATCH[1]}" "FORTRESS_KEY"
+        fi
+
+        # nvapi-* NVIDIA API key
+        if [[ "$line" =~ nvapi-([a-zA-Z0-9]{20,}) ]]; then
+            _flag "$f" "$lineno" "nvapi-${BASH_REMATCH[1]}" "NVAPI_KEY"
+        fi
+
+        # Miner-bot DB password (split to avoid self-trigger)
+        if [[ "$line" == *"${_MINER_BOT_PW}"* ]]; then
+            _flag "$f" "$lineno" "${_MINER_BOT_PW}!!!" "MINER_BOT_PW"
+        fi
+
+        # Hardcoded password= literal
+        if [[ "$line" =~ password[[:space:]]*=[[:space:]]*[\"\']([a-zA-Z0-9!@#%^&*]{6,})[\"\'] ]]; then
+            _flag "$f" "$lineno" "password=${BASH_REMATCH[1]}" "HARDCODED_PW"
+        fi
+
+        # Private key block header (variables split to avoid self-trigger)
+        if [[ "$line" == *"${_PK_BEGIN}"*"${_PK_END}"* ]]; then
+            _flag "$f" "$lineno" "${_PK_BEGIN}...${_PK_END}" "PRIVATE_KEY"
+        fi
+
+        # AWS access key
+        if [[ "$line" =~ (AKIA[0-9A-Z]{16}) ]]; then
+            _flag "$f" "$lineno" "${BASH_REMATCH[1]}" "AWS_KEY"
+        fi
+
+        # Stripe live key
+        if [[ "$line" =~ sk_live_([a-zA-Z0-9]{20,}) ]]; then
+            _flag "$f" "$lineno" "sk_live_${BASH_REMATCH[1]}" "STRIPE_LIVE_KEY"
+        fi
+
+    done < <(git show ":${f}" 2>/dev/null)
+done
+
+# ---------------------------------------------------------------------------
+# Result
+# ---------------------------------------------------------------------------
+if [ "$ERRORS" -gt 0 ]; then
+    echo ""
+    printf "  %d issue(s) found. Fix above, then commit again.\n" "$ERRORS"
+    echo "  Bypass (if intentional): git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+exit 0
