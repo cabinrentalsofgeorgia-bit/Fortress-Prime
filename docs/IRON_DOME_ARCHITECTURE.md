@@ -223,8 +223,8 @@ Current filter catches legal personas and legal modules. Extend to check source 
 
 ### Phase 2.5 — Model registry (DONE)
 
-### Phase 3 — Flywheel capture (DONE, but retag)
-Captures continue. Add served_by_endpoint tagging (R6 from v3). Add served_vector_store tagging.
+### Phase 3 — Flywheel capture (DONE + retagged April 18)
+Captures continue. served_by_endpoint and served_vector_store columns added to both tables (PR #64, migration 1a0d5cfa13e5). NULL for pre-retag rows — intentional. served_vector_store remains NULL until Phase 5a.
 
 ### Phase 4a — CROG-VRS distillation (NEW)
 Retarget trainer from Llama-3.3-70B-FP4 to qwen2.5:7b. Train on spark-4. Serve from spark-4.

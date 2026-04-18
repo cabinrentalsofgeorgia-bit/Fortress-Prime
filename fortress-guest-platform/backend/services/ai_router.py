@@ -64,6 +64,16 @@ async def _capture_interaction(
     response: str,
     model_label: str,
     db: Any | None = None,
+    # Phase 3 retag — v5 tagging schema (all optional, None = pre-retag)
+    served_by_endpoint:  Optional[str] = None,
+    served_vector_store: Optional[str] = None,
+    escalated_from:      Optional[str] = None,
+    sovereign_attempt:   Optional[str] = None,
+    teacher_endpoint:    Optional[str] = None,
+    teacher_model:       Optional[str] = None,
+    task_type:           Optional[str] = None,
+    judge_decision:      Optional[str] = None,
+    judge_reasoning:     Optional[str] = None,
 ) -> None:
     """
     Write a frontier-model interaction to llm_training_captures.
@@ -90,33 +100,55 @@ async def _capture_interaction(
 
         async def _insert() -> None:
             async with AsyncSessionLocal() as session:
+                _tag = {
+                    "endpoint":    served_by_endpoint[:256]  if served_by_endpoint  else None,
+                    "store":       served_vector_store[:64]  if served_vector_store else None,
+                    "esc_from":    escalated_from[:256]      if escalated_from       else None,
+                    "sov_attempt": sovereign_attempt,
+                    "t_endpoint":  teacher_endpoint[:256]    if teacher_endpoint    else None,
+                    "t_model":     teacher_model[:128]       if teacher_model       else None,
+                    "task":        task_type[:64]            if task_type           else None,
+                    "judge_dec":   judge_decision[:16]       if judge_decision      else None,
+                    "judge_rsn":   judge_reasoning,
+                }
                 if decision.route == CaptureRoute.ALLOW:
                     await session.execute(text("""
                         INSERT INTO llm_training_captures
-                            (source_module, model_used, user_prompt, assistant_resp, status)
+                            (source_module, model_used, user_prompt, assistant_resp, status,
+                             served_by_endpoint, served_vector_store,
+                             escalated_from, sovereign_attempt,
+                             teacher_endpoint, teacher_model,
+                             task_type, judge_decision, judge_reasoning)
                         VALUES
-                            (:module, :model, :prompt, :response, 'pending')
+                            (:module, :model, :prompt, :response, 'pending',
+                             :endpoint, :store,
+                             :esc_from, :sov_attempt,
+                             :t_endpoint, :t_model,
+                             :task, :judge_dec, :judge_rsn)
                         ON CONFLICT DO NOTHING
-                    """), {
-                        "module":   source_module[:120],
-                        "model":    model_label[:120],
-                        "prompt":   prompt[:32_000],
-                        "response": response[:32_000],
-                    })
+                    """), {"module": source_module[:120], "model": model_label[:120],
+                           "prompt": prompt[:32_000], "response": response[:32_000],
+                           **_tag})
                 else:  # RESTRICTED
                     await session.execute(text("""
                         INSERT INTO restricted_captures
                             (source_module, prompt, response,
-                             restriction_reason, matched_patterns)
+                             restriction_reason, matched_patterns,
+                             served_by_endpoint, served_vector_store,
+                             escalated_from, sovereign_attempt,
+                             teacher_endpoint, teacher_model,
+                             task_type, judge_decision, judge_reasoning)
                         VALUES
-                            (:module, :prompt, :response, :reason, :patterns)
-                    """), {
-                        "module":   source_module[:120],
-                        "prompt":   prompt[:32_000],
-                        "response": response[:32_000],
-                        "reason":   decision.reason[:256],
-                        "patterns": list(decision.matched_patterns),
-                    })
+                            (:module, :prompt, :response, :reason, :patterns,
+                             :endpoint, :store,
+                             :esc_from, :sov_attempt,
+                             :t_endpoint, :t_model,
+                             :task, :judge_dec, :judge_rsn)
+                    """), {"module": source_module[:120],
+                           "prompt": prompt[:32_000], "response": response[:32_000],
+                           "reason": decision.reason[:256],
+                           "patterns": list(decision.matched_patterns),
+                           **_tag})
                 await session.commit()
 
         asyncio.create_task(_insert())
@@ -183,7 +215,8 @@ async def _call_ollama(
     temperature: float,
     timeout_s: float,
     tier: Optional[str] = None,
-) -> str:
+) -> tuple[str, str]:
+    """Returns (response_text, endpoint_url) so callers can tag served_by_endpoint."""
     base_url = _ollama_base_url_for(model, tier=tier)
     url = f"{base_url.rstrip('/')}/api/chat"
     messages = []
@@ -204,7 +237,8 @@ async def _call_ollama(
         resp = await client.post(url, json=payload)
         resp.raise_for_status()
         data = resp.json()
-        return ((data.get("message") or {}).get("content") or "").strip()
+        text = ((data.get("message") or {}).get("content") or "").strip()
+        return text, base_url
 
 
 async def _call_openai(
@@ -214,7 +248,8 @@ async def _call_openai(
     max_tokens: int,
     temperature: float,
     timeout_s: float,
-) -> str:
+) -> tuple[str, str]:
+    """Returns (response_text, endpoint_url) — endpoint is the LiteLLM gateway."""
     response = await submit_chat_completion(
         prompt=prompt,
         model=settings.openai_model,
@@ -226,9 +261,10 @@ async def _call_openai(
         },
     )
     choices = response.get("choices") or []
-    if not choices:
-        return ""
-    return (((choices[0] or {}).get("message") or {}).get("content") or "").strip()
+    text = "" if not choices else (
+        (((choices[0] or {}).get("message") or {}).get("content") or "").strip()
+    )
+    return text, str(settings.litellm_base_url)
 
 
 def _adapter_eligible(source_module: Optional[str]) -> bool:
@@ -255,10 +291,10 @@ async def _call_adapter(
     max_tokens: int,
     temperature: float,
     timeout_s: float,
-) -> str:
+) -> tuple[str, str]:
     """
     Call the distilled-adapter vLLM OpenAI-compat endpoint.
-    Returns the response text, or raises on failure (caller falls through).
+    Returns (response_text, adapter_url), or raises on failure (caller falls through).
 
     The adapter serves model 'crog-distilled' at SOVEREIGN_DISTILL_ADAPTER_URL.
     Adapter path is read from the PROMOTED_CANDIDATE sentinel for audit purposes.
@@ -299,7 +335,7 @@ async def _call_adapter(
         adapter_path, latency_ms,
         (data.get("usage") or {}).get("completion_tokens", 0),
     )
-    return text
+    return text, _ADAPTER_URL
 
 
 async def execute_resilient_inference(
@@ -319,7 +355,7 @@ async def execute_resilient_inference(
 
     # 1) Sovereign default: local Ollama
     try:
-        text = await _call_ollama(
+        text, _ollama_endpoint = await _call_ollama(
             prompt=prompt,
             system_message=system_message,
             model=_preferred_ollama_model(task_type),
@@ -362,7 +398,7 @@ async def execute_resilient_inference(
     # Legal/privileged source_modules are blocked at _adapter_eligible().
     if _adapter_eligible(source_module):
         try:
-            adapter_text = await _call_adapter(
+            adapter_text, _adapter_endpoint = await _call_adapter(
                 prompt=prompt,
                 system_message=system_message,
                 max_tokens=max_tokens,
@@ -404,7 +440,7 @@ async def execute_resilient_inference(
         privacy_decision = sanitize_for_cloud({"prompt": prompt, "system_message": system_message or ""})
         safe_prompt = str((privacy_decision.redacted_payload or {}).get("prompt", ""))
         safe_system_message = str((privacy_decision.redacted_payload or {}).get("system_message", ""))
-        text = await _call_openai(
+        text, _cloud_endpoint = await _call_openai(
             prompt=safe_prompt,
             system_message=safe_system_message,
             max_tokens=max_tokens,
@@ -439,12 +475,15 @@ async def execute_resilient_inference(
             db=db,
         )
         # Capture for nightly distillation flywheel (fire-and-forget)
+        # served_by_endpoint = actual cloud endpoint returned by _call_openai
         await _capture_interaction(
             source_module=source_module or "resilient_inference",
             prompt=safe_prompt,
             response=text,
             model_label=f"godhead/{settings.openai_model}",
             db=db,
+            served_by_endpoint=_cloud_endpoint,
+            served_vector_store=None,  # RAG integration Phase 5a
         )
         return result
     except Exception as exc:  # noqa: BLE001
