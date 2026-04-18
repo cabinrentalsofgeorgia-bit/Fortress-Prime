@@ -1,0 +1,81 @@
+Streamline Statement Reference — Dutil / Above the Timberline / January 2026
+=============================================================================
+Source: Transcribed from product owner's reference shared in conversation.
+The actual Streamline PDF for this period was not available via the API.
+This text file describes the EXPECTED structure for structural comparison tests.
+
+HEADER
+------
+  Title:   OWNER STATEMENT
+  Owner:   Dutil David
+  Address: (owner mailing address — not stored in Crog-VRS)
+  Company: (company address)
+  Badge:   APPROVED
+  Property Group + Name: Above the Timberline
+
+ACCOUNT SUMMARY
+---------------
+  Activity: From 01/01/2026 to 01/31/2026
+
+                                        Period      YTD
+  Balance as of 01/01/2026:             $3,001.91
+  Payment Received:                         $0.00   $0.00
+  Gross Reservation Revenue:                $0.00   $0.00
+  Less Management Commission:               $0.00   $0.00
+  Additional Owner Income:                  $0.00   $0.00
+  Owner Charges/Expenses:               ($312.50) ($312.50)
+  Total Balance Due:                    $2,689.41
+  Payments to Owner:                  ($3,001.91) ($3,001.91)
+  Balance as of 01/31/2026 (includes
+    minimum required balance):           ($312.50)
+
+PROPERTY BLOCK
+--------------
+  Property Group: Above the Timberline
+  Property Name:  Above the Timberline
+  Address:        638 Bell Camp Ridge (or similar — exact address from DB)
+  Year: 2026  Period: 1
+
+RESERVATIONS TABLE
+------------------
+  Columns: Res #/Type | Guest | Start | End | Nights | Gross Rent | Mgmt Comm | Net Amount
+  Rows: (empty — no reservations in January 2026)
+  Total: 0 | $0.00 | $0.00 | $0.00
+
+OWNER PAYMENTS / ADDITIONAL OWNER INCOME
+-----------------------------------------
+  Columns: Date | Description | Amount
+  Rows: (empty)
+  TOTAL: $0.00
+
+OWNER CHARGES/EXPENSES
+-----------------------
+  Columns: Posted Date | Type | Description | W.O./REF# | Expense
+  Row 1: (date) | (type 1) | (description 1) | (ref) | ($200.00 approx)
+  Row 2: (date) | (type 2) | (description 2) | (ref) | ($112.50 approx)
+  TOTAL: ($312.50)
+
+PAYMENTS TO OWNER
+-----------------
+  Columns: Date | Description | ACH # | CK # | Amount
+  Row 1: (date) | (description) | (ach ref) | | ($3,001.91)
+  TOTAL: ($3,001.91)
+  Scheduled Payments: $0.00
+
+OWNER RESERVE
+-------------
+  Balance as of 01/01/2026: $0.00
+  Balance as of 01/31/2026: $0.00
+
+KEY ASSERTIONS FOR TESTS
+------------------------
+  - Owner name contains "Dutil"
+  - Property name contains "Above the Timberline"
+  - Period: Jan 2026
+  - Status badge: APPROVED
+  - Opening balance: $3,001.91
+  - Total charges: $312.50
+  - Closing balance: ($312.50) — NEGATIVE, shown in parentheses
+  - Payments to owner: $3,001.91
+  - No reservations in table
+  - Two charge rows in charges table
