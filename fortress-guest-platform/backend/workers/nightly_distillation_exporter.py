@@ -198,6 +198,7 @@ async def run_distillation_export(
                    user_prompt, assistant_resp, created_at
             FROM   llm_training_captures
             WHERE  status = 'pending'
+              AND  (eval_holdout IS NULL OR eval_holdout = FALSE)
             ORDER  BY created_at ASC
             LIMIT  :lim
         """), {"lim": batch_size})
