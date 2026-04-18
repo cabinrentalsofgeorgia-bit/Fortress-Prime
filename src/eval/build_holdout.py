@@ -79,7 +79,9 @@ def build_holdout(today: date, dry_run: bool) -> dict:
             FROM llm_training_captures
             WHERE created_at >= %s
               AND (eval_holdout IS NULL OR eval_holdout = FALSE)
-              AND status = 'exported'
+              -- MVP v1: include pending rows so first eval cycle runs same-night as
+              -- first training. Tighten to exported-only in Phase 4c when volume is sufficient.
+              AND status IN ('pending', 'exported')
         """, (cutoff,))
         rows = cur.fetchall()
         log.info("Found %d eligible rows in window", len(rows))
