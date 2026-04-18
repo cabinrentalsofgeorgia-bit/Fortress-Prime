@@ -265,7 +265,8 @@ Godhead-as-labeler pipeline. Manual QC surface. Capture extension
 for (prompt, sovereign_response, godhead_judgment, gary_correction).
 Enables every downstream judge phase.
 
-### Phase 4e.2 — Task type classifier (NEW)
+### Phase 4e.2 — Task type classifier (DONE)
+Task classifier live. Three tiers: module hint → keyword pattern → qwen2.5:0.5b (500ms timeout). See backend/services/task_types.py for module→task and keyword→task mappings. task_type populated on every ai_router and legal_council capture.
 Three-tier classifier: source hint → keyword → small LLM. Wires into
 ai_router at top of request path. Populates task_type on every capture.
 

@@ -892,6 +892,16 @@ Execute analysis and return the raw JSON object.
             _extract_json_block(text)
             # Training capture: write frontier opinion for local model distillation
             if text and provider in _CLOUD_PROVIDERS:
+                # Classify task type by seat/persona context (Phase 4e.2)
+                try:
+                    from backend.services.task_classifier import classify_task_type as _cls
+                    _council_task = _cls(
+                        source_module=f"legal_council_of_9/seat_{persona.seat}/{persona.name}",
+                        prompt=base_user[:600],
+                    )
+                except Exception:
+                    _council_task = "legal_reasoning"
+
                 asyncio.ensure_future(_capture_council_training(
                     seat=persona.seat,
                     persona_name=persona.name,
@@ -900,6 +910,7 @@ Execute analysis and return the raw JSON object.
                     response=text[:16000],
                     served_by_endpoint=_NIM_ENDPOINT,   # NIM ClusterIP (audit: 10.43.38.88:8000)
                     served_vector_store=None,             # RAG integration Phase 5a
+                    task_type=_council_task,
                 ))
             break
         except Exception as exc:
