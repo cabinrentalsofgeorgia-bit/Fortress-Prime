@@ -34,7 +34,7 @@ log = logging.getLogger("model_registry")
 
 _ATLAS_PATH = Path(os.getenv(
     "FORTRESS_ATLAS_PATH",
-    str(Path(__file__).resolve().parents[5] / "fortress_atlas.yaml"),
+    str(Path(__file__).resolve().parents[3] / "fortress_atlas.yaml"),
 ))
 
 # ---------------------------------------------------------------------------
