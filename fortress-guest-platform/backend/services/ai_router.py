@@ -3,12 +3,22 @@ Resilient AI router for legal/agent services.
 
 Routes to local Ollama first (sovereign default), then optionally OpenAI
 when credentials are available.
+
+Phase 4c: adds optional distilled-adapter tier (tier 1.5) between Ollama
+and OpenAI. Controlled by SOVEREIGN_DISTILL_ADAPTER_PCT (default 0 = off).
+Only active when PROMOTED_CANDIDATE sentinel file exists. Legal/privileged
+modules are blocked from the adapter tier regardless of PCT.
 """
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
+import os
+import random
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional
 
 import httpx
@@ -20,6 +30,25 @@ from backend.services.privacy_router import sanitize_for_cloud
 from backend.services.swarm_service import submit_chat_completion
 
 _capture_log = structlog.get_logger(service="ai_router.capture")
+_adapter_log  = logging.getLogger("ai_router.adapter")
+
+# ---------------------------------------------------------------------------
+# Phase 4c — Distilled adapter routing config
+# ---------------------------------------------------------------------------
+_ADAPTER_PCT  = int(os.getenv("SOVEREIGN_DISTILL_ADAPTER_PCT",  "0"))   # 0 = off
+_ADAPTER_URL  = os.getenv("SOVEREIGN_DISTILL_ADAPTER_URL",       "http://127.0.0.1:8100/v1")
+_ADAPTER_DIR  = Path(os.getenv("FINETUNE_ADAPTER_DIR",           "/mnt/fortress_nas/finetune-artifacts"))
+_SENTINEL     = _ADAPTER_DIR / "PROMOTED_CANDIDATE"
+
+# Source modules that must NEVER be routed to the distilled adapter.
+# The adapter was trained on VRS/hospitality data only.
+# Legal and privileged modules must stay on frontier models.
+_ADAPTER_BLOCKED_MODULES: frozenset[str] = frozenset({
+    "legal_council", "ediscovery_agent", "legal_email_intake",
+    "legal_intake", "legal_case_graph", "legal_chronology",
+    "legal_deposition_prep", "legal_discovery_engine",
+    "legal_agent_orchestrator", "legal_email_intake_api",
+})
 
 
 async def _capture_interaction(
@@ -160,6 +189,77 @@ async def _call_openai(
     return (((choices[0] or {}).get("message") or {}).get("content") or "").strip()
 
 
+def _adapter_eligible(source_module: Optional[str]) -> bool:
+    """
+    Return True if this request is eligible for the distilled-adapter tier.
+    Legal/privileged modules are hard-blocked regardless of PCT setting.
+    """
+    if _ADAPTER_PCT == 0:
+        return False
+    if not _SENTINEL.exists():
+        return False
+    if source_module and source_module in _ADAPTER_BLOCKED_MODULES:
+        return False
+    if source_module and any(
+        source_module.startswith(p) for p in ("legal_", "ediscovery_")
+    ):
+        return False
+    return random.randint(1, 100) <= _ADAPTER_PCT
+
+
+async def _call_adapter(
+    prompt: str,
+    system_message: Optional[str],
+    max_tokens: int,
+    temperature: float,
+    timeout_s: float,
+) -> str:
+    """
+    Call the distilled-adapter vLLM OpenAI-compat endpoint.
+    Returns the response text, or raises on failure (caller falls through).
+
+    The adapter serves model 'crog-distilled' at SOVEREIGN_DISTILL_ADAPTER_URL.
+    Adapter path is read from the PROMOTED_CANDIDATE sentinel for audit purposes.
+    """
+    try:
+        sentinel_data = json.loads(_SENTINEL.read_text()) if _SENTINEL.exists() else {}
+        adapter_path = sentinel_data.get("adapter_path", "unknown")
+    except Exception:
+        adapter_path = "unknown"
+
+    messages: list[dict] = []
+    if system_message:
+        messages.append({"role": "system", "content": system_message})
+    messages.append({"role": "user", "content": prompt})
+
+    t0 = time.perf_counter()
+    async with httpx.AsyncClient(timeout=timeout_s) as client:
+        resp = await client.post(
+            f"{_ADAPTER_URL.rstrip('/')}/chat/completions",
+            json={
+                "model":       "crog-distilled",
+                "messages":    messages,
+                "max_tokens":  max_tokens,
+                "temperature": temperature,
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    text = (
+        ((data.get("choices") or [{}])[0].get("message") or {})
+        .get("content", "")
+        .strip()
+    )
+    _adapter_log.info(
+        "adapter_call_ok adapter=%s latency_ms=%d tokens=%d",
+        adapter_path, latency_ms,
+        (data.get("usage") or {}).get("completion_tokens", 0),
+    )
+    return text
+
+
 async def execute_resilient_inference(
     prompt: str,
     task_type: str,
@@ -213,6 +313,48 @@ async def execute_resilient_inference(
         return result
     except Exception as exc:  # noqa: BLE001
         errors.append(f"ollama:{exc}")
+
+    # 1.5) Distilled adapter (Phase 4c) — only when PCT > 0 and PROMOTED_CANDIDATE exists
+    # Default PCT=0 means this block is never entered today.
+    # Legal/privileged source_modules are blocked at _adapter_eligible().
+    if _adapter_eligible(source_module):
+        try:
+            adapter_text = await _call_adapter(
+                prompt=prompt,
+                system_message=system_message,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                timeout_s=min(timeout_s, 30.0),  # tighter timeout — don't delay cloud fallback
+            )
+            if adapter_text:
+                result = InferenceResult(
+                    text=adapter_text,
+                    source="distilled_adapter",
+                    breaker_state="closed",
+                    latency_ms=int((time.perf_counter() - start) * 1000),
+                )
+                await record_audit_event(
+                    actor_id=None,
+                    action="ai_inference",
+                    resource_type="model_route",
+                    resource_id=task_type,
+                    purpose=source_module or "resilient_inference",
+                    redaction_status="not_applicable",
+                    model_route="distilled_adapter",
+                    outcome="success",
+                    request_id=request_id,
+                    metadata_json={
+                        "task_type": task_type,
+                        "source_module": source_module,
+                        "latency_ms": result.latency_ms,
+                        "adapter_pct": _ADAPTER_PCT,
+                    },
+                    db=db,
+                )
+                return result
+        except Exception as exc:  # noqa: BLE001
+            _adapter_log.warning("adapter_call_failed error=%s — falling through", str(exc)[:200])
+            errors.append(f"adapter:{exc}")
 
     # 2) Cloud fallback: OpenAI
     try:
