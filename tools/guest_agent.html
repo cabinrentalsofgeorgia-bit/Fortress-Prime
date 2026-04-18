@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guest Agent — CROG Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Secondary Nav ── */
+.sec-nav{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;height:52px;
+  backdrop-filter:blur(10px)}
+.sec-left{display:flex;align-items:center;gap:12px}
+.sec-title{font-size:16px;font-weight:700}
+.sec-right{display:flex;align-items:center;gap:16px;font-size:14px}
+.btn-logout{background:#222;border:1px solid #333;color:#fff;padding:6px 14px;
+  border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;
+  text-decoration:none}
+.btn-logout:hover{background:#333;border-color:#444}
+
+/* ── Stats Banner ── */
+.stats-banner{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:12px;margin-bottom:24px}
+.stat-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:16px;
+  text-align:center;transition:border-color .15s}
+.stat-card:hover{border-color:#333}
+.stat-val{font-size:24px;font-weight:700;margin-bottom:2px}
+.stat-val.green{color:#4ade80}
+.stat-val.blue{color:#60a5fa}
+.stat-val.amber{color:#fbbf24}
+.stat-val.red{color:#f87171}
+.stat-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Container ── */
+.container{max-width:1200px;margin:0 auto;padding:24px}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;cursor:pointer;
+  background:#111;border:1px solid #1a1a1a;color:#888;
+  font-size:12px;font-weight:600;transition:all .15s}
+.tab:hover{border-color:#333;color:#fff}
+.tab.active{background:#4ade80;color:#000;border-color:#4ade80}
+.tab .tab-count{margin-left:6px;font-size:10px;opacity:.7}
+
+/* ── Queue Items ── */
+.queue-item{background:#111;border:1px solid #1a1a1a;border-radius:14px;
+  padding:20px;margin-bottom:14px;transition:all .2s;position:relative;overflow:hidden}
+.queue-item:hover{border-color:#333;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.queue-item::before{content:'';position:absolute;top:0;left:0;bottom:0;width:4px}
+.queue-item.urgent::before{background:#f87171}
+.queue-item.escalation::before{background:#fbbf24}
+.queue-item.normal::before{background:#4ade80}
+
+.item-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.item-left{display:flex;flex-direction:column;gap:6px}
+.guest-name{font-size:15px;font-weight:600}
+.guest-phone{font-size:12px;color:#666;font-family:'SF Mono',Consolas,monospace}
+.timestamp{font-size:11px;color:#555}
+
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.badge{padding:3px 10px;border-radius:8px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em}
+.badge-intent{background:rgba(96,165,250,.12);color:#60a5fa}
+.badge-positive{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-negative{background:rgba(248,113,113,.12);color:#f87171}
+.badge-neutral{background:rgba(156,163,175,.12);color:#888}
+.badge-urgent{background:rgba(248,113,113,.25);color:#f87171}
+.badge-cabin{background:rgba(168,85,247,.12);color:#a78bfa}
+.badge-escalation{background:rgba(251,191,36,.25);color:#fbbf24}
+.badge-status{padding:3px 10px;border-radius:8px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em}
+.badge-approved{background:rgba(74,222,128,.15);color:#4ade80}
+.badge-edited{background:rgba(96,165,250,.15);color:#60a5fa}
+.badge-rejected{background:rgba(248,113,113,.15);color:#f87171}
+.badge-sent{background:rgba(74,222,128,.25);color:#4ade80}
+
+.msg-section{margin:10px 0;padding:14px 16px;border-radius:10px}
+.msg-guest{background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15)}
+.msg-ai{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15)}
+.msg-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  margin-bottom:6px;color:#555}
+.msg-text{font-size:14px;line-height:1.6;white-space:pre-wrap}
+
+.actions{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap}
+.btn{padding:9px 20px;border-radius:8px;font-size:12px;font-weight:700;
+  cursor:pointer;border:none;transition:all .15s;letter-spacing:.02em}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-approve{background:#4ade80;color:#000}
+.btn-approve:hover:not(:disabled){background:#22c55e;transform:translateY(-1px)}
+.btn-edit{background:#60a5fa;color:#000}
+.btn-edit:hover:not(:disabled){background:#3b82f6;transform:translateY(-1px)}
+.btn-reject{background:transparent;color:#f87171;border:1px solid #f87171}
+.btn-reject:hover:not(:disabled){background:rgba(248,113,113,.1)}
+
+.confidence{margin-left:auto;font-size:11px;color:#555;display:flex;align-items:center;gap:6px}
+.conf-bar{width:60px;height:5px;background:#222;border-radius:3px;overflow:hidden}
+.conf-fill{height:100%;border-radius:3px}
+
+.edit-area{display:none;margin-top:12px}
+.edit-area.open{display:block}
+.edit-area textarea{width:100%;min-height:100px;padding:14px;border-radius:10px;
+  background:#0a0a0a;border:1px solid #222;color:#fff;font-family:inherit;
+  font-size:14px;resize:vertical;line-height:1.6}
+.edit-area textarea:focus{outline:none;border-color:#60a5fa}
+.edit-btns{display:flex;gap:8px;margin-top:8px}
+
+/* ── Simulate Panel ── */
+.sim-panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;
+  padding:20px;margin-bottom:24px}
+.sim-title{font-size:13px;font-weight:700;color:#4ade80;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:14px}
+.sim-row{display:flex;gap:10px;flex-wrap:wrap}
+.sim-input{flex:1;min-width:200px;padding:10px 14px;border-radius:8px;
+  background:#0a0a0a;border:1px solid #222;color:#fff;font-size:13px;font-family:inherit}
+.sim-input:focus{outline:none;border-color:#4ade80}
+.sim-input.phone{max-width:180px}
+.sim-input.cabin{max-width:220px}
+.sim-btn{padding:10px 24px;border-radius:8px;background:#4ade80;color:#000;
+  font-weight:700;font-size:12px;border:none;cursor:pointer;transition:all .15s;
+  white-space:nowrap}
+.sim-btn:hover{background:#22c55e}
+.sim-btn:disabled{opacity:.5;cursor:not-allowed}
+.sim-status{font-size:12px;color:#666;margin-top:8px;min-height:20px}
+
+/* ── Empty State ── */
+.empty{text-align:center;padding:60px 20px;color:#555}
+.empty h2{font-size:22px;margin-bottom:8px;color:#888}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:14px 24px;border-radius:10px;
+  font-size:13px;font-weight:600;transform:translateY(100px);opacity:0;
+  transition:all .3s;z-index:10000;max-width:400px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:#4ade80;color:#000}
+.toast.error{background:#f87171;color:#000}
+
+/* ── Grade Stars ── */
+.grade-row{display:flex;gap:4px;align-items:center;margin-top:10px;padding:8px 0;border-top:1px solid #1a1a1a}
+.grade-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-right:8px}
+.star{font-size:20px;cursor:pointer;color:#333;transition:color .15s;background:none;border:none;padding:2px}
+.star:hover,.star.active{color:#fbbf24}
+.star.graded{color:#fbbf24;cursor:default}
+.grade-badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:700;margin-left:8px}
+.grade-badge.high{background:rgba(74,222,128,.15);color:#4ade80}
+.grade-badge.mid{background:rgba(251,191,36,.15);color:#fbbf24}
+.grade-badge.low{background:rgba(248,113,113,.15);color:#f87171}
+.edit-pct{font-size:10px;color:#555;margin-left:auto}
+
+/* ── Learning Panel ── */
+.learning-panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;
+  padding:20px;margin-bottom:24px;display:none}
+.learning-panel.visible{display:block}
+.learning-title{font-size:13px;font-weight:700;color:#a78bfa;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.pattern-card{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;
+  padding:12px 16px;margin-bottom:8px}
+.pattern-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.pattern-type.critical{color:#f87171}
+.pattern-type.high{color:#fbbf24}
+.pattern-type.medium{color:#60a5fa}
+.suggestion-item{padding:8px 12px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.12);
+  border-radius:8px;margin-bottom:6px;font-size:13px;color:#ccc}
+.style-note{padding:6px 12px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.12);
+  border-radius:8px;margin-bottom:6px;font-size:12px;color:#a78bfa}
+
+/* ── Debug Log ── */
+.debug-log{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;
+  padding:12px 16px;margin-top:8px;font-family:'SF Mono',Consolas,monospace;
+  font-size:11px;color:#666;max-height:120px;overflow-y:auto;display:none}
+.debug-log.visible{display:block}
+.debug-log .ok{color:#4ade80}
+.debug-log .err{color:#f87171}
+.debug-log .info{color:#60a5fa}
+
+@media(max-width:768px){
+  .fn-groups{display:none}
+  .container{padding:16px}
+  .sim-row{flex-direction:column}
+  .sim-input.phone,.sim-input.cabin{max-width:100%}
+  .stats-banner{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- UNIFIED NAV BAR -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item fn-dd-active" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- SECONDARY NAV -->
+<div class="sec-nav">
+  <div class="sec-left">
+    <span class="sec-title">Guest Agent</span>
+  </div>
+  <div class="sec-right">
+    <span style="color:#555;font-size:12px">AI-Powered Guest Communication</span>
+    <a href="/profile" id="username" style="color:#888;font-weight:500;text-decoration:none;font-size:13px">Loading...</a>
+    <button class="btn-logout" id="btnLogout">Sign Out</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STATS -->
+  <div class="stats-banner">
+    <div class="stat-card"><div class="stat-val amber" id="sPending">-</div><div class="stat-label">Pending Review</div></div>
+    <div class="stat-card"><div class="stat-val green" id="sSent">-</div><div class="stat-label">Sent Today</div></div>
+    <div class="stat-card"><div class="stat-val red" id="sEscalations">-</div><div class="stat-label">Escalations</div></div>
+    <div class="stat-card"><div class="stat-val blue" id="sConfidence">-</div><div class="stat-label">Avg Confidence</div></div>
+    <div class="stat-card"><div class="stat-val" id="sDuration" style="color:#a78bfa">-</div><div class="stat-label">Avg Response</div></div>
+    <div class="stat-card"><div class="stat-val green" id="sTotal">-</div><div class="stat-label">Total Processed</div></div>
+  </div>
+
+  <!-- SIMULATE -->
+  <div class="sim-panel">
+    <div class="sim-title">Test Message</div>
+    <div class="sim-row">
+      <input class="sim-input phone" id="simPhone" placeholder="Phone: +1706..." value="+17065551234">
+      <select class="sim-input cabin" id="simCabin">
+        <option value="">Auto-detect cabin</option>
+        <option>Above the Timberline</option>
+        <option>Aska Escape Lodge</option>
+        <option>Blue Ridge Lake Sanctuary</option>
+        <option>Chase Mountain Dreams</option>
+        <option>Cherokee Sunrise on Noontootla Creek</option>
+        <option>Cohutta Sunset</option>
+        <option>Creekside Green</option>
+        <option>Fallen Timber Lodge</option>
+        <option>High Hopes</option>
+        <option>Riverview Lodge</option>
+        <option>Serendipity on Noontootla Creek</option>
+        <option>Skyfall</option>
+        <option>The Rivers Edge</option>
+      </select>
+      <input class="sim-input" id="simMessage" placeholder="Type a guest message to test...">
+      <button class="sim-btn" id="simBtn">Send to Agent</button>
+    </div>
+    <div class="sim-status" id="simStatus"></div>
+    <div class="debug-log" id="debugLog"></div>
+  </div>
+
+  <!-- LEARNING REPORT -->
+  <div class="learning-panel" id="learningPanel">
+    <div class="learning-title">
+      <span>Recursive Learning Report</span>
+      <button class="btn" style="background:#a78bfa;color:#000;padding:5px 14px;font-size:11px;margin-left:auto" id="btnRefreshLearning">Refresh</button>
+      <button class="btn" style="background:#333;color:#fff;padding:5px 14px;font-size:11px" id="btnApplyLearning">Apply to Prompt</button>
+    </div>
+    <div id="learningContent">Loading learning data...</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs" id="tabBar">
+    <div class="tab active" data-status="pending_review">Pending Review <span class="tab-count" id="tabPending"></span></div>
+    <div class="tab" data-status="approved">Approved</div>
+    <div class="tab" data-status="edited">Edited</div>
+    <div class="tab" data-status="rejected">Rejected</div>
+    <div class="tab" data-status="all">All</div>
+    <div class="tab" data-status="learning" style="background:#1a1a2e;border-color:#a78bfa;color:#a78bfa">Learning Report</div>
+  </div>
+
+  <!-- QUEUE LIST -->
+  <div id="queueList"></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var currentStatus = 'pending_review';
+var API = '/api/guest-agent';
+var editingId = null;
+var refreshTimer = null;
+
+// ── Safe HTML escaping ──
+function esc(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str)));
+  return d.innerHTML;
+}
+
+// ── Debug logger ──
+function debugMsg(msg, type) {
+  var log = document.getElementById('debugLog');
+  var ts = new Date().toLocaleTimeString();
+  var cls = type === 'ok' ? 'ok' : (type === 'err' ? 'err' : 'info');
+  log.innerHTML += '<div class="' + cls + '">[' + ts + '] ' + esc(msg) + '</div>';
+  log.scrollTop = log.scrollHeight;
+  log.classList.add('visible');
+}
+
+// ── Auth ──
+function loadUser() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/verify', true);
+  xhr.withCredentials = true;
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try {
+        var d = JSON.parse(xhr.responseText);
+        document.getElementById('username').textContent = d.username || 'User';
+      } catch(e) { window.location.href = '/login'; }
+    } else {
+      window.location.href = '/login';
+    }
+  };
+  xhr.onerror = function() { window.location.href = '/login'; };
+  xhr.send();
+}
+
+document.getElementById('btnLogout').addEventListener('click', function() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/logout', true);
+  xhr.withCredentials = true;
+  xhr.onload = function() { window.location.href = '/login'; };
+  xhr.onerror = function() { window.location.href = '/login'; };
+  xhr.send();
+});
+
+// ── Clock ──
+setInterval(function() {
+  document.getElementById('fnClock').textContent =
+    new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+// ── Nav Toggle ──
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+function logout() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/logout', true);
+  xhr.withCredentials = true;
+  xhr.onload = function() { window.location.href = '/login'; };
+  xhr.onerror = function() { window.location.href = '/login'; };
+  xhr.send();
+}
+
+// ── Toast ──
+function toast(msg, type) {
+  type = type || 'success';
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(function() { t.className = 'toast'; }, 4000);
+}
+
+// ── Helpers ──
+function timeAgo(iso) {
+  if (!iso) return '';
+  var d = Date.now() - new Date(iso).getTime();
+  var m = Math.floor(d/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  var h = Math.floor(m/60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
+
+function confColor(s) {
+  if (s >= 0.8) return '#4ade80';
+  if (s >= 0.6) return '#fbbf24';
+  return '#f87171';
+}
+
+function sentimentClass(s) {
+  if (s === 'positive') return 'badge-positive';
+  if (s === 'negative') return 'badge-negative';
+  if (s === 'urgent') return 'badge-urgent';
+  return 'badge-neutral';
+}
+
+// ── POST helper using XMLHttpRequest for maximum compatibility ──
+function apiPost(url, body, callback) {
+  debugMsg('POST ' + url, 'info');
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', url, true);
+  xhr.withCredentials = true;
+  if (body !== null) {
+    xhr.setRequestHeader('Content-Type', 'application/json');
+  }
+  xhr.onload = function() {
+    debugMsg('Response ' + xhr.status + ': ' + xhr.responseText.substring(0, 200), xhr.status === 200 ? 'ok' : 'err');
+    try {
+      var data = JSON.parse(xhr.responseText);
+      callback(null, data, xhr.status);
+    } catch(e) {
+      callback('Parse error: ' + e.message + ' | Raw: ' + xhr.responseText.substring(0, 100));
+    }
+  };
+  xhr.onerror = function() {
+    var msg = 'Network error (XHR failed). Status: ' + xhr.status;
+    debugMsg(msg, 'err');
+    callback(msg);
+  };
+  xhr.ontimeout = function() {
+    debugMsg('Request timed out', 'err');
+    callback('Request timed out');
+  };
+  xhr.timeout = 120000;
+  if (body !== null) {
+    var payload = JSON.stringify(body);
+    debugMsg('Sending: ' + payload.substring(0, 100), 'info');
+    xhr.send(payload);
+  } else {
+    xhr.send();
+  }
+}
+
+// ── GET helper using XMLHttpRequest ──
+function apiGet(url, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.withCredentials = true;
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try {
+        callback(null, JSON.parse(xhr.responseText));
+      } catch(e) {
+        callback('JSON parse error');
+      }
+    } else {
+      callback('HTTP ' + xhr.status);
+    }
+  };
+  xhr.onerror = function() { callback('Network error'); };
+  xhr.send();
+}
+
+// ── Render ──
+function renderItem(item) {
+  var isUrgent = item.urgency_level >= 4;
+  var isEsc = item.escalation_required;
+  var pClass = isUrgent ? 'urgent' : (isEsc ? 'escalation' : 'normal');
+  var conf = parseFloat(item.confidence_score) || 0;
+  var draft = item.edited_draft || item.ai_draft || '';
+
+  var statusBadge = '';
+  if (item.status !== 'pending_review') {
+    statusBadge = '<span class="badge badge-status badge-' + esc(item.status) + '">' + esc(item.status) + '</span>';
+  }
+
+  var actions = '';
+  if (item.status === 'pending_review') {
+    actions =
+      '<div class="actions">' +
+        '<button class="btn btn-approve" data-action="approve" data-id="' + item.id + '">Approve &amp; Send</button>' +
+        '<button class="btn btn-edit" data-action="toggle-edit" data-id="' + item.id + '">Edit</button>' +
+        '<button class="btn btn-reject" data-action="reject" data-id="' + item.id + '">Reject</button>' +
+        '<div class="confidence">' +
+          (conf*100).toFixed(0) + '% confidence' +
+          '<span class="conf-bar"><span class="conf-fill" style="width:' + (conf*100) + '%;background:' + confColor(conf) + '"></span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="edit-area" id="edit-' + item.id + '">' +
+        '<textarea id="edit-text-' + item.id + '">' + esc(draft) + '</textarea>' +
+        '<div class="edit-btns">' +
+          '<button class="btn btn-approve" data-action="send-edit" data-id="' + item.id + '">Send Edited</button>' +
+          '<button class="btn btn-reject" data-action="toggle-edit" data-id="' + item.id + '">Cancel</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // Grade row — visible on ALL items so you can rate AI quality anytime
+  var currentGrade = item.quality_grade || 0;
+  var editPct = item.edit_distance_pct ? parseFloat(item.edit_distance_pct).toFixed(0) : null;
+  var stars = '';
+  for (var s = 1; s <= 5; s++) {
+    var cls = currentGrade >= s ? 'star active' : 'star';
+    if (currentGrade > 0) cls += ' graded';
+    stars += '<button class="' + cls + '" data-action="grade" data-id="' + item.id + '" data-grade="' + s + '">' +
+             (currentGrade >= s ? '\u2605' : '\u2606') + '</button>';
+  }
+  var gradeBadge = '';
+  if (currentGrade > 0) {
+    var gc = currentGrade >= 4 ? 'high' : (currentGrade >= 3 ? 'mid' : 'low');
+    gradeBadge = '<span class="grade-badge ' + gc + '">' + currentGrade + '/5</span>';
+  }
+  var editPctHtml = editPct !== null ? '<span class="edit-pct">' + editPct + '% edited</span>' : '';
+  var gradeLabel = item.status === 'pending_review' ? 'Rate AI Draft:' : 'Rate AI:';
+  var gradeRow = '<div class="grade-row">' +
+    '<span class="grade-label">' + gradeLabel + '</span>' + stars + gradeBadge + editPctHtml +
+    '</div>';
+
+  return '<div class="queue-item ' + pClass + '">' +
+    '<div class="item-header">' +
+      '<div class="item-left">' +
+        '<span class="guest-name">' + esc(item.guest_name || 'Unknown Guest') + '</span>' +
+        '<span class="guest-phone">' + esc(item.phone_number) + '</span>' +
+      '</div>' +
+      '<div>' +
+        '<span class="timestamp">' + timeAgo(item.created_at) + '</span>' +
+        (item.reviewed_by ? '<br><span style="font-size:10px;color:#555">by ' + esc(item.reviewed_by) + '</span>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="badges">' +
+      '<span class="badge badge-intent">' + esc(item.intent || 'GENERAL') + '</span>' +
+      '<span class="badge ' + sentimentClass(item.sentiment) + '">' + esc(item.sentiment || 'neutral') + '</span>' +
+      (item.cabin_name ? '<span class="badge badge-cabin">' + esc(item.cabin_name) + '</span>' : '') +
+      (isUrgent ? '<span class="badge badge-urgent">URGENT</span>' : '') +
+      (isEsc ? '<span class="badge badge-escalation">ESCALATION</span>' : '') +
+      statusBadge +
+    '</div>' +
+    '<div class="msg-section msg-guest">' +
+      '<div class="msg-label">Guest Message</div>' +
+      '<div class="msg-text">' + esc(item.guest_message) + '</div>' +
+    '</div>' +
+    '<div class="msg-section msg-ai">' +
+      '<div class="msg-label">AI Draft &mdash; ' + esc(item.ai_model || 'unknown') + ' &mdash; ' + (item.ai_duration_ms || 0) + 'ms</div>' +
+      '<div class="msg-text">' + esc(draft) + '</div>' +
+    '</div>' +
+    actions + gradeRow +
+  '</div>';
+}
+
+// ── Load Queue ──
+function loadQueue(status) {
+  currentStatus = status;
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) {
+    if (tabs[i].getAttribute('data-status') === status) {
+      tabs[i].classList.add('active');
+    } else {
+      tabs[i].classList.remove('active');
+    }
+  }
+
+  apiGet(API + '/queue?status=' + status, function(err, data) {
+    var list = document.getElementById('queueList');
+    if (err) {
+      list.innerHTML = '<div class="empty"><h2>Error loading queue</h2><p>' + esc(err) + '</p></div>';
+      return;
+    }
+    if (!data.items || !data.items.length) {
+      list.innerHTML = '<div class="empty">' +
+        '<h2>' + (status === 'pending_review' ? 'All Clear' : 'No Items') + '</h2>' +
+        '<p style="margin-top:8px">' +
+          (status === 'pending_review'
+            ? 'No messages waiting for review. Use the test panel above to simulate one.'
+            : 'No ' + esc(status) + ' items found.') +
+        '</p></div>';
+    } else {
+      var html = '';
+      for (var j = 0; j < data.items.length; j++) {
+        html += renderItem(data.items[j]);
+      }
+      list.innerHTML = html;
+    }
+  });
+}
+
+// ── Load Stats ──
+function loadStats() {
+  apiGet(API + '/stats', function(err, s) {
+    if (err) return;
+    document.getElementById('sPending').textContent = s.pending || 0;
+    document.getElementById('sSent').textContent = (s.approved||0) + (s.edited||0) + (s.sent||0);
+    document.getElementById('sEscalations').textContent = s.escalations || 0;
+    document.getElementById('sConfidence').textContent = s.avg_confidence ? (s.avg_confidence*100).toFixed(0)+'%' : '-';
+    document.getElementById('sDuration').textContent = s.avg_duration ? Math.round(s.avg_duration)+'ms' : '-';
+    document.getElementById('sTotal').textContent = s.total || 0;
+    document.getElementById('tabPending').textContent = s.pending ? '(' + s.pending + ')' : '';
+  });
+}
+
+// ── Queue Actions via Event Delegation ──
+document.getElementById('queueList').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  var action = btn.getAttribute('data-action');
+  var id = btn.getAttribute('data-id');
+
+  if (action === 'approve') {
+    approveItem(parseInt(id, 10), btn);
+  } else if (action === 'toggle-edit') {
+    toggleEdit(parseInt(id, 10));
+  } else if (action === 'send-edit') {
+    editItem(parseInt(id, 10), btn);
+  } else if (action === 'reject') {
+    rejectItem(parseInt(id, 10), btn);
+  } else if (action === 'grade') {
+    gradeItem(parseInt(id, 10), parseInt(btn.getAttribute('data-grade'), 10));
+  }
+});
+
+// ── Actions ──
+function toggleEdit(id) {
+  var el = document.getElementById('edit-' + id);
+  if (!el) {
+    toast('Edit area not found for #' + id, 'error');
+    return;
+  }
+  var isOpen = el.classList.contains('open');
+  el.classList.toggle('open');
+  editingId = isOpen ? null : id;
+}
+
+function approveItem(id, btn) {
+  if (btn) btn.disabled = true;
+  toast('Approving #' + id + '...', 'success');
+
+  apiPost(API + '/queue/' + id + '/approve', null, function(err, data, status) {
+    if (btn) btn.disabled = false;
+    if (err) {
+      toast('Error: ' + err, 'error');
+      return;
+    }
+    if (status !== 200) {
+      toast('Server error: ' + (data.detail || JSON.stringify(data)), 'error');
+      return;
+    }
+    if (data.send_result && data.send_result.success) {
+      toast('Message approved and sent via SMS!', 'success');
+    } else {
+      toast('Approved (SMS: ' + (data.send_result ? data.send_result.error || 'queued' : 'unknown') + ')', 'error');
+    }
+    editingId = null;
+    loadQueue(currentStatus);
+    loadStats();
+  });
+}
+
+function editItem(id, btn) {
+  var textarea = document.getElementById('edit-text-' + id);
+  if (!textarea) {
+    toast('Edit textarea not found for #' + id, 'error');
+    return;
+  }
+  var text = textarea.value.trim();
+  if (!text) {
+    toast('Please enter the edited message', 'error');
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  toast('Sending edited draft #' + id + '...', 'success');
+
+  apiPost(API + '/queue/' + id + '/edit', {edited_draft: text}, function(err, data, status) {
+    if (btn) btn.disabled = false;
+    if (err) {
+      toast('Error: ' + err, 'error');
+      return;
+    }
+    if (status !== 200) {
+      toast('Server error: ' + (data.detail || JSON.stringify(data)), 'error');
+      return;
+    }
+    if (data.send_result && data.send_result.success) {
+      toast('Edited message sent via SMS!', 'success');
+    } else {
+      toast('Edited (SMS: ' + (data.send_result ? data.send_result.error || 'queued' : 'unknown') + ')', 'error');
+    }
+    editingId = null;
+    loadQueue(currentStatus);
+    loadStats();
+  });
+}
+
+function rejectItem(id, btn) {
+  var reason = prompt('Rejection reason (optional):');
+  if (reason === null) return;
+
+  if (btn) btn.disabled = true;
+
+  apiPost(API + '/queue/' + id + '/reject', {reason: reason || ''}, function(err, data, status) {
+    if (btn) btn.disabled = false;
+    if (err) {
+      toast('Error: ' + err, 'error');
+      return;
+    }
+    if (status !== 200) {
+      toast('Server error: ' + (data.detail || JSON.stringify(data)), 'error');
+      return;
+    }
+    toast('Draft rejected', 'success');
+    editingId = null;
+    loadQueue(currentStatus);
+    loadStats();
+  });
+}
+
+// ── Grading ──
+function gradeItem(id, grade) {
+  apiPost(API + '/queue/' + id + '/grade', {grade: grade, notes: ''}, function(err, data, status) {
+    if (err || status !== 200) {
+      toast('Grade failed: ' + (err || data.detail), 'error');
+      return;
+    }
+    toast('Rated #' + id + ': ' + grade + '/5 stars' + (data.edit_pct ? ' (' + data.edit_pct + '% edited)' : ''), 'success');
+    loadQueue(currentStatus);
+  });
+}
+
+// ── Learning Report ──
+function loadLearning() {
+  var panel = document.getElementById('learningPanel');
+  var content = document.getElementById('learningContent');
+  panel.classList.add('visible');
+
+  apiGet(API + '/learning/digest', function(err, data) {
+    if (err) {
+      content.innerHTML = '<div style="color:#f87171">Error loading learning data: ' + esc(err) + '</div>';
+      return;
+    }
+
+    var html = '';
+
+    // Summary stats
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">';
+    html += '<div class="stat-card"><div class="stat-val amber">' + (data.total_edits || 0) + '</div><div class="stat-label">Total Edits</div></div>';
+    html += '<div class="stat-card"><div class="stat-val blue">' + (data.avg_edit_distance || 0) + '%</div><div class="stat-label">Avg Edit Distance</div></div>';
+    html += '<div class="stat-card"><div class="stat-val" style="color:#a78bfa">' + (data.patterns ? data.patterns.length : 0) + '</div><div class="stat-label">Patterns Found</div></div>';
+    html += '<div class="stat-card"><div class="stat-val green">' + (data.suggestions ? data.suggestions.length : 0) + '</div><div class="stat-label">Suggestions</div></div>';
+    html += '</div>';
+
+    // Style notes from Taylor
+    if (data.style_notes && data.style_notes.length) {
+      html += '<h3 style="font-size:13px;color:#a78bfa;margin:16px 0 8px">Taylor\'s Communication Style</h3>';
+      for (var i = 0; i < data.style_notes.length; i++) {
+        html += '<div class="style-note">' + esc(data.style_notes[i]) + '</div>';
+      }
+    }
+
+    // Suggestions for prompt improvement
+    if (data.suggestions && data.suggestions.length) {
+      html += '<h3 style="font-size:13px;color:#4ade80;margin:16px 0 8px">Prompt Improvement Suggestions</h3>';
+      for (var j = 0; j < data.suggestions.length; j++) {
+        html += '<div class="suggestion-item">' + esc(data.suggestions[j]) + '</div>';
+      }
+    }
+
+    // Detected patterns
+    if (data.patterns && data.patterns.length) {
+      html += '<h3 style="font-size:13px;color:#60a5fa;margin:16px 0 8px">Detected Correction Patterns</h3>';
+      for (var k = 0; k < data.patterns.length; k++) {
+        var p = data.patterns[k];
+        html += '<div class="pattern-card">' +
+          '<div class="pattern-type ' + esc(p.severity) + '">' + esc(p.type) + ' (' + esc(p.severity) + ')</div>' +
+          '<div style="font-size:12px;color:#888">' + esc(p.detail) + '</div>' +
+          '</div>';
+      }
+    }
+
+    // Common openers
+    if (data.common_openers && Object.keys(data.common_openers).length) {
+      html += '<h3 style="font-size:13px;color:#fbbf24;margin:16px 0 8px">Common Opening Phrases</h3>';
+      var openers = Object.entries(data.common_openers);
+      for (var m = 0; m < openers.length; m++) {
+        html += '<div style="font-size:12px;color:#888;padding:4px 0">"' + esc(openers[m][0]) + '" (' + openers[m][1] + 'x)</div>';
+      }
+    }
+
+    if (!data.patterns.length && !data.suggestions.length) {
+      html += '<div class="empty" style="padding:30px"><h2>Not Enough Data Yet</h2><p>Review and grade more responses to see learning patterns</p></div>';
+    }
+
+    content.innerHTML = html;
+  });
+}
+
+// ── Simulate ──
+document.getElementById('simBtn').addEventListener('click', function() {
+  simulateMessage();
+});
+
+function simulateMessage() {
+  var phone = document.getElementById('simPhone').value.trim();
+  var msg = document.getElementById('simMessage').value.trim();
+  var cabin = document.getElementById('simCabin').value;
+  if (!phone || !msg) {
+    toast('Phone and message required', 'error');
+    return;
+  }
+
+  var btn = document.getElementById('simBtn');
+  var statusEl = document.getElementById('simStatus');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  statusEl.textContent = 'Sending to AI agent...';
+
+  var payload = {phone_number: phone, message: msg, cabin_name: cabin || null};
+  debugMsg('Simulating message: ' + JSON.stringify(payload), 'info');
+
+  apiPost(API + '/incoming', payload, function(err, data, status) {
+    btn.disabled = false;
+    btn.textContent = 'Send to Agent';
+
+    if (err) {
+      statusEl.innerHTML = '<span style="color:#f87171">Error: ' + esc(err) + '</span>';
+      toast('Failed to send test message', 'error');
+      return;
+    }
+
+    if (status !== 200) {
+      statusEl.innerHTML = '<span style="color:#f87171">Server Error ' + status + ': ' + esc(data.detail || JSON.stringify(data)) + '</span>';
+      toast('Server returned error', 'error');
+      return;
+    }
+
+    if (data.queue_id) {
+      statusEl.innerHTML = '<span style="color:#4ade80">Queued as #' + data.queue_id + '</span>' +
+        ' &mdash; ' + esc(data.intent) + ' (' + esc(data.sentiment) + ')' +
+        ' &mdash; ' + esc(data.model) + ' &mdash; ' + Math.round(data.duration_ms) + 'ms';
+      document.getElementById('simMessage').value = '';
+      toast('Draft generated in ' + Math.round(data.duration_ms) + 'ms');
+      loadQueue('pending_review');
+      loadStats();
+    } else {
+      statusEl.innerHTML = '<span style="color:#f87171">Unexpected response: ' + esc(JSON.stringify(data)) + '</span>';
+    }
+  });
+}
+
+// Enter key for simulate
+document.getElementById('simMessage').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); simulateMessage(); }
+});
+
+// Tab clicks via delegation
+document.getElementById('tabBar').addEventListener('click', function(e) {
+  var tab = e.target.closest('.tab');
+  if (!tab) return;
+  var status = tab.getAttribute('data-status');
+  if (status === 'learning') {
+    // Show learning panel, hide queue
+    document.getElementById('queueList').style.display = 'none';
+    document.getElementById('learningPanel').classList.add('visible');
+    loadLearning();
+    // Highlight tab
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+    tab.classList.add('active');
+  } else if (status) {
+    document.getElementById('queueList').style.display = 'block';
+    document.getElementById('learningPanel').classList.remove('visible');
+    loadQueue(status);
+  }
+});
+
+// Learning panel buttons
+document.getElementById('btnRefreshLearning').addEventListener('click', function() { loadLearning(); });
+document.getElementById('btnApplyLearning').addEventListener('click', function() {
+  toast('Applying learned patterns to AI prompt...', 'success');
+  apiPost(API + '/learning/apply', {}, function(err, data, status) {
+    if (err || status !== 200) {
+      toast('Apply failed: ' + (err || (data && data.detail) || 'unknown'), 'error');
+      return;
+    }
+    toast('Prompt updated with ' + (data.patterns_applied || 0) + ' learned patterns!', 'success');
+  });
+});
+
+// Smart auto-refresh: skip if user is editing
+function autoRefresh() {
+  if (editingId) return;
+  loadQueue(currentStatus);
+  loadStats();
+}
+
+// Init
+loadUser();
+loadQueue('pending_review');
+loadStats();
+refreshTimer = setInterval(autoRefresh, 15000);
+</script>
+</body>
+</html>

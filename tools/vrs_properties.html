@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Properties</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;background:#111;border:1px solid #222;border-radius:0 0 10px 10px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;background:#111;border:1px solid #222;border-radius:0 0 10px 10px;box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.page-hdr h1 .icon{font-size:20px}
+.count-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;
+  background:rgba(74,222,128,.12);color:#4ade80;letter-spacing:.02em}
+
+/* ── Toolbar ── */
+.toolbar{padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1a1a1a;background:#0a0a0a}
+.search-box{flex:1;max-width:400px;position:relative}
+.search-box input{width:100%;background:#111;border:1px solid #222;border-radius:8px;padding:8px 12px 8px 34px;
+  color:#fff;font-size:13px;outline:none;transition:border-color .15s}
+.search-box input:focus{border-color:#4ade80}
+.search-box input::placeholder{color:#555}
+.search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#555}
+.filter-pills{display:flex;gap:6px}
+.pill{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;
+  background:#111;border:1px solid #222;color:#888;transition:all .15s;text-transform:capitalize;user-select:none}
+.pill:hover{border-color:#444;color:#ccc}
+.pill.active{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.3);color:#4ade80}
+
+/* ── Property Grid ── */
+.container{max-width:1440px;margin:0 auto;padding:24px}
+.prop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+
+/* ── Property Card ── */
+.prop-card{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:20px;
+  cursor:pointer;transition:all .2s;display:flex;flex-direction:column;gap:14px}
+.prop-card:hover{border-color:#333;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.prop-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.prop-name{font-size:15px;font-weight:700;line-height:1.3}
+.prop-type{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.04em;flex-shrink:0}
+.type-cabin{background:rgba(74,222,128,.12);color:#4ade80}
+.type-lodge{background:rgba(96,165,250,.12);color:#60a5fa}
+.type-house{background:rgba(251,191,36,.12);color:#fbbf24}
+.type-cottage{background:rgba(167,139,250,.12);color:#a78bfa}
+.type-default{background:rgba(255,255,255,.08);color:#888}
+.prop-stats{display:flex;gap:16px;flex-wrap:wrap}
+.prop-stat{display:flex;align-items:center;gap:5px;font-size:12px;color:#888}
+.prop-stat svg{color:#555;flex-shrink:0}
+.prop-stat strong{color:#fff;font-weight:600}
+.prop-wifi{display:flex;align-items:center;gap:6px;font-size:11px;color:#555;
+  background:#0a0a0a;border-radius:6px;padding:6px 10px}
+.prop-wifi svg{color:#60a5fa;flex-shrink:0}
+.prop-wifi code{color:#60a5fa;font-family:'SF Mono',Consolas,monospace;font-size:11px}
+.prop-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.status-dot.active{background:#4ade80;box-shadow:0 0 6px #4ade80}
+.status-dot.inactive{background:#f87171;box-shadow:0 0 6px #f87171}
+.status-label{font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px}
+.status-label.active{color:#4ade80}
+.status-label.inactive{color:#f87171}
+
+.empty-state{text-align:center;padding:60px 24px;color:#555;font-size:14px;grid-column:1/-1}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+
+/* ── Detail Panel (slide-out) ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10001;
+  backdrop-filter:blur(4px);opacity:0;transition:opacity .25s}
+.overlay.open{display:block;opacity:1}
+.detail-panel{position:fixed;top:0;right:-480px;width:480px;max-width:100vw;height:100vh;
+  background:#111;border-left:1px solid #222;z-index:10002;overflow-y:auto;
+  transition:right .3s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 32px rgba(0,0,0,.5)}
+.detail-panel.open{right:0}
+.dp-header{padding:20px 24px;border-bottom:1px solid #1a1a1a;display:flex;align-items:flex-start;
+  justify-content:space-between;position:sticky;top:0;background:#111;z-index:1}
+.dp-close{background:none;border:1px solid #333;color:#888;width:32px;height:32px;border-radius:8px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;flex-shrink:0}
+.dp-close:hover{color:#fff;border-color:#555;background:#1a1a1a}
+.dp-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.dp-slug{font-size:11px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.dp-body{padding:24px}
+.dp-section{margin-bottom:24px}
+.dp-section-title{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #1a1a1a}
+.dp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.dp-field{display:flex;flex-direction:column;gap:3px}
+.dp-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.dp-value{font-size:14px;font-weight:600}
+.dp-value code{font-family:'SF Mono',Consolas,monospace;font-size:13px;color:#60a5fa;
+  background:#0a0a0a;padding:2px 6px;border-radius:4px}
+.dp-value.green{color:#4ade80}
+.dp-value.red{color:#f87171}
+.dp-wifi-block{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:14px}
+.dp-wifi-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dp-wifi-row:last-child{margin-bottom:0}
+.dp-wifi-label{font-size:11px;color:#666}
+.dp-wifi-val{font-size:13px;font-weight:600;font-family:'SF Mono',Consolas,monospace;color:#60a5fa}
+.dp-copy{background:none;border:1px solid #333;color:#888;padding:3px 8px;border-radius:4px;
+  font-size:10px;cursor:pointer;transition:all .15s}
+.dp-copy:hover{color:#fff;border-color:#555}
+.dp-copy.copied{color:#4ade80;border-color:#4ade80}
+
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .search-box{max-width:none}
+  .filter-pills{overflow-x:auto}
+  .detail-panel{width:100vw}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item fn-dd-active" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1><span class="icon">&#127968;</span> Properties <span class="count-badge" id="propCount">—</span></h1>
+  <div style="font-size:11px;color:#555">Cabin Rentals of Georgia, LLC</div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="search-box">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="Search properties..." autocomplete="off">
+  </div>
+  <div class="filter-pills" id="filterPills">
+    <div class="pill active" data-filter="all">All</div>
+    <div class="pill" data-filter="cabin">Cabin</div>
+    <div class="pill" data-filter="lodge">Lodge</div>
+    <div class="pill" data-filter="house">House</div>
+    <div class="pill" data-filter="cottage">Cottage</div>
+  </div>
+</div>
+
+<!-- GRID -->
+<div class="container">
+  <div class="prop-grid" id="propGrid">
+    <div class="empty-state"><div class="empty-icon">&#127968;</div>Loading properties...</div>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeDetail()"></div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-header">
+    <div>
+      <div class="dp-title" id="dpName">—</div>
+      <div class="dp-slug" id="dpSlug">—</div>
+    </div>
+    <button class="dp-close" onclick="closeDetail()" title="Close">&times;</button>
+  </div>
+  <div class="dp-body">
+    <div class="dp-section">
+      <div class="dp-section-title">Overview</div>
+      <div class="dp-row">
+        <div class="dp-field"><div class="dp-label">Property Type</div><div class="dp-value" id="dpType">—</div></div>
+        <div class="dp-field"><div class="dp-label">Status</div><div class="dp-value" id="dpStatus">—</div></div>
+      </div>
+      <div class="dp-row">
+        <div class="dp-field"><div class="dp-label">Bedrooms</div><div class="dp-value" id="dpBeds">—</div></div>
+        <div class="dp-field"><div class="dp-label">Bathrooms</div><div class="dp-value" id="dpBaths">—</div></div>
+      </div>
+      <div class="dp-row">
+        <div class="dp-field"><div class="dp-label">Max Guests</div><div class="dp-value" id="dpGuests">—</div></div>
+        <div class="dp-field"><div class="dp-label">Access Type</div><div class="dp-value" id="dpAccess">—</div></div>
+      </div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-title">Wi-Fi</div>
+      <div class="dp-wifi-block" id="dpWifiBlock">
+        <div class="dp-wifi-row">
+          <span class="dp-wifi-label">Network</span>
+          <span class="dp-wifi-val" id="dpSsid">—</span>
+          <button class="dp-copy" onclick="copyText(this,'dpSsid')">Copy</button>
+        </div>
+        <div class="dp-wifi-row">
+          <span class="dp-wifi-label">Password</span>
+          <span class="dp-wifi-val" id="dpPass">—</span>
+          <button class="dp-copy" onclick="copyText(this,'dpPass')">Copy</button>
+        </div>
+      </div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-title">Parking</div>
+      <div style="font-size:13px;color:#999;line-height:1.5" id="dpParking">No instructions provided</div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-title">Identifier</div>
+      <div class="dp-field"><div class="dp-label">Property ID</div><div class="dp-value"><code id="dpId">—</code></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var allProperties=[];
+var activeFilter='all';
+
+/* ── Nav ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+/* ── Clock ── */
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+/* ── Auth ── */
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── Helpers ── */
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function typeClass(t){
+  var map={cabin:'type-cabin',lodge:'type-lodge',house:'type-house',cottage:'type-cottage'};
+  return map[(t||'').toLowerCase()]||'type-default';
+}
+
+/* ── Render Grid ── */
+function renderGrid(){
+  var q=(document.getElementById('searchInput').value||'').toLowerCase().trim();
+  var filtered=allProperties.filter(function(p){
+    if(activeFilter!=='all'&&(p.property_type||'').toLowerCase()!==activeFilter)return false;
+    if(q&&(p.name||'').toLowerCase().indexOf(q)===-1)return false;
+    return true;
+  });
+
+  document.getElementById('propCount').textContent=filtered.length;
+  var grid=document.getElementById('propGrid');
+
+  if(filtered.length===0){
+    grid.innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div>'+(allProperties.length===0?'No properties found':'No properties match your filter')+'</div>';
+    return;
+  }
+
+  grid.innerHTML=filtered.map(function(p){
+    var active=p.is_active!==false;
+    var statusCls=active?'active':'inactive';
+    return '<div class="prop-card" onclick="openDetail(\''+esc(p.id)+'\')">'
+      +'<div class="prop-card-head">'
+        +'<div class="prop-name">'+esc(p.name)+'</div>'
+        +'<span class="prop-type '+typeClass(p.property_type)+'">'+esc(p.property_type||'other')+'</span>'
+      +'</div>'
+      +'<div class="prop-stats">'
+        +'<div class="prop-stat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v11a2 2 0 002 2h14a2 2 0 002-2V7"/><path d="M16 3H8v4h8V3z"/><path d="M3 7h18"/></svg> <strong>'+(p.bedrooms!=null?p.bedrooms:'—')+'</strong> bed</div>'
+        +'<div class="prop-stat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z"/><path d="M6 12V5a2 2 0 012-2h1a2 2 0 012 2v1"/></svg> <strong>'+(p.bathrooms!=null?p.bathrooms:'—')+'</strong> bath</div>'
+        +'<div class="prop-stat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> <strong>'+(p.max_guests!=null?p.max_guests:'—')+'</strong> guests</div>'
+      +'</div>'
+      +(p.wifi_ssid?'<div class="prop-wifi"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1"/></svg> <code>'+esc(p.wifi_ssid)+'</code></div>':'')
+      +'<div class="prop-footer"><span class="status-label '+statusCls+'"><span class="status-dot '+statusCls+'"></span>'+(active?'Active':'Inactive')+'</span></div>'
+    +'</div>';
+  }).join('');
+}
+
+/* ── Detail Panel ── */
+function openDetail(id){
+  var p=allProperties.find(function(x){return x.id===id});
+  if(!p)return;
+  document.getElementById('dpName').textContent=p.name||'—';
+  document.getElementById('dpSlug').textContent=p.slug||'—';
+  document.getElementById('dpType').innerHTML='<span class="prop-type '+typeClass(p.property_type)+'" style="font-size:12px">'+esc(p.property_type||'other')+'</span>';
+  var active=p.is_active!==false;
+  document.getElementById('dpStatus').className='dp-value '+(active?'green':'red');
+  document.getElementById('dpStatus').textContent=active?'Active':'Inactive';
+  document.getElementById('dpBeds').textContent=p.bedrooms!=null?p.bedrooms:'—';
+  document.getElementById('dpBaths').textContent=p.bathrooms!=null?p.bathrooms:'—';
+  document.getElementById('dpGuests').textContent=p.max_guests!=null?p.max_guests:'—';
+  document.getElementById('dpAccess').textContent=p.access_code_type||'Not set';
+  document.getElementById('dpSsid').textContent=p.wifi_ssid||'—';
+  document.getElementById('dpPass').textContent=p.wifi_password||'—';
+  document.getElementById('dpParking').textContent=p.parking_instructions||'No instructions provided';
+  document.getElementById('dpId').textContent=p.id||'—';
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('detailPanel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeDetail(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('detailPanel').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDetail()});
+
+/* ── Copy helper ── */
+function copyText(btn,elId){
+  var text=document.getElementById(elId).textContent;
+  if(!text||text==='—')return;
+  navigator.clipboard.writeText(text).then(function(){
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied')},1500);
+  });
+}
+
+/* ── Filters ── */
+document.getElementById('filterPills').addEventListener('click',function(e){
+  var pill=e.target.closest('.pill');
+  if(!pill)return;
+  document.querySelectorAll('.pill').forEach(function(p){p.classList.remove('active')});
+  pill.classList.add('active');
+  activeFilter=pill.dataset.filter;
+  renderGrid();
+});
+
+document.getElementById('searchInput').addEventListener('input',renderGrid);
+
+/* ── Fetch ── */
+async function loadProperties(){
+  try{
+    var r=await fetch('/api/vrs/properties',{credentials:'include'});
+    if(!r.ok)throw new Error('API error');
+    allProperties=await r.json();
+    if(!Array.isArray(allProperties))allProperties=[];
+    renderGrid();
+  }catch(e){
+    document.getElementById('propGrid').innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;</div>Failed to load properties</div>';
+  }
+}
+
+/* ── Init ── */
+loadUser();
+loadProperties();
+setInterval(loadProperties,30000);
+</script>
+</body>
+</html>

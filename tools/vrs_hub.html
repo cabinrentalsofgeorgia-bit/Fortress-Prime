@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1400px;margin:0 auto;padding:32px 24px}
+
+/* ── KPI Banner ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:36px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+/* ── Quick Links ── */
+.ql-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:40px}
+.ql-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;text-decoration:none;color:#fff;transition:all .15s;display:flex;
+  flex-direction:column;align-items:center;gap:6px}
+.ql-card:hover{border-color:#4ade80;background:#0d1a0d;transform:translateY(-2px)}
+.ql-icon{font-size:28px}
+.ql-label{font-size:13px;font-weight:600}
+.ql-sub{font-size:10px;color:#666}
+
+/* ── Two-Column Panel ── */
+.panel-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:36px}
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;overflow:hidden}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;
+  justify-content:space-between}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+
+/* ── Arrivals/Departures List ── */
+.res-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto}
+.res-item{background:#1a1a1a;border-radius:10px;padding:12px 16px;display:flex;
+  align-items:center;justify-content:space-between;transition:background .15s}
+.res-item:hover{background:#222}
+.res-item-left{display:flex;flex-direction:column;gap:2px}
+.res-item-name{font-size:13px;font-weight:600}
+.res-item-sub{font-size:11px;color:#666}
+.res-item-code{font-size:11px;color:#60a5fa;font-family:'SF Mono',Consolas,monospace}
+
+/* ── Messaging Stats ── */
+.msg-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.msg-stat{background:#1a1a1a;border-radius:10px;padding:14px;text-align:center}
+.msg-stat-val{font-size:20px;font-weight:700;color:#60a5fa}
+.msg-stat-label{font-size:10px;color:#666;text-transform:uppercase;margin-top:4px}
+
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .panel-row{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+.kpi-link{text-decoration:none;color:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.kpi-link:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.res-item-link{text-decoration:none;color:inherit;cursor:pointer;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:space-between}
+.res-item-link:hover{background:rgba(79,209,197,.08);transform:translateX(2px)}
+.res-item-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.res-item-arrow{color:#4fd1c5;font-weight:700;font-size:14px;opacity:0;transition:opacity .15s}
+.res-item-link:hover .res-item-arrow{opacity:1}
+.panel-view-all{float:right;font-size:11px;color:#4fd1c5;text-decoration:none;font-weight:500}
+.panel-view-all:hover{text-decoration:underline}
+.res-detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;justify-content:flex-end}
+.res-detail-panel{width:480px;max-width:100%;background:#1a1a2e;height:100%;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.5);padding:0;animation:slideIn .2s ease-out}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.rdp-header{padding:20px 24px;border-bottom:1px solid #2a2a4a;display:flex;justify-content:space-between;align-items:center}
+.rdp-header h2{font-size:16px;margin:0;color:#e2e8f0}
+.rdp-close{background:none;border:none;color:#999;font-size:24px;cursor:pointer;padding:0 4px}
+.rdp-close:hover{color:#fff}
+.rdp-body{padding:16px 24px}
+.rdp-section{margin-bottom:20px}
+.rdp-section h3{font-size:12px;text-transform:uppercase;color:#888;margin:0 0 8px;letter-spacing:.05em}
+.rdp-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #1e1e3a}
+.rdp-row .rdp-label{color:#999}
+.rdp-row .rdp-value{color:#e2e8f0;font-weight:500}
+.rdp-actions{display:flex;gap:8px;padding:16px 24px;border-top:1px solid #2a2a4a}
+.rdp-btn{flex:1;padding:8px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;color:#fff}
+.rdp-btn-primary{background:#4fd1c5}
+.rdp-btn-primary:hover{background:#38b2ac}
+.rdp-btn-secondary{background:#2a2a4a;color:#aaa}
+.rdp-btn-secondary:hover{background:#333}
+.rdp-status{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.rdp-status-confirmed{background:rgba(79,209,197,.15);color:#4fd1c5}
+.rdp-status-pending{background:rgba(236,201,75,.15);color:#ecc94b}
+.rdp-checklist{list-style:none;padding:0;margin:0}
+.rdp-checklist li{padding:6px 0;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1e1e3a}
+.rdp-check{width:16px;height:16px;border-radius:3px;border:2px solid #555;display:inline-flex;align-items:center;justify-content:center;font-size:10px}
+.rdp-check-done{border-color:#4fd1c5;color:#4fd1c5}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item fn-dd-active" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1><span>CROG-VRS</span> &mdash; Vacation Rental Software</h1>
+  <div class="hdr-right">
+    <span class="hdr-badge" id="platformBadge">ONLINE</span>
+    <span style="font-size:11px;color:#555">Cabin Rentals of Georgia, LLC</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI BANNER -->
+  <div class="kpi-grid">
+    <a href="/vrs/properties" class="kpi-card kpi-link"><div class="kpi-val green" id="kProperties">-</div><div class="kpi-label">Properties</div><div class="kpi-sub" id="kPropSub">Active cabins</div></a>
+    <a href="/vrs/reservations" class="kpi-card kpi-link"><div class="kpi-val blue" id="kReservations">-</div><div class="kpi-label">Reservations</div><div class="kpi-sub">Total bookings</div></a>
+    <a href="#arrivals-section" class="kpi-card kpi-link" onclick="scrollToArrivals()"><div class="kpi-val amber" id="kArrivals">-</div><div class="kpi-label">Arrivals Today</div><div class="kpi-sub">Check-ins pending</div></a>
+    <a href="#departures-section" class="kpi-card kpi-link" onclick="scrollToDepartures()"><div class="kpi-val red" id="kDepartures">-</div><div class="kpi-label">Departures Today</div><div class="kpi-sub">Check-outs due</div></a>
+    <a href="/vrs/guests" class="kpi-card kpi-link"><div class="kpi-val purple" id="kGuests">-</div><div class="kpi-label">Total Guests</div><div class="kpi-sub" id="kGuestSub">In CRM</div></a>
+    <a href="/guest-agent" class="kpi-card kpi-link"><div class="kpi-val green" id="kMessages">-</div><div class="kpi-label">Messages</div><div class="kpi-sub" id="kMsgSub">Auto-response rate</div></a>
+  </div>
+
+  <!-- QUICK LINKS -->
+  <div class="section-head">Quick Access</div>
+  <div class="ql-grid">
+    <a href="/vrs/properties" class="ql-card"><span class="ql-icon">&#127968;</span><span class="ql-label">Properties</span><span class="ql-sub">Manage all cabins</span></a>
+    <a href="/vrs/reservations" class="ql-card"><span class="ql-icon">&#128197;</span><span class="ql-label">Reservations</span><span class="ql-sub">Calendar &amp; bookings</span></a>
+    <a href="/vrs/guests" class="ql-card"><span class="ql-icon">&#128100;</span><span class="ql-label">Guest CRM</span><span class="ql-sub">360&deg; guest profiles</span></a>
+    <a href="/guest-agent" class="ql-card"><span class="ql-icon">&#128172;</span><span class="ql-label">Guest Agent</span><span class="ql-sub">AI communication</span></a>
+    <a href="/vrs/work-orders" class="ql-card"><span class="ql-icon">&#128295;</span><span class="ql-label">Work Orders</span><span class="ql-sub">Maintenance &amp; repairs</span></a>
+    <a href="/vrs/reservations#damage" class="ql-card"><span class="ql-icon">&#128680;</span><span class="ql-label">Damage Claims</span><span class="ql-sub">Post-stay inspections</span></a>
+    <a href="/vrs/contracts" class="ql-card"><span class="ql-icon">&#128221;</span><span class="ql-label">Contracts</span><span class="ql-sub">E-Sign agreements</span></a>
+    <a href="/vrs/analytics" class="ql-card"><span class="ql-icon">&#128200;</span><span class="ql-label">Analytics</span><span class="ql-sub">Revenue &amp; performance</span></a>
+  </div>
+
+  <!-- ARRIVALS / DEPARTURES -->
+  <div class="panel-row">
+    <div class="panel" id="arrivals-section">
+      <div class="panel-title">Arriving Today <span class="badge badge-green" id="arrivalCount">0</span> <a href="/vrs/reservations?filter=arriving" class="panel-view-all">View all &rarr;</a></div>
+      <div class="res-list" id="arrivalsList"><div class="empty-state">Loading arrivals...</div></div>
+    </div>
+    <div class="panel" id="departures-section">
+      <div class="panel-title">Departing Today <span class="badge badge-amber" id="departureCount">0</span> <a href="/vrs/reservations?filter=departing" class="panel-view-all">View all &rarr;</a></div>
+      <div class="res-list" id="departuresList"><div class="empty-state">Loading departures...</div></div>
+    </div>
+  </div>
+
+  <!-- MESSAGING STATS -->
+  <div class="section-head">Guest Communication</div>
+  <div class="panel" style="margin-bottom:36px">
+    <div class="msg-stats">
+      <div class="msg-stat"><div class="msg-stat-val" id="mTotal">-</div><div class="msg-stat-label">Total Messages</div></div>
+      <div class="msg-stat"><div class="msg-stat-val" id="mInbound">-</div><div class="msg-stat-label">Inbound</div></div>
+      <div class="msg-stat"><div class="msg-stat-val" id="mOutbound">-</div><div class="msg-stat-label">Outbound</div></div>
+      <div class="msg-stat"><div class="msg-stat-val" id="mAutoRate">-</div><div class="msg-stat-label">Automation Rate</div></div>
+      <div class="msg-stat"><div class="msg-stat-val" id="mConfidence">-</div><div class="msg-stat-label">AI Confidence</div></div>
+      <div class="msg-stat"><div class="msg-stat-val" id="mSentiment">-</div><div class="msg-stat-label">Positive Sentiment</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+function renderResList(el,items,type){
+  if(!items||items.length===0){
+    el.innerHTML='<div class="empty-state">No '+type+' today</div>';
+    return;
+  }
+  el.innerHTML=items.map(function(r){
+    var prop=r.property_name||'';
+    var code=r.confirmation_code||r.id?.substring(0,8)||'';
+    var guests=r.num_guests||'-';
+    var resId=r.id||'';
+    return '<a href="javascript:void(0)" class="res-item res-item-link" onclick="openReservation(\''+resId+'\')"><div class="res-item-left"><div class="res-item-name">'+prop+'</div><div class="res-item-sub">'+guests+' guests &bull; '+(r.guest_name||'Guest')+' &bull; '+r.check_in_date+' &rarr; '+r.check_out_date+'</div></div><div class="res-item-right"><div class="res-item-code">'+code+'</div><span class="res-item-arrow">&rarr;</span></div></a>';
+  }).join('');
+}
+
+async function loadDashboard(){
+  try{
+    var pr=await fetch('/api/vrs/properties',{credentials:'include'}).catch(function(){return null});
+    if(pr&&pr.ok){var pd=await pr.json();var count=Array.isArray(pd)?pd.length:0;document.getElementById('kProperties').textContent=count;document.getElementById('kPropSub').textContent=count+' active cabins'}
+  }catch(e){}
+
+  try{
+    var rr=await fetch('/api/vrs/reservations',{credentials:'include'}).catch(function(){return null});
+    if(rr&&rr.ok){var rd=await rr.json();document.getElementById('kReservations').textContent=Array.isArray(rd)?rd.length:0}
+  }catch(e){}
+
+  try{
+    var ar=await fetch('/api/vrs/reservations/arriving/today',{credentials:'include'}).catch(function(){return null});
+    if(ar&&ar.ok){var ad=await ar.json();var ac=Array.isArray(ad)?ad.length:0;document.getElementById('kArrivals').textContent=ac;document.getElementById('arrivalCount').textContent=ac;renderResList(document.getElementById('arrivalsList'),ad,'arrivals')}
+  }catch(e){document.getElementById('arrivalsList').innerHTML='<div class="empty-state">Could not load arrivals</div>'}
+
+  try{
+    var dr=await fetch('/api/vrs/reservations/departing/today',{credentials:'include'}).catch(function(){return null});
+    if(dr&&dr.ok){var dd=await dr.json();var dc=Array.isArray(dd)?dd.length:0;document.getElementById('kDepartures').textContent=dc;document.getElementById('departureCount').textContent=dc;renderResList(document.getElementById('departuresList'),dd,'departures')}
+  }catch(e){document.getElementById('departuresList').innerHTML='<div class="empty-state">Could not load departures</div>'}
+
+  try{
+    var gr=await fetch('/api/vrs/guests',{credentials:'include'}).catch(function(){return null});
+    if(gr&&gr.ok){var gd=await gr.json();var gc=Array.isArray(gd)?gd.length:0;document.getElementById('kGuests').textContent=gc;document.getElementById('kGuestSub').textContent=gc+' in CRM'}
+  }catch(e){}
+
+  try{
+    var mr=await fetch('/api/vrs/messages/stats',{credentials:'include'}).catch(function(){return null});
+    if(mr&&mr.ok){
+      var md=await mr.json();
+      document.getElementById('kMessages').textContent=md.total_messages||0;
+      document.getElementById('kMsgSub').textContent=(md.automation_rate||0).toFixed(0)+'% automated';
+      document.getElementById('mTotal').textContent=md.total_messages||0;
+      document.getElementById('mInbound').textContent=md.inbound||0;
+      document.getElementById('mOutbound').textContent=md.outbound||0;
+      document.getElementById('mAutoRate').textContent=(md.automation_rate||0).toFixed(0)+'%';
+      document.getElementById('mConfidence').textContent=((md.avg_ai_confidence||0)*100).toFixed(0)+'%';
+      var sd=md.sentiment_distribution||{};
+      var total=Object.values(sd).reduce(function(a,b){return a+b},0);
+      document.getElementById('mSentiment').textContent=total>0?((sd.positive||0)/total*100).toFixed(0)+'%':'N/A';
+    }
+  }catch(e){}
+}
+
+function scrollToArrivals(){document.getElementById('arrivals-section')?.scrollIntoView({behavior:'smooth',block:'start'})}
+function scrollToDepartures(){document.getElementById('departures-section')?.scrollIntoView({behavior:'smooth',block:'start'})}
+
+var _resCache={};
+async function openReservation(resId){
+  if(!resId)return;
+  var overlay=document.createElement('div');
+  overlay.className='res-detail-overlay';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove()};
+  overlay.innerHTML='<div class="res-detail-panel"><div class="rdp-header"><h2>Loading...</h2><button class="rdp-close" onclick="this.closest(\'.res-detail-overlay\').remove()">&times;</button></div><div class="rdp-body"><div class="empty-state">Fetching reservation details...</div></div></div>';
+  document.body.appendChild(overlay);
+  try{
+    var r=await fetch('/api/vrs/reservations/'+resId+'/full',{credentials:'include'});
+    if(!r.ok){r=await fetch('/api/vrs/reservations/'+resId,{credentials:'include'})}
+    if(!r.ok)throw new Error('Failed to load');
+    var d=await r.json();
+    _resCache[resId]=d;
+    renderReservationDetail(overlay.querySelector('.res-detail-panel'),d,resId);
+  }catch(e){
+    overlay.querySelector('.rdp-body').innerHTML='<div class="empty-state">Could not load reservation: '+e.message+'</div>';
+  }
+}
+
+function renderReservationDetail(panel,d,resId){
+  var guest=d.guest||d;
+  var guestName=guest.guest_name||d.guest_name||'Guest';
+  var prop=d.property_name||d.property||'';
+  var code=d.confirmation_code||d.streamline_confirmation||resId.substring(0,8);
+  var status=d.status||'confirmed';
+  var statusClass=status==='confirmed'?'rdp-status-confirmed':'rdp-status-pending';
+  var checkin=d.check_in_date||'-';
+  var checkout=d.check_out_date||'-';
+  var nights=d.nights||'-';
+  var numGuests=d.num_guests||d.adults||'-';
+  var total=d.total_price||d.total||d.base_rate||'-';
+  var phone=guest.phone||d.phone||'-';
+  var email=guest.email||d.email||'-';
+  var source=d.source||d.channel||'Direct';
+  var notes=d.special_requests||d.notes||'None';
+  var preArrival=d.pre_arrival_sent?'done':'';
+  var accessInfo=d.access_info_sent?'done':'';
+  var guide=d.digital_guide_sent?'done':'';
+
+  panel.innerHTML=
+    '<div class="rdp-header"><h2>'+prop+'</h2><button class="rdp-close" onclick="this.closest(\'.res-detail-overlay\').remove()">&times;</button></div>'+
+    '<div class="rdp-body">'+
+      '<div class="rdp-section"><h3>Reservation</h3>'+
+        '<div class="rdp-row"><span class="rdp-label">Confirmation</span><span class="rdp-value">'+code+'</span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Status</span><span class="rdp-value"><span class="rdp-status '+statusClass+'">'+status.toUpperCase()+'</span></span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Source</span><span class="rdp-value">'+source+'</span></div>'+
+      '</div>'+
+      '<div class="rdp-section"><h3>Guest</h3>'+
+        '<div class="rdp-row"><span class="rdp-label">Name</span><span class="rdp-value">'+guestName+'</span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Phone</span><span class="rdp-value">'+phone+'</span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Email</span><span class="rdp-value">'+email+'</span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Guests</span><span class="rdp-value">'+numGuests+'</span></div>'+
+      '</div>'+
+      '<div class="rdp-section"><h3>Stay</h3>'+
+        '<div class="rdp-row"><span class="rdp-label">Check-in</span><span class="rdp-value">'+checkin+'</span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Check-out</span><span class="rdp-value">'+checkout+'</span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Nights</span><span class="rdp-value">'+nights+'</span></div>'+
+        '<div class="rdp-row"><span class="rdp-label">Total</span><span class="rdp-value">'+(typeof total==='number'?'$'+total.toLocaleString():total)+'</span></div>'+
+      '</div>'+
+      '<div class="rdp-section"><h3>Guest Readiness</h3>'+
+        '<ul class="rdp-checklist">'+
+          '<li><span class="rdp-check '+(preArrival?'rdp-check-done':'')+'">'+(preArrival?'&#10003;':'')+'</span> Pre-arrival message sent</li>'+
+          '<li><span class="rdp-check '+(accessInfo?'rdp-check-done':'')+'">'+(accessInfo?'&#10003;':'')+'</span> Access info delivered</li>'+
+          '<li><span class="rdp-check '+(guide?'rdp-check-done':'')+'">'+(guide?'&#10003;':'')+'</span> Digital guide sent</li>'+
+        '</ul>'+
+      '</div>'+
+      '<div class="rdp-section"><h3>Notes</h3><div style="font-size:13px;color:#ccc">'+notes+'</div></div>'+
+    '</div>'+
+    '<div class="rdp-actions">'+
+      '<a href="/vrs/reservations?search='+encodeURIComponent(code)+'" class="rdp-btn rdp-btn-primary">Open Full Reservation</a>'+
+      '<button class="rdp-btn rdp-btn-secondary" onclick="this.closest(\'.res-detail-overlay\').remove()">Close</button>'+
+    '</div>';
+}
+
+loadUser();
+loadDashboard();
+setInterval(loadDashboard,30000);
+</script>
+</body>
+</html>

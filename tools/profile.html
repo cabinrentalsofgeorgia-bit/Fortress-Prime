@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile — CROG Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Secondary Nav ── */
+.sec-nav{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;height:52px;
+  backdrop-filter:blur(10px)}
+.sec-left{display:flex;align-items:center;gap:12px}
+.sec-title{font-size:16px;font-weight:700}
+.sec-right{display:flex;align-items:center;gap:16px;font-size:14px}
+.username-link{color:#888;font-weight:500;text-decoration:none;transition:color .15s}
+.username-link:hover{color:#4ade80}
+.btn-nav{background:#222;border:1px solid #333;color:#fff;padding:6px 14px;
+  border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;
+  text-decoration:none;display:inline-block}
+.btn-nav:hover{background:#333;border-color:#444}
+
+/* ── Main ── */
+.container{max-width:800px;margin:0 auto;padding:32px 24px}
+
+/* ── Cards ── */
+.card{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:28px;
+  margin-bottom:20px;transition:border-color .15s}
+.card:hover{border-color:#333}
+.card h2{font-size:18px;font-weight:700;margin-bottom:20px;display:flex;
+  align-items:center;gap:10px}
+.card h2 .icon{font-size:20px;opacity:.6}
+
+/* ── Info rows ── */
+.info-grid{display:grid;grid-template-columns:140px 1fr;gap:14px 20px;align-items:center}
+.info-label{color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.info-value{color:#e0e0e0;font-size:15px;font-weight:500}
+.badge{display:inline-block;padding:4px 14px;border-radius:8px;font-size:11px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.badge-admin{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.3)}
+.badge-operator{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3)}
+.badge-viewer{background:rgba(107,114,128,.15);color:#9ca3af;border:1px solid rgba(107,114,128,.3)}
+.badge-active{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.3)}
+.badge-inactive{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+
+/* ── Forms ── */
+.form-group{margin-bottom:18px}
+.form-group label{display:block;margin-bottom:6px;color:#888;font-size:12px;
+  font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.form-group input{width:100%;padding:12px 14px;background:#0a0a0a;border:1px solid #222;
+  border-radius:10px;color:#fff;font-size:14px;transition:all .2s}
+.form-group input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.form-group .hint{font-size:11px;color:#555;margin-top:4px}
+.form-actions{display:flex;gap:12px;margin-top:24px}
+.btn{padding:12px 24px;border-radius:10px;border:none;font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .2s}
+.btn-primary{background:#3b82f6;color:#fff}
+.btn-primary:hover{background:#2563eb;transform:translateY(-1px)}
+.btn-secondary{background:#1a1a1a;color:#888;border:1px solid #333}
+.btn-secondary:hover{background:#222;color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ── Messages ── */
+.msg{padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;
+  display:none;margin-bottom:16px}
+.msg.show{display:flex;align-items:center;gap:8px}
+.msg.error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171}
+.msg.success{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:#34d399}
+
+/* ── Divider ── */
+.divider{height:1px;background:#1a1a1a;margin:24px 0}
+
+@media(max-width:600px){
+  .info-grid{grid-template-columns:1fr;gap:4px 0}
+  .info-label{margin-top:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- FORTRESS UNIFIED NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUserIcon">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item fn-dd-active"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- SECONDARY NAV -->
+<div class="sec-nav">
+  <div class="sec-left">
+    <span class="sec-title">Profile &amp; Settings</span>
+  </div>
+  <div class="sec-right">
+    <a href="/profile" class="username-link" id="navUser">Loading...</a>
+    <a href="/users" class="btn-nav">Manage Users</a>
+    <button class="btn-nav" onclick="logout()">Sign Out</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ACCOUNT INFO -->
+  <div class="card">
+    <h2><span class="icon">&#128100;</span> Account Information</h2>
+    <div class="info-grid">
+      <span class="info-label">Username</span>
+      <span class="info-value" id="dispUsername">-</span>
+
+      <span class="info-label">Email</span>
+      <span class="info-value" id="dispEmail">-</span>
+
+      <span class="info-label">Role</span>
+      <span id="dispRole">-</span>
+
+      <span class="info-label">Status</span>
+      <span id="dispStatus">-</span>
+
+      <span class="info-label">Member Since</span>
+      <span class="info-value" id="dispCreated">-</span>
+
+      <span class="info-label">Last Login</span>
+      <span class="info-value" id="dispLastLogin">-</span>
+    </div>
+  </div>
+
+  <!-- CHANGE USERNAME -->
+  <div class="card">
+    <h2><span class="icon">&#9998;</span> Change Username</h2>
+    <div id="unMsg" class="msg"></div>
+    <form id="unForm" onsubmit="changeUsername(event)">
+      <div class="form-group">
+        <label>New Username</label>
+        <input type="text" id="newUsername" required minlength="3" maxlength="50"
+               pattern="[a-zA-Z0-9_.\-]+" placeholder="Letters, numbers, _ . - only">
+        <div class="hint">3-50 characters. Letters, numbers, underscore, period, hyphen.</div>
+      </div>
+      <div class="form-group">
+        <label>Current Password (to confirm)</label>
+        <input type="password" id="unPassword" required placeholder="Enter your current password">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="unBtn">Update Username</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- CHANGE PASSWORD -->
+  <div class="card">
+    <h2><span class="icon">&#128274;</span> Change Password</h2>
+    <div id="pwMsg" class="msg"></div>
+    <form id="pwForm" onsubmit="changePassword(event)">
+      <div class="form-group">
+        <label>Current Password</label>
+        <input type="password" id="currentPw" required placeholder="Enter your current password">
+      </div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="newPw" required minlength="8" placeholder="Minimum 8 characters">
+        <div class="hint">Must be at least 8 characters.</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" id="confirmPw" required placeholder="Re-enter new password">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="pwBtn">Update Password</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+// Clock
+setInterval(()=>{
+  document.getElementById('fnClock').textContent =
+    new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+// Auth + Load Profile
+async function loadProfile() {
+  try {
+    const resp = await fetch('/api/profile', {credentials:'include'});
+    if (!resp.ok) { window.location.href = '/login'; return; }
+    const d = await resp.json();
+
+    document.getElementById('dispUsername').textContent = d.username || '-';
+    document.getElementById('dispEmail').textContent = d.email || 'Not set';
+    document.getElementById('navUser').textContent = d.username || 'User';
+
+    const role = d.role || 'viewer';
+    document.getElementById('dispRole').innerHTML =
+      `<span class="badge badge-${role}">${role}</span>`;
+
+    const active = d.is_active !== false;
+    document.getElementById('dispStatus').innerHTML =
+      `<span class="badge ${active ? 'badge-active' : 'badge-inactive'}">${active ? 'Active' : 'Inactive'}</span>`;
+
+    document.getElementById('dispCreated').textContent =
+      d.created_at ? new Date(d.created_at).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) : '-';
+    document.getElementById('dispLastLogin').textContent =
+      d.last_login ? new Date(d.last_login).toLocaleString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Never';
+
+    document.getElementById('newUsername').placeholder = d.username || '';
+  } catch {
+    window.location.href = '/login';
+  }
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = `msg ${type} show`;
+  setTimeout(() => { if (type === 'success') el.className = 'msg'; }, 5000);
+}
+
+// Change Username
+async function changeUsername(e) {
+  e.preventDefault();
+  const btn = document.getElementById('unBtn');
+  btn.disabled = true; btn.textContent = 'Updating...';
+
+  try {
+    const resp = await fetch('/api/profile/username', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        new_username: document.getElementById('newUsername').value.trim(),
+        password: document.getElementById('unPassword').value,
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Failed to update username');
+
+    showMsg('unMsg', 'Username updated! You will be signed out to refresh your session.', 'success');
+    document.getElementById('unForm').reset();
+    setTimeout(() => { fetch('/api/logout',{method:'POST'}).then(()=>window.location.href='/login'); }, 2000);
+  } catch (err) {
+    showMsg('unMsg', err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Update Username';
+  }
+}
+
+// Change Password
+async function changePassword(e) {
+  e.preventDefault();
+  const newPw = document.getElementById('newPw').value;
+  const confirm = document.getElementById('confirmPw').value;
+
+  if (newPw !== confirm) { showMsg('pwMsg', 'New passwords do not match.', 'error'); return; }
+  if (newPw.length < 8) { showMsg('pwMsg', 'Password must be at least 8 characters.', 'error'); return; }
+
+  const btn = document.getElementById('pwBtn');
+  btn.disabled = true; btn.textContent = 'Updating...';
+
+  try {
+    const resp = await fetch('/api/profile/password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        current_password: document.getElementById('currentPw').value,
+        new_password: newPw,
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Failed to update password');
+
+    showMsg('pwMsg', 'Password updated successfully.', 'success');
+    document.getElementById('pwForm').reset();
+  } catch (err) {
+    showMsg('pwMsg', err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Update Password';
+  }
+}
+
+function logout() {
+  fetch('/api/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login');
+}
+
+loadProfile();
+</script>
+</body>
+</html>

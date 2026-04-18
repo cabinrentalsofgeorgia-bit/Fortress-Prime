@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legal Cases — CROG Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;height:52px;
+  backdrop-filter:blur(10px);flex-shrink:0}
+.page-hdr-left{display:flex;align-items:center;gap:16px}
+.page-title{font-size:16px;font-weight:700}
+.case-select{background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:8px;
+  padding:6px 32px 6px 12px;font-size:13px;font-weight:500;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  min-width:280px;transition:border-color .15s}
+.case-select:hover,.case-select:focus{border-color:#f87171;outline:none}
+.page-hdr-right{display:flex;align-items:center;gap:12px;font-size:13px}
+.btn-back{background:#1a1a1a;border:1px solid #333;color:#fff;padding:6px 14px;
+  border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;text-decoration:none;transition:all .15s}
+.btn-back:hover{background:#222;border-color:#4ade80;color:#4ade80}
+
+/* ── Loading / Error ── */
+.state-msg{flex:1;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:12px;color:#555;font-size:14px;padding:40px}
+.state-msg .icon{font-size:48px;opacity:.4}
+.spinner{width:32px;height:32px;border:3px solid #222;border-top-color:#f87171;
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Case Header Card ── */
+.case-hdr{background:#111;border:1px solid #1a1a1a;border-radius:14px;
+  margin:20px 24px 0;padding:24px;position:relative;overflow:hidden}
+.case-hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,#f87171,#fb923c)}
+.case-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+.case-name{font-size:20px;font-weight:700;line-height:1.3;max-width:70%}
+.case-number{font-size:12px;color:#888;font-weight:500;margin-top:2px}
+.case-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;
+  text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.badge-role{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+.badge-status{background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.badge-countdown{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25);
+  font-size:11px;font-weight:700;padding:5px 12px}
+.badge-countdown.urgent{background:rgba(248,113,113,.15);color:#f87171;border-color:rgba(248,113,113,.3)}
+
+.case-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 24px}
+.meta-item{display:flex;flex-direction:column;gap:2px}
+.meta-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.meta-value{font-size:13px;color:#ccc;font-weight:500}
+
+/* ── Tab Bar ── */
+.tab-bar{display:flex;gap:0;margin:20px 24px 0;border-bottom:1px solid #222;flex-shrink:0}
+.tab{padding:10px 20px;font-size:13px;font-weight:600;color:#666;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s;user-select:none}
+.tab:hover{color:#fff;background:rgba(255,255,255,.03)}
+.tab.active{color:#fff;border-bottom-color:#f87171}
+.tab .tab-count{font-size:11px;color:#555;margin-left:6px;font-weight:500}
+.tab.active .tab-count{color:#f87171}
+
+/* ── Tab Content ── */
+.tab-content{flex:1;overflow-y:auto;padding:20px 24px 40px}
+
+/* ── Deadline Cards ── */
+.dl-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:16px 20px;
+  margin-bottom:10px;display:flex;align-items:flex-start;gap:16px;transition:border-color .15s}
+.dl-card:hover{border-color:#333}
+.dl-date-box{min-width:72px;text-align:center;flex-shrink:0}
+.dl-month{font-size:10px;color:#888;text-transform:uppercase;font-weight:700;letter-spacing:.05em}
+.dl-day{font-size:24px;font-weight:800;color:#fff;line-height:1.2}
+.dl-year{font-size:10px;color:#555}
+.dl-body{flex:1;min-width:0}
+.dl-desc{font-size:14px;font-weight:600;margin-bottom:4px;line-height:1.4}
+.dl-meta{font-size:11px;color:#666;display:flex;gap:12px;flex-wrap:wrap}
+.dl-urgency{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.dl-urgency.normal{background:rgba(74,222,128,.1);color:#4ade80}
+.dl-urgency.elevated{background:rgba(251,191,36,.1);color:#fbbf24}
+.dl-urgency.critical{background:rgba(248,113,113,.15);color:#f87171}
+.dl-urgency.overdue{background:rgba(248,113,113,.25);color:#f87171;animation:blink 1.5s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ── Correspondence Cards ── */
+.corr-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:16px 20px;
+  margin-bottom:10px;transition:border-color .15s;cursor:pointer}
+.corr-card:hover{border-color:#333}
+.corr-card.expanded{border-color:#444}
+.corr-top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.corr-dir{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase}
+.corr-dir.inbound{background:rgba(96,165,250,.12);color:#60a5fa}
+.corr-dir.outbound{background:rgba(251,191,36,.12);color:#fbbf24}
+.corr-subject{font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.corr-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px}
+.corr-status.draft{background:rgba(168,85,247,.12);color:#a855f7}
+.corr-status.sent{background:rgba(74,222,128,.12);color:#4ade80}
+.corr-status.pending{background:rgba(251,191,36,.12);color:#fbbf24}
+.corr-status.approved{background:rgba(96,165,250,.12);color:#60a5fa}
+.corr-detail{font-size:12px;color:#666;display:flex;gap:12px;flex-wrap:wrap}
+.corr-body{margin-top:12px;padding-top:12px;border-top:1px solid #222;font-size:13px;
+  color:#aaa;line-height:1.6;white-space:pre-wrap;display:none}
+.corr-card.expanded .corr-body{display:block}
+
+/* ── Action Cards ── */
+.act-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:16px 20px;
+  margin-bottom:10px;display:flex;align-items:flex-start;gap:16px;transition:border-color .15s}
+.act-card:hover{border-color:#333}
+.act-icon{width:36px;height:36px;border-radius:8px;background:#1a1a1a;display:flex;
+  align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.act-body{flex:1;min-width:0}
+.act-desc{font-size:14px;font-weight:600;margin-bottom:4px;line-height:1.4}
+.act-meta{font-size:11px;color:#666;display:flex;gap:12px;flex-wrap:wrap}
+.act-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.act-status.pending{background:rgba(251,191,36,.12);color:#fbbf24}
+.act-status.completed{background:rgba(74,222,128,.12);color:#4ade80}
+.act-status.filed{background:rgba(96,165,250,.12);color:#60a5fa}
+.act-status.in_progress{background:rgba(168,85,247,.12);color:#a855f7}
+
+/* ── Evidence Cards ── */
+.ev-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:16px 20px;
+  margin-bottom:10px;display:flex;align-items:flex-start;gap:16px;transition:border-color .15s}
+.ev-card:hover{border-color:#333}
+.ev-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:16px;flex-shrink:0}
+.ev-icon.critical{background:rgba(248,113,113,.15)}
+.ev-icon.normal{background:#1a1a1a}
+.ev-body{flex:1;min-width:0}
+.ev-desc{font-size:14px;font-weight:600;margin-bottom:4px;line-height:1.4}
+.ev-meta{font-size:11px;color:#666;display:flex;gap:12px;flex-wrap:wrap}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:40px;color:#555;font-size:13px}
+.empty .empty-icon{font-size:40px;margin-bottom:8px;opacity:.3}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .fn-groups{display:none}
+  .case-select{min-width:180px}
+  .case-name{max-width:100%;font-size:16px}
+  .case-meta{grid-template-columns:1fr 1fr}
+  .tab{padding:10px 14px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- UNIFIED NAV BAR -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue fn-g-active" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item fn-dd-active"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <span class="page-title">Legal Cases</span>
+    <select class="case-select" id="caseSelect" onchange="selectCase(this.value)">
+      <option value="">Loading cases...</option>
+    </select>
+  </div>
+  <div class="page-hdr-right">
+    <a href="/" class="btn-back">&#8592; Dashboard</a>
+  </div>
+</div>
+
+<!-- LOADING STATE (initial) -->
+<div class="state-msg" id="loadingState">
+  <div class="spinner"></div>
+  <span>Loading legal cases...</span>
+</div>
+
+<!-- CASE HEADER (hidden until case selected) -->
+<div class="case-hdr" id="caseHeader" style="display:none">
+  <div class="case-hdr-top">
+    <div>
+      <div class="case-name" id="caseName"></div>
+      <div class="case-number" id="caseNumber"></div>
+    </div>
+    <div class="case-badges">
+      <span class="badge badge-role" id="caseRole"></span>
+      <span class="badge badge-status" id="caseStatus"></span>
+      <span class="badge badge-countdown" id="caseCountdown"></span>
+    </div>
+  </div>
+  <div class="case-meta" id="caseMeta"></div>
+</div>
+
+<!-- TAB BAR (hidden until case selected) -->
+<div class="tab-bar" id="tabBar" style="display:none">
+  <div class="tab active" data-tab="deadlines" onclick="switchTab('deadlines')">Deadlines <span class="tab-count" id="countDeadlines"></span></div>
+  <div class="tab" data-tab="correspondence" onclick="switchTab('correspondence')">Correspondence <span class="tab-count" id="countCorrespondence"></span></div>
+  <div class="tab" data-tab="actions" onclick="switchTab('actions')">Actions <span class="tab-count" id="countActions"></span></div>
+  <div class="tab" data-tab="evidence" onclick="switchTab('evidence')">Evidence <span class="tab-count" id="countEvidence"></span></div>
+</div>
+
+<!-- TAB CONTENT -->
+<div class="tab-content" id="tabContent" style="display:none"></div>
+
+<script>
+// ── Clock ──
+setInterval(()=>{
+  const el=document.getElementById('fnClock');
+  if(el) el.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+// ── Nav Toggle ──
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+function logout(){window.location.href='/login';}
+
+// ── State ──
+let cases = [];
+let currentSlug = null;
+let caseDetail = null;     // {case, actions, evidence, watchdog}
+let caseCorrespondence = [];
+let caseDeadlines = [];
+let activeTab = 'deadlines';
+
+// ── Init ──
+async function init() {
+  try {
+    const r = await fetch('/api/legal/overview', {credentials:'include'});
+    if (r.status === 401) { window.location.href='/login'; return; }
+    if (!r.ok) throw new Error('Failed to load overview');
+    const data = await r.json();
+    cases = data.cases || [];
+
+    const sel = document.getElementById('caseSelect');
+    sel.innerHTML = '<option value="">— Select a case —</option>';
+    cases.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.case_slug;
+      opt.textContent = `${c.case_number} — ${c.case_name}`;
+      sel.appendChild(opt);
+    });
+
+    document.getElementById('loadingState').style.display = 'none';
+
+    // Auto-select first case
+    if (cases.length > 0) {
+      sel.value = cases[0].case_slug;
+      selectCase(cases[0].case_slug);
+    }
+  } catch(e) {
+    document.getElementById('loadingState').innerHTML =
+      '<div class="icon">&#9888;</div><span>Failed to load legal cases. Is the Legal API running?</span>';
+    console.error(e);
+  }
+}
+
+// ── Select a case ──
+async function selectCase(slug) {
+  if (!slug) return;
+  currentSlug = slug;
+
+  document.getElementById('caseHeader').style.display = '';
+  document.getElementById('tabBar').style.display = '';
+  document.getElementById('tabContent').style.display = '';
+
+  // Find overview data for quick header render
+  const overview = cases.find(c => c.case_slug === slug);
+  if (overview) renderHeader(overview);
+
+  // Fetch full detail + deadlines + correspondence in parallel
+  try {
+    const [detailR, dlR, corrR] = await Promise.all([
+      fetch(`/api/legal/cases/${slug}`, {credentials:'include'}),
+      fetch(`/api/legal/cases/${slug}/deadlines`, {credentials:'include'}),
+      fetch(`/api/legal/cases/${slug}/correspondence`, {credentials:'include'}),
+    ]);
+
+    if (detailR.ok) {
+      caseDetail = await detailR.json();
+      // Re-render header with more complete data
+      renderHeader(caseDetail.case || overview);
+      // Update tab counts
+      document.getElementById('countActions').textContent = `(${(caseDetail.actions||[]).length})`;
+      document.getElementById('countEvidence').textContent = `(${(caseDetail.evidence||[]).length})`;
+    }
+
+    if (dlR.ok) {
+      const dlData = await dlR.json();
+      caseDeadlines = dlData.deadlines || [];
+      document.getElementById('countDeadlines').textContent = `(${caseDeadlines.length})`;
+    }
+
+    if (corrR.ok) {
+      const corrData = await corrR.json();
+      caseCorrespondence = corrData.correspondence || [];
+      document.getElementById('countCorrespondence').textContent = `(${caseCorrespondence.length})`;
+    }
+
+    // Render active tab
+    renderTab(activeTab);
+  } catch(e) {
+    console.error('Failed to load case detail:', e);
+  }
+}
+
+// ── Render Case Header ──
+function renderHeader(c) {
+  document.getElementById('caseName').textContent = c.case_name || 'Unknown';
+  document.getElementById('caseNumber').textContent = c.case_number || '';
+
+  const roleEl = document.getElementById('caseRole');
+  roleEl.textContent = (c.our_role || 'party').toUpperCase();
+
+  const statusEl = document.getElementById('caseStatus');
+  statusEl.textContent = (c.status || 'active').toUpperCase();
+
+  // Countdown badge
+  const cdEl = document.getElementById('caseCountdown');
+  const daysRem = c.days_remaining;
+  if (daysRem !== undefined && daysRem !== null) {
+    const txt = daysRem <= 0 ? 'OVERDUE' : `${daysRem} DAYS`;
+    cdEl.textContent = txt;
+    cdEl.className = 'badge badge-countdown' + (daysRem <= 7 ? ' urgent' : '');
+  } else if (c.critical_date) {
+    const diff = Math.ceil((new Date(c.critical_date) - new Date()) / 86400000);
+    cdEl.textContent = diff <= 0 ? 'OVERDUE' : `${diff} DAYS`;
+    cdEl.className = 'badge badge-countdown' + (diff <= 7 ? ' urgent' : '');
+  } else {
+    cdEl.textContent = '';
+  }
+
+  // Meta fields
+  const metaFields = [
+    {label:'Court', value:c.court},
+    {label:'Judge', value:c.judge},
+    {label:'Case Type', value:c.case_type},
+    {label:'Our Role', value:c.our_role},
+    {label:'Petition Date', value:c.petition_date ? formatDate(c.petition_date) : null},
+    {label:'Critical Date', value:c.critical_date ? formatDate(c.critical_date) : null},
+    {label:'Plan Admin', value:c.plan_admin},
+    {label:'Opposing Counsel', value:c.opposing_counsel},
+    {label:'Fiduciary', value:c.fiduciary},
+    {label:'Claim Basis', value:c.our_claim_basis},
+  ].filter(f => f.value);
+
+  const metaEl = document.getElementById('caseMeta');
+  metaEl.innerHTML = metaFields.map(f =>
+    `<div class="meta-item"><span class="meta-label">${esc(f.label)}</span><span class="meta-value">${esc(f.value)}</span></div>`
+  ).join('');
+}
+
+// ── Tab Switching ──
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  renderTab(tab);
+}
+
+// ── Render Tab Content ──
+function renderTab(tab) {
+  const el = document.getElementById('tabContent');
+  switch(tab) {
+    case 'deadlines': el.innerHTML = renderDeadlines(); break;
+    case 'correspondence': el.innerHTML = renderCorrespondence(); break;
+    case 'actions': el.innerHTML = renderActions(); break;
+    case 'evidence': el.innerHTML = renderEvidence(); break;
+  }
+}
+
+// ── Deadlines ──
+function renderDeadlines() {
+  if (!caseDeadlines.length) return emptyState('No deadlines', '&#128197;');
+
+  // Sort by due_date ascending (soonest first)
+  const sorted = [...caseDeadlines].sort((a,b) => {
+    const da = a.effective_date || a.due_date;
+    const db = b.effective_date || b.due_date;
+    return new Date(da) - new Date(db);
+  });
+
+  return sorted.map(dl => {
+    const due = dl.effective_date || dl.due_date;
+    const d = new Date(due);
+    const month = d.toLocaleDateString('en-US',{month:'short'}).toUpperCase();
+    const day = d.getDate();
+    const year = d.getFullYear();
+    const urgency = dl.urgency || 'normal';
+    const urgLabel = urgency.charAt(0).toUpperCase() + urgency.slice(1);
+    const daysRem = dl.days_remaining;
+    const daysText = daysRem !== undefined
+      ? (daysRem <= 0 ? 'Overdue' : `${daysRem} days`)
+      : '';
+
+    return `<div class="dl-card">
+      <div class="dl-date-box">
+        <div class="dl-month">${month}</div>
+        <div class="dl-day">${day}</div>
+        <div class="dl-year">${year}</div>
+      </div>
+      <div class="dl-body">
+        <div class="dl-desc">${esc(dl.description)}</div>
+        <div class="dl-meta">
+          <span class="dl-urgency ${urgency}">${urgLabel}</span>
+          <span>${esc(dl.deadline_type||'')}</span>
+          <span>${esc(dl.status||'')}</span>
+          ${daysText ? `<span style="color:#fbbf24">${daysText}</span>` : ''}
+          ${dl.extended_to ? `<span style="color:#a855f7">Extended to ${formatDate(dl.extended_to)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Correspondence ──
+function renderCorrespondence() {
+  if (!caseCorrespondence.length) return emptyState('No correspondence', '&#128232;');
+
+  // Sort by created_at descending (newest first)
+  const sorted = [...caseCorrespondence].sort((a,b) =>
+    new Date(b.created_at) - new Date(a.created_at)
+  );
+
+  return sorted.map((c, i) => {
+    const dir = (c.direction||'outbound').toLowerCase();
+    const status = (c.status||'draft').toLowerCase();
+    const date = c.sent_at || c.created_at;
+
+    return `<div class="corr-card" onclick="toggleCorr(this)">
+      <div class="corr-top">
+        <span class="corr-dir ${dir}">${dir}</span>
+        <span class="corr-subject">${esc(c.subject||'(no subject)')}</span>
+        <span class="corr-status ${status}">${status}</span>
+      </div>
+      <div class="corr-detail">
+        <span>To: ${esc(c.recipient||c.recipient_email||'—')}</span>
+        ${date ? `<span>${formatDateTime(date)}</span>` : ''}
+        ${c.tracking_number ? `<span>Tracking: ${esc(c.tracking_number)}</span>` : ''}
+        ${c.comm_type ? `<span>Type: ${esc(c.comm_type)}</span>` : ''}
+      </div>
+      ${c.body ? `<div class="corr-body">${esc(c.body)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleCorr(el) {
+  el.classList.toggle('expanded');
+}
+
+// ── Actions ──
+function renderActions() {
+  const actions = caseDetail?.actions || [];
+  if (!actions.length) return emptyState('No actions', '&#9889;');
+
+  // Sort by action_date descending
+  const sorted = [...actions].sort((a,b) =>
+    new Date(b.action_date||b.created_at) - new Date(a.action_date||a.created_at)
+  );
+
+  const typeIcons = {
+    'filing':'&#128221;', 'motion':'&#9878;', 'upload':'&#128228;', 'email':'&#128232;',
+    'research':'&#128270;', 'hearing':'&#127979;', 'letter':'&#9993;', 'call':'&#128222;',
+    'objection':'&#9888;', 'review':'&#128269;', 'default':'&#9733;'
+  };
+
+  return sorted.map(a => {
+    const status = (a.status||'pending').toLowerCase().replace(/\s+/g,'_');
+    const icon = typeIcons[(a.action_type||'').toLowerCase()] || typeIcons['default'];
+    const date = a.action_date || a.created_at;
+
+    return `<div class="act-card">
+      <div class="act-icon">${icon}</div>
+      <div class="act-body">
+        <div class="act-desc">${esc(a.description)}</div>
+        <div class="act-meta">
+          <span class="act-status ${status}">${(a.status||'pending').toUpperCase()}</span>
+          <span>${esc(a.action_type||'')}</span>
+          ${date ? `<span>${formatDate(date)}</span>` : ''}
+          ${a.tracking_number ? `<span>Tracking: ${esc(a.tracking_number)}</span>` : ''}
+          ${a.notes ? `<span style="color:#888">${esc(a.notes)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Evidence ──
+function renderEvidence() {
+  const evidence = caseDetail?.evidence || [];
+  if (!evidence.length) return emptyState('No evidence', '&#128270;');
+
+  return evidence.map(e => {
+    const critical = e.is_critical;
+    return `<div class="ev-card">
+      <div class="ev-icon ${critical?'critical':'normal'}">${critical?'&#128680;':'&#128196;'}</div>
+      <div class="ev-body">
+        <div class="ev-desc">${esc(e.description||'Evidence item')}</div>
+        <div class="ev-meta">
+          <span>${esc(e.evidence_type||'unknown')}</span>
+          <span>Relevance: ${esc(e.relevance||'—')}</span>
+          ${e.discovered_at ? `<span>Discovered: ${formatDate(e.discovered_at)}</span>` : ''}
+          ${e.file_path ? `<span style="color:#60a5fa">${esc(e.file_path)}</span>` : ''}
+          ${critical ? '<span style="color:#f87171;font-weight:700">CRITICAL</span>' : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Helpers ──
+function emptyState(msg, icon) {
+  return `<div class="empty"><div class="empty-icon">${icon||'&#128196;'}</div><div>${msg}</div></div>`;
+}
+
+function esc(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+
+function formatDate(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+}
+
+function formatDateTime(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) +
+    ' ' + d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+}
+
+// ── Boot ──
+init();
+</script>
+</body>
+</html>

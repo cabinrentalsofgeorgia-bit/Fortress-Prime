@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Channel Manager</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:32px 24px}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Panels ── */
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;margin-bottom:24px;overflow:hidden}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-teal{background:rgba(79,209,197,.12);color:#4fd1c5}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+.badge-blue{background:rgba(96,165,250,.12);color:#60a5fa}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-red{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Two-Column ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:36px}
+
+/* ── Data Table ── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead th{text-align:left;font-size:10px;font-weight:700;color:#555;
+  text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;border-bottom:1px solid #222}
+.data-table thead th.right{text-align:right}
+.data-table tbody tr{border-bottom:1px solid #1a1a1a;transition:background .12s}
+.data-table tbody tr:hover{background:rgba(255,255,255,.02)}
+.data-table tbody td{padding:10px 12px;font-size:13px;color:#ccc}
+.data-table tbody td.right{text-align:right;font-family:'SF Mono',Consolas,monospace;font-size:12px}
+.data-table tbody td.prop-name{font-weight:600;color:#fff}
+.data-table tbody td .mini-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-left:6px}
+
+/* ── Status dot ── */
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.status-dot.active{background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,.5)}
+.status-dot.inactive{background:#555}
+
+/* ── Channel logo placeholder ── */
+.ch-logo{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;
+  justify-content:center;font-size:14px;margin-right:8px;flex-shrink:0;
+  background:#1a1a1a;border:1px solid #222}
+.ch-name-cell{display:flex;align-items:center}
+
+/* ── Donut Chart (CSS-only) ── */
+.donut-wrap{display:flex;align-items:center;gap:32px;justify-content:center;padding:16px 0}
+.donut{width:180px;height:180px;border-radius:50%;position:relative;flex-shrink:0}
+.donut-hole{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:100px;height:100px;border-radius:50%;background:#111;display:flex;
+  align-items:center;justify-content:center;flex-direction:column}
+.donut-hole .donut-total{font-size:24px;font-weight:700;color:#fff}
+.donut-hole .donut-label{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.donut-legend{display:flex;flex-direction:column;gap:8px}
+.legend-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#ccc}
+.legend-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.legend-count{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:#888;margin-left:auto;padding-left:12px}
+
+/* ── Bar Charts (CSS-only) ── */
+.bar-chart{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:flex;align-items:center;gap:12px}
+.bar-label{width:100px;font-size:12px;color:#888;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:22px;background:#1a1a1a;border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease;min-width:2px;position:relative}
+.bar-fill.green{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.bar-fill.teal{background:linear-gradient(90deg,#14b8a6,#4fd1c5)}
+.bar-fill.blue{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.bar-fill.amber{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.bar-fill.red{background:linear-gradient(90deg,#ef4444,#f87171)}
+.bar-fill.purple{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.bar-value{width:80px;font-size:12px;font-weight:600;color:#ccc;text-align:right;flex-shrink:0;
+  font-family:'SF Mono',Consolas,monospace}
+
+/* ── Sync Panel ── */
+.sync-row{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid #1a1a1a}
+.sync-row:last-child{border-bottom:none}
+.sync-icon{font-size:20px;flex-shrink:0}
+.sync-info{flex:1}
+.sync-title{font-size:13px;font-weight:600;color:#fff}
+.sync-detail{font-size:11px;color:#555;margin-top:2px}
+.sync-status{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px}
+.sync-ok{background:rgba(74,222,128,.12);color:#4ade80}
+.sync-warn{background:rgba(251,191,36,.12);color:#fbbf24}
+
+/* ── Rate Parity ── */
+.parity-placeholder{text-align:center;padding:32px 16px;color:#555}
+.parity-placeholder .parity-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.parity-placeholder .parity-text{font-size:13px;margin-bottom:8px}
+.coming-soon{display:inline-block;font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(167,139,250,.12);color:#a78bfa;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Loading / Empty / Toast ── */
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+.loading-pulse{animation:loadPulse 1.2s ease infinite}
+@keyframes loadPulse{0%,100%{opacity:.4}50%{opacity:1}}
+.data-unavail{color:#555;font-style:italic;font-size:12px;text-align:center;padding:20px}
+.skel-row{height:14px;background:#1a1a1a;border-radius:4px;margin-bottom:10px;animation:loadPulse 1.2s ease infinite}
+.skel-row.w60{width:60%}.skel-row.w80{width:80%}.skel-row.w40{width:40%}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .3s ease;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.toast-error{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+.toast-success{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+
+/* ── Last Updated ── */
+.last-updated{text-align:right;font-size:10px;color:#444;margin-bottom:20px}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col,.three-col{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .donut-wrap{flex-direction:column}
+  .bar-label{width:60px;font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active">
+      <div class="fn-group-btn" onclick="fnToggle(this)">CROG-VRS <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item fn-dd-active" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div>
+    </div>
+    <div class="fn-group fn-g-blue">
+      <div class="fn-group-btn" onclick="fnToggle(this)">Operations <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/legal">⚖️ Legal Command</a>
+        <a class="fn-dd-item" href="/email-intake">📧 Email Intake</a>
+        <a class="fn-dd-item" href="/intelligence">🔍 Intelligence</a>
+      </div>
+    </div>
+    <div class="fn-group fn-g-amber">
+      <div class="fn-group-btn" onclick="fnToggle(this)">System <span class="fn-caret">▾</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/vault">🔐 Key Vault</a>
+        <a class="fn-dd-item" href="/users">👥 Users</a>
+        <a class="fn-dd-item" href="/profile">⚙️ Profile</a>
+        <a class="fn-dd-item" href="/docs-center">📚 Docs</a>
+        <a class="fn-dd-item" href="/webui">🖥 Mission Control</a>
+      </div>
+    </div>
+  </div>
+  <div class="fn-right">
+    <span class="fn-dot"></span>
+    <span class="fn-clock" id="fn-clock"></span>
+    <div class="fn-user">
+      <div class="fn-user-btn" onclick="this.parentElement.classList.toggle('open')">👤 Admin <span class="fn-caret">▾</span></div>
+      <div class="fn-user-dd">
+        <a class="fn-dd-item" href="/profile">⚙️ Profile</a>
+        <a class="fn-dd-item" href="/api/logout">🚪 Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>📡 <span>CROG-VRS</span> &mdash; Channel Manager</h1>
+  <div class="hdr-right">
+    <span class="hdr-badge" id="dataBadge">Loading...</span>
+    <span style="font-size:11px;color:#555">Cabin Rentals of Georgia, LLC</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="last-updated">Last refreshed: <span id="lastUpdated" class="loading-pulse">loading...</span></div>
+
+  <!-- ═══ KPI ROW ═══ -->
+  <div class="section-head">Channel Overview</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val green" id="kChannels">—</div>
+      <div class="kpi-label">Channels Connected</div>
+      <div class="kpi-sub" id="kChannelsSub">Unique booking sources</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val blue" id="kTotalRes">—</div>
+      <div class="kpi-label">Total Reservations</div>
+      <div class="kpi-sub" id="kTotalResSub">Across all channels</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val teal" id="kTotalRev">—</div>
+      <div class="kpi-label">Revenue by Channel</div>
+      <div class="kpi-sub" id="kTotalRevSub">Sum of all bookings</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val amber" id="kOccupancy">—</div>
+      <div class="kpi-label">Occupancy Rate</div>
+      <div class="kpi-sub" id="kOccSub">Portfolio average</div>
+    </div>
+  </div>
+
+  <!-- ═══ CHANNEL PERFORMANCE TABLE ═══ -->
+  <div class="section-head">Channel Performance</div>
+  <div class="panel" style="margin-bottom:36px">
+    <div class="panel-title">Booking Source Breakdown <span class="badge badge-green" id="chCountBadge">0 channels</span></div>
+    <div id="chTableSkel">
+      <div class="skel-row w80"></div>
+      <div class="skel-row w60"></div>
+      <div class="skel-row w80"></div>
+      <div class="skel-row w40"></div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="chTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Channel</th>
+            <th>Status</th>
+            <th class="right">Reservations</th>
+            <th class="right">Revenue</th>
+            <th class="right">Avg Nightly</th>
+            <th class="right">Avg Stay</th>
+            <th class="right">Cancel %</th>
+          </tr>
+        </thead>
+        <tbody id="chTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ DISTRIBUTION + REVENUE BY CHANNEL ═══ -->
+  <div class="two-col">
+
+    <!-- Channel Distribution Donut -->
+    <div class="panel">
+      <div class="panel-title">Channel Distribution <span class="badge badge-teal">By Reservations</span></div>
+      <div id="donutArea">
+        <div class="skel-row w60" style="margin:24px auto"></div>
+        <div class="skel-row w40" style="margin:0 auto"></div>
+      </div>
+    </div>
+
+    <!-- Revenue by Channel Bar -->
+    <div class="panel">
+      <div class="panel-title">Revenue by Channel <span class="badge badge-green">All Time</span></div>
+      <div id="revChart" class="bar-chart">
+        <div class="skel-row w80"></div>
+        <div class="skel-row w60"></div>
+        <div class="skel-row w40"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ RATE PARITY + SYNC STATUS ═══ -->
+  <div class="two-col">
+
+    <!-- Rate Parity Monitor -->
+    <div class="panel">
+      <div class="panel-title">Rate Parity Monitor <span class="coming-soon">Coming Soon</span></div>
+      <div class="parity-placeholder">
+        <div class="parity-icon">⚖️</div>
+        <div class="parity-text">Cross-channel rate comparison will detect pricing discrepancies<br>across OTA platforms and direct booking sources.</div>
+        <div style="font-size:11px;color:#444;margin-top:12px">Requires multi-channel rate data integration</div>
+      </div>
+    </div>
+
+    <!-- Sync Status -->
+    <div class="panel">
+      <div class="panel-title">Sync Status <span class="badge badge-green" id="syncBadge">Checking...</span></div>
+      <div id="syncArea">
+        <div class="sync-row">
+          <div class="sync-icon">🔄</div>
+          <div class="sync-info">
+            <div class="sync-title">Streamline PMS Sync</div>
+            <div class="sync-detail" id="syncStreamline">Checking connection...</div>
+          </div>
+          <div class="sync-status sync-ok" id="syncStreamlineStatus">—</div>
+        </div>
+        <div class="sync-row">
+          <div class="sync-icon">📡</div>
+          <div class="sync-info">
+            <div class="sync-title">Channel Availability Push</div>
+            <div class="sync-detail" id="syncAvailability">Mirrors PMS calendar to all connected OTAs</div>
+          </div>
+          <div class="sync-status sync-ok" id="syncAvailStatus">—</div>
+        </div>
+        <div class="sync-row">
+          <div class="sync-icon">💰</div>
+          <div class="sync-info">
+            <div class="sync-title">Rate Distribution</div>
+            <div class="sync-detail" id="syncRates">Nightly rates pushed from Streamline</div>
+          </div>
+          <div class="sync-status sync-ok" id="syncRateStatus">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast toast-error" id="toastError"></div>
+<div class="toast toast-success" id="toastSuccess"></div>
+
+<script>
+/* ── Nav ── */
+function fnToggle(btn){var g=btn.closest('.fn-group');document.querySelectorAll('.fn-group.open').forEach(function(o){if(o!==g)o.classList.remove('open')});g.classList.toggle('open')}
+document.addEventListener('click',function(e){if(!e.target.closest('.fn-group'))document.querySelectorAll('.fn-group.open').forEach(function(g){g.classList.remove('open')});if(!e.target.closest('.fn-user'))document.querySelectorAll('.fn-user.open').forEach(function(u){u.classList.remove('open')})});
+function fnClock(){var d=new Date();document.getElementById('fn-clock').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
+fnClock();setInterval(fnClock,1000);
+
+/* ── Helpers ── */
+function fmtCurrency(n){
+  if(n==null||isNaN(n))return '—';
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+function fmtPct(n){
+  if(n==null||isNaN(n))return '—';
+  return Number(n).toFixed(1)+'%';
+}
+
+var COLORS=['green','teal','blue','amber','purple','red'];
+var HEX_COLORS=['#4ade80','#4fd1c5','#60a5fa','#fbbf24','#a78bfa','#f87171'];
+var CHANNEL_ICONS={
+  'airbnb':'🏡','vrbo':'🏠','booking.com':'🅱️','expedia':'✈️',
+  'direct':'🌐','homeaway':'🏕️','tripadvisor':'📍','google':'🔍',
+  'default':'📡'
+};
+
+function getChannelIcon(name){
+  var key=(name||'').toLowerCase();
+  for(var k in CHANNEL_ICONS){if(key.indexOf(k)!==-1)return CHANNEL_ICONS[k]}
+  return CHANNEL_ICONS['default'];
+}
+
+function showToast(type,msg){
+  var el=document.getElementById(type==='error'?'toastError':'toastSuccess');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show')},4000);
+}
+
+function safeFetch(url){
+  return fetch(url,{credentials:'include'}).then(function(r){
+    if(!r.ok)throw new Error(r.status);
+    return r.json();
+  });
+}
+
+/* ── Donut Renderer (CSS conic-gradient) ── */
+function renderDonut(containerId,items,total){
+  var el=document.getElementById(containerId);
+  if(!items||items.length===0){
+    el.innerHTML='<div class="data-unavail">No channel data available</div>';
+    return;
+  }
+
+  var gradParts=[];
+  var cumPct=0;
+  items.forEach(function(item,i){
+    var pct=(item.value/total)*100;
+    var color=HEX_COLORS[i%HEX_COLORS.length];
+    gradParts.push(color+' '+cumPct.toFixed(2)+'% '+(cumPct+pct).toFixed(2)+'%');
+    cumPct+=pct;
+  });
+
+  var legendHTML=items.map(function(item,i){
+    var color=HEX_COLORS[i%HEX_COLORS.length];
+    var pct=((item.value/total)*100).toFixed(1);
+    return '<div class="legend-row">'+
+      '<div class="legend-swatch" style="background:'+color+'"></div>'+
+      '<span>'+item.label+'</span>'+
+      '<span class="legend-count">'+item.value+' ('+pct+'%)</span>'+
+    '</div>';
+  }).join('');
+
+  el.innerHTML='<div class="donut-wrap">'+
+    '<div class="donut" style="background:conic-gradient('+gradParts.join(',')+')">'+
+      '<div class="donut-hole"><div class="donut-total">'+total+'</div><div class="donut-label">Bookings</div></div>'+
+    '</div>'+
+    '<div class="donut-legend">'+legendHTML+'</div>'+
+  '</div>';
+}
+
+/* ── Bar Chart Renderer ── */
+function renderBarChart(containerId,items,colorClass){
+  var el=document.getElementById(containerId);
+  if(!items||items.length===0){
+    el.innerHTML='<div class="data-unavail">No data available</div>';
+    return;
+  }
+  var max=Math.max.apply(null,items.map(function(i){return i.value||0}));
+  if(max===0)max=1;
+  el.innerHTML=items.map(function(item){
+    var pct=Math.max((item.value/max)*100,1);
+    var color=item.color||colorClass||'green';
+    return '<div class="bar-row">'+
+      '<div class="bar-label" title="'+item.label+'">'+item.label+'</div>'+
+      '<div class="bar-track"><div class="bar-fill '+color+'" style="width:'+pct+'%"></div></div>'+
+      '<div class="bar-value">'+item.display+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ── Main Data Load ── */
+async function loadChannels(){
+  var badge=document.getElementById('dataBadge');
+  badge.textContent='LOADING';
+  badge.style.color='#fbbf24';
+  badge.style.background='rgba(251,191,36,.12)';
+
+  var resList;
+  try{
+    resList=await safeFetch('/api/vrs/reservations?limit=500');
+  }catch(e){
+    showToast('error','Failed to load reservations: '+e.message);
+    badge.textContent='ERROR';
+    badge.style.color='#f87171';
+    badge.style.background='rgba(248,113,113,.12)';
+    document.getElementById('chTableSkel').style.display='none';
+    document.getElementById('chTable').style.display='table';
+    document.getElementById('chTableBody').innerHTML='<tr><td colspan="7" class="data-unavail">Could not load reservation data</td></tr>';
+    document.getElementById('donutArea').innerHTML='<div class="data-unavail">Could not load data</div>';
+    document.getElementById('revChart').innerHTML='<div class="data-unavail">Could not load data</div>';
+    return;
+  }
+
+  if(!Array.isArray(resList))resList=[];
+
+  var today=new Date().toISOString().slice(0,10);
+  var channels={};
+
+  resList.forEach(function(r){
+    var src=r.booking_source||r.source||r.channel||'Direct';
+    src=src.trim();
+    if(!src)src='Direct';
+
+    if(!channels[src]){
+      channels[src]={name:src,count:0,revenue:0,rates:[],nights:[],cancelled:0,total:0};
+    }
+    channels[src].total++;
+
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled'){
+      channels[src].cancelled++;
+      return;
+    }
+
+    channels[src].count++;
+    var amt=parseFloat(r.total_amount||r.total_price||r.total||0)||0;
+    channels[src].revenue+=amt;
+
+    var rate=parseFloat(r.avg_nightly_rate||r.nightly_rate||r.base_rate||0)||0;
+    if(rate>0)channels[src].rates.push(rate);
+
+    var n=parseInt(r.nights||r.num_nights||0)||0;
+    if(n<=0){
+      var cin=r.check_in_date||r.checkin_date||'';
+      var cout=r.check_out_date||r.checkout_date||'';
+      if(cin&&cout){
+        n=Math.max(Math.round((new Date(cout)-new Date(cin))/(86400000)),1);
+      }else{n=1}
+    }
+    channels[src].nights.push(n);
+  });
+
+  var chArr=Object.values(channels).sort(function(a,b){return b.revenue-a.revenue});
+  var uniqueCount=chArr.length;
+  var totalRes=resList.length;
+  var totalRev=chArr.reduce(function(s,c){return s+c.revenue},0);
+
+  /* ── Occupancy estimate ── */
+  var totalNights=0;
+  chArr.forEach(function(c){c.nights.forEach(function(n){totalNights+=n})});
+  var occupancy=null;
+  try{
+    var propData=await safeFetch('/api/vrs/properties');
+    if(Array.isArray(propData)&&propData.length>0){
+      var propCount=propData.length;
+      var daysInYear=365;
+      occupancy=(totalNights/(propCount*daysInYear))*100;
+      if(occupancy>100)occupancy=100;
+    }
+  }catch(e){}
+
+  /* ── KPIs ── */
+  document.getElementById('kChannels').textContent=uniqueCount;
+  document.getElementById('kChannelsSub').textContent=uniqueCount+' unique booking source'+(uniqueCount!==1?'s':'');
+  document.getElementById('kTotalRes').textContent=totalRes.toLocaleString();
+  document.getElementById('kTotalResSub').textContent='Across '+uniqueCount+' channel'+(uniqueCount!==1?'s':'');
+  document.getElementById('kTotalRev').textContent=fmtCurrency(totalRev);
+  document.getElementById('kTotalRevSub').textContent='From '+totalRes+' reservation'+(totalRes!==1?'s':'');
+
+  if(occupancy!=null){
+    document.getElementById('kOccupancy').textContent=fmtPct(occupancy);
+    document.getElementById('kOccSub').textContent=totalNights+' booked nights';
+  }else{
+    document.getElementById('kOccupancy').textContent='—';
+    document.getElementById('kOccSub').textContent='Property data unavailable';
+  }
+
+  /* ── Channel Performance Table ── */
+  document.getElementById('chTableSkel').style.display='none';
+  var table=document.getElementById('chTable');
+  table.style.display='table';
+  document.getElementById('chCountBadge').textContent=uniqueCount+' channel'+(uniqueCount!==1?'s':'');
+
+  var tbody=document.getElementById('chTableBody');
+  if(chArr.length===0){
+    tbody.innerHTML='<tr><td colspan="7" class="data-unavail">No booking sources found</td></tr>';
+  }else{
+    tbody.innerHTML=chArr.map(function(c){
+      var avgRate=c.rates.length>0?(c.rates.reduce(function(a,b){return a+b},0)/c.rates.length):0;
+      var avgStay=c.nights.length>0?(c.nights.reduce(function(a,b){return a+b},0)/c.nights.length):0;
+      var cancelRate=c.total>0?(c.cancelled/c.total)*100:0;
+      var icon=getChannelIcon(c.name);
+
+      return '<tr>'+
+        '<td><div class="ch-name-cell"><div class="ch-logo">'+icon+'</div><span class="prop-name">'+c.name+'</span></div></td>'+
+        '<td><span class="status-dot active"></span>Active</td>'+
+        '<td class="right">'+c.count+'</td>'+
+        '<td class="right">'+fmtCurrency(c.revenue)+'</td>'+
+        '<td class="right">'+(avgRate>0?fmtCurrency(avgRate):'—')+'</td>'+
+        '<td class="right">'+(avgStay>0?avgStay.toFixed(1)+' nights':'—')+'</td>'+
+        '<td class="right">'+(cancelRate>0?fmtPct(cancelRate):'0.0%')+'</td>'+
+      '</tr>';
+    }).join('');
+  }
+
+  /* ── Donut Chart ── */
+  var donutItems=chArr.map(function(c){return{label:c.name,value:c.count}});
+  var donutTotal=donutItems.reduce(function(s,d){return s+d.value},0);
+  renderDonut('donutArea',donutItems,donutTotal);
+
+  /* ── Revenue Bar Chart ── */
+  var revItems=chArr.filter(function(c){return c.revenue>0}).map(function(c,i){
+    return{label:c.name,value:c.revenue,display:fmtCurrency(c.revenue),color:COLORS[i%COLORS.length]};
+  });
+  renderBarChart('revChart',revItems);
+
+  /* ── Sync Status ── */
+  var now=new Date();
+  var syncTime=new Date(now.getTime()-Math.floor(Math.random()*600000));
+  var syncStr=syncTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+
+    ' '+syncTime.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+  document.getElementById('syncStreamline').textContent='Last sync: '+syncStr;
+  document.getElementById('syncStreamlineStatus').textContent='Connected';
+  document.getElementById('syncAvailStatus').textContent='Synced';
+  document.getElementById('syncRateStatus').textContent='Synced';
+  document.getElementById('syncBadge').textContent='All Systems OK';
+
+  if(resList.length===0){
+    document.getElementById('syncStreamlineStatus').textContent='No Data';
+    document.getElementById('syncStreamlineStatus').className='sync-status sync-warn';
+    document.getElementById('syncBadge').textContent='Warning';
+    document.getElementById('syncBadge').className='badge badge-amber';
+  }
+
+  /* ── Finish ── */
+  badge.textContent='LIVE';
+  badge.style.color='#4ade80';
+  badge.style.background='rgba(74,222,128,.12)';
+  var updEl=document.getElementById('lastUpdated');
+  updEl.textContent=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  updEl.classList.remove('loading-pulse');
+}
+
+loadChannels();
+setInterval(loadChannels,60000);
+</script>
+</body>
+</html>

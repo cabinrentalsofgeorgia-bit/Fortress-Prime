@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intelligence — Council of Giants</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Layout ── */
+.main{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:20px 24px 40px}
+.section{margin-bottom:28px}
+.section-title{font-size:13px;font-weight:700;color:#a78bfa;text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* ── Ask the Council ── */
+.ask-box{background:#111;border:1px solid #222;border-radius:12px;padding:20px}
+.ask-row{display:flex;gap:10px;align-items:flex-end}
+.ask-input{flex:1;background:#0a0a0a;border:1px solid #333;border-radius:8px;
+  color:#fff;padding:10px 14px;font-size:14px;resize:none;min-height:42px;
+  font-family:inherit;transition:border-color .15s}
+.ask-input:focus{outline:none;border-color:#a78bfa}
+.ask-model{background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;
+  padding:8px 12px;font-size:12px;cursor:pointer;appearance:none;min-width:150px}
+.ask-btn{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:10px 24px;
+  font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;
+  letter-spacing:.5px;text-transform:uppercase}
+.ask-btn:hover{background:#6d28d9}
+.ask-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Vote Stream ── */
+.stream-box{margin-top:16px;display:none}
+.stream-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.stream-bar{flex:1;height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden}
+.stream-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);
+  border-radius:4px;transition:width .3s ease}
+.stream-pct{font-size:11px;color:#888;min-width:40px;text-align:right}
+.stream-opinions{display:flex;flex-direction:column;gap:6px}
+.stream-op{background:#0a0a0a;border:1px solid #222;border-radius:8px;padding:10px 14px;
+  display:flex;align-items:center;gap:12px;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.stream-op .op-name{font-size:12px;font-weight:600;min-width:180px}
+.stream-op .op-signal{font-size:11px;font-weight:700;padding:2px 10px;border-radius:4px;
+  text-transform:uppercase;letter-spacing:.5px}
+.signal-BUY,.signal-STRONG_BUY{background:rgba(34,197,94,.15);color:#4ade80}
+.signal-SELL,.signal-STRONG_SELL{background:rgba(239,68,68,.15);color:#f87171}
+.signal-NEUTRAL{background:rgba(250,204,21,.1);color:#fbbf24}
+.stream-op .op-conv{font-size:11px;color:#888;min-width:50px}
+.stream-op .op-reason{font-size:11px;color:#aaa;flex:1;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Consensus Banner ── */
+.consensus{display:none;background:#111;border:1px solid #333;border-radius:12px;
+  padding:20px;margin-top:16px}
+.cons-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.cons-signal{font-size:28px;font-weight:900;letter-spacing:1px}
+.cons-stat{text-align:center}
+.cons-stat .val{font-size:20px;font-weight:800}
+.cons-stat .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+/* ── Persona Grid ── */
+.persona-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.p-card{background:#111;border:1px solid #222;border-radius:10px;padding:16px;
+  cursor:pointer;transition:all .15s}
+.p-card:hover{border-color:#a78bfa;transform:translateY(-1px)}
+.p-card .p-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.p-card .p-name{font-size:13px;font-weight:700}
+.p-card .p-arch{font-size:10px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px}
+.p-card .p-stats{display:flex;gap:16px}
+.p-card .p-stat{text-align:center}
+.p-card .p-stat .v{font-size:16px;font-weight:800}
+.p-card .p-stat .l{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.5px}
+.p-card .p-signal{margin-top:8px;display:flex;align-items:center;gap:8px}
+.p-card .p-signal-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px}
+.p-card .p-streak{font-size:10px;color:#888}
+
+/* ── History Table ── */
+.hist-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
+.hist-table th{text-align:left;padding:8px 12px;color:#888;font-size:10px;
+  text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #222}
+.hist-table td{padding:8px 12px;border-bottom:1px solid #111;vertical-align:middle}
+.hist-table tr:hover td{background:rgba(255,255,255,.02)}
+.hist-event{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block}
+.badge-resolved{background:rgba(34,197,94,.15);color:#4ade80}
+.badge-pending{background:rgba(250,204,21,.1);color:#fbbf24}
+
+/* ── Debate Arena ── */
+.debate-box{background:#111;border:1px solid #222;border-radius:12px;padding:20px}
+.debate-row{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;flex-wrap:wrap}
+.debate-sel{background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;
+  padding:8px 12px;font-size:12px;cursor:pointer;appearance:none;min-width:160px}
+.debate-result{display:none;margin-top:16px}
+.debate-side{background:#0a0a0a;border:1px solid #222;border-radius:10px;padding:16px;flex:1;min-width:280px}
+.debate-side .d-name{font-size:14px;font-weight:700;margin-bottom:8px}
+.debate-side .d-signal{margin-bottom:6px}
+.debate-sides{display:flex;gap:16px;flex-wrap:wrap}
+.debate-agree{text-align:center;margin-top:16px;padding:12px;background:#111;
+  border:1px solid #222;border-radius:10px}
+.debate-agree .val{font-size:28px;font-weight:900}
+.debate-agree .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid #222;margin-bottom:16px}
+.tab{padding:10px 20px;font-size:12px;font-weight:600;color:#666;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:#aaa}
+.tab.active{color:#fff;border-bottom-color:#a78bfa}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+.spinner-sm{width:16px;height:16px;border:2px solid #333;border-top-color:#a78bfa;
+  border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── God Head Indicator ── */
+.godhead-badge{display:none;align-items:center;gap:6px;padding:6px 14px;
+  background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(168,85,247,.12));
+  border:1px solid rgba(168,85,247,.3);border-radius:8px;margin-top:10px;
+  font-size:11px;color:#c4b5fd;letter-spacing:.03em}
+.godhead-badge.active{display:inline-flex}
+.godhead-badge .gh-icon{font-size:14px}
+.godhead-badge .gh-warn{color:#fbbf24;font-size:10px;margin-left:8px}
+</style>
+</head>
+<body>
+
+<!-- Unified Nav -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue fn-g-active" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item fn-dd-active"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div></div>
+
+<span class="fn-clock" id="clock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+<div class="main">
+
+<!-- ═══ ASK THE COUNCIL ═══ -->
+<div class="section">
+  <div class="section-title">Ask the Council</div>
+  <div class="ask-box">
+    <div class="ask-row">
+      <textarea class="ask-input" id="eventInput" rows="1" placeholder="Enter a market event... e.g. Fed announces 25bps rate cut with hawkish guidance"></textarea>
+      <select class="ask-model" id="modelSelect">
+        <option value="qwen2.5:7b">Swarm (7B fast)</option>
+        <option value="deepseek-r1:70b">Hydra (R1 70B deep)</option>
+        <option value="gpt-4o">God Head (GPT-4o)</option>
+        <option value="gpt-4o-mini">God Head (GPT-4o mini)</option>
+      </select>
+      <button class="ask-btn" id="voteBtn" onclick="startVote()">VOTE</button>
+    </div>
+    <div class="godhead-badge" id="godheadBadge">
+      <span class="gh-icon">&#9733;</span>
+      <span>GOD HEAD — OpenAI Cloud Inference</span>
+      <span class="gh-warn">&#9888; Non-sensitive data only (Constitution Art I §1.1)</span>
+    </div>
+    <div class="stream-box" id="streamBox">
+      <div class="stream-header">
+        <div style="font-size:12px;font-weight:600" id="streamStatus">Polling personas...</div>
+        <div class="stream-bar"><div class="stream-fill" id="streamFill" style="width:0%"></div></div>
+        <div class="stream-pct" id="streamPct">0/9</div>
+      </div>
+      <div class="stream-opinions" id="streamOpinions"></div>
+    </div>
+    <div class="consensus" id="consensusBanner"></div>
+  </div>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <div class="tab active" data-tab="personas" onclick="switchTab('personas')">Personas</div>
+  <div class="tab" data-tab="history" onclick="switchTab('history')">Vote History</div>
+  <div class="tab" data-tab="leaderboard" onclick="switchTab('leaderboard')">Leaderboard</div>
+  <div class="tab" data-tab="debate" onclick="switchTab('debate')">Debate Arena</div>
+</div>
+
+<!-- ═══ PERSONAS TAB ═══ -->
+<div class="tab-panel active" id="tab-personas">
+  <div class="persona-grid" id="personaGrid"></div>
+</div>
+
+<!-- ═══ HISTORY TAB ═══ -->
+<div class="tab-panel" id="tab-history">
+  <table class="hist-table">
+    <thead><tr>
+      <th>Event</th><th>Signal</th><th>Conviction</th><th>Agreement</th>
+      <th>Bull/Bear</th><th>Model</th><th>Time</th><th>Status</th>
+    </tr></thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+</div>
+
+<!-- ═══ LEADERBOARD TAB ═══ -->
+<div class="tab-panel" id="tab-leaderboard">
+  <table class="hist-table">
+    <thead><tr>
+      <th>#</th><th>Persona</th><th>Votes</th><th>Correct</th>
+      <th>Accuracy</th><th>Streak</th><th>Last Signal</th>
+    </tr></thead>
+    <tbody id="leaderBody"></tbody>
+  </table>
+</div>
+
+<!-- ═══ DEBATE TAB ═══ -->
+<div class="tab-panel" id="tab-debate">
+  <div class="debate-box">
+    <div class="debate-row">
+      <select class="debate-sel" id="debateA"></select>
+      <span style="color:#555;font-weight:700;font-size:14px">VS</span>
+      <select class="debate-sel" id="debateB"></select>
+      <textarea class="ask-input" id="debateTopic" rows="1" placeholder="Topic..." style="flex:1;min-width:200px"></textarea>
+      <select class="ask-model" id="debateModel">
+        <option value="qwen2.5:7b">Swarm (7B)</option>
+        <option value="deepseek-r1:70b">Hydra (R1 70B)</option>
+        <option value="gpt-4o">God Head (GPT-4o)</option>
+        <option value="gpt-4o-mini">God Head (mini)</option>
+      </select>
+      <button class="ask-btn" id="debateBtn" onclick="startDebate()">DEBATE</button>
+    </div>
+    <div class="debate-result" id="debateResult"></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+const API = '';
+
+// ── Clock ──
+function updateClock(){
+  const d = new Date();
+  document.getElementById('clock').textContent =
+    d.toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ── Nav Toggle ──
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+function logout(){window.location.href='/login';}
+
+// ── God Head badge toggle ──
+document.getElementById('modelSelect').addEventListener('change', function(){
+  var badge = document.getElementById('godheadBadge');
+  badge.classList.toggle('active', this.value.startsWith('gpt-') || this.value.startsWith('o1-') || this.value.startsWith('o3-'));
+});
+
+// ── Tabs ──
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
+  if(name==='history') loadHistory();
+  if(name==='leaderboard') loadLeaderboard();
+}
+
+// ── Signal color helper ──
+function signalTag(sig,cls){
+  cls = cls||'op-signal';
+  return `<span class="${cls} signal-${sig}">${sig}</span>`;
+}
+
+// ── Load Personas ──
+let allPersonas = [];
+async function loadPersonas(){
+  try{
+    const r = await fetch(API+'/api/intelligence/personas');
+    allPersonas = await r.json();
+    renderPersonaGrid();
+    populateDebateSelects();
+  }catch(e){console.error(e)}
+}
+
+function renderPersonaGrid(){
+  const g = document.getElementById('personaGrid');
+  g.innerHTML = allPersonas.map(p=>{
+    const acc = p.total_votes>0? Math.round(p.correct_votes/p.total_votes*100)+'%' : '--';
+    const sig = p.last_signal? signalTag(p.last_signal,'p-signal-tag') : '<span style="color:#555">--</span>';
+    const streak = p.streak>0? `+${p.streak}` : p.streak<0? `${p.streak}` : '0';
+    const streakColor = p.streak>0?'#4ade80':p.streak<0?'#f87171':'#888';
+    return `<div class="p-card" onclick="showPersonaDetail('${p.slug}')">
+      <div class="p-head">
+        <div class="p-name">${p.name}</div>
+        <div class="p-arch">${p.archetype}</div>
+      </div>
+      <div class="p-stats">
+        <div class="p-stat"><div class="v">${p.vectors.toLocaleString()}</div><div class="l">Vectors</div></div>
+        <div class="p-stat"><div class="v">${p.total_votes}</div><div class="l">Votes</div></div>
+        <div class="p-stat"><div class="v">${acc}</div><div class="l">Accuracy</div></div>
+      </div>
+      <div class="p-signal">${sig} <span class="p-streak" style="color:${streakColor}">Streak: ${streak}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function showPersonaDetail(slug){
+  alert('Persona detail for '+slug+' — coming soon in the drill-down view.');
+}
+
+function populateDebateSelects(){
+  const opts = allPersonas.map(p=>`<option value="${p.slug}">${p.name}</option>`).join('');
+  document.getElementById('debateA').innerHTML = opts;
+  document.getElementById('debateB').innerHTML = opts;
+  if(allPersonas.length>1) document.getElementById('debateB').selectedIndex=1;
+}
+
+// ── Council Vote ──
+let currentVoteId = null;
+let eventSource = null;
+
+async function startVote(){
+  const ev = document.getElementById('eventInput').value.trim();
+  if(!ev) return;
+  const model = document.getElementById('modelSelect').value;
+  const btn = document.getElementById('voteBtn');
+  btn.disabled = true;
+  btn.textContent = 'VOTING...';
+
+  document.getElementById('streamBox').style.display = 'block';
+  document.getElementById('streamOpinions').innerHTML = '';
+  document.getElementById('streamFill').style.width = '0%';
+  document.getElementById('streamPct').textContent = '0/9';
+  document.getElementById('streamStatus').textContent = 'Dispatching to Hydra cluster...';
+  document.getElementById('consensusBanner').style.display = 'none';
+
+  try{
+    const r = await fetch(API+'/api/intelligence/vote',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({event:ev, model:model})
+    });
+    const d = await r.json();
+    currentVoteId = d.vote_id;
+    pollVoteStream();
+  }catch(e){
+    btn.disabled=false; btn.textContent='VOTE';
+    alert('Vote failed: '+e.message);
+  }
+}
+
+async function pollVoteStream(){
+  if(!currentVoteId) return;
+  const source = new EventSource(API+'/api/intelligence/stream/'+currentVoteId);
+  eventSource = source;
+
+  source.onmessage = function(e){
+    const d = JSON.parse(e.data);
+    if(d.status==='not_found') return;
+
+    const total = d.personas_total||9;
+    const done = d.personas_completed||0;
+    const pct = Math.round(done/total*100);
+
+    document.getElementById('streamFill').style.width = pct+'%';
+    document.getElementById('streamPct').textContent = done+'/'+total;
+    document.getElementById('streamStatus').textContent =
+      d.status==='voting'? `Receiving votes... (${done}/${total})` :
+      d.status==='complete'? 'Vote complete' :
+      d.status==='error'? 'Error: '+d.error :
+      d.status==='starting'? 'Dispatching to Hydra cluster...' : d.status;
+
+    // Render opinions as they arrive
+    const box = document.getElementById('streamOpinions');
+    if(d.opinions && d.opinions.length > box.children.length){
+      for(let i=box.children.length; i<d.opinions.length; i++){
+        const op = d.opinions[i];
+        const div = document.createElement('div');
+        div.className = 'stream-op';
+        div.innerHTML = `
+          <div class="op-name">${op.persona}</div>
+          ${signalTag(op.signal)}
+          <div class="op-conv">${(op.conviction*100).toFixed(0)}%</div>
+          <div class="op-reason">${op.reasoning||''}</div>
+        `;
+        box.appendChild(div);
+      }
+    }
+
+    if(d.status==='complete'){
+      source.close();
+      showConsensus(d);
+      document.getElementById('voteBtn').disabled = false;
+      document.getElementById('voteBtn').textContent = 'VOTE';
+      loadHistory();
+      loadLeaderboard();
+      loadPersonas();
+    }
+    if(d.status==='error'){
+      source.close();
+      document.getElementById('voteBtn').disabled = false;
+      document.getElementById('voteBtn').textContent = 'VOTE';
+    }
+  };
+
+  source.onerror = function(){
+    source.close();
+    document.getElementById('voteBtn').disabled = false;
+    document.getElementById('voteBtn').textContent = 'VOTE';
+  };
+}
+
+function showConsensus(d){
+  const banner = document.getElementById('consensusBanner');
+  banner.style.display = 'block';
+  const sigColor = d.consensus_signal.includes('BUY')?'#4ade80':
+                   d.consensus_signal.includes('SELL')?'#f87171':'#fbbf24';
+  banner.innerHTML = `
+    <div class="cons-row">
+      <div class="cons-signal" style="color:${sigColor}">${d.consensus_signal}</div>
+      <div class="cons-stat"><div class="val">${(d.consensus_conviction*100).toFixed(0)}%</div><div class="lbl">Conviction</div></div>
+      <div class="cons-stat"><div class="val">${(d.agreement_rate*100).toFixed(0)}%</div><div class="lbl">Agreement</div></div>
+      <div class="cons-stat"><div class="val" style="color:#4ade80">${d.bullish_count}</div><div class="lbl">Bullish</div></div>
+      <div class="cons-stat"><div class="val" style="color:#f87171">${d.bearish_count}</div><div class="lbl">Bearish</div></div>
+      <div class="cons-stat"><div class="val" style="color:#fbbf24">${d.neutral_count}</div><div class="lbl">Neutral</div></div>
+      <div class="cons-stat"><div class="val">${d.elapsed_seconds||'--'}s</div><div class="lbl">Time</div></div>
+    </div>
+  `;
+}
+
+// ── History ──
+async function loadHistory(){
+  try{
+    const r = await fetch(API+'/api/intelligence/history?limit=30');
+    const d = await r.json();
+    const body = document.getElementById('historyBody');
+    body.innerHTML = d.votes.map(v=>{
+      const resolved = v.resolved_at;
+      const status = resolved?
+        `<span class="badge badge-resolved">${v.actual_outcome}</span>` :
+        '<span class="badge badge-pending">Pending</span>';
+      const dt = v.created_at? new Date(v.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '--';
+      return `<tr>
+        <td class="hist-event" title="${v.event}">${v.event}</td>
+        <td>${signalTag(v.consensus_signal,'badge signal-'+v.consensus_signal)}</td>
+        <td>${(v.conviction*100).toFixed(0)}%</td>
+        <td>${(v.agreement_rate*100).toFixed(0)}%</td>
+        <td style="color:#4ade80">${v.bullish}<span style="color:#555">/</span><span style="color:#f87171">${v.bearish}</span></td>
+        <td style="font-size:10px;color:#888">${v.model||'--'}</td>
+        <td style="font-size:10px;color:#888">${dt}</td>
+        <td>${status}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+// ── Leaderboard ──
+async function loadLeaderboard(){
+  try{
+    const r = await fetch(API+'/api/intelligence/leaderboard');
+    const d = await r.json();
+    const body = document.getElementById('leaderBody');
+    body.innerHTML = d.map((p,i)=>{
+      const streak = p.streak>0? `<span style="color:#4ade80">+${p.streak}</span>` :
+                     p.streak<0? `<span style="color:#f87171">${p.streak}</span>` :
+                     '<span style="color:#888">0</span>';
+      const sig = p.last_signal? signalTag(p.last_signal,'badge signal-'+p.last_signal) : '--';
+      return `<tr>
+        <td style="font-weight:800;color:#a78bfa">${i+1}</td>
+        <td style="font-weight:600">${p.name}</td>
+        <td>${p.total_votes}</td>
+        <td>${p.correct_votes}</td>
+        <td style="font-weight:700">${p.accuracy_pct}%</td>
+        <td>${streak}</td>
+        <td>${sig}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+// ── Debate ──
+async function startDebate(){
+  const a = document.getElementById('debateA').value;
+  const b = document.getElementById('debateB').value;
+  const topic = document.getElementById('debateTopic').value.trim();
+  if(!topic){alert('Enter a debate topic');return;}
+  if(a===b){alert('Pick two different personas');return;}
+
+  const btn = document.getElementById('debateBtn');
+  btn.disabled=true; btn.textContent='DEBATING...';
+  const box = document.getElementById('debateResult');
+  box.style.display='block';
+  box.innerHTML='<div style="text-align:center;padding:20px"><div class="spinner-sm"></div> Both personas are analyzing...</div>';
+
+  try{
+    const r = await fetch(API+'/api/intelligence/debate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({persona_a:a, persona_b:b, topic:topic, model:document.getElementById('debateModel').value})
+    });
+    const d = await r.json();
+
+    const sigA = signalTag(d.persona_a.signal,'badge signal-'+d.persona_a.signal);
+    const sigB = signalTag(d.persona_b.signal,'badge signal-'+d.persona_b.signal);
+    const agreeColor = d.agreement_score>0.7?'#4ade80':d.agreement_score>0.4?'#fbbf24':'#f87171';
+
+    box.innerHTML = `
+      <div class="debate-sides">
+        <div class="debate-side">
+          <div class="d-name">${d.persona_a.name}</div>
+          <div class="d-signal">${sigA} <span style="color:#888;font-size:11px">${(d.persona_a.conviction*100).toFixed(0)}% conviction</span></div>
+          <div style="font-size:12px;color:#ccc;line-height:1.6;margin-top:8px">${d.persona_a.reasoning}</div>
+          <div style="font-size:10px;color:#666;margin-top:8px">Assets: ${(d.persona_a.assets||[]).join(', ')||'--'}</div>
+        </div>
+        <div class="debate-side">
+          <div class="d-name">${d.persona_b.name}</div>
+          <div class="d-signal">${sigB} <span style="color:#888;font-size:11px">${(d.persona_b.conviction*100).toFixed(0)}% conviction</span></div>
+          <div style="font-size:12px;color:#ccc;line-height:1.6;margin-top:8px">${d.persona_b.reasoning}</div>
+          <div style="font-size:10px;color:#666;margin-top:8px">Assets: ${(d.persona_b.assets||[]).join(', ')||'--'}</div>
+        </div>
+      </div>
+      <div class="debate-agree">
+        <div class="val" style="color:${agreeColor}">${(d.agreement_score*100).toFixed(0)}%</div>
+        <div class="lbl">Agreement Score</div>
+      </div>
+    `;
+  }catch(e){
+    box.innerHTML='<div style="color:#f87171;padding:20px">Debate failed: '+e.message+'</div>';
+  }
+  btn.disabled=false; btn.textContent='DEBATE';
+}
+
+// ── Init ──
+loadPersonas();
+loadHistory();
+</script>
+</body>
+</html>
