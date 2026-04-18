@@ -22,8 +22,8 @@ Usage
 
 Environment variables (loaded from .env / .env.dgx by run-fortress-nightly-finetune.sh)
     INTERACTION_LOG_DIR     default: /mnt/ai_bulk/training_logs
-    FINETUNE_BASE_MODEL_DIR default: /mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct
-    FINETUNE_ADAPTER_DIR    default: /mnt/ai_bulk/models/fine-tuned/lora-adapters
+    FINETUNE_BASE_MODEL_DIR default: /mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct-FP4
+    FINETUNE_ADAPTER_DIR    default: /mnt/fortress_nas/finetune-artifacts
     FINETUNE_ROLLING_DAYS   default: 30
     FINETUNE_MIN_EXAMPLES   default: 20
     FINETUNE_LORA_RANK      default: 16
@@ -62,8 +62,8 @@ log = logging.getLogger("finetune")
 # Config
 # ---------------------------------------------------------------------------
 INTERACTION_LOG_DIR  = Path(os.getenv("INTERACTION_LOG_DIR",  "/mnt/ai_bulk/training_logs"))
-BASE_MODEL_DIR       = Path(os.getenv("FINETUNE_BASE_MODEL_DIR", "/mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct"))
-ADAPTER_DIR          = Path(os.getenv("FINETUNE_ADAPTER_DIR", "/mnt/ai_bulk/models/fine-tuned/lora-adapters"))
+BASE_MODEL_DIR       = Path(os.getenv("FINETUNE_BASE_MODEL_DIR", "/mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct-FP4"))
+ADAPTER_DIR          = Path(os.getenv("FINETUNE_ADAPTER_DIR", "/mnt/fortress_nas/finetune-artifacts"))
 ROLLING_DAYS         = int(os.getenv("FINETUNE_ROLLING_DAYS",  "30"))
 MIN_EXAMPLES         = int(os.getenv("FINETUNE_MIN_EXAMPLES",  "20"))
 LORA_RANK            = int(os.getenv("FINETUNE_LORA_RANK",     "16"))
@@ -239,7 +239,7 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
         device_map="auto",
         trust_remote_code=False,
         torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
+        attn_implementation="sdpa",
     )
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
@@ -298,26 +298,60 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
     )
 
     log.info("Training started …")
-    trainer.train()
+    train_result = trainer.train()
+    log.info("Training complete. metrics=%s", train_result.metrics)
 
     log.info("Saving LoRA adapter to %s …", adapter_out)
     trainer.save_model(str(adapter_out))
     tokenizer.save_pretrained(str(adapter_out))
     log.info("Adapter saved.")
 
-    # Write a manifest for the hot-swap step
+    # Capture loss curve from trainer log history
+    loss_history = [
+        {"step": e["step"], "loss": round(e["loss"], 6)}
+        for e in trainer.state.log_history
+        if "loss" in e
+    ]
+    final_loss = loss_history[-1]["loss"] if loss_history else None
+
+    # Git SHA of trainer code at run time
+    try:
+        git_sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(Path(__file__).parent),
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        git_sha = "unknown"
+
+    # Write full metadata manifest
     manifest = {
         "base_model": str(BASE_MODEL_DIR),
         "adapter_path": str(adapter_out),
         "training_date": date.today().isoformat(),
-        "num_examples": len(records),
-        "lora_rank": LORA_RANK,
-        "epochs": NUM_EPOCHS,
-        "learning_rate": LEARNING_RATE,
+        "dataset_size": len(records),
+        "lora_config": {
+            "r": LORA_RANK,
+            "lora_alpha": LORA_RANK * 2,
+            "target_modules": LORA_TARGET_MODULES,
+            "lora_dropout": 0.05,
+            "task_type": "CAUSAL_LM",
+        },
+        "training_args": {
+            "epochs": NUM_EPOCHS,
+            "learning_rate": LEARNING_RATE,
+            "batch_size": BATCH_SIZE,
+            "grad_accum": GRAD_ACCUM,
+            "max_seq_len": MAX_SEQ_LEN,
+        },
+        "final_loss": final_loss,
+        "loss_curve": loss_history,
+        "trainer_git_sha": git_sha,
     }
     (adapter_out / "training_manifest.json").write_text(
         json.dumps(manifest, indent=2)
     )
+    log.info("Manifest written. final_loss=%s git_sha=%s", final_loss, git_sha)
 
 
 # ---------------------------------------------------------------------------
@@ -383,15 +417,28 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
     # --- Step 2: Load data ---
     records = load_training_data(ROLLING_DAYS)
 
-    if len(records) < MIN_EXAMPLES:
+    _HARD_MIN = 5  # absolute floor — never train on fewer than this regardless of env
+    if len(records) < _HARD_MIN:
         log.warning(
-            "Only %d training examples (minimum %d). Skipping training run.",
-            len(records), MIN_EXAMPLES,
+            "Only %d training examples (hard minimum %d). Skipping.",
+            len(records), _HARD_MIN,
         )
         return 0
 
+    # Dry-run check comes before env-minimum so config can be validated even when
+    # the rolling dataset is below the production threshold.
     if dry_run:
-        log.info("[DRY RUN] Would train on %d examples. Exiting.", len(records))
+        log.info(
+            "[DRY RUN] base_model=%s output=%s examples=%d min_required=%d. Exiting without training.",
+            BASE_MODEL_DIR.name, adapter_out, len(records), MIN_EXAMPLES,
+        )
+        return 0
+
+    if len(records) < MIN_EXAMPLES:
+        log.warning(
+            "Only %d training examples (env minimum %d). Skipping training run.",
+            len(records), MIN_EXAMPLES,
+        )
         return 0
 
     # --- Step 3: Install deps ---
@@ -410,8 +457,17 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
             push_to_ollama(adapter_out)
 
     except Exception as exc:
+        import traceback as _tb
         log.error("Training failed: %s", exc, exc_info=True)
         exit_code = 1
+        try:
+            adapter_out.mkdir(parents=True, exist_ok=True)
+            (adapter_out / "training.error").write_text(
+                f"{type(exc).__name__}: {exc}\n\n{_tb.format_exc()}"
+            )
+            log.info("Failure reason written to %s/training.error", adapter_out)
+        except Exception:
+            pass
     finally:
         # Always restart vLLM even if training failed
         if vllm_was_running:
