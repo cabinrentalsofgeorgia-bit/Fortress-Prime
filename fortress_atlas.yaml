@@ -398,3 +398,88 @@ fortress_prime:
         to: "dev"
         condition: "Query about property improvements or construction on existing rentals"
         action: "Route to DEV with CROG property reference"
+
+  # =========================================================================
+  # CLUSTER TOPOLOGY (Phase 2.5 addition — April 18, 2026)
+  # Real node→model mapping as verified by live probing.
+  # IPs below are LAN management addresses (192.168.0.x).
+  # model_registry.py reads this section on startup.
+  # =========================================================================
+  cluster:
+    probe_interval_seconds: 30
+    healthy_failure_threshold: 3   # consecutive failures before marking unhealthy
+    probe_timeout_seconds: 3
+
+    nodes:
+      - id: spark-2
+        label: "Captain"
+        role: "control_plane + fast_tier + training"
+        management_ip: "192.168.0.100"
+        ollama_url: "http://192.168.0.100:11434"
+        models:
+          - name: "qwen2.5:7b"
+            tier: "fast"
+          - name: "qwen2.5:0.5b"
+            tier: "fast"
+          - name: "nomic-embed-text:latest"
+            tier: "embed"
+
+      - id: spark-1
+        label: "Muscle"
+        role: "primary_heavy_reasoning"
+        management_ip: "192.168.0.104"
+        ollama_url: "http://192.168.0.104:11434"
+        models:
+          - name: "deepseek-r1:70b"
+            tier: "deep"
+          - name: "qwen2.5:32b"
+            tier: "mid"
+          - name: "llama3.2-vision:90b"
+            tier: "vision"
+          - name: "qwen2.5:7b"
+            tier: "fast"
+          - name: "llava:latest"
+            tier: "vision"
+          - name: "mistral:latest"
+            tier: "mid"
+          - name: "nomic-embed-text:latest"
+            tier: "embed"
+
+      - id: spark-3
+        label: "Ocular"
+        role: "vision_specialist"
+        management_ip: "192.168.0.105"
+        ollama_url: "http://192.168.0.105:11434"
+        models:
+          - name: "llama3.2-vision:90b"
+            tier: "vision"
+          - name: "llama3.2-vision:latest"
+            tier: "vision"
+          - name: "nomic-embed-text:latest"
+            tier: "embed"
+
+      - id: spark-4
+        label: "Sovereign"
+        role: "deep_reasoning_redundancy"
+        management_ip: "192.168.0.106"
+        ollama_url: "http://192.168.0.106:11434"
+        models:
+          - name: "deepseek-r1:70b"
+            tier: "deep"
+          - name: "qwen2.5:32b"
+            tier: "mid"
+          - name: "llava:latest"
+            tier: "vision"
+          - name: "mistral:latest"
+            tier: "mid"
+          - name: "nomic-embed-text:latest"
+            tier: "embed"
+
+    # Tier routing policy: which tiers prefer which nodes (in order)
+    tier_routing:
+      fast:   ["spark-2", "spark-1"]          # spark-2 primary; spark-1 overflow
+      mid:    ["spark-1", "spark-4"]           # active-active
+      deep:   ["spark-1", "spark-4"]           # active-active
+      vision: ["spark-3", "spark-1"]           # spark-3 primary; spark-1 overflow
+      embed:  ["spark-2", "spark-1", "spark-4", "spark-3"]  # any node
+

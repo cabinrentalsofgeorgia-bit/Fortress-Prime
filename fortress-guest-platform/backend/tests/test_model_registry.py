@@ -1,0 +1,202 @@
+"""Tests for model_registry.py — Phase 2.5."""
+import threading
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+import yaml
+
+from backend.services.model_registry import (
+    EndpointState,
+    ModelRegistry,
+    NoHealthyEndpoint,
+)
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+def _make_ep(node_id: str, models: list[str], healthy: bool = True,
+             latency: float = 50.0, failures: int = 0) -> EndpointState:
+    ep = EndpointState(
+        node_id=node_id,
+        ollama_url=f"http://192.168.0.10{node_id[-1]}:11434",
+        models=models,
+        tier_affinity=["fast", "deep"],
+    )
+    if healthy:
+        ep.reachable = True
+        ep.consecutive_failures = failures
+        ep.last_latency_ms = latency
+        ep.latency_history = [latency]
+        ep.last_success_at = datetime.now(tz=timezone.utc)
+    else:
+        ep.reachable = False
+        ep.consecutive_failures = 5  # over threshold
+    return ep
+
+
+def _make_registry(*endpoints: EndpointState, tier_routing: dict | None = None) -> ModelRegistry:
+    r = ModelRegistry()
+    r._endpoints = list(endpoints)
+    r._tier_routing = tier_routing or {}
+    r._loaded = True
+    return r
+
+
+# ---------------------------------------------------------------------------
+# EndpointState
+# ---------------------------------------------------------------------------
+
+class TestEndpointState:
+    def test_healthy_when_reachable_and_low_failures(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"], healthy=True, failures=0)
+        assert ep.healthy is True
+
+    def test_unhealthy_when_consecutive_failures_at_threshold(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"], healthy=True, failures=3)
+        assert ep.healthy is False  # 3 >= threshold of 3
+
+    def test_unhealthy_when_unreachable(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"], healthy=False)
+        assert ep.healthy is False
+
+    def test_record_success_clears_failures(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"], healthy=False)
+        ep.consecutive_failures = 5
+        ep.record_success(42.0)
+        assert ep.consecutive_failures == 0
+        assert ep.reachable is True
+        assert ep.last_success_at is not None
+
+    def test_record_failure_increments(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"])
+        ep.record_failure()
+        ep.record_failure()
+        assert ep.consecutive_failures == 2
+
+    def test_rolling_latency_uses_history(self):
+        # _make_ep seeds history with [50.0], then we add 100 and 200 → [50, 100, 200] mean=116.7
+        ep = _make_ep("spark-1", ["qwen2.5:7b"], latency=50.0)
+        ep.record_success(100.0)
+        ep.record_success(200.0)
+        assert ep.rolling_latency_ms == pytest.approx((50.0 + 100.0 + 200.0) / 3, abs=1.0)
+
+
+# ---------------------------------------------------------------------------
+# Routing
+# ---------------------------------------------------------------------------
+
+class TestGetEndpointForModel:
+    def test_returns_healthy_endpoint(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"])
+        r = _make_registry(ep)
+        url = r.get_endpoint_for_model("qwen2.5:7b")
+        assert "192.168" in url
+
+    def test_raises_when_model_not_in_registry(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"])
+        r = _make_registry(ep)
+        with pytest.raises(NoHealthyEndpoint):
+            r.get_endpoint_for_model("deepseek-r1:70b")
+
+    def test_raises_when_all_unhealthy(self):
+        ep1 = _make_ep("spark-1", ["deepseek-r1:70b"], healthy=False)
+        ep2 = _make_ep("spark-4", ["deepseek-r1:70b"], healthy=False)
+        r = _make_registry(ep1, ep2)
+        with pytest.raises(NoHealthyEndpoint):
+            r.get_endpoint_for_model("deepseek-r1:70b")
+
+    def test_raises_when_registry_empty(self):
+        r = ModelRegistry()
+        with pytest.raises(NoHealthyEndpoint):
+            r.get_endpoint_for_model("qwen2.5:7b")
+
+    def test_picks_lowest_latency_among_healthy(self):
+        slow = _make_ep("spark-1", ["deepseek-r1:70b"], latency=300.0)
+        fast = _make_ep("spark-4", ["deepseek-r1:70b"], latency=80.0)
+        r = _make_registry(slow, fast)
+        url = r.get_endpoint_for_model("deepseek-r1:70b")
+        # fast (spark-4) has lower latency and no tier preference → should win
+        assert url == fast.ollama_url
+
+    def test_tier_routing_overrides_latency_within_preference(self):
+        # spark-1 is preferred by tier but slower; spark-4 faster but not preferred
+        spark1 = _make_ep("spark-1", ["deepseek-r1:70b"], latency=200.0)
+        spark4 = _make_ep("spark-4", ["deepseek-r1:70b"], latency=50.0)
+        routing = {"deep": ["spark-1", "spark-4"]}
+        r = _make_registry(spark1, spark4, tier_routing=routing)
+        # With tier="deep": spark-1 gets priority=0, spark-4 gets priority=1
+        url = r.get_endpoint_for_model("deepseek-r1:70b", tier="deep")
+        assert url == spark1.ollama_url
+
+    def test_unhealthy_skipped_even_if_tier_preferred(self):
+        # spark-1 preferred but unhealthy — should fall to spark-4
+        spark1 = _make_ep("spark-1", ["deepseek-r1:70b"], healthy=False)
+        spark4 = _make_ep("spark-4", ["deepseek-r1:70b"], latency=50.0)
+        routing = {"deep": ["spark-1", "spark-4"]}
+        r = _make_registry(spark1, spark4, tier_routing=routing)
+        url = r.get_endpoint_for_model("deepseek-r1:70b", tier="deep")
+        assert url == spark4.ollama_url
+
+    def test_consecutive_failures_threshold(self):
+        # At threshold (3) → unhealthy
+        ep = _make_ep("spark-1", ["qwen2.5:7b"], healthy=True, failures=3)
+        r = _make_registry(ep)
+        with pytest.raises(NoHealthyEndpoint):
+            r.get_endpoint_for_model("qwen2.5:7b")
+
+    def test_recovery_after_success(self):
+        ep = _make_ep("spark-1", ["qwen2.5:7b"], healthy=False)
+        ep.consecutive_failures = 5
+        ep.record_success(30.0)
+        r = _make_registry(ep)
+        url = r.get_endpoint_for_model("qwen2.5:7b")
+        assert url == ep.ollama_url
+
+
+# ---------------------------------------------------------------------------
+# Atlas loading
+# ---------------------------------------------------------------------------
+
+class TestLoadFromAtlas:
+    def test_loads_nodes_from_valid_atlas(self, tmp_path: Path):
+        atlas = {
+            "fortress_prime": {
+                "cluster": {
+                    "nodes": [
+                        {
+                            "id": "spark-2",
+                            "ollama_url": "http://192.168.0.100:11434",
+                            "models": [
+                                {"name": "qwen2.5:7b", "tier": "fast"},
+                            ],
+                        }
+                    ],
+                    "tier_routing": {"fast": ["spark-2"]},
+                }
+            }
+        }
+        p = tmp_path / "atlas.yaml"
+        p.write_text(yaml.dump(atlas))
+        r = ModelRegistry()
+        r.load_from_atlas(p)
+        assert r._loaded is True
+        assert len(r._endpoints) == 1
+        assert r._endpoints[0].node_id == "spark-2"
+
+    def test_missing_atlas_leaves_registry_empty(self, tmp_path: Path):
+        r = ModelRegistry()
+        r.load_from_atlas(tmp_path / "nonexistent.yaml")
+        assert r._loaded is False
+        assert r._endpoints == []
+
+    def test_malformed_atlas_leaves_registry_empty(self, tmp_path: Path):
+        p = tmp_path / "bad.yaml"
+        p.write_text(": invalid: yaml: [")
+        r = ModelRegistry()
+        r.load_from_atlas(p)
+        assert r._loaded is False

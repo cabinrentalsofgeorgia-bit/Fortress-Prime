@@ -4,6 +4,10 @@ Resilient AI router for legal/agent services.
 Routes to local Ollama first (sovereign default), then optionally OpenAI
 when credentials are available.
 
+Phase 2.5: replaces hardcoded ollama_base_url with model_registry which
+health-probes all cluster nodes and routes to the healthiest endpoint for
+the requested model. On NoHealthyEndpoint, falls through to cloud.
+
 Phase 4c: adds optional distilled-adapter tier (tier 1.5) between Ollama
 and OpenAI. Controlled by SOVEREIGN_DISTILL_ADAPTER_PCT (default 0 = off).
 Only active when PROMOTED_CANDIDATE sentinel file exists. Legal/privileged
@@ -23,6 +27,8 @@ from typing import Any, Optional
 
 import httpx
 import structlog
+
+from backend.services.model_registry import NoHealthyEndpoint, registry as _model_registry
 
 from backend.core.config import settings
 from backend.services.openshell_audit import record_audit_event
@@ -128,10 +134,44 @@ class InferenceResult:
     error: Optional[str] = None
 
 
+_DEEP_TASK_TYPES = {"legal", "reasoning", "analysis"}
+
 def _preferred_ollama_model(task_type: str) -> str:
-    if task_type in {"legal", "reasoning", "analysis"}:
+    if task_type in _DEEP_TASK_TYPES:
         return settings.ollama_deep_model
     return settings.ollama_fast_model
+
+
+def _tier_for_task(task_type: str) -> str:
+    """Map task_type to model registry tier name."""
+    if task_type in _DEEP_TASK_TYPES:
+        return "deep"
+    return "fast"
+
+
+def _ollama_base_url_for(model: str, tier: Optional[str] = None) -> str:
+    """
+    Return Ollama base URL for the given model.
+
+    Phase 2.5: prefers model_registry for health-aware routing.
+    Falls back to settings.ollama_base_url if registry has no healthy node
+    (registry not loaded, atlas missing, or all nodes down).
+    """
+    try:
+        return _model_registry.get_endpoint_for_model(model, tier=tier)
+    except NoHealthyEndpoint as exc:
+        import logging as _log
+        _log.getLogger("ai_router").warning(
+            "model_registry.no_healthy_endpoint model=%s tier=%s — using config fallback: %s",
+            model, tier, str(exc)[:120],
+        )
+        return settings.ollama_base_url
+    except Exception as exc:
+        import logging as _log
+        _log.getLogger("ai_router").warning(
+            "model_registry.error model=%s — using config fallback: %s", model, str(exc)[:120]
+        )
+        return settings.ollama_base_url
 
 
 async def _call_ollama(
@@ -142,8 +182,10 @@ async def _call_ollama(
     max_tokens: int,
     temperature: float,
     timeout_s: float,
+    tier: Optional[str] = None,
 ) -> str:
-    url = f"{settings.ollama_base_url.rstrip('/')}/api/chat"
+    base_url = _ollama_base_url_for(model, tier=tier)
+    url = f"{base_url.rstrip('/')}/api/chat"
     messages = []
     if system_message:
         messages.append({"role": "system", "content": system_message})
@@ -284,6 +326,7 @@ async def execute_resilient_inference(
             max_tokens=max_tokens,
             temperature=temperature,
             timeout_s=timeout_s,
+            tier=_tier_for_task(task_type),
         )
         result = InferenceResult(
             text=text,

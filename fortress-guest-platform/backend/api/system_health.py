@@ -218,6 +218,13 @@ async def build_system_health_payload(db: AsyncSession) -> dict[str, Any]:
 
     collected_ms = int((time.perf_counter() - t0) * 1000)
 
+    # Phase 2.5: model registry health snapshot
+    try:
+        from backend.services.model_registry import registry as _mr
+        model_registry_snapshot = _mr.health_snapshot()
+    except Exception:
+        model_registry_snapshot = {"loaded": False, "nodes": []}
+
     return {
         "status": status,
         "service": "fortress_system_health",
@@ -230,6 +237,7 @@ async def build_system_health_payload(db: AsyncSession) -> dict[str, Any]:
             "postgres": pg_rows if pg_rows else ({"connected": 1} if postgres_ok else {}),
             "qdrant": qdrant,
         },
+        "model_registry": model_registry_snapshot,
     }
 
 

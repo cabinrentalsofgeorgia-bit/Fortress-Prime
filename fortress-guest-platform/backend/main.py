@@ -376,6 +376,14 @@ async def lifespan(app: FastAPI):
         version="1.0.0",
     )
 
+    # Phase 2.5: initialise model registry (non-fatal if atlas missing)
+    try:
+        from backend.services.model_registry import initialise as _init_registry
+        _init_registry()
+        logger.info("model_registry_initialized")
+    except Exception as _mr_exc:
+        logger.warning("model_registry_init_skipped", error=str(_mr_exc))
+
     try:
         await init_db()
         logger.info("database_initialized")
