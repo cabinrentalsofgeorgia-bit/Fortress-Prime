@@ -270,7 +270,7 @@ Task classifier live. Three tiers: module hint → keyword pattern → qwen2.5:0
 Three-tier classifier: source hint → keyword → small LLM. Wires into
 ai_router at top of request path. Populates task_type on every capture.
 
-### Phase 4e.3 — First judge: vrs_concierge_judge (NEW)
+### Phase 4e.3 — Judge scaffolding (DONE, awaiting training data)
 Highest-volume task type, lowest-risk errors, fastest iteration.
 Proves the judge architecture end-to-end before replicating.
 

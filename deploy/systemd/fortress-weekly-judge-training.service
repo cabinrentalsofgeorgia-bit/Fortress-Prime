@@ -1,0 +1,39 @@
+[Unit]
+Description=Fortress Prime — Weekly Judge Training (gated by JUDGE_TRAINING_ENABLED)
+Documentation=file:///home/admin/Fortress-Prime/src/judge/train_judge.py
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+
+ExecStart=/bin/bash -c '\
+  set -a; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env 2>/dev/null; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx 2>/dev/null; \
+  set +a; \
+  if [ "${JUDGE_TRAINING_ENABLED:-false}" != "true" ]; then \
+    echo "JUDGE_TRAINING_ENABLED not true — skipping"; exit 0; \
+  fi; \
+  TODAY=$(date +%Y-%m-%d); \
+  for JUDGE in vrs_concierge_judge; do \
+    DATASET=/mnt/fortress_nas/judge-training/${JUDGE}-${TODAY}.jsonl; \
+    OUTPUT=/mnt/fortress_nas/judge-artifacts/${JUDGE}-${TODAY}; \
+    python3 -m src.judge.build_judge_dataset \
+      --judge-name "$JUDGE" --task-types vrs_concierge \
+      --since "7 days ago" --output "$DATASET" && \
+    python3 -m src.judge.train_judge \
+      --judge-name "$JUDGE" --base-model qwen2.5:7b \
+      --training-data "$DATASET" --output-dir "$OUTPUT" && \
+    echo "{\"judge\": \"$JUDGE\", \"date\": \"$TODAY\", \"status\": \"ready\"}" \
+      > "${OUTPUT}/ready_to_deploy.json" || \
+    echo "{\"judge\": \"$JUDGE\", \"date\": \"$TODAY\", \"status\": \"failed\"}" \
+      > "${OUTPUT}/ready_to_deploy.json"; \
+  done'
+
+TimeoutStartSec=21600
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-weekly-judge-training

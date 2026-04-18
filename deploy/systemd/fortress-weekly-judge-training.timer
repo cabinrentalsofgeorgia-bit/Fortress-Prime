@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Fortress Prime weekly judge training Sunday at 03:00 EDT
+
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00 America/New_York
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target
