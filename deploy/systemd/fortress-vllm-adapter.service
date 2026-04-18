@@ -1,0 +1,40 @@
+[Unit]
+Description=Fortress-Prime vLLM Adapter Server — distilled Llama-3.3-70B LoRA
+Documentation=file:///home/admin/Fortress-Prime/src/inference/vllm_adapter_server.py
+# NIM must be stopped before starting this (Model B coexistence — cannot coexist)
+# Before enabling: kubectl scale deployment nim-sovereign -n default --replicas=0
+After=network-online.target
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+
+ExecStart=/bin/bash -c '\
+  set -a; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env 2>/dev/null; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx 2>/dev/null; \
+  set +a; \
+  exec /home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python \
+    /home/admin/Fortress-Prime/src/inference/vllm_adapter_server.py'
+
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=600
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-vllm-adapter
+
+# GPU training requires elevated limits
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+# NOT enabled by default — Phase 4c Model B: on-demand only.
+# Enable manually when activating the distilled tier:
+#   sudo systemctl enable --now fortress-vllm-adapter.service
+# And first stop NIM:
+#   kubectl scale deployment nim-sovereign -n default --replicas=0
+WantedBy=multi-user.target
