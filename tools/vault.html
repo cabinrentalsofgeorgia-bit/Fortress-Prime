@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Vault — Fortress Prime</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Fortress Unified Nav ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Layout ── */
+.main{flex:1;max-width:1200px;margin:0 auto;padding:28px 24px 60px;width:100%}
+
+/* ── Header ── */
+.page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.page-title{font-size:22px;font-weight:800;display:flex;align-items:center;gap:10px}
+.page-title .icon{font-size:26px;opacity:.7}
+.page-sub{font-size:12px;color:#666;margin-top:4px}
+.head-actions{display:flex;gap:8px}
+
+/* ── Buttons ── */
+.btn{padding:8px 18px;border:none;border-radius:8px;font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .15s;letter-spacing:.02em}
+.btn-primary{background:#4ade80;color:#000}.btn-primary:hover{background:#22c55e}
+.btn-amber{background:#fbbf24;color:#000}.btn-amber:hover{background:#f59e0b}
+.btn-ghost{background:transparent;border:1px solid #333;color:#888}.btn-ghost:hover{color:#fff;border-color:#555}
+.btn-danger{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.2)}.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Security Banner ── */
+.sec-banner{background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(34,197,94,.02));
+  border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:14px 18px;
+  margin-bottom:24px;display:flex;align-items:center;gap:12px;font-size:12px;color:#86efac}
+.sec-banner .sec-icon{font-size:18px}
+.sec-banner .sec-detail{color:#4ade80;font-weight:600}
+
+/* ── Stats Row ── */
+.stat-row{display:flex;gap:12px;margin-bottom:24px}
+.stat-pill{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:12px 18px;
+  flex:1;text-align:center}
+.stat-pill .val{font-size:22px;font-weight:800}
+.stat-pill .lbl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.val.green{color:#4ade80}.val.amber{color:#fbbf24}.val.blue{color:#60a5fa}.val.red{color:#f87171}
+
+/* ── Category Section ── */
+.cat-head{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1.5px;
+  margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid #1a1a1a;
+  display:flex;align-items:center;gap:8px}
+.cat-accent{width:3px;height:14px;border-radius:2px}
+.cat-ai{background:#a78bfa}.cat-comms{background:#60a5fa}.cat-intel{background:#fbbf24}.cat-infra{background:#4ade80}.cat-custom{background:#f87171}
+
+/* ── Key Row ── */
+.key-row{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:14px 18px;
+  margin-bottom:8px;display:flex;align-items:center;gap:16px;transition:border-color .15s}
+.key-row:hover{border-color:#333}
+.key-info{flex:1;min-width:0}
+.key-name{font-size:13px;font-weight:700;font-family:'SF Mono',Consolas,monospace;letter-spacing:.02em}
+.key-label{font-size:11px;color:#888;margin-top:2px}
+.key-desc{font-size:10px;color:#555;margin-top:1px}
+.key-masked{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:#666;
+  min-width:180px;text-align:right;letter-spacing:.5px}
+.key-status{min-width:70px;text-align:center}
+.badge{font-size:9px;font-weight:700;padding:3px 10px;border-radius:4px;
+  display:inline-block;text-transform:uppercase;letter-spacing:.5px}
+.badge-vault{background:rgba(34,197,94,.12);color:#4ade80}
+.badge-env{background:rgba(250,204,21,.1);color:#fbbf24}
+.badge-missing{background:rgba(239,68,68,.1);color:#f87171}
+.key-actions{display:flex;gap:6px;min-width:120px;justify-content:flex-end}
+.key-meta{font-size:9px;color:#444;margin-top:3px}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:10001;
+  align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:#111;border:1px solid #222;border-radius:14px;padding:28px;
+  width:480px;max-width:90vw;box-shadow:0 24px 48px rgba(0,0,0,.5)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.modal .modal-sub{font-size:11px;color:#666;margin-bottom:20px}
+.modal label{font-size:11px;font-weight:600;color:#888;display:block;margin-bottom:4px;
+  text-transform:uppercase;letter-spacing:.05em}
+.modal input,.modal select{width:100%;background:#0a0a0a;border:1px solid #333;
+  border-radius:8px;color:#fff;padding:10px 12px;font-size:13px;margin-bottom:14px;
+  font-family:inherit;transition:border-color .15s}
+.modal input:focus,.modal select:focus{outline:none;border-color:#4ade80}
+.modal input[type="password"]{font-family:'SF Mono',Consolas,monospace;letter-spacing:.5px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.modal .warn{font-size:10px;color:#fbbf24;margin-bottom:14px;padding:8px 10px;
+  background:rgba(250,204,21,.06);border:1px solid rgba(250,204,21,.15);border-radius:6px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;
+  font-size:12px;font-weight:600;z-index:20000;opacity:0;transform:translateY(8px);
+  transition:all .3s ease;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.toast-ok{background:#065f46;color:#4ade80;border:1px solid #047857}
+.toast-err{background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b}
+
+.spinner-sm{width:14px;height:14px;border:2px solid #333;border-top-color:#4ade80;
+  border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ═══ Unified Nav ═══ -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber fn-g-active" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item fn-dd-active"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div></div>
+
+<span class="fn-clock" id="clock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+<div class="main">
+
+<!-- ═══ Header ═══ -->
+<div class="page-head">
+  <div>
+    <div class="page-title"><span class="icon">&#128273;</span> API Key Vault</div>
+    <div class="page-sub">Encrypted credential storage — Admin only — Constitution Rule IV.1</div>
+  </div>
+  <div class="head-actions">
+    <button class="btn btn-ghost" onclick="importFromEnv()">Import from .env</button>
+    <button class="btn btn-ghost" onclick="openCustomModal()">+ Custom Key</button>
+  </div>
+</div>
+
+<!-- ═══ Security Banner ═══ -->
+<div class="sec-banner">
+  <span class="sec-icon">&#128274;</span>
+  <div>
+    All keys are <span class="sec-detail">AES-encrypted at rest</span> using Fernet (derived from JWT_SECRET).
+    Keys sync to <span class="sec-detail">.env</span> and process environment on save.
+    Only admin users can access this page.
+  </div>
+</div>
+
+<!-- ═══ Stats ═══ -->
+<div class="stat-row">
+  <div class="stat-pill"><div class="val green" id="statVault">-</div><div class="lbl">In Vault</div></div>
+  <div class="stat-pill"><div class="val amber" id="statEnv">-</div><div class="lbl">Env Only</div></div>
+  <div class="stat-pill"><div class="val red" id="statMissing">-</div><div class="lbl">Not Set</div></div>
+  <div class="stat-pill"><div class="val blue" id="statTotal">-</div><div class="lbl">Total Keys</div></div>
+</div>
+
+<!-- ═══ Key List ═══ -->
+<div id="keyList"></div>
+
+</div><!-- /main -->
+
+<!-- ═══ Save Key Modal ═══ -->
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <h3 id="modalTitle">Update API Key</h3>
+    <div class="modal-sub" id="modalSub"></div>
+    <div class="warn">Keys are encrypted before storage. The plaintext value is never logged or persisted in cleartext.</div>
+    <label>Key Name</label>
+    <input id="modalKeyName" readonly style="opacity:.6">
+    <label>Value</label>
+    <input type="password" id="modalKeyValue" placeholder="Paste your API key..." autocomplete="off">
+    <div style="text-align:right;margin-top:-8px;margin-bottom:10px">
+      <span style="font-size:10px;color:#555;cursor:pointer" onclick="toggleShow()">&#128065; show/hide</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modalSaveBtn" onclick="saveKey()">Save &amp; Encrypt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Custom Key Modal ═══ -->
+<div class="modal-overlay" id="customModal">
+  <div class="modal">
+    <h3>Add Custom API Key</h3>
+    <div class="modal-sub">For services not in the standard registry</div>
+    <label>Key Name (ENV_VAR format)</label>
+    <input id="customKeyName" placeholder="e.g. STRIPE_SECRET_KEY" style="text-transform:uppercase">
+    <label>Display Label</label>
+    <input id="customLabel" placeholder="e.g. Stripe">
+    <label>Description</label>
+    <input id="customDesc" placeholder="e.g. Payment processing API">
+    <label>Category</label>
+    <select id="customCat">
+      <option value="AI / LLM">AI / LLM</option>
+      <option value="Communications">Communications</option>
+      <option value="Intelligence">Intelligence</option>
+      <option value="Infrastructure">Infrastructure</option>
+      <option value="Payments">Payments</option>
+      <option value="Custom" selected>Custom</option>
+    </select>
+    <label>Value</label>
+    <input type="password" id="customValue" placeholder="Paste your API key..." autocomplete="off">
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCustomModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomKey()">Save &amp; Encrypt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Toast ═══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API='';
+const CAT_COLORS={
+  'AI / LLM':'cat-ai','Communications':'cat-comms','Intelligence':'cat-intel',
+  'Infrastructure':'cat-infra','Custom':'cat-custom','Payments':'cat-custom'
+};
+
+function toggleGroup(n){
+  document.querySelectorAll('.fn-group,.fn-user').forEach(g=>{
+    g.dataset.group===n?g.classList.toggle('open'):g.classList.remove('open')});
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user'))
+    document.querySelectorAll('.fn-group,.fn-user').forEach(g=>g.classList.remove('open'));
+});
+function logout(){window.location.href='/login';}
+setInterval(()=>{
+  document.getElementById('clock').textContent=
+    new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+function toast(msg,ok){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(ok?'toast-ok':'toast-err')+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+async function loadKeys(){
+  try{
+    const r=await fetch(API+'/api/vault/keys');
+    if(r.status===401||r.status===403){window.location.href='/login';return;}
+    const d=await r.json();
+    renderKeys(d.keys);
+    updateStats(d.keys);
+  }catch(e){toast('Failed to load keys','');}
+}
+
+function updateStats(keys){
+  const vault=keys.filter(k=>k.in_vault).length;
+  const envOnly=keys.filter(k=>k.in_env_only).length;
+  const missing=keys.filter(k=>!k.is_set&&k.registered).length;
+  document.getElementById('statVault').textContent=vault;
+  document.getElementById('statEnv').textContent=envOnly;
+  document.getElementById('statMissing').textContent=missing;
+  document.getElementById('statTotal').textContent=keys.length;
+}
+
+function renderKeys(keys){
+  const container=document.getElementById('keyList');
+  const grouped={};
+  keys.forEach(k=>{
+    const cat=k.category||'Custom';
+    if(!grouped[cat])grouped[cat]=[];
+    grouped[cat].push(k);
+  });
+
+  const catOrder=['AI / LLM','Communications','Intelligence','Infrastructure','Custom','Payments'];
+  let html='';
+  catOrder.forEach(cat=>{
+    const items=grouped[cat];
+    if(!items||!items.length)return;
+    const accent=CAT_COLORS[cat]||'cat-custom';
+    html+=`<div class="cat-head"><span class="cat-accent ${accent}"></span>${cat}</div>`;
+    items.forEach(k=>{
+      const badge=k.in_vault?'<span class="badge badge-vault">VAULT</span>'
+        :k.is_set?'<span class="badge badge-env">ENV</span>'
+        :'<span class="badge badge-missing">NOT SET</span>';
+      const meta=[];
+      if(k.updated_by)meta.push('by '+k.updated_by);
+      if(k.last_rotated)meta.push(new Date(k.last_rotated).toLocaleDateString());
+      html+=`<div class="key-row">
+        <div class="key-info">
+          <div class="key-name">${k.key_name}</div>
+          <div class="key-label">${k.label||''}</div>
+          <div class="key-desc">${k.description||''}</div>
+          ${meta.length?'<div class="key-meta">'+meta.join(' &middot; ')+'</div>':''}
+        </div>
+        <div class="key-masked">${k.masked_value||'&mdash;'}</div>
+        <div class="key-status">${badge}</div>
+        <div class="key-actions">
+          <button class="btn btn-ghost" onclick="openSaveModal('${k.key_name}','${(k.label||'').replace(/'/g,"\\'")}','${(k.description||'').replace(/'/g,"\\'")}')">
+            ${k.is_set?'Rotate':'Set'}
+          </button>
+          ${k.in_vault?'<button class="btn btn-danger" onclick="deleteKey(\''+k.key_name+'\')">Remove</button>':''}
+        </div>
+      </div>`;
+    });
+  });
+  container.innerHTML=html;
+}
+
+function openSaveModal(keyName,label,desc){
+  document.getElementById('modalKeyName').value=keyName;
+  document.getElementById('modalTitle').textContent=(label||keyName);
+  document.getElementById('modalSub').textContent=desc||'';
+  document.getElementById('modalKeyValue').value='';
+  document.getElementById('modalKeyValue').type='password';
+  document.getElementById('saveModal').classList.add('active');
+  setTimeout(()=>document.getElementById('modalKeyValue').focus(),100);
+}
+
+function closeModal(){document.getElementById('saveModal').classList.remove('active');}
+
+function toggleShow(){
+  const inp=document.getElementById('modalKeyValue');
+  inp.type=inp.type==='password'?'text':'password';
+}
+
+async function saveKey(){
+  const keyName=document.getElementById('modalKeyName').value;
+  const value=document.getElementById('modalKeyValue').value.trim();
+  if(!value){toast('Enter a value','');return;}
+
+  const btn=document.getElementById('modalSaveBtn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> Saving...';
+
+  try{
+    const r=await fetch(API+'/api/vault/keys',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key_name:keyName,value:value})
+    });
+    const d=await r.json();
+    if(r.ok){
+      toast('Key saved & encrypted',true);
+      closeModal();
+      loadKeys();
+    }else{
+      toast(d.detail||'Save failed','');
+    }
+  }catch(e){toast('Network error','');}
+  btn.disabled=false;btn.innerHTML='Save &amp; Encrypt';
+}
+
+async function deleteKey(keyName){
+  if(!confirm('Remove '+keyName+' from the vault? The key will be cleared from .env and the running environment.'))return;
+  try{
+    const r=await fetch(API+'/api/vault/keys/'+keyName,{method:'DELETE'});
+    if(r.ok){toast(keyName+' removed',true);loadKeys();}
+    else toast('Delete failed','');
+  }catch(e){toast('Network error','');}
+}
+
+async function importFromEnv(){
+  if(!confirm('This will import all currently-set .env keys into the encrypted vault. Existing vault entries will NOT be overwritten.'))return;
+  try{
+    const r=await fetch(API+'/api/vault/import-env',{method:'POST'});
+    const d=await r.json();
+    if(r.ok){toast('Imported '+d.count+' keys into vault',true);loadKeys();}
+    else toast(d.detail||'Import failed','');
+  }catch(e){toast('Network error','');}
+}
+
+function openCustomModal(){
+  document.getElementById('customKeyName').value='';
+  document.getElementById('customLabel').value='';
+  document.getElementById('customDesc').value='';
+  document.getElementById('customValue').value='';
+  document.getElementById('customModal').classList.add('active');
+}
+function closeCustomModal(){document.getElementById('customModal').classList.remove('active');}
+
+async function saveCustomKey(){
+  const keyName=document.getElementById('customKeyName').value.trim().toUpperCase();
+  const label=document.getElementById('customLabel').value.trim();
+  const desc=document.getElementById('customDesc').value.trim();
+  const cat=document.getElementById('customCat').value;
+  const value=document.getElementById('customValue').value.trim();
+
+  if(!keyName||!label||!value){toast('Fill in required fields','');return;}
+  if(!/^[A-Z][A-Z0-9_]+$/.test(keyName)){toast('Key name must be UPPER_SNAKE_CASE','');return;}
+
+  try{
+    const r=await fetch(API+'/api/vault/keys/custom',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key_name:keyName,value:value,label:label,description:desc,category:cat})
+    });
+    const d=await r.json();
+    if(r.ok){toast('Custom key saved',true);closeCustomModal();loadKeys();}
+    else toast(d.detail||'Save failed','');
+  }catch(e){toast('Network error','');}
+}
+
+loadKeys();
+</script>
+</body>
+</html>

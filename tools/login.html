@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Fortress Prime Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh;display:flex;align-items:center;
+  justify-content:center;padding:20px}
+.container{max-width:420px;width:100%}
+.logo{text-align:center;margin-bottom:40px}
+.logo h1{font-size:28px;font-weight:700;margin-bottom:8px}
+.logo p{font-size:14px;color:#888}
+.card{background:#111;border:1px solid #222;border-radius:16px;padding:40px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5)}
+h2{font-size:20px;margin-bottom:24px;text-align:center}
+.form-group{margin-bottom:20px}
+label{display:block;margin-bottom:8px;font-size:14px;color:#aaa;font-weight:500}
+input{width:100%;padding:14px;background:#1a1a1a;border:1px solid#333;
+  border-radius:10px;color:#fff;font-size:15px;transition:all .2s}
+input:focus{outline:none;border-color:#0a84ff;box-shadow:0 0 0 3px rgba(10,132,255,.1)}
+.btn{width:100%;padding:15px;background:#0a84ff;color:#fff;border:none;
+  border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
+  transition:all .2s;margin-top:8px}
+.btn:hover{background:#0070f3;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.alert{padding:12px;border-radius:8px;margin-bottom:20px;font-size:14px;display:none}
+.alert.error{background:rgba(255,69,58,.1);border:1px solid rgba(255,69,58,.3);color:#ff453a}
+.alert.success{background:rgba(48,209,88,.1);border:1px solid rgba(48,209,88,.3);color:#30d158}
+.alert.show{display:block}
+.footer{text-align:center;margin-top:24px;font-size:14px;color:#666}
+.footer a{color:#0a84ff;text-decoration:none}
+.footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">
+    <h1>🏰 Fortress Prime</h1>
+    <p>Enterprise Command Center</p>
+  </div>
+  
+  <div class="card">
+    <h2>Sign In</h2>
+    
+    <div id="alert" class="alert"></div>
+    
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" required autofocus autocomplete="username">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+      
+      <button type="submit" class="btn" id="submitBtn">Sign In</button>
+    </form>
+  </div>
+
+  <div class="footer">
+    Don't have an account? <a href="/signup">Sign Up</a>
+  </div>
+</div>
+
+<script>
+function showAlert(message, type = 'error') {
+  const alert = document.getElementById('alert');
+  alert.textContent = message;
+  alert.className = `alert ${type} show`;
+}
+
+function setLoading(loading) {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Signing in...' : 'Sign In';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  
+  setLoading(true);
+  
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+      credentials: 'include',
+      redirect: 'manual'
+    });
+    
+    if (response.type === 'opaqueredirect' || response.status === 0 || response.status === 302) {
+      // Redirect successful
+      window.location.href = '/';
+      return;
+    }
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.detail || 'Login failed');
+    }
+    
+    window.location.href = '/';
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    showAlert(error.message || 'Invalid username or password', 'error');
+    setLoading(false);
+  }
+}
+</script>
+
+</body>
+</html>

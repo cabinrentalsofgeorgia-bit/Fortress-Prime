@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Reservations</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.page-hdr h1 span{color:#4ade80}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:24px}
+
+/* ── Filter Bar ── */
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:8px;border:1px solid #222;background:#111;
+  color:#888;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;
+  text-transform:uppercase;letter-spacing:.04em}
+.filter-btn:hover{color:#fff;border-color:#333}
+.filter-btn.active{color:#fff;background:rgba(74,222,128,.1);border-color:#4ade80}
+.filter-select{padding:6px 12px;border-radius:8px;border:1px solid #222;background:#111;
+  color:#ccc;font-size:11px;font-family:inherit;cursor:pointer;outline:none;
+  appearance:none;-webkit-appearance:none;padding-right:28px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+.filter-select:hover{border-color:#333}
+input.filter-select{background-image:none;padding-right:12px;appearance:auto;-webkit-appearance:auto}
+input.filter-select:focus{border-color:#4ade80;box-shadow:0 0 0 2px rgba(74,222,128,.15)}
+
+/* ── Damage Command Center ── */
+.badge-red{background:rgba(248,113,113,.15);color:#f87171}
+.dmg-center{background:#111;border:1px solid #1a1a1a;border-radius:14px;margin-bottom:20px;
+  border-left:3px solid #f87171;overflow:hidden;display:none}
+.dmg-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;
+  cursor:pointer;user-select:none}
+.dmg-header h3{font-size:13px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.04em;
+  display:flex;align-items:center;gap:8px}
+.dmg-body{display:none;border-top:1px solid #1a1a1a}
+.dmg-body.open{display:flex}
+.dmg-list{width:320px;border-right:1px solid #1a1a1a;overflow-y:auto;max-height:640px;flex-shrink:0}
+.dmg-list-item{padding:12px 16px;border-bottom:1px solid #111;cursor:pointer;transition:all .15s}
+.dmg-list-item:hover{background:rgba(255,255,255,.03)}
+.dmg-list-item.active{background:rgba(248,113,113,.06);border-left:3px solid #f87171}
+.dmg-list-claim{font-size:12px;font-weight:700;color:#f87171}
+.dmg-list-prop{font-size:11px;color:#ccc;margin-top:2px}
+.dmg-list-meta{font-size:10px;color:#666;margin-top:4px;display:flex;gap:8px;align-items:center}
+.dmg-list-status{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase}
+.dmg-detail{flex:1;overflow-y:auto;max-height:640px;padding:0}
+.dmg-detail-empty{display:flex;align-items:center;justify-content:center;height:200px;color:#555;font-size:13px}
+.dmg-section{padding:16px 20px;border-bottom:1px solid #1a1a1a}
+.dmg-section:last-child{border-bottom:none}
+.dmg-section-title{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.dmg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.dmg-field{display:flex;flex-direction:column;gap:3px}
+.dmg-field-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.dmg-field-value{font-size:13px;color:#ccc;font-weight:500}
+.dmg-field-value.highlight{color:#f87171;font-weight:700}
+.dmg-text-block{font-size:12px;color:#ccc;line-height:1.6;white-space:pre-wrap;background:#0a0a0a;
+  border:1px solid #1a1a1a;border-radius:8px;padding:12px;margin-top:6px}
+.dmg-draft-block{background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:8px;
+  padding:14px;margin-top:6px;font-size:12px;color:#c4b5fd;line-height:1.6;white-space:pre-wrap;
+  max-height:300px;overflow-y:auto}
+.dmg-actions{display:flex;gap:8px;flex-wrap:wrap;padding:16px 20px;background:#0d0d0d;border-top:1px solid #1a1a1a}
+.dmg-btn{padding:8px 18px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#ccc;
+  font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.dmg-btn:hover{border-color:#4ade80;color:#4ade80}
+.dmg-btn:disabled{opacity:.4;cursor:not-allowed}
+.dmg-btn-approve{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.3);color:#4ade80}
+.dmg-btn-approve:hover:not(:disabled){background:rgba(74,222,128,.2)}
+.dmg-btn-draft{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3);color:#a78bfa}
+.dmg-btn-draft:hover:not(:disabled){background:rgba(139,92,246,.2)}
+.dmg-btn-send{background:rgba(96,165,250,.12);border-color:rgba(96,165,250,.3);color:#60a5fa}
+.dmg-btn-send:hover:not(:disabled){background:rgba(96,165,250,.2)}
+.dmg-btn-danger{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.3);color:#f87171}
+.dmg-btn-danger:hover:not(:disabled){background:rgba(248,113,113,.15)}
+.dmg-btn-edit{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3);color:#fbbf24}
+.dmg-btn-edit:hover:not(:disabled){background:rgba(251,191,36,.15)}
+.dmg-timeline{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+.dmg-tl-step{font-size:9px;padding:4px 10px;border-radius:6px;font-weight:700;text-transform:uppercase}
+.dmg-tl-done{background:rgba(74,222,128,.12);color:#4ade80}
+.dmg-tl-active{background:rgba(251,191,36,.15);color:#fbbf24;animation:fn-pulse 2s ease infinite}
+.dmg-tl-pending{background:#1a1a1a;color:#555}
+.dmg-edit-field{background:#0a0a0a;border:1px solid #222;border-radius:6px;color:#ccc;
+  padding:8px 10px;font-size:12px;font-family:inherit;width:100%;outline:none;transition:border-color .15s;resize:vertical}
+.dmg-edit-field:focus{border-color:#fbbf24;box-shadow:0 0 0 2px rgba(251,191,36,.15)}
+.dmg-edit-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+.dmg-edit-full{margin-bottom:8px}
+.dmg-edit-label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px}
+
+/* ── Two-Panel Layout ── */
+.main-grid{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+
+/* ── Side Panels ── */
+.side-stack{display:flex;flex-direction:column;gap:16px}
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:20px;overflow:hidden}
+.panel-title{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;
+  justify-content:space-between;text-transform:uppercase;letter-spacing:.04em;color:#888}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+.badge-blue{background:rgba(96,165,250,.12);color:#60a5fa}
+.badge-red{background:rgba(248,113,113,.12);color:#f87171}
+.res-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.res-item{background:#1a1a1a;border-radius:10px;padding:10px 14px;display:flex;
+  align-items:center;justify-content:space-between;transition:background .15s;cursor:default}
+.res-item:hover{background:#222}
+.res-item-left{display:flex;flex-direction:column;gap:2px}
+.res-item-name{font-size:12px;font-weight:600}
+.res-item-sub{font-size:10px;color:#666}
+.res-item-code{font-size:10px;color:#60a5fa;font-family:'SF Mono',Consolas,monospace}
+
+/* ── Reservation Table ── */
+.table-wrap{background:#111;border:1px solid #1a1a1a;border-radius:14px;overflow:hidden}
+.table-scroll{max-height:calc(100vh - 220px);overflow-y:auto}
+table{width:100%;border-collapse:collapse}
+thead{position:sticky;top:0;z-index:5}
+th{background:#0a0a0a;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;
+  color:#555;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #1a1a1a}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid #0d0d0d;color:#ccc}
+tr.res-row{cursor:pointer;transition:background .12s}
+tr.res-row:hover{background:rgba(255,255,255,.03)}
+tr.res-row.selected{background:rgba(74,222,128,.04)}
+td.code-col{font-family:'SF Mono',Consolas,monospace;color:#60a5fa;font-weight:600;font-size:11px}
+td.amount-col{font-family:'SF Mono',Consolas,monospace;color:#4ade80;font-weight:600}
+
+/* ── Status Badges ── */
+.status-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.st-confirmed{background:rgba(74,222,128,.12);color:#4ade80}
+.st-checked_in{background:rgba(96,165,250,.12);color:#60a5fa}
+.st-checked_out{background:rgba(251,191,36,.12);color:#fbbf24}
+.st-cancelled{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Expanded Row Detail ── */
+tr.detail-row td{padding:0;border-bottom:1px solid #1a1a1a}
+.detail-inner{padding:16px 20px;background:#0a0a0a;display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.detail-col{display:flex;flex-direction:column;gap:8px;min-width:160px}
+.detail-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.detail-value{font-size:13px;font-weight:500}
+.detail-actions{display:flex;gap:10px;align-items:center;margin-left:auto}
+.action-btn{padding:8px 18px;border-radius:8px;border:none;font-size:11px;font-weight:700;
+  cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.action-btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-checkin{background:rgba(96,165,250,.15);color:#60a5fa}
+.btn-checkin:hover:not(:disabled){background:rgba(96,165,250,.25)}
+.btn-checkout{background:rgba(251,191,36,.15);color:#fbbf24}
+.btn-checkout:hover:not(:disabled){background:rgba(251,191,36,.25)}
+
+/* ── Reservation Hub Panel ── */
+.res-hub{background:#0a0a0a;border-top:1px solid #1a1a1a;padding:0}
+.res-hub-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;
+  background:#0d0d0d;border-bottom:1px solid #1a1a1a}
+.res-hub-header h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.res-hub-header .guest-badge{font-size:10px;padding:3px 10px;border-radius:6px;font-weight:600;
+  background:rgba(96,165,250,.12);color:#60a5fa}
+.hub-tabs{display:flex;gap:0;border-bottom:1px solid #1a1a1a;background:#0d0d0d}
+.hub-tab{padding:10px 18px;font-size:11px;font-weight:600;color:#666;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;letter-spacing:.04em;
+  display:flex;align-items:center;gap:6px}
+.hub-tab:hover{color:#ccc;background:rgba(255,255,255,.02)}
+.hub-tab.active{color:#fff;border-bottom-color:#4ade80}
+.hub-tab .tab-count{font-size:9px;background:#222;color:#888;padding:2px 6px;border-radius:4px;font-weight:700}
+.hub-tab.active .tab-count{background:rgba(74,222,128,.15);color:#4ade80}
+.hub-tab .tab-alert{background:rgba(248,113,113,.15);color:#f87171}
+.hub-content{padding:16px 20px;max-height:480px;overflow-y:auto}
+
+/* ── Hub Sections ── */
+.hub-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:14px;margin-bottom:10px}
+.hub-card-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.hub-msg{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #0d0d0d}
+.hub-msg:last-child{border:none}
+.hub-msg-dir{font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;white-space:nowrap;margin-top:2px}
+.hub-msg-in{background:rgba(96,165,250,.12);color:#60a5fa}
+.hub-msg-out{background:rgba(74,222,128,.12);color:#4ade80}
+.hub-msg-body{font-size:12px;color:#ccc;line-height:1.5;flex:1}
+.hub-msg-time{font-size:10px;color:#555;white-space:nowrap;margin-top:2px}
+.hub-kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.hub-kv-item{display:flex;flex-direction:column;gap:3px}
+.hub-kv-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.hub-kv-val{font-size:13px;font-weight:500}
+.hub-lifecycle{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.hub-lc-dot{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600}
+.hub-lc-done{background:rgba(74,222,128,.12);color:#4ade80}
+.hub-lc-pending{background:#1a1a1a;color:#555}
+.hub-damage{background:#111;border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:14px;margin-bottom:10px}
+.hub-damage-title{font-size:13px;font-weight:700;color:#f87171;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.hub-damage-body{font-size:12px;color:#ccc;line-height:1.5;white-space:pre-wrap}
+.hub-damage-footer{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.hub-legal-draft{background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:8px;
+  padding:12px;margin-top:10px;font-size:12px;color:#c4b5fd;line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+.hub-btn{padding:6px 14px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#ccc;
+  font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.hub-btn:hover{border-color:#4ade80;color:#4ade80}
+.hub-btn-danger{border-color:rgba(248,113,113,.3);color:#f87171}
+.hub-btn-danger:hover{border-color:#f87171;background:rgba(248,113,113,.1)}
+.hub-btn-primary{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.3);color:#4ade80}
+.hub-btn-primary:hover{background:rgba(74,222,128,.2)}
+.hub-btn-purple{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3);color:#a78bfa}
+.hub-btn-purple:hover{background:rgba(139,92,246,.2)}
+.hub-form textarea,.hub-form input,.hub-form select{background:#0a0a0a;border:1px solid #222;border-radius:6px;
+  color:#ccc;padding:8px 10px;font-size:12px;font-family:inherit;width:100%;outline:none;transition:border-color .15s}
+.hub-form textarea:focus,.hub-form input:focus{border-color:#4ade80}
+.hub-form label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px}
+.hub-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.hub-form-full{margin-bottom:10px}
+
+/* ── Empty State ── */
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-ok{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-err{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+
+/* ── Responsive ── */
+@media(max-width:960px){
+  .main-grid{grid-template-columns:1fr}
+  .side-stack{flex-direction:row}
+  .side-stack .panel{flex:1}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .side-stack{flex-direction:column}
+  .filter-bar{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active" data-group="vrs"><div class="fn-group-btn" onclick="toggleGroup('vrs')"><span>CROG-VRS</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item fn-dd-active" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div></div>
+    <div class="fn-group fn-g-blue" data-group="ops"><div class="fn-group-btn" onclick="toggleGroup('ops')"><span>Operations</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a><a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a><a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a></div></div>
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right"><div class="fn-dot"></div><span class="fn-clock" id="fnClock"></span><div class="fn-user" data-group="user"><div class="fn-user-btn" onclick="toggleGroup('user')"><span id="navUser">&#128100;</span><span class="fn-caret">&#9660;</span></div><div class="fn-user-dd"><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><div class="fn-dd-sep"></div><a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a></div></div></div>
+</div>
+
+
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>&#128197;&ensp;Reservations</h1>
+  <span class="hdr-badge" id="resBadge">0 reservations</span>
+</div>
+
+<div class="container">
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <input type="text" id="guestSearch" class="filter-select" placeholder="&#128269; Search guest name, email, phone, or conf#..." style="min-width:280px;padding-left:10px" oninput="debounceSearch()">
+    <button class="filter-btn active" data-status="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-status="confirmed" onclick="setFilter('confirmed',this)">Confirmed</button>
+    <button class="filter-btn" data-status="checked_in" onclick="setFilter('checked_in',this)">Checked In</button>
+    <button class="filter-btn" data-status="checked_out" onclick="setFilter('checked_out',this)">Checked Out</button>
+    <button class="filter-btn" data-status="cancelled" onclick="setFilter('cancelled',this)">Cancelled</button>
+    <select class="filter-select" id="propFilter" onchange="applyFilters()">
+      <option value="">All Properties</option>
+    </select>
+  </div>
+
+  <!-- DAMAGE COMMAND CENTER — enterprise-grade across all properties -->
+  <div class="dmg-center" id="dmg-center">
+    <div class="dmg-header" onclick="toggleDmgCenter()">
+      <h3>&#9888; Damage Command Center <span class="badge badge-red" id="dmgCenterCount">0</span></h3>
+      <span style="font-size:10px;color:#555" id="dmg-toggle-hint">&#9660; expand</span>
+    </div>
+    <div class="dmg-body" id="dmg-body">
+      <div class="dmg-list" id="dmg-list"></div>
+      <div class="dmg-detail" id="dmg-detail">
+        <div class="dmg-detail-empty">Select a claim to view full record</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TWO-PANEL LAYOUT -->
+  <div class="main-grid">
+
+    <!-- LEFT: Side Panels -->
+    <div class="side-stack">
+      <div class="panel">
+        <div class="panel-title">Arriving Today <span class="badge badge-green" id="arrivalCount">0</span></div>
+        <div class="res-list" id="arrivalsList"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Departing Today <span class="badge badge-amber" id="departureCount">0</span></div>
+        <div class="res-list" id="departuresList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Reservation Table -->
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Confirmation</th>
+              <th>Guest</th>
+              <th>Property</th>
+              <th>Check-in</th>
+              <th>Check-out</th>
+              <th>#</th>
+              <th>Status</th>
+              <th style="text-align:right">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="resBody">
+            <tr><td colspan="8"><div class="empty-state">Loading reservations...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Nav ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){if(g.dataset.group===name){g.classList.toggle('open')}else{g.classList.remove('open')}});
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+/* ── Auth ── */
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── Toast ── */
+function showToast(msg,ok){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(ok?'toast-ok':'toast-err')+' show';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){t.classList.remove('show')},3500);
+}
+
+/* ── State ── */
+var allRes=[];
+var propMap={};
+var activeStatus='all';
+var activeProp='';
+var expandedId=null;
+var searchTimer=null;
+
+/* ── Search ── */
+function debounceSearch(){
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(function(){
+    var term=document.getElementById('guestSearch').value.trim();
+    if(term.length>=2||term.length===0) loadAll(term||null);
+  },350);
+}
+
+/* ── Filter ── */
+function setFilter(status,btn){
+  activeStatus=status;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  applyFilters();
+}
+function applyFilters(){
+  activeProp=document.getElementById('propFilter').value;
+  renderTable();
+}
+function filtered(){
+  return allRes.filter(function(r){
+    if(activeStatus!=='all'&&r.status!==activeStatus) return false;
+    if(activeProp&&r.property_id!==activeProp) return false;
+    return true;
+  });
+}
+
+/* ── Format Helpers ── */
+function fmtDate(d){
+  if(!d) return '—';
+  var dt=new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtMoney(v){
+  if(v==null) return '—';
+  return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function statusClass(s){
+  var map={confirmed:'st-confirmed',checked_in:'st-checked_in',checked_out:'st-checked_out',cancelled:'st-cancelled'};
+  return map[s]||'st-confirmed';
+}
+function statusLabel(s){
+  var map={confirmed:'Confirmed',checked_in:'Checked In',checked_out:'Checked Out',cancelled:'Cancelled'};
+  return map[s]||s;
+}
+function propName(pid){return propMap[pid]||pid||'—'}
+
+/* ── Render Table ── */
+function renderTable(){
+  var data=filtered();
+  var body=document.getElementById('resBody');
+  if(!data.length){
+    body.innerHTML='<tr><td colspan="8"><div class="empty-state">No reservations match the current filter</div></td></tr>';
+    return;
+  }
+  var html='';
+  data.forEach(function(r){
+    var sel=expandedId===r.id?'selected':'';
+    html+='<tr class="res-row '+sel+'" data-id="'+r.id+'" onclick="toggleDetail(\''+r.id+'\')">';
+    html+='<td class="code-col">'+esc(r.confirmation_code||'—')+'</td>';
+    html+='<td style="font-weight:600">'+esc(r.guest_name||'—')+'</td>';
+    html+='<td>'+esc(r.property_name||propName(r.property_id))+'</td>';
+    html+='<td>'+fmtDate(r.check_in_date)+'</td>';
+    html+='<td>'+fmtDate(r.check_out_date)+'</td>';
+    html+='<td>'+(r.num_guests||'—')+'</td>';
+    html+='<td><span class="status-badge '+statusClass(r.status)+'">'+statusLabel(r.status)+'</span></td>';
+    html+='<td class="amount-col" style="text-align:right">'+fmtMoney(r.total_amount)+'</td>';
+    html+='</tr>';
+    if(expandedId===r.id){
+      html+=buildDetail(r);
+    }
+  });
+  body.innerHTML=html;
+}
+
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+/* ── Detail Row — now a full reservation hub ── */
+var hubCache={};
+var activeHubTab='overview';
+
+function buildDetail(r){
+  var h=hubCache[r.id];
+  var loading=!h;
+  if(loading){
+    loadHubData(r.id);
+    return '<tr class="detail-row"><td colspan="8"><div class="res-hub" style="padding:30px;text-align:center;color:#555">Loading reservation details...</div></td></tr>';
+  }
+  return buildHubHTML(r,h);
+}
+
+function buildHubHTML(r,h){
+  var res=h.reservation||r;
+  var g=h.guest||{};
+  var p=h.property||{};
+  var msgs=h.messages||[];
+  var wos=h.work_orders||[];
+  var dcs=h.damage_claims||[];
+  var ra=h.rental_agreement;
+  var lc=h.lifecycle||{};
+  var canCheckin=res.status==='confirmed';
+  var canCheckout=res.status==='checked_in';
+  var tab=activeHubTab;
+
+  var html='<tr class="detail-row"><td colspan="8"><div class="res-hub">';
+
+  // Header
+  html+='<div class="res-hub-header">';
+  html+='<h3>&#128100; '+esc(g.first_name||'')+' '+esc(g.last_name||'')+' <span class="guest-badge">'+esc(res.confirmation_code)+'</span></h3>';
+  html+='<div style="display:flex;gap:8px">';
+  html+='<button class="action-btn btn-checkin" onclick="event.stopPropagation();doAction(\''+r.id+'\',\'check-in\')"'+(canCheckin?'':' disabled')+'>Check In</button>';
+  html+='<button class="action-btn btn-checkout" onclick="event.stopPropagation();doAction(\''+r.id+'\',\'check-out\')"'+(canCheckout?'':' disabled')+'>Check Out</button>';
+  html+='</div></div>';
+
+  // Tabs
+  html+='<div class="hub-tabs">';
+  html+=hubTab('overview','&#9733; Overview',0,tab);
+  html+=hubTab('messages','&#128172; Messages',msgs.length,tab);
+  html+=hubTab('workorders','&#128295; Work Orders',wos.length,tab);
+  html+=hubTab('damage','&#9888; Damage',dcs.length,tab,dcs.length>0);
+  html+=hubTab('agreement','&#128196; Agreement',ra?1:0,tab);
+  html+='</div>';
+
+  // Content
+  html+='<div class="hub-content">';
+  if(tab==='overview') html+=hubOverview(res,g,p,lc,msgs,wos,dcs);
+  else if(tab==='messages') html+=hubMessages(msgs);
+  else if(tab==='workorders') html+=hubWorkOrders(wos,r.id);
+  else if(tab==='damage') html+=hubDamage(dcs,r.id);
+  else if(tab==='agreement') html+=hubAgreement(ra);
+  html+='</div>';
+
+  html+='</div></td></tr>';
+  return html;
+}
+
+function hubTab(id,label,count,active,alert){
+  var cls='hub-tab'+(active===id?' active':'');
+  var cntCls='tab-count'+(alert?' tab-alert':'');
+  return '<div class="'+cls+'" onclick="event.stopPropagation();switchHubTab(\''+id+'\')">'+label+(count?'<span class="'+cntCls+'">'+count+'</span>':'')+'</div>';
+}
+
+function switchHubTab(tab){
+  activeHubTab=tab;
+  renderTable();
+}
+
+function hubOverview(res,g,p,lc,msgs,wos,dcs){
+  var html='<div class="hub-card"><div class="hub-kv">';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Guest</div><div class="hub-kv-val">'+esc(g.first_name||'')+' '+esc(g.last_name||'')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Phone</div><div class="hub-kv-val" style="color:#60a5fa">'+esc(g.phone_number||'—')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Email</div><div class="hub-kv-val" style="color:#60a5fa">'+esc(g.email||'—')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Property</div><div class="hub-kv-val">'+esc(p.name||'—')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Check-in</div><div class="hub-kv-val">'+fmtDate(res.check_in_date)+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Check-out</div><div class="hub-kv-val">'+fmtDate(res.check_out_date)+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Nights</div><div class="hub-kv-val">'+(res.nights||'—')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Guests</div><div class="hub-kv-val">'+(res.num_guests||'—')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Amount</div><div class="hub-kv-val" style="color:#4ade80">'+fmtMoney(res.total_amount)+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Access Code</div><div class="hub-kv-val" style="color:#fbbf24;font-family:monospace">'+(res.access_code||'—')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">WiFi</div><div class="hub-kv-val" style="font-size:11px">'+(p.wifi_ssid?esc(p.wifi_ssid)+' / '+esc(p.wifi_password||''):'—')+'</div></div>';
+  html+='<div class="hub-kv-item"><div class="hub-kv-label">Source</div><div class="hub-kv-val">'+esc(res.booking_source||'—')+'</div></div>';
+  html+='</div>';
+
+  // Lifecycle
+  html+='<div style="margin-top:14px"><div class="hub-kv-label" style="margin-bottom:6px">Guest Lifecycle</div><div class="hub-lifecycle">';
+  var steps=[['pre_arrival_sent','Pre-Arrival'],['access_info_sent','Access Info'],['mid_stay_checkin_sent','Mid-Stay'],['checkout_reminder_sent','Checkout'],['post_stay_followup_sent','Follow-Up']];
+  steps.forEach(function(s){
+    var done=lc[s[0]];
+    html+='<span class="hub-lc-dot '+(done?'hub-lc-done':'hub-lc-pending')+'">'+(done?'&#10003; ':'')+s[1]+'</span>';
+  });
+  html+='</div></div>';
+
+  // Quick summary
+  html+='<div style="margin-top:14px;display:flex;gap:12px">';
+  html+='<span class="hub-lc-dot hub-lc-'+(msgs.length?'done':'pending')+'">'+msgs.length+' Messages</span>';
+  html+='<span class="hub-lc-dot hub-lc-'+(wos.length?'done':'pending')+'">'+wos.length+' Work Orders</span>';
+  html+='<span class="hub-lc-dot '+(dcs.length?'hub-lc-dot tab-alert':'hub-lc-pending')+'" style="'+(dcs.length?'background:rgba(248,113,113,.12);color:#f87171':'')+'">'+dcs.length+' Damage Claims</span>';
+  html+='</div></div>';
+  return html;
+}
+
+function hubMessages(msgs){
+  if(!msgs.length) return '<div style="text-align:center;padding:20px;color:#555">No messages for this guest yet</div>';
+  return msgs.map(function(m){
+    var dir=m.direction==='inbound'?'IN':'OUT';
+    var cls=m.direction==='inbound'?'hub-msg-in':'hub-msg-out';
+    return '<div class="hub-msg"><span class="hub-msg-dir '+cls+'">'+dir+'</span><div class="hub-msg-body">'+esc(m.body||'')+'</div><span class="hub-msg-time">'+fmtTime(m.created_at)+'</span></div>';
+  }).join('');
+}
+
+function hubWorkOrders(wos,resId){
+  var html='';
+  if(wos.length){
+    html+=wos.map(function(wo){
+      var prioColor={urgent:'#f87171',high:'#fbbf24',medium:'#60a5fa',low:'#555'};
+      return '<div class="hub-card"><div class="hub-card-title">'+esc(wo.ticket_number)+' — '+esc(wo.title)+' <span class="badge-red" style="font-size:9px;padding:2px 8px;border-radius:4px;background:'+(prioColor[wo.priority]||'#555')+'22;color:'+(prioColor[wo.priority]||'#555')+'">'+esc(wo.priority)+' / '+esc(wo.status)+'</span></div><div style="font-size:12px;color:#999">'+esc(wo.description||'')+'</div></div>';
+    }).join('');
+  }else{
+    html+='<div style="text-align:center;padding:20px;color:#555">No work orders for this reservation</div>';
+  }
+  return html;
+}
+
+function hubDamage(dcs,resId){
+  var html='';
+  // New claim button
+  html+='<div style="margin-bottom:14px"><button class="hub-btn hub-btn-danger" onclick="event.stopPropagation();toggleDamageForm(\''+resId+'\')">&#9888; File Damage Claim</button></div>';
+  // Inline form (hidden by default)
+  html+='<div id="damage-form-'+resId+'" style="display:none;margin-bottom:16px">';
+  html+=buildDamageForm(resId);
+  html+='</div>';
+  // Existing claims
+  if(dcs.length){
+    html+=dcs.map(function(dc){
+      var stColor={reported:'#f87171',draft_ready:'#fbbf24',approved:'#60a5fa',sent:'#06b6d4',resolved:'#4ade80'};
+      var col=stColor[dc.status]||'#666';
+      var h='<div class="hub-damage"><div class="hub-damage-title"><span style="background:'+col+'22;color:'+col+';padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700">'+esc(dc.status).toUpperCase()+'</span> '+esc(dc.claim_number)+' &mdash; '+(dc.estimated_cost?'$'+Number(dc.estimated_cost).toLocaleString():'TBD')+'</div>';
+      h+='<div class="hub-damage-body">'+esc(dc.damage_description||'')+'</div>';
+      if(dc.policy_violations) h+='<div style="color:#f87171;font-size:11px;margin-top:6px"><strong>Violations:</strong> '+esc(dc.policy_violations)+'</div>';
+      if(dc.damage_areas&&dc.damage_areas.length) h+='<div style="font-size:10px;color:#666;margin-top:4px">Areas: '+dc.damage_areas.join(', ')+'</div>';
+      if(dc.legal_draft){
+        h+='<details style="margin-top:10px"><summary style="cursor:pointer;color:#a78bfa;font-size:11px;font-weight:600">View Legal Draft ('+esc(dc.legal_draft_model||'AI')+')</summary>';
+        h+='<div class="hub-legal-draft">'+esc(dc.legal_draft)+'</div></details>';
+      }
+      h+='<div class="hub-damage-footer">';
+      if(dc.status==='reported') h+='<button class="hub-btn hub-btn-purple" onclick="event.stopPropagation();genDraft(\''+dc.id+'\')">&#9878; Generate Legal Draft</button>';
+      if(dc.status==='draft_ready'){
+        h+='<button class="hub-btn hub-btn-primary" onclick="event.stopPropagation();approveDraft(\''+dc.id+'\')">&#10003; Approve</button>';
+        h+='<button class="hub-btn hub-btn-purple" onclick="event.stopPropagation();genDraft(\''+dc.id+'\')">&#8635; Regenerate</button>';
+      }
+      if(dc.status==='approved'){
+        h+='<button class="hub-btn hub-btn-primary" onclick="event.stopPropagation();sendDamageResp(\''+dc.id+'\',\'email\')">&#9993; Send Email</button>';
+        h+='<button class="hub-btn" onclick="event.stopPropagation();sendDamageResp(\''+dc.id+'\',\'sms\')">&#128172; Send SMS</button>';
+      }
+      h+='</div></div>';
+      return h;
+    }).join('');
+  }else{
+    html+='<div style="text-align:center;padding:20px;color:#555">No damage claims filed for this reservation</div>';
+  }
+  return html;
+}
+
+function hubAgreement(ra){
+  if(!ra) return '<div style="text-align:center;padding:20px;color:#555">No rental agreement on file for this reservation</div>';
+  var stColor={signed:'#4ade80',sent:'#60a5fa',draft:'#fbbf24'};
+  var col=stColor[ra.status]||'#666';
+  return '<div class="hub-card"><div class="hub-kv" style="grid-template-columns:1fr 1fr 1fr 1fr">'
+    +'<div class="hub-kv-item"><div class="hub-kv-label">Status</div><div class="hub-kv-val" style="color:'+col+'">'+esc(ra.status||'—').toUpperCase()+'</div></div>'
+    +'<div class="hub-kv-item"><div class="hub-kv-label">Type</div><div class="hub-kv-val">'+esc(ra.agreement_type||'—')+'</div></div>'
+    +'<div class="hub-kv-item"><div class="hub-kv-label">Signed By</div><div class="hub-kv-val">'+esc(ra.signer_name||'—')+'</div></div>'
+    +'<div class="hub-kv-item"><div class="hub-kv-label">Signed At</div><div class="hub-kv-val">'+esc(ra.signed_at||'—')+'</div></div>'
+    +'</div></div>';
+}
+
+/* ── Damage Form (inline in reservation) ── */
+function buildDamageForm(resId){
+  var speechOk='webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  var micBtn=speechOk?'<button type="button" class="hub-btn" onclick="event.stopPropagation();voiceInput(this,\'df-desc-'+resId+'\')" style="float:right">&#127908; Voice</button>':'';
+  var micBtn2=speechOk?'<button type="button" class="hub-btn" onclick="event.stopPropagation();voiceInput(this,\'df-viol-'+resId+'\')" style="float:right">&#127908; Voice</button>':'';
+  return '<div class="hub-form" onclick="event.stopPropagation()">'
+    +'<div class="hub-form-full"><label>Damage Description '+micBtn+'</label><textarea id="df-desc-'+resId+'" rows="4" placeholder="Describe damage found during post-checkout inspection..."></textarea></div>'
+    +'<div class="hub-form-full"><label>Policy Violations '+micBtn2+'</label><textarea id="df-viol-'+resId+'" rows="2" placeholder="Smoking, unauthorized pets, exceeding occupancy..."></textarea></div>'
+    +'<div class="hub-form-row"><div><label>Estimated Cost ($)</label><input id="df-cost-'+resId+'" type="number" step="0.01" placeholder="0.00"></div>'
+    +'<div><label>Inspection Date</label><input id="df-date-'+resId+'" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="hub-form-full"><label>Affected Areas</label><input id="df-areas-'+resId+'" placeholder="hot tub, deck, living room (comma separated)"></div>'
+    +'<div class="hub-form-full"><label>Inspection Notes</label><textarea id="df-notes-'+resId+'" rows="2" placeholder="Additional observations..."></textarea></div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px">'
+    +'<button class="hub-btn hub-btn-danger" onclick="event.stopPropagation();submitDamage(\''+resId+'\')">&#9888; File Claim & Generate Legal Draft</button>'
+    +'<button class="hub-btn" onclick="event.stopPropagation();toggleDamageForm(\''+resId+'\')">Cancel</button>'
+    +'</div></div>';
+}
+
+function toggleDamageForm(resId){
+  var el=document.getElementById('damage-form-'+resId);
+  if(el) el.style.display=el.style.display==='none'?'block':'none';
+}
+
+/* ── Voice Input ── */
+var activeVoice=null;
+function voiceInput(btn,targetId){
+  if(activeVoice){activeVoice.stop();activeVoice=null;return}
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('Voice not supported',false);return}
+  var rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang='en-US';
+  activeVoice=rec;
+  btn.style.color='#f87171';btn.textContent='&#9899; Stop';
+  var tgt=document.getElementById(targetId);
+  rec.onresult=function(e){
+    var t='';for(var i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)t+=e.results[i][0].transcript}
+    if(t&&tgt)tgt.value+=(tgt.value?' ':'')+t;
+  };
+  rec.onend=function(){btn.textContent='&#127908; Voice';btn.style.color='';activeVoice=null};
+  rec.onerror=function(){btn.textContent='&#127908; Voice';btn.style.color='';activeVoice=null};
+  rec.start();
+}
+
+/* ── Hub Data Loading ── */
+async function loadHubData(resId){
+  try{
+    var r=await fetch('/api/vrs/reservations/'+resId+'/full',{credentials:'include'});
+    if(r.ok){hubCache[resId]=await r.json();renderTable()}
+    else{hubCache[resId]={reservation:{},guest:{},property:{},messages:[],work_orders:[],damage_claims:[]};renderTable()}
+  }catch(e){console.error('Hub load error:',e)}
+}
+
+/* ── Damage Actions ── */
+async function submitDamage(resId){
+  var desc=document.getElementById('df-desc-'+resId);
+  if(!desc||!desc.value.trim()){showToast('Damage description required',false);return}
+  try{
+    showToast('Filing claim...',true);
+    var r=await fetch('/api/vrs/damage-claims/',{method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        reservation_id:resId,
+        damage_description:desc.value.trim(),
+        policy_violations:(document.getElementById('df-viol-'+resId)?.value||'').trim()||null,
+        estimated_cost:parseFloat(document.getElementById('df-cost-'+resId)?.value)||null,
+        inspection_date:document.getElementById('df-date-'+resId)?.value||null,
+        damage_areas:(document.getElementById('df-areas-'+resId)?.value||'').split(',').map(function(s){return s.trim()}).filter(Boolean),
+        inspection_notes:(document.getElementById('df-notes-'+resId)?.value||'').trim()||null,
+        reported_by:'management'
+      })
+    });
+    if(r.ok){
+      var claim=await r.json();
+      showToast('Claim '+claim.claim_number+' filed — generating draft...',true);
+      await genDraft(claim.id);
+      delete hubCache[resId];
+      loadHubData(resId);
+    }else{showToast('Failed to file claim',false)}
+  }catch(e){showToast('Error: '+e.message,false)}
+}
+
+/* ═══════════ DAMAGE COMMAND CENTER — Enterprise Agentic ═══════════ */
+var dmgClaims=[];
+var dmgSelectedId=null;
+var dmgEditMode=false;
+var dmgDraftEditMode=false;
+
+async function genDraft(claimId){
+  try{
+    showToast('HYDRA generating legal draft — analyzing rental agreement...',true);
+    var r=await fetch('/api/vrs/damage-claims/'+claimId+'/generate-legal-draft',{method:'POST',credentials:'include'});
+    if(r.ok){
+      showToast('Legal draft ready for review',true);
+      Object.keys(hubCache).forEach(function(k){delete hubCache[k]});
+      await refreshDmgDetail(claimId);
+      await loadAll();
+    }else{showToast('Draft generation failed',false)}
+  }catch(e){showToast('Error: '+e.message,false)}
+}
+
+async function approveDraft(claimId){
+  try{
+    var r=await fetch('/api/vrs/damage-claims/'+claimId+'/approve',{method:'POST',credentials:'include'});
+    if(r.ok){
+      showToast('Draft approved — ready to send',true);
+      Object.keys(hubCache).forEach(function(k){delete hubCache[k]});
+      await refreshDmgDetail(claimId);
+      await loadAll();
+    }else{showToast('Approval failed',false)}
+  }catch(e){showToast('Error: '+e.message,false)}
+}
+
+async function sendDamageResp(claimId,via){
+  if(!confirm('Send damage response to guest via '+via.toUpperCase()+'?\n\nThis will deliver the approved letter.')) return;
+  try{
+    var r=await fetch('/api/vrs/damage-claims/'+claimId+'/send?via='+via,{method:'POST',credentials:'include'});
+    if(r.ok){
+      showToast('Response sent via '+via,true);
+      Object.keys(hubCache).forEach(function(k){delete hubCache[k]});
+      await refreshDmgDetail(claimId);
+      await loadAll();
+    }else{showToast('Send failed',false)}
+  }catch(e){showToast('Error: '+e.message,false)}
+}
+
+async function saveDmgEdit(claimId){
+  var body={};
+  var f=function(id){var el=document.getElementById(id);return el?el.value.trim():''};
+  body.damage_description=f('dmg-edit-desc');
+  body.policy_violations=f('dmg-edit-violations');
+  body.inspection_notes=f('dmg-edit-notes');
+  var cost=f('dmg-edit-cost');if(cost)body.estimated_cost=parseFloat(cost);
+  var areas=f('dmg-edit-areas');if(areas)body.damage_areas=areas.split(',').map(function(a){return a.trim()}).filter(Boolean);
+  try{
+    showToast('Saving claim updates...',true);
+    var r=await fetch('/api/vrs/damage-claims/'+claimId,{method:'PATCH',credentials:'include',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){
+      showToast('Claim updated',true);dmgEditMode=false;
+      Object.keys(hubCache).forEach(function(k){delete hubCache[k]});
+      await refreshDmgDetail(claimId);await loadAll();
+    }else{showToast('Save failed',false)}
+  }catch(e){showToast('Error: '+e.message,false)}
+}
+
+async function saveDmgDraftEdit(claimId){
+  var el=document.getElementById('dmg-draft-editor');
+  if(!el)return;
+  try{
+    showToast('Saving edited draft...',true);
+    var r=await fetch('/api/vrs/damage-claims/'+claimId,{method:'PATCH',credentials:'include',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({final_response:el.value})});
+    if(r.ok){showToast('Draft saved',true);dmgDraftEditMode=false;await refreshDmgDetail(claimId);await loadAll()}
+    else{showToast('Save failed',false)}
+  }catch(e){showToast('Error: '+e.message,false)}
+}
+
+async function resolveDmgClaim(claimId){
+  var amt=prompt('Resolution amount (or leave blank):');
+  var note=prompt('Resolution notes:');
+  if(note===null)return;
+  var body={status:'resolved',resolution:note||'Resolved'};
+  if(amt&&!isNaN(parseFloat(amt))) body.resolution_amount=parseFloat(amt);
+  try{
+    var r=await fetch('/api/vrs/damage-claims/'+claimId,{method:'PATCH',credentials:'include',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){showToast('Claim resolved',true);await refreshDmgDetail(claimId);await loadAll()}
+    else{showToast('Resolve failed',false)}
+  }catch(e){showToast('Error: '+e.message,false)}
+}
+
+async function refreshDmgDetail(claimId){
+  try{
+    var r=await fetch('/api/vrs/damage-claims/'+claimId,{credentials:'include'});
+    if(r.ok){
+      var c=await r.json();
+      var idx=dmgClaims.findIndex(function(x){return x.id===claimId});
+      if(idx>=0) dmgClaims[idx]=c;
+      renderDmgList();renderDmgDetail(c);
+    }
+  }catch(e){}
+}
+
+function toggleDmgCenter(){
+  var body=document.getElementById('dmg-body');
+  var hint=document.getElementById('dmg-toggle-hint');
+  if(!body)return;
+  var open=body.classList.toggle('open');
+  if(hint) hint.innerHTML=open?'&#9650; collapse':'&#9660; expand';
+}
+
+function renderDmgList(){
+  var list=document.getElementById('dmg-list');
+  if(!list)return;
+  var stColors={reported:'#f87171',draft_ready:'#fbbf24',approved:'#60a5fa',sent:'#06b6d4',resolved:'#4ade80'};
+  var stBg={reported:'rgba(248,113,113,.15)',draft_ready:'rgba(251,191,36,.15)',approved:'rgba(96,165,250,.15)',sent:'rgba(6,182,212,.15)',resolved:'rgba(74,222,128,.15)'};
+  list.innerHTML=dmgClaims.map(function(c){
+    var sel=dmgSelectedId===c.id?'active':'';
+    var cost=c.estimated_cost?'$'+Number(c.estimated_cost).toLocaleString():'TBD';
+    return '<div class="dmg-list-item '+sel+'" onclick="selectDmgClaim(\''+c.id+'\')">'
+      +'<div class="dmg-list-claim">'+esc(c.claim_number)+'</div>'
+      +'<div class="dmg-list-prop">'+esc(c.property_name||'')+'</div>'
+      +'<div class="dmg-list-meta">'
+      +'<span class="dmg-list-status" style="background:'+stBg[c.status]+';color:'+stColors[c.status]+'">'+esc(c.status)+'</span>'
+      +'<span>'+esc(c.guest_name||'')+'</span>'
+      +'<span>'+cost+'</span>'
+      +'</div></div>';
+  }).join('');
+}
+
+function selectDmgClaim(id){
+  dmgSelectedId=id;dmgEditMode=false;dmgDraftEditMode=false;
+  var c=dmgClaims.find(function(x){return x.id===id});
+  renderDmgList();
+  if(c) renderDmgDetail(c);
+}
+
+function renderDmgDetail(c){
+  var el=document.getElementById('dmg-detail');
+  if(!el)return;
+  var stColors={reported:'#f87171',draft_ready:'#fbbf24',approved:'#60a5fa',sent:'#06b6d4',resolved:'#4ade80'};
+  var stLabels={reported:'Reported',draft_ready:'Draft Ready',approved:'Approved',sent:'Sent to Guest',resolved:'Resolved'};
+  var steps=['reported','draft_ready','approved','sent','resolved'];
+  var currentIdx=steps.indexOf(c.status);
+
+  var h='';
+
+  // ── Header
+  h+='<div class="dmg-section" style="background:#0d0d0d;padding:16px 20px">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
+  h+='<div><span style="font-size:16px;font-weight:800;color:#f87171">'+esc(c.claim_number)+'</span>';
+  h+='<span style="font-size:12px;color:#888;margin-left:10px">'+esc(c.property_name||'')+'</span></div>';
+  h+='<span class="dmg-list-status" style="font-size:11px;padding:4px 14px;background:'+stColors[c.status]+'22;color:'+stColors[c.status]+'">'+esc(stLabels[c.status]||c.status)+'</span>';
+  h+='</div>';
+
+  // Timeline
+  h+='<div class="dmg-timeline">';
+  steps.forEach(function(s,i){
+    var cls=i<currentIdx?'dmg-tl-done':i===currentIdx?'dmg-tl-active':'dmg-tl-pending';
+    h+='<span class="dmg-tl-step '+cls+'">'+(i<currentIdx?'&#10003; ':i===currentIdx?'&#9679; ':'')+(stLabels[s]||s)+'</span>';
+    if(i<steps.length-1) h+='<span style="color:#333;font-size:11px">&#8594;</span>';
+  });
+  h+='</div></div>';
+
+  // ── Reservation & Guest Info
+  h+='<div class="dmg-section"><div class="dmg-section-title">Reservation & Guest</div>';
+  h+='<div class="dmg-grid">';
+  h+=dmgField('Guest',c.guest_name);
+  h+=dmgField('Email',c.guest_email||'—');
+  h+=dmgField('Phone',c.guest_phone||'—');
+  h+=dmgField('Confirmation',c.confirmation_code||'—');
+  h+=dmgField('Check-in',fmtDate(c.check_in_date));
+  h+=dmgField('Check-out',fmtDate(c.check_out_date));
+  h+=dmgField('Reported By',c.reported_by);
+  h+=dmgField('Inspection Date',fmtDate(c.inspection_date));
+  h+=dmgField('Filed',fmtTime(c.created_at));
+  h+='</div></div>';
+
+  // ── Damage Details (editable)
+  if(dmgEditMode){
+    h+=renderDmgEditForm(c);
+  }else{
+    h+='<div class="dmg-section"><div class="dmg-section-title">Damage Details <button class="dmg-btn dmg-btn-edit" style="padding:3px 10px;font-size:9px" onclick="dmgEditMode=true;selectDmgClaim(\''+c.id+'\')">&#9998; Edit</button></div>';
+    h+='<div class="dmg-grid" style="margin-bottom:10px">';
+    h+=dmgField('Estimated Cost','$'+Number(c.estimated_cost||0).toLocaleString(),'highlight');
+    h+=dmgField('Areas',(c.damage_areas||[]).join(', ')||'—');
+    h+=dmgField('Status',stLabels[c.status]||c.status);
+    h+='</div>';
+    h+='<div class="dmg-field-label">Damage Description</div>';
+    h+='<div class="dmg-text-block">'+esc(c.damage_description)+'</div>';
+    if(c.policy_violations){
+      h+='<div class="dmg-field-label" style="margin-top:10px">Policy Violations</div>';
+      h+='<div class="dmg-text-block" style="border-color:rgba(248,113,113,.2)">'+esc(c.policy_violations)+'</div>';
+    }
+    if(c.inspection_notes){
+      h+='<div class="dmg-field-label" style="margin-top:10px">Inspection Notes</div>';
+      h+='<div class="dmg-text-block">'+esc(c.inspection_notes)+'</div>';
+    }
+    h+='</div>';
+  }
+
+  // ── Legal Draft Section
+  h+='<div class="dmg-section"><div class="dmg-section-title">Legal Response Draft';
+  if(c.legal_draft_model) h+='<span style="font-size:9px;color:#555">Model: '+esc(c.legal_draft_model)+' &bull; '+fmtTime(c.legal_draft_at)+'</span>';
+  h+='</div>';
+  if(c.legal_draft){
+    if(dmgDraftEditMode){
+      h+='<textarea id="dmg-draft-editor" class="dmg-edit-field" rows="14" style="font-size:12px;line-height:1.6;color:#c4b5fd">'
+        +esc(c.final_response||c.legal_draft)+'</textarea>';
+      h+='<div style="display:flex;gap:8px;margin-top:8px">';
+      h+='<button class="dmg-btn dmg-btn-approve" onclick="saveDmgDraftEdit(\''+c.id+'\')">&#10003; Save Draft</button>';
+      h+='<button class="dmg-btn" onclick="dmgDraftEditMode=false;selectDmgClaim(\''+c.id+'\')">Cancel</button>';
+      h+='</div>';
+    }else{
+      h+='<div class="dmg-draft-block">'+esc(c.final_response||c.legal_draft)+'</div>';
+      h+='<div style="display:flex;gap:8px;margin-top:8px">';
+      h+='<button class="dmg-btn dmg-btn-edit" onclick="dmgDraftEditMode=true;selectDmgClaim(\''+c.id+'\')">&#9998; Edit Draft</button>';
+      h+='<button class="dmg-btn dmg-btn-draft" onclick="genDraft(\''+c.id+'\')">&#8635; Regenerate</button>';
+      h+='</div>';
+    }
+  }else{
+    h+='<div style="color:#555;font-size:12px;padding:14px 0">No draft yet — generate one using the button below.</div>';
+  }
+  h+='</div>';
+
+  // ── Resolution (if resolved)
+  if(c.resolution){
+    h+='<div class="dmg-section"><div class="dmg-section-title">Resolution</div>';
+    h+='<div class="dmg-grid">';
+    h+=dmgField('Resolution',c.resolution);
+    h+=dmgField('Resolution Amount',c.resolution_amount?'$'+Number(c.resolution_amount).toLocaleString():'—');
+    h+=dmgField('Resolved At',fmtTime(c.resolved_at));
+    h+='</div></div>';
+  }
+
+  // ── Audit trail
+  h+='<div class="dmg-section"><div class="dmg-section-title">Audit Trail</div>';
+  h+='<div class="dmg-grid">';
+  h+=dmgField('Created',fmtTime(c.created_at));
+  h+=dmgField('Reviewed By',c.reviewed_by||'—');
+  h+=dmgField('Reviewed At',fmtTime(c.reviewed_at));
+  h+=dmgField('Sent At',fmtTime(c.sent_at));
+  h+=dmgField('Sent Via',c.sent_via||'—');
+  h+=dmgField('Last Updated',fmtTime(c.updated_at));
+  h+='</div></div>';
+
+  // ── Action buttons bar
+  h+='<div class="dmg-actions">';
+  if(c.status==='reported'){
+    h+='<button class="dmg-btn dmg-btn-draft" onclick="genDraft(\''+c.id+'\')">&#9878; Generate Legal Draft</button>';
+  }
+  if(c.status==='draft_ready'){
+    h+='<button class="dmg-btn dmg-btn-approve" onclick="approveDraft(\''+c.id+'\')">&#10003; Approve Draft</button>';
+    h+='<button class="dmg-btn dmg-btn-draft" onclick="genDraft(\''+c.id+'\')">&#8635; Regenerate</button>';
+  }
+  if(c.status==='approved'){
+    h+='<button class="dmg-btn dmg-btn-send" onclick="sendDamageResp(\''+c.id+'\',\'email\')">&#9993; Send via Email</button>';
+    h+='<button class="dmg-btn dmg-btn-send" onclick="sendDamageResp(\''+c.id+'\',\'sms\')">&#128241; Send via SMS</button>';
+    h+='<button class="dmg-btn dmg-btn-send" onclick="sendDamageResp(\''+c.id+'\',\'both\')">&#128232; Send Both</button>';
+  }
+  if(c.status!=='resolved'&&c.status!=='closed'){
+    h+='<button class="dmg-btn dmg-btn-danger" style="margin-left:auto" onclick="resolveDmgClaim(\''+c.id+'\')">&#10006; Resolve & Close</button>';
+  }
+  h+='</div>';
+
+  el.innerHTML=h;
+}
+
+function renderDmgEditForm(c){
+  var h='<div class="dmg-section" style="background:rgba(251,191,36,.03);border:1px solid rgba(251,191,36,.15);border-radius:10px;margin:0 16px 8px">';
+  h+='<div class="dmg-section-title" style="color:#fbbf24">&#9998; Editing Damage Record</div>';
+  h+='<div class="dmg-edit-full"><label class="dmg-edit-label">Damage Description</label>';
+  h+='<textarea id="dmg-edit-desc" class="dmg-edit-field" rows="5">'+esc(c.damage_description)+'</textarea></div>';
+  h+='<div class="dmg-edit-full"><label class="dmg-edit-label">Policy Violations</label>';
+  h+='<textarea id="dmg-edit-violations" class="dmg-edit-field" rows="3">'+esc(c.policy_violations||'')+'</textarea></div>';
+  h+='<div class="dmg-edit-row">';
+  h+='<div><label class="dmg-edit-label">Estimated Cost ($)</label><input id="dmg-edit-cost" class="dmg-edit-field" type="number" step="0.01" value="'+(c.estimated_cost||'')+'"></div>';
+  h+='<div><label class="dmg-edit-label">Damage Areas (comma-separated)</label><input id="dmg-edit-areas" class="dmg-edit-field" value="'+esc((c.damage_areas||[]).join(', '))+'"></div>';
+  h+='</div>';
+  h+='<div class="dmg-edit-full"><label class="dmg-edit-label">Inspection Notes</label>';
+  h+='<textarea id="dmg-edit-notes" class="dmg-edit-field" rows="3">'+esc(c.inspection_notes||'')+'</textarea></div>';
+  h+='<div style="display:flex;gap:8px;margin-top:10px">';
+  h+='<button class="dmg-btn dmg-btn-approve" onclick="saveDmgEdit(\''+c.id+'\')">&#10003; Save Changes</button>';
+  h+='<button class="dmg-btn" onclick="dmgEditMode=false;selectDmgClaim(\''+c.id+'\')">Cancel</button>';
+  h+='<button class="dmg-btn dmg-btn-draft" onclick="saveDmgEdit(\''+c.id+'\').then(function(){genDraft(\''+c.id+'\')})">&#10003; Save & Regenerate Draft</button>';
+  h+='</div></div>';
+  return h;
+}
+
+function dmgField(label,value,cls){
+  return '<div class="dmg-field"><div class="dmg-field-label">'+label+'</div><div class="dmg-field-value'+(cls?' '+cls:'')+'">'+esc(value||'—')+'</div></div>';
+}
+
+function renderDmgCenter(claims){
+  var center=document.getElementById('dmg-center');
+  var count=document.getElementById('dmgCenterCount');
+  if(!center)return;
+  dmgClaims=claims||[];
+  if(!dmgClaims.length){center.style.display='none';return}
+  center.style.display='block';
+  if(count) count.textContent=dmgClaims.length;
+  renderDmgList();
+  if(dmgSelectedId){
+    var sel=dmgClaims.find(function(c){return c.id===dmgSelectedId});
+    if(sel) renderDmgDetail(sel);
+  }
+}
+
+function fmtTime(d){
+  if(!d)return'';
+  try{return new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return d}
+}
+
+function toggleDetail(id){
+  if(expandedId===id){expandedId=null;activeHubTab='overview'}
+  else{expandedId=id;activeHubTab='overview'}
+  renderTable();
+}
+
+/* ── Actions ── */
+async function doAction(resId,action){
+  try{
+    var r=await fetch('/api/vrs/booking/reservations/'+resId+'/'+action,{method:'POST',credentials:'include'});
+    if(r.ok){
+      showToast((action==='check-in'?'Checked in':'Checked out')+' successfully',true);
+      await loadAll();
+    }else{
+      var d=await r.json().catch(function(){return{}});
+      showToast(d.error||d.detail||('Failed to '+action),false);
+    }
+  }catch(e){
+    showToast('Network error: '+e.message,false);
+  }
+}
+
+/* ── Render Side Panels ── */
+function renderSideList(el,items,type){
+  if(!items||!items.length){
+    el.innerHTML='<div class="empty-state">No '+type+' today</div>';
+    return;
+  }
+  el.innerHTML=items.map(function(r){
+    var pname=r.property_name||propName(r.property_id);
+    var gname=r.guest_name||'';
+    var code=r.confirmation_code||r.id?.substring(0,8)||'';
+    return '<div class="res-item"><div class="res-item-left"><div class="res-item-name">'+esc(gname)+'</div><div class="res-item-sub">'+esc(pname)+' &bull; '+fmtDate(r.check_in_date)+' &rarr; '+fmtDate(r.check_out_date)+'</div></div><div class="res-item-code">'+esc(code)+'</div></div>';
+  }).join('');
+}
+
+/* ── (Damage Command Center JS is above) ── */
+
+/* ── Load Data ── */
+async function loadAll(searchTerm){
+  try{
+    var resUrl='/api/vrs/reservations?limit=200';
+    if(searchTerm) resUrl+='&search='+encodeURIComponent(searchTerm);
+
+    var [pRes,rRes,aRes,dRes,dcRes]=await Promise.all([
+      fetch('/api/vrs/properties',{credentials:'include'}).catch(function(){return null}),
+      fetch(resUrl,{credentials:'include'}).catch(function(){return null}),
+      fetch('/api/vrs/reservations/arriving/today',{credentials:'include'}).catch(function(){return null}),
+      fetch('/api/vrs/reservations/departing/today',{credentials:'include'}).catch(function(){return null}),
+      fetch('/api/vrs/damage-claims/?status=all&limit=50',{credentials:'include'}).catch(function(){return null})
+    ]);
+
+    if(pRes&&pRes.ok){
+      var props=await pRes.json();
+      if(Array.isArray(props)){
+        propMap={};
+        props.forEach(function(p){propMap[p.id]=p.name||p.property_name||p.id});
+        var sel=document.getElementById('propFilter');
+        var cur=sel.value;
+        sel.innerHTML='<option value="">All Properties</option>';
+        props.forEach(function(p){
+          var o=document.createElement('option');
+          o.value=p.id;
+          o.textContent=propMap[p.id];
+          sel.appendChild(o);
+        });
+        sel.value=cur;
+      }
+    }
+
+    if(rRes&&rRes.ok){
+      var rd=await rRes.json();
+      allRes=Array.isArray(rd)?rd:[];
+      document.getElementById('resBadge').textContent=allRes.length+' reservation'+(allRes.length!==1?'s':'');
+      renderTable();
+    }else{
+      document.getElementById('resBody').innerHTML='<tr><td colspan="8"><div class="empty-state">Could not load reservations</div></td></tr>';
+    }
+
+    if(aRes&&aRes.ok){
+      var ad=await aRes.json();
+      var ac=Array.isArray(ad)?ad.length:0;
+      document.getElementById('arrivalCount').textContent=ac;
+      renderSideList(document.getElementById('arrivalsList'),ad,'arrivals');
+    }else{
+      document.getElementById('arrivalsList').innerHTML='<div class="empty-state">Could not load arrivals</div>';
+    }
+
+    if(dRes&&dRes.ok){
+      var dd=await dRes.json();
+      var dc=Array.isArray(dd)?dd.length:0;
+      document.getElementById('departureCount').textContent=dc;
+      renderSideList(document.getElementById('departuresList'),dd,'departures');
+    }else{
+      document.getElementById('departuresList').innerHTML='<div class="empty-state">Could not load departures</div>';
+    }
+
+    // Damage Command Center
+    if(dcRes&&dcRes.ok){
+      var dcs=await dcRes.json();
+      var activeClaims=Array.isArray(dcs)?dcs.filter(function(c){return c.status!=='closed'&&c.status!=='resolved'}):[];
+      renderDmgCenter(activeClaims);
+    }
+  }catch(e){
+    console.error('Load error:',e);
+  }
+}
+
+/* ── Init ── */
+loadUser();
+(function initFromUrl(){
+  var params=new URLSearchParams(window.location.search);
+  var search=params.get('search');
+  var filter=params.get('filter');
+  if(search){
+    document.getElementById('guestSearch').value=search;
+    loadAll(search);
+  }else if(filter==='arriving'){
+    activeStatus='all';
+    loadAll().then(function(){
+      var today=new Date().toISOString().split('T')[0];
+      allRes=allRes.filter(function(r){return r.check_in_date===today});
+      renderTable();
+    });
+  }else if(filter==='departing'){
+    activeStatus='all';
+    loadAll().then(function(){
+      var today=new Date().toISOString().split('T')[0];
+      allRes=allRes.filter(function(r){return r.check_out_date===today});
+      renderTable();
+    });
+  }else{
+    loadAll();
+  }
+})();
+setInterval(function(){loadAll()},30000);
+</script>
+</body>
+</html>

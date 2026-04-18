@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortress Prime — Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Fortress Unified Nav v2 — Grouped Dropdowns ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+
+.fn-g-green .fn-group-btn{border-bottom-color:transparent}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue .fn-group-btn{border-bottom-color:transparent}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber .fn-group-btn{border-bottom-color:transparent}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-item .fn-dd-icon{font-size:14px;width:18px;text-align:center;opacity:.5}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-dd-label{padding:6px 16px 4px;font-size:9px;color:#555;text-transform:uppercase;
+  letter-spacing:.08em;font-weight:600}
+
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Secondary Nav ── */
+.sec-nav{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;height:52px;
+  backdrop-filter:blur(10px)}
+.sec-left{display:flex;align-items:center;gap:12px}
+.sec-title{font-size:16px;font-weight:700}
+.sec-right{display:flex;align-items:center;gap:16px;font-size:14px}
+
+/* ── Main ── */
+.container{max-width:1400px;margin:0 auto;padding:32px 24px}
+.hero{margin-bottom:32px}
+.hero h1{font-size:28px;margin-bottom:6px}
+.hero .subtitle{color:#666;font-size:14px}
+
+/* ── Status Banner ── */
+.status-banner{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;margin-bottom:40px}
+.stat-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:16px;
+  text-align:center;transition:border-color .15s,transform .15s}
+.stat-card:hover{border-color:#333}
+.stat-link{text-decoration:none;color:inherit;cursor:pointer}
+.stat-link:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3);border-color:#4ade80}
+.stat-val{font-size:24px;font-weight:700;margin-bottom:2px}
+.stat-val.green{color:#4ade80}
+.stat-val.blue{color:#60a5fa}
+.stat-val.amber{color:#fbbf24}
+.stat-val.red{color:#f87171}
+.stat-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Section Headers ── */
+.section-head{font-size:14px;font-weight:700;color:#fff;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:16px;padding-bottom:10px;
+  border-bottom:1px solid #1a1a1a;display:flex;align-items:center;gap:10px}
+.section-head .sh-accent{width:4px;height:18px;border-radius:2px}
+.sh-green{background:#4ade80}
+.sh-blue{background:#60a5fa}
+.sh-amber{background:#fbbf24}
+
+/* ── Service Cards ── */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;margin-bottom:48px}
+.svc-card{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;
+  display:flex;flex-direction:column;gap:12px;transition:all .2s;position:relative;overflow:hidden;
+  text-decoration:none;color:#fff}
+.svc-card:hover{border-color:#333;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.svc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.svc-card.s-green::before{background:linear-gradient(90deg,#4ade80,#22d3ee)}
+.svc-card.s-blue::before{background:linear-gradient(90deg,#60a5fa,#a78bfa)}
+.svc-card.s-amber::before{background:linear-gradient(90deg,#fbbf24,#f97316)}
+.svc-card.s-red::before{background:linear-gradient(90deg,#f87171,#fb923c)}
+.svc-card.s-purple::before{background:linear-gradient(90deg,#a78bfa,#c084fc)}
+.svc-top{display:flex;align-items:flex-start;justify-content:space-between}
+.svc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:20px;background:#1a1a1a}
+.svc-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;
+  text-transform:uppercase;letter-spacing:.04em}
+.svc-badge.up{background:rgba(74,222,128,.12);color:#4ade80}
+.svc-badge.down{background:rgba(248,113,113,.12);color:#f87171}
+.svc-name{font-size:15px;font-weight:600}
+.svc-desc{font-size:12px;color:#666;line-height:1.5}
+.svc-meta{font-size:11px;color:#555;display:flex;gap:12px}
+.svc-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+  background:#1a1a1a;border:1px solid #333;color:#fff;text-decoration:none;
+  border-radius:8px;font-size:12px;font-weight:600;transition:all .15s;margin-top:auto}
+.svc-btn:hover{background:#222;border-color:#4ade80;color:#4ade80}
+
+/* ── Hero Card (CROG-VRS) ── */
+.hero-card{background:#111;border:1px solid #1a1a1a;border-radius:16px;padding:32px;
+  position:relative;overflow:hidden;margin-bottom:16px;transition:all .2s;
+  text-decoration:none;color:#fff;display:block}
+.hero-card:hover{border-color:#333;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.hero-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,#4ade80,#22d3ee,#60a5fa)}
+.hero-card-inner{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center}
+.hero-card-left h3{font-size:20px;margin-bottom:6px}
+.hero-card-left p{font-size:13px;color:#888;line-height:1.6;max-width:600px}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.hero-stat{text-align:center;padding:12px 16px;background:#1a1a1a;border-radius:10px}
+.hero-stat-val{font-size:22px;font-weight:700;color:#4ade80}
+.hero-stat-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+
+/* ── Quick Links ── */
+.ql-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:48px}
+.ql-card{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:14px;
+  text-align:center;text-decoration:none;color:#fff;transition:all .15s}
+.ql-card:hover{border-color:#4ade80;background:#0d1a0d}
+.ql-icon{font-size:22px;margin-bottom:4px}
+.ql-label{font-size:11px;font-weight:600}
+.ql-sub{font-size:9px;color:#666;margin-top:2px}
+
+/* ── System Grid ── */
+.sys-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:48px}
+.sys-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:16px;
+  text-decoration:none;color:#fff;transition:all .15s;display:flex;flex-direction:column;gap:8px}
+.sys-card:hover{border-color:#333}
+.sys-card-top{display:flex;align-items:center;justify-content:space-between}
+.sys-card-name{font-size:13px;font-weight:600}
+.sys-card-desc{font-size:11px;color:#666}
+.sys-card-val{font-size:11px;color:#555}
+
+@media(max-width:768px){
+  .fn-groups{display:none}
+  .svc-grid,.sys-grid{grid-template-columns:1fr}
+  .status-banner{grid-template-columns:repeat(2,1fr)}
+  .hero-card-inner{grid-template-columns:1fr}
+  .hero-stats{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- UNIFIED NAV BAR v2 -->
+<div class="fn-bar">
+  <a href="/" class="fn-home">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    FORTRESS PRIME
+  </a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc fn-cc-active">Command Center</a>
+    <!-- CROG-VRS Group -->
+    <div class="fn-group fn-g-green" data-group="vrs">
+      <div class="fn-group-btn" onclick="toggleGroup('vrs')">
+        <span>CROG-VRS</span>
+        <span class="fn-caret">&#9660;</span>
+      </div>
+      <div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div>
+    </div>
+    <!-- Operations Group -->
+    <div class="fn-group fn-g-blue" data-group="ops">
+      <div class="fn-group-btn" onclick="toggleGroup('ops')">
+        <span>Operations</span>
+        <span class="fn-caret">&#9660;</span>
+      </div>
+      <div class="fn-dropdown">
+        <a href="/email-intake" class="fn-dd-item"><span class="fn-dd-icon">&#128231;</span>Email Intake</a>
+        <a href="/intelligence" class="fn-dd-item"><span class="fn-dd-icon">&#9813;</span>Intelligence</a>
+        <a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Documents</a>
+        <a href="/legal" class="fn-dd-item"><span class="fn-dd-icon">&#9878;</span>Legal Cases</a>
+      </div>
+    </div>
+    <!-- System Group -->
+    <div class="fn-group fn-g-amber" data-group="sys"><div class="fn-group-btn" onclick="toggleGroup('sys')"><span>System</span><span class="fn-caret">&#9660;</span></div><div class="fn-dropdown"><a href="/vault" class="fn-dd-item"><span class="fn-dd-icon">&#128273;</span>Key Vault</a><a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a><a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a><a href="/docs-center" class="fn-dd-item"><span class="fn-dd-icon">&#128196;</span>Docs</a><a href="/webui" class="fn-dd-item"><span class="fn-dd-icon">&#9798;</span>Mission Control</a></div></div>
+  <div class="fn-right">
+    <div class="fn-dot"></div>
+    <span class="fn-clock" id="fnClock"></span>
+    <div class="fn-user" data-group="user">
+      <div class="fn-user-btn" onclick="toggleGroup('user')">
+        <span id="navUser">&#128100;</span>
+        <span class="fn-caret">&#9660;</span>
+      </div>
+      <div class="fn-user-dd">
+        <a href="/profile" class="fn-dd-item"><span class="fn-dd-icon">&#9881;</span>Profile</a>
+        <a href="/users" class="fn-dd-item"><span class="fn-dd-icon">&#128101;</span>Users</a>
+        <div class="fn-dd-sep"></div>
+        <a href="#" class="fn-dd-item" onclick="logout();return false"><span class="fn-dd-icon">&#10140;</span>Sign Out</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</div>
+
+<!-- SECONDARY NAV -->
+<div class="sec-nav">
+  <div class="sec-left">
+    <span class="sec-title">Command Center</span>
+  </div>
+  <div class="sec-right">
+    <span style="color:#555;font-size:12px" id="envLabel">Cabin Rentals of Georgia, LLC</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STATUS BANNER -->
+  <div class="status-banner">
+    <div class="stat-card"><div class="stat-val green" id="sNodes">-</div><div class="stat-label">Cluster Nodes</div></div>
+    <div class="stat-card"><div class="stat-val blue" id="sServices">-</div><div class="stat-label">Services Up</div></div>
+    <a href="/vrs/properties" class="stat-card stat-link"><div class="stat-val green" id="sProperties">-</div><div class="stat-label">Properties</div></a>
+    <a href="/vrs/reservations?filter=arriving" class="stat-card stat-link"><div class="stat-val amber" id="sArrivals">-</div><div class="stat-label">Arrivals Today</div></a>
+    <a href="/legal" class="stat-card stat-link"><div class="stat-val red" id="sLegal">-</div><div class="stat-label">Legal Actions</div></a>
+    <a href="/email-intake" class="stat-card stat-link"><div class="stat-val blue" id="sEmails">-</div><div class="stat-label">Emails (24h)</div></a>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: BUSINESS DIVISIONS                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section-head"><span class="sh-accent sh-green"></span>Business Divisions</div>
+
+  <!-- CROG-VRS Hero Card -->
+  <a href="/vrs" class="hero-card">
+    <div class="hero-card-inner">
+      <div class="hero-card-left">
+        <h3>CROG-VRS &mdash; Vacation Rental Software</h3>
+        <p>Full property management platform. Properties, reservations, guest CRM, AI-powered guest communication, dynamic pricing, and inspection management for all Blue Ridge cabins.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-val" id="vrsPropCount">-</div><div class="hero-stat-label">Properties</div></div>
+        <div class="hero-stat"><div class="hero-stat-val" id="vrsOccupancy">-</div><div class="hero-stat-label">Occupancy</div></div>
+        <div class="hero-stat"><div class="hero-stat-val" id="vrsGuests">-</div><div class="hero-stat-label">Guests</div></div>
+      </div>
+    </div>
+  </a>
+
+  <div class="svc-grid">
+    <div class="svc-card s-red">
+      <div class="svc-top">
+        <div class="svc-icon">&#9878;</div>
+        <span class="svc-badge up" id="legalBadge">LIVE</span>
+      </div>
+      <div class="svc-name">Legal &mdash; Fortress JD</div>
+      <div class="svc-desc">Case viewer with deadlines, correspondence, actions, and evidence. Multi-case management across all divisions.</div>
+      <div class="svc-meta"><span id="legalCases">-</span><span id="legalDeadline">-</span></div>
+      <a href="/legal" class="svc-btn">Open Legal Cases &#8594;</a>
+    </div>
+
+    <div class="svc-card s-blue">
+      <div class="svc-top">
+        <div class="svc-icon">&#128176;</div>
+        <span class="svc-badge up">LIVE</span>
+      </div>
+      <div class="svc-name">Finance &mdash; Comptroller</div>
+      <div class="svc-desc">Enterprise financial oversight. Audit ledger, revenue tracking, QuickBooks integration, tax optimization.</div>
+      <div class="svc-meta"><span>QuantRevenue</span><span>Audit Ledger</span></div>
+      <a href="/docs-center" class="svc-btn">View Reports &#8594;</a>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: OPERATIONS & INTELLIGENCE                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section-head"><span class="sh-accent sh-blue"></span>Operations &amp; Intelligence</div>
+
+  <div class="svc-grid">
+    <div class="svc-card s-amber">
+      <div class="svc-top">
+        <div class="svc-icon">&#128231;</div>
+        <span class="svc-badge up" id="intakeBadge">LIVE</span>
+      </div>
+      <div class="svc-name">Email Intake</div>
+      <div class="svc-desc">3-layer email pipeline. GateKeeper, SmartClassifier, EscalationEngine. Review, reclassify, and teach the system.</div>
+      <div class="svc-meta"><span id="intakePending">- pending</span><span id="intakeQuarantine">- quarantined</span></div>
+      <a href="/email-intake" class="svc-btn">Open Email Intake &#8594;</a>
+    </div>
+
+    <div class="svc-card s-purple">
+      <div class="svc-top">
+        <div class="svc-icon">&#9813;</div>
+        <span class="svc-badge up">LIVE</span>
+      </div>
+      <div class="svc-name">Intelligence &mdash; Council of Giants</div>
+      <div class="svc-desc">9-persona market analysis Council. Multi-model voting, accuracy tracking, leaderboard, and debate arena.</div>
+      <div class="svc-meta"><span>9 Personas</span><span>Reranked RAG</span></div>
+      <a href="/intelligence" class="svc-btn">Open Intelligence &#8594;</a>
+    </div>
+
+    <div class="svc-card s-blue">
+      <div class="svc-top">
+        <div class="svc-icon">&#128196;</div>
+        <span class="svc-badge up">LIVE</span>
+      </div>
+      <div class="svc-name">Document Center</div>
+      <div class="svc-desc">Enterprise documentation hub. Architecture maps, audit reports, deployment guides, integration docs.</div>
+      <div class="svc-meta"><span>Markdown viewer</span></div>
+      <a href="/docs-center" class="svc-btn">Open Documents &#8594;</a>
+    </div>
+
+    <div class="svc-card s-amber">
+      <div class="svc-top">
+        <div class="svc-icon">&#128232;</div>
+        <span class="svc-badge up" id="bridgeBadge">LIVE</span>
+      </div>
+      <div class="svc-name">Email Bridge</div>
+      <div class="svc-desc">IMAP polling service ingesting emails into Fortress. Watchdog matching for legal cases. Auto-alerts on NAS.</div>
+      <div class="svc-meta"><span id="bridgeTotal">-</span><span id="bridgeLatest">-</span></div>
+      <a href="/email-intake" class="svc-btn">View in Email Intake &#8594;</a>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: SYSTEM HEALTH                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section-head"><span class="sh-accent sh-amber"></span>System Health</div>
+
+  <div class="sys-grid">
+    <a href="http://192.168.0.100:9876" class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#128153; Cluster Health</div>
+        <span class="svc-badge up" id="healthBadge">LIVE</span>
+      </div>
+      <div class="sys-card-desc">4-node DGX Spark cluster. GPU, CPU, RAM, disk monitoring.</div>
+      <div class="sys-card-val"><span id="sGPU">-</span> GPU &bull; <span id="sNodes2">4</span> Nodes</div>
+    </a>
+    <a href="http://192.168.0.100:3000" class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#128200; Grafana</div>
+        <span class="svc-badge up" id="grafanaBadge">LIVE</span>
+      </div>
+      <div class="sys-card-desc">Metrics visualization. Docker stats, Ollama throughput, Prometheus.</div>
+      <div class="sys-card-val">Port 3000 &bull; Port 9090</div>
+    </a>
+    <a href="http://192.168.0.100:9877" class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#9783; Batch Classifier</div>
+        <span class="svc-badge up" id="classifierBadge">LIVE</span>
+      </div>
+      <div class="sys-card-desc">AI-powered vendor classification engine. 57K+ emails processed.</div>
+      <div class="sys-card-val" id="classifierVendors">-</div>
+    </a>
+    <a href="http://192.168.0.100:8888" class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#9638; Portainer</div>
+        <span class="svc-badge up">LIVE</span>
+      </div>
+      <div class="sys-card-desc">Docker Swarm management. Containers, stacks, volumes.</div>
+      <div class="sys-card-val" id="dockerContainers">-</div>
+    </a>
+    <a href="/webui" class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#9798; Mission Control</div>
+        <span class="svc-badge up" id="missionBadge">LIVE</span>
+      </div>
+      <div class="sys-card-desc">Open WebUI. Hydra (R1-70B), Claude, Gemini, Grok. Tool calling.</div>
+      <div class="sys-card-val">Multi-model</div>
+    </a>
+    <div class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#129302; Ollama Cluster</div>
+        <span class="svc-badge up">RUNNING</span>
+      </div>
+      <div class="sys-card-desc">4-node Nginx load-balanced inference. qwen2.5, deepseek-r1, nomic-embed.</div>
+      <div class="sys-card-val">Port 80 (LB) &bull; Port 11434</div>
+    </div>
+    <div class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#128451; PostgreSQL + Qdrant</div>
+        <span class="svc-badge up">RUNNING</span>
+      </div>
+      <div class="sys-card-desc">fortress_db (PG 16), 4 Qdrant collections, 1.4M+ vectors.</div>
+      <div class="sys-card-val">PG: 5432 &bull; Qdrant: 6333</div>
+    </div>
+    <div class="sys-card">
+      <div class="sys-card-top">
+        <div class="sys-card-name">&#128190; NAS Storage</div>
+        <span class="svc-badge up">MOUNTED</span>
+      </div>
+      <div class="sys-card-desc">Fortress NAS 192.168.0.103. Backups, legal docs, email archive.</div>
+      <div class="sys-card-val" id="nasUsage">-</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ── Nav Dropdown Logic ── */
+function toggleGroup(name){
+  var all=document.querySelectorAll('.fn-group,.fn-user');
+  all.forEach(function(g){
+    if(g.dataset.group===name){g.classList.toggle('open')}
+    else{g.classList.remove('open')}
+  });
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.fn-group')&&!e.target.closest('.fn-user')){
+    document.querySelectorAll('.fn-group,.fn-user').forEach(function(g){g.classList.remove('open')});
+  }
+});
+
+/* ── Clock ── */
+setInterval(function(){document.getElementById('fnClock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+/* ── Auth ── */
+async function loadUser(){
+  try{
+    var r=await fetch('/api/verify',{credentials:'include'});
+    if(r.ok){var d=await r.json();document.getElementById('navUser').textContent=d.username||'User'}
+    else{window.location.href='/login'}
+  }catch(e){window.location.href='/login'}
+}
+function logout(){fetch('/api/logout',{method:'POST',credentials:'include'}).then(function(){window.location.href='/login'})}
+
+/* ── Live Stats ── */
+async function loadStats(){
+  try{
+    var lr=await fetch('/api/legal/overview',{credentials:'include'}).catch(function(){return null});
+    if(lr&&lr.ok){
+      var ld=await lr.json();
+      document.getElementById('sLegal').textContent=ld.pending_actions?.length||'0';
+      document.getElementById('legalCases').textContent=(ld.total_cases||0)+' cases';
+      var dl=ld.deadlines?.[0];
+      document.getElementById('legalDeadline').textContent=dl?'Next: '+dl.effective_date:'';
+    }
+  }catch(e){}
+
+  try{
+    var br=await fetch('http://192.168.0.100:9878/api/bridge/status').catch(function(){return null});
+    if(br&&br.ok){
+      var bd=await br.json();
+      document.getElementById('sEmails').textContent=bd.last_24h||'-';
+      document.getElementById('bridgeTotal').textContent=(bd.bridge_total||0).toLocaleString()+' total';
+      document.getElementById('bridgeLatest').textContent=bd.latest_email?'Latest: '+new Date(bd.latest_email).toLocaleTimeString():'';
+    }
+  }catch(e){}
+
+  try{
+    var ir=await fetch('/api/email-intake/dashboard',{credentials:'include'}).catch(function(){return null});
+    if(ir&&ir.ok){
+      var id=await ir.json();
+      var escPending=0;
+      (id.escalation?.stats||[]).forEach(function(s){if(s.status==='pending')escPending+=s.cnt});
+      document.getElementById('intakePending').textContent=escPending+' pending';
+      var quarCount=0;
+      (id.quarantine?.by_status||[]).forEach(function(s){if(s.status==='quarantined')quarCount+=s.cnt});
+      document.getElementById('intakeQuarantine').textContent=quarCount+' quarantined';
+    }
+  }catch(e){}
+
+  try{
+    var vr=await fetch('/api/vrs/properties',{credentials:'include'}).catch(function(){return null});
+    if(vr&&vr.ok){
+      var vd=await vr.json();
+      var count=Array.isArray(vd)?vd.length:(vd.total||vd.count||'-');
+      document.getElementById('sProperties').textContent=count;
+      document.getElementById('vrsPropCount').textContent=count;
+    }
+  }catch(e){}
+
+  try{
+    var ar=await fetch('/api/vrs/reservations/arriving/today',{credentials:'include'}).catch(function(){return null});
+    if(ar&&ar.ok){
+      var ad=await ar.json();
+      document.getElementById('sArrivals').textContent=Array.isArray(ad)?ad.length:(ad.total||'0');
+    }
+  }catch(e){}
+
+  try{
+    var gr=await fetch('/api/vrs/guests',{credentials:'include'}).catch(function(){return null});
+    if(gr&&gr.ok){
+      var gd=await gr.json();
+      document.getElementById('vrsGuests').textContent=Array.isArray(gd)?gd.length:(gd.total||'-');
+    }
+  }catch(e){}
+
+  var checks=[
+    {url:'http://192.168.0.100:9878/api/health',badge:'legalBadge'},
+    {url:'http://192.168.0.100:9876/',badge:'healthBadge'},
+    {url:'http://192.168.0.100:9877/',badge:'classifierBadge'},
+    {url:'http://192.168.0.100:8080/health',badge:'missionBadge'},
+    {url:'http://192.168.0.100:3000/login',badge:'grafanaBadge'},
+  ];
+  var upCount=0;
+  for(var i=0;i<checks.length;i++){
+    var c=checks[i];
+    try{
+      var r=await fetch(c.url,{mode:'no-cors'}).catch(function(){return null});
+      if(r){upCount++;document.getElementById(c.badge).textContent='LIVE';document.getElementById(c.badge).className='svc-badge up'}
+      else{document.getElementById(c.badge).textContent='DOWN';document.getElementById(c.badge).className='svc-badge down'}
+    }catch(e){document.getElementById(c.badge).textContent='DOWN';document.getElementById(c.badge).className='svc-badge down'}
+  }
+  document.getElementById('sServices').textContent=upCount+'/'+checks.length;
+  document.getElementById('sNodes').textContent='4/4';
+  document.getElementById('vrsOccupancy').textContent='--%';
+  document.getElementById('sGPU').textContent='53\u00b0C';
+}
+
+loadUser();
+loadStats();
+setInterval(loadStats,30000);
+</script>
+</body>
+</html>

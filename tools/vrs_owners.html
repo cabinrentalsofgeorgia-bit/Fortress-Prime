@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CROG-VRS — Owner Portal</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#000;color:#fff;min-height:100vh}
+
+/* ── Nav v2 ── */
+.fn-bar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:0 16px;
+  display:flex;align-items:center;height:40px;font-family:system-ui,-apple-system,sans-serif;
+  position:sticky;top:0;z-index:9999;gap:0;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.fn-home{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none;
+  font-weight:700;font-size:12px;letter-spacing:.03em;padding:6px 12px 6px 0;
+  border-right:1px solid #222;margin-right:4px;white-space:nowrap;transition:color .15s}
+.fn-home:hover{color:#4ade80}
+.fn-home svg{opacity:.6}
+.fn-cc{display:flex;align-items:center;padding:0 14px;color:#888;font-size:11px;font-weight:600;
+  height:100%;white-space:nowrap;text-decoration:none;text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:2px solid transparent;transition:all .15s}
+.fn-cc:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-cc.fn-cc-active{color:#fff;border-bottom-color:#4ade80}
+.fn-groups{display:flex;align-items:center;gap:0;flex:1;height:100%}
+.fn-group{position:relative;height:100%;display:flex;align-items:center}
+.fn-group-btn{display:flex;align-items:center;gap:5px;padding:0 14px;color:#888;
+  font-size:11px;font-weight:600;cursor:pointer;height:100%;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;
+  letter-spacing:.04em;user-select:none}
+.fn-group-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+.fn-group-btn .fn-caret{font-size:8px;opacity:.5;transition:transform .2s}
+.fn-group.open .fn-group-btn .fn-caret{transform:rotate(180deg)}
+.fn-group.fn-g-active .fn-group-btn{color:#fff}
+.fn-g-green.fn-g-active .fn-group-btn{border-bottom-color:#4ade80}
+.fn-g-blue.fn-g-active .fn-group-btn{border-bottom-color:#60a5fa}
+.fn-g-amber.fn-g-active .fn-group-btn{border-bottom-color:#fbbf24}
+.fn-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+.fn-group.open .fn-dropdown{display:block}
+.fn-dd-item{display:flex;align-items:center;gap:8px;padding:9px 16px;color:#999;
+  text-decoration:none;font-size:12px;font-weight:500;transition:all .12s;white-space:nowrap}
+.fn-dd-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.fn-dd-item.fn-dd-active{color:#fff;background:rgba(74,222,128,.08)}
+.fn-dd-sep{height:1px;background:#222;margin:4px 0}
+.fn-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fn-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:fn-pulse 2s ease infinite}
+@keyframes fn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.fn-clock{font-size:10px;color:#555;font-family:'SF Mono',Consolas,monospace}
+.fn-user{position:relative;height:100%;display:flex;align-items:center}
+.fn-user-btn{display:flex;align-items:center;gap:5px;padding:0 12px;color:#888;
+  font-size:11px;font-weight:500;cursor:pointer;height:100%;white-space:nowrap;transition:color .15s}
+.fn-user-btn:hover{color:#fff}
+.fn-user.open .fn-user-dd{display:block}
+.fn-user-dd{display:none;position:absolute;top:100%;right:0;min-width:160px;
+  background:#111;border:1px solid #222;border-radius:0 0 10px 10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);padding:6px 0;z-index:10000}
+
+/* ── Page Header ── */
+.page-hdr{background:rgba(17,17,17,.95);border-bottom:1px solid #222;padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
+.page-hdr h1{font-size:18px;font-weight:700}
+.page-hdr h1 span{color:#4ade80}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.04em}
+.hdr-badge-mgmt{background:rgba(167,139,250,.12);color:#a78bfa}
+.hdr-badge-ok{background:rgba(74,222,128,.12);color:#4ade80}
+.hdr-badge-warn{background:rgba(251,191,36,.12);color:#fbbf24}
+.hdr-badge-err{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Container ── */
+.container{max-width:1440px;margin:0 auto;padding:24px}
+
+/* ── Section Head ── */
+.section-head{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:36px}
+.kpi-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;transition:border-color .15s}
+.kpi-card:hover{border-color:#333}
+.kpi-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:10px;color:#555;margin-top:6px}
+.kpi-val.green{color:#4ade80}
+.kpi-val.teal{color:#4fd1c5}
+.kpi-val.blue{color:#60a5fa}
+.kpi-val.amber{color:#fbbf24}
+.kpi-val.red{color:#f87171}
+.kpi-val.purple{color:#a78bfa}
+
+/* ── Panels ── */
+.panel{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:24px;margin-bottom:24px;overflow:hidden}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.panel-title .badge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:600}
+.badge-green{background:rgba(74,222,128,.12);color:#4ade80}
+.badge-teal{background:rgba(79,209,197,.12);color:#4fd1c5}
+.badge-amber{background:rgba(251,191,36,.12);color:#fbbf24}
+.badge-blue{background:rgba(96,165,250,.12);color:#60a5fa}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-red{background:rgba(248,113,113,.12);color:#f87171}
+
+/* ── Two-Column ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:36px}
+
+/* ── Property Performance Cards ── */
+.prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:36px}
+.prop-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;overflow:hidden;
+  transition:border-color .15s}
+.prop-card:hover{border-color:#333}
+.prop-card-hdr{padding:18px 20px;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between}
+.prop-card-name{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.prop-card-name .caret{font-size:10px;color:#555;transition:transform .2s}
+.prop-card.expanded .prop-card-name .caret{transform:rotate(180deg)}
+.prop-card-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.prop-stat{text-align:center}
+.prop-stat-val{font-size:16px;font-weight:700;margin-bottom:2px}
+.prop-stat-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.04em}
+.prop-card-detail{display:none;border-top:1px solid #1a1a1a;padding:16px 20px;background:#0d0d0d}
+.prop-card.expanded .prop-card-detail{display:block}
+
+/* ── Mini Table ── */
+.mini-table{width:100%;border-collapse:collapse;margin-top:10px}
+.mini-table th{text-align:left;font-size:9px;font-weight:700;color:#555;text-transform:uppercase;
+  letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid #1a1a1a}
+.mini-table th.right{text-align:right}
+.mini-table td{padding:6px 8px;font-size:11px;color:#bbb;border-bottom:1px solid rgba(26,26,26,.6)}
+.mini-table td.right{text-align:right;font-family:'SF Mono',Consolas,monospace;font-size:11px}
+.mini-table td.mono{font-family:'SF Mono',Consolas,monospace}
+
+/* ── Monthly Revenue Bars ── */
+.month-bars{display:flex;align-items:flex-end;gap:4px;height:80px;margin-top:12px;padding-top:4px}
+.month-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.month-bar{width:100%;border-radius:3px 3px 0 0;background:linear-gradient(180deg,#4ade80,#22c55e);
+  min-height:2px;transition:height .5s ease}
+.month-bar-lbl{font-size:8px;color:#555;text-transform:uppercase}
+
+/* ── Expense Summary ── */
+.expense-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;
+  border-bottom:1px solid rgba(26,26,26,.6);font-size:12px}
+.expense-row:last-child{border-bottom:none}
+.expense-label{color:#999}
+.expense-val{font-family:'SF Mono',Consolas,monospace;font-weight:600}
+
+/* ── Statement Generator ── */
+.stmt-form{display:grid;grid-template-columns:1fr 1fr auto auto;gap:14px;align-items:end;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em}
+.form-select,.form-input{width:100%;padding:10px 14px;background:#0a0a0a;border:1px solid #222;
+  border-radius:8px;color:#fff;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;
+  appearance:none;-webkit-appearance:none}
+.form-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%23666'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.form-select:focus,.form-input:focus{border-color:#4ade80;box-shadow:0 0 0 2px rgba(74,222,128,.15)}
+.btn-primary{padding:10px 24px;border-radius:8px;border:1px solid rgba(74,222,128,.3);
+  background:rgba(74,222,128,.15);color:#4ade80;font-size:12px;font-weight:700;cursor:pointer;
+  text-transform:uppercase;letter-spacing:.04em;transition:all .15s;white-space:nowrap}
+.btn-primary:hover{background:rgba(74,222,128,.25)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{padding:10px 24px;border-radius:8px;border:1px solid #333;background:#1a1a1a;
+  color:#ccc;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;
+  letter-spacing:.04em;transition:all .15s;white-space:nowrap}
+.btn-secondary:hover{border-color:#555;color:#fff}
+
+/* ── Statement Output ── */
+.stmt-output{display:none}
+.stmt-output.visible{display:block}
+.stmt-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
+  padding-bottom:12px;border-bottom:1px solid #1a1a1a}
+.stmt-hdr h3{font-size:15px;font-weight:700}
+.stmt-period{font-size:11px;color:#888}
+.stmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.stmt-block{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:16px}
+.stmt-block-title{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;
+  letter-spacing:.04em;margin-bottom:12px}
+.stmt-line{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;
+  border-bottom:1px solid rgba(26,26,26,.5)}
+.stmt-line:last-child{border-bottom:none}
+.stmt-line-label{color:#999}
+.stmt-line-val{font-family:'SF Mono',Consolas,monospace;font-weight:600;color:#ccc}
+.stmt-line-val.green{color:#4ade80}
+.stmt-line-val.red{color:#f87171}
+.stmt-line-val.amber{color:#fbbf24}
+.stmt-total{display:flex;justify-content:space-between;padding:12px 0;font-size:14px;
+  font-weight:700;border-top:2px solid #333;margin-top:8px}
+.stmt-total-val{font-family:'SF Mono',Consolas,monospace;color:#4ade80}
+
+/* ── Bar Charts ── */
+.bar-chart{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:flex;align-items:center;gap:12px}
+.bar-label{width:100px;font-size:12px;color:#888;text-align:right;flex-shrink:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:22px;background:#1a1a1a;border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease;min-width:2px;position:relative}
+.bar-fill.green{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.bar-fill.teal{background:linear-gradient(90deg,#14b8a6,#4fd1c5)}
+.bar-fill.blue{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.bar-fill.amber{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.bar-fill.red{background:linear-gradient(90deg,#ef4444,#f87171)}
+.bar-fill.purple{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.bar-value{width:90px;font-size:12px;font-weight:600;color:#ccc;text-align:right;flex-shrink:0;
+  font-family:'SF Mono',Consolas,monospace}
+
+/* ── Quick Actions ── */
+.qa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:36px}
+.qa-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  text-align:center;cursor:pointer;transition:all .15s}
+.qa-card:hover{border-color:#333;background:#151515}
+.qa-icon{font-size:28px;margin-bottom:8px}
+.qa-title{font-size:12px;font-weight:700;margin-bottom:4px}
+.qa-desc{font-size:10px;color:#555}
+
+/* ── Loading / Empty ── */
+.empty-state{text-align:center;padding:32px;color:#555;font-size:13px}
+.loading-pulse{animation:loadPulse 1.2s ease infinite}
+@keyframes loadPulse{0%,100%{opacity:.4}50%{opacity:1}}
+.data-unavail{color:#555;font-style:italic;font-size:12px;text-align:center;padding:20px}
+
+/* ── Skeleton ── */
+.skel-row{display:flex;gap:14px;padding:12px 14px;border-bottom:1px solid #0d0d0d}
+.skel-cell{height:14px;border-radius:4px;background:#1a1a1a;animation:loadPulse 1.2s ease infinite}
+.skel-card{background:#111;border:1px solid #1a1a1a;border-radius:12px;padding:20px;
+  min-height:140px;animation:loadPulse 1.2s ease infinite}
+
+/* ── Last Updated ── */
+.last-updated{text-align:right;font-size:10px;color:#444;margin-bottom:20px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+  font-size:12px;font-weight:600;z-index:99999;opacity:0;transform:translateY(10px);
+  transition:all .25s;pointer-events:none;max-width:400px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-ok{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.25)}
+.toast-err{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.25)}
+
+/* ── Print ── */
+@media print{
+  .fn-bar,.page-hdr,.qa-grid,.toast,.section-head,.last-updated{display:none!important}
+  body{background:#fff;color:#000}
+  .container{padding:0;max-width:100%}
+  .panel,.stmt-block,.kpi-card{background:#fff;border:1px solid #ddd;color:#000}
+  .kpi-val,.stmt-line-val,.stmt-total-val{color:#000!important}
+  .stmt-output{display:block!important}
+  .stmt-line-label,.expense-label{color:#333}
+}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+  .stmt-form{grid-template-columns:1fr 1fr}
+  .prop-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .fn-groups{display:none}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .stmt-form{grid-template-columns:1fr}
+  .stmt-grid{grid-template-columns:1fr}
+  .prop-card-stats{grid-template-columns:repeat(2,1fr)}
+  .qa-grid{grid-template-columns:1fr 1fr}
+  .bar-label{width:60px;font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="fn-bar">
+  <a href="/" class="fn-home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> FORTRESS PRIME</a>
+  <div class="fn-groups">
+    <a href="/" class="fn-cc">Command Center</a>
+    <div class="fn-group fn-g-green fn-g-active">
+      <div class="fn-group-btn" onclick="fnToggle(this)">CROG-VRS <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-dropdown"><a class="fn-dd-item" href="/vrs">📊 VRS Full Dashboard</a><a class="fn-dd-item" href="/vrs/properties">🏠 Properties</a><a class="fn-dd-item" href="/vrs/reservations">📅 Reservations</a><a class="fn-dd-item" href="/vrs/guests">👤 Guests</a><a class="fn-dd-item" href="/vrs/work-orders">🔧 Work Orders</a><a class="fn-dd-item" href="/vrs/contracts">📝 Contracts</a><a class="fn-dd-item" href="/vrs/analytics">📈 Analytics</a><a class="fn-dd-item" href="/vrs/payments">💳 Payments</a><a class="fn-dd-item" href="/vrs/utilities">⚡ Utilities</a><a class="fn-dd-item" href="/vrs/channels">📡 Channels</a><a class="fn-dd-item fn-dd-active" href="/vrs/owners">👔 Owners</a><a class="fn-dd-item" href="/vrs/direct-booking">🌐 Direct Booking</a><a class="fn-dd-item" href="/vrs/iot">🏠 IoT & Smart Home</a><div class="fn-dd-sep"></div><a class="fn-dd-item" href="/guest-agent">🤖 Guest Agent</a></div>
+    </div>
+    <div class="fn-group fn-g-blue">
+      <div class="fn-group-btn" onclick="fnToggle(this)">Operations <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/legal">&#9878;&#65039; Legal Command</a>
+        <a class="fn-dd-item" href="/email-intake">&#128231; Email Intake</a>
+        <a class="fn-dd-item" href="/intelligence">&#128269; Intelligence</a>
+      </div>
+    </div>
+    <div class="fn-group fn-g-amber">
+      <div class="fn-group-btn" onclick="fnToggle(this)">System <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-dropdown">
+        <a class="fn-dd-item" href="/vault">&#128272; Key Vault</a>
+        <a class="fn-dd-item" href="/users">&#128101; Users</a>
+        <a class="fn-dd-item" href="/profile">&#9881;&#65039; Profile</a>
+        <a class="fn-dd-item" href="/docs-center">&#128218; Docs</a>
+        <a class="fn-dd-item" href="/webui">&#128421; Mission Control</a>
+      </div>
+    </div>
+  </div>
+  <div class="fn-right">
+    <span class="fn-dot"></span>
+    <span class="fn-clock" id="fn-clock"></span>
+    <div class="fn-user">
+      <div class="fn-user-btn" onclick="this.parentElement.classList.toggle('open')">&#128100; Admin <span class="fn-caret">&#9662;</span></div>
+      <div class="fn-user-dd">
+        <a class="fn-dd-item" href="/profile">&#9881;&#65039; Profile</a>
+        <a class="fn-dd-item" href="/api/logout">&#128682; Logout</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>&#128084;&ensp;<span>CROG-VRS</span> &mdash; Owner Portal</h1>
+  <div class="hdr-right">
+    <span class="hdr-badge hdr-badge-mgmt">MANAGEMENT</span>
+    <span style="font-size:11px;color:#555">Cabin Rentals of Georgia, LLC</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="last-updated">Last refreshed: <span id="lastUpdated" class="loading-pulse">loading...</span></div>
+
+  <!-- ═══ KPI ROW ═══ -->
+  <div class="section-head">Portfolio Overview</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val purple" id="kTotalProps">&mdash;</div>
+      <div class="kpi-label">Total Properties</div>
+      <div class="kpi-sub" id="kPropSub">Active managed units</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val green" id="kRevYTD">&mdash;</div>
+      <div class="kpi-label">Total Revenue YTD</div>
+      <div class="kpi-sub" id="kRevSub">Current year bookings</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val blue" id="kBookYTD">&mdash;</div>
+      <div class="kpi-label">Bookings YTD</div>
+      <div class="kpi-sub" id="kBookSub">Current year reservations</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val amber" id="kOccupancy">&mdash;</div>
+      <div class="kpi-label">Avg Occupancy Rate</div>
+      <div class="kpi-sub" id="kOccSub">Portfolio average</div>
+    </div>
+  </div>
+
+  <!-- ═══ PROPERTY PERFORMANCE GRID ═══ -->
+  <div class="section-head">Property Performance</div>
+  <div class="prop-grid" id="propGrid">
+    <div class="skel-card"></div>
+    <div class="skel-card"></div>
+    <div class="skel-card"></div>
+    <div class="skel-card"></div>
+  </div>
+
+  <!-- ═══ OWNER STATEMENT GENERATOR ═══ -->
+  <div class="section-head">Owner Statement Generator</div>
+  <div class="panel">
+    <div class="panel-title">Generate Statement <span class="badge badge-purple">Financial</span></div>
+    <div class="stmt-form" id="stmtForm">
+      <div class="form-group">
+        <label for="stmtProp">Property</label>
+        <select class="form-select" id="stmtProp">
+          <option value="all">All Properties</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="stmtRange">Date Range</label>
+        <select class="form-select" id="stmtRange" onchange="toggleCustomDates()">
+          <option value="month">Current Month</option>
+          <option value="quarter">Current Quarter</option>
+          <option value="year" selected>Year to Date</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </div>
+      <div class="form-group" id="customDateStart" style="display:none">
+        <label for="stmtStart">Start Date</label>
+        <input type="date" class="form-input" id="stmtStart">
+      </div>
+      <div class="form-group" id="customDateEnd" style="display:none">
+        <label for="stmtEnd">End Date</label>
+        <input type="date" class="form-input" id="stmtEnd">
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button class="btn-primary" onclick="generateStatement()">Generate Statement</button>
+      </div>
+    </div>
+
+    <div class="stmt-output" id="stmtOutput">
+      <div class="stmt-hdr">
+        <div>
+          <h3 id="stmtTitle">Owner Statement</h3>
+          <div class="stmt-period" id="stmtPeriod"></div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-secondary" onclick="window.print()">&#128424; Print</button>
+          <button class="btn-secondary" onclick="showToast('PDF generation queued — feature coming soon','ok')">&#128196; Download PDF</button>
+        </div>
+      </div>
+
+      <div class="stmt-grid">
+        <div class="stmt-block">
+          <div class="stmt-block-title">Revenue Summary</div>
+          <div id="stmtRevenue"></div>
+        </div>
+        <div class="stmt-block">
+          <div class="stmt-block-title">Fee Breakdown</div>
+          <div id="stmtFees"></div>
+        </div>
+      </div>
+      <div class="stmt-grid">
+        <div class="stmt-block">
+          <div class="stmt-block-title">Expense Deductions</div>
+          <div id="stmtExpenses"></div>
+        </div>
+        <div class="stmt-block">
+          <div class="stmt-block-title">Net to Owner</div>
+          <div id="stmtNet"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REVENUE COMPARISON ═══ -->
+  <div class="section-head">Revenue Comparison</div>
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">Monthly Revenue <span class="badge badge-green" id="revCompYear"></span></div>
+      <div id="monthlyRevenueChart" class="bar-chart">
+        <div class="empty-state loading-pulse">Loading revenue data...</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Revenue by Property <span class="badge badge-teal">YTD</span></div>
+      <div id="propRevenueChart" class="bar-chart">
+        <div class="empty-state loading-pulse">Loading property data...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ QUICK ACTIONS ═══ -->
+  <div class="section-head">Quick Actions</div>
+  <div class="qa-grid">
+    <div class="qa-card" onclick="emailStatement()">
+      <div class="qa-icon">&#128231;</div>
+      <div class="qa-title">Email Statement to Owner</div>
+      <div class="qa-desc">Send latest statement via email</div>
+    </div>
+    <div class="qa-card" onclick="generateTaxReport()">
+      <div class="qa-icon">&#128200;</div>
+      <div class="qa-title">Generate Tax Report</div>
+      <div class="qa-desc">Annual tax summary for 1099 filing</div>
+    </div>
+    <div class="qa-card" onclick="scheduleAutoReport()">
+      <div class="qa-icon">&#128339;</div>
+      <div class="qa-title">Schedule Auto-Report</div>
+      <div class="qa-desc">Set up recurring owner statements</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Nav ── */
+function fnToggle(btn){var g=btn.closest('.fn-group');document.querySelectorAll('.fn-group.open').forEach(function(o){if(o!==g)o.classList.remove('open')});g.classList.toggle('open')}
+document.addEventListener('click',function(e){if(!e.target.closest('.fn-group'))document.querySelectorAll('.fn-group.open').forEach(function(g){g.classList.remove('open')});if(!e.target.closest('.fn-user'))document.querySelectorAll('.fn-user.open').forEach(function(u){u.classList.remove('open')})});
+function fnClock(){var d=new Date();document.getElementById('fn-clock').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
+fnClock();setInterval(fnClock,1000);
+
+/* ── State ── */
+var allProperties=[];
+var allReservations=[];
+var propMap={};
+var currentYear=new Date().getFullYear();
+
+/* ── Helpers ── */
+function fmtCurrency(n){
+  if(n==null||isNaN(n))return '$0';
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+function fmtCurrencyDecimal(n){
+  if(n==null||isNaN(n))return '$0.00';
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtPct(n){
+  if(n==null||isNaN(n))return '0.0%';
+  return Number(n).toFixed(1)+'%';
+}
+function escHtml(s){
+  if(!s)return '';
+  var d=document.createElement('div');d.textContent=s;return d.innerHTML;
+}
+function safeFetch(url){
+  return fetch(url,{credentials:'include'}).then(function(r){
+    if(!r.ok)throw new Error(r.status);
+    return r.json();
+  }).catch(function(){return null});
+}
+function showToast(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(type==='ok'?'toast-ok':'toast-err')+' show';
+  setTimeout(function(){t.classList.remove('show')},3500);
+}
+
+function getResTotal(r){
+  return r.total_price||r.total_amount||r.total||r.base_rate||0;
+}
+function getResDate(r){
+  return r.check_in_date||r.checkin||r.start_date||'';
+}
+function getResCheckout(r){
+  return r.check_out_date||r.checkout||r.end_date||'';
+}
+function getResPropId(r){
+  return r.property_id||r.property||null;
+}
+function getResPropName(r){
+  return r.property_name||r.property_title||'Unknown Property';
+}
+function getResNights(r){
+  if(r.nights)return r.nights;
+  var ci=getResDate(r), co=getResCheckout(r);
+  if(!ci||!co)return 1;
+  var d1=new Date(ci), d2=new Date(co);
+  var diff=Math.round((d2-d1)/(86400000));
+  return diff>0?diff:1;
+}
+function isCurrentYear(dateStr){
+  if(!dateStr)return false;
+  return dateStr.substring(0,4)===''+currentYear;
+}
+function getMonth(dateStr){
+  if(!dateStr)return -1;
+  return parseInt(dateStr.substring(5,7),10)-1;
+}
+var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* ── Bar Chart Renderer ── */
+function renderBarChart(containerId,items,colorClass){
+  var el=document.getElementById(containerId);
+  if(!items||items.length===0){
+    el.innerHTML='<div class="data-unavail">No data available</div>';
+    return;
+  }
+  var max=Math.max.apply(null,items.map(function(i){return i.value||0}));
+  if(max===0)max=1;
+  el.innerHTML=items.map(function(item){
+    var pct=Math.max((item.value/max)*100,1);
+    var color=item.color||colorClass||'green';
+    return '<div class="bar-row">'+
+      '<div class="bar-label" title="'+escHtml(item.label)+'">'+escHtml(item.label)+'</div>'+
+      '<div class="bar-track"><div class="bar-fill '+color+'" style="width:'+pct+'%"></div></div>'+
+      '<div class="bar-value">'+item.display+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ── Compute Property Analytics ── */
+function computePropAnalytics(){
+  propMap={};
+  allProperties.forEach(function(p){
+    var pid=p.id||p.property_id;
+    var name=p.name||p.property_name||p.title||'Property #'+pid;
+    propMap[pid]={
+      id:pid,name:name,
+      reservations:[],ytdReservations:[],
+      totalRevenue:0,ytdRevenue:0,
+      totalNights:0,ytdNights:0,
+      monthlyRevenue:new Array(12).fill(0)
+    };
+  });
+
+  allReservations.forEach(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return;
+    var pid=getResPropId(r);
+    if(!pid)return;
+
+    if(!propMap[pid]){
+      propMap[pid]={
+        id:pid,name:getResPropName(r),
+        reservations:[],ytdReservations:[],
+        totalRevenue:0,ytdRevenue:0,
+        totalNights:0,ytdNights:0,
+        monthlyRevenue:new Array(12).fill(0)
+      };
+    }
+
+    var total=getResTotal(r);
+    var nights=getResNights(r);
+    var ci=getResDate(r);
+
+    propMap[pid].reservations.push(r);
+    propMap[pid].totalRevenue+=total;
+    propMap[pid].totalNights+=nights;
+
+    if(isCurrentYear(ci)){
+      propMap[pid].ytdReservations.push(r);
+      propMap[pid].ytdRevenue+=total;
+      propMap[pid].ytdNights+=nights;
+      var m=getMonth(ci);
+      if(m>=0)propMap[pid].monthlyRevenue[m]+=total;
+    }
+  });
+}
+
+/* ── KPI Update ── */
+function updateKPIs(){
+  var propCount=Object.keys(propMap).length;
+  var ytdRevenue=0, ytdBookings=0, totalNightsBooked=0;
+
+  Object.values(propMap).forEach(function(p){
+    ytdRevenue+=p.ytdRevenue;
+    ytdBookings+=p.ytdReservations.length;
+    totalNightsBooked+=p.ytdNights;
+  });
+
+  var daysInYear=Math.ceil((new Date()-new Date(currentYear,0,1))/(86400000));
+  if(daysInYear<1)daysInYear=1;
+  var totalAvailNights=propCount*daysInYear;
+  var occupancy=totalAvailNights>0?(totalNightsBooked/totalAvailNights)*100:0;
+
+  document.getElementById('kTotalProps').textContent=propCount;
+  document.getElementById('kPropSub').textContent=propCount+' active managed units';
+  document.getElementById('kRevYTD').textContent=fmtCurrency(ytdRevenue);
+  document.getElementById('kRevSub').textContent=currentYear+' revenue';
+  document.getElementById('kBookYTD').textContent=ytdBookings.toLocaleString();
+  document.getElementById('kBookSub').textContent=currentYear+' reservations';
+  document.getElementById('kOccupancy').textContent=fmtPct(occupancy);
+  document.getElementById('kOccSub').textContent='Based on '+totalNightsBooked+' booked nights';
+}
+
+/* ── Property Performance Grid ── */
+function renderPropGrid(){
+  var grid=document.getElementById('propGrid');
+  var props=Object.values(propMap).sort(function(a,b){return b.ytdRevenue-a.ytdRevenue});
+
+  if(props.length===0){
+    grid.innerHTML='<div class="empty-state">No property data available</div>';
+    return;
+  }
+
+  grid.innerHTML=props.map(function(p,idx){
+    var bookCount=p.ytdReservations.length;
+    var avgRate=p.ytdNights>0?(p.ytdRevenue/p.ytdNights):0;
+    var daysInYear=Math.ceil((new Date()-new Date(currentYear,0,1))/(86400000));
+    if(daysInYear<1)daysInYear=1;
+    var occ=(p.ytdNights/daysInYear)*100;
+    if(occ>100)occ=100;
+
+    var maxMonthly=Math.max.apply(null,p.monthlyRevenue);
+    if(maxMonthly<1)maxMonthly=1;
+    var barsHtml=p.monthlyRevenue.map(function(val,mi){
+      var h=Math.max((val/maxMonthly)*60,2);
+      return '<div class="month-bar-col">'+
+        '<div class="month-bar" style="height:'+h+'px" title="'+monthNames[mi]+': '+fmtCurrency(val)+'"></div>'+
+        '<div class="month-bar-lbl">'+monthNames[mi]+'</div>'+
+      '</div>';
+    }).join('');
+
+    var recentRes=p.ytdReservations.slice(0,5);
+    var resTableHtml='';
+    if(recentRes.length>0){
+      resTableHtml='<table class="mini-table"><thead><tr>'+
+        '<th>Guest</th><th>Check-in</th><th>Nights</th><th class="right">Revenue</th>'+
+      '</tr></thead><tbody>'+
+      recentRes.map(function(r){
+        return '<tr>'+
+          '<td>'+escHtml(r.guest_name||r.guest||'—')+'</td>'+
+          '<td class="mono">'+escHtml(getResDate(r))+'</td>'+
+          '<td>'+getResNights(r)+'</td>'+
+          '<td class="right" style="color:#4ade80">'+fmtCurrency(getResTotal(r))+'</td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table>';
+      if(p.ytdReservations.length>5){
+        resTableHtml+='<div style="text-align:center;padding:8px;font-size:10px;color:#555">+'+(p.ytdReservations.length-5)+' more reservations</div>';
+      }
+    }else{
+      resTableHtml='<div class="data-unavail">No YTD reservations</div>';
+    }
+
+    var mgmtFee=p.ytdRevenue*0.25;
+    var cleaningEst=bookCount*150;
+    var maintenanceEst=p.ytdRevenue*0.05;
+
+    return '<div class="prop-card" id="prop-'+idx+'">'+
+      '<div class="prop-card-hdr" onclick="togglePropCard('+idx+')">'+
+        '<div style="flex:1">'+
+          '<div class="prop-card-name">'+escHtml(p.name)+' <span class="caret">&#9662;</span></div>'+
+          '<div class="prop-card-stats">'+
+            '<div class="prop-stat"><div class="prop-stat-val" style="color:#60a5fa">'+bookCount+'</div><div class="prop-stat-label">Bookings</div></div>'+
+            '<div class="prop-stat"><div class="prop-stat-val" style="color:#4ade80">'+fmtCurrency(p.ytdRevenue)+'</div><div class="prop-stat-label">Revenue</div></div>'+
+            '<div class="prop-stat"><div class="prop-stat-val" style="color:#fbbf24">'+fmtPct(occ)+'</div><div class="prop-stat-label">Occupancy</div></div>'+
+            '<div class="prop-stat"><div class="prop-stat-val" style="color:#a78bfa">'+fmtCurrency(avgRate)+'</div><div class="prop-stat-label">Avg/Night</div></div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="prop-card-detail">'+
+        '<div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Monthly Revenue ('+currentYear+')</div>'+
+        '<div class="month-bars">'+barsHtml+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Recent Reservations</div>'+
+        resTableHtml+
+        '<div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Estimated Expense Summary</div>'+
+        '<div class="expense-row"><span class="expense-label">Management Fee (25%)</span><span class="expense-val" style="color:#f87171">-'+fmtCurrency(mgmtFee)+'</span></div>'+
+        '<div class="expense-row"><span class="expense-label">Cleaning (est. $150/stay)</span><span class="expense-val" style="color:#f87171">-'+fmtCurrency(cleaningEst)+'</span></div>'+
+        '<div class="expense-row"><span class="expense-label">Maintenance Reserve (5%)</span><span class="expense-val" style="color:#f87171">-'+fmtCurrency(maintenanceEst)+'</span></div>'+
+        '<div class="expense-row" style="border-top:1px solid #333;padding-top:8px;font-weight:700"><span class="expense-label" style="color:#ccc">Est. Net to Owner</span><span class="expense-val" style="color:#4ade80">'+fmtCurrency(p.ytdRevenue-mgmtFee-cleaningEst-maintenanceEst)+'</span></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function togglePropCard(idx){
+  var card=document.getElementById('prop-'+idx);
+  if(card)card.classList.toggle('expanded');
+}
+
+/* ── Statement Generator ── */
+function toggleCustomDates(){
+  var range=document.getElementById('stmtRange').value;
+  var show=range==='custom';
+  document.getElementById('customDateStart').style.display=show?'':'none';
+  document.getElementById('customDateEnd').style.display=show?'':'none';
+}
+
+function populatePropertySelect(){
+  var sel=document.getElementById('stmtProp');
+  sel.innerHTML='<option value="all">All Properties (Portfolio)</option>';
+  Object.values(propMap).sort(function(a,b){return a.name.localeCompare(b.name)}).forEach(function(p){
+    sel.innerHTML+='<option value="'+p.id+'">'+escHtml(p.name)+'</option>';
+  });
+}
+
+function getDateRange(){
+  var range=document.getElementById('stmtRange').value;
+  var now=new Date();
+  var start,end;
+
+  if(range==='month'){
+    start=new Date(now.getFullYear(),now.getMonth(),1);
+    end=now;
+  }else if(range==='quarter'){
+    var qStart=Math.floor(now.getMonth()/3)*3;
+    start=new Date(now.getFullYear(),qStart,1);
+    end=now;
+  }else if(range==='year'){
+    start=new Date(now.getFullYear(),0,1);
+    end=now;
+  }else{
+    start=new Date(document.getElementById('stmtStart').value||now.getFullYear()+'-01-01');
+    end=new Date(document.getElementById('stmtEnd').value||now.toISOString().split('T')[0]);
+  }
+
+  return{start:start,end:end};
+}
+
+function generateStatement(){
+  var propId=document.getElementById('stmtProp').value;
+  var dr=getDateRange();
+  var startStr=dr.start.toISOString().split('T')[0];
+  var endStr=dr.end.toISOString().split('T')[0];
+
+  var filteredRes=allReservations.filter(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return false;
+    var ci=getResDate(r);
+    if(!ci)return false;
+    if(ci<startStr||ci>endStr)return false;
+    if(propId!=='all'){
+      var pid=getResPropId(r);
+      if(pid!=propId&&String(pid)!==String(propId))return false;
+    }
+    return true;
+  });
+
+  var propLabel=propId==='all'?'All Properties':(propMap[propId]?propMap[propId].name:'Selected Property');
+
+  document.getElementById('stmtTitle').textContent='Owner Statement — '+propLabel;
+  document.getElementById('stmtPeriod').textContent=startStr+' through '+endStr;
+
+  var grossRevenue=0, totalNights=0, bookCount=filteredRes.length;
+  filteredRes.forEach(function(r){
+    grossRevenue+=getResTotal(r);
+    totalNights+=getResNights(r);
+  });
+  var avgNightly=totalNights>0?(grossRevenue/totalNights):0;
+
+  document.getElementById('stmtRevenue').innerHTML=
+    '<div class="stmt-line"><span class="stmt-line-label">Gross Booking Revenue</span><span class="stmt-line-val green">'+fmtCurrencyDecimal(grossRevenue)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Number of Bookings</span><span class="stmt-line-val">'+bookCount+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Total Nights Booked</span><span class="stmt-line-val">'+totalNights+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Average Nightly Rate</span><span class="stmt-line-val">'+fmtCurrencyDecimal(avgNightly)+'</span></div>';
+
+  var mgmtFee=grossRevenue*0.25;
+  var platformFees=grossRevenue*0.03;
+  var processingFees=grossRevenue*0.029;
+  var totalFees=mgmtFee+platformFees+processingFees;
+
+  document.getElementById('stmtFees').innerHTML=
+    '<div class="stmt-line"><span class="stmt-line-label">Management Fee (25%)</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(mgmtFee)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Platform/OTA Fees (3%)</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(platformFees)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Payment Processing (2.9%)</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(processingFees)+'</span></div>'+
+    '<div class="stmt-total"><span>Total Fees</span><span class="stmt-total-val" style="color:#f87171">-'+fmtCurrencyDecimal(totalFees)+'</span></div>';
+
+  var cleaning=bookCount*150;
+  var supplies=bookCount*35;
+  var maintenance=grossRevenue*0.05;
+  var insurance=(grossRevenue>0?Math.max(grossRevenue*0.02,200):0);
+  var totalExpenses=cleaning+supplies+maintenance+insurance;
+
+  document.getElementById('stmtExpenses').innerHTML=
+    '<div class="stmt-line"><span class="stmt-line-label">Cleaning ($150/stay)</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(cleaning)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Guest Supplies ($35/stay)</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(supplies)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Maintenance Reserve (5%)</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(maintenance)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Insurance Allocation</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(insurance)+'</span></div>'+
+    '<div class="stmt-total"><span>Total Expenses</span><span class="stmt-total-val" style="color:#f87171">-'+fmtCurrencyDecimal(totalExpenses)+'</span></div>';
+
+  var netOwner=grossRevenue-totalFees-totalExpenses;
+
+  document.getElementById('stmtNet').innerHTML=
+    '<div class="stmt-line"><span class="stmt-line-label">Gross Revenue</span><span class="stmt-line-val green">'+fmtCurrencyDecimal(grossRevenue)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Less: Total Fees</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(totalFees)+'</span></div>'+
+    '<div class="stmt-line"><span class="stmt-line-label">Less: Total Expenses</span><span class="stmt-line-val red">-'+fmtCurrencyDecimal(totalExpenses)+'</span></div>'+
+    '<div class="stmt-total"><span>Net to Owner</span><span class="stmt-total-val">'+fmtCurrencyDecimal(netOwner)+'</span></div>';
+
+  document.getElementById('stmtOutput').classList.add('visible');
+  showToast('Statement generated for '+propLabel,'ok');
+}
+
+/* ── Revenue Comparison Charts ── */
+function renderRevenueCharts(){
+  var monthly=new Array(12).fill(0);
+  var propRevYTD={};
+
+  allReservations.forEach(function(r){
+    var st=(r.status||'').toLowerCase();
+    if(st==='cancelled'||st==='canceled')return;
+    var ci=getResDate(r);
+    if(!isCurrentYear(ci))return;
+    var total=getResTotal(r);
+    var m=getMonth(ci);
+    if(m>=0)monthly[m]+=total;
+
+    var pname=getResPropName(r);
+    propRevYTD[pname]=(propRevYTD[pname]||0)+total;
+  });
+
+  document.getElementById('revCompYear').textContent=currentYear;
+
+  var currentMonth=new Date().getMonth();
+  var monthItems=[];
+  for(var i=0;i<=currentMonth;i++){
+    monthItems.push({label:monthNames[i],value:monthly[i],display:fmtCurrency(monthly[i]),color:'green'});
+  }
+  renderBarChart('monthlyRevenueChart',monthItems,'green');
+
+  var colors=['green','teal','blue','amber','purple','red'];
+  var propItems=Object.keys(propRevYTD).map(function(k){
+    return{label:k,value:propRevYTD[k],display:fmtCurrency(propRevYTD[k])};
+  }).sort(function(a,b){return b.value-a.value});
+  propItems.forEach(function(item,i){item.color=colors[i%colors.length]});
+  renderBarChart('propRevenueChart',propItems);
+}
+
+/* ── Quick Actions ── */
+function emailStatement(){
+  showToast('Email statement queued — email integration coming soon','ok');
+}
+function generateTaxReport(){
+  showToast('Tax report generation queued — feature coming soon','ok');
+}
+function scheduleAutoReport(){
+  showToast('Auto-report scheduler — feature coming soon','ok');
+}
+
+/* ── Main Data Load ── */
+async function loadOwnerData(){
+  var results=await Promise.all([
+    safeFetch('/api/vrs/properties'),
+    safeFetch('/api/vrs/reservations?limit=500')
+  ]);
+
+  allProperties=Array.isArray(results[0])?results[0]:(results[0]&&results[0].properties?results[0].properties:[]);
+  allReservations=Array.isArray(results[1])?results[1]:(results[1]&&results[1].reservations?results[1].reservations:[]);
+
+  if(allProperties.length===0&&allReservations.length>0){
+    var seen={};
+    allReservations.forEach(function(r){
+      var pid=getResPropId(r);
+      if(pid&&!seen[pid]){
+        seen[pid]=true;
+        allProperties.push({id:pid,name:getResPropName(r)});
+      }
+    });
+  }
+
+  computePropAnalytics();
+  updateKPIs();
+  renderPropGrid();
+  populatePropertySelect();
+  renderRevenueCharts();
+
+  document.getElementById('lastUpdated').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('lastUpdated').classList.remove('loading-pulse');
+}
+
+/* ── Init ── */
+loadOwnerData();
+setInterval(loadOwnerData,120000);
+</script>
+</body>
+</html>
