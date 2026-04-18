@@ -22,8 +22,8 @@ Usage
 
 Environment variables (loaded from .env / .env.dgx by run-fortress-nightly-finetune.sh)
     INTERACTION_LOG_DIR     default: /mnt/ai_bulk/training_logs
-    FINETUNE_BASE_MODEL_DIR default: /mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct
-    FINETUNE_ADAPTER_DIR    default: /mnt/ai_bulk/models/fine-tuned/lora-adapters
+    FINETUNE_BASE_MODEL_DIR default: /mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct-FP4
+    FINETUNE_ADAPTER_DIR    default: /mnt/fortress_nas/finetune-artifacts
     FINETUNE_ROLLING_DAYS   default: 30
     FINETUNE_MIN_EXAMPLES   default: 20
     FINETUNE_LORA_RANK      default: 16
@@ -33,7 +33,11 @@ Environment variables (loaded from .env / .env.dgx by run-fortress-nightly-finet
     FINETUNE_EPOCHS         default: 1
     FINETUNE_LR             default: 2e-4
     FINETUNE_PUSH_OLLAMA    default: false
-    VLLM_CONTAINER_NAME     default: vllm-70b-captain
+    VLLM_DEPLOYMENT         default: nim-sovereign (k8s deployment name)
+    VLLM_NAMESPACE          default: default
+    VLLM_HEALTH_URL         default: http://10.43.38.88:8000/v1/models (ClusterIP)
+    VLLM_STOP_TIMEOUT       default: 120  (seconds to wait for pod to terminate)
+    VLLM_START_TIMEOUT      default: 300  (seconds for NIM model load + health)
     DATABASE_URL            required for exporter
 """
 from __future__ import annotations
@@ -62,8 +66,8 @@ log = logging.getLogger("finetune")
 # Config
 # ---------------------------------------------------------------------------
 INTERACTION_LOG_DIR  = Path(os.getenv("INTERACTION_LOG_DIR",  "/mnt/ai_bulk/training_logs"))
-BASE_MODEL_DIR       = Path(os.getenv("FINETUNE_BASE_MODEL_DIR", "/mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct"))
-ADAPTER_DIR          = Path(os.getenv("FINETUNE_ADAPTER_DIR", "/mnt/ai_bulk/models/fine-tuned/lora-adapters"))
+BASE_MODEL_DIR       = Path(os.getenv("FINETUNE_BASE_MODEL_DIR", "/mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct-FP4"))
+ADAPTER_DIR          = Path(os.getenv("FINETUNE_ADAPTER_DIR", "/mnt/fortress_nas/finetune-artifacts"))
 ROLLING_DAYS         = int(os.getenv("FINETUNE_ROLLING_DAYS",  "30"))
 MIN_EXAMPLES         = int(os.getenv("FINETUNE_MIN_EXAMPLES",  "20"))
 LORA_RANK            = int(os.getenv("FINETUNE_LORA_RANK",     "16"))
@@ -73,7 +77,11 @@ MAX_SEQ_LEN          = int(os.getenv("FINETUNE_MAX_SEQ_LEN",   "4096"))
 NUM_EPOCHS           = int(os.getenv("FINETUNE_EPOCHS",        "1"))
 LEARNING_RATE        = float(os.getenv("FINETUNE_LR",          "2e-4"))
 PUSH_OLLAMA          = os.getenv("FINETUNE_PUSH_OLLAMA",       "false").lower() == "true"
-VLLM_CONTAINER       = os.getenv("VLLM_CONTAINER_NAME",        "vllm-70b-captain")
+VLLM_DEPLOYMENT      = os.getenv("VLLM_DEPLOYMENT",            "nim-sovereign")
+VLLM_NAMESPACE       = os.getenv("VLLM_NAMESPACE",             "default")
+VLLM_HEALTH_URL      = os.getenv("VLLM_HEALTH_URL",            "http://10.43.38.88:8000/v1/models")
+VLLM_STOP_TIMEOUT    = int(os.getenv("VLLM_STOP_TIMEOUT",      "120"))
+VLLM_START_TIMEOUT   = int(os.getenv("VLLM_START_TIMEOUT",     "300"))
 MIN_DATE             = date.fromisoformat(os.getenv("FINETUNE_MIN_DATE", "2026-04-18"))
 
 # LoRA target modules for Llama architecture
@@ -112,34 +120,91 @@ def _ensure_training_deps() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Docker container management
+# NIM / vLLM k8s pod management
+# vLLM runs as NVIDIA NIM (nim-sovereign deployment) inside k3s, NOT as a
+# native systemd process or Docker container. GPU is freed only when the
+# k8s pod terminates. We use kubectl scale to control replica count.
 # ---------------------------------------------------------------------------
-def _docker_running(container: str) -> bool:
-    try:
-        out = subprocess.check_output(
-            ["docker", "inspect", "--format", "{{.State.Running}}", container],
-            stderr=subprocess.DEVNULL, timeout=10,
-        )
-        return out.strip() == b"true"
-    except subprocess.CalledProcessError:
+def _nim_pod_running() -> bool:
+    """True if at least one nim-sovereign pod is in Running state."""
+    result = subprocess.run(
+        ["kubectl", "get", "pods", "-n", VLLM_NAMESPACE,
+         "-l", "app=nim-engine", "--no-headers"],
+        capture_output=True, text=True, timeout=15,
+    )
+    return "Running" in result.stdout
+
+
+def _stop_vllm() -> bool:
+    """
+    Scale nim-sovereign to 0 replicas, freeing GPU memory for training.
+
+    k8s gracefully terminates the pod (SIGTERM then SIGKILL), releasing
+    all GPU allocations. We poll until the pod disappears or raise
+    RuntimeError if it doesn't terminate within VLLM_STOP_TIMEOUT.
+
+    Returns True if NIM was running and was stopped, False if already gone.
+    """
+    if not _nim_pod_running():
+        log.info("NIM pod not running — GPU already free.")
         return False
 
+    log.info("Scaling %s/%s to 0 replicas to free GPU …", VLLM_NAMESPACE, VLLM_DEPLOYMENT)
+    subprocess.run(
+        ["kubectl", "scale", "deployment", VLLM_DEPLOYMENT,
+         "-n", VLLM_NAMESPACE, "--replicas=0"],
+        check=True, timeout=30,
+    )
 
-def _stop_vllm(container: str) -> bool:
-    if not _docker_running(container):
-        log.info("vLLM container %s not running, skip stop.", container)
-        return False
-    log.info("Stopping vLLM container %s to free GPU memory …", container)
-    subprocess.run(["docker", "stop", "-t", "30", container], check=True, timeout=60)
-    time.sleep(5)
-    log.info("vLLM container stopped.")
-    return True
+    deadline = time.time() + VLLM_STOP_TIMEOUT
+    while time.time() < deadline:
+        if not _nim_pod_running():
+            log.info("NIM pod terminated — GPU memory freed.")
+            return True
+        time.sleep(5)
+
+    raise RuntimeError(
+        f"NIM pod ({VLLM_NAMESPACE}/{VLLM_DEPLOYMENT}) did not terminate "
+        f"within {VLLM_STOP_TIMEOUT}s after scale-to-zero. "
+        "GPU memory not freed — aborting training to avoid OOM. "
+        "Check: kubectl get pods -n default -l app=nim-engine"
+    )
 
 
-def _start_vllm(container: str) -> None:
-    log.info("Restarting vLLM container %s …", container)
-    subprocess.run(["docker", "start", container], check=True, timeout=30)
-    log.info("vLLM container restarted.")
+def _start_vllm() -> None:
+    """
+    Scale nim-sovereign back to 1 replica and wait for the OpenAI-compat
+    health endpoint to respond. NIM model load takes 3-5 minutes for 8B,
+    so VLLM_START_TIMEOUT defaults to 300s.
+
+    Raises RuntimeError if health check times out — caller writes error file.
+    """
+    import urllib.request
+
+    log.info("Scaling %s/%s to 1 replica …", VLLM_NAMESPACE, VLLM_DEPLOYMENT)
+    subprocess.run(
+        ["kubectl", "scale", "deployment", VLLM_DEPLOYMENT,
+         "-n", VLLM_NAMESPACE, "--replicas=1"],
+        check=True, timeout=30,
+    )
+
+    log.info("Waiting for NIM health at %s (timeout=%ds) …", VLLM_HEALTH_URL, VLLM_START_TIMEOUT)
+    deadline = time.time() + VLLM_START_TIMEOUT
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(VLLM_HEALTH_URL, timeout=10) as resp:
+                if resp.status == 200:
+                    log.info("NIM healthy — pod Running and API responding.")
+                    return
+        except Exception:
+            pass
+        time.sleep(10)
+
+    raise RuntimeError(
+        f"NIM pod did not become healthy at {VLLM_HEALTH_URL} within "
+        f"{VLLM_START_TIMEOUT}s after scale-up. "
+        "Check: kubectl logs -n default -l app=nim-engine"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +304,7 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
         device_map="auto",
         trust_remote_code=False,
         torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
+        attn_implementation="sdpa",
     )
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
@@ -298,26 +363,60 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
     )
 
     log.info("Training started …")
-    trainer.train()
+    train_result = trainer.train()
+    log.info("Training complete. metrics=%s", train_result.metrics)
 
     log.info("Saving LoRA adapter to %s …", adapter_out)
     trainer.save_model(str(adapter_out))
     tokenizer.save_pretrained(str(adapter_out))
     log.info("Adapter saved.")
 
-    # Write a manifest for the hot-swap step
+    # Capture loss curve from trainer log history
+    loss_history = [
+        {"step": e["step"], "loss": round(e["loss"], 6)}
+        for e in trainer.state.log_history
+        if "loss" in e
+    ]
+    final_loss = loss_history[-1]["loss"] if loss_history else None
+
+    # Git SHA of trainer code at run time
+    try:
+        git_sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(Path(__file__).parent),
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        git_sha = "unknown"
+
+    # Write full metadata manifest
     manifest = {
         "base_model": str(BASE_MODEL_DIR),
         "adapter_path": str(adapter_out),
         "training_date": date.today().isoformat(),
-        "num_examples": len(records),
-        "lora_rank": LORA_RANK,
-        "epochs": NUM_EPOCHS,
-        "learning_rate": LEARNING_RATE,
+        "dataset_size": len(records),
+        "lora_config": {
+            "r": LORA_RANK,
+            "lora_alpha": LORA_RANK * 2,
+            "target_modules": LORA_TARGET_MODULES,
+            "lora_dropout": 0.05,
+            "task_type": "CAUSAL_LM",
+        },
+        "training_args": {
+            "epochs": NUM_EPOCHS,
+            "learning_rate": LEARNING_RATE,
+            "batch_size": BATCH_SIZE,
+            "grad_accum": GRAD_ACCUM,
+            "max_seq_len": MAX_SEQ_LEN,
+        },
+        "final_loss": final_loss,
+        "loss_curve": loss_history,
+        "trainer_git_sha": git_sha,
     }
     (adapter_out / "training_manifest.json").write_text(
         json.dumps(manifest, indent=2)
     )
+    log.info("Manifest written. final_loss=%s git_sha=%s", final_loss, git_sha)
 
 
 # ---------------------------------------------------------------------------
@@ -383,22 +482,45 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
     # --- Step 2: Load data ---
     records = load_training_data(ROLLING_DAYS)
 
-    if len(records) < MIN_EXAMPLES:
+    _HARD_MIN = 5  # absolute floor — never train on fewer than this regardless of env
+    if len(records) < _HARD_MIN:
         log.warning(
-            "Only %d training examples (minimum %d). Skipping training run.",
-            len(records), MIN_EXAMPLES,
+            "Only %d training examples (hard minimum %d). Skipping.",
+            len(records), _HARD_MIN,
         )
         return 0
 
+    # Dry-run check comes before env-minimum so config can be validated even when
+    # the rolling dataset is below the production threshold.
     if dry_run:
-        log.info("[DRY RUN] Would train on %d examples. Exiting.", len(records))
+        log.info(
+            "[DRY RUN] base_model=%s output=%s examples=%d min_required=%d. Exiting without training.",
+            BASE_MODEL_DIR.name, adapter_out, len(records), MIN_EXAMPLES,
+        )
+        return 0
+
+    if len(records) < MIN_EXAMPLES:
+        log.warning(
+            "Only %d training examples (env minimum %d). Skipping training run.",
+            len(records), MIN_EXAMPLES,
+        )
         return 0
 
     # --- Step 3: Install deps ---
     _ensure_training_deps()
 
-    # --- Step 4: Stop vLLM ---
-    vllm_was_running = _stop_vllm(VLLM_CONTAINER)
+    # --- Step 4: Stop vLLM to free GPU memory ---
+    vllm_was_running = False
+    try:
+        vllm_was_running = _stop_vllm()
+    except RuntimeError as exc:
+        # GPU not freed — abort cleanly rather than OOM during training
+        log.error("Cannot free GPU memory for training: %s", exc)
+        adapter_out.mkdir(parents=True, exist_ok=True)
+        (adapter_out / "training.error").write_text(
+            f"vLLM stop failed — training aborted to avoid OOM.\n{exc}"
+        )
+        return 1
 
     exit_code = 0
     try:
@@ -410,12 +532,33 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
             push_to_ollama(adapter_out)
 
     except Exception as exc:
+        import traceback as _tb
         log.error("Training failed: %s", exc, exc_info=True)
         exit_code = 1
+        try:
+            adapter_out.mkdir(parents=True, exist_ok=True)
+            (adapter_out / "training.error").write_text(
+                f"{type(exc).__name__}: {exc}\n\n{_tb.format_exc()}"
+            )
+            log.info("Failure reason written to %s/training.error", adapter_out)
+        except Exception:
+            pass
     finally:
-        # Always restart vLLM even if training failed
+        # Always attempt to restart vLLM even if training failed
         if vllm_was_running:
-            _start_vllm(VLLM_CONTAINER)
+            try:
+                _start_vllm()
+            except RuntimeError as exc:
+                import traceback as _tb
+                log.error("vLLM failed to restart after training: %s", exc)
+                try:
+                    adapter_out.mkdir(parents=True, exist_ok=True)
+                    (adapter_out / "vllm_restart.error").write_text(
+                        f"vLLM restart failed after training.\n{exc}\n\n{_tb.format_exc()}"
+                    )
+                except Exception:
+                    pass
+                exit_code = max(exit_code, 1)
 
     log.info("Nightly fine-tune job complete. exit_code=%d", exit_code)
     return exit_code
