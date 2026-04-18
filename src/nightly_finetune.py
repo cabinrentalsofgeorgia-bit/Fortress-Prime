@@ -83,6 +83,8 @@ VLLM_HEALTH_URL      = os.getenv("VLLM_HEALTH_URL",            "http://10.43.38.
 VLLM_STOP_TIMEOUT    = int(os.getenv("VLLM_STOP_TIMEOUT",      "120"))
 VLLM_START_TIMEOUT   = int(os.getenv("VLLM_START_TIMEOUT",     "300"))
 MIN_DATE             = date.fromisoformat(os.getenv("FINETUNE_MIN_DATE", "2026-04-18"))
+HOLDOUT_DIR          = Path(os.getenv("HOLDOUT_DIR",
+                         "/mnt/fortress_nas/finetune-artifacts/holdouts"))
 
 # LoRA target modules for Llama architecture
 LORA_TARGET_MODULES = [
@@ -420,6 +422,57 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Phase 4b: Eval pipeline
+# ---------------------------------------------------------------------------
+def _run_eval_pipeline(adapter_out: Path) -> None:
+    """
+    Run the Phase 4b eval harness after training.
+
+    Finds today's holdout manifest, runs run_eval.py against the adapter,
+    then applies the promotion gate. Errors are logged but never raise —
+    a failed eval doesn't roll back the training artifact.
+    """
+    today_tag = date.today().isoformat()
+    holdout_path = HOLDOUT_DIR / f"holdout-{today_tag}.json"
+
+    if not holdout_path.exists():
+        log.warning("No holdout manifest at %s — skipping eval. "
+                    "Run build_holdout.py to create one.", holdout_path)
+        return
+
+    eval_script = Path(__file__).parent / "eval" / "run_eval.py"
+    gate_script  = Path(__file__).parent / "eval" / "promotion_gate.py"
+
+    try:
+        log.info("Running eval harness …")
+        result = subprocess.run(
+            [sys.executable, str(eval_script),
+             "--adapter-path", str(adapter_out),
+             "--holdout-path", str(holdout_path)],
+            timeout=3600,
+        )
+        if result.returncode != 0:
+            log.warning("Eval script exited %d — check adapter metrics", result.returncode)
+            return
+
+        log.info("Running promotion gate …")
+        gate_result = subprocess.run(
+            [sys.executable, str(gate_script),
+             "--adapter-path", str(adapter_out)],
+            timeout=60,
+        )
+        if gate_result.returncode == 0:
+            log.info("Promotion gate PASSED — promotion_candidate.json written")
+        elif gate_result.returncode == 2:
+            log.warning("Promotion gate REJECTED — see promotion_rejected.json")
+        else:
+            log.error("Promotion gate failed unexpectedly (exit %d)", gate_result.returncode)
+
+    except Exception as exc:
+        log.error("Eval pipeline error (non-fatal): %s", exc)
+
+
+# ---------------------------------------------------------------------------
 # Step 4: Ollama hot-swap (optional)
 # ---------------------------------------------------------------------------
 def push_to_ollama(adapter_path: Path) -> None:
@@ -527,7 +580,10 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
         # --- Step 5: Train ---
         run_qlora_training(records, adapter_out)
 
-        # --- Step 6: Optional Ollama push ---
+        # --- Step 6: Phase 4b eval pipeline (runs while GPU is still free) ---
+        _run_eval_pipeline(adapter_out)
+
+        # --- Step 7: Optional Ollama push ---
         if PUSH_OLLAMA:
             push_to_ollama(adapter_out)
 
