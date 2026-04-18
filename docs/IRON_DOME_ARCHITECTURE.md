@@ -1,362 +1,307 @@
 # Iron Dome — Fortress-Prime Sovereign AI Defense System
 
-**Version:** 3.0
+**Version:** 4.0
 **Date:** April 18, 2026
 **Author:** Gary Knight (with Claude)
-**Supersedes:** v2 (commit 8649e8236)
+**Supersedes:** v3 (commit 0b4730fef)
 
----
+## Why v4
 
-## Why v3
+v3 documented the cluster as four GB10 nodes running a mix of models with no clear mapping from business to compute. The fix-the-routing audit answered "where does deepseek-r1:70b actually live?" but not "which business gets which node?"
 
-v2 documented Iron Dome as five phases that assumed the cluster's
-AI routing worked as intended. A late-night infrastructure audit on
-April 18 revealed the sovereign tier was broken: ai_router was calling
-`http://192.168.0.100:11434` expecting `deepseek-r1:70b`, but that
-model lives on `192.168.0.104` (spark-1) and `192.168.0.106` (spark-4).
-Every deep-reasoning sovereign call was 404-ing and silently falling
-through to cloud inference.
+v4 is the business-driven architecture. Fortress-Prime operates two enterprise workloads that differ in every meaningful dimension — legal privilege, data volume, query patterns, hardware needs, eval criteria. Running them on shared compute with implicit routing is architecturally wrong. v4 explicitly assigns nodes, vector stores, and distillation targets per business.
 
-This changes everything. Phase 4's distillation was targeted at a
-model ai_router couldn't route to. Phase 4c was scaffolded against
-a serving path that bypassed the default sovereign tier. v3 corrects
-the foundation before building further.
+## The two businesses
 
----
+**CROG-VRS (Cabin Rentals of Georgia)**
 
-## What Iron Dome actually defends
+High-volume, consumer-facing, fast-response. Guest concierge via SMS and email. Rate optimization across 40+ properties. Channel management across Airbnb, VRBO, Booking.com. Damage claim workflows. Listing content. Competitor intelligence.
 
-Same four threats as v2 — vendor lock-in, privilege leakage, compute
-economics, model quality drift. The threats haven't changed. What
-changed is our understanding of the assets defending against them.
+Query profile: short context, high frequency, conversational voice. Privacy: guest PII, payment data (filtered out at capture). Privilege: none — standard business content.
 
----
+Eval criteria: response relevance, brand voice consistency, factual accuracy about property details, pricing reasonableness.
 
-## The cluster as it actually exists
+**Fortress Legal**
 
-Four nodes, each NVIDIA GB10 with ~120GB unified memory. Tailscale
-mesh. k3s cluster with spark-2 as control plane. Synology 1825+
-NAS at `192.168.0.112` (`/mnt/fortress_nas`).
+Low-volume, deep-reasoning, privileged. Active litigation (SUV2026000013 Generali v. CROG et al). Deposition preparation, brief drafting, discovery review, case chronology, statute research.
 
-### Current node roles (reality, not intent)
+Query profile: long context, low frequency, formal voice. Privacy: attorney-client privilege, attorney work product. Data: pleadings, contracts, discovery documents, chronologies.
 
-| Node | IP | GB10 | Services | Models loaded |
-|---|---|---|---|---|
-| spark-2 (Captain) | 192.168.0.100 | Yes | fortress-backend, workers, k3s control plane, NIM llama-3.1-8b (~60GB), Ollama | qwen2.5:0.5b, qwen2.5:7b, nomic-embed-text |
-| spark-1 (Muscle) | 192.168.0.104 | Yes | Ollama | deepseek-r1:70b, qwen2.5:32b, llama3.2-vision:90b, qwen2.5:7b, llava, mistral |
-| spark-3 (Ocular) | 192.168.0.105 | Yes | Ollama | llama3.2-vision:90b, nomic-embed-text |
-| spark-4 (Sovereign) | 192.168.0.106 | Yes | Ollama + docker nim-swarm | deepseek-r1:70b, qwen2.5:32b, llava, mistral |
+Eval criteria: legal accuracy, citation integrity, preservation of argumentative structure, zero hallucination of statutes or case holdings.
 
-### What's working
+These two workloads should share as little as possible.
 
-- spark-2 NIM serves legal_council and SEO archive via direct URL
-- spark-2 Ollama serves ai_router fast-path calls (qwen2.5:7b)
-- spark-3 serves vision workloads via direct URL
-- All nodes reachable via Tailscale mesh
+## Node assignment — final
 
-### What's broken
+### spark-2 (192.168.0.100) — Orchestrator + Fast Tier + Embeddings
 
-- ai_router deep-tier calls 404 silently (wrong endpoint)
-- spark-2 simultaneously runs control plane + NIM + Ollama, leaving
-  no headroom for training without stopping inference
-- No health-aware routing: if spark-1 restarts, all deep calls fail
-- No load balancing between spark-1 and spark-4 despite both hosting
-  deepseek-r1:70b
-- Single-node distillation target (Llama-3.3-70B-FP4 on spark-2)
-  doesn't match what ai_router serves to production traffic
+Role: the cluster's brain. Makes routing decisions, writes embeddings, serves the fast tier. High-frequency small-context work.
 
----
+Loaded models:
+- qwen2.5:7b — concierge replies, OTA responses, message classification
+- qwen2.5:0.5b — intent routing, small classification tasks
+- nomic-embed-text — universal embedding endpoint
 
-## Target node roles (where we're going)
-
-### spark-2 — Control plane + fast tier + training
-Responsibilities:
-- fortress-backend and all worker processes
-- ai_router decision-making (the brain, not the inference)
+Services:
+- fortress-backend, all worker processes
+- ai_router decision-making
 - k3s control plane
-- Fast-tier inference: qwen2.5:7b for concierge, routine VRS, pricing
-  heuristics
-- Nightly training runs (when GB10 is free of inference load)
+- Model registry (health probes + routing)
+- Universal embedding writer (all RAG ingestion hits this endpoint)
 
-Explicitly NOT on spark-2 going forward:
-- NIM llama-3.1-8b — move to spark-1 or spark-4 where it doesn't
-  compete with control plane
+Explicitly NOT on spark-2:
+- NIM llama-3.1-8b — move to spark-1
+- Any training workloads — use business-owned training node
+- Deep-tier inference — routes to spark-1/spark-4
 
-### spark-1 — Primary heavy reasoning
-Responsibilities:
-- deepseek-r1:70b (deep tier default)
-- qwen2.5:32b (mid tier default)
-- llama3.2-vision:90b (vision overflow)
+Why: the node that routes traffic should be fast and free of heavy inference load. Embeddings are a shared service across both businesses; centralizing them on spark-2 simplifies ingestion pipelines.
+
+### spark-1 (192.168.0.104) — Fortress Legal
+
+Role: Fortress Legal's sovereign compute. Privileged by design.
+
+Loaded models:
+- deepseek-r1:70b — deposition prep, brief drafting, complex legal reasoning
+- qwen2.5:32b — document review, discovery summarization, mid-weight legal work
+- qwen2.5:32b-fortress-legal (future distilled) — routine legal workflows
+- nomic-embed-text — legal-domain embeddings
 - NIM llama-3.1-8b (migrated from spark-2)
-- Primary target for legal_council deliberations, complex analysis,
-  acquisitions work
 
-### spark-3 — Vision specialist
-Responsibilities:
-- llama3.2-vision:90b (primary)
-- OCR and image analysis workflows
-- No general-purpose traffic — specialized node
+Vector stores on this node:
+- Fortress Legal vector store — pleadings, statutes, case law, contracts, chronologies, discovery documents
+- Privileged case corpus per active matter
 
-### spark-4 — Heavy-reasoning redundancy + audio
-Responsibilities:
-- deepseek-r1:70b (active-active with spark-1)
-- qwen2.5:32b (active-active with spark-1)
-- Speech/audio workloads when added
-- Automatic failover target if spark-1 offline
+Access control:
+- Only legal_council, ediscovery_agent, legal_email_intake, legal_intake modules route here
+- model_registry enforces this via source_module check
+- Privileged captures from these modules route to restricted_captures (Phase 2 filter)
 
-This is a real active-active pair for the deep tier, not hot-standby.
-Load balances across both.
+Why: legal work is the most privilege-sensitive workload in the stack. Physical and logical isolation makes the privilege defense clean. If opposing counsel ever argues privilege waiver, the architecture answer is: legal content lived on a single dedicated node, was never mixed with other business data, and never crossed compute boundaries.
 
----
+### spark-3 (192.168.0.105) — Ocular (Vision)
 
-## The three cornerstones
+Role: anything involving images.
 
-Iron Dome rebuilt around three architectural pieces:
+Loaded models:
+- llama3.2-vision:90b — damage assessment, property photos, listing QC
+- nomic-embed-text — caption and alt-text embeddings
 
-### 1. Model registry (new)
+Services:
+- Vision API endpoint exposed at :11434 (default Ollama)
+- Called directly by damage_claim_workflow, listing_qc_worker, ota_vision_recon
 
-A module (`backend/services/model_registry.py`) that knows:
+Why: vision is a specialized workload. Keeps image processing from saturating text nodes. spark-3 is dedicated — not active-active, not shared.
 
-- Which models are on which nodes (loaded from a config + live probing)
-- Each node's health (last successful request, rolling latency,
-  consecutive failures)
-- Routing policy per tier: affinity rules, failover chains, load
-  balancing
+### spark-4 (192.168.0.106) — CROG-VRS + Deep Tier Redundancy
 
-Signature:
+Role: CROG-VRS's sovereign compute. Active-active backup for spark-1's general deep tier (non-legal).
 
-    def get_endpoint_for_model(model_name: str, tier: str) -> Endpoint:
-        """Returns healthiest node endpoint that has model_name.
-        Raises NoHealthyEndpoint if none available."""
+Loaded models:
+- deepseek-r1:70b — pricing strategy, revenue optimization, competitor analysis
+- qwen2.5:32b — market intelligence, damage claim reasoning
+- qwen2.5:7b-crog-vrs (future distilled) — routine VRS workflows
+- qwen2.5:7b — fallback if spark-2 fast tier saturates
+- nomic-embed-text — VRS-domain embeddings
 
-ai_router calls the registry. Registry returns the right URL. If
-spark-1 has been failing recently, registry returns spark-4 instead.
-When both deep-tier nodes are down, registry raises, and ai_router
-falls through to cloud.
+Vector stores on this node:
+- CROG-VRS vector store — property inventory, guest history, pricing patterns, SOPs, OTA responses, damage claim history
 
-No more hardcoded endpoints anywhere.
+Services:
+- VRS API endpoint at :11434
+- Called by vrs_agent_dispatcher, quote_engine, concierge_worker, reactivation_hunter, damage_claim_workflow
 
-### 2. Health-aware routing (new)
+Active-active behavior: if spark-1's non-legal deep tier fails, model_registry routes those calls to spark-4. Legal calls never route here regardless of spark-1 health.
 
-Probe each known endpoint every 30 seconds:
+## RAG architecture — domain-isolated
 
-- GET /api/tags on Ollama
-- GET /v1/models on NIM/vLLM
+### Why isolation
 
-Track three signals per endpoint:
-- Reachable (boolean)
-- Rolling latency (last 20 requests)
-- Consecutive failures (reset on success)
+Cross-domain RAG retrieval is the number-one way privilege leaks in production LLM systems. A query about "wedding cancellation" from a guest messaging flow retrieves a passage from a deposition prep memo if they share a vector store. Domain isolation prevents this at the retrieval layer, not just the filter layer.
 
-Endpoint is "healthy" if reachable AND consecutive_failures < 3.
-Registry returns only healthy endpoints. If tier has multiple healthy
-endpoints, pick by lowest rolling latency (primitive load balancing).
+### Vector store topology
 
-### 3. Observability (new)
+**CROG-VRS store:** on spark-4 or NAS-pinned and mounted at spark-4. Contains:
+- Property inventory (location, amenities, photos metadata)
+- Guest conversation history (filtered for PII)
+- Pricing analysis archive
+- Competitor intelligence
+- OTA response templates and history
+- SOPs and operational playbooks
+- Damage claim corpus
+- Market research (Blue Ridge, Fannin County, North Georgia)
 
-Metrics exposed at /api/v1/system-health (already exists, extend):
+**Fortress Legal store:** on spark-1, physically not replicated elsewhere. Contains:
+- Active case pleadings
+- Statutes (Georgia state, federal)
+- Case law (Georgia appellate, federal circuit)
+- Contract corpus (lease agreements, OTA contracts, vendor agreements)
+- Discovery document production sets (per matter)
+- Chronologies
+- Privileged work product (briefs, memos, strategy notes)
 
-- Per-endpoint request count
-- Per-endpoint latency p50, p95
-- Per-tier fallback count (how often did registry have to use backup)
-- Per-model request count (separates "what's being asked for" from
-  "what's being served")
+**Shared entities store:** on NAS, accessible from spark-2. Contains:
+- Property registry (name, address, owner, management contract)
+- Contact registry (guests, vendors, owners, counsel)
+- Calendar/event data
+- Any data that exists identically in both business contexts
 
-This is how we notice spark-4 is idle while spark-1 is saturated. Or
-that a specific prompt type always falls through to cloud.
+### Query-time retrieval rules
 
----
+1. Query source module determines which stores are eligible:
+   - legal_council → Fortress Legal store only
+   - vrs_agent_dispatcher → CROG-VRS store + shared entities only
+   - concierge_worker → CROG-VRS store + shared entities only
+   - General queries → shared entities only
 
-## Distillation redesigned
+2. Cross-domain retrieval is prohibited at the query layer, not just advised.
 
-### What we got wrong in v1/v2
+3. Embedding writes follow the same isolation:
+   - Legal module writes → legal embedding endpoint (spark-1)
+   - VRS module writes → VRS embedding endpoint (spark-4)
+   - Generic writes → spark-2 embedding endpoint
 
-Trained LoRA adapter for Llama-3.3-70B-FP4. Nothing in production
-actually serves Llama-3.3-70B — it existed because NIM deployment
-chose it. ai_router serves qwen2.5:7b (fast) and tries to serve
-deepseek-r1:70b (deep, broken). Training a model production doesn't
-serve means the adapter serves nobody.
+### Privacy at retrieval
 
-### What to train instead
+Legal store retrieval never returns content flagged with specific matter IDs to queries from non-authorized personas. Matter-level access control is finer-grained than persona-level — documents in SUV2026000013 corpus are retrievable only by matter participants.
 
-Primary target: qwen2.5:7b (fast tier).
+## Distillation — two businesses, two models
 
-Reasoning:
-- Most production VRS/concierge traffic lands on the fast tier
-- 7B model is cheap to fine-tune (minutes, not hours)
-- Fits in every node's memory with room for base + adapter loaded
-  simultaneously
-- Adapter improvements show up in real user-facing latency
-- Easy to A/B test by running base qwen2.5:7b alongside
-  qwen2.5:7b-crog on same node
+### CROG-VRS distillation
 
-Secondary target (later): qwen2.5:32b (mid tier).
+**Target model:** qwen2.5:7b → qwen2.5:7b-crog-vrs
 
-Reasoning:
-- Deeper reasoning for complex concierge, pricing analysis
-- Same model family — lessons from 7b fine-tune transfer
-- Larger base requires more training compute per iteration but
-  same pipeline
+**Training data source:**
+- llm_training_captures filtered to VRS source_modules
+- Backfilled historical captures (PR #53)
+- Approved concierge response templates
+- Approved OTA response patterns
 
-Explicitly NOT training targets:
-- deepseek-r1:70b — too large, too specialized. Keep as frontier-local
-  substitute for hard reasoning.
-- llama3.2-vision:90b — vision training is a different problem
-- Llama-3.3-70B-FP4 — not in production routing path
+**Training location:** spark-4 GB10, during low-traffic window (2am EST, current timer slot)
 
-### Training infrastructure
+**Serving location:** spark-4 Ollama with LoRA adapter applied
 
-Two paths, decide based on usage patterns:
+**Eval criteria:**
+- Response relevance >= 0.85 cosine similarity to frontier on holdout
+- Brand voice consistency (no tone regressions)
+- Zero fabrication of property details (fact-checked against inventory)
+- Pricing reasonableness (no quotes outside defined ranges)
 
-Path A (simpler): Train on spark-2 GB10 when inference load is low.
-Nightly at 2am when traffic is minimal. Requires spark-2 to NOT
-hold 60GB of NIM. If NIM moves to spark-1, spark-2 has full GPU
-free for training.
+**Promotion:** gated by eval harness (Phase 4b), manual approval for first N promotions until signal is trusted.
 
-Path B (cleaner isolation): Dedicate spark-4 to training during
-defined windows. spark-4 stops serving inference for N minutes,
-trains, resumes. spark-1 carries all deep traffic during window.
-Requires active-active routing to handle redirect cleanly.
+### Fortress Legal distillation
 
-Start with Path A for operational simplicity. Reconsider if training
-frequency exceeds once daily.
+**Target model:** qwen2.5:32b → qwen2.5:32b-fortress-legal
 
----
+**Training data source:**
+- NOT llm_training_captures or restricted_captures directly (too small, privileged content cannot train a model that serves future queries about unrelated matters — cross-matter contamination risk)
+- Public Georgia case law (searchable via casetext, Georgia Supreme Court archives)
+- Georgia statutes (OCGA)
+- Federal Rules of Civil Procedure, Evidence, Local Rules for Northern District of Georgia
+- Anonymized briefs from prior matters (all matter-identifying details redacted before training)
+- Legal style guide (Bluebook, local court preferences)
 
-## Phase plan v3
+**Why not privileged content:** training on privileged material creates risk the model regurgitates matter-specific details in unrelated future queries. Public legal corpus is safer and probably sufficient for style and structural quality improvements.
+
+**Training location:** spark-1 GB10, off-hours (requires moving the current trainer from spark-2 to spark-1)
+
+**Serving location:** spark-1 Ollama with LoRA adapter
+
+**Eval criteria:**
+- Citation accuracy (100% — cited cases must exist and stand for the proposition claimed)
+- Statutory reference accuracy
+- Zero hallucination of precedent
+- Argumentative structure preservation
+
+**Promotion:** gated by human review for legal accuracy. Distillation cannot promote without attorney sign-off.
+
+## Phase plan v4
 
 ### Phase 1 — Plumbing deployed (DONE)
-Running in production April 18, 2026.
 
-### Phase 2 — Privilege filter (DONE)
-Live and tested. 4-layer defense.
+### Phase 2 — Privilege filter (DONE, but improve)
+Current filter catches legal personas and legal modules. Extend to check source node: if a legal module attempts to route to spark-4 or use VRS vector store, block and log.
 
-### Phase 2.5 — Model registry + health-aware routing (NEW, NEXT)
-The foundation this v3 document describes. Without this, Phase 4+
-cannot meaningfully improve production.
+### Phase 2.5 — Model registry (DONE)
 
-### Phase 3 — Flywheel capture (DONE, but flawed)
-Timer armed. Exports capture pairs. BUT: captures flow through
-ai_router which is currently mis-routing. A capture pair's
-teacher_response may not reflect what production actually served.
-Phase 2.5 must land before flywheel data is trusted for training.
+### Phase 3 — Flywheel capture (DONE, but retag)
+Captures continue. Add served_by_endpoint tagging (R6 from v3). Add served_vector_store tagging.
 
-### Phase 4 — Trainer (DONE, but retargeted)
-Currently trains Llama-3.3-70B-FP4. Needs retarget to qwen2.5:7b.
-Tomorrow's work. Existing scaffolding (manifest, error handling,
-vLLM process management, holdout, eval harness, promotion gate)
-is reusable — only the base model and training config change.
+### Phase 4a — CROG-VRS distillation (NEW)
+Retarget trainer from Llama-3.3-70B-FP4 to qwen2.5:7b. Train on spark-4. Serve from spark-4.
 
 ### Phase 4b — Eval harness (DONE)
-Works regardless of target model. Ships as-is.
+Reusable for both CROG-VRS and Fortress Legal distillation cycles.
 
-### Phase 4c — Adapter routing (DONE, but realigned)
-Currently scaffolded to serve Llama-3.3-FP4 adapter via separate
-vLLM. When target moves to qwen2.5:7b, adapter serving becomes
-native Ollama (ollama run qwen2.5:7b-crog) — no vLLM needed.
-Phase 4c simplifies dramatically after retarget.
+### Phase 4c — Adapter routing (DONE, simplify)
+Refactor to support per-business adapter routing. VRS modules → qwen2.5:7b-crog-vrs on spark-4. Legal modules → qwen2.5:32b-fortress-legal on spark-1 (when that exists). PCT per adapter, not global.
 
-### Phase 5 — Node role migration
-Move NIM off spark-2. Set up active-active deep tier. This is
-multi-hour production work — maintenance window required.
+### Phase 4d — Fortress Legal distillation (NEW, later)
+Build public-corpus training pipeline. Requires legal corpus acquisition (casetext API, OCGA scraping, or licensed source). Ship after Phase 4a stabilizes.
 
-### Phase 6 — Multi-node observability
-Per-endpoint metrics, dashboard, alerting on endpoint failures.
-Lower priority until Phases 2.5 + 4-retarget are stable.
+### Phase 5a — RAG architecture migration (NEW)
+Build CROG-VRS vector store on spark-4. Build Fortress Legal vector store on spark-1. Update retrieval code to respect domain boundaries. Migrate existing shared vectors (if any) into domain-specific stores.
 
----
+### Phase 5b — Node role migration (from v3 Phase 5)
+Move NIM off spark-2 to spark-1. Requires maintenance window.
+
+### Phase 6 — Multi-node observability (from v3, unchanged)
 
 ## Migration sequence
 
-Recommended order. Each has specific exit criteria; don't start
-N+1 until N is verified.
+Recommended order with exit criteria:
 
-1. Phase 2.5 — Model registry + routing (next session, ~1-2 hours)
-2. Phase 4 retarget — qwen2.5:7b training (next session, ~2-3 hours)
-3. Phase 4c simplification (when retarget ships, ~1 hour)
-4. Phase 5 — NIM migration off spark-2 (separate session with
-   maintenance window, ~2-3 hours, production impact)
-5. Phase 6 — Observability extensions (incremental, ongoing)
+1. Phase 3 retag — add served_by_endpoint and served_vector_store columns to capture tables. Trivial migration. (~30 min)
 
----
+2. Phase 5a part 1 — spark-4 VRS vector store provisioning and ingestion of existing VRS content. (~2-3 hours including content audit)
 
-## Solo-operator constraints
+3. Phase 4a — CROG-VRS trainer retarget to qwen2.5:7b on spark-4 with VRS data. First real distillation for the actual production target. (~2-3 hours)
 
-This architecture assumes:
-- One person makes all decisions
-- Maintenance windows are 30-60 minutes during quiet traffic
-- Complexity must pay for itself; anything too clever is fragile
-- When something breaks at 3am, the person recovering it is the
-  same person who built it
+4. Phase 4c refactor — per-business adapter routing. Enable VRS adapter at PCT=5 after Phase 4a's first promotion. (~1-2 hours)
 
-Implications:
-- Model registry is Python module, not dedicated service — one
-  less moving part
-- Health probing is in-process thread, not sidecar — one less
-  moving part
-- Observability is logs + /api/v1/system-health endpoint, not
-  Prometheus/Grafana — deferrable until volume justifies
-- All decisions documented in PRs and in this doc — future-you
-  reads the same thing current-you wrote
+5. Phase 5a part 2 — spark-1 legal vector store provisioning and ingestion of legal corpus. Slower work; requires matter-level access controls. (~multiple sessions)
 
----
+6. Phase 5b — NIM migration off spark-2. Maintenance window. Production impact. (~2-3 hours)
+
+7. Phase 4d — Fortress Legal distillation. After Phase 5a part 2 and legal corpus acquisition. (~multi-session project)
+
+8. Phase 6 — observability, incremental and ongoing.
 
 ## Decision log (April 18, 2026)
 
-1. Adopt model registry pattern over continuing with hardcoded
-   endpoints. Enables all downstream improvements.
-2. Distillation target: qwen2.5:7b first, qwen2.5:32b later.
-   NOT Llama-3.3-70B-FP4 (current tonight's target — will be
-   retargeted tomorrow).
-3. NIM migration off spark-2 is scheduled but deferred.
-   Control-plane/inference coexistence is the root cause of the
-   training-needs-inference-stop pattern; fixing it is worth a
-   maintenance window.
-4. Active-active deep tier (spark-1 + spark-4) over hot-standby.
-   Utilizes both GB10s.
-5. Phase 3 captures continue running tonight despite the
-   mis-routing, because the filter itself works and restricted
-   routing still blocks privileged content from training. Training
-   data quality improves automatically once Phase 2.5 lands.
+1. Two businesses, two distilled models. Not one shared distillation target. CROG-VRS gets qwen2.5:7b-crog-vrs, Fortress Legal gets qwen2.5:32b-fortress-legal. Trained separately, served separately, evaluated separately.
 
----
+2. Domain-isolated RAG. Cross-domain retrieval prohibited at the query layer, not just advised. Vector stores physically separated on different nodes.
 
-## Risks still live
+3. spark-1 dedicated to legal. Single-purpose node for privilege defense.
 
-R1-R5 from v2 unchanged (secrets rotation, .env key, event_consumer
-NameError, etc.).
+4. spark-4 dedicated to VRS. Also serves as active-active deep-tier backup for spark-1 non-legal work.
 
-New risks from v3:
+5. spark-2 dedicated to orchestration + fast tier + embeddings. No heavy inference. No training. No vector stores.
 
-R6 — Mis-routed historical captures. Some entries in
-llm_training_captures may have teacher_response fields that didn't
-actually come from the advertised tier (because routing was broken).
-Mitigation: after Phase 2.5 lands, tag future captures with
-served_by_endpoint so we can distinguish clean captures from
-pre-fix ones.
+6. spark-3 dedicated to vision. Unchanged from v3.
 
-R7 — Active-active routing complexity. Two-node load balancing
-sounds simple but split-brain failure modes (both nodes think the
-other is down) need thinking. Mitigation: primitive approach first —
-round-robin with health gate. If split-brain happens, degrade to
-single-node cleanly.
+7. Legal distillation uses public corpus, not privileged captures. Prevents cross-matter contamination risk.
 
-R8 — Distilled model eval assumes production data volume. Current
-eval threshold (30 prompts/domain) lowered to 13 for first iteration.
-Real statistical confidence needs weeks of production capture.
-Mitigation: document lowered threshold as MVP-only, revert when
-volume reaches natural threshold.
+8. Training moves to the business's own node. CROG-VRS trains on spark-4. Legal trains on spark-1. Not a shared training node.
 
----
+## Risks live after v4
 
-## What this document is for
+R1-R5 from v2 unchanged (secrets rotation, etc.). R6-R8 from v3 unchanged.
 
-A future Claude session (or future you) opening this repo should
-read this doc and know:
-- What's running where
-- Why we designed it this way
-- What ships next and in what order
-- What NOT to touch without understanding why
+New risks from v4:
 
-This replaces v2 because v2 was written without the cluster audit.
-v3 is the real map.
+R9 — Cross-domain RAG leakage. If any query code path retrieves from both stores, privilege is at risk. Mitigation: test-driven development at the retrieval layer. Every retrieval call must specify source_module; registry enforces the mapping.
+
+R10 — Training data volume per business. CROG-VRS has more volume (~74 captures post-backfill). Fortress Legal has none eligible for training (everything is in restricted_captures). Legal distillation blocked on public corpus acquisition. Mitigation: accept this order — ship VRS distillation first, legal after corpus is secured.
+
+R11 — Dedicated-node failure equals dedicated-workload outage. If spark-1 dies, legal has no fallback (spark-4 will not serve privileged content). Mitigation: manual failover plan. Legal calls degrade to cloud (frontier models) during spark-1 outage, with explicit privilege warning in ai_router. Not automatic active-active for legal — too risky for privilege argument.
+
+R12 — NIM migration during maintenance window risks. Moving NIM from spark-2 to spark-1 requires coordinated stop/start across services. Mitigation: scheduled maintenance, documented rollback, verify legal_council traffic is paused during window.
+
+## What this document does
+
+This is the architecture Fortress-Prime is building toward. Every PR from here should cite which phase of v4 it implements, which exit criterion it advances, and which risk it touches.
+
+Future Gary or future Claude reading this should be able to understand which node handles which business, see why RAG is domain-isolated, know which model distillation targets which workload, and identify what ships next and in what order.
+
+This replaces v3 as the single source of architectural truth.
