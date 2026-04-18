@@ -80,3 +80,22 @@ fortress-guest-platform/backend/scripts/review_namespace_batch*.json
 fortress-guest-platform/backend/scripts/seo_migration_candidates*.json
 fortress-guest-platform/backend/scripts/seo_migration_map_dry_run.json
 fortress-guest-platform/backend/scripts/seo_orphan_report_dry_run.json
+
+# Runtime operational state
+.defcon_state
+
+# LiteLLM runtime config — contains master_key, use deploy/litellm_config.yaml as template
+/litellm_config.yaml
+/litellm_config.yaml.bak
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# SQLite runtime databases
+*.db
+*.db-journal
+
+# Background process output
+nohup.out
