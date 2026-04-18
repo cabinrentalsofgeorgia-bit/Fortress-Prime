@@ -373,6 +373,16 @@ async def execute_resilient_inference(
     start = time.perf_counter()
     errors: list[str] = []
 
+    # Phase 4e.2: classify v5 labeling task type (non-blocking, default "generic")
+    try:
+        from backend.services.task_classifier import classify_task_type as _classify
+        label_task_type: str = _classify(
+            source_module=source_module or "",
+            prompt=prompt,
+        )
+    except Exception:
+        label_task_type = "generic"
+
     # 1) Sovereign default: local Ollama
     try:
         text, _ollama_endpoint = await _call_ollama(
@@ -504,6 +514,7 @@ async def execute_resilient_inference(
             db=db,
             served_by_endpoint=_cloud_endpoint,
             served_vector_store=None,  # RAG integration Phase 5a
+            task_type=label_task_type,
         )
         return result
     except Exception as exc:  # noqa: BLE001
