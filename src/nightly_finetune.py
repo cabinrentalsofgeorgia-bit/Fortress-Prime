@@ -33,10 +33,11 @@ Environment variables (loaded from .env / .env.dgx by run-fortress-nightly-finet
     FINETUNE_EPOCHS         default: 1
     FINETUNE_LR             default: 2e-4
     FINETUNE_PUSH_OLLAMA    default: false
-    VLLM_BRIDGE_SERVICE     default: fortress-vllm-bridge
-    VLLM_HEALTH_URL         default: http://127.0.0.1:18001/v1/models
-    VLLM_STOP_TIMEOUT       default: 60   (seconds to wait for EngineCore to die)
-    VLLM_START_TIMEOUT      default: 120  (seconds to wait for vLLM to come back)
+    VLLM_DEPLOYMENT         default: nim-sovereign (k8s deployment name)
+    VLLM_NAMESPACE          default: default
+    VLLM_HEALTH_URL         default: http://10.43.38.88:8000/v1/models (ClusterIP)
+    VLLM_STOP_TIMEOUT       default: 120  (seconds to wait for pod to terminate)
+    VLLM_START_TIMEOUT      default: 300  (seconds for NIM model load + health)
     DATABASE_URL            required for exporter
 """
 from __future__ import annotations
@@ -76,10 +77,11 @@ MAX_SEQ_LEN          = int(os.getenv("FINETUNE_MAX_SEQ_LEN",   "4096"))
 NUM_EPOCHS           = int(os.getenv("FINETUNE_EPOCHS",        "1"))
 LEARNING_RATE        = float(os.getenv("FINETUNE_LR",          "2e-4"))
 PUSH_OLLAMA          = os.getenv("FINETUNE_PUSH_OLLAMA",       "false").lower() == "true"
-VLLM_BRIDGE_SERVICE  = os.getenv("VLLM_BRIDGE_SERVICE",        "fortress-vllm-bridge")
-VLLM_HEALTH_URL      = os.getenv("VLLM_HEALTH_URL",            "http://127.0.0.1:18001/v1/models")
-VLLM_STOP_TIMEOUT    = int(os.getenv("VLLM_STOP_TIMEOUT",      "60"))
-VLLM_START_TIMEOUT   = int(os.getenv("VLLM_START_TIMEOUT",     "120"))
+VLLM_DEPLOYMENT      = os.getenv("VLLM_DEPLOYMENT",            "nim-sovereign")
+VLLM_NAMESPACE       = os.getenv("VLLM_NAMESPACE",             "default")
+VLLM_HEALTH_URL      = os.getenv("VLLM_HEALTH_URL",            "http://10.43.38.88:8000/v1/models")
+VLLM_STOP_TIMEOUT    = int(os.getenv("VLLM_STOP_TIMEOUT",      "120"))
+VLLM_START_TIMEOUT   = int(os.getenv("VLLM_START_TIMEOUT",     "300"))
 MIN_DATE             = date.fromisoformat(os.getenv("FINETUNE_MIN_DATE", "2026-04-18"))
 
 # LoRA target modules for Llama architecture
@@ -118,100 +120,90 @@ def _ensure_training_deps() -> None:
 
 
 # ---------------------------------------------------------------------------
-# vLLM native-process management
-# vLLM runs as VLLM::EngineCore (native python3 process, not Docker) on this
-# deployment. The docker container model assumed in the original stub was wrong
-# for the GB10/DGX Spark setup where vLLM is managed via systemd
-# (fortress-vllm-bridge.service) + a direct uvicorn/asyncio process.
+# NIM / vLLM k8s pod management
+# vLLM runs as NVIDIA NIM (nim-sovereign deployment) inside k3s, NOT as a
+# native systemd process or Docker container. GPU is freed only when the
+# k8s pod terminates. We use kubectl scale to control replica count.
 # ---------------------------------------------------------------------------
-def _vllm_enginecore_running() -> bool:
-    """True if any VLLM::EngineCore process is alive."""
+def _nim_pod_running() -> bool:
+    """True if at least one nim-sovereign pod is in Running state."""
     result = subprocess.run(
-        ["pgrep", "-f", "VLLM::EngineCore"],
-        capture_output=True,
+        ["kubectl", "get", "pods", "-n", VLLM_NAMESPACE,
+         "-l", "app=nim-engine", "--no-headers"],
+        capture_output=True, text=True, timeout=15,
     )
-    return result.returncode == 0
+    return "Running" in result.stdout
 
 
 def _stop_vllm() -> bool:
     """
-    Stop vLLM for training.
+    Scale nim-sovereign to 0 replicas, freeing GPU memory for training.
 
-    1. Stop fortress-vllm-bridge (systemd) — halts HTTP ingress.
-    2. Send SIGTERM to VLLM::EngineCore and wait up to VLLM_STOP_TIMEOUT.
-    3. Escalate to SIGKILL if SIGTERM is ignored.
-    4. Raise RuntimeError if the process still lives — caller must abort
-       training rather than OOM the GPU.
+    k8s gracefully terminates the pod (SIGTERM then SIGKILL), releasing
+    all GPU allocations. We poll until the pod disappears or raise
+    RuntimeError if it doesn't terminate within VLLM_STOP_TIMEOUT.
 
-    Returns True if vLLM was running and was stopped, False if it was
-    already not running.
+    Returns True if NIM was running and was stopped, False if already gone.
     """
-    if not _vllm_enginecore_running():
-        log.info("VLLM::EngineCore not running — nothing to stop.")
+    if not _nim_pod_running():
+        log.info("NIM pod not running — GPU already free.")
         return False
 
-    log.info("Stopping %s service (HTTP bridge) …", VLLM_BRIDGE_SERVICE)
+    log.info("Scaling %s/%s to 0 replicas to free GPU …", VLLM_NAMESPACE, VLLM_DEPLOYMENT)
     subprocess.run(
-        ["sudo", "systemctl", "stop", VLLM_BRIDGE_SERVICE],
+        ["kubectl", "scale", "deployment", VLLM_DEPLOYMENT,
+         "-n", VLLM_NAMESPACE, "--replicas=0"],
         check=True, timeout=30,
     )
 
-    log.info("Sending SIGTERM to VLLM::EngineCore …")
-    subprocess.run(["pkill", "-TERM", "-f", "VLLM::EngineCore"], check=False)
-
     deadline = time.time() + VLLM_STOP_TIMEOUT
     while time.time() < deadline:
-        if not _vllm_enginecore_running():
-            log.info("VLLM::EngineCore exited cleanly — GPU memory freed.")
+        if not _nim_pod_running():
+            log.info("NIM pod terminated — GPU memory freed.")
             return True
-        time.sleep(2)
+        time.sleep(5)
 
-    # Process survived SIGTERM — escalate
-    log.warning("EngineCore still alive after %ds, escalating to SIGKILL …", VLLM_STOP_TIMEOUT)
-    subprocess.run(["pkill", "-KILL", "-f", "VLLM::EngineCore"], check=False)
-    time.sleep(5)
-
-    if _vllm_enginecore_running():
-        raise RuntimeError(
-            f"VLLM::EngineCore refused to die after SIGTERM + SIGKILL "
-            f"(waited {VLLM_STOP_TIMEOUT}s). GPU memory not freed — "
-            "aborting training to avoid OOM."
-        )
-
-    log.info("VLLM::EngineCore killed (SIGKILL) — GPU memory freed.")
-    return True
+    raise RuntimeError(
+        f"NIM pod ({VLLM_NAMESPACE}/{VLLM_DEPLOYMENT}) did not terminate "
+        f"within {VLLM_STOP_TIMEOUT}s after scale-to-zero. "
+        "GPU memory not freed — aborting training to avoid OOM. "
+        "Check: kubectl get pods -n default -l app=nim-engine"
+    )
 
 
 def _start_vllm() -> None:
     """
-    Restart vLLM via systemd bridge service and verify the health endpoint
-    responds before returning. Raises RuntimeError if vLLM doesn't come up
-    within VLLM_START_TIMEOUT seconds — caller writes an error file.
+    Scale nim-sovereign back to 1 replica and wait for the OpenAI-compat
+    health endpoint to respond. NIM model load takes 3-5 minutes for 8B,
+    so VLLM_START_TIMEOUT defaults to 300s.
+
+    Raises RuntimeError if health check times out — caller writes error file.
     """
     import urllib.request
 
-    log.info("Starting %s service …", VLLM_BRIDGE_SERVICE)
+    log.info("Scaling %s/%s to 1 replica …", VLLM_NAMESPACE, VLLM_DEPLOYMENT)
     subprocess.run(
-        ["sudo", "systemctl", "start", VLLM_BRIDGE_SERVICE],
+        ["kubectl", "scale", "deployment", VLLM_DEPLOYMENT,
+         "-n", VLLM_NAMESPACE, "--replicas=1"],
         check=True, timeout=30,
     )
 
-    log.info("Waiting for vLLM health at %s (timeout=%ds) …", VLLM_HEALTH_URL, VLLM_START_TIMEOUT)
+    log.info("Waiting for NIM health at %s (timeout=%ds) …", VLLM_HEALTH_URL, VLLM_START_TIMEOUT)
     deadline = time.time() + VLLM_START_TIMEOUT
     while time.time() < deadline:
         try:
-            with urllib.request.urlopen(VLLM_HEALTH_URL, timeout=5) as resp:
+            with urllib.request.urlopen(VLLM_HEALTH_URL, timeout=10) as resp:
                 if resp.status == 200:
-                    log.info("vLLM health confirmed — bridge and EngineCore up.")
+                    log.info("NIM healthy — pod Running and API responding.")
                     return
         except Exception:
             pass
-        time.sleep(5)
+        time.sleep(10)
 
     raise RuntimeError(
-        f"vLLM did not become healthy at {VLLM_HEALTH_URL} within "
-        f"{VLLM_START_TIMEOUT}s after starting {VLLM_BRIDGE_SERVICE}. "
-        "Check: journalctl -u fortress-vllm-bridge"
+        f"NIM pod did not become healthy at {VLLM_HEALTH_URL} within "
+        f"{VLLM_START_TIMEOUT}s after scale-up. "
+        "Check: kubectl logs -n default -l app=nim-engine"
     )
 
 
