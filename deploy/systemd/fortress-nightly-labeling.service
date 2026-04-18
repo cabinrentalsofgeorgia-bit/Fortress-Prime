@@ -1,0 +1,24 @@
+[Unit]
+Description=Fortress Prime — Nightly Godhead Labeling Job
+Documentation=file:///home/admin/Fortress-Prime/fortress-guest-platform/backend/services/labeling_pipeline.py
+After=network-online.target fortress-backend.service
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+
+ExecStart=/bin/bash -c '\
+  set -a; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env 2>/dev/null; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx 2>/dev/null; \
+  source /home/admin/Fortress-Prime/.env.security 2>/dev/null; \
+  set +a; \
+  exec /home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python \
+    -m backend.services.labeling_pipeline --mode=nightly'
+
+TimeoutStartSec=3600
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nightly-labeling
