@@ -76,6 +76,8 @@ LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library", "legal_ediscovery
 from backend.core.config import settings as _cfg
 
 _LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:8002/v1").rstrip("/")
+# NIM inference endpoint (k8s ClusterIP, spark-2 internal) — used for served_by_endpoint tagging
+_NIM_ENDPOINT = os.getenv("LEGAL_NIM_ENDPOINT", "http://10.43.38.88:8000")
 _raw_litellm_key = getattr(_cfg, "litellm_master_key", None) or os.getenv("LITELLM_MASTER_KEY")
 if not _raw_litellm_key:
     raise RuntimeError(
@@ -187,6 +189,16 @@ async def _capture_council_training(
     model_used: str,
     user_prompt: str,
     response: str,
+    # Phase 3 retag — v5 tagging schema (all optional, None = pre-retag)
+    served_by_endpoint:  str | None = None,
+    served_vector_store: str | None = None,
+    escalated_from:      str | None = None,
+    sovereign_attempt:   str | None = None,
+    teacher_endpoint:    str | None = None,
+    teacher_model:       str | None = None,
+    task_type:           str | None = None,
+    judge_decision:      str | None = None,
+    judge_reasoning:     str | None = None,
 ) -> None:
     """
     Fire-and-forget: write a frontier persona opinion to llm_training_captures
@@ -212,35 +224,56 @@ async def _capture_council_training(
 
         async def _insert() -> None:
             async with AsyncSessionLocal() as session:
+                _tag = {
+                    "endpoint":    served_by_endpoint[:256]  if served_by_endpoint  else None,
+                    "store":       served_vector_store[:64]  if served_vector_store else None,
+                    "esc_from":    escalated_from[:256]      if escalated_from       else None,
+                    "sov_attempt": sovereign_attempt,
+                    "t_endpoint":  teacher_endpoint[:256]    if teacher_endpoint    else None,
+                    "t_model":     teacher_model[:128]       if teacher_model       else None,
+                    "task":        task_type[:64]            if task_type           else None,
+                    "judge_dec":   judge_decision[:16]       if judge_decision      else None,
+                    "judge_rsn":   judge_reasoning,
+                }
                 if decision.route == CaptureRoute.ALLOW:
                     await session.execute(_text("""
                         INSERT INTO llm_training_captures
-                            (source_module, model_used, user_prompt, assistant_resp, status)
+                            (source_module, model_used, user_prompt, assistant_resp, status,
+                             served_by_endpoint, served_vector_store,
+                             escalated_from, sovereign_attempt,
+                             teacher_endpoint, teacher_model,
+                             task_type, judge_decision, judge_reasoning)
                         VALUES
-                            (:module, :model, :prompt, :response, 'pending')
+                            (:module, :model, :prompt, :response, 'pending',
+                             :endpoint, :store,
+                             :esc_from, :sov_attempt,
+                             :t_endpoint, :t_model,
+                             :task, :judge_dec, :judge_rsn)
                         ON CONFLICT DO NOTHING
-                    """), {
-                        "module":   _source_module[:120],
-                        "model":    model_used[:120],
-                        "prompt":   user_prompt[:32_000],
-                        "response": response[:32_000],
-                    })
+                    """), {"module": _source_module[:120], "model": model_used[:120],
+                           "prompt": user_prompt[:32_000], "response": response[:32_000],
+                           **_tag})
                 else:  # RESTRICTED
                     await session.execute(_text("""
                         INSERT INTO restricted_captures
                             (source_module, source_persona, prompt, response,
-                             restriction_reason, matched_patterns)
+                             restriction_reason, matched_patterns,
+                             served_by_endpoint, served_vector_store,
+                             escalated_from, sovereign_attempt,
+                             teacher_endpoint, teacher_model,
+                             task_type, judge_decision, judge_reasoning)
                         VALUES
                             (:module, :persona, :prompt, :response,
-                             :reason, :patterns)
-                    """), {
-                        "module":   _source_module[:120],
-                        "persona":  persona_name[:128],
-                        "prompt":   user_prompt[:32_000],
-                        "response": response[:32_000],
-                        "reason":   decision.reason[:256],
-                        "patterns": list(decision.matched_patterns),
-                    })
+                             :reason, :patterns,
+                             :endpoint, :store,
+                             :esc_from, :sov_attempt,
+                             :t_endpoint, :t_model,
+                             :task, :judge_dec, :judge_rsn)
+                    """), {"module": _source_module[:120], "persona": persona_name[:128],
+                           "prompt": user_prompt[:32_000], "response": response[:32_000],
+                           "reason": decision.reason[:256],
+                           "patterns": list(decision.matched_patterns),
+                           **_tag})
                 await session.commit()
 
         asyncio.create_task(_insert())
@@ -844,6 +877,8 @@ Execute analysis and return the raw JSON object.
                     model_used=f"council/{provider.lower()}/{model}",
                     user_prompt=base_user[:16000],
                     response=text[:16000],
+                    served_by_endpoint=_NIM_ENDPOINT,   # NIM ClusterIP (audit: 10.43.38.88:8000)
+                    served_vector_store=None,             # RAG integration Phase 5a
                 ))
             break
         except Exception as exc:
