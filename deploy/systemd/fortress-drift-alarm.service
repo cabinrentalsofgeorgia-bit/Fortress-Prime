@@ -1,0 +1,27 @@
+[Unit]
+Description=Fortress-Prime Drift Alarm — working-tree drift detector
+Documentation=file:///home/admin/Fortress-Prime/tools/drift_alarm.py
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+
+# Load env files in same order as other fortress services
+ExecStart=/bin/bash -c '\
+  set -a; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env 2>/dev/null; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx 2>/dev/null; \
+  source /home/admin/Fortress-Prime/.env.security 2>/dev/null; \
+  set +a; \
+  exec /home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python \
+    /home/admin/Fortress-Prime/tools/drift_alarm.py'
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-drift-alarm
+
+# Allow writing to drift log
+LogsDirectory=fortress-drift
