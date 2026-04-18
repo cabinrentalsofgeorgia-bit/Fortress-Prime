@@ -1,6 +1,11 @@
+import os
 import psycopg2
 
-DB_PASS = "190AntiochCemeteryRD!!!"
+
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+DB_PASS = _MINER_BOT_PASSWORD
 
 try:
     conn = psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password=DB_PASS)

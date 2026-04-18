@@ -36,7 +36,7 @@ New dependencies added:
    DB_HOST=localhost
    DB_NAME=fortress_db
    DB_USER=miner_bot
-   DB_PASS=190AntiochCemeteryRD!!!
+   DB_PASS=REPLACE_ME_WITH_REAL_PASSWORD
    ```
 
 **Get a Google Gemini API Key:**

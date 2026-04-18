@@ -251,7 +251,7 @@ python ~/fortress-prime/src/find_intel.py
 - **Host:** `localhost` (local) / `postgres` (Docker network)
 - **Database:** `fortress_db`
 - **User:** `miner_bot`
-- **Password:** `190AntiochCemeteryRD!!!` (Tier 2) / `secure_password` (some configs)
+- **Password:** `<see MINER_BOT_DB_PASSWORD env var>` (Tier 2) / `secure_password` (some configs)
 
 ### Storage Mounts
 - **PostgreSQL Data:** `/mnt/fortress_data/postgres`
