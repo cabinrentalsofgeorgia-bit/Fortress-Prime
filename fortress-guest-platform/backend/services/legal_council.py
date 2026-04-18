@@ -195,21 +195,52 @@ async def _capture_council_training(
     try:
         from sqlalchemy import text as _text
         from backend.core.database import AsyncSessionLocal
+        from backend.services.privilege_filter import classify_for_capture, CaptureRoute
+
+        _source_module = f"legal_council_of_9/seat_{seat}/{persona_name}"
+        decision = classify_for_capture(
+            prompt=user_prompt,
+            response=response,
+            source_persona=persona_name,
+            source_module="legal_council",
+        )
+
+        if decision.route == CaptureRoute.BLOCK:
+            _capture_log.info("council_capture_blocked reason=%s persona=%s seat=%s",
+                              decision.reason, persona_name, seat)
+            return
 
         async def _insert() -> None:
             async with AsyncSessionLocal() as session:
-                await session.execute(_text("""
-                    INSERT INTO llm_training_captures
-                        (source_module, model_used, user_prompt, assistant_resp, status)
-                    VALUES
-                        (:module, :model, :prompt, :response, 'pending')
-                    ON CONFLICT DO NOTHING
-                """), {
-                    "module":   f"legal_council_of_9/seat_{seat}/{persona_name}"[:120],
-                    "model":    model_used[:120],
-                    "prompt":   user_prompt[:32_000],
-                    "response": response[:32_000],
-                })
+                if decision.route == CaptureRoute.ALLOW:
+                    await session.execute(_text("""
+                        INSERT INTO llm_training_captures
+                            (source_module, model_used, user_prompt, assistant_resp, status)
+                        VALUES
+                            (:module, :model, :prompt, :response, 'pending')
+                        ON CONFLICT DO NOTHING
+                    """), {
+                        "module":   _source_module[:120],
+                        "model":    model_used[:120],
+                        "prompt":   user_prompt[:32_000],
+                        "response": response[:32_000],
+                    })
+                else:  # RESTRICTED
+                    await session.execute(_text("""
+                        INSERT INTO restricted_captures
+                            (source_module, source_persona, prompt, response,
+                             restriction_reason, matched_patterns)
+                        VALUES
+                            (:module, :persona, :prompt, :response,
+                             :reason, :patterns)
+                    """), {
+                        "module":   _source_module[:120],
+                        "persona":  persona_name[:128],
+                        "prompt":   user_prompt[:32_000],
+                        "response": response[:32_000],
+                        "reason":   decision.reason[:256],
+                        "patterns": list(decision.matched_patterns),
+                    })
                 await session.commit()
 
         asyncio.create_task(_insert())
