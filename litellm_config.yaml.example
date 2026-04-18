@@ -1,0 +1,52 @@
+# litellm_config.yaml — template / example
+#
+# To use:
+#   1. Copy this file to litellm_config.yaml (gitignored, never committed)
+#   2. Set LITELLM_MASTER_KEY env var: export LITELLM_MASTER_KEY='sk-...'
+#   3. Set provider API keys as env vars (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
+#      and replace os.environ/FILL_IN_PROVIDER_API_KEY with the correct var name
+#   4. Start LiteLLM: litellm --config litellm_config.yaml --port 8002 --host 127.0.0.1
+#
+# The actual active config on production lives at repo root (gitignored).
+# This .example lives in the repo to document config shape and model roster.
+
+model_list:
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: anthropic/claude-opus-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: grok-4
+    litellm_params:
+      model: xai/grok-4.20-reasoning
+      api_key: os.environ/XAI_API_KEY
+
+  - model_name: gemini-2.5-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: deepseek-chat
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  - model_name: deepseek-reasoner
+    litellm_params:
+      model: deepseek/deepseek-reasoner
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+general_settings:
+  master_key: ${LITELLM_MASTER_KEY}  # Required: export before starting LiteLLM
+  drop_params: true
+  request_timeout: 180

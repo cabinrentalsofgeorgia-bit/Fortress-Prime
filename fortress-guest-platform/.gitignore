@@ -27,3 +27,14 @@ backend/tests/fixtures/crog_output/*.pdf
 # Financial data — never commit PDFs or backup SQL from scripts/
 backend/scripts/*.pdf
 backend/scripts/g1_5_backup_*.sql
+
+# Runtime operational state
+.defcon_state
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Background process output
+nohup.out
