@@ -7,6 +7,11 @@ import psycopg2
 import sys
 import glob
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- CONFIGURATION ---
 # Base path where you extracted the emails
 MAIL_ROOT = os.path.expanduser("~/fortress-prime/backup-1.18.2026_21-12-59_cabinre/homedir/mail/cabin-rentals-of-georgia.com/")
@@ -14,7 +19,7 @@ MAIL_ROOT = os.path.expanduser("~/fortress-prime/backup-1.18.2026_21-12-59_cabin
 DB_HOST = "localhost"
 DB_NAME = "fortress_db"
 DB_USER = "miner_bot"
-DB_PASS = "190AntiochCemeteryRD!!!"  # <--- Password is pre-set for you
+DB_PASS = _MINER_BOT_PASSWORD
 WORKER_IP = "192.168.0.104"
 OLLAMA_EMBED = f"http://{WORKER_IP}:11434/api/embeddings"
 EMBED_MODEL = "nomic-embed-text"

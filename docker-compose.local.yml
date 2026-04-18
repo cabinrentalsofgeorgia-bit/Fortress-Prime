@@ -12,7 +12,7 @@ services:
     environment:
       POSTGRES_DB: fortress_db
       POSTGRES_USER: miner_bot
-      POSTGRES_PASSWORD: 190AntiochCemeteryRD!!!
+      POSTGRES_PASSWORD: ${MINER_BOT_DB_PASSWORD}  # export MINER_BOT_DB_PASSWORD before docker compose up
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       # Persistent data volume for database - mounted to Synology DS1825+ storage
@@ -45,7 +45,7 @@ services:
       - DB_HOST=postgres
       - DB_NAME=fortress_db
       - DB_USER=miner_bot
-      - DB_PASS=190AntiochCemeteryRD!!!
+      - DB_PASS=${MINER_BOT_DB_PASSWORD}
       - INTERVAL=5
     volumes:
       # Mount source code
@@ -83,7 +83,7 @@ services:
       - DB_HOST=postgres
       - DB_NAME=fortress_db
       - DB_USER=miner_bot
-      - DB_PASS=190AntiochCemeteryRD!!!
+      - DB_PASS=${MINER_BOT_DB_PASSWORD}
       - BATCH_SIZE=20
       - SLEEP_INTERVAL=5
     volumes:

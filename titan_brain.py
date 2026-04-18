@@ -1,9 +1,14 @@
+import os
 import psycopg2
 import requests
 import sys
 
 # --- CONFIGURATION ---
-DB_PASS = "190AntiochCemeteryRD!!!"
+
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+DB_PASS = _MINER_BOT_PASSWORD
 WORKER_IP = "192.168.0.104"
 OLLAMA_API = f"http://{WORKER_IP}:11434/api/generate"
 OLLAMA_EMBED = f"http://{WORKER_IP}:11434/api/embeddings"
