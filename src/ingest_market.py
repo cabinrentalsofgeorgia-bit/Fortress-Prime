@@ -5,9 +5,14 @@ import psycopg2
 from datetime import datetime
 import re
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- CONFIGURATION ---
 TARGET_DIR = "/mnt/fortress_mail/@local/1026/1026/Maildir/.MARKET_INTELLIGENCE/cur"
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = _MINER_BOT_PASSWORD
 
 def get_db_connection():
     return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password=DB_PASS)

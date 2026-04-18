@@ -8,6 +8,11 @@ import time
 import sys
 from streamlit_option_menu import option_menu
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- CONFIGURATION ---
 st.set_page_config(page_title="FORTRESS PRIME", page_icon="🛡️", layout="wide")
 
@@ -399,7 +404,7 @@ st.markdown("""
 # --- BACKEND FUNCTIONS ---
 def get_db_conn():
     try:
-        return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password="190AntiochCemeteryRD!!!")
+        return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password=_MINER_BOT_PASSWORD)
     except:
         return None
 

@@ -16,6 +16,11 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # Load environment variables
 load_dotenv()
 
@@ -25,7 +30,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 # Use admin credentials for write operations (mining requires INSERT/UPDATE)
 DB_USER = os.getenv("ADMIN_DB_USER") or os.getenv("DB_USER", "miner_bot")
-DB_PASS = os.getenv("ADMIN_DB_PASS") or os.getenv("DB_PASS", "190AntiochCemeteryRD!!!")
+DB_PASS = os.getenv("ADMIN_DB_PASS") or os.getenv("DB_PASS", _MINER_BOT_PASSWORD)
 
 # Inference Engine: Spark-1 (Ollama)
 WORKER_IP = "192.168.0.104"

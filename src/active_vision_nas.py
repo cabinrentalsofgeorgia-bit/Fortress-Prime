@@ -4,11 +4,16 @@ import psycopg2
 import socket
 import sys
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # CONFIG
 DB_HOST = "192.168.0.100"
 DB_NAME = "fortress_db"
 DB_USER = "miner_bot"
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = _MINER_BOT_PASSWORD
 IMAGE_DIR = "/mnt/fortress_ai/raw_images"
 
 def get_db():

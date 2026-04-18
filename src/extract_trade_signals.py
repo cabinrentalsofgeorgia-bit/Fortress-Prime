@@ -7,8 +7,13 @@ from PIL import Image
 import io
 import re
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- CONFIGURATION ---
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = _MINER_BOT_PASSWORD
 CHART_DIR = "/mnt/fortress_data/charts"
 
 def get_db_connection():

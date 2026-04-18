@@ -7,6 +7,11 @@ import os
 import sys
 from dotenv import load_dotenv
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 load_dotenv()
 
 try:
@@ -20,7 +25,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
 ADMIN_USER = os.getenv("ADMIN_DB_USER", "miner_bot")
-ADMIN_PASS = os.getenv("ADMIN_DB_PASS", "190AntiochCemeteryRD!!!")
+ADMIN_PASS = os.getenv("ADMIN_DB_PASS", _MINER_BOT_PASSWORD)
 
 print("🛡️  FORTRESS PRIME - Safety Valve Installation")
 print("=" * 80)

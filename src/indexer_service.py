@@ -3,8 +3,13 @@ import psycopg2
 import pypdf
 import sys
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- CONFIGURATION ---
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = _MINER_BOT_PASSWORD
 LEGAL_PATH = "/mnt/fortress_data/legal_archive"
 BUSINESS_PATH = "/mnt/fortress_data/documents/Cabin Rentals Of Georgia"
 # We scan the root documents for Knight specific business folders too

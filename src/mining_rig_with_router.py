@@ -14,13 +14,18 @@ from dotenv import load_dotenv
 # Import the router
 from data_router import route_incoming_data, create_tables
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 load_dotenv()
 
 # Configuration - Sovereign Cluster Topology
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_USER = os.getenv("ADMIN_DB_USER") or os.getenv("DB_USER", "miner_bot")
-DB_PASS = os.getenv("ADMIN_DB_PASS") or os.getenv("DB_PASS", "190AntiochCemeteryRD!!!")
+DB_PASS = os.getenv("ADMIN_DB_PASS") or os.getenv("DB_PASS", _MINER_BOT_PASSWORD)
 
 # Inference Engine: Spark-1 (Ollama)
 WORKER_IP = "192.168.0.104"

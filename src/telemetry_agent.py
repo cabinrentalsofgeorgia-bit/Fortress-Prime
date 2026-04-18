@@ -4,9 +4,14 @@ import time
 import socket
 import os
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- CONFIGURATION ---
 DB_HOST = "127.0.0.1" 
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = _MINER_BOT_PASSWORD
 HOSTNAME = socket.gethostname()
 
 def run_agent():
