@@ -205,6 +205,7 @@ async def _capture_council_training(
     so the nightly distillation job can use frontier outputs to train local models.
     """
     try:
+        import uuid as _uuid
         from sqlalchemy import text as _text
         from backend.core.database import AsyncSessionLocal
         from backend.services.privilege_filter import classify_for_capture, CaptureRoute
@@ -221,6 +222,8 @@ async def _capture_council_training(
             _capture_log.info("council_capture_blocked reason=%s persona=%s seat=%s",
                               decision.reason, persona_name, seat)
             return
+
+        _capture_id = str(_uuid.uuid4())
 
         async def _insert() -> None:
             async with AsyncSessionLocal() as session:
@@ -275,6 +278,24 @@ async def _capture_council_training(
                            "patterns": list(decision.matched_patterns),
                            **_tag})
                 await session.commit()
+
+                # Phase 4e.1: queue for Godhead labeling (fire-and-forget thread)
+                try:
+                    from backend.services.labeling_pipeline import queue_capture_for_labeling
+                    capture_tbl = (
+                        "llm_training_captures"
+                        if decision.route == CaptureRoute.ALLOW
+                        else "restricted_captures"
+                    )
+                    queue_capture_for_labeling(
+                        capture_id=_capture_id,
+                        capture_table=capture_tbl,
+                        task_type=(task_type or "legal_reasoning"),
+                        user_prompt=user_prompt,
+                        sovereign_response=response,
+                    )
+                except Exception:
+                    pass  # never block capture on labeling failure
 
         asyncio.create_task(_insert())
     except Exception as exc:

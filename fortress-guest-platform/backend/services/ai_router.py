@@ -83,6 +83,7 @@ async def _capture_interaction(
     The table is bootstrapped by nightly_distillation_exporter on first run.
     """
     try:
+        import uuid as _uuid
         from sqlalchemy import text
         from backend.core.database import AsyncSessionLocal
         from backend.services.privilege_filter import classify_for_capture, CaptureRoute
@@ -111,22 +112,23 @@ async def _capture_interaction(
                     "judge_dec":   judge_decision[:16]       if judge_decision      else None,
                     "judge_rsn":   judge_reasoning,
                 }
+                _capture_id = str(_uuid.uuid4())
                 if decision.route == CaptureRoute.ALLOW:
                     await session.execute(text("""
                         INSERT INTO llm_training_captures
-                            (source_module, model_used, user_prompt, assistant_resp, status,
+                            (id, source_module, model_used, user_prompt, assistant_resp, status,
                              served_by_endpoint, served_vector_store,
                              escalated_from, sovereign_attempt,
                              teacher_endpoint, teacher_model,
                              task_type, judge_decision, judge_reasoning)
                         VALUES
-                            (:module, :model, :prompt, :response, 'pending',
+                            (:id::uuid, :module, :model, :prompt, :response, 'pending',
                              :endpoint, :store,
                              :esc_from, :sov_attempt,
                              :t_endpoint, :t_model,
                              :task, :judge_dec, :judge_rsn)
                         ON CONFLICT DO NOTHING
-                    """), {"module": source_module[:120], "model": model_label[:120],
+                    """), {"id": _capture_id, "module": source_module[:120], "model": model_label[:120],
                            "prompt": prompt[:32_000], "response": response[:32_000],
                            **_tag})
                 else:  # RESTRICTED
@@ -150,6 +152,24 @@ async def _capture_interaction(
                            "patterns": list(decision.matched_patterns),
                            **_tag})
                 await session.commit()
+
+                # Phase 4e.1: queue for Godhead labeling (fire-and-forget thread)
+                try:
+                    from backend.services.labeling_pipeline import queue_capture_for_labeling
+                    capture_tbl = (
+                        "llm_training_captures"
+                        if decision.route == CaptureRoute.ALLOW
+                        else "restricted_captures"
+                    )
+                    queue_capture_for_labeling(
+                        capture_id=_capture_id,
+                        capture_table=capture_tbl,
+                        task_type=(task_type or "unknown"),
+                        user_prompt=prompt,
+                        sovereign_response=response,
+                    )
+                except Exception:
+                    pass  # never block capture on labeling failure
 
         asyncio.create_task(_insert())
     except Exception as exc:

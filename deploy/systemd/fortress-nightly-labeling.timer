@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Fortress Prime nightly labeling at 01:45 (before fine-tune timer at 02:01)
+Documentation=file:///home/admin/Fortress-Prime/fortress-guest-platform/backend/services/labeling_pipeline.py
+
+[Timer]
+OnCalendar=*-*-* 01:45:00 America/New_York
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
