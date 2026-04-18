@@ -85,6 +85,17 @@ LEGAL_KEYWORDS = (
     "case suv", "attorney", "counsel", "litigation", "claim",
     "breach of contract", "case brief", "ediscovery", "deposition",
     "privilege", "legal analysis", "claimant",
+    "analyze the case", "contradictions", "case evidence", "legal graph",
+    "appellate", "statute of limitations", "discovery request",
+    "case lf-", "case lfm",  # internal case ID prefixes
+)
+
+# Outputs that are test/dry-run artifacts — skip these entirely
+_SKIP_OUTPUT_PREFIXES = (
+    "[DRY RUN",
+    "[dry run",
+    "[TEST]",
+    "[MOCK]",
 )
 
 
@@ -105,19 +116,21 @@ def _prompt_hash(prompt: str, response: str) -> str:
 
 
 def _already_ingested(cur, prompt: str, response: str) -> bool:
-    h = _prompt_hash(prompt, response)
+    """Dedup using md5 of full prompt+response text (computed in Python, matched in DB)."""
+    import hashlib as _hl
+    full_hash = _hl.md5((prompt + "|||" + response).encode("utf-8")).hexdigest()
     cur.execute("""
         SELECT 1 FROM llm_training_captures
-        WHERE md5(user_prompt || '|||' || assistant_resp) = md5(%s || '|||' || %s)
+        WHERE md5(user_prompt || '|||' || assistant_resp) = %s
         LIMIT 1
-    """, (prompt[:500], response[:500]))
+    """, (full_hash,))
     if cur.fetchone():
         return True
     cur.execute("""
         SELECT 1 FROM restricted_captures
-        WHERE md5(prompt || '|||' || response) = md5(%s || '|||' || %s)
+        WHERE md5(prompt || '|||' || response) = %s
         LIMIT 1
-    """, (prompt[:500], response[:500]))
+    """, (full_hash,))
     return bool(cur.fetchone())
 
 
@@ -164,6 +177,9 @@ def _iter_nas_prompts() -> Iterator[dict]:
                     continue  # no usable input
 
                 asst_text = str(output).strip()
+                # Skip test/dry-run outputs — not real model outputs
+                if any(asst_text.startswith(p) for p in _SKIP_OUTPUT_PREFIXES):
+                    continue
                 if not asst_text or len(asst_text) < 5:
                     continue
 
