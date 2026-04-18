@@ -1,8 +1,14 @@
+import os
 import psycopg2
+
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
 
 try:
     # Connect to the Vault
-    conn = psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password="190AntiochCemeteryRD!!!")
+    conn = psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password=_MINER_BOT_PASSWORD)
     cur = conn.cursor()
     
     print("🏗️  BUILDING DATABASE SCHEMA...")

@@ -13,6 +13,11 @@ import requests
 from typing import Tuple, Optional
 from dotenv import load_dotenv
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # Load environment variables
 load_dotenv()
 
@@ -45,7 +50,7 @@ def get_schema() -> str:
             database=DB_NAME,
             port=int(DB_PORT),
             user=os.getenv("ADMIN_DB_USER", "miner_bot"),
-            password=os.getenv("ADMIN_DB_PASS", "190AntiochCemeteryRD!!!")
+            password=os.getenv("ADMIN_DB_PASS", _MINER_BOT_PASSWORD)
         )
         cur = admin_conn.cursor()
         

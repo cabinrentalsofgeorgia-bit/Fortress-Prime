@@ -3,13 +3,18 @@ import psycopg2
 import subprocess
 import os
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- CONFIG ---
 # Use environment variables when running in Docker, fallback to defaults
 NODE_NAME = os.getenv("NODE_NAME", "spark-1")
 DB_HOST = os.getenv("DB_HOST", "192.168.0.100")  # Address of Spark-2 or postgres container
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_USER = os.getenv("DB_USER", "miner_bot")
-DB_PASS = os.getenv("DB_PASS", "190AntiochCemeteryRD!!!")
+DB_PASS = os.getenv("DB_PASS", _MINER_BOT_PASSWORD)
 INTERVAL = int(os.getenv("INTERVAL", "5"))  # Update every 5 seconds (Turbo Mode)
 
 def get_hw_stats():

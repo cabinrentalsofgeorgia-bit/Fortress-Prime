@@ -18,6 +18,11 @@ from typing import Iterable, List, Tuple
 import psycopg2
 from psycopg2.extras import execute_batch
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 
 MAILPLUS_ROOT = "/home/admin/fortress-prime/mnt/synology/MailPlus"
 
@@ -127,7 +132,7 @@ def _get_db_connection():
     host = os.getenv("FORTRESS_DB_HOST", "localhost")
     db = os.getenv("FORTRESS_DB_NAME", "fortress_db")
     user = os.getenv("FORTRESS_DB_USER", "miner_bot")
-    password = os.getenv("FORTRESS_DB_PASS", "190AntiochCemeteryRD!!!")
+    password = os.getenv("FORTRESS_DB_PASS", _MINER_BOT_PASSWORD)
     return psycopg2.connect(host=host, database=db, user=user, password=password)
 
 

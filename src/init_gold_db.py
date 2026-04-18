@@ -8,6 +8,11 @@ import psycopg2
 import os
 from dotenv import load_dotenv
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # Load environment variables
 load_dotenv()
 
@@ -15,7 +20,7 @@ load_dotenv()
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_USER = os.getenv("DB_USER", "miner_bot")
-DB_PASS = os.getenv("DB_PASS", "190AntiochCemeteryRD!!!")
+DB_PASS = os.getenv("DB_PASS", _MINER_BOT_PASSWORD)
 
 def get_db_connection():
     """Establish database connection."""

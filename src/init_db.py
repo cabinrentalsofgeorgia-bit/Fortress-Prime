@@ -1,4 +1,10 @@
+import os
 import psycopg2
+
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
 
 try:
     # Connect (VS Code handles the '!!!' safely)
@@ -6,7 +12,7 @@ try:
         host='localhost', 
         database='fortress_db', 
         user='miner_bot', 
-        password='190AntiochCemeteryRD!!!'
+        password=_MINER_BOT_PASSWORD
     )
     cur = conn.cursor()
     

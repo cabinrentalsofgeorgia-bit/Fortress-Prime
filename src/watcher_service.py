@@ -8,6 +8,11 @@ import re
 import logging
 from datetime import datetime
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 # --- ENTERPRISE CONFIGURATION ---
 # "Hot Data" Input - Files here will be ingested AND MOVED.
 WATCH_FOLDER = "/mnt/fortress_data/market_input"
@@ -15,7 +20,7 @@ WATCH_FOLDER = "/mnt/fortress_data/market_input"
 PROCESSED_FOLDER = "/mnt/fortress_data/market_input/Processed"
 
 # Database & AI Credentials
-DB_PASS = "190AntiochCemeteryRD!!!"
+DB_PASS = _MINER_BOT_PASSWORD
 OLLAMA_API_URL = "http://localhost:11434/api"
 LOG_FILE = "/home/admin/fortress-prime/logs/watcher.log"
 

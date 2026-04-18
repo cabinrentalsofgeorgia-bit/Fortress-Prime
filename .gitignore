@@ -99,3 +99,6 @@ __pycache__/
 
 # Background process output
 nohup.out
+
+# Backup files
+*.bak

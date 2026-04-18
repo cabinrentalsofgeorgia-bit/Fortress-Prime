@@ -4,10 +4,15 @@ import psycopg2
 import subprocess
 import os
 
+_MINER_BOT_PASSWORD = os.getenv("MINER_BOT_DB_PASSWORD")
+if not _MINER_BOT_PASSWORD:
+    raise RuntimeError("MINER_BOT_DB_PASSWORD env var required")
+
+
 st.set_page_config(layout="wide")
 st.title("Fortress Prime")
 
-def get_conn(): return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password="190AntiochCemeteryRD!!!")
+def get_conn(): return psycopg2.connect(host="localhost", database="fortress_db", user="miner_bot", password=_MINER_BOT_PASSWORD)
 
 t1, t2, t3 = st.tabs(["Signals", "System", "Audit"])
 
