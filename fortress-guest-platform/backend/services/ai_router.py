@@ -40,21 +40,48 @@ async def _capture_interaction(
     try:
         from sqlalchemy import text
         from backend.core.database import AsyncSessionLocal
+        from backend.services.privilege_filter import classify_for_capture, CaptureRoute
+
+        decision = classify_for_capture(
+            prompt=prompt,
+            response=response,
+            source_module=source_module,
+        )
+
+        if decision.route == CaptureRoute.BLOCK:
+            _capture_log.info("distillation_capture_blocked reason=%s module=%s",
+                              decision.reason, source_module)
+            return
 
         async def _insert() -> None:
             async with AsyncSessionLocal() as session:
-                await session.execute(text("""
-                    INSERT INTO llm_training_captures
-                        (source_module, model_used, user_prompt, assistant_resp, status)
-                    VALUES
-                        (:module, :model, :prompt, :response, 'pending')
-                    ON CONFLICT DO NOTHING
-                """), {
-                    "module":   source_module[:120],
-                    "model":    model_label[:120],
-                    "prompt":   prompt[:32_000],
-                    "response": response[:32_000],
-                })
+                if decision.route == CaptureRoute.ALLOW:
+                    await session.execute(text("""
+                        INSERT INTO llm_training_captures
+                            (source_module, model_used, user_prompt, assistant_resp, status)
+                        VALUES
+                            (:module, :model, :prompt, :response, 'pending')
+                        ON CONFLICT DO NOTHING
+                    """), {
+                        "module":   source_module[:120],
+                        "model":    model_label[:120],
+                        "prompt":   prompt[:32_000],
+                        "response": response[:32_000],
+                    })
+                else:  # RESTRICTED
+                    await session.execute(text("""
+                        INSERT INTO restricted_captures
+                            (source_module, prompt, response,
+                             restriction_reason, matched_patterns)
+                        VALUES
+                            (:module, :prompt, :response, :reason, :patterns)
+                    """), {
+                        "module":   source_module[:120],
+                        "prompt":   prompt[:32_000],
+                        "response": response[:32_000],
+                        "reason":   decision.reason[:256],
+                        "patterns": list(decision.matched_patterns),
+                    })
                 await session.commit()
 
         asyncio.create_task(_insert())
