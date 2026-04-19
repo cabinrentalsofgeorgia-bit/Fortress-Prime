@@ -24,6 +24,15 @@ from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+# Load env files before backend imports — DB_URI is resolved at labeling_pipeline import time.
+# override=False so an explicitly set process env always wins.
+_repo_root = Path(__file__).resolve().parent.parent
+for _env_file in [".env", ".env.dgx", ".env.security"]:
+    _env_path = _repo_root / "fortress-guest-platform" / _env_file
+    if _env_path.exists():
+        load_dotenv(_env_path, override=False)
 
 # Import shared labeling primitives
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "fortress-guest-platform"))

@@ -48,6 +48,7 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       NEXT_TELEMETRY_DISABLED: "1"
       CI: "true"
+      PORT: "8100"
       BOOTSTRAP_ADMIN_PASSWORD: FortressPrime2026!
       BOOTSTRAP_ADMIN_CONFIRM_PASSWORD: FortressPrime2026!
     steps:
