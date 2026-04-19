@@ -21,8 +21,9 @@ from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
-from backend.core.qdrant import COLLECTION_NAME, VECTOR_DIM
+from backend.core.qdrant import VECTOR_DIM
 from backend.models.knowledge import KnowledgeBaseEntry
+from backend.services.qdrant_dual_writer import resolve_read_endpoint
 
 logger = structlog.get_logger()
 
@@ -55,12 +56,16 @@ async def _qdrant_search(
     top_k: int = DEFAULT_TOP_K,
     property_id: Optional[UUID] = None,
 ) -> List[Dict]:
-    """Execute a similarity search against the fgp_knowledge Qdrant collection.
+    """Execute a similarity search against the active fgp knowledge collection.
+
+    Target collection is resolved via READ_FROM_VRS_STORE flag:
+      False (default) → spark-2 fgp_knowledge
+      True            → spark-4 fgp_vrs_knowledge
 
     When *property_id* is supplied the search is scoped to points that either
     belong to that property or have no property_id (global entries).
     """
-    qdrant_url = settings.qdrant_url.rstrip("/")
+    qdrant_url, collection_name = resolve_read_endpoint()
     headers = {"api-key": settings.qdrant_api_key} if settings.qdrant_api_key else {}
 
     body: Dict = {
@@ -80,7 +85,7 @@ async def _qdrant_search(
 
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.post(
-            f"{qdrant_url}/collections/{COLLECTION_NAME}/points/search",
+            f"{qdrant_url}/collections/{collection_name}/points/search",
             json=body,
             headers=headers,
         )

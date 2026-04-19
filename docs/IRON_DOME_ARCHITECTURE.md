@@ -361,18 +361,29 @@ matter-level redaction). Ships after legal_reasoning_judge is mature.
 - Reads still target spark-2 fgp_knowledge. No retrieval code changed.
 - Metrics (in-process): `qdrant_vrs_dual_write_{success,failure,skipped}_total`.
 
-**Part 4 — Read cutover (NEXT)**: flip `QDRANT_URL` → spark-4 and
-`QDRANT_COLLECTION_NAME` → `fgp_vrs_knowledge` once write parity is confirmed
-stable over 24–48h of dual-write operation.
+**Part 4 — Read cutover SCAFFOLDED (2026-04-19)**
+- Feature flag `READ_FROM_VRS_STORE` (bool, default `false`) added to `backend/core/config.py`.
+- Resolver `resolve_read_endpoint()` in `qdrant_dual_writer.py` returns `(url, collection)`:
+  - `false` → spark-2 `fgp_knowledge` (unchanged behaviour on merge)
+  - `true`  → spark-4 `fgp_vrs_knowledge`
+- Single read site wired: `knowledge_retriever.py:_qdrant_search()`.
+  All callers (`agentic_orchestrator.py`, `dgx_tools.py`) inherit the flag via `semantic_search()`.
+- Startup log emitted on every restart: `qdrant_read_endpoint url=... collection=... flag=...`
+- Parity gate extended: `src/rag/verify_dual_write_parity.py --compare-search QUERY`
+  runs the same query on both endpoints and reports top-5 agreement (≥95% required).
+- Option A rollback: flip flag back to `false`, restart — zero code changes needed.
 
-**Part 5 — Write sunset**: stop dual-writing to spark-2 `fgp_knowledge`,
-decommission as VRS Qdrant.
+Promotion workflow (when ready to cut over):
+  1. `python3 -m src.rag.verify_dual_write_parity --compare-search "what does Fallen Timber Lodge look like"` — confirm ≥95% agreement
+  2. Set `READ_FROM_VRS_STORE=true` in `.env`
+  3. `sudo systemctl restart fortress-backend`
+  4. Monitor concierge response quality for 24h (watch `qdrant_semantic_search_hit` log lines)
+  5. If issues: flip back to `false`, restart, investigate
 
-**Part 3 — Read cutover (LATER)**: after spark-4 data matches spark-2 (168 points +
-ongoing delta), flip `QDRANT_URL` → spark-4 and `QDRANT_COLLECTION_NAME` → `fgp_vrs_knowledge`.
-Remove dual-write code.
+**Part 5 — Write sunset (LATER)**: confirm Part 4 stable ≥24h, then stop dual-writing to
+spark-2 `fgp_knowledge` and decommission spark-2 as VRS Qdrant.
 
-Recommendation: Option A (dual-write) — not Option B (hard cutover) because
+Recommendation: Option A (restart-to-flip) — not hard config swap — because
 `_qdrant_search` is called on every guest concierge interaction (zero downtime tolerance).
 See `docs/RAG_INGESTION_AUDIT.md` for full write/read site table and rationale.
 
