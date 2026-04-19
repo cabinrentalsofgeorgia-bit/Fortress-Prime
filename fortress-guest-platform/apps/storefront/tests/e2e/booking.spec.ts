@@ -45,7 +45,7 @@ async function findAvailableStay(request: APIRequestContext): Promise<AvailableS
   };
 }
 
-test.describe("Guest booking critical path", () => {
+test.describe("Guest booking critical path", { tag: "@integration" }, () => {
   test.use({ storageState: undefined });
 
   test("renders a live quote and routes into secure checkout", async ({ page, request }) => {

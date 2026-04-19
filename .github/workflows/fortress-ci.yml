@@ -181,9 +181,9 @@ jobs:
           echo "::error::Next.js storefront did not become ready on 127.0.0.1:3000"
           exit 1
 
-      - name: Run Playwright
+      - name: Run Playwright (CI-safe subset — @integration tests skipped)
         working-directory: fortress-guest-platform/apps/storefront
-        run: npx playwright test
+        run: npx playwright test --grep-invert "@integration" --pass-with-no-tests
 
       - name: Upload Playwright report
         if: always()

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Legal Graph Panopticon", () => {
+test.describe("Legal Graph Panopticon", { tag: "@integration" }, () => {
   test.use({ storageState: undefined });
 
   test("renders graph radar for live case snapshot", async ({ page, baseURL }) => {

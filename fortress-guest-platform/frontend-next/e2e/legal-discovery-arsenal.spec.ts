@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Legal Discovery Arsenal", () => {
+test.describe("Legal Discovery Arsenal", { tag: "@integration" }, () => {
   test.use({ storageState: undefined });
 
   test("generates a discovery draft pack for a live case", async ({ page, baseURL }) => {

@@ -1,0 +1,43 @@
+name: Playwright Integration Tests (Nightly)
+
+# Runs @integration-tagged Playwright tests against the live DGX cluster.
+#
+# REQUIREMENT: A self-hosted runner with DGX cluster access must be registered
+# under the label "dgx-cluster". Until that is configured, trigger manually via
+# workflow_dispatch and run from a machine with cluster access using:
+#   make playwright-integration
+#
+# Self-hosted runner setup (future):
+#   - Install GitHub Actions runner on spark-node-2 (192.168.0.100)
+#   - Label it "dgx-cluster"
+#   - The runner needs: Node 22, npm, Chromium (via playwright install)
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: "Additional grep filter (default: runs all @integration)"
+        required: false
+        default: "@integration"
+  # Uncomment when self-hosted runner is registered:
+  # schedule:
+  #   - cron: "0 8 * * *"  # 08:00 UTC = 04:00 EDT
+
+jobs:
+  integration:
+    name: integration-suite
+    # Switch to [self-hosted, dgx-cluster] when runner is registered.
+    # For now: manual dispatch only — run locally with 'make playwright-integration'.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Note — self-hosted runner required
+        run: |
+          echo "::warning::@integration tests require DGX cluster access (NIM on spark-1:8000, Qdrant on spark-4:6333)."
+          echo "::warning::Run manually: make playwright-integration from spark-node-2."
+          echo "::warning::To automate: register a self-hosted runner labeled 'dgx-cluster'."
+          exit 0
