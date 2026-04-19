@@ -83,6 +83,45 @@ _MODULE_TO_TASK: dict[str, str] = {
 # Tier 2: keyword patterns → task_type (ordered, first match wins)
 # Case-insensitive — applied to lowercased combined prompt+response.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Content-signal patterns for Tier 1 override logic
+# These are separate from _KEYWORD_PATTERNS (which are classification rules).
+# Used by _detect_content_mismatch in task_classifier.py to catch modules
+# whose source_module → task_type mapping is ambiguous (e.g. quote_engine
+# sometimes produces property descriptions instead of pricing calculations).
+# ---------------------------------------------------------------------------
+
+# Patterns that indicate the prompt is requesting a pricing calculation.
+# Must be present for a quote_engine capture to stay classified as pricing_math.
+_PRICING_PATTERNS: list[re.Pattern] = [
+    re.compile(r"\bnightly rate\b|\bprice per night\b|\brate per night\b",  re.IGNORECASE),
+    re.compile(r"\bhow much\b.{0,40}\b(?:night|stay|week|total)\b",         re.IGNORECASE),
+    re.compile(r"\bprice this\b|\bprice for\b|\brate for\b|\bquote for\b",  re.IGNORECASE),
+    re.compile(r"\brate.*(?:strategy|multiplier|extraction|adjustment)\b",   re.IGNORECASE),
+    re.compile(r"\bstrike.*(?:type|price|rate)\b|\brate.*strike\b",         re.IGNORECASE),
+    re.compile(r"\$\s*\d+",                                                  re.IGNORECASE),
+    re.compile(r"\btotal cost\b|\bbooking cost\b|\bfee schedule\b",         re.IGNORECASE),
+    re.compile(r"\bcompetitor.*(?:rate|price|nightly)\b",                   re.IGNORECASE),
+]
+
+# Patterns that indicate the prompt is requesting a property description,
+# marketing copy, or factual property information — not a price calculation.
+_DESCRIPTIVE_PATTERNS: list[re.Pattern] = [
+    re.compile(r"what does .{1,60} look like",                                              re.IGNORECASE),
+    re.compile(r"\bdescribe (?:the |this |that |\w+ )?(?:property|cabin|lodge|deck|exterior|interior|room|view|amenit)", re.IGNORECASE),
+    re.compile(r"\bmarketing copy\b|\blisting (?:description|copy)\b|\bproperty description\b", re.IGNORECASE),
+    re.compile(r"\btell me about\b|\bdetails about\b|\binfo(?:rmation)? about\b",          re.IGNORECASE),
+    re.compile(r"\bamenities of\b|\bfeatures of\b",                                        re.IGNORECASE),
+    re.compile(r"\b(?:deck|exterior|interior|views?|outdoor|indoor)\b.{0,40}\b(?:look|appear|feature|material|condition|built|made)\b", re.IGNORECASE),
+    re.compile(r"\bluxury (?:retreat|escape|sanctuary|experience)\b",                      re.IGNORECASE),
+    re.compile(r"\bself[- ]check.?in\b|\bsmart home\b|\bpanoram\w*\b",                    re.IGNORECASE),
+]
+
+
+# ---------------------------------------------------------------------------
+# Tier 2: keyword patterns → task_type (ordered, first match wins)
+# Case-insensitive — applied to lowercased combined prompt+response.
+# ---------------------------------------------------------------------------
 _KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"draft (?:a |the )?brief|opening statement|closing argument"), "brief_drafting"),
     (re.compile(r"analyze|review (?:this |the )contract"), "contract_analysis"),

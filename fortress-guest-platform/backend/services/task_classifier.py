@@ -16,8 +16,10 @@ import os
 import httpx
 
 from backend.services.task_types import (
+    _DESCRIPTIVE_PATTERNS,
     _KEYWORD_PATTERNS,
     _MODULE_TO_TASK,
+    _PRICING_PATTERNS,
     _TASK_TYPES,
 )
 
@@ -38,6 +40,40 @@ Valid task types: {types}
 Prompt: {prompt}
 
 Task type:"""
+
+
+def _detect_content_mismatch(tier1_type: str, prompt: str) -> "str | None":
+    """
+    Override Tier 1 when prompt content strongly contradicts the module hint.
+
+    Currently only fires for pricing_math: quote_engine is multi-purpose —
+    it generates both pricing calculations and property descriptions/marketing
+    copy. When the prompt contains no pricing signal but clear descriptive
+    signal (listing copy, amenity descriptions, "what does X look like"),
+    reclassify to vrs_concierge rather than training the model that
+    marketing copy == pricing_math.
+
+    Returns corrected task_type string or None (keep Tier 1 result).
+
+    Decision logged in docs/IRON_DOME_ARCHITECTURE.md Phase 4e.2.
+    """
+    if tier1_type != "pricing_math":
+        return None
+
+    has_pricing = any(p.search(prompt) for p in _PRICING_PATTERNS)
+    if has_pricing:
+        return None
+
+    has_descriptive = any(p.search(prompt) for p in _DESCRIPTIVE_PATTERNS)
+    if has_descriptive:
+        log.debug(
+            "task_classifier.tier1_override tier1=%s → vrs_concierge "
+            "(descriptive signal, no pricing signal)",
+            tier1_type,
+        )
+        return "vrs_concierge"
+
+    return None
 
 
 def _llm_classify(prompt: str) -> str:
@@ -90,15 +126,20 @@ def classify_task_type(
     Returns a string from _TASK_TYPES. Defaults to "generic" on failure.
     """
     try:
-        # Tier 1: source module
+        # Tier 1: source module — then check for content mismatch
+        tier1: str | None = None
         if source_module and source_module in _MODULE_TO_TASK:
-            return _MODULE_TO_TASK[source_module]
-
-        # Also check prefix — e.g. "legal_council_of_9/seat_1/..." → legal_reasoning
-        if source_module:
+            tier1 = _MODULE_TO_TASK[source_module]
+        elif source_module:
+            # prefix match: "legal_council_of_9/seat_1/..." → legal_reasoning
             for module_key, task in _MODULE_TO_TASK.items():
                 if source_module.startswith(module_key):
-                    return task
+                    tier1 = task
+                    break
+
+        if tier1 is not None:
+            override = _detect_content_mismatch(tier1, prompt)
+            return override if override is not None else tier1
 
         # Tier 2: keyword patterns
         combined = f"{prompt} {response}".lower()
