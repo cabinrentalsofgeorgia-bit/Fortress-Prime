@@ -330,8 +330,18 @@ matter-level redaction). Ships after legal_reasoning_judge is mature.
 - Smoke test passed: write → read → delete round-trip from both spark-4 and spark-2
 - Full ingestion audit: `docs/RAG_INGESTION_AUDIT.md`
 
-**Part 2 — Dual-write (NEXT)**: add `QDRANT_VRS_URL` env var; `VectorizerWorker`
-and `sync_knowledge_base_to_qdrant` write to both spark-2 and spark-4 simultaneously.
+**Part 2 — Snapshot migration COMPLETE (2026-04-19)**
+- 168 points migrated from spark-2 `fgp_knowledge` → spark-4 `fgp_vrs_knowledge`
+- Tool: `src/rag/migrate_fgp_to_vrs.py` (scroll 3×64-batch + upsert wait=true)
+- Verification: count parity 168==168 ✓, 10/10 sampled vectors byte-identical ✓
+- Elapsed: 1.2s. Idempotent — safe to re-run with --force.
+- spark-2 `fgp_knowledge` is **NOT modified** — remains source of truth for reads.
+- spark-4 `fgp_vrs_knowledge` is a static snapshot. New writes still go to spark-2
+  until Part 3 (ingestion cutover).
+
+**Part 3 — Ingestion cutover + read flip (NEXT)**: add `QDRANT_VRS_URL` env var;
+`VectorizerWorker` and `sync_knowledge_base_to_qdrant` write to both spark-2 and
+spark-4 simultaneously. Once parity is confirmed stable, flip reads to spark-4.
 
 **Part 3 — Read cutover (LATER)**: after spark-4 data matches spark-2 (168 points +
 ongoing delta), flip `QDRANT_URL` → spark-4 and `QDRANT_COLLECTION_NAME` → `fgp_vrs_knowledge`.
