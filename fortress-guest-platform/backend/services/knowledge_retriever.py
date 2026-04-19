@@ -267,14 +267,11 @@ async def _upsert_batch(
     headers: Dict,
     points: List[Dict],
 ) -> None:
-    """Upsert a batch of points into Qdrant."""
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.put(
-            f"{qdrant_url}/collections/{COLLECTION_NAME}/points",
-            json={"points": points},
-            headers=headers,
-        )
-        resp.raise_for_status()
+    """Upsert a batch of points into primary Qdrant (spark-2) and — best-effort —
+    secondary Qdrant (spark-4). qdrant_url and headers are sourced from settings
+    inside dual_upsert_points; parameters kept for API compatibility."""
+    from backend.services.qdrant_dual_writer import dual_upsert_points
+    await dual_upsert_points(points)
 
 
 LEGAL_COLLECTION = "legal_library"
