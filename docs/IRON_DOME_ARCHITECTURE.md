@@ -270,6 +270,25 @@ Task classifier live. Three tiers: module hint → keyword pattern → qwen2.5:0
 Three-tier classifier: source hint → keyword → small LLM. Wires into
 ai_router at top of request path. Populates task_type on every capture.
 
+**Defect 3 fix (2026-04-19):** Tier 1 module hint can now be overridden by
+content analysis when the prompt strongly contradicts the module's default
+task type. Currently only fires for `pricing_math`: `quote_engine` is
+multi-purpose — it handles both pricing calculations and property
+description/marketing copy tasks. When a quote_engine prompt contains no
+pricing signal (`_PRICING_PATTERNS`) but clear descriptive signal
+(`_DESCRIPTIVE_PATTERNS`), `_detect_content_mismatch` returns `vrs_concierge`
+instead. Pricing signal always wins if present; the override only fires on
+zero pricing + positive descriptive. See `task_classifier.py`.
+
+**Ambiguous multi-purpose modules:** `quote_engine` defers to keyword content.
+`vrs_agent_dispatcher` stays `vrs_concierge` regardless of pricing keywords —
+the override only fires when Tier 1 resolves to `pricing_math`, not when it
+resolves to `vrs_concierge`. If a `vrs_agent_dispatcher` capture contains
+substantive pricing discussion, that is within-scope for `vrs_concierge`
+(staff pricing guidance is a concierge function). If pricing math becomes a
+distinct vrs sub-task with sufficient volume, add `vrs_pricing` to `_TASK_TYPES`
+and update `_MODULE_TO_TASK` in a separate architectural decision.
+
 ### Phase 4e.3 — Judge scaffolding (DONE, awaiting training data)
 Highest-volume task type, lowest-risk errors, fastest iteration.
 Proves the judge architecture end-to-end before replicating.
