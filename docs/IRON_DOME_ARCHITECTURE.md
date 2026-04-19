@@ -293,6 +293,17 @@ and update `_MODULE_TO_TASK` in a separate architectural decision.
 Highest-volume task type, lowest-risk errors, fastest iteration.
 Proves the judge architecture end-to-end before replicating.
 
+**Path C update (2026-04-19):** Per-task latency budgets + expanded _JUDGE_MAP.
+- `_JUDGE_TIMEOUTS` dict: legal tasks 1000ms, VRS 200ms, code/market 300–500ms.
+  Falls back to `JUDGE_TIMEOUT_MS` env var (default 200ms) for unknown task types.
+- `_JUDGE_MAP` expanded to 15 entries across all task types (all `is_active=False`).
+  Legal judges (legal_reasoning, brief_drafting, legal_citations, contract_analysis)
+  assigned `qwen2.5:32b` on spark-1 (Path C). VRS + code + vision judges assigned
+  `qwen2.5:7b` on their respective nodes.
+- `is_active=False` on all entries: placeholder routing only. No judge fires until
+  training data accumulates and a model is explicitly promoted.
+- `JUDGE_ENABLED=false` (default) unchanged — zero runtime overhead.
+
 ### Phase 4e.4 through 4e.10 — remaining judges
 One per primary task type, sequenced by data volume and strategic
 value. Legal reasoning judge ships early despite lower volume because
@@ -432,6 +443,13 @@ First working end-to-end loop (Phases 4e.1-4e.3 + 4a): **2-3 weeks**.
 
 10. First judge is vrs_concierge_judge. Highest volume, lowest risk
     per error, fastest iteration to prove architecture.
+
+11. Legal judge uses qwen2.5:32b base with 1000ms inline latency budget
+    (Path C). VRS judges use qwen2.5:7b with 200ms budget. Per-task
+    latency budgets via _JUDGE_TIMEOUTS dict. Rationale: legal stakes per
+    query justify extra latency; low volume makes it UX-tolerable. All
+    judges start is_active=False until training data accumulates and a
+    model is explicitly promoted.
 
 ## Risks live after v5
 

@@ -2,9 +2,20 @@
 judge_runtime.py — Phase 4e.3 judge tier runtime (Ollama-LoRA served).
 
 Evaluates sovereign responses inline via task-type specialized judge models.
-<200ms p95 hard budget. Failure modes never block the response path.
+Per-task latency budgets (Path C, v5 decision #11). Failure modes never
+block the response path.
 
 JUDGE_ENABLED=false (default) → zero overhead, judge skipped entirely.
+
+Per-task timeout budgets (_JUDGE_TIMEOUTS):
+  Legal tasks  (high stakes, low volume)  → 1000 ms
+  VRS tasks    (low stakes, high volume)  → 200 ms
+  Code/market  (medium)                   → 300–500 ms
+  Unknown task_type                       → JUDGE_TIMEOUT_MS env (default 200 ms)
+
+_JUDGE_MAP is_active flag:
+  False (default) → no judge trained yet → confident / no_judge_for_task_type
+  True            → judge deployed, will call Ollama inline
 
 Failure handling:
   timeout        → uncertain  (response may be fine, judge was slow)
@@ -26,24 +37,59 @@ from pydantic import BaseModel
 log = logging.getLogger("judge_runtime")
 
 JUDGE_ENABLED    = os.getenv("JUDGE_ENABLED",    "false").lower() == "true"
-JUDGE_TIMEOUT_MS = int(os.getenv("JUDGE_TIMEOUT_MS", "200"))
+JUDGE_TIMEOUT_MS = int(os.getenv("JUDGE_TIMEOUT_MS", "200"))  # fallback for unknown task types
 
-# task_type → (ollama_model_name, ollama_host_ip)
-# Populated as judges are trained and deployed.
-_JUDGE_MAP: dict[str, tuple[str, str]] = {
-    # VRS judges on spark-4 (192.168.0.106)
-    "vrs_concierge":    ("vrs_concierge_judge",  "192.168.0.106"),
-    "vrs_ota_response": ("vrs_ota_judge",         "192.168.0.106"),
-    "pricing_math":     ("pricing_math_judge",    "192.168.0.106"),
-    "market_research":  ("market_research_judge", "192.168.0.106"),
-    # Legal judges on spark-1 (192.168.0.104)
-    "legal_reasoning":  ("legal_reasoning_judge", "192.168.0.104"),
-    "brief_drafting":   ("brief_drafting_judge",  "192.168.0.104"),
-    # Code judge on spark-2 (192.168.0.100)
-    "code_generation":  ("code_generation_judge", "192.168.0.100"),
-    # Vision judge on spark-3 (192.168.0.105)
-    "vision_damage":    ("vision_analysis_judge", "192.168.0.105"),
-    "vision_photo":     ("vision_analysis_judge", "192.168.0.105"),
+# Per-task latency budgets (ms). Legal tasks justify higher latency due to high stakes
+# per query and low volume. VRS tasks need sub-200ms to stay off the hot path.
+# Unknown task types fall back to JUDGE_TIMEOUT_MS (env default 200ms).
+# v5 Decision #11 / Path C.
+_JUDGE_TIMEOUTS: dict[str, int] = {
+    # Legal (spark-1, qwen2.5:32b) — high stakes, low volume
+    "legal_reasoning":   1000,
+    "brief_drafting":    1000,
+    "legal_citations":   1000,
+    "contract_analysis": 1000,
+    # VRS (spark-4, qwen2.5:7b) — low stakes, high volume
+    "vrs_concierge":     200,
+    "vrs_ota_response":  200,
+    # Business intelligence
+    "pricing_math":      300,
+    "real_time":         300,
+    "market_research":   500,
+    "acquisitions_analysis": 500,
+    # Code (spark-2, qwen2.5:7b)
+    "code_generation":   500,
+    "code_refactoring":  500,
+    "code_debugging":    500,
+    # Vision (spark-3, qwen2.5:7b)
+    "vision_photo":      500,
+    "vision_damage":     500,
+}
+
+# task_type → judge routing config.
+# is_active=False: placeholder — no judge trained yet. Returns confident/no_judge_for_task_type.
+# is_active=True:  judge deployed on target_node, will be called inline.
+# All entries start is_active=False until training data accumulates and a judge is deployed.
+_JUDGE_MAP: dict[str, dict] = {
+    # VRS judges — spark-4 (192.168.0.106), qwen2.5:7b base
+    "vrs_concierge":    {"judge_model": "vrs_concierge_judge",    "target_node": "192.168.0.106", "base_model": "qwen2.5:7b",  "is_active": False},
+    "vrs_ota_response": {"judge_model": "vrs_ota_judge",          "target_node": "192.168.0.106", "base_model": "qwen2.5:7b",  "is_active": False},
+    "pricing_math":     {"judge_model": "pricing_math_judge",     "target_node": "192.168.0.106", "base_model": "qwen2.5:7b",  "is_active": False},
+    "market_research":  {"judge_model": "market_research_judge",  "target_node": "192.168.0.106", "base_model": "qwen2.5:7b",  "is_active": False},
+    "real_time":        {"judge_model": "real_time_judge",        "target_node": "192.168.0.106", "base_model": "qwen2.5:7b",  "is_active": False},
+    # Legal judges — spark-1 (192.168.0.104), qwen2.5:32b base (Path C)
+    "legal_reasoning":   {"judge_model": "legal_reasoning_judge",   "target_node": "192.168.0.104", "base_model": "qwen2.5:32b", "is_active": False},
+    "brief_drafting":    {"judge_model": "brief_drafting_judge",    "target_node": "192.168.0.104", "base_model": "qwen2.5:32b", "is_active": False},
+    "legal_citations":   {"judge_model": "legal_citations_judge",   "target_node": "192.168.0.104", "base_model": "qwen2.5:32b", "is_active": False},
+    "contract_analysis": {"judge_model": "contract_analysis_judge", "target_node": "192.168.0.104", "base_model": "qwen2.5:32b", "is_active": False},
+    "acquisitions_analysis": {"judge_model": "acquisitions_analysis_judge", "target_node": "192.168.0.104", "base_model": "qwen2.5:32b", "is_active": False},
+    # Code judges — spark-2 (192.168.0.100), qwen2.5:7b base
+    "code_generation":  {"judge_model": "code_generation_judge",  "target_node": "192.168.0.100", "base_model": "qwen2.5:7b",  "is_active": False},
+    "code_refactoring": {"judge_model": "code_refactoring_judge", "target_node": "192.168.0.100", "base_model": "qwen2.5:7b",  "is_active": False},
+    "code_debugging":   {"judge_model": "code_debugging_judge",   "target_node": "192.168.0.100", "base_model": "qwen2.5:7b",  "is_active": False},
+    # Vision judges — spark-3 (192.168.0.105), qwen2.5:7b base
+    "vision_damage":    {"judge_model": "vision_analysis_judge",  "target_node": "192.168.0.105", "base_model": "qwen2.5:7b",  "is_active": False},
+    "vision_photo":     {"judge_model": "vision_analysis_judge",  "target_node": "192.168.0.105", "base_model": "qwen2.5:7b",  "is_active": False},
 }
 
 _USER_PROMPT = (
@@ -110,7 +156,8 @@ async def judge_response(
 ) -> JudgeDecision:
     """
     Evaluate sovereign response via specialized judge.
-    Hard timeout: JUDGE_TIMEOUT_MS (default 200ms). Never raises.
+    Timeout is per-task from _JUDGE_TIMEOUTS (falls back to JUDGE_TIMEOUT_MS).
+    Never raises.
     """
     t0 = time.perf_counter()
 
@@ -121,7 +168,7 @@ async def judge_response(
         )
 
     judge_info = _JUDGE_MAP.get(task_type)
-    if judge_info is None:
+    if judge_info is None or not judge_info.get("is_active", False):
         return JudgeDecision(
             decision="confident",
             reasoning=f"no_judge_for_task_type={task_type}",
@@ -129,9 +176,13 @@ async def judge_response(
             latency_ms=int((time.perf_counter() - t0) * 1000),
         )
 
-    model_name, host_ip = judge_info
-    ollama_url  = f"http://{host_ip}:11434"
-    timeout_s   = JUDGE_TIMEOUT_MS / 1000.0
+    model_name = judge_info["judge_model"]
+    host_ip    = judge_info["target_node"]
+    ollama_url = f"http://{host_ip}:11434"
+    timeout_ms = _JUDGE_TIMEOUTS.get(task_type, JUDGE_TIMEOUT_MS)
+    timeout_s  = timeout_ms / 1000.0
+    log.debug("judge_timeout_selected task=%s timeout_ms=%d model=%s",
+              task_type, timeout_ms, model_name)
 
     try:
         async with httpx.AsyncClient(timeout=timeout_s) as client:
@@ -157,10 +208,10 @@ async def judge_response(
     except httpx.TimeoutException:
         latency_ms = int((time.perf_counter() - t0) * 1000)
         log.warning("judge_timeout task=%s model=%s timeout=%dms",
-                    task_type, model_name, JUDGE_TIMEOUT_MS)
+                    task_type, model_name, timeout_ms)
         return JudgeDecision(
             decision="uncertain",
-            reasoning=f"judge_timeout_{JUDGE_TIMEOUT_MS}ms",
+            reasoning=f"judge_timeout_{timeout_ms}ms",
             judge_model=model_name, latency_ms=latency_ms,
         )
     except (httpx.ConnectError, httpx.NetworkError):
