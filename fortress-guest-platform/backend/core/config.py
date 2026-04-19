@@ -567,10 +567,13 @@ class Settings(BaseSettings):
     # Gateway
     gateway_api_url: str = Field(default="http://localhost:8000")
 
-    # Qdrant
+    # Qdrant — primary (spark-2)
     qdrant_url: str = Field(default="http://localhost:6333")
     qdrant_api_key: str = Field(default="")
     qdrant_collection_name: str = Field(default="fgp_knowledge")
+    # Qdrant — VRS secondary (spark-4, Phase 5a Part 3 dual-write)
+    qdrant_vrs_url: str = Field(default="http://192.168.0.106:6333")
+    enable_qdrant_vrs_dual_write: bool = Field(default=True)
 
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0")

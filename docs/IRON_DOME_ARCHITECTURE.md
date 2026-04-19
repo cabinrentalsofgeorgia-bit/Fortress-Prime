@@ -339,9 +339,23 @@ matter-level redaction). Ships after legal_reasoning_judge is mature.
 - spark-4 `fgp_vrs_knowledge` is a static snapshot. New writes still go to spark-2
   until Part 3 (ingestion cutover).
 
-**Part 3 — Ingestion cutover + read flip (NEXT)**: add `QDRANT_VRS_URL` env var;
-`VectorizerWorker` and `sync_knowledge_base_to_qdrant` write to both spark-2 and
-spark-4 simultaneously. Once parity is confirmed stable, flip reads to spark-4.
+**Part 3 — Dual-write ACTIVE (2026-04-19)**
+- `backend/services/qdrant_dual_writer.py` wraps every fgp_knowledge upsert.
+- Primary (spark-2): synchronous, raises on failure — semantics unchanged.
+- Secondary (spark-4): fire-and-forget asyncio.Task, 5s timeout, logs WARNING
+  on failure, never blocks primary. Failure mode: Option B.
+- Two write sites wired: `workers/vectorizer.py` and `services/knowledge_retriever.py`.
+- Feature flag: `ENABLE_QDRANT_VRS_DUAL_WRITE=false` → instant disable, no restart.
+- Parity check tool: `src/rag/verify_dual_write_parity.py [--sample N]`.
+- Reads still target spark-2 fgp_knowledge. No retrieval code changed.
+- Metrics (in-process): `qdrant_vrs_dual_write_{success,failure,skipped}_total`.
+
+**Part 4 — Read cutover (NEXT)**: flip `QDRANT_URL` → spark-4 and
+`QDRANT_COLLECTION_NAME` → `fgp_vrs_knowledge` once write parity is confirmed
+stable over 24–48h of dual-write operation.
+
+**Part 5 — Write sunset**: stop dual-writing to spark-2 `fgp_knowledge`,
+decommission as VRS Qdrant.
 
 **Part 3 — Read cutover (LATER)**: after spark-4 data matches spark-2 (168 points +
 ongoing delta), flip `QDRANT_URL` → spark-4 and `QDRANT_COLLECTION_NAME` → `fgp_vrs_knowledge`.

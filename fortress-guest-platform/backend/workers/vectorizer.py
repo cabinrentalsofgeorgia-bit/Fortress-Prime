@@ -128,17 +128,13 @@ async def _embed_text(client: httpx.AsyncClient, text: str) -> Optional[list[flo
 
 
 async def _upsert_batch(client: httpx.AsyncClient, points: list[dict]) -> bool:
-    """Upsert a batch of points into Qdrant. Returns True on success."""
+    """Upsert a batch of points into primary Qdrant (spark-2) and — best-effort —
+    secondary Qdrant (spark-4). Returns True on primary success."""
     if not points:
         return True
     try:
-        resp = await client.put(
-            f"{_qdrant_url()}/collections/{COLLECTION_NAME}/points",
-            json={"points": points},
-            headers=_qdrant_headers(),
-            timeout=60,
-        )
-        resp.raise_for_status()
+        from backend.services.qdrant_dual_writer import dual_upsert_points
+        await dual_upsert_points(points)
         return True
     except Exception as e:
         logger.error("qdrant_upsert_failed", error=str(e)[:200], batch_size=len(points))
