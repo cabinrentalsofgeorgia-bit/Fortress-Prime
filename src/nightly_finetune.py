@@ -36,8 +36,9 @@ Environment variables (loaded from .env / .env.dgx by run-fortress-nightly-finet
     VLLM_DEPLOYMENT         default: nim-sovereign (k8s deployment name)
     VLLM_NAMESPACE          default: default
     VLLM_HEALTH_URL         default: http://10.43.38.88:8000/v1/models (ClusterIP)
-    VLLM_STOP_TIMEOUT       default: 120  (seconds to wait for pod to terminate)
-    VLLM_START_TIMEOUT      default: 300  (seconds for NIM model load + health)
+    VLLM_STOP_TIMEOUT             default: 120  (seconds to wait for pod to terminate)
+    VLLM_START_TIMEOUT            default: 300  (seconds for NIM model load + health)
+    NIM_TERMINATION_DWELL_SECONDS default: 30   (fixed sleep after pod gone on unified-memory GPUs)
     DATABASE_URL            required for exporter
 """
 from __future__ import annotations
@@ -77,11 +78,13 @@ MAX_SEQ_LEN          = int(os.getenv("FINETUNE_MAX_SEQ_LEN",   "4096"))
 NUM_EPOCHS           = int(os.getenv("FINETUNE_EPOCHS",        "1"))
 LEARNING_RATE        = float(os.getenv("FINETUNE_LR",          "2e-4"))
 PUSH_OLLAMA          = os.getenv("FINETUNE_PUSH_OLLAMA",       "false").lower() == "true"
-VLLM_DEPLOYMENT      = os.getenv("VLLM_DEPLOYMENT",            "nim-sovereign")
-VLLM_NAMESPACE       = os.getenv("VLLM_NAMESPACE",             "default")
-VLLM_HEALTH_URL      = os.getenv("VLLM_HEALTH_URL",            "http://10.43.38.88:8000/v1/models")
-VLLM_STOP_TIMEOUT    = int(os.getenv("VLLM_STOP_TIMEOUT",      "120"))
-VLLM_START_TIMEOUT   = int(os.getenv("VLLM_START_TIMEOUT",     "300"))
+VLLM_DEPLOYMENT              = os.getenv("VLLM_DEPLOYMENT",            "nim-sovereign")
+VLLM_NAMESPACE               = os.getenv("VLLM_NAMESPACE",             "default")
+VLLM_HEALTH_URL              = os.getenv("VLLM_HEALTH_URL",            "http://10.43.38.88:8000/v1/models")
+VLLM_STOP_TIMEOUT            = int(os.getenv("VLLM_STOP_TIMEOUT",      "120"))
+VLLM_START_TIMEOUT           = int(os.getenv("VLLM_START_TIMEOUT",     "300"))
+NIM_TERMINATION_DWELL_SECONDS = int(os.getenv("NIM_TERMINATION_DWELL_SECONDS", "30"))
+_NIM_GPU_RELEASE_TIMEOUT     = 120  # hard ceiling; not configurable
 MIN_DATE             = date.fromisoformat(os.getenv("FINETUNE_MIN_DATE", "2026-04-18"))
 HOLDOUT_DIR          = Path(os.getenv("HOLDOUT_DIR",
                          "/mnt/fortress_nas/finetune-artifacts/holdouts"))
@@ -137,6 +140,94 @@ def _nim_pod_running() -> bool:
     return "Running" in result.stdout
 
 
+def _nim_any_pod_exists() -> bool:
+    """True if any nim-engine pod exists in any state (Running, Terminating, etc.)."""
+    result = subprocess.run(
+        ["kubectl", "get", "pods", "-n", VLLM_NAMESPACE,
+         "-l", "app=nim-engine", "--no-headers"],
+        capture_output=True, text=True, timeout=15,
+    )
+    return bool(result.stdout.strip())
+
+
+def _gpu_free_mib() -> "int | None":
+    """Return free GPU MiB, or None if the card reports [N/A] (GB10 unified memory)."""
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
+            timeout=10, text=True,
+        ).strip()
+        first = out.splitlines()[0].strip() if out else ""
+        return None if not first or "[N/A]" in first else int(first)
+    except Exception:
+        return None
+
+
+def _wait_for_gpu_released() -> None:
+    """
+    After kubectl scale-to-zero, block until VRAM is confirmed free.
+
+    Phase 1 — pod termination: poll until no nim-engine pods exist in any
+    state (Running or Terminating). _stop_vllm's loop only checks "Running";
+    a pod stuck in Terminating still holds the CUDA context.
+
+    Phase 2 — VRAM release:
+    - Unified-memory / GB10: nvidia-smi reports [N/A] for memory metrics.
+      Sleep NIM_TERMINATION_DWELL_SECONDS (default 30 s) as a fixed dwell.
+    - Discrete GPU: poll nvidia-smi memory.free until it jumps by >1 GiB,
+      indicating the CUDA context was released.
+
+    Hard ceiling: _NIM_GPU_RELEASE_TIMEOUT (120 s). Raises RuntimeError on
+    timeout so the caller can write a .error file instead of OOMing mid-load.
+    """
+    deadline = time.time() + _NIM_GPU_RELEASE_TIMEOUT
+
+    # Phase 1: wait for pod to vanish entirely (no Terminating stragglers)
+    while time.time() < deadline:
+        if not _nim_any_pod_exists():
+            log.info("NIM pod fully terminated (no pods in any state).")
+            break
+        log.info("NIM pod still exists (may be Terminating) — waiting for full teardown …")
+        time.sleep(3)
+    else:
+        raise RuntimeError(
+            f"NIM pod ({VLLM_NAMESPACE}/{VLLM_DEPLOYMENT}) still present "
+            f"{_NIM_GPU_RELEASE_TIMEOUT}s after scale-to-zero. "
+            "GPU memory not confirmed free — aborting training to avoid OOM. "
+            f"Check: kubectl get pods -n {VLLM_NAMESPACE} -l app=nim-engine"
+        )
+
+    # Phase 2: confirm VRAM released
+    free_mib = _gpu_free_mib()
+    if free_mib is None:
+        # GB10 / unified-memory: nvidia-smi can't report discrete VRAM
+        dwell = NIM_TERMINATION_DWELL_SECONDS
+        log.info(
+            "Unified-memory GPU detected (nvidia-smi N/A) — "
+            "sleeping %ds for CUDA context teardown (NIM_TERMINATION_DWELL_SECONDS).", dwell,
+        )
+        time.sleep(dwell)
+        log.info("GPU dwell complete — proceeding with model load.")
+    else:
+        # Discrete GPU: poll until free memory jumps (NIM CUDA context released)
+        log.info("GPU free before dwell: %d MiB — polling for release …", free_mib)
+        prev = free_mib
+        while time.time() < deadline:
+            time.sleep(5)
+            curr = _gpu_free_mib()
+            if curr is None:
+                log.info("GPU switched to N/A reporting — assuming released.")
+                return
+            if curr >= prev + 1024:
+                log.info("GPU memory released: %d MiB → %d MiB — proceeding.", prev, curr)
+                return
+            prev = curr
+        log.warning(
+            "GPU memory polling reached %ds ceiling (%d MiB free) — proceeding anyway.",
+            _NIM_GPU_RELEASE_TIMEOUT, prev,
+        )
+
+
 def _stop_vllm() -> bool:
     """
     Scale nim-sovereign to 0 replicas, freeing GPU memory for training.
@@ -161,15 +252,17 @@ def _stop_vllm() -> bool:
     deadline = time.time() + VLLM_STOP_TIMEOUT
     while time.time() < deadline:
         if not _nim_pod_running():
-            log.info("NIM pod terminated — GPU memory freed.")
+            log.info("NIM pod no longer Running — waiting for full teardown and GPU release …")
+            _wait_for_gpu_released()
+            log.info("GPU memory confirmed free — proceeding with training.")
             return True
         time.sleep(5)
 
     raise RuntimeError(
-        f"NIM pod ({VLLM_NAMESPACE}/{VLLM_DEPLOYMENT}) did not terminate "
+        f"NIM pod ({VLLM_NAMESPACE}/{VLLM_DEPLOYMENT}) did not leave Running state "
         f"within {VLLM_STOP_TIMEOUT}s after scale-to-zero. "
         "GPU memory not freed — aborting training to avoid OOM. "
-        "Check: kubectl get pods -n default -l app=nim-engine"
+        f"Check: kubectl get pods -n {VLLM_NAMESPACE} -l app=nim-engine"
     )
 
 
