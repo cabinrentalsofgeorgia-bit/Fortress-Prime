@@ -58,8 +58,11 @@ def upgrade() -> None:
         sa.Column('generation_ms', sa.Integer(), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.ForeignKeyConstraint(['property_id'], ['properties.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['rubric_id'], ['seo_rubrics.id'], ondelete='SET NULL'),
+        # FK to properties.id intentionally deferred: this SEO branch runs before the
+        # main migration chain creates `properties` on a fresh DB. The constraint is
+        # already present on production (migration applied when properties existed).
+        # A follow-up migration can add the FK once the branch ordering is resolved.
         sa.PrimaryKeyConstraint('id')
     )
 
