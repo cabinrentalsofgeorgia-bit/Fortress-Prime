@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const CABIN_SLUG = "aska-escape-lodge";
 
-test.describe("Sovereign concierge", () => {
+test.describe("Sovereign concierge", { tag: "@integration" }, () => {
   test.use({ storageState: undefined });
 
   test("answers a cabin-specific guest question through the live RAG path", async ({ page }) => {

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { loginAsE2EStaff } from "./helpers/auth";
 
-test.describe("Hive Mind telemetry editor", () => {
+test.describe("Hive Mind telemetry editor", { tag: "@integration" }, () => {
   test.use({ storageState: undefined });
 
   test("syncs counsel edits and shows telemetry pulse", async ({ page, baseURL }) => {

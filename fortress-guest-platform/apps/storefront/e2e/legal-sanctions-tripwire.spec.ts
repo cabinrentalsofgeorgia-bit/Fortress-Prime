@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { loginAsE2EStaff } from "./helpers/auth";
 
-test.describe("Sanctions Tripwire Panel", () => {
+test.describe("Sanctions Tripwire Panel", { tag: "@integration" }, () => {
   test.use({ storageState: undefined });
 
   test("renders tripwire header and pre-computed alerts", async ({ page, baseURL }) => {
