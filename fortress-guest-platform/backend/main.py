@@ -412,6 +412,8 @@ async def lifespan(app: FastAPI):
             qdrant_ready = await ensure_collection()
             if qdrant_ready:
                 logger.info("qdrant_fgp_knowledge_ready")
+                from backend.services.qdrant_dual_writer import log_read_endpoint_at_startup
+                log_read_endpoint_at_startup()
                 from backend.core.database import AsyncSessionLocal
                 from backend.services.async_jobs import enqueue_async_job
 

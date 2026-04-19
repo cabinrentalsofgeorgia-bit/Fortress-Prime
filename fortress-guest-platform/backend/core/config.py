@@ -574,6 +574,11 @@ class Settings(BaseSettings):
     # Qdrant — VRS secondary (spark-4, Phase 5a Part 3 dual-write)
     qdrant_vrs_url: str = Field(default="http://192.168.0.106:6333")
     enable_qdrant_vrs_dual_write: bool = Field(default=True)
+    # Phase 5a Part 4 — read cutover (Option A: restart to flip)
+    # False  → reads target spark-2 fgp_knowledge (default, safe)
+    # True   → reads target spark-4 fgp_vrs_knowledge
+    # Run src/rag/verify_dual_write_parity.py --compare-search before flipping.
+    read_from_vrs_store: bool = Field(default=False)
 
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0")

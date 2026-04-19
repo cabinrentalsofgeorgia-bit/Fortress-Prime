@@ -112,6 +112,30 @@ async def _write_secondary(points: list[dict[str, Any]], collection: str) -> Non
 # Public API
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Read endpoint resolver (Phase 5a Part 4)
+# ---------------------------------------------------------------------------
+
+def resolve_read_endpoint() -> tuple[str, str]:
+    """Return (qdrant_url, collection_name) for fgp_knowledge reads.
+
+    flag=False (default) → spark-2 fgp_knowledge  (no production change)
+    flag=True            → spark-4 fgp_vrs_knowledge  (post-cutover)
+    """
+    if settings.read_from_vrs_store:
+        return (settings.qdrant_vrs_url.rstrip("/"), _VRS_COLLECTION)
+    return (settings.qdrant_url.rstrip("/"), COLLECTION_NAME)
+
+
+def log_read_endpoint_at_startup() -> None:
+    """Emit a single INFO log so the active read target is visible on every restart."""
+    url, collection = resolve_read_endpoint()
+    log.info(
+        "qdrant_read_endpoint url=%s collection=%s flag=%s",
+        url, collection, settings.read_from_vrs_store,
+    )
+
+
 # Keeps fire-and-forget tasks alive until the event loop can run them.
 _pending: set[asyncio.Task] = set()
 
