@@ -64,6 +64,9 @@ UNTRACKED_WARN    = int(os.getenv("UNTRACKED_WARN",        "10"))
 UNTRACKED_ALERT   = int(os.getenv("UNTRACKED_ALERT",       "50"))
 STALE_HOURS       = int(os.getenv("MODIFIED_STALE_HOURS",  "48"))
 
+_DRIFT_LOG_FALLBACK         = Path.home() / "fortress-drift.log"
+_DRIFT_LOG_WARNED_SENTINEL  = Path.home() / ".fortress_drift_perm_warned"
+
 TWILIO_SID    = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_TOKEN  = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_FROM   = os.getenv("TWILIO_PHONE_NUMBER")
@@ -186,11 +189,19 @@ def _append_log(message: str) -> None:
     try:
         with open(DRIFT_LOG, "a") as fh:
             fh.write(line)
-    except PermissionError:
-        log.warning("Cannot write to %s — check permissions", DRIFT_LOG)
-        # Fallback: write to home dir
-        fallback = Path.home() / "fortress-drift.log"
-        with open(fallback, "a") as fh:
+    except OSError:
+        # Warn once across runs via a sentinel file; subsequent runs fall back silently.
+        if not _DRIFT_LOG_WARNED_SENTINEL.exists():
+            log.warning(
+                "Cannot write to %s — falling back to %s. "
+                "Fix: sudo touch %s && sudo chown admin:admin %s",
+                DRIFT_LOG, _DRIFT_LOG_FALLBACK, DRIFT_LOG, DRIFT_LOG,
+            )
+            try:
+                _DRIFT_LOG_WARNED_SENTINEL.touch()
+            except OSError:
+                pass
+        with open(_DRIFT_LOG_FALLBACK, "a") as fh:
             fh.write(line)
 
 

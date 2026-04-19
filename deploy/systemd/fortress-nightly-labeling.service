@@ -7,7 +7,7 @@ After=network-online.target fortress-backend.service
 Type=oneshot
 User=admin
 Group=admin
-WorkingDirectory=/home/admin/Fortress-Prime
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
 
 ExecStart=/bin/bash -c '\
   set -a; \
