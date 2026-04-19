@@ -33,6 +33,17 @@ _MODEL_ALIASES: dict[str, list[str]] = {
     "deepseek-r1:70b": ["deepseek-ai--DeepSeek-R1-Distill-Llama-70B"],
 }
 
+# Maps friendly names → actual directory names on NAS (flat, no HF double-dash format).
+# The NAS direct search uses these before falling back to the generic name transform.
+_NAS_ALIASES: dict[str, list[str]] = {
+    "qwen2.5:7b":               ["Qwen2.5-7B-Instruct"],
+    "Qwen/Qwen2.5-7B-Instruct": ["Qwen2.5-7B-Instruct"],
+    "qwen2.5:0.5b":             ["Qwen2.5-0.5B-Instruct"],
+    "qwen2.5:1.5b":             ["Qwen2.5-1.5B-Instruct"],
+    "qwen2.5:32b":              ["Qwen2.5-32B-Instruct"],
+    "deepseek-r1:70b":          ["DeepSeek-R1-Distill-Llama-70B"],
+}
+
 
 def _hf_dir_for_model(model_name: str, cache_root: Path) -> Optional[Path]:
     """Find a model's HF cache directory under cache_root."""
@@ -91,11 +102,15 @@ def find_base_model(model_name: str) -> Optional[Path]:
     """
     log.info("Searching for base model: %s", model_name)
 
-    # 1. NAS direct — look for model directory
-    nas_direct = _NAS_MODELS / model_name.replace(":", "-").replace("/", "-")
-    if nas_direct.exists() and (nas_direct / "config.json").exists():
-        log.info("Found %s on NAS at %s", model_name, nas_direct)
-        return nas_direct
+    # 1. NAS direct — check known aliases first, then fall back to generic name transform
+    nas_candidates: list[Path] = [
+        _NAS_MODELS / alias for alias in _NAS_ALIASES.get(model_name, [])
+    ]
+    nas_candidates.append(_NAS_MODELS / model_name.replace(":", "-").replace("/", "-"))
+    for nas_path in nas_candidates:
+        if nas_path.exists() and (nas_path / "config.json").exists():
+            log.info("Found %s on NAS at %s", model_name, nas_path)
+            return nas_path
 
     # 2. ai_bulk HF cache
     found = _hf_dir_for_model(model_name, _HF_CACHE_AI_BULK)
