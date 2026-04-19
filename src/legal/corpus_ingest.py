@@ -1,39 +1,41 @@
 #!/usr/bin/env python3
 """
-corpus_ingest.py — Phase 4d Part 1: Georgia insurance defense corpus acquisition.
+corpus_ingest.py — Phase 4d Parts 1 & 1b: Georgia insurance defense corpus acquisition.
 
-Downloads and filters public legal data from:
-  1. CourtListener bulk data — Georgia appellate court opinions, insurance-filtered
+Downloads, filters, and fetches full text of public legal data from:
+  1. CourtListener REST API v4 — Georgia appellate court opinions, insurance-filtered
   2. OCGA Title 33 — Georgia Insurance Code (via Justia mirror)
 
 No training data is prepared here — that is Phase 4d Part 2.
 
 Usage:
-  python -m src.legal.corpus_ingest courtlistener-bulk [--court COURTS] [--filter FILTER]
+  python -m src.legal.corpus_ingest courtlistener-search [--court COURTS] [--filter FILTER]
+  python -m src.legal.corpus_ingest fetch-fulltext [--source PATH] [--no-resume]
   python -m src.legal.corpus_ingest ocga [--title N] [--dry-run]
   python -m src.legal.corpus_ingest verify
 
-  COURTS   Comma-separated CourtListener court IDs (default: ga,gactapp)
+  COURTS   Comma-separated CourtListener court IDs (default: ga,gactapp,gasupct)
   FILTER   Keyword filter preset (default: insurance)
 
 Environment (read from .env.legal — not committed):
-  COURTLISTENER_API_TOKEN  Optional; only needed for future API queries.
-                           Bulk downloads are anonymous and do NOT require it.
+  COURTLISTENER_API_TOKEN  Required for API queries (free tier, sign up at courtlistener.com).
 
 Storage:
   /mnt/fortress_nas/legal-corpus/
-  ├── courtlistener/raw/          Downloaded CSVs, gzip-compressed, unmodified
-  ├── courtlistener/filtered/     Our filtered outputs (Georgia insurance cases, JSON-L)
-  ├── courtlistener/manifest.json Download manifest (pulled_at, sha256, row counts)
-  ├── ocga/raw/                   Raw HTML/text fetched from Justia
-  ├── ocga/title-33/              Parsed OCGA Title 33 sections (JSON)
-  └── README.md                   Licensing and provenance notes
+  ├── courtlistener/filtered/          Metadata JSONL from search API
+  ├── courtlistener/opinions-full.jsonl Full text + metadata (Part 1b output)
+  ├── courtlistener/.progress          Fetched opinion IDs for resumption
+  ├── courtlistener/manifest.json      Pull manifest (counts, timestamps)
+  ├── ocga/raw/                        Raw HTML/text fetched from Justia
+  ├── ocga/title-33/                   Parsed OCGA Title 33 sections (JSON)
+  └── README.md                        Licensing and provenance notes
 
 SAFETY:
   - Corpus data stays on NAS only — never committed to the repo.
   - CourtListener opinions are public domain (court opinions).
   - OCGA is published law — public domain.
   - OCGA scraper sleeps between requests; respects rate limits.
+  - fetch-fulltext is idempotent: resumes from .progress file by default.
 """
 from __future__ import annotations
 
@@ -51,6 +53,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
+from urllib.error import HTTPError
 import urllib.request
 
 # ---------------------------------------------------------------------------
@@ -419,6 +422,206 @@ def cmd_ocga(title: int, dry_run: bool = False) -> None:
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# HTTP retry helper
+# ---------------------------------------------------------------------------
+
+_CL_BASE = "https://www.courtlistener.com"
+
+
+def _api_get(url: str, token: str, max_retries: int = 5) -> dict:
+    """GET a CourtListener API URL with exponential backoff on 5xx/429.
+
+    Raises the last exception if all retries are exhausted.
+    Respects Retry-After header on 429.
+    """
+    for attempt in range(1, max_retries + 1):
+        req = urllib.request.Request(url, headers={
+            "Authorization": f"Token {token}",
+            "User-Agent": "FortressPrime-LegalCorpus/1.0 (research; gary@garyknight.com)",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read())
+        except HTTPError as exc:
+            if exc.code == 429:
+                retry_after = int(exc.headers.get("Retry-After", "60"))
+                log.warning("rate_limited attempt=%d retry_after=%ds", attempt, retry_after)
+                time.sleep(retry_after)
+            elif exc.code >= 500:
+                backoff = min(2 ** attempt, 60)
+                log.warning("server_error status=%d attempt=%d backoff=%ds url=%s",
+                            exc.code, attempt, backoff, url[:80])
+                if attempt == max_retries:
+                    raise
+                time.sleep(backoff)
+            else:
+                raise  # 4xx other than 429 — don't retry
+        except Exception as exc:
+            backoff = min(2 ** attempt, 60)
+            log.warning("request_error attempt=%d backoff=%ds error=%s url=%s",
+                        attempt, backoff, exc, url[:80])
+            if attempt == max_retries:
+                raise
+            time.sleep(backoff)
+    raise RuntimeError(f"_api_get exhausted {max_retries} retries for {url}")
+
+
+# ---------------------------------------------------------------------------
+# Sub-command: fetch-fulltext  (Phase 4d Part 1b)
+# ---------------------------------------------------------------------------
+
+FULLTEXT_OUT = "courtlistener/opinions-full.jsonl"
+PROGRESS_FILE = "courtlistener/.progress"
+FULLTEXT_SLEEP = 0.5  # seconds between opinion fetches
+
+
+def _load_progress(progress_path: Path) -> set[str]:
+    """Return set of already-fetched opinion IDs from progress file."""
+    if not progress_path.exists():
+        return set()
+    ids: set[str] = set()
+    for line in progress_path.read_text().splitlines():
+        line = line.strip()
+        if line:
+            ids.add(line)
+    log.info("resuming from progress file: %d already fetched", len(ids))
+    return ids
+
+
+def _append_progress(progress_path: Path, opinion_id: str) -> None:
+    progress_path.parent.mkdir(parents=True, exist_ok=True)
+    with progress_path.open("a") as fh:
+        fh.write(opinion_id + "\n")
+
+
+def _clean_text(text: str) -> str:
+    """Minimal cleanup: strip excessive whitespace from plain_text."""
+    if not text:
+        return ""
+    # Collapse sequences of 3+ blank lines to 2
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
+def cmd_fetch_fulltext(
+    source_jsonl: Path,
+    resume: bool = True,
+    token: str = "",
+) -> None:
+    """
+    Fetch full opinion text for every record in the metadata JSONL.
+
+    For each cluster_id, queries /api/rest/v4/opinions/?cluster={id}
+    and saves plain_text + html_with_citations to opinions-full.jsonl.
+
+    Resumable: tracks fetched IDs in .progress; re-runs skip already-done.
+    Rate-limited: 0.5s sleep between fetches; respects Retry-After on 429.
+    """
+    if not token:
+        log.error("COURTLISTENER_API_TOKEN required for full-text fetch")
+        raise SystemExit(1)
+
+    out_path = CORPUS_ROOT / FULLTEXT_OUT
+    progress_path = CORPUS_ROOT / PROGRESS_FILE
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fetched_ids = _load_progress(progress_path) if resume else set()
+
+    # Load metadata records
+    if not source_jsonl.exists():
+        log.error("source JSONL not found: %s", source_jsonl)
+        raise SystemExit(1)
+    records = [json.loads(l) for l in source_jsonl.open() if l.strip()]
+    log.info("fetch_fulltext records=%d already_fetched=%d to_fetch=%d",
+             len(records), len(fetched_ids), len(records) - len(fetched_ids))
+
+    n_fetched = len(fetched_ids)
+    n_skipped = 0
+    n_failed = 0
+    n_empty = 0
+
+    with out_path.open("a", encoding="utf-8") as out_fh:
+        for i, rec in enumerate(records):
+            cluster_id = str(rec.get("cluster_id") or rec.get("id") or "")
+            if not cluster_id:
+                log.warning("record_missing_cluster_id index=%d case=%s", i, rec.get("case_name", "?"))
+                n_failed += 1
+                continue
+
+            if cluster_id in fetched_ids:
+                n_skipped += 1
+                continue
+
+            url = f"{_CL_BASE}/api/rest/v4/opinions/?cluster={cluster_id}&format=json"
+            try:
+                data = _api_get(url, token)
+            except Exception as exc:
+                log.error("fulltext_fetch_failed cluster=%s error=%s", cluster_id, exc)
+                n_failed += 1
+                continue
+
+            opinions = data.get("results", [])
+            if not opinions:
+                log.warning("no_opinions_returned cluster=%s case=%s", cluster_id, rec.get("case_name"))
+                n_empty += 1
+                # Still mark as done so re-runs don't retry
+                _append_progress(progress_path, cluster_id)
+                fetched_ids.add(cluster_id)
+                continue
+
+            # Take the first (main) opinion; most clusters have 1
+            op = opinions[0]
+            plain = _clean_text(op.get("plain_text") or "")
+            html = op.get("html_with_citations") or ""
+
+            full_record = {
+                "cluster_id": cluster_id,
+                "opinion_id": str(op.get("id", "")),
+                "case_name": rec.get("case_name"),
+                "court": rec.get("court"),
+                "date_filed": rec.get("date_filed"),
+                "citation": rec.get("citation", []),
+                "plain_text": plain,
+                "html_with_citations": html[:50_000] if html else "",
+                "plain_text_chars": len(plain),
+                "fetched_at": datetime.now(tz=timezone.utc).isoformat(),
+            }
+            out_fh.write(json.dumps(full_record, ensure_ascii=False) + "\n")
+
+            _append_progress(progress_path, cluster_id)
+            fetched_ids.add(cluster_id)
+            n_fetched += 1
+
+            if (i + 1) % 100 == 0:
+                done = n_fetched + n_skipped
+                log.info("progress %d/%d fetched=%d skipped=%d failed=%d empty=%d",
+                         done, len(records), n_fetched, n_skipped, n_failed, n_empty)
+
+            time.sleep(FULLTEXT_SLEEP)
+
+    total_done = n_fetched + n_skipped
+    log.info(
+        "fetch_fulltext_complete total=%d fetched=%d skipped=%d failed=%d empty=%d out=%s",
+        len(records), n_fetched, n_skipped, n_failed, n_empty, out_path,
+    )
+
+    # Update manifest
+    manifest_path = CORPUS_ROOT / "courtlistener" / "manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest: dict[str, Any] = {}
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+    manifest.setdefault("_meta", {})["fulltext_fetched_at"] = datetime.now(tz=timezone.utc).isoformat()
+    manifest.setdefault("_meta", {})["fulltext_rows"] = total_done
+    manifest.setdefault("_meta", {})["fulltext_failed"] = n_failed
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+
+    if n_failed:
+        log.warning("%d opinions failed to fetch — re-run to retry", n_failed)
+
+
+# ---------------------------------------------------------------------------
 # Sub-command: verify
 # ---------------------------------------------------------------------------
 
@@ -444,17 +647,30 @@ def cmd_verify() -> None:
     cl_dir = CORPUS_ROOT / "courtlistener"
     manifest_path = cl_dir / "manifest.json"
     if cl_dir.exists():
-        raw_files = list((cl_dir / "raw").rglob("*.gz")) if (cl_dir / "raw").exists() else []
         filtered_files = list((cl_dir / "filtered").rglob("*.jsonl")) if (cl_dir / "filtered").exists() else []
+        fulltext_path = CORPUS_ROOT / FULLTEXT_OUT
+        progress_path = CORPUS_ROOT / PROGRESS_FILE
         _, size = _dir_size(cl_dir)
         print(f"CourtListener:  {size}")
-        print(f"  raw CSVs:     {len(raw_files)} files")
         if filtered_files:
             total_rows = sum(sum(1 for _ in f.open()) for f in filtered_files)
-            print(f"  filtered:     {len(filtered_files)} files, ~{total_rows:,} Georgia insurance opinions")
+            print(f"  metadata:     {total_rows:,} Georgia insurance opinions")
+        if fulltext_path.exists():
+            ft_rows = sum(1 for _ in fulltext_path.open())
+            ft_size = fulltext_path.stat().st_size / 1024 / 1024
+            print(f"  full-text:    {ft_rows:,} opinions, {ft_size:.1f} MB")
+        else:
+            print("  full-text:    not yet fetched (run fetch-fulltext)")
+        if progress_path.exists():
+            done = sum(1 for _ in progress_path.open() if _.strip())
+            print(f"  progress:     {done:,} IDs in .progress file")
         if manifest_path.exists():
             meta = json.loads(manifest_path.read_text()).get("_meta", {})
-            print(f"  last_run:     {meta.get('last_run', 'unknown')}")
+            print(f"  last_search:  {meta.get('last_run', 'unknown')}")
+            if meta.get("fulltext_fetched_at"):
+                print(f"  last_fulltext:{meta.get('fulltext_fetched_at')}")
+                if meta.get("fulltext_failed"):
+                    print(f"  failed:       {meta['fulltext_failed']} (re-run to retry)")
     else:
         print("CourtListener:  not yet acquired")
 
@@ -526,20 +742,35 @@ def _ensure_nas_readme() -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
+    _load_dotenv_legal()
     _ensure_nas_readme()
 
     parser = argparse.ArgumentParser(
         prog="python -m src.legal.corpus_ingest",
-        description="Fortress legal corpus acquisition pipeline (Phase 4d Part 1)",
+        description="Fortress legal corpus acquisition pipeline (Phase 4d Parts 1 & 1b)",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    # courtlistener-bulk
-    cl = sub.add_parser("courtlistener-bulk", help="Download + filter CourtListener bulk CSVs")
-    cl.add_argument("--court", default=",".join(GEORGIA_COURTS),
-                    help=f"Comma-separated court IDs (default: {','.join(GEORGIA_COURTS)})")
-    cl.add_argument("--filter", default="insurance",
-                    help="Keyword filter preset: insurance (default)")
+    # courtlistener-bulk (legacy) + courtlistener-search (current)
+    for cmd_name, cmd_help in [
+        ("courtlistener-bulk", "Search CourtListener API for Georgia insurance opinions (alias: courtlistener-search)"),
+        ("courtlistener-search", "Search CourtListener API for Georgia insurance opinions"),
+    ]:
+        cl = sub.add_parser(cmd_name, help=cmd_help)
+        cl.add_argument("--court", default=",".join(GEORGIA_COURTS),
+                        help=f"Comma-separated court IDs (default: {','.join(GEORGIA_COURTS)})")
+        cl.add_argument("--filter", default="insurance",
+                        help="Keyword filter preset: insurance (default)")
+
+    # fetch-fulltext (Part 1b)
+    ft = sub.add_parser("fetch-fulltext", help="Fetch full opinion text for existing metadata records")
+    ft.add_argument(
+        "--source",
+        default=str(CORPUS_ROOT / "courtlistener" / "filtered" / "georgia_insurance_opinions.jsonl"),
+        help="Source metadata JSONL path",
+    )
+    ft.add_argument("--no-resume", action="store_true",
+                    help="Ignore .progress file and re-fetch everything (overwrites output)")
 
     # ocga
     og = sub.add_parser("ocga", help="Scrape OCGA from Justia mirror")
@@ -551,10 +782,24 @@ def main() -> int:
     sub.add_parser("verify", help="Report corpus inventory on NAS")
 
     args = parser.parse_args()
+    token = os.getenv("COURTLISTENER_API_TOKEN", "")
 
-    if args.cmd == "courtlistener-bulk":
+    if args.cmd in ("courtlistener-bulk", "courtlistener-search"):
         courts = [c.strip() for c in args.court.split(",") if c.strip()]
         cmd_courtlistener_bulk(courts, args.filter)
+    elif args.cmd == "fetch-fulltext":
+        if args.no_resume:
+            progress = CORPUS_ROOT / PROGRESS_FILE
+            if progress.exists():
+                progress.unlink()
+            out = CORPUS_ROOT / FULLTEXT_OUT
+            if out.exists():
+                out.unlink()
+        cmd_fetch_fulltext(
+            source_jsonl=Path(args.source),
+            resume=not args.no_resume,
+            token=token,
+        )
     elif args.cmd == "ocga":
         cmd_ocga(args.title, dry_run=args.dry_run)
     elif args.cmd == "verify":
