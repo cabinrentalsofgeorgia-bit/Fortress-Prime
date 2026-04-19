@@ -42,6 +42,7 @@ full_index.txt
 # Only fortress-guest-platform/.env.dgx.example is version-controlled as the operator contract.
 fortress-guest-platform/.env.dgx
 .env.security
+.env.legal
 .env
 .env.bak
 deploy/compute/paperclip/secret.yaml
