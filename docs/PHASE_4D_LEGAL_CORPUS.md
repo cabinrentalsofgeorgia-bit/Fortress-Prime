@@ -8,23 +8,29 @@ Initial scope: Georgia appellate court insurance opinions + OCGA Title 33 (Georg
 
 ---
 
-## Part 1 — Corpus Infrastructure (THIS PHASE)
+## Part 1 + 1b — Corpus Infrastructure (COMPLETE)
 
 Acquire and stage public legal data. No training.
+
+### Actual results (2026-04-19)
+
+| Source | Result |
+|--------|--------|
+| CourtListener API v4 | **1,880 Georgia insurance opinions** staged (metadata JSONL) |
+| Full-text fetch (Part 1b) | Fetches `plain_text` for all 1,880 via `/api/rest/v4/opinions/?cluster={id}` |
+| OCGA Title 33 | Pending (manual run after bulk fetch complete) |
+
+**Note on bulk CSVs:** CourtListener's S3 bulk files returned 404 (URL structure changed).
+Switched to REST API v4 with direct keyword pre-filtering — better quality, same coverage.
 
 ### Data Sources
 
 | Source | Coverage | License |
 |--------|----------|---------|
-| CourtListener bulk | Georgia Court of Appeals (`gactapp`), Georgia Supreme Court (`ga`) opinions, insurance-filtered, 2010–2026 | Court opinions: public domain. CourtListener data: CC-BY (Free Law Project) |
+| CourtListener REST API v4 | Georgia `ga` + `gactapp` + `gasupct` courts, insurance-filtered, 2010–2026 | Court opinions: public domain. CourtListener data: CC-BY (Free Law Project) |
 | OCGA Title 33 | Georgia Insurance Code, all chapters | Published law: public domain |
 
-**CourtListener bulk data sizes (published on their site):**
-- `opinions` CSVs: ~15–40 MB per court (compressed)
-- Full Georgia corpus before filtering: ~10,000–30,000 opinions
-- After insurance keyword filter: estimated 500–2,000 relevant opinions
-
-**OCGA Title 33:** ~800–1,100 sections, ~2–5 MB total
+**Expected NAS size after Part 1b:** ~30–80 MB (`opinions-full.jsonl` with full plain_text)
 
 ### Running Ingestion
 
