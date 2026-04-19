@@ -127,7 +127,7 @@ jobs:
           PYTHONPATH: "${{ github.workspace }}/fortress-guest-platform"
         run: |
           source "$GITHUB_WORKSPACE/.venv/bin/activate"
-          alembic -c backend/alembic.ini upgrade head
+          alembic -c backend/alembic.ini upgrade heads
 
       - name: Install Playwright Chromium
         working-directory: fortress-guest-platform/apps/storefront
