@@ -77,7 +77,7 @@ from backend.core.config import settings as _cfg
 
 _LITELLM_BASE = getattr(_cfg, "litellm_base_url", "http://127.0.0.1:8002/v1").rstrip("/")
 # NIM inference endpoint (k8s ClusterIP, spark-2 internal) — used for served_by_endpoint tagging
-_NIM_ENDPOINT = os.getenv("LEGAL_NIM_ENDPOINT", "http://10.43.38.88:8000")
+_NIM_ENDPOINT = os.getenv("LEGAL_NIM_ENDPOINT", _cfg.nim_sovereign_url)
 _raw_litellm_key = getattr(_cfg, "litellm_master_key", None) or os.getenv("LITELLM_MASTER_KEY")
 if not _raw_litellm_key:
     raise RuntimeError(

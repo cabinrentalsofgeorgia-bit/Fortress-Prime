@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timezone
 import os
 import re
+from backend.core.config import settings as _depo_cfg
 from typing import AsyncGenerator, List
 from uuid import UUID, uuid4
 
@@ -25,7 +26,10 @@ from backend.services.legal_case_graph import (
 
 logger = logging.getLogger(__name__)
 
-SOVEREIGN_URL = "http://192.168.0.106:8000/v1/chat/completions"
+SOVEREIGN_URL = os.getenv(
+    "NIM_SOVEREIGN_URL",
+    f"{_depo_cfg.nim_sovereign_url.rstrip('/')}/v1/chat/completions",
+)
 SOVEREIGN_MODEL = "meta/llama-3.1-8b-instruct"
 
 SYSTEM_PROMPT = (

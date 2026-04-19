@@ -1,0 +1,40 @@
+[Unit]
+Description=Fortress NIM Sovereign — meta/llama-3.1-8b-instruct on spark-1
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-nim-sovereign.service
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+# NIM startup can take 60-120s on first load; allow 5 minutes
+TimeoutStartSec=300
+
+# NGC_API_KEY required at runtime — deploy via cutover script before starting
+EnvironmentFile=/etc/fortress/nim.env
+
+# Remove any stale container from a previous run
+ExecStartPre=-/usr/bin/docker stop fortress-nim-sovereign
+ExecStartPre=-/usr/bin/docker rm fortress-nim-sovereign
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-nim-sovereign \
+  --rm \
+  --gpus all \
+  --shm-size=16g \
+  -p 8000:8000 \
+  -v /mnt/fortress_nas/nim_cache:/opt/nim/.cache \
+  -e NGC_API_KEY=${NGC_API_KEY} \
+  nvcr.io/nim/meta/llama-3.1-8b-instruct-dgx-spark:latest
+
+ExecStop=/usr/bin/docker stop fortress-nim-sovereign
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nim-sovereign
+
+[Install]
+WantedBy=multi-user.target

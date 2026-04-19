@@ -390,8 +390,46 @@ See `docs/RAG_INGESTION_AUDIT.md` for full write/read site table and rationale.
 Legal collections (`legal_library`, `legal_ediscovery`) stay on spark-2 permanently;
 they are NOT in Phase 5a scope.
 
-### Phase 5b — Node role migration (from v4)
-Move NIM off spark-2. Unchanged from v4.
+### Phase 5b — NIM migration off spark-2 → spark-1 (Docker/systemd)
+
+**Completed (2026-04-19) — awaiting cutover GO signal.**
+
+Architecture:
+- NIM (`meta/llama-3.1-8b-instruct`, DGX Spark variant) migrated from k8s pod on spark-2
+  to Docker/systemd on spark-1, freeing spark-2's GPU for training/distillation.
+- Service: `deploy/systemd/fortress-nim-sovereign.service` — mirrors the `fortress-qdrant-vrs.service` pattern.
+- GPU access via NVIDIA Container Toolkit CDI (`--gpus all`). Verified on spark-1.
+- Cache: `/mnt/fortress_nas/nim_cache` (pre-existing, NIM has run on spark-1 before).
+- NGC credentials: nvcr.io auth in `~/.docker/config.json` ✓; runtime `NGC_API_KEY` from
+  `/etc/fortress/nim.env` (deployed by cutover script from k8s secret `nim-secrets`).
+
+Endpoint config:
+- New setting: `NIM_SOVEREIGN_URL` / `settings.nim_sovereign_url` (default: `http://192.168.0.104:8000`)
+- `legal_council.py`: `_NIM_ENDPOINT` reads `LEGAL_NIM_ENDPOINT` → `settings.nim_sovereign_url`
+- `legal_deposition_engine.py`: `SOVEREIGN_URL` reads `NIM_SOVEREIGN_URL` → `settings.nim_sovereign_url`
+- Rollback env: `NIM_SOVEREIGN_URL=http://10.43.38.88:8000` + restart backend
+
+Cutover sequence (execute after PR merge, awaiting GO):
+  a. Extract NGC_API_KEY from k8s secret, write to spark-1:/etc/fortress/nim.env
+  b. docker pull nvcr.io/nim/meta/llama-3.1-8b-instruct-dgx-spark:latest on spark-1
+  c. Install + enable fortress-nim-sovereign.service (NOT started yet)
+  d. kubectl scale deployment nim-sovereign --replicas=0  ← REQUIRES GO SIGNAL
+  e. systemctl start fortress-nim-sovereign on spark-1
+  f. Wait for health: python3 -m src.ops.verify_nim_health --url http://192.168.0.104:8000
+  g. Set NIM_SOVEREIGN_URL=http://192.168.0.104:8000 in .env, restart fortress-backend
+  h. Verify end-to-end: test legal query routes to spark-1
+
+Rollback (if anything fails after step d):
+  kubectl scale deployment nim-sovereign --replicas=1
+  Set NIM_SOVEREIGN_URL=http://10.43.38.88:8000 in .env, restart fortress-backend
+
+After 24h stable → Phase 5b cleanup PR deletes k8s nim-sovereign deployment entirely.
+
+Node roles post-cutover:
+- spark-1 (192.168.0.104): Fortress Legal + NIM sovereign inference
+- spark-2 (192.168.0.100): Orchestration + backend + control plane (GPU freed for training)
+- spark-3 (192.168.0.105): Vision
+- spark-4 (192.168.0.106): CROG-VRS + Qdrant VRS
 
 ### Phase 6 — Multi-node observability (from v4)
 Extended to surface judge decisions, escalation rates, teacher
