@@ -1,0 +1,31 @@
+[Unit]
+Description=Fortress Prime — Qdrant VRS vector store (spark-4)
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-qdrant-vrs.service
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=10
+
+# Stop and remove any stale container before starting fresh
+ExecStartPre=-/usr/bin/docker stop fortress-qdrant-vrs
+ExecStartPre=-/usr/bin/docker rm fortress-qdrant-vrs
+ExecStart=/usr/bin/docker run \
+  --name fortress-qdrant-vrs \
+  --rm \
+  -p 6333:6333 \
+  -p 6334:6334 \
+  -v /mnt/fortress_nas/qdrant-vrs:/qdrant/storage \
+  qdrant/qdrant:latest
+ExecStop=/usr/bin/docker stop fortress-qdrant-vrs
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-qdrant-vrs
+
+[Install]
+WantedBy=multi-user.target
