@@ -579,6 +579,10 @@ class Settings(BaseSettings):
     # True   → reads target spark-4 fgp_vrs_knowledge
     # Run src/rag/verify_dual_write_parity.py --compare-search before flipping.
     read_from_vrs_store: bool = Field(default=False)
+    # Phase 5b — NIM sovereign inference endpoint (Docker/systemd on spark-1)
+    # Replaces k8s ClusterIP 10.43.38.88:8000 after cutover.
+    # Model: meta/llama-3.1-8b-instruct (DGX Spark variant)
+    nim_sovereign_url: str = Field(default="http://192.168.0.104:8000")
 
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0")

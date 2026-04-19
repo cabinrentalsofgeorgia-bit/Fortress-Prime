@@ -126,7 +126,8 @@ class TestLegalCouncilNIMEndpoint:
     def test_nim_endpoint_constant_exists(self):
         from backend.services.legal_council import _NIM_ENDPOINT
         assert _NIM_ENDPOINT is not None
-        assert "10.43.38.88" in _NIM_ENDPOINT or "LEGAL_NIM_ENDPOINT" in str(_NIM_ENDPOINT)
+        # Phase 5b: default is spark-1 (192.168.0.104:8000), not k8s ClusterIP
+        assert "192.168.0.104" in _NIM_ENDPOINT or "LEGAL_NIM_ENDPOINT" in str(_NIM_ENDPOINT)
 
     def test_nim_endpoint_env_overridable(self, monkeypatch):
         monkeypatch.setenv("LEGAL_NIM_ENDPOINT", "http://192.168.0.104:8000")
