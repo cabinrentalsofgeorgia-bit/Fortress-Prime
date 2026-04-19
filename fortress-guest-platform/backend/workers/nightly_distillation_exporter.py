@@ -199,6 +199,7 @@ async def run_distillation_export(
             FROM   llm_training_captures
             WHERE  status = 'pending'
               AND  (eval_holdout IS NULL OR eval_holdout = FALSE)
+              AND  (capture_metadata->>'training_excluded') IS DISTINCT FROM 'true'
             ORDER  BY created_at ASC
             LIMIT  :lim
         """), {"lim": batch_size})

@@ -139,3 +139,51 @@ def classify_for_capture(
         route=CaptureRoute.ALLOW,
         reason="no_privilege_signal",
     )
+
+
+# ---------------------------------------------------------------------------
+# Training contamination detection
+# ---------------------------------------------------------------------------
+
+# Matches the Feb 2026 concierge ASSESSMENT block separator pattern:
+#   \n---\n\n**ASSESSMENT**
+_ASSESSMENT_BLOCK_RE: re.Pattern = re.compile(
+    r"\n---\n\n\*\*ASSESSMENT\*\*",
+    re.IGNORECASE,
+)
+
+# Individual internal metadata markers from the same prompt era.
+# Checked as a fallback if the full separator pattern is absent.
+_INTERNAL_METADATA_MARKERS: tuple[str, ...] = (
+    "**ASSESSMENT**",
+    "**Risk Level:**",
+    "**Strategy Type:**",
+    "**Citations Used:**",
+)
+
+
+def check_training_contamination(prompt: str, response: str) -> tuple[bool, str]:
+    """
+    Detect internal metadata leaked into a stored LLM response.
+
+    Returns (is_contaminated, reason). Never raises.
+
+    Defense-in-depth against the Feb 2026 vrs_concierge defect: the system
+    prompt asked the model to produce a guest-facing response followed by a
+    '---' separator and an internal **ASSESSMENT** block (Risk Level /
+    Strategy Type / Citations Used). The prompt was fixed in Iron Dome
+    (2026-03-01). This check catches recurrence or similar patterns.
+
+    The `prompt` argument is accepted for API symmetry with classify_for_capture
+    but is not currently inspected — contamination lives in the response.
+    """
+    try:
+        if _ASSESSMENT_BLOCK_RE.search(response):
+            return True, "assessment_block_separator"
+        for marker in _INTERNAL_METADATA_MARKERS:
+            if marker in response:
+                tag = marker.strip("*").strip().lower().replace(" ", "_").rstrip(":")
+                return True, f"internal_metadata_marker:{tag}"
+    except Exception:
+        pass
+    return False, ""
