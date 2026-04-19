@@ -16,6 +16,7 @@ pgvector
 python-dotenv
 requests
 sqlalchemy
+alembic
 psutil
 arq
 redis
