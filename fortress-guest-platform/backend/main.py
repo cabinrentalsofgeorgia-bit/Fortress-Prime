@@ -3,8 +3,10 @@ Fortress Guest Platform - Main FastAPI Application
 Enterprise guest communication system
 """
 import asyncio
+import logging
 import os
 import secrets
+import sys
 import time
 import uuid
 import traceback
@@ -127,6 +129,27 @@ from backend.api import storefront_checkout as storefront_checkout_api
 from backend.api import trust_ledger_command_center as trust_ledger_command_center_api
 from backend.api import shadow_router as shadow_router_api
 from backend.core.tenant import TenantMiddleware
+
+# ---------------------------------------------------------------------------
+# Root logger — must be configured before structlog so that stdlib-backed
+# structlog loggers (LoggerFactory) have a handler to write to.  Without
+# this, every logger.info() call is silently discarded by Python's
+# lastResort handler (WARNING-only, no formatter, no journald output).
+#
+# force=True overrides any implicit basicConfig that libraries may have
+# called before us (e.g. uvicorn's own startup).  Uvicorn's named loggers
+# (uvicorn, uvicorn.access, uvicorn.error) have their own handlers and are
+# unaffected — they propagate=False so they never reach the root handler.
+# ---------------------------------------------------------------------------
+_log_level_name: str = getattr(settings, "log_level", "INFO") or "INFO"
+logging.basicConfig(
+    level=getattr(logging, _log_level_name, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+    stream=sys.stderr,
+    force=True,
+)
+logging.getLogger(__name__).info("Logging initialized at level %s", _log_level_name)
 
 # Configure structured logging
 structlog.configure(

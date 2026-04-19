@@ -37,9 +37,24 @@ ALLOWED_POSTGRES_PORT = 5432
 ALLOWED_POSTGRES_SCHEMES = frozenset({"postgres", "postgresql", "postgresql+asyncpg"})
 
 
+_VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
+
+
 class Settings(BaseSettings):
     environment: str = Field(default="development")
     debug: bool = Field(default=False)
+    log_level: str = Field(
+        default="INFO",
+        alias="LOG_LEVEL",
+        description="Python root logger level. One of DEBUG/INFO/WARNING/ERROR/CRITICAL.",
+    )
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def _normalise_log_level(cls, v: str) -> str:
+        upper = (v or "INFO").strip().upper()
+        return upper if upper in _VALID_LOG_LEVELS else "INFO"
+
     db_auto_create_tables: bool = Field(
         default=False,
         alias="DB_AUTO_CREATE_TABLES",
