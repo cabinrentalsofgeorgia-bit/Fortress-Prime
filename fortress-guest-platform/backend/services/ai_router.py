@@ -86,7 +86,11 @@ async def _capture_interaction(
         import uuid as _uuid
         from sqlalchemy import text
         from backend.core.database import AsyncSessionLocal
-        from backend.services.privilege_filter import classify_for_capture, CaptureRoute
+        from backend.services.privilege_filter import (
+            classify_for_capture,
+            check_training_contamination,
+            CaptureRoute,
+        )
 
         decision = classify_for_capture(
             prompt=prompt,
@@ -98,6 +102,14 @@ async def _capture_interaction(
             _capture_log.info("distillation_capture_blocked reason=%s module=%s",
                               decision.reason, source_module)
             return
+
+        contaminated, contamination_reason = check_training_contamination(prompt, response)
+        if contaminated:
+            _capture_log.warning(
+                "training_contamination_detected reason=%s module=%s — "
+                "capture will be written with training_excluded=true",
+                contamination_reason, source_module,
+            )
 
         async def _insert() -> None:
             async with AsyncSessionLocal() as session:
@@ -113,6 +125,13 @@ async def _capture_interaction(
                     "judge_rsn":   judge_reasoning,
                 }
                 _capture_id = str(_uuid.uuid4())
+                _capture_meta = (
+                    json.dumps({
+                        "training_excluded": True,
+                        "exclusion_reason": contamination_reason,
+                    })
+                    if contaminated else None
+                )
                 if decision.route == CaptureRoute.ALLOW:
                     await session.execute(text("""
                         INSERT INTO llm_training_captures
@@ -120,16 +139,19 @@ async def _capture_interaction(
                              served_by_endpoint, served_vector_store,
                              escalated_from, sovereign_attempt,
                              teacher_endpoint, teacher_model,
-                             task_type, judge_decision, judge_reasoning)
+                             task_type, judge_decision, judge_reasoning,
+                             capture_metadata)
                         VALUES
                             (:id::uuid, :module, :model, :prompt, :response, 'pending',
                              :endpoint, :store,
                              :esc_from, :sov_attempt,
                              :t_endpoint, :t_model,
-                             :task, :judge_dec, :judge_rsn)
+                             :task, :judge_dec, :judge_rsn,
+                             CAST(:capture_meta AS jsonb))
                         ON CONFLICT DO NOTHING
                     """), {"id": _capture_id, "module": source_module[:120], "model": model_label[:120],
                            "prompt": prompt[:32_000], "response": response[:32_000],
+                           "capture_meta": _capture_meta,
                            **_tag})
                 else:  # RESTRICTED
                     await session.execute(text("""
