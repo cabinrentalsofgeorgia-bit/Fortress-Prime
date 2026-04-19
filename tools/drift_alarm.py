@@ -63,6 +63,7 @@ ALERT_MD          = Path(os.getenv("ALERT_MD",
 UNTRACKED_WARN    = int(os.getenv("UNTRACKED_WARN",        "10"))
 UNTRACKED_ALERT   = int(os.getenv("UNTRACKED_ALERT",       "50"))
 STALE_HOURS       = int(os.getenv("MODIFIED_STALE_HOURS",  "48"))
+PARITY_ALARM_DIR  = Path(os.getenv("PARITY_ALARM_DIR",    "/mnt/fortress_nas/parity-alarm"))
 
 _DRIFT_LOG_FALLBACK         = Path.home() / "fortress-drift.log"
 _DRIFT_LOG_WARNED_SENTINEL  = Path.home() / ".fortress_drift_perm_warned"
@@ -156,6 +157,16 @@ def check_secrets() -> list[str]:
     return hits
 
 
+def check_parity_alarms() -> list[Path]:
+    """Return list of unacknowledged parity alarm files in PARITY_ALARM_DIR."""
+    try:
+        if not PARITY_ALARM_DIR.exists():
+            return []
+        return sorted(PARITY_ALARM_DIR.glob("alarm-*.error"))
+    except OSError:
+        return []
+
+
 def check_modified() -> tuple[int, list[str]]:
     """Return (count, stale_files) where stale = modified >STALE_HOURS ago."""
     result = subprocess.run(
@@ -241,19 +252,27 @@ def run(dry_run: bool, why: bool = False) -> int:
     untracked_count, untracked_level = check_untracked()
     secret_hits                       = check_secrets()
     modified_count, stale_files       = check_modified()
+    parity_alarm_files                = check_parity_alarms()
+
+    if parity_alarm_files:
+        log.warning(
+            "parity_alarm_detected count=%d files=%s",
+            len(parity_alarm_files),
+            [f.name for f in parity_alarm_files[:5]],
+        )
 
     # --- Determine overall level ---
     level = ""
     if secret_hits or untracked_level == "ALERT":
         level = "ALERT"
-    elif untracked_level == "WARN" or stale_files:
+    elif untracked_level == "WARN" or stale_files or parity_alarm_files:
         level = "WARN"
 
     # --- Log summary ---
     summary = (
         f"[{level or 'OK'}] untracked={untracked_count} "
         f"secrets={len(secret_hits)} modified={modified_count} "
-        f"stale={len(stale_files)}"
+        f"stale={len(stale_files)} parity_alarms={len(parity_alarm_files)}"
     )
     _append_log(summary)
     log.info(summary)
@@ -291,6 +310,17 @@ def run(dry_run: bool, why: bool = False) -> int:
     ]
     for s in stale_files[:20]:
         lines.append(f"  - {s}")
+
+    lines += [
+        f"",
+        f"## Check 5: Qdrant dual-write parity alarms",
+        f"Count: {len(parity_alarm_files)}",
+        f"Dir: {PARITY_ALARM_DIR}",
+    ]
+    for f in parity_alarm_files[:5]:
+        lines.append(f"  - {f.name}")
+    if len(parity_alarm_files) > 5:
+        lines.append(f"  ... and {len(parity_alarm_files)-5} more")
 
     report = "\n".join(lines) + "\n"
     log.warning("Drift detected — level=%s", level)

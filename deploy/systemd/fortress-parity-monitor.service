@@ -1,0 +1,29 @@
+[Unit]
+Description=Fortress Prime — Qdrant dual-write parity monitor (Phase 5a Part 4 soak)
+Documentation=file:///home/admin/Fortress-Prime/src/rag/verify_dual_write_parity.py
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+
+ExecStart=/bin/bash -c '\
+  set -a; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env 2>/dev/null; \
+  source /home/admin/Fortress-Prime/fortress-guest-platform/.env.dgx 2>/dev/null; \
+  source /home/admin/Fortress-Prime/.env.security 2>/dev/null; \
+  set +a; \
+  exec /home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/python \
+    -m src.rag.verify_dual_write_parity --monitor'
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-parity-monitor
+
+# Allow writing alarm files — alarm dir is on NAS, no special permission needed
+# Log writes to /var/log/fortress-parity.log (falls back to ~/fortress-parity.log)
+
+[Install]
+WantedBy=multi-user.target
