@@ -7,7 +7,7 @@ After=network-online.target
 Type=oneshot
 User=admin
 Group=admin
-WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+WorkingDirectory=/home/admin/Fortress-Prime
 
 ExecStart=/bin/bash -c '\
   set -a; \
