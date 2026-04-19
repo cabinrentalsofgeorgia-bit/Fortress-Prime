@@ -71,10 +71,15 @@ _load_env_file(PROJECT_ROOT / ".env.security")
 
 import uvicorn
 
-if __name__ == "__main__":
+
+def _serve() -> None:
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=int(os.getenv("PORT", "8000")),
         log_level="info",
     )
+
+
+if __name__ == "__main__":
+    _serve()
