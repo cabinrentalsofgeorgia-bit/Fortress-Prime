@@ -320,7 +320,29 @@ PLUS captures where judge_decision = escalate on legal tasks (with
 matter-level redaction). Ships after legal_reasoning_judge is mature.
 
 ### Phase 5a — RAG architecture migration (from v4)
-Build domain-isolated stores. Unchanged from v4.
+
+**Part 1 — spark-4 VRS Qdrant LIVE (2026-04-19)**
+- Qdrant `latest` running on spark-4 (192.168.0.106:6333) via Docker
+- Data volume: `/mnt/fortress_nas/qdrant-vrs/` (NAS-backed)
+- systemd unit: `fortress-qdrant-vrs.service` (enabled, starts on boot)
+- Collection `fgp_vrs_knowledge` created: 768d Cosine, 4 payload indexes
+  (`source_table`, `record_id`, `property_id`, `category`) — empty, migration deferred
+- Smoke test passed: write → read → delete round-trip from both spark-4 and spark-2
+- Full ingestion audit: `docs/RAG_INGESTION_AUDIT.md`
+
+**Part 2 — Dual-write (NEXT)**: add `QDRANT_VRS_URL` env var; `VectorizerWorker`
+and `sync_knowledge_base_to_qdrant` write to both spark-2 and spark-4 simultaneously.
+
+**Part 3 — Read cutover (LATER)**: after spark-4 data matches spark-2 (168 points +
+ongoing delta), flip `QDRANT_URL` → spark-4 and `QDRANT_COLLECTION_NAME` → `fgp_vrs_knowledge`.
+Remove dual-write code.
+
+Recommendation: Option A (dual-write) — not Option B (hard cutover) because
+`_qdrant_search` is called on every guest concierge interaction (zero downtime tolerance).
+See `docs/RAG_INGESTION_AUDIT.md` for full write/read site table and rationale.
+
+Legal collections (`legal_library`, `legal_ediscovery`) stay on spark-2 permanently;
+they are NOT in Phase 5a scope.
 
 ### Phase 5b — Node role migration (from v4)
 Move NIM off spark-2. Unchanged from v4.
