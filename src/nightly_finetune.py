@@ -2,44 +2,55 @@
 """
 Fortress Prime — Nightly Fine-Tuning Job
 ==========================================
-Distils frontier-model interactions captured in distillation_queue into
-the local Llama-3.3-70B model via QLoRA (LoRA + 4-bit NF4 quantization).
+Distils frontier-model interactions captured in llm_training_captures into
+Qwen2.5-7B-Instruct via QLoRA (LoRA + 4-bit NF4 quantization).
+
+Phase 4 retarget (2026-04-19): switched from Llama-3.3-70B-Instruct-FP4 to
+Qwen2.5-7B-Instruct. Rationale: ai_router production inference runs on
+qwen2.5:7b (via NIM/vLLM); training the same architecture closes the
+train/serve gap. Llama-3.3 was never served to production and the 70B QLoRA
+required stopping NIM (~60 GB GPU). 7B QLoRA peaks at ~15 GB, comfortably
+fits alongside NIM on the GB10 unified memory, so NIM stop is optional.
 
 Execution order
 ---------------
-1. Export today's data from distillation_queue → JSONL  (calls backend worker)
+1. Export today's data from llm_training_captures → JSONL  (calls backend worker)
 2. Load all JSONL from the rolling 30-day window
 3. Validate: skip run if < MIN_EXAMPLES examples
-4. Stop vllm-70b-captain Docker container (free ~60 GB)
-5. QLoRA fine-tune Llama-3.3-70B-Instruct
-6. Save LoRA adapter to NAS
+4. Optionally stop NIM (NIGHTLY_FINETUNE_STOP_NIM; default false for 7B)
+5. QLoRA fine-tune Qwen2.5-7B-Instruct
+6. Save LoRA adapter to NAS as qwen2.5-7b-crog-vrs-<date>/
 7. Optionally merge + push to Ollama
-8. Restart vllm-70b-captain
+8. Restart NIM if it was stopped
 
 Usage
 -----
     python3 /home/admin/Fortress-Prime/src/nightly_finetune.py [--dry-run] [--skip-export]
 
 Environment variables (loaded from .env / .env.dgx by run-fortress-nightly-finetune.sh)
-    INTERACTION_LOG_DIR     default: /mnt/ai_bulk/training_logs
-    FINETUNE_BASE_MODEL_DIR default: /mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct-FP4
-    FINETUNE_ADAPTER_DIR    default: /mnt/fortress_nas/finetune-artifacts
-    FINETUNE_ROLLING_DAYS   default: 30
-    FINETUNE_MIN_EXAMPLES   default: 20
-    FINETUNE_LORA_RANK      default: 16
-    FINETUNE_BATCH_SIZE     default: 1
-    FINETUNE_GRAD_ACCUM     default: 8
-    FINETUNE_MAX_SEQ_LEN    default: 4096
-    FINETUNE_EPOCHS         default: 1
-    FINETUNE_LR             default: 2e-4
-    FINETUNE_PUSH_OLLAMA    default: false
-    VLLM_DEPLOYMENT         default: nim-sovereign (k8s deployment name)
-    VLLM_NAMESPACE          default: default
-    VLLM_HEALTH_URL         default: http://10.43.38.88:8000/v1/models (ClusterIP)
+    INTERACTION_LOG_DIR           default: /mnt/ai_bulk/training_logs
+    FINETUNE_BASE_MODEL_DIR       default: resolved via base_model_locator ("qwen2.5:7b")
+                                  Override only for testing; locator checks NAS first.
+    FINETUNE_ADAPTER_DIR          default: /mnt/fortress_nas/finetune-artifacts
+    FINETUNE_ROLLING_DAYS         default: 30
+    FINETUNE_MIN_EXAMPLES         default: 20 (env.dgx sets 13 as MVP floor)
+    FINETUNE_LORA_RANK            default: 16
+    FINETUNE_BATCH_SIZE           default: 1
+    FINETUNE_GRAD_ACCUM           default: 8
+    FINETUNE_MAX_SEQ_LEN          default: 4096
+    FINETUNE_EPOCHS               default: 1
+    FINETUNE_LR                   default: 2e-4
+    FINETUNE_PUSH_OLLAMA          default: false
+    NIGHTLY_FINETUNE_STOP_NIM     default: false — 7B QLoRA (~15 GB peak) fits alongside
+                                  NIM (~60 GB) on the GB10 (120 GB unified). Set true to
+                                  stop NIM before training for extra headroom or 70B runs.
+    VLLM_DEPLOYMENT               default: nim-sovereign (k8s deployment name)
+    VLLM_NAMESPACE                default: default
+    VLLM_HEALTH_URL               default: http://10.43.38.88:8000/v1/models (ClusterIP)
     VLLM_STOP_TIMEOUT             default: 120  (seconds to wait for pod to terminate)
     VLLM_START_TIMEOUT            default: 300  (seconds for NIM model load + health)
     NIM_TERMINATION_DWELL_SECONDS default: 30   (fixed sleep after pod gone on unified-memory GPUs)
-    DATABASE_URL            required for exporter
+    DATABASE_URL                  required for exporter
 """
 from __future__ import annotations
 
@@ -52,6 +63,8 @@ import sys
 import time
 from datetime import date, timedelta
 from pathlib import Path
+
+from judge.base_model_locator import find_base_model
 
 # ---------------------------------------------------------------------------
 # Logging (structlog-style JSON to stdout so journald picks it up cleanly)
@@ -67,7 +80,6 @@ log = logging.getLogger("finetune")
 # Config
 # ---------------------------------------------------------------------------
 INTERACTION_LOG_DIR  = Path(os.getenv("INTERACTION_LOG_DIR",  "/mnt/ai_bulk/training_logs"))
-BASE_MODEL_DIR       = Path(os.getenv("FINETUNE_BASE_MODEL_DIR", "/mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct-FP4"))
 ADAPTER_DIR          = Path(os.getenv("FINETUNE_ADAPTER_DIR", "/mnt/fortress_nas/finetune-artifacts"))
 ROLLING_DAYS         = int(os.getenv("FINETUNE_ROLLING_DAYS",  "30"))
 MIN_EXAMPLES         = int(os.getenv("FINETUNE_MIN_EXAMPLES",  "20"))
@@ -78,6 +90,7 @@ MAX_SEQ_LEN          = int(os.getenv("FINETUNE_MAX_SEQ_LEN",   "4096"))
 NUM_EPOCHS           = int(os.getenv("FINETUNE_EPOCHS",        "1"))
 LEARNING_RATE        = float(os.getenv("FINETUNE_LR",          "2e-4"))
 PUSH_OLLAMA          = os.getenv("FINETUNE_PUSH_OLLAMA",       "false").lower() == "true"
+STOP_NIM_FOR_TRAINING = os.getenv("NIGHTLY_FINETUNE_STOP_NIM", "false").lower() == "true"
 VLLM_DEPLOYMENT              = os.getenv("VLLM_DEPLOYMENT",            "nim-sovereign")
 VLLM_NAMESPACE               = os.getenv("VLLM_NAMESPACE",             "default")
 VLLM_HEALTH_URL              = os.getenv("VLLM_HEALTH_URL",            "http://10.43.38.88:8000/v1/models")
@@ -89,7 +102,17 @@ MIN_DATE             = date.fromisoformat(os.getenv("FINETUNE_MIN_DATE", "2026-0
 HOLDOUT_DIR          = Path(os.getenv("HOLDOUT_DIR",
                          "/mnt/fortress_nas/finetune-artifacts/holdouts"))
 
-# LoRA target modules for Llama architecture
+# Base model: resolved via base_model_locator at module load.
+# FINETUNE_BASE_MODEL_DIR env override bypasses locator (for testing/CI).
+# None if qwen2.5:7b is not staged on NAS — main() will abort with a clear message.
+_base_model_env = os.getenv("FINETUNE_BASE_MODEL_DIR")
+BASE_MODEL_DIR: "Path | None" = (
+    Path(_base_model_env) if _base_model_env
+    else find_base_model("qwen2.5:7b")
+)
+
+# LoRA target modules — same for Qwen2.5 and Llama architectures.
+# Qwen2.5-7B uses identical projection names: q/k/v/o_proj, gate/up/down_proj.
 LORA_TARGET_MODULES = [
     "q_proj", "k_proj", "v_proj", "o_proj",
     "gate_proj", "up_proj", "down_proj",
@@ -569,7 +592,7 @@ def _run_eval_pipeline(adapter_out: Path) -> None:
 # Step 4: Ollama hot-swap (optional)
 # ---------------------------------------------------------------------------
 def push_to_ollama(adapter_path: Path) -> None:
-    """Merge LoRA adapter + create an Ollama model named crog-llama-70b."""
+    """Merge LoRA adapter + create an Ollama model named crog-qwen-7b-vrs."""
     import torch
     from peft import AutoPeftModelForCausalLM
     from transformers import AutoTokenizer
@@ -598,13 +621,13 @@ def push_to_ollama(adapter_path: Path) -> None:
         'SYSTEM "You are CROG-AI, a sovereign AI assistant for Cabin Rentals of Georgia. You have been fine-tuned on real operational data from legal, booking, and market intelligence domains."\n'
     )
 
-    log.info("Creating Ollama model crog-llama-70b …")
+    log.info("Creating Ollama model crog-qwen-7b-vrs …")
     subprocess.run(
-        ["ollama", "create", "crog-llama-70b", "-f", str(modelfile)],
+        ["ollama", "create", "crog-qwen-7b-vrs", "-f", str(modelfile)],
         check=True,
         timeout=600,
     )
-    log.info("Ollama model crog-llama-70b created.")
+    log.info("Ollama model crog-qwen-7b-vrs created.")
 
 
 # ---------------------------------------------------------------------------
@@ -617,7 +640,18 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
     log.info("=" * 60)
 
     today_tag = date.today().isoformat()
-    adapter_out = ADAPTER_DIR / f"llama-3.3-70b-crog-{today_tag}"
+    adapter_out = ADAPTER_DIR / f"qwen2.5-7b-crog-vrs-{today_tag}"
+
+    # --- Resolve base model path (abort early if not staged) ---
+    if BASE_MODEL_DIR is None:
+        log.error(
+            "qwen2.5:7b base weights not found on NAS or local cache. "
+            "Stage with: huggingface-cli download Qwen/Qwen2.5-7B-Instruct "
+            "--local-dir /mnt/fortress_nas/models/Qwen2.5-7B-Instruct "
+            "--local-dir-use-symlinks False"
+        )
+        return 1
+    log.info("Base model resolved: %s", BASE_MODEL_DIR)
 
     # --- Step 1: Export ---
     if not skip_export:
@@ -640,8 +674,8 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
     # the rolling dataset is below the production threshold.
     if dry_run:
         log.info(
-            "[DRY RUN] base_model=%s output=%s examples=%d min_required=%d. Exiting without training.",
-            BASE_MODEL_DIR.name, adapter_out, len(records), MIN_EXAMPLES,
+            "[DRY RUN] base_model=%s output=%s examples=%d min_required=%d stop_nim=%s. Exiting without training.",
+            BASE_MODEL_DIR.name, adapter_out, len(records), MIN_EXAMPLES, STOP_NIM_FOR_TRAINING,
         )
         return 0
 
@@ -655,18 +689,26 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
     # --- Step 3: Install deps ---
     _ensure_training_deps()
 
-    # --- Step 4: Stop vLLM to free GPU memory ---
+    # --- Step 4: Optionally stop NIM ---
+    # For qwen2.5:7b QLoRA (~15 GB peak), NIM (~60 GB) fits alongside on the
+    # GB10 (120 GB unified memory). STOP_NIM_FOR_TRAINING defaults to false.
+    # Set NIGHTLY_FINETUNE_STOP_NIM=true for 70B targets or tight memory budgets.
     vllm_was_running = False
-    try:
-        vllm_was_running = _stop_vllm()
-    except RuntimeError as exc:
-        # GPU not freed — abort cleanly rather than OOM during training
-        log.error("Cannot free GPU memory for training: %s", exc)
-        adapter_out.mkdir(parents=True, exist_ok=True)
-        (adapter_out / "training.error").write_text(
-            f"vLLM stop failed — training aborted to avoid OOM.\n{exc}"
+    if STOP_NIM_FOR_TRAINING:
+        try:
+            vllm_was_running = _stop_vllm()
+        except RuntimeError as exc:
+            log.error("Cannot free GPU memory for training: %s", exc)
+            adapter_out.mkdir(parents=True, exist_ok=True)
+            (adapter_out / "training.error").write_text(
+                f"vLLM stop failed — training aborted to avoid OOM.\n{exc}"
+            )
+            return 1
+    else:
+        log.info(
+            "NIGHTLY_FINETUNE_STOP_NIM=false — NIM left running "
+            "(7B QLoRA fits in remaining unified memory)"
         )
-        return 1
 
     exit_code = 0
     try:

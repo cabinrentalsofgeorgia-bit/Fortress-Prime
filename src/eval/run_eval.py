@@ -33,8 +33,16 @@ logging.basicConfig(
 )
 log = logging.getLogger("run_eval")
 
-BASE_MODEL_DIR = Path(os.getenv("FINETUNE_BASE_MODEL_DIR",
-                    "/mnt/ai_bulk/models/huggingface/Llama-3.3-70B-Instruct-FP4"))
+_eval_base_env = os.getenv("FINETUNE_BASE_MODEL_DIR")
+if not _eval_base_env:
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from judge.base_model_locator import find_base_model as _find_base_model
+        _found = _find_base_model("qwen2.5:7b")
+        _eval_base_env = str(_found) if _found else "/mnt/fortress_nas/models/Qwen2.5-7B-Instruct"
+    except Exception:
+        _eval_base_env = "/mnt/fortress_nas/models/Qwen2.5-7B-Instruct"
+BASE_MODEL_DIR = Path(_eval_base_env)
 EMBEDDING_MODEL = os.getenv("EVAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 MAX_NEW_TOKENS  = int(os.getenv("EVAL_MAX_NEW_TOKENS", "512"))
 

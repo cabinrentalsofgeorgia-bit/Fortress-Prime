@@ -298,10 +298,21 @@ One per primary task type, sequenced by data volume and strategic
 value. Legal reasoning judge ships early despite lower volume because
 its value per correct decision is highest.
 
-### Phase 4a — CROG-VRS distillation (NEW)
-qwen2.5:7b → qwen2.5:7b-crog-vrs. Training data comes from captures
-where judge_decision = escalate (high-signal training pairs). Ships
-after vrs_concierge_judge accumulates a few weeks of labels.
+### Phase 4a — CROG-VRS distillation (ACTIVE — trainer retargeted 2026-04-19)
+qwen2.5:7b → qwen2.5:7b-crog-vrs. Nightly fine-tune pipeline
+(`src/nightly_finetune.py`) now targets Qwen2.5-7B-Instruct staged at
+`/mnt/fortress_nas/models/Qwen2.5-7B-Instruct` (PR #70).
+
+**Retarget rationale:** ai_router production inference runs on `qwen2.5:7b`
+via NIM/vLLM. Training the same architecture closes the train/serve gap.
+The previous Llama-3.3-70B-Instruct-FP4 target was never served to production
+and required stopping NIM to free ~60 GB for training. Qwen2.5-7B QLoRA
+peaks at ~15 GB, fits alongside NIM on the GB10 (120 GB unified memory)
+without disruption. `NIGHTLY_FINETUNE_STOP_NIM` now defaults to `false`.
+
+Adapter artifacts: `qwen2.5-7b-crog-vrs-<date>/` on NAS.
+Previous Llama-3.3 adapter stubs (`llama-3.3-70b-crog-*`) are pipeline
+development exercises and can be ignored — they contain only error files.
 
 ### Phase 4d — Fortress Legal distillation (NEW, later)
 qwen2.5:32b → qwen2.5:32b-fortress-legal. Uses public legal corpus
