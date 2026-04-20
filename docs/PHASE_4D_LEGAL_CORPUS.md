@@ -76,22 +76,51 @@ All corpus data lives on NAS only — not in the repo.
 
 ---
 
-## Part 2 — Training Pair Preparation (NEXT)
+## Part 2 — Training Pair Preparation (THIS PHASE)
 
-Convert filtered corpus → instruction-tuning pairs for LoRA fine-tuning.
+Hybrid extraction: rule-based Patterns A-D (bulk) + Godhead Pattern E (high-value cases).
 
-Stub: `src/legal/training_prep.py` — see docstring for full design.
+### Actual results (2026-04-19)
 
-**Pair types planned:**
-1. Legal reasoning: `{facts}` → `{court's coverage analysis}`
-2. Bad faith analysis: `{claims handling facts}` → `{O.C.G.A. § 33-4-6 analysis}`
-3. Statutory interpretation: `{section query}` → `{text + relevant cases}`
-4. Coverage denial: `{policy language + facts}` → `{denial analysis}`
+| Source | Pairs | Notes |
+|--------|-------|-------|
+| Pattern A (case analysis) | 1,021 | Facts → holding |
+| Pattern B (issue spotting) | 71 | Section headers → issues list |
+| Pattern C (citation lookup) | 32 | Citation context pairs (no filter — structural) |
+| Pattern D (precedent outcome) | 1,013 | Insurance fact pattern → outcome |
+| **Scripted total** | **2,137** | In `scripted.jsonl` |
+| Pattern E (Godhead) | ~750 target | 150 cases × 5 pairs, est. $2.40 |
 
-**Output:** `/mnt/fortress_nas/finetune-artifacts/legal-corpus-v1/`
-- `train.jsonl` (80%)
-- `holdout.jsonl` (20%)
-- `manifest.json` (provenance, split details)
+**Filter applied to A/B/D:** shared `_INSURANCE_KEYWORDS` constant (16 terms) against full `plain_text`. Removed 37 false-positive opinions (attorney discipline, child welfare, estate cases) that leaked through the CourtListener search.
+
+### Running
+
+```bash
+python -m src.legal.training_pairs_scripted              # Patterns A-D
+python -m src.legal.training_pairs_godhead --dry-run     # Preview, no API cost
+python -m src.legal.training_pairs_godhead --limit 150   # Run Pattern E (~$2.40)
+python -m src.legal.training_pairs_consolidate           # Merge + 80/10/10 split
+python -m src.legal.training_pairs_sample 20             # Quality review sample
+```
+
+### Quality notes
+
+Patterns A, B, D all use the shared `_INSURANCE_KEYWORDS` filter against full opinion text.
+37 of 1,067 opinions with text were rejected (attorney discipline, child welfare, estate cases).
+Pattern C is structural (citation extraction) — no content filter needed.
+Manual review via `training_pairs_sample` recommended before Part 3 training.
+
+### Output files (NAS)
+
+```
+/mnt/fortress_nas/legal-corpus/training-pairs/
+├── scripted.jsonl     2,137 pairs (Patterns A-D, after keyword filter)
+├── godhead.jsonl      ~750 pairs (Pattern E, after Godhead run)
+├── combined.jsonl     merged + deduped
+├── train.jsonl        80%
+├── val.jsonl          10%
+└── holdout.jsonl      10%
+```
 
 ---
 
