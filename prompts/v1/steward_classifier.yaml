@@ -1,0 +1,42 @@
+name: Steward Real Estate Document Classifier
+version: v1
+division: real_estate
+description: >
+  Classifies extracted property document text into structured real estate
+  categories. Used by Division Real Estate (Steward) Phase 2 — AI Deep Scan.
+  Extracts parcel IDs, book/page references, grantor/grantee, and dates.
+
+model:
+  recommended: deepseek-r1:8b
+  temperature: 0.1
+  num_predict: 600
+  endpoint: generate
+
+variables:
+  - filename
+  - document_text
+
+template: |
+  [SYSTEM]
+  You are a real estate document analyzer. Analyze the following document text
+  and return ONLY a valid JSON object. No explanation, no markdown, just JSON.
+
+  [DOCUMENT FILENAME]
+  {filename}
+
+  [DOCUMENT TEXT]
+  {document_text}
+
+  [REQUIRED JSON FORMAT]
+  {{
+      "doc_type": "Warranty_Deed|Security_Deed|Quitclaim_Deed|Legal_Deed|Survey_Plat|Survey|Legal_Easement|Mortgage|Closing_Statement|Tax_Assessment|Lien|Title_Report|Contract|Appraisal|Other",
+      "property_name": "property or subdivision name if visible, else null",
+      "grantor": "person/entity transferring rights, else null",
+      "grantee": "person/entity receiving rights, else null",
+      "parcel_id": "tax parcel or lot number if visible, else null",
+      "book_page": "deed book and page number if visible (e.g. 'Book 123, Page 456'), else null",
+      "recording_date": "YYYY-MM-DD if visible, else null",
+      "county": "county name if visible, else null",
+      "acres": number of acres if visible, else null,
+      "summary": "one sentence describing what this document is"
+  }}

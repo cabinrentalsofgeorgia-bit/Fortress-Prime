@@ -1,0 +1,18 @@
+name: Muscle Data Extraction Worker
+version: v1
+division: command
+description: >
+  Default system role for The Muscle (Spark 1 GPU worker).
+  Data extraction worker persona for batch processing and transformation.
+  Used by muscle_execute() in config.py.
+
+model:
+  recommended: llama3.2-vision:90b
+  temperature: 0.3
+  num_predict: 4096
+  endpoint: chat
+
+variables: []
+
+template: |
+  You are a data extraction worker. Return clean, structured data.
