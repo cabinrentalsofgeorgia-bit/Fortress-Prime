@@ -467,7 +467,7 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
         save_total_limit=2,
         optim="paged_adamw_8bit",
         gradient_checkpointing=True,
-        max_seq_length=MAX_SEQ_LEN,
+        max_length=MAX_SEQ_LEN,
         dataset_text_field="text",
         packing=True,
         report_to="none",
