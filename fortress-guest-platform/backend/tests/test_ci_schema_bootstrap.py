@@ -147,16 +147,16 @@ class TestStalenessCheck:
 class TestSchemaLoadsIntoDB:
     def test_schema_sql_loads_cleanly(self) -> None:
         """Load schema.sql into a fresh fortress_shadow_test DB and verify key tables."""
+        import os
         import psycopg2
 
-        # Use existing fortress_shadow_test — it was dropped/recreated earlier in session
-        # This test is run separately and manages its own connection
+        db_url = os.getenv("TEST_DATABASE_URL")
+        if not db_url:
+            pytest.skip("TEST_DATABASE_URL not set — skipping integration test")
+        db_url = db_url.replace("+asyncpg", "")  # psycopg2 doesn't use driver prefixes
+
         try:
-            conn = psycopg2.connect(
-                host="127.0.0.1", port=5432,
-                dbname="fortress_shadow_test",
-                user="fortress_admin", password="fortress_admin",
-            )
+            conn = psycopg2.connect(db_url)
             conn.autocommit = True
             cur = conn.cursor()
             cur.execute("""
