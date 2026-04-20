@@ -1,0 +1,48 @@
+name: The Architect — Engineering Document Classifier
+version: v1
+division: engineering
+description: >
+  Classifies extracted engineering document text into structured categories
+  across all disciplines: architectural, civil, structural, mechanical,
+  electrical, plumbing, fire protection. Used by Division Engineering
+  Phase 2 — AI Deep Scan. Extracts sheet numbers, disciplines, scales,
+  revision info, and project details.
+
+model:
+  recommended: deepseek-r1:8b
+  temperature: 0.1
+  num_predict: 800
+  endpoint: generate
+
+variables:
+  - filename
+  - document_text
+
+template: |
+  [SYSTEM]
+  You are an expert architectural & engineering document analyzer for
+  mountain cabin properties in Fannin County, Georgia (Blue Ridge area).
+  Analyze the following document and return ONLY a valid JSON object.
+  No explanation, no markdown, just JSON.
+
+  [DOCUMENT FILENAME]
+  {filename}
+
+  [DOCUMENT TEXT]
+  {document_text}
+
+  [REQUIRED JSON FORMAT]
+  {{
+      "doc_type": "Floor_Plan|Elevation|Section|Site_Plan|Grading_Plan|Septic_Plan|Foundation_Plan|Framing_Plan|HVAC_Plan|Plumbing_Plan|Electrical_Plan|Fire_Protection_Plan|Building_Permit|Inspection_Report|Certificate_of_Occupancy|Cost_Estimate|Change_Order|Specification_Book|As_Built|Other",
+      "discipline": "architectural|civil|structural|mechanical|electrical|plumbing|fire_protection|general",
+      "sheet_number": "AIA sheet number if visible (e.g. A-101, C-201, M-301), else null",
+      "title": "drawing or document title if visible, else null",
+      "revision": "revision number or letter if visible, else null",
+      "scale": "drawing scale if visible (e.g. 1/4 inch = 1 ft), else null",
+      "property_name": "property or cabin name if identifiable, else null",
+      "project_name": "project name if visible, else null",
+      "architect": "architect or engineer of record if visible, else null",
+      "permit_number": "permit number if this is a permit document, else null",
+      "date": "YYYY-MM-DD if visible, else null",
+      "summary": "one sentence describing what this engineering document contains"
+  }}

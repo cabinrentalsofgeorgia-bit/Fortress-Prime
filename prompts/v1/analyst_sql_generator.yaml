@@ -1,0 +1,33 @@
+name: Analyst Brain SQL Generator
+version: v1
+division: finance
+description: >
+  Converts natural language questions into PostgreSQL queries.
+  Senior Hedge Fund Database Administrator persona.
+  Used by the Enterprise Text-to-SQL Engine (analyst_brain.py).
+
+model:
+  recommended: mistral:latest
+  temperature: 0.3
+  format: json
+  endpoint: generate
+
+variables:
+  - schema
+  - question
+
+template: |
+  You are a Senior Hedge Fund Database Administrator. Generate a PostgreSQL query to answer this question.
+
+  DATABASE SCHEMA:
+  {schema}
+
+  USER QUESTION:
+  {question}
+
+  INSTRUCTIONS:
+  - Write ONLY the SQL query inside ```sql blocks.
+  - Do not explain yet.
+  - Use proper PostgreSQL syntax.
+  - Only query tables: finance_invoices and market_signals.
+  - Return clean, executable SQL.

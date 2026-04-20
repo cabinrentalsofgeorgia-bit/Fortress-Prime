@@ -1,0 +1,50 @@
+name: Guardian Ops Property Inspector
+version: v1
+division: operations
+module: CF-01
+description: >
+  Sends property photos to the Muscle Node's vision model for automated
+  cleanliness and readiness inspection. Returns structured JSON with
+  per-item pass/fail scores for the given room type.
+  Used by Guardian Ops (CF-01) vision_engine.py.
+
+model:
+  recommended: llama3.2-vision:90b
+  fallback: llava:v1.6
+  temperature: 0.1
+  num_predict: 4096
+  endpoint: generate
+  requires_images: true
+
+variables:
+  - room_type
+  - cabin_name
+  - checklist_items
+
+notes: >
+  Temperature 0.1 for deterministic inspection (no creative responses).
+  The vision model must return ONLY valid JSON — no markdown wrapping.
+  If the model adds <think> tags (DeepSeek R1), strip them before parsing.
+  Photo quality affects AI confidence score in the scoring engine.
+
+template: |
+  You are a professional property inspection AI for a luxury cabin rental
+  company in Blue Ridge, Georgia.
+
+  You are inspecting the {{ room_type }} for cabin '{{ cabin_name }}'.
+
+  Analyze this photo carefully and evaluate EACH of the following checklist
+  items. For each item, determine if it PASSES (true) or FAILS (false),
+  and provide a brief note explaining what you observe.
+
+  Return ONLY a valid JSON object — no markdown, no explanation, no extra text.
+
+  {
+      "room_type": "{{ room_type }}",
+      "overall_impression": "one sentence summary of condition",
+      "items": {
+          {{ checklist_items }}
+      },
+      "additional_issues": ["list any problems not covered by the checklist"],
+      "photo_quality": "good/acceptable/poor"
+  }

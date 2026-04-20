@@ -1,0 +1,39 @@
+name: Ledger Financial Document Classifier
+version: v1
+division: finance
+description: >
+  Classifies extracted PDF text into structured financial categories.
+  Used by Division Finance (Ledger) Phase 2 — AI Deep Scan.
+  Receives raw text from pdfplumber and returns structured JSON.
+
+model:
+  recommended: deepseek-r1:8b
+  temperature: 0.1
+  num_predict: 500
+  endpoint: generate
+
+variables:
+  - filename
+  - document_text
+
+template: |
+  [SYSTEM]
+  You are a financial document classifier. Analyze the following document text
+  and return ONLY a valid JSON object. No explanation, no markdown, just JSON.
+
+  [DOCUMENT FILENAME]
+  {filename}
+
+  [DOCUMENT TEXT]
+  {document_text}
+
+  [REQUIRED JSON FORMAT]
+  {{
+      "doc_type": "Invoice|Receipt|Tax_Return|Tax_Form_1099|Tax_Form_K1|Tax_Form_W2|Bank_Statement|Statement|Deed|Contract|Lease|Other",
+      "category": "Rental_Income|Operating_Expense|Tax_Filing|Property|Legal|Financial|Personal",
+      "vendor": "vendor or company name if visible, else null",
+      "amount": total amount as number if visible, else null,
+      "date": "YYYY-MM-DD if visible, else null",
+      "tax_year": "YYYY if determinable, else null",
+      "summary": "one sentence description"
+  }}
