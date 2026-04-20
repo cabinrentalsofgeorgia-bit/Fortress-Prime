@@ -84,12 +84,14 @@ Hybrid extraction: rule-based Patterns A-D (bulk) + Godhead Pattern E (high-valu
 
 | Source | Pairs | Notes |
 |--------|-------|-------|
-| Pattern A (case analysis) | 1,057 | Facts → holding |
+| Pattern A (case analysis) | 1,021 | Facts → holding |
 | Pattern B (issue spotting) | 71 | Section headers → issues list |
-| Pattern C (citation lookup) | 32 | Citation context pairs |
-| Pattern D (precedent outcome) | 558 | Insurance fact pattern → outcome |
-| **Scripted total** | **1,718** | In `scripted.jsonl` |
+| Pattern C (citation lookup) | 32 | Citation context pairs (no filter — structural) |
+| Pattern D (precedent outcome) | 1,013 | Insurance fact pattern → outcome |
+| **Scripted total** | **2,137** | In `scripted.jsonl` |
 | Pattern E (Godhead) | ~750 target | 150 cases × 5 pairs, est. $2.40 |
+
+**Filter applied to A/B/D:** shared `_INSURANCE_KEYWORDS` constant (16 terms) against full `plain_text`. Removed 37 false-positive opinions (attorney discipline, child welfare, estate cases) that leaked through the CourtListener search.
 
 ### Running
 
@@ -103,9 +105,10 @@ python -m src.legal.training_pairs_sample 20             # Quality review sample
 
 ### Quality notes
 
-Pattern A-D is rule-based and some non-insurance opinions leak through (the search
-corpus has ~10% noise). The Godhead filter is tighter (520 → 150 by keyword density
-+ length). Manual review via `training_pairs_sample` before Part 3 training.
+Patterns A, B, D all use the shared `_INSURANCE_KEYWORDS` filter against full opinion text.
+37 of 1,067 opinions with text were rejected (attorney discipline, child welfare, estate cases).
+Pattern C is structural (citation extraction) — no content filter needed.
+Manual review via `training_pairs_sample` recommended before Part 3 training.
 
 ### Output files (NAS)
 

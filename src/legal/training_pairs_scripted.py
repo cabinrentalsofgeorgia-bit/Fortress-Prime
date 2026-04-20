@@ -59,6 +59,24 @@ _SECTION_HEADER = re.compile(
 
 _NOISE = re.compile(r'\s+')
 
+# Shared insurance-defense keyword filter.
+# An opinion must contain at least one of these to produce A/B/D pairs.
+# Pattern C (citation lookup) is structural — no content filter needed.
+_INSURANCE_KEYWORDS: tuple[str, ...] = (
+    "insurance", "coverage", "policy", "insurer", "insured",
+    "bad faith", "duty to defend", "subrogation",
+    "policyholder", "underwriting", "premium", "claim",
+    "indemnity", "indemnification", "uninsured", "underinsured",
+    "uim", "first-party", "third-party", "coverage exclusion",
+    "reservation of rights", "denial of claim",
+)
+
+
+def _is_insurance_opinion(text: str) -> bool:
+    """Return True if the opinion is substantively about insurance."""
+    lower = text.lower()
+    return any(kw in lower for kw in _INSURANCE_KEYWORDS)
+
 
 def _clean(text: str) -> str:
     return _NOISE.sub(' ', text).strip()
@@ -142,8 +160,11 @@ def _extract_citations(text: str) -> list[dict[str, str]]:
 
 def pattern_a(rec: dict) -> dict | None:
     """Pattern A — Case analysis pair."""
-    facts = _extract_facts(rec.get("plain_text", ""))
-    holding = _extract_holding(rec.get("plain_text", ""))
+    text = rec.get("plain_text", "")
+    if not _is_insurance_opinion(text):
+        return None
+    facts = _extract_facts(text)
+    holding = _extract_holding(text)
     if not facts or not holding or len(holding) < 30:
         return None
     case_ref = f"{rec.get('case_name', 'This case')}, {rec.get('court', 'Georgia')}, {rec.get('date_filed', '')}"
@@ -160,8 +181,11 @@ def pattern_a(rec: dict) -> dict | None:
 
 def pattern_b(rec: dict) -> dict | None:
     """Pattern B — Issue spotting."""
-    facts = _extract_facts(rec.get("plain_text", ""), max_chars=1500)
-    topics = _extract_section_topics(rec.get("plain_text", ""))
+    text = rec.get("plain_text", "")
+    if not _is_insurance_opinion(text):
+        return None
+    facts = _extract_facts(text, max_chars=1500)
+    topics = _extract_section_topics(text)
     if not facts or not topics:
         return None
     issues_text = "\n".join(f"  {i+1}. {t}" for i, t in enumerate(topics))
@@ -203,9 +227,8 @@ def pattern_d(rec: dict) -> dict | None:
     holding = _extract_holding(rec.get("plain_text", ""))
     if not facts or not holding or len(holding) < 40:
         return None
-    # Only generate for cases with insurance-defense keywords in facts
-    kws = ["insurance", "coverage", "policy", "insurer", "bad faith", "duty to defend", "subrogation"]
-    if not any(k in facts.lower() for k in kws):
+    # Insurance filter (shared constant — same gate as A/B)
+    if not _is_insurance_opinion(rec.get("plain_text", "")):
         return None
     court_short = rec.get("court", "Georgia Court").replace("Court of Appeals of Georgia", "Georgia Court of Appeals")
     return {
