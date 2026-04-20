@@ -1,11 +1,17 @@
 import { expect, type Page } from "@playwright/test";
 
-const DEFAULT_E2E_EMAIL = "cabin.rentals.of.georgia@gmail.com";
-const DEFAULT_E2E_PASSWORD = "FortressPrime2026!";
-
 export async function loginAsE2EStaff(page: Page, baseURL: string | undefined): Promise<void> {
   if (!baseURL) {
     throw new Error("Playwright baseURL is required for E2E staff login.");
+  }
+
+  const email = process.env.E2E_LOGIN_EMAIL;
+  const password = process.env.FORTRESS_SMOKE_PASSWORD ?? process.env.E2E_LOGIN_PASSWORD;
+  if (!email || !password) {
+    throw new Error(
+      "E2E_LOGIN_EMAIL and FORTRESS_SMOKE_PASSWORD (or E2E_LOGIN_PASSWORD) must be set. " +
+      "See docs/OPERATIONS.md.",
+    );
   }
 
   page.on("console", (msg) => console.log(`[PLAYWRIGHT BROWSER]: ${msg.text()}`));
@@ -17,9 +23,6 @@ export async function loginAsE2EStaff(page: Page, baseURL: string | undefined): 
       );
     }
   });
-
-  const email = process.env.E2E_LOGIN_EMAIL || DEFAULT_E2E_EMAIL;
-  const password = process.env.E2E_LOGIN_PASSWORD || DEFAULT_E2E_PASSWORD;
 
   const loginResponse = await page.request.post(`${baseURL}/api/auth/login`, {
     data: { email, password },

@@ -52,7 +52,12 @@ from backend.models.staff import StaffRole, StaffUser
 
 
 ADMIN_EMAIL = "cabin.rentals.of.georgia@gmail.com"
-ADMIN_PASSWORD = "FortressPrime2026!"
+ADMIN_PASSWORD = os.getenv("ADMIN_SEED_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise SystemExit(
+        "ADMIN_SEED_PASSWORD env var is required to run the seed script.\n"
+        "Set it in .env or export from the vault before running. See docs/OPERATIONS.md."
+    )
 ADMIN_FIRST_NAME = "Gary"
 ADMIN_LAST_NAME = "Knight"
 CI_FIXTURE_PROPERTY_ID = UUID("11111111-1111-1111-1111-111111111111")
