@@ -114,7 +114,7 @@ Manual review via `training_pairs_sample` recommended before Part 3 training.
 
 ```
 /mnt/fortress_nas/legal-corpus/training-pairs/
-├── scripted.jsonl     1,718 pairs (Patterns A-D)
+├── scripted.jsonl     2,137 pairs (Patterns A-D, after keyword filter)
 ├── godhead.jsonl      ~750 pairs (Pattern E, after Godhead run)
 ├── combined.jsonl     merged + deduped
 ├── train.jsonl        80%
