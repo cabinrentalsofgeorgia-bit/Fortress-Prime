@@ -79,7 +79,7 @@ SECRET_PATTERN = re.compile(
     r"sk-fortress-[a-zA-Z0-9]{20}"
     r"|nvapi-[a-zA-Z0-9]{20}"
     r"|" + re.escape(_MINER_BOT_PASS_PREFIX + _MINER_BOT_PASS_SUFFIX)
-    + r"|password\s*=\s*['\"][a-zA-Z0-9]{6,}"
+    + r"|(?i:password|passwd)\s*=\s*['\"][a-zA-Z0-9]{6,}"
 )
 
 EXCLUDE_DIRS = [".git", "node_modules", ".venv", "venv", "__pycache__",
