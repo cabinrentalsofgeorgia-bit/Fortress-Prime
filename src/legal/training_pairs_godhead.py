@@ -97,7 +97,7 @@ Return ONLY a JSON array of 5 objects, each with "instruction" and "output" keys
 Opinion ({chars} chars):
 {text}"""
 
-_AVG_OUTPUT_TOKENS = 1800  # ~5 pairs × ~360 tokens each
+_AVG_OUTPUT_TOKENS = 2800  # ~5 pairs × ~560 tokens each (raised with max_tokens bump to 4096)
 
 
 def estimate_cost(model: str, n_cases: int, avg_chars: int) -> float:
@@ -125,7 +125,7 @@ def _call_godhead(text: str, model: str, api_key: str, base_url: str) -> tuple[l
     payload = json.dumps({
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 2200,
+        "max_tokens": 4096,
         "temperature": 0.7,
     }).encode()
 
