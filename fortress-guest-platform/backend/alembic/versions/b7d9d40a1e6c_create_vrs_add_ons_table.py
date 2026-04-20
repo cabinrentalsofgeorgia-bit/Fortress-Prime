@@ -60,7 +60,8 @@ def upgrade() -> None:
                 "(scope = 'property_specific' AND property_id IS NOT NULL)",
                 name="ck_vrs_add_ons_scope_property_consistency",
             ),
-            sa.ForeignKeyConstraint(["property_id"], ["properties.id"], ondelete="CASCADE"),
+            # FK to properties.id intentionally deferred: SEO branch may run before
+            # the main chain creates `properties` on a fresh DB.
             sa.PrimaryKeyConstraint("id"),
         )
     else:

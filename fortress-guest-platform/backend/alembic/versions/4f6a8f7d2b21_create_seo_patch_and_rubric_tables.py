@@ -19,6 +19,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    tables = set(inspector.get_table_names())
+
     op.alter_column(
         "seo_rubrics",
         "source_model",
@@ -40,16 +44,20 @@ def upgrade() -> None:
         unique=False,
     )
 
-    op.drop_constraint("seo_patches_property_id_fkey", "seo_patches", type_="foreignkey")
-    op.drop_constraint("seo_patches_rubric_id_fkey", "seo_patches", type_="foreignkey")
-    op.create_foreign_key(
-        "seo_patches_property_id_fkey",
-        "seo_patches",
-        "properties",
-        ["property_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
+    existing_fks = {fk["name"] for fk in inspector.get_foreign_keys("seo_patches")}
+    if "seo_patches_property_id_fkey" in existing_fks:
+        op.drop_constraint("seo_patches_property_id_fkey", "seo_patches", type_="foreignkey")
+    if "seo_patches_rubric_id_fkey" in existing_fks:
+        op.drop_constraint("seo_patches_rubric_id_fkey", "seo_patches", type_="foreignkey")
+    if "properties" in tables:
+        op.create_foreign_key(
+            "seo_patches_property_id_fkey",
+            "seo_patches",
+            "properties",
+            ["property_id"],
+            ["id"],
+            ondelete="CASCADE",
+        )
     op.create_foreign_key(
         "seo_patches_rubric_id_fkey",
         "seo_patches",

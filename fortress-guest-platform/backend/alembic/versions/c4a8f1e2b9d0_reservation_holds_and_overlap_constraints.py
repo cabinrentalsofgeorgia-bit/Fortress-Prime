@@ -24,7 +24,7 @@ def upgrade() -> None:
 
     inspector = sa.inspect(bind)
     tables = set(inspector.get_table_names())
-    if "guests" not in tables or "reservations" not in tables:
+    if "guests" not in tables or "reservations" not in tables or "properties" not in tables:
         return
 
     if "reservation_holds" not in tables:
