@@ -27,7 +27,12 @@ DB_PORT = int(os.getenv("DB_PORT", "5432"))
 
 # Use analyst_writer user for data ingestion
 DB_USER = "analyst_writer"
-DB_PASSWORD = "6652201a"
+DB_PASSWORD = os.getenv("ANALYST_WRITER_PASSWORD")
+if not DB_PASSWORD:
+    raise SystemExit(
+        "ANALYST_WRITER_PASSWORD env var is required to run fleet_commander.\n"
+        "Set it in .env or export it from the vault. See docs/OPERATIONS.md."
+    )
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)

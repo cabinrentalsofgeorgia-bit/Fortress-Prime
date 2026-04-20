@@ -1,5 +1,21 @@
 # Fortress Prime Operations Runbook
 
+## CREDENTIAL ROTATION NOTICE 2026-04-20
+
+The following credentials were previously hardcoded in source and were scrubbed in PR #98.
+**Both must be rotated before running any script that uses them.**
+
+- **`analyst_writer` postgres role password** — used by `src/fleet_commander.py`.
+  Set new password via `sudo -u postgres psql -c "ALTER ROLE analyst_writer PASSWORD '...';"`,
+  then update `ANALYST_WRITER_PASSWORD` in `.env` and vault.
+
+- **Fortress staff login password** (`cabin.rentals.of.georgia@gmail.com`) — used by
+  `seed_master_admin.py`, `smoke_test_seo.py`, and E2E Playwright helpers.
+  Rotate via the staff login UI or `backend/scripts/reset_staff_password.py`,
+  then update `FORTRESS_SMOKE_PASSWORD` and `ADMIN_SEED_PASSWORD` in `.env` and vault.
+
+All three env vars are now required at runtime — scripts fail fast with a clear error if unset.
+
 This runbook captures the verified recovery steps for the Fortress Prime async runtime after the auth and Hunter incident.
 
 ## Canonical Worker Topology
@@ -66,7 +82,7 @@ Run the full auth, BFF, and Hunter smoke suite:
 ```bash
 cd /home/admin/Fortress-Prime
 FORTRESS_SMOKE_EMAIL='cabin.rentals.of.georgia@gmail.com' \
-FORTRESS_SMOKE_PASSWORD='FortressPrime2026!' \
+FORTRESS_SMOKE_PASSWORD='<your-password-here>' \
 ./scripts/fortress_auth_pipeline_smoke.sh
 ```
 

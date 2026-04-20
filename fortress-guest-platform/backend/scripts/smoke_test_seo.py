@@ -38,8 +38,13 @@ from backend.core.config import settings
 API_BASE = os.getenv("SEO_SMOKE_API_BASE", "http://127.0.0.1:8100").rstrip("/")
 HTTP_TIMEOUT = httpx.Timeout(connect=10, read=60, write=30, pool=30)
 SMOKE_PREFIX = "[seo-smoke]"
-DEFAULT_E2E_EMAIL = "cabin.rentals.of.georgia@gmail.com"
-DEFAULT_E2E_PASSWORD = "FortressPrime2026!"
+DEFAULT_E2E_EMAIL = os.getenv("E2E_LOGIN_EMAIL", "cabin.rentals.of.georgia@gmail.com")
+DEFAULT_E2E_PASSWORD = os.getenv("FORTRESS_SMOKE_PASSWORD") or os.getenv("E2E_LOGIN_PASSWORD")
+if not DEFAULT_E2E_PASSWORD:
+    sys.exit(
+        "FORTRESS_SMOKE_PASSWORD (or E2E_LOGIN_PASSWORD) env var required to run smoke tests.\n"
+        "See docs/OPERATIONS.md."
+    )
 DEPLOY_POLL_ATTEMPTS = 20
 DEPLOY_POLL_INTERVAL_SECONDS = 0.5
 
