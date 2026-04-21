@@ -31,6 +31,7 @@ from backend.api import integrations as integrations_api
 from backend.api import booking, housekeeping, channels, agent
 from backend.api import portal as portal_api
 from backend.api import review_queue, email_bridge, damage_claims
+from backend.api import email_outbound_drafts as email_outbound_drafts_api
 from backend.api import tenants as tenants_api
 from backend.api import owner_portal
 from backend.api import paperclip_bridge as paperclip_bridge_api
@@ -557,6 +558,7 @@ app.include_router(paperclip_bridge_api.router, prefix="/api/paperclip", tags=["
 app.include_router(portal_api.router, prefix="/api/portal", tags=["Portal"])
 app.include_router(review_queue.router, prefix="/api/review-queue", tags=["Review Queue"])
 app.include_router(email_bridge.router, prefix="/api/email-bridge", tags=["Email Bridge"])
+app.include_router(email_outbound_drafts_api.router)
 app.include_router(damage_claims.router, prefix="/api/damage-claims", tags=["Damage Claims"])
 app.include_router(tenants_api.router, prefix="/api/tenants", tags=["Tenants"])
 app.include_router(owner_portal.router, prefix="/api/owner", tags=["Owner Portal"])

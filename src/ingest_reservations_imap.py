@@ -4,30 +4,33 @@ ingest_reservations_imap.py — Reservations mailbox IMAP watcher
 
 Pattern: poll-based (NOT IDLE). Invoked by cron every 10 minutes.
 Source:  reservations@cabin-rentals-of-georgia.com on mail.cabin-rentals-of-georgia.com (cPanel)
-Sink:    Postgres table fortress_db.reservations_draft_queue
+Sink:    email_messages table via EmailMessageService (backend/services/email_message_service.py)
 
 On startup:
   - First run of the day (or empty queue): scan last 24h for UNSEEN messages
   - Subsequent runs: scan only UNSEEN messages since last run's max UID
-Idempotency: imap_uid UNIQUE constraint in Postgres — re-inserts are no-ops
+Idempotency: imap_uid UNIQUE constraint on email_messages — re-inserts are no-ops
 
 Environment variables (required):
   RESERVATIONS_IMAP_HOST    e.g. "mail.cabin-rentals-of-georgia.com"
   RESERVATIONS_IMAP_PORT    e.g. "993"
   RESERVATIONS_IMAP_USER    e.g. "reservations@cabin-rentals-of-georgia.com"
   RESERVATIONS_IMAP_PASS    cPanel mailbox password
-  DB_HOST, DB_NAME, DB_USER, DB_PASS (existing fortress_db credentials)
 
 Environment variables (optional):
   RESERVATIONS_IMAP_FOLDER  default "INBOX"
   RESERVATIONS_LOOKBACK_HOURS  default 24 (first run per day)
   RESERVATIONS_MAX_PER_RUN  default 50 (cap per invocation)
+  AI_ROUTER_BACKEND_DIR     path to fortress-guest-platform root
 
 Usage:
   python3 -m src.ingest_reservations_imap                    # production poll
   python3 -m src.ingest_reservations_imap --dry-run          # fetch + classify, don't write to DB
-  python3 -m src.ingest_reservations_imap --no-ai            # ingest only, skip reply generation
+  python3 -m src.ingest_reservations_imap --no-ai            # ingest only, skip draft generation
   python3 -m src.ingest_reservations_imap --since-hours 48   # override lookback
+
+DEPRECATED (still present, not removed yet): reservations_draft_queue write path.
+Drop in follow-up PR after email pipeline is proven in production for >=48 hours.
 """
 from __future__ import annotations
 
@@ -66,6 +69,26 @@ IMAP_FOLDER = os.getenv("RESERVATIONS_IMAP_FOLDER", "INBOX")
 LOOKBACK_HOURS = int(os.getenv("RESERVATIONS_LOOKBACK_HOURS", "24"))
 MAX_PER_RUN = int(os.getenv("RESERVATIONS_MAX_PER_RUN", "50"))
 
+# v5 ai_router integration
+AI_ROUTER_TASK_TYPE = os.getenv("RESERVATIONS_TASK_TYPE", "vrs_concierge")
+AI_ROUTER_SOURCE_MODULE = "reservations_imap_watcher"
+AI_ROUTER_MAX_TOKENS = int(os.getenv("RESERVATIONS_AI_MAX_TOKENS", "800"))
+AI_ROUTER_TEMPERATURE = float(os.getenv("RESERVATIONS_AI_TEMPERATURE", "0.4"))
+AI_ROUTER_SYSTEM_PROMPT = os.getenv(
+    "RESERVATIONS_AI_SYSTEM_PROMPT",
+    "You are the concierge for Cabin Rentals of Georgia. "
+    "Draft a warm, professional, accurate reply to this guest email. "
+    "If the guest asks something that requires checking availability, pricing, "
+    "or specific cabin details you don't have, say you'll confirm and follow up "
+    "rather than guessing. Sign as the Cabin Rentals of Georgia team."
+)
+AI_ROUTER_BACKEND_DIR = os.path.expanduser(
+    os.getenv("AI_ROUTER_BACKEND_DIR", "~/Fortress-Prime/fortress-guest-platform")
+)
+AI_ROUTER_TIMEOUT_S = int(os.getenv("RESERVATIONS_AI_TIMEOUT_S", "120"))
+
+# DEPRECATED: fortress_db / miner_bot credentials used by the old reservations_draft_queue path.
+# Keep until email pipeline is verified in production (>= 48h). Then remove.
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_USER = os.getenv("DB_USER", "miner_bot")
@@ -290,51 +313,197 @@ def insert_draft(conn, fe: FetchedEmail, ai_draft: Optional[str],
 
 
 # -----------------------------------------------------------------------------
-# AI draft generation (wraps guest_reply_engine if available)
+# Email pipeline — ingest via EmailMessageService
 # -----------------------------------------------------------------------------
 
-def generate_draft(fe: FetchedEmail, skip_ai: bool) -> tuple[Optional[str], Optional[float], Optional[dict]]:
+def ingest_to_email_pipeline(fe: FetchedEmail, skip_ai: bool) -> Optional[str]:
     """
-    Attempt to generate an AI draft using guest_reply_engine.
-    Returns (draft_text, confidence, meta_dict) — any can be None on failure.
-    Failures are logged but non-fatal: email still gets queued with no draft.
+    Persist the email into email_messages via EmailMessageService (subprocess).
+
+    Returns the EmailMessage UUID string on success, None on failure.
+    Every failure mode logs an error but never drops the email silently —
+    the caller should log a warning so ops can retry.
+    """
+    import subprocess
+
+    venv_py = os.path.join(AI_ROUTER_BACKEND_DIR, ".uv-venv/bin/python3")
+    if not os.path.exists(venv_py):
+        log.error("email_pipeline_unavailable: backend venv missing at %s", venv_py)
+        return None
+
+    payload = {
+        "email_from": fe.sender,
+        "email_to": fe.recipient,
+        "subject": fe.subject,
+        "body_text": fe.body_text,
+        "imap_uid": fe.imap_uid,
+        "message_id": fe.message_id,
+        "received_at": fe.received_at.isoformat(),
+        "skip_ai": skip_ai,
+    }
+
+    runner = (
+        "import asyncio, json, sys\n"
+        "from backend.core.database import async_session\n"
+        "from backend.services.email_message_service import EmailMessageService\n"
+        "from datetime import datetime, timezone\n"
+        "from uuid import UUID\n"
+        "p = json.loads(sys.stdin.read())\n"
+        "async def _run():\n"
+        "    async with async_session() as db:\n"
+        "        svc = EmailMessageService(db)\n"
+        "        msg = await svc.receive_email(\n"
+        "            email_from=p['email_from'],\n"
+        "            email_to=p['email_to'],\n"
+        "            subject=p['subject'],\n"
+        "            body_text=p['body_text'],\n"
+        "            imap_uid=int(p['imap_uid']),\n"
+        "            message_id=p['message_id'],\n"
+        "            received_at=datetime.fromisoformat(p['received_at']),\n"
+        "        )\n"
+        "        if not p['skip_ai']:\n"
+        "            msg = await svc.generate_draft_for_inbound(msg.id)\n"
+        "        print(json.dumps({'message_id': str(msg.id), 'status': msg.approval_status}))\n"
+        "asyncio.run(_run())\n"
+    )
+
+    try:
+        proc = subprocess.run(
+            [venv_py, "-c", runner],
+            input=json.dumps(payload),
+            cwd=AI_ROUTER_BACKEND_DIR,
+            capture_output=True,
+            text=True,
+            timeout=AI_ROUTER_TIMEOUT_S,
+        )
+        if proc.returncode != 0:
+            log.error(
+                "email_pipeline_subprocess_failed uid=%s returncode=%s stderr=%s",
+                fe.imap_uid, proc.returncode, (proc.stderr or "")[-1000:],
+            )
+            return None
+        out_lines = [ln for ln in (proc.stdout or "").splitlines() if ln.strip()]
+        if not out_lines:
+            log.error(
+                "email_pipeline_no_output uid=%s stderr=%s",
+                fe.imap_uid, (proc.stderr or "")[-500:],
+            )
+            return None
+        result = json.loads(out_lines[-1])
+        return result.get("message_id")
+    except subprocess.TimeoutExpired:
+        log.error("email_pipeline_timeout uid=%s timeout_s=%s", fe.imap_uid, AI_ROUTER_TIMEOUT_S)
+        return None
+    except Exception as exc:
+        log.exception("email_pipeline_exception uid=%s err=%s", fe.imap_uid, exc)
+        return None
+
+
+# -----------------------------------------------------------------------------
+# AI draft generation (wraps guest_reply_engine if available)
+# DEPRECATED: replaced by EmailMessageService.generate_draft_for_inbound.
+# Keep until reservations_draft_queue path is fully retired.
+# -----------------------------------------------------------------------------
+
+def generate_draft(fe: FetchedEmail, skip_ai: bool) -> tuple:
+    """
+    Call ai_router (v5) to generate a draft reply.
+
+    Returns (draft_text, confidence, meta_dict). Failure is non-fatal: email
+    still gets queued with no draft. Routes through
+    backend.services.ai_router.execute_resilient_inference, which handles
+    sovereign->godhead escalation, judging, and v5 capture.
+
+    We invoke ai_router via subprocess in the backend's venv because:
+      1. backend.* modules are not on this script's PYTHONPATH
+      2. ai_router is async; subprocess avoids importing asyncio here
+      3. Subprocess gives clean isolation per-email
+    Cost: ~100-300ms fork overhead per email. Acceptable for cron cadence.
     """
     if skip_ai:
         return (None, None, {"ai_skipped": True})
-    try:
-        from src.guest_reply_engine import process_email  # type: ignore
-    except Exception as e:
-        log.warning(f"guest_reply_engine unavailable ({e}) — queuing without draft")
-        return (None, None, {"ai_unavailable": str(e)})
+
+    import subprocess
+
+    venv_py = os.path.join(AI_ROUTER_BACKEND_DIR, ".uv-venv/bin/python3")
+    if not os.path.exists(venv_py):
+        return (None, None, {"ai_unavailable": "backend venv missing", "expected": venv_py})
+
+    prompt = (
+        "From: " + (fe.sender_name or "") + " <" + fe.sender + ">\n"
+        "Subject: " + fe.subject + "\n\n"
+        + fe.body_text
+    )
+
+    payload = {
+        "prompt": prompt,
+        "task_type": AI_ROUTER_TASK_TYPE,
+        "system_message": AI_ROUTER_SYSTEM_PROMPT,
+        "max_tokens": AI_ROUTER_MAX_TOKENS,
+        "temperature": AI_ROUTER_TEMPERATURE,
+        "source_module": AI_ROUTER_SOURCE_MODULE,
+    }
+
+    # Inline runner script. Reads payload from stdin (avoids shell-quoting hell),
+    # awaits ai_router, prints single-line JSON result on stdout.
+    runner = (
+        "import asyncio, json, sys\n"
+        "from backend.services.ai_router import execute_resilient_inference\n"
+        "p = json.loads(sys.stdin.read())\n"
+        "r = asyncio.run(execute_resilient_inference(\n"
+        "    prompt=p['prompt'],\n"
+        "    task_type=p['task_type'],\n"
+        "    system_message=p['system_message'],\n"
+        "    max_tokens=p['max_tokens'],\n"
+        "    temperature=p['temperature'],\n"
+        "    source_module=p['source_module'],\n"
+        "))\n"
+        "print(json.dumps({\n"
+        "    'text': getattr(r, 'text', None),\n"
+        "    'source': getattr(r, 'source', None),\n"
+        "    'breaker_state': getattr(r, 'breaker_state', None),\n"
+        "    'latency_ms': getattr(r, 'latency_ms', None),\n"
+        "}))\n"
+    )
 
     try:
-        # guest_reply_engine.process_email signature varies by version;
-        # we pass a dict payload and catch whatever shape comes back.
-        payload = {
-            "sender": fe.sender,
-            "sender_name": fe.sender_name,
-            "subject": fe.subject,
-            "body": fe.body_text,
-            "received_at": fe.received_at.isoformat(),
-            "mailbox": "reservations",
-        }
-        result = process_email(payload)  # type: ignore
-        # Normalize result shape
-        if result is None:
-            return (None, None, {"ai_returned_none": True})
-        if isinstance(result, str):
-            return (result, None, None)
-        # Assume object/dict with attributes
-        draft = getattr(result, "reply_text", None) or (result.get("reply_text") if isinstance(result, dict) else None)
-        conf = getattr(result, "confidence", None) or (result.get("confidence") if isinstance(result, dict) else None)
+        proc = subprocess.run(
+            [venv_py, "-c", runner],
+            input=json.dumps(payload),
+            cwd=AI_ROUTER_BACKEND_DIR,
+            capture_output=True,
+            text=True,
+            timeout=AI_ROUTER_TIMEOUT_S,
+        )
+        if proc.returncode != 0:
+            return (None, None, {
+                "ai_subprocess_failed": True,
+                "returncode": proc.returncode,
+                "stderr_tail": (proc.stderr or "")[-2000:],
+            })
+        # ai_router may print log lines; the JSON is on the LAST non-empty stdout line.
+        out_lines = [ln for ln in (proc.stdout or "").splitlines() if ln.strip()]
+        if not out_lines:
+            return (None, None, {"ai_no_output": True, "stderr_tail": (proc.stderr or "")[-1000:]})
+        try:
+            result = json.loads(out_lines[-1])
+        except json.JSONDecodeError as je:
+            return (None, None, {
+                "ai_parse_error": str(je),
+                "stdout_tail": (proc.stdout or "")[-1000:],
+            })
         meta = {
-            "tone": getattr(result, "tone", None) or (result.get("tone") if isinstance(result, dict) else None),
-            "topic": getattr(result, "topic", None) or (result.get("topic") if isinstance(result, dict) else None),
-            "needs_human": getattr(result, "needs_human", None) or (result.get("needs_human") if isinstance(result, dict) else None),
+            "task_type": AI_ROUTER_TASK_TYPE,
+            "ai_source": result.get("source"),
+            "breaker_state": result.get("breaker_state"),
+            "latency_ms": result.get("latency_ms"),
+            "via": "ai_router_v5",
         }
-        return (draft, float(conf) if conf is not None else None, meta)
+        return (result.get("text"), None, meta)
+    except subprocess.TimeoutExpired:
+        return (None, None, {"ai_timeout": True, "timeout_s": AI_ROUTER_TIMEOUT_S})
     except Exception as e:
-        log.exception(f"guest_reply_engine.process_email raised: {e}")
+        log.exception("ai_router subprocess failed: %s", e)
         return (None, None, {"ai_exception": str(e)})
 
 
@@ -359,28 +528,38 @@ def run(since_hours: int, dry_run: bool, skip_ai: bool) -> int:
             return 0
         uids = uids[-MAX_PER_RUN:]  # cap to most recent MAX_PER_RUN
 
-        # DB
-        conn_db = None if dry_run else get_db_connection()
-        if conn_db:
-            ensure_table(conn_db)
+        # DEPRECATED: reservations_draft_queue DB connection — kept for safety, no longer written to.
+        # Remove after email pipeline is proven in production for >=48h.
+        conn_db = None
 
         processed = 0
         for uid in uids:
-            if conn_db and already_queued(conn_db, uid):
-                log.info(f"UID {uid} already queued, skipping")
-                continue
             fe = fetch_by_uid(conn_imap, uid)
             if not fe:
                 continue
             log.info(f"UID {uid} from={fe.sender} subject={fe.subject[:80]!r}")
-            draft, conf, meta = generate_draft(fe, skip_ai=skip_ai)
+
             if dry_run:
-                log.info(f"  DRY-RUN: would insert (draft_len={len(draft) if draft else 0}, conf={conf})")
+                log.info(f"  DRY-RUN: would ingest uid={uid} into email_messages")
+                processed += 1
+                continue
+
+            message_uuid = ingest_to_email_pipeline(fe, skip_ai=skip_ai)
+            if message_uuid:
+                log.info(
+                    "  ingested uid=%s message_id=%s skip_ai=%s",
+                    uid, message_uuid, skip_ai,
+                )
             else:
-                insert_draft(conn_db, fe, draft, conf, meta)
-                log.info(f"  inserted UID {uid} status={'pending' if draft else 'pending_no_draft'}")
+                log.error(
+                    "  FAILED to ingest uid=%s — email NOT lost (IMAP still unread), "
+                    "will retry on next cron run",
+                    uid,
+                )
             processed += 1
 
+        # DEPRECATED: conn_db (reservations_draft_queue) no longer used.
+        # Remove after email pipeline is proven in production for >=48h.
         if conn_db:
             conn_db.close()
         log.info(f"Run complete. processed={processed}")
