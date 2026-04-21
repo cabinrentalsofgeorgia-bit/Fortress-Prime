@@ -344,13 +344,13 @@ def ingest_to_email_pipeline(fe: FetchedEmail, skip_ai: bool) -> Optional[str]:
 
     runner = (
         "import asyncio, json, sys\n"
-        "from backend.core.database import async_session\n"
+        "from backend.core.database import async_session_factory\n"
         "from backend.services.email_message_service import EmailMessageService\n"
         "from datetime import datetime, timezone\n"
         "from uuid import UUID\n"
         "p = json.loads(sys.stdin.read())\n"
         "async def _run():\n"
-        "    async with async_session() as db:\n"
+        "    async with async_session_factory() as db:\n"
         "        svc = EmailMessageService(db)\n"
         "        msg = await svc.receive_email(\n"
         "            email_from=p['email_from'],\n"
