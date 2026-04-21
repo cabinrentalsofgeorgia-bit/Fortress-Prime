@@ -6,6 +6,12 @@ an email-specific case brief.  When the inquirer is already linked to a Guest,
 delegates directly to run_guest_triage().
 
 Returns: {draft_text, confidence, meta, intent, sentiment, category}
+
+Phase: draft-quality-fix (PR 3)
+  _compose_email_draft() replaces the SMS _compose_draft_reply for the cold-
+  inquiry path. It injects up to 3 retrieved exemplars from Taylor's sent-mail
+  corpus plus the council's top recommendations, producing specific drafts
+  instead of the generic fallback template.
 """
 from __future__ import annotations
 
@@ -13,7 +19,7 @@ import json
 import logging
 import uuid as _uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +30,6 @@ from backend.models.email_message import EmailMessage
 # Reuse from the existing engine — no code duplication
 from backend.services.crog_concierge_engine import (
     ConciergePersona,
-    _compose_draft_reply,
     _persist_operational_deliberation_log,
     analyze_with_concierge_persona,
     compute_concierge_consensus,
@@ -32,11 +37,110 @@ from backend.services.crog_concierge_engine import (
     _make_error_opinion,
     PERSONA_TIMEOUT_SECONDS,
     run_guest_triage,
+    _call_llm,
+    HYDRA_MODEL_120B,
+    HYDRA_120B_URL,
 )
 
 import asyncio
 
 logger = logging.getLogger("email_concierge_engine")
+
+
+# ---------------------------------------------------------------------------
+# Email-specific composer (Phase: draft-quality-fix)
+# ---------------------------------------------------------------------------
+
+async def _compose_email_draft(
+    *,
+    focal_message: str,
+    council_recommendations: List[str],
+    exemplars: list,  # List[SentMailExemplar] — typed loosely to avoid circular import
+) -> str:
+    """
+    Build an exemplar-augmented composer prompt and call the HYDRA LLM.
+
+    If exemplars are available: injects up to 3 real sent-mail examples so the
+    model matches Taylor's actual voice and addresses the specific inquiry.
+    If no exemplars: falls back to council-recommendations-only prompt, which
+    is still significantly better than the generic SMS fallback template.
+    """
+    rec_bullets = "\n".join(
+        f"- {r}" for r in (council_recommendations or [])[:6] if r
+    ) or "- Respond warmly and invite the guest to share dates and party size."
+
+    if exemplars:
+        example_blocks = []
+        for i, ex in enumerate(exemplars[:3], 1):
+            date_str = ex.sent_at[:10] if ex.sent_at else "past"
+            example_blocks.append(
+                f"=== Example {i} (topic: {ex.detected_topic}, from {date_str}) ===\n"
+                f"{ex.body[:1200]}"
+            )
+        examples_section = "\n\n".join(example_blocks)
+
+        system = (
+            "You are writing on behalf of Taylor Knight at Cabin Rentals of Georgia. "
+            "Your job is to write a guest reply email. "
+            "Match the voice, warmth, specificity, and sign-off style shown in the examples. "
+            "Do not mention the council, AI, or that this was generated. "
+            "Output plain text only — the exact reply to send, nothing else."
+        )
+        user = f"""HERE ARE {len(exemplars[:3])} EXAMPLES OF HOW WE REPLY TO SIMILAR INQUIRIES:
+
+{examples_section}
+
+THE COUNCIL REVIEWED THIS INQUIRY AND RECOMMENDS ADDRESSING:
+{rec_bullets}
+
+THE GUEST ASKED:
+{focal_message[:4000]}
+
+Write a reply that:
+- Matches the tone and voice shown in the examples
+- Addresses what the guest specifically asked about
+- Incorporates the council's recommendations naturally
+- Signs off the way the examples sign off
+- Does not mention that it was AI-generated, does not mention 'the council'
+
+Reply:"""
+    else:
+        # Council-only path — no exemplars available
+        system = (
+            "You are writing on behalf of Taylor Knight at Cabin Rentals of Georgia. "
+            "Write a warm, professional email reply to the guest inquiry below. "
+            "Be specific about what they asked. Do not mention AI or any internal processes. "
+            "Sign off warmly from the CROG team."
+        )
+        user = f"""THE COUNCIL REVIEWED THIS INQUIRY AND RECOMMENDS ADDRESSING:
+{rec_bullets}
+
+THE GUEST ASKED:
+{focal_message[:4000]}
+
+Write a warm, professional reply that addresses what the guest asked and
+incorporates the council's recommendations naturally.
+
+Reply:"""
+
+    text, _ = await _call_llm(
+        system,
+        user,
+        model=HYDRA_MODEL_120B,
+        base_url=HYDRA_120B_URL,
+        temperature=0.55,
+        max_tokens=600,
+    )
+
+    draft = (text or "").strip()
+    if not draft:
+        draft = (
+            "Thank you for reaching out to Cabin Rentals of Georgia! We'd love to help "
+            "you plan your perfect mountain getaway. Please share your preferred dates, "
+            "party size, and any questions and we'll put together the best options for you.\n\n"
+            "Warm regards,\nTaylor\nCabin Rentals of Georgia"
+        )
+    return draft[:2000]
 
 
 async def run_email_triage(
@@ -139,12 +243,21 @@ async def run_email_triage(
     if consensus.get("error"):
         return _fast_fallback(focal_message)
 
-    draft_text = await _compose_draft_reply(
-        case_brief=case_brief,
-        consensus=consensus,
+    # Retrieve exemplars for few-shot composer injection (fail-fast, non-blocking)
+    exemplars = []
+    try:
+        from backend.services.sent_mail_retriever import SentMailRetriever
+        retriever = SentMailRetriever()
+        exemplars = await retriever.find_similar_replies(focal_message, k=3)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("email_triage_retriever_failed err=%s", str(exc)[:200])
+
+    council_recs = consensus.get("top_recommended_actions", [])
+    draft_text = await _compose_email_draft(
         focal_message=focal_message,
+        council_recommendations=council_recs,
+        exemplars=exemplars,
     )
-    draft_text = _adapt_draft_for_email(draft_text)
 
     escalation_level, escalation_rationale = _heuristic_escalation(
         focal_message,
@@ -157,6 +270,12 @@ async def run_email_triage(
     if intent:
         intent = intent[:50]
 
+    # Composition mode for audit / debugging
+    n_exemplars = len(exemplars)
+    composition_mode = (
+        f"council_plus_{n_exemplars}_exemplars" if exemplars else "council_only"
+    )
+
     meta = {
         "path": "cold_inquiry_9seat",
         "session_id": session_id,
@@ -166,6 +285,9 @@ async def run_email_triage(
         "escalation_rationale": escalation_rationale,
         "signal_breakdown": consensus.get("signal_breakdown"),
         "top_recommended_actions": consensus.get("top_recommended_actions", [])[:5],
+        "composition_mode": composition_mode,
+        "exemplar_scores": [round(e.score, 4) for e in exemplars],
+        "exemplar_topics": [e.detected_topic for e in exemplars],
     }
 
     # Persist deliberation audit log (best-effort, never blocks the result)
@@ -264,7 +386,7 @@ def _adapt_draft_for_email(sms_draft: str) -> str:
     )
 
 
-def _fast_fallback(_focal_message: str) -> Dict[str, Any]:
+def _fast_fallback(focal_message: str) -> Dict[str, Any]:  # noqa: ARG001
     """Used when personas are unavailable or upstream fails."""
     return {
         "draft_text": (
