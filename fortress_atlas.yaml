@@ -460,10 +460,12 @@ fortress_prime:
 
       - id: spark-4
         label: "Sovereign"
-        role: "deep_reasoning_redundancy"
+        role: "deep_reasoning_redundancy + vrs_fast_primary"
         management_ip: "192.168.0.106"
         ollama_url: "http://192.168.0.106:11434"
         models:
+          - name: "qwen2.5:7b"
+            tier: "fast"             # Iron Dome v5: VRS concierge primary
           - name: "deepseek-r1:70b"
             tier: "deep"
           - name: "qwen2.5:32b"
@@ -477,7 +479,7 @@ fortress_prime:
 
     # Tier routing policy: which tiers prefer which nodes (in order)
     tier_routing:
-      fast:   ["spark-2", "spark-1"]          # spark-2 primary; spark-1 overflow
+      fast:   ["spark-4", "spark-2", "spark-1"]  # Iron Dome v5: spark-4 primary (dedicated VRS); spark-2/spark-1 overflow
       mid:    ["spark-1", "spark-4"]           # active-active
       deep:   ["spark-1", "spark-4"]           # active-active
       vision: ["spark-3", "spark-1"]           # spark-3 primary; spark-1 overflow

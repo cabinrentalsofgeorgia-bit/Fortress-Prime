@@ -181,24 +181,73 @@ class ModelRegistry:
             self._probe_one(ep)
 
     def _probe_one(self, ep: EndpointState) -> None:
-        """Probe a single endpoint's /api/tags. Update state in-place (thread-safe)."""
+        """
+        Probe a single endpoint.  Three-phase check:
+
+        Phase 1 — GET /api/tags: verify Ollama is running and refresh the
+                  on-disk model catalog.
+        Phase 2 — GET /api/ps:  get the list of models currently loaded in
+                  VRAM.  Fast read — does not touch GPU.
+        Phase 3 — POST /api/chat (1 token, warm models only): if any model
+                  from the node's configured list is currently in VRAM, fire
+                  a 1-token inference to confirm GPU compute is available.
+                  This catches nodes where the GPU is locked by an external
+                  process (e.g. a training job) while Ollama's web-server
+                  still answers /api/tags and /api/ps fine.
+                  Skipped when no configured models are warm (cold nodes are
+                  healthy; they load models on first real request).
+        """
+        base = ep.ollama_url.rstrip("/")
         t0 = time.perf_counter()
         try:
             with httpx.Client(timeout=_PROBE_TIMEOUT) as client:
-                resp = client.get(f"{ep.ollama_url.rstrip('/')}/api/tags")
-                resp.raise_for_status()
-                # Optionally refresh model list from live response
-                data = resp.json()
+                # Phase 1: catalog
+                tags_resp = client.get(f"{base}/api/tags")
+                tags_resp.raise_for_status()
+                data = tags_resp.json()
                 live_models = [m["name"] for m in data.get("models", [])]
-                latency_ms = (time.perf_counter() - t0) * 1000
+
+                # Phase 2: VRAM inventory
+                ps_resp = client.get(f"{base}/api/ps")
+                ps_resp.raise_for_status()
+                warm_models = {m["name"] for m in ps_resp.json().get("models", [])}
+
+            # Phase 3: inference liveness (only when a configured model is warm)
+            with self._lock:
+                configured = set(ep.models)
+            warm_configured = configured & warm_models
+            if warm_configured:
+                probe_model = next(iter(warm_configured))
+                try:
+                    with httpx.Client(timeout=_PROBE_TIMEOUT) as client:
+                        inf_resp = client.post(
+                            f"{base}/api/chat",
+                            json={
+                                "model": probe_model,
+                                "messages": [{"role": "user", "content": "hi"}],
+                                "stream": False,
+                                "options": {"num_predict": 1},
+                            },
+                        )
+                        inf_resp.raise_for_status()
+                except Exception as inf_exc:
+                    with self._lock:
+                        ep.record_failure()
+                    log.warning(
+                        "probe inference_check failed node=%s model=%s failures=%d error=%s",
+                        ep.node_id, probe_model, ep.consecutive_failures, str(inf_exc)[:80],
+                    )
+                    return
+
+            latency_ms = (time.perf_counter() - t0) * 1000
 
             with self._lock:
                 ep.record_success(latency_ms)
                 if live_models:
                     ep.models = live_models
 
-            log.debug("probe ok node=%s latency=%.0fms models=%d",
-                      ep.node_id, latency_ms, len(ep.models))
+            log.debug("probe ok node=%s latency=%.0fms models=%d warm=%d",
+                      ep.node_id, latency_ms, len(ep.models), len(warm_models))
 
         except Exception as exc:
             with self._lock:
