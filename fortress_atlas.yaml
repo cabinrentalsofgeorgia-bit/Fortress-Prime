@@ -479,9 +479,10 @@ fortress_prime:
 
     # Tier routing policy: which tiers prefer which nodes (in order)
     tier_routing:
-      fast:   ["spark-4", "spark-2", "spark-1"]  # Iron Dome v5: spark-4 primary (dedicated VRS); spark-2/spark-1 overflow
-      mid:    ["spark-1", "spark-4"]           # active-active
-      deep:   ["spark-1", "spark-4"]           # active-active
-      vision: ["spark-3", "spark-1"]           # spark-3 primary; spark-1 overflow
-      embed:  ["spark-2", "spark-1", "spark-4", "spark-3"]  # any node
+      fast:     ["spark-2", "spark-1"]                    # generic fast tasks — spark-2 primary
+      vrs_fast: ["spark-4", "spark-2", "spark-1"]         # Iron Dome v6: VRS concierge dedicated lane — spark-4 primary
+      mid:      ["spark-1", "spark-4"]                    # active-active
+      deep:     ["spark-1", "spark-4"]                    # active-active
+      vision:   ["spark-3", "spark-1"]                    # spark-3 primary; spark-1 overflow
+      embed:    ["spark-2", "spark-1", "spark-4", "spark-3"]  # any node
 
