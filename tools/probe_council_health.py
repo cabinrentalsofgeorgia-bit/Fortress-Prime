@@ -48,7 +48,8 @@ _PROVIDER_ENDPOINTS = {
     "SWARM":        (SWARM_URL,         SWARM_MODEL,         ""),
 }
 
-PROBE_TIMEOUT = 20
+PROBE_TIMEOUT = 45   # Gemini 2.5 Pro (thinking model) needs ~20-30s at this token budget
+PROBE_MAX_TOKENS = 256  # must exceed Gemini's thinking token consumption (~130 reasoning + text
 
 
 async def _probe_provider(provider: str) -> tuple[str, str]:
@@ -60,7 +61,7 @@ async def _probe_provider(provider: str) -> tuple[str, str]:
     try:
         text, used = await asyncio.wait_for(
             _call_llm("Reply WORKING.", "Say WORKING.", model=model, base_url=url,
-                      api_key=key, temperature=0.35, max_tokens=5),
+                      api_key=key, temperature=0.35, max_tokens=PROBE_MAX_TOKENS),
             timeout=PROBE_TIMEOUT,
         )
         return ("live" if text.strip() else "empty"), used
