@@ -89,9 +89,10 @@ class EndpointState:
 # Registry
 # ---------------------------------------------------------------------------
 
-_PROBE_INTERVAL   = 30   # seconds
-_PROBE_TIMEOUT    = 3    # seconds
-_FAILURE_THRESHOLD = 3   # consecutive failures → unhealthy
+_PROBE_INTERVAL        = 30  # seconds
+_PROBE_TIMEOUT         = 3   # seconds — /api/tags and /api/ps (lightweight reads)
+_INFERENCE_PROBE_TIMEOUT = 8  # seconds — /api/chat Phase 3 (1-token, allows 32b models)
+_FAILURE_THRESHOLD     = 3   # consecutive failures → unhealthy
 
 class ModelRegistry:
     def __init__(self) -> None:
@@ -212,14 +213,19 @@ class ModelRegistry:
                 ps_resp.raise_for_status()
                 warm_models = {m["name"] for m in ps_resp.json().get("models", [])}
 
-            # Phase 3: inference liveness (only when a configured model is warm)
+            # Phase 3: inference liveness — only chat-capable warm models.
+            # Embed models (nomic-embed-text etc.) return HTTP 400 on /api/chat.
+            _EMBED_SKIP = ("embed", "nomic", "mxbai", "all-minilm")
             with self._lock:
                 configured = set(ep.models)
-            warm_configured = configured & warm_models
-            if warm_configured:
-                probe_model = next(iter(warm_configured))
+            warm_chat = {
+                m for m in (configured & warm_models)
+                if not any(p in m.lower() for p in _EMBED_SKIP)
+            }
+            if warm_chat:
+                probe_model = next(iter(warm_chat))
                 try:
-                    with httpx.Client(timeout=_PROBE_TIMEOUT) as client:
+                    with httpx.Client(timeout=_INFERENCE_PROBE_TIMEOUT) as client:
                         inf_resp = client.post(
                             f"{base}/api/chat",
                             json={

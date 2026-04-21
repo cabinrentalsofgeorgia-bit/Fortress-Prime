@@ -210,6 +210,10 @@ class InferenceResult:
 
 _DEEP_TASK_TYPES = {"legal", "reasoning", "analysis"}
 
+# Task types that use the dedicated vrs_fast tier (spark-4 primary, Iron Dome v6).
+# All other fast tasks continue to use the 'fast' tier (spark-2/spark-1).
+_VRS_FAST_TASK_TYPES = {"vrs_concierge"}
+
 def _preferred_ollama_model(task_type: str) -> str:
     if task_type in _DEEP_TASK_TYPES:
         return settings.ollama_deep_model
@@ -220,6 +224,8 @@ def _tier_for_task(task_type: str) -> str:
     """Map task_type to model registry tier name."""
     if task_type in _DEEP_TASK_TYPES:
         return "deep"
+    if task_type in _VRS_FAST_TASK_TYPES:
+        return "vrs_fast"
     return "fast"
 
 

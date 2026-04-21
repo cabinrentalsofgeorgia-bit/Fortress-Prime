@@ -200,3 +200,62 @@ class TestLoadFromAtlas:
         r = ModelRegistry()
         r.load_from_atlas(p)
         assert r._loaded is False
+
+
+# ---------------------------------------------------------------------------
+# Iron Dome v6 — vrs_fast tier routing
+# ---------------------------------------------------------------------------
+
+class TestVrsFastTier:
+    """Registry must route vrs_fast tier to spark-4 first, generic fast to spark-2."""
+
+    def _make_v6_registry(self) -> ModelRegistry:
+        spark2 = _make_ep("spark-2", ["qwen2.5:7b"], latency=50.0)
+        spark4 = _make_ep("spark-4", ["qwen2.5:7b"], latency=28.0)
+        return _make_registry(
+            spark2, spark4,
+            tier_routing={
+                "fast":     ["spark-2"],
+                "vrs_fast": ["spark-4", "spark-2"],
+            },
+        )
+
+    def test_vrs_fast_tier_picks_spark4_first(self):
+        r = self._make_v6_registry()
+        url = r.get_endpoint_for_model("qwen2.5:7b", tier="vrs_fast")
+        assert "192.168.0.104" in url  # spark-4 mock URL ends in node_id[-1]="4"
+
+    def test_fast_tier_picks_spark2_not_spark4(self):
+        r = self._make_v6_registry()
+        url = r.get_endpoint_for_model("qwen2.5:7b", tier="fast")
+        assert "192.168.0.102" in url  # spark-2 mock URL ends in "2"
+
+    def test_vrs_fast_falls_back_to_spark2_when_spark4_unhealthy(self):
+        spark2 = _make_ep("spark-2", ["qwen2.5:7b"], latency=50.0)
+        spark4 = _make_ep("spark-4", ["qwen2.5:7b"], healthy=False)
+        r = _make_registry(
+            spark2, spark4,
+            tier_routing={"vrs_fast": ["spark-4", "spark-2"]},
+        )
+        url = r.get_endpoint_for_model("qwen2.5:7b", tier="vrs_fast")
+        assert "192.168.0.102" in url  # falls back to spark-2
+
+
+class TestTierForTask:
+    """_tier_for_task must map vrs_concierge to vrs_fast, everything else to fast or deep."""
+
+    def test_vrs_concierge_maps_to_vrs_fast(self):
+        from backend.services.ai_router import _tier_for_task
+        assert _tier_for_task("vrs_concierge") == "vrs_fast"
+
+    def test_generic_maps_to_fast(self):
+        from backend.services.ai_router import _tier_for_task
+        assert _tier_for_task("generic") == "fast"
+
+    def test_legal_maps_to_deep(self):
+        from backend.services.ai_router import _tier_for_task
+        assert _tier_for_task("legal") == "deep"
+
+    def test_unknown_maps_to_fast(self):
+        from backend.services.ai_router import _tier_for_task
+        assert _tier_for_task("code_generation") == "fast"
