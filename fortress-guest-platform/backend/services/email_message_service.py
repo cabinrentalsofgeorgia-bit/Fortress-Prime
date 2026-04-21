@@ -115,9 +115,13 @@ class EmailMessageService:
             msg.ai_draft = result.get("draft_text") or ""
             msg.ai_confidence = result.get("confidence")
             msg.ai_meta = result.get("meta")
-            msg.intent = result.get("intent")
-            msg.sentiment = result.get("sentiment")
-            msg.category = result.get("category")
+            # Truncate to schema limits — run_guest_triage primary_issue can be >50 chars
+            raw = result.get("intent") or ""
+            msg.intent = raw[:50] if raw else None
+            raw = result.get("sentiment") or ""
+            msg.sentiment = raw[:20] if raw else None
+            raw = result.get("category") or ""
+            msg.category = raw[:50] if raw else None
         except Exception as exc:  # noqa: BLE001
             logger.error(
                 "email_draft_generation_failed message_id=%s err=%s",
