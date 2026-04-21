@@ -62,7 +62,7 @@ HYDRA_32B_URL = os.getenv("HYDRA_32B_URL", "http://192.168.0.105:11434/v1").rstr
 HYDRA_120B_URL = os.getenv("HYDRA_120B_URL", "http://192.168.0.106:11434/v1").rstrip("/")
 VLLM_120B_URL = os.getenv("VLLM_120B_URL", "http://192.168.0.106:8000/v1").rstrip("/")
 
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")  # matches litellm_config.yaml
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 XAI_MODEL = os.getenv("XAI_MODEL", "grok-3")
 XAI_MODEL_FLAGSHIP = os.getenv("XAI_MODEL_FLAGSHIP", "grok-4-0709")
@@ -1205,10 +1205,12 @@ Full operational brief (reference):
 {case_brief[:12000]}
 
 Write one draft SMS reply."""
+    # qwen2.5:7b at HYDRA_120B_URL (spark-4 :11434/v1) — confirmed working.
+    # HYDRA_MODEL_120B (gpt-oss:120b) is not loaded on any node.
     text, _model = await _call_llm(
         system,
         user,
-        model=HYDRA_MODEL_120B,
+        model="qwen2.5:7b",
         base_url=HYDRA_120B_URL,
         temperature=0.55,
         max_tokens=512,
