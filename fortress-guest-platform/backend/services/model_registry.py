@@ -215,9 +215,15 @@ class ModelRegistry:
             # Phase 3: inference liveness (only when a configured model is warm)
             with self._lock:
                 configured = set(ep.models)
-            warm_configured = configured & warm_models
-            if warm_configured:
-                probe_model = next(iter(warm_configured))
+            # Embed models (nomic-embed-text etc.) return 400 on /api/chat.
+            # Only probe chat-capable models.
+            _EMBED_SKIP = ("embed", "nomic", "mxbai", "all-minilm")
+            warm_chat = {
+                m for m in (configured & warm_models)
+                if not any(p in m.lower() for p in _EMBED_SKIP)
+            }
+            if warm_chat:
+                probe_model = next(iter(warm_chat))
                 try:
                     with httpx.Client(timeout=_PROBE_TIMEOUT) as client:
                         inf_resp = client.post(
