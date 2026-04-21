@@ -64,8 +64,8 @@ VLLM_120B_URL = os.getenv("VLLM_120B_URL", "http://192.168.0.106:8000/v1").rstri
 
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")  # matches litellm_config.yaml
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
-XAI_MODEL = os.getenv("XAI_MODEL", "grok-3")
-XAI_MODEL_FLAGSHIP = os.getenv("XAI_MODEL_FLAGSHIP", "grok-4-0709")
+XAI_MODEL = os.getenv("XAI_MODEL", "grok-4")          # litellm_config.yaml registers grok-4; grok-3 not registered
+XAI_MODEL_FLAGSHIP = os.getenv("XAI_MODEL_FLAGSHIP", "grok-4")  # grok-4-0709 not in config
 VLLM_MODEL_120B = os.getenv("VLLM_MODEL_120B", "openai/gpt-oss-120b")
 HYDRA_MODEL_32B = os.getenv("HYDRA_MODEL_32B", "qwen3:32b")
 HYDRA_MODEL_120B = os.getenv("HYDRA_MODEL_120B", "gpt-oss:120b")
