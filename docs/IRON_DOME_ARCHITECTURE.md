@@ -1,6 +1,6 @@
 # Iron Dome — Fortress-Prime Sovereign AI Defense System
 
-**Version:** 6.0
+**Version:** 6.1
 **Date:** April 21, 2026
 **Author:** Gary Knight (with Claude)
 **Supersedes:** v5 (April 18, 2026)
@@ -29,6 +29,35 @@ v5 was written:
    perpetuated the crowding problem v5 was designed to avoid and
    caused the sovereignty break documented above. v6 explicitly
    assigns homes for the remaining enterprises.
+
+---
+
+## Operating Principles (v6.1)
+
+### Principle 1 — Vendor-optimized inference first
+
+For any workload where Nvidia ships a tuned NIM or Nemotron variant
+(concierge, reasoning, customer service, high-throughput inference), that is
+the **default choice**. Generic Ollama pulls are the fallback when no
+NIM/Nemotron fits the workload, not the default.
+
+This applies because this cluster is 4× DGX Spark (GB10 Grace Blackwell,
+unified memory) — built specifically for the NIM ecosystem. Using commodity
+models when vendor-optimized variants exist leaves performance and safety on
+the table.
+
+### Principle 2 — Headroom discipline
+
+- Target per-node memory utilization **≤ 60%** under steady-state workload.
+- Reserve ≥ 40% for: training collisions, on-demand bursts (Financial,
+  Vision), concurrent guest traffic, emergency failover capacity.
+- No node operates with zero slack. If a model allocation would push a node
+  over 60%, the allocation gets revisited — re-host to a different node,
+  use a smaller model, or defer the decision.
+- **Exception:** `legal_train` during active epochs may push spark-2 beyond
+  60% temporarily. Other nodes compensate via health-probe failover per the
+  3-phase probe introduced in PR #105. This exception is time-bounded to the
+  epoch duration and does not set a precedent for steady-state overcommit.
 
 ---
 
@@ -304,4 +333,14 @@ establishes shared-GPU gating for spark-3. It preserves v5's three-tier
 architecture, all task-type mappings, and the judge scaffolding plan.
 
 This replaces v5 as the single source of architectural truth.
+
+---
+
+## Changes from v6.0
+
+**v6.1 (April 21, 2026):** Added two Operating Principles — Vendor-optimized
+inference first (NIM/Nemotron preferred on GB10 hardware) and Headroom
+discipline (≤ 60% per-node steady-state, ≥ 40% reserve). These formalize
+architecture decisions implied by the DGX Spark hardware choice and the
+legal_train failover pattern established in PR #105.
 (END)
