@@ -156,3 +156,52 @@ After running e3 on the expanded eval set (13 Pattern C, 8 Pattern B), the retra
 - If e3 legal/C < 0.40 on expanded set → **retrain as e3.1** with `new_c_pairs.jsonl` added to training data
 
 See eval results in PR description.
+
+---
+
+## 8. E3 Eval Results on Expanded Holdout
+
+**Eval completed:** 2026-04-21T13:27  
+**Holdout:** 195 records (legal/C: 2→13, legal/B: 8 unchanged)
+
+### Overall Metrics
+
+| Metric | Original (N=184) | Expanded (N=195) | Delta |
+|--------|-----------------|-----------------|-------|
+| similarity_mean | 0.7486 | **0.7348** | −0.0138 |
+| validity_rate | 0.9891 | **0.9897** | +0.0006 |
+| regression_count | 2 | **2** | 0 |
+
+*Note: Overall similarity_mean decreased slightly because 11 new legal/C samples (the harder citation-lookup task) were added. This is expected and not a regression.*
+
+### By Domain
+
+| Domain | Original N | Expanded N | Original sim | New sim | Delta |
+|--------|-----------|-----------|-------------|---------|-------|
+| legal/A | 45 | 45 | 0.8002 | **0.8002** | 0 |
+| legal/B | 8 | 8 | 0.5701 | **0.5701** | 0 |
+| legal/C | 2 | **13** | 0.2094 | **0.4589** | **+0.2495** |
+| legal/D | 43 | 43 | 0.8571 | **0.8571** | 0 |
+| legal/E | 86 | 86 | 0.6965 | **0.6965** | 0 |
+
+### Retrain Decision: **NO RETRAIN**
+
+**Threshold:** legal/C ≥ 0.40 → do not retrain  
+**Result:** legal/C = **0.4589** (N=13) ≥ 0.40 ✓
+
+The original legal/C score of 0.21 was a **sampling artifact** caused by two degenerate eval records with truncated context and ambiguous citation placeholders. With 13 properly-formed samples, e3 scores 0.46 on citation lookup — comfortably above the 0.40 threshold.
+
+**Conclusion:** Ship e3 as-is. The legal/C eval signal is now reliable (N=13). Further improvement requires new corpus acquisition (see §4 recommendations), not a retrain on current data.
+
+### e3 vs e2 Final Comparison (Expanded Eval)
+
+| Domain | e2 sim | e3 sim (expanded) | Delta |
+|--------|--------|------------------|-------|
+| legal/A | 0.7869 | 0.8002 | +0.013 |
+| legal/B | 0.4430 | 0.5701 | +0.127 |
+| legal/C | n/a (2 bad samples) | 0.4589 | — |
+| legal/D | 0.8663 | 0.8571 | −0.009 |
+| legal/E | 0.6829 | 0.6965 | +0.014 |
+| **Overall** | **0.7358** (N=184) | **0.7348** (N=195) | −0.001 |
+
+e3 remains the recommended production adapter across all well-sampled categories.
