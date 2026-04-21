@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # ── Config ────────────────────────────────────────────────────────────────────
-API_TOKEN = "1e8f8581c60a9cf6357dafcdc0c0ee8aa62b0c92"
+API_TOKEN = os.getenv("COURTLISTENER_API_TOKEN", "")
 BASE_URL = "https://www.courtlistener.com/api/rest/v4"
 GA_COURTS = ["gactapp", "ga"]
 DATE_AFTER = "2015-01-01"

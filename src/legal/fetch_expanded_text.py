@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 fetch_expanded_text.py — Fetch full text for expanded CourtListener opinions
 and paginate to find more unique ones.
@@ -23,7 +24,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("fetch_expanded")
 
-API_TOKEN   = "1e8f8581c60a9cf6357dafcdc0c0ee8aa62b0c92"
+API_TOKEN   = os.getenv("COURTLISTENER_API_TOKEN", "")
 BASE_URL    = "https://www.courtlistener.com/api/rest/v4"
 RATE_SLEEP  = 0.5
 PAGE_SLEEP  = 1.5
