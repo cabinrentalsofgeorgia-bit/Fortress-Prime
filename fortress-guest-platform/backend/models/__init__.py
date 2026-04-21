@@ -6,6 +6,8 @@ from backend.models.guest import Guest
 from backend.models.property import Property
 from backend.models.reservation import Reservation
 from backend.models.message import Message, MessageTemplate, ScheduledMessage
+from backend.models.email_inquirer import EmailInquirer
+from backend.models.email_message import EmailMessage
 from backend.models.workorder import WorkOrder
 from backend.models.guestbook import GuestbookGuide, Extra, ExtraOrder
 from backend.models.analytics import AnalyticsEvent
@@ -106,10 +108,13 @@ __all__ = [
     "Guest",
     "Property",
     "Reservation",
-    # Communication
+    # Communication — SMS
     "Message",
     "MessageTemplate",
     "ScheduledMessage",
+    # Communication — Email
+    "EmailInquirer",
+    "EmailMessage",
     # Operations
     "WorkOrder",
     # "HousekeepingTask",

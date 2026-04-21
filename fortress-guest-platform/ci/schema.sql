@@ -1,8 +1,8 @@
 -- CI schema snapshot for fortress-guest-platform
--- Generated: 2026-04-19T21:49:06Z
+-- Generated: 2026-04-21T02:49:45Z
 -- Source:    fortress_shadow
--- Commit:    c5484163a57de913df52635687916f443ad926a0
--- Alembic:   c255801e28a0,i23a1_add_payment_credit_codes
+-- Commit:    3446e105817985d0c870aad9a782c12f06a5d862
+-- Alembic:   l7e8f1a2b3c4
 -- NOTE: geometry/vector types replaced with text for CI compatibility.
 --       postgis/vector extensions omitted (postgres:16 has pgcrypto/uuid-ossp).
 
@@ -18,7 +18,7 @@ SET ROLE TO fortress_admin;
 -- PostgreSQL database dump
 --
 
-\restrict k7Ka2M4FW6sHX2WgZamqxwyS9uO30uOfRImi1Ak5PVdpcHfBt87YnaLdvzS8Kno
+\restrict FdO3Ro8PL5WgXQeaZzwcBMCxYm7tASohFPK6iWWOA4tAqKqVEW35qN3uEPfbMbp
 
 -- Dumped from database version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
@@ -1357,6 +1357,68 @@ CREATE TABLE public.distillation_queue (
     error text,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: email_inquirers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.email_inquirers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email character varying(255) NOT NULL,
+    display_name character varying(255),
+    first_name character varying(100),
+    last_name character varying(100),
+    guest_id uuid,
+    inferred_party_size integer,
+    inferred_dates_text text,
+    opt_in_email boolean DEFAULT true NOT NULL,
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    inquiry_count integer DEFAULT 1 NOT NULL
+);
+
+
+--
+-- Name: email_messages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.email_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    inquirer_id uuid NOT NULL,
+    guest_id uuid,
+    reservation_id uuid,
+    in_reply_to_message_id uuid,
+    direction character varying(20) NOT NULL,
+    email_from character varying(255) NOT NULL,
+    email_to character varying(255) NOT NULL,
+    email_cc text,
+    subject text,
+    body_text text NOT NULL,
+    body_excerpt text,
+    imap_uid bigint,
+    imap_message_id text,
+    received_at timestamp with time zone,
+    intent character varying(50),
+    sentiment character varying(20),
+    category character varying(50),
+    ai_draft text,
+    ai_confidence numeric(4,3),
+    ai_meta jsonb,
+    approval_status character varying(30) DEFAULT 'pending_approval'::character varying NOT NULL,
+    requires_human_review boolean DEFAULT true NOT NULL,
+    human_reviewed_at timestamp with time zone,
+    human_reviewed_by uuid,
+    human_edited_body text,
+    sent_at timestamp with time zone,
+    smtp_message_id text,
+    error_code character varying(50),
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    extra_data jsonb,
+    CONSTRAINT ck_email_messages_approval_status CHECK (((approval_status)::text = ANY ((ARRAY['pending_approval'::character varying, 'approved'::character varying, 'rejected'::character varying, 'sent'::character varying, 'send_failed'::character varying, 'no_draft_needed'::character varying])::text[]))),
+    CONSTRAINT ck_email_messages_direction CHECK (((direction)::text = ANY ((ARRAY['inbound'::character varying, 'outbound'::character varying])::text[])))
 );
 
 
@@ -4601,6 +4663,22 @@ ALTER TABLE ONLY public.distillation_queue
 
 
 --
+-- Name: email_inquirers email_inquirers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_inquirers
+    ADD CONSTRAINT email_inquirers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: email_messages email_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_messages
+    ADD CONSTRAINT email_messages_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: email_templates email_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5382,6 +5460,14 @@ ALTER TABLE ONLY public.channel_mappings
 
 ALTER TABLE ONLY public.competitor_listings
     ADD CONSTRAINT uq_competitor_listings_dedupe_hash UNIQUE (dedupe_hash);
+
+
+--
+-- Name: email_inquirers uq_email_inquirers_email; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_inquirers
+    ADD CONSTRAINT uq_email_inquirers_email UNIQUE (email);
 
 
 --
@@ -6208,6 +6294,41 @@ CREATE INDEX idx_cl_qc_queue ON public.capture_labels USING btree (created_at DE
 --
 
 CREATE INDEX idx_cl_task_type ON public.capture_labels USING btree (task_type);
+
+
+--
+-- Name: idx_email_inquirers_guest_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_email_inquirers_guest_id ON public.email_inquirers USING btree (guest_id);
+
+
+--
+-- Name: idx_email_messages_imap_uid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_email_messages_imap_uid ON public.email_messages USING btree (imap_uid) WHERE (imap_uid IS NOT NULL);
+
+
+--
+-- Name: idx_email_messages_inquirer; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_email_messages_inquirer ON public.email_messages USING btree (inquirer_id, received_at DESC);
+
+
+--
+-- Name: idx_email_messages_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_email_messages_status ON public.email_messages USING btree (approval_status, received_at DESC);
+
+
+--
+-- Name: idx_email_messages_thread; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_email_messages_thread ON public.email_messages USING btree (in_reply_to_message_id);
 
 
 --
@@ -9251,6 +9372,46 @@ ALTER TABLE ONLY public.distillation_queue
 
 
 --
+-- Name: email_inquirers email_inquirers_guest_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_inquirers
+    ADD CONSTRAINT email_inquirers_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id) ON DELETE SET NULL;
+
+
+--
+-- Name: email_messages email_messages_guest_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_messages
+    ADD CONSTRAINT email_messages_guest_id_fkey FOREIGN KEY (guest_id) REFERENCES public.guests(id) ON DELETE SET NULL;
+
+
+--
+-- Name: email_messages email_messages_human_reviewed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_messages
+    ADD CONSTRAINT email_messages_human_reviewed_by_fkey FOREIGN KEY (human_reviewed_by) REFERENCES public.staff_users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: email_messages email_messages_inquirer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_messages
+    ADD CONSTRAINT email_messages_inquirer_id_fkey FOREIGN KEY (inquirer_id) REFERENCES public.email_inquirers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: email_messages email_messages_reservation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_messages
+    ADD CONSTRAINT email_messages_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id) ON DELETE SET NULL;
+
+
+--
 -- Name: extra_orders extra_orders_extra_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9264,6 +9425,14 @@ ALTER TABLE ONLY public.extra_orders
 
 ALTER TABLE ONLY public.extra_orders
     ADD CONSTRAINT extra_orders_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: email_messages fk_email_messages_reply_to; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_messages
+    ADD CONSTRAINT fk_email_messages_reply_to FOREIGN KEY (in_reply_to_message_id) REFERENCES public.email_messages(id) ON DELETE SET NULL;
 
 
 --
@@ -9950,4 +10119,4 @@ ALTER TABLE ONLY public.yield_simulations
 -- PostgreSQL database dump complete
 --
 
-\unrestrict k7Ka2M4FW6sHX2WgZamqxwyS9uO30uOfRImi1Ak5PVdpcHfBt87YnaLdvzS8Kno
+\unrestrict FdO3Ro8PL5WgXQeaZzwcBMCxYm7tASohFPK6iWWOA4tAqKqVEW35qN3uEPfbMbp

@@ -52,7 +52,7 @@ from backend.models.staff import StaffRole, StaffUser
 
 
 ADMIN_EMAIL = "cabin.rentals.of.georgia@gmail.com"
-ADMIN_PASSWORD = os.getenv("ADMIN_SEED_PASSWORD")
+ADMIN_PASSWORD = os.getenv("ADMIN_SEED_PASSWORD") or os.getenv("BOOTSTRAP_ADMIN_PASSWORD")
 if not ADMIN_PASSWORD:
     raise SystemExit(
         "ADMIN_SEED_PASSWORD env var is required to run the seed script.\n"
