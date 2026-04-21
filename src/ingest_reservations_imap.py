@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# DEPRECATED: reservations_draft_queue table writes removed; kept for 48h rollback
 """
 ingest_reservations_imap.py — Reservations mailbox IMAP watcher
 
