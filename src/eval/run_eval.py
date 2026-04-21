@@ -94,23 +94,18 @@ def run_eval(adapter_path: Path, holdout_path: Path, dry_run: bool) -> dict:
     embedder = SentenceTransformer(EMBEDDING_MODEL, device="cpu")
 
     # --- Load LoRA adapter ---
-    log.info("Loading base model %s in 4-bit NF4 …", BASE_MODEL_DIR)
+    # DGX Spark (GB10) unified memory: skip 4-bit quantization, load bf16 directly
+    # (matches training config; bitsandbytes CUDA ops unavailable in this env)
+    log.info("Loading base model %s in bf16 …", BASE_MODEL_DIR)
     import torch
     from peft import AutoPeftModelForCausalLM
-    from transformers import AutoTokenizer, BitsAndBytesConfig
+    from transformers import AutoTokenizer
 
-    bnb = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-    )
     tokenizer = AutoTokenizer.from_pretrained(str(adapter_path), use_fast=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     model = AutoPeftModelForCausalLM.from_pretrained(
         str(adapter_path),
-        quantization_config=bnb,
         device_map="auto",
         torch_dtype=torch.bfloat16,
     )
