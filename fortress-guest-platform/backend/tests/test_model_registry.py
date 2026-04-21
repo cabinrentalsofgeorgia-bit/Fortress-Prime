@@ -259,3 +259,36 @@ class TestTierForTask:
     def test_unknown_maps_to_fast(self):
         from backend.services.ai_router import _tier_for_task
         assert _tier_for_task("code_generation") == "fast"
+
+
+# ---------------------------------------------------------------------------
+# Hydra fleet autofix — qwen2.5:32b replaces unloaded qwen3:32b for seats 4/6
+# ---------------------------------------------------------------------------
+
+class TestHydra32bModelName:
+    """HYDRA_MODEL_32B default must be qwen2.5:32b (loaded on spark-1 and spark-4).
+    qwen3:32b is not loaded on any node; routing to it caused seats 4+6 to fall
+    through the full fallback chain to SWARM on every request."""
+
+    def test_hydra_model_32b_default_is_qwen_25(self):
+        from backend.services.crog_concierge_engine import HYDRA_MODEL_32B
+        assert HYDRA_MODEL_32B == "qwen2.5:32b", (
+            f"HYDRA_MODEL_32B should be qwen2.5:32b (loaded on spark-1+spark-4), "
+            f"got {HYDRA_MODEL_32B!r}"
+        )
+
+    def test_hydra_32b_routes_to_loaded_model(self):
+        """Registry: seats 4 and 6 should find a healthy node for qwen2.5:32b."""
+        spark1 = _make_ep("spark-1", ["qwen2.5:32b"], latency=30.0)
+        spark4 = _make_ep("spark-4", ["qwen2.5:32b"], latency=28.0)
+        r = _make_registry(spark1, spark4,
+                           tier_routing={"mid": ["spark-1", "spark-4"]})
+        url = r.get_endpoint_for_model("qwen2.5:32b")
+        assert "192.168" in url  # resolves to a cluster node
+
+    def test_qwen3_32b_not_default(self):
+        """Regression: qwen3:32b must NOT be the default (unloaded everywhere)."""
+        from backend.services.crog_concierge_engine import HYDRA_MODEL_32B
+        assert HYDRA_MODEL_32B != "qwen3:32b", (
+            "HYDRA_MODEL_32B reverted to qwen3:32b — model is not loaded on any node"
+        )
