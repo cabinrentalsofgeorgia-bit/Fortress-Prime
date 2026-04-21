@@ -1,548 +1,307 @@
 # Iron Dome — Fortress-Prime Sovereign AI Defense System
 
-**Version:** 5.0
-**Date:** April 18, 2026
+**Version:** 6.0
+**Date:** April 21, 2026
 **Author:** Gary Knight (with Claude)
-**Supersedes:** v4 (commit 7b7cefeba)
+**Supersedes:** v5 (April 18, 2026)
 
-## Why v5
+---
 
-v4 documented the cluster as two businesses with dedicated nodes
-and domain-isolated RAG. v5 adds what was missing from every prior
-version: the frontier tier that sits above sovereign, and the
-mechanism by which sovereign learns from it.
+## Why v6
 
-v4 treated frontier API calls as "fallback when sovereign fails."
-That framing is wrong. Frontier models aren't a fallback — they're
-teachers. Sovereign models aren't a primary path — they're students.
-The architecture is teacher-student distillation, and every
-capture-write site is a training opportunity.
+v5 established the three-tier architecture (Godhead / Sovereign / Judge)
+and assigned two enterprises to nodes — Fortress Legal on spark-1,
+CROG-VRS on spark-4. v6 corrects two realities that surfaced after
+v5 was written:
 
-v5 makes that explicit.
+1. **v5 on paper was not v5 in production.** The atlas / model_registry
+   never listed `qwen2.5:7b` on spark-4. `tier_routing.fast` was
+   `["spark-2", "spark-1"]` only. Every `task_type=vrs_concierge` call
+   routed to spark-2 (training-loaded) or spark-1 (also under load),
+   then cascaded to cloud fallback. The "spark-4 is CROG-VRS" story
+   was an architectural aspiration, not a deployment. v6 makes it
+   real via the atlas fix (feat/atlas-vrs-spark4-routing, PR
+   forthcoming).
 
-## The three-tier architecture
+2. **v5 had no home for non-VRS, non-Legal enterprises.** Master
+   Accounting, Acquisitions, and the Financial / Trading / Wealth
+   enterprise were implicitly piled onto spark-2 by default. This
+   perpetuated the crowding problem v5 was designed to avoid and
+   caused the sovereignty break documented above. v6 explicitly
+   assigns homes for the remaining enterprises.
 
-┌─────────────────────────────────────────────────────┐
- │                   GODHEAD TIER                      │
- │    Frontier APIs, specialized per task type         │
- │                                                     │
- │  Claude (Anthropic)     │ Legal reasoning, brief    │
- │                         │ drafting, summarization   │
- │  GPT (OpenAI)           │ Code generation, general  │
- │                         │ reasoning                 │
- │  Gemini (Google)        │ Vision, multimodal        │
- │  Grok (xAI)             │ Real-time, current events │
- │  DeepSeek-R1 (cloud)    │ Heavy logic, math         │
- └─────────────────────────┬───────────────────────────┘
-                           │
-                           │ escalated when sovereign uncertain
-                           │ captured as teacher signal
-                           │
- ┌─────────────────────────▼───────────────────────────┐
- │                 SOVEREIGN TIER                       │
- │           Spark cluster, domain-dedicated            │
- │                                                      │
- │  spark-1  Fortress Legal                             │
- │  spark-4  CROG-VRS                                   │
- │  spark-2  Orchestration + fast tier + embeddings     │
- │  spark-3  Vision                                     │
- │                                                      │
- │  Models: deepseek-r1:70b, qwen2.5:32b,               │
- │          qwen2.5:7b, llama3.2-vision:90b             │
- └─────────────────────────┬───────────────────────────┘
-                           │
-                           │ every response evaluated
-                           │
- ┌─────────────────────────▼───────────────────────────┐
- │                    JUDGE TIER                        │
- │       Task-type specialized classifier LLMs          │
- │                                                      │
- │  legal_reasoning_judge   on spark-1                  │
- │  brief_drafting_judge    on spark-1                  │
- │  vrs_concierge_judge     on spark-4                  │
- │  market_research_judge   on spark-4                  │
- │  pricing_math_judge      on spark-4                  │
- │  code_generation_judge   on spark-2                  │
- │  vision_analysis_judge   on spark-3                  │
- │  real_time_judge         on spark-2                  │
- │                                                      │
- │  Decision: confident | uncertain | escalate          │
- │  Output: decision + reasoning for audit              │
- └──────────────────────────────────────────────────────┘
+---
 
-Three tiers. Judge decides escalation. Sovereign serves when confident.
-Godhead teaches when escalated. Every exchange captured as training
-data for the next iteration of sovereign.
+## Enterprise → node assignments (v6)
 
-## Task specialization — Godhead mapping
+| Node    | IP              | Primary Role                        | Secondary Role                         |
+|---------|-----------------|-------------------------------------|----------------------------------------|
+| spark-1 | 192.168.0.104   | Fortress Legal (sovereign + NIM)    | Legal vector store host               |
+| spark-2 | 192.168.0.100   | Orchestration + backend + control   | Accounting + Acquisitions co-tenants  |
+| spark-3 | 192.168.0.105   | Vision                              | Financial GPU (on-demand, gated)      |
+| spark-4 | 192.168.0.106   | CROG-VRS (sovereign + Qdrant VRS)   | —                                     |
 
-Each frontier model is the authoritative teacher for specific task
-types. ai_router routes to the right teacher when escalation happens.
-Fallback: if the specialized teacher is rate-limited or unavailable,
-route to the next-best teacher per this priority table.
+**Changes from v5:**
+- spark-3 adds Financial as a gated co-tenant (v5 was vision-only)
+- Accounting and Acquisitions explicitly named as spark-2 co-tenants
+- spark-4 CROG-VRS routing made real via atlas registration
 
-| Task type | Primary | Fallback 1 | Fallback 2 |
-|-----------|---------|------------|------------|
-| Legal reasoning | Claude | GPT | DeepSeek-R1 |
-| Brief drafting | Claude | GPT | DeepSeek-R1 |
-| Legal citations | Claude | GPT | — |
-| Contract analysis | Claude | GPT | — |
-| Code generation | GPT | Claude | — |
-| Code refactoring | Claude | GPT | — |
-| Code debugging | GPT | Claude | — |
-| Vision (damage, photos) | Gemini | Claude (with image) | — |
-| OCR | Gemini | Claude (with image) | — |
-| Real-time facts | Grok | Gemini (if web) | — |
-| Current market conditions | Grok | Claude | — |
-| Math reasoning | DeepSeek-R1 | Claude | GPT |
-| Complex logic chains | DeepSeek-R1 | Claude | GPT |
-| Summarization (long context) | Claude | Gemini | GPT |
-| Summarization (news) | Grok | Claude | — |
-| Concierge replies | Claude | GPT | — |
-| OTA responses | Claude | GPT | — |
-| Competitive intelligence | Claude | Gemini | — |
-| Pricing strategy | Claude | GPT | DeepSeek-R1 |
-| Acquisitions analysis | Claude | GPT | — |
+---
 
-The table is authoritative; changes require an architectural decision
-logged here.
+## The five enterprises
 
-## Task type classifier
+### Fortress Legal
+- Sovereign model: NIM `meta/llama-3.1-8b-instruct-dgx-spark`
+  (migrated to spark-1 per v5 Phase 5b)
+- Judge: `legal_reasoning_judge`, `brief_drafting_judge` (qwen2.5:32b, 1000ms
+  latency, is_active=False pending training data per Phase 4e.3)
+- Godhead: Claude primary, GPT fallback (legal reasoning / brief drafting)
+- Vector store: `legal_library`, `legal_ediscovery` — stays on spark-2 Qdrant
+  (NOT in Phase 5a migration scope)
+- Privilege boundary: no cross-domain retrieval into VRS stores
 
-Before routing, ai_router classifies the incoming request into one
-of the task types above. Classifier lives at the top of the request
-path — lightweight, deterministic where possible.
+### CROG-VRS (Cabin Rentals of Georgia)
+- Sovereign model: `qwen2.5:7b` served from spark-4
+- Distilled target: `qwen2.5:7b-crog-vrs` (Phase 4a, nightly finetune active)
+- Judge: `vrs_concierge_judge`, `market_research_judge`, `pricing_math_judge`
+  (qwen2.5:7b, 200ms latency)
+- 9-seat concierge deliberation: `crog_concierge_engine.run_guest_triage` /
+  `run_email_triage` (Seats 1–9 per the concierge architecture; seats 4, 7
+  hit spark-3/spark-4 local, seat flagship via LiteLLM gateway)
+- Godhead: Claude primary for guest concierge, GPT fallback
+- Vector store: `fgp_vrs_knowledge` on spark-4 Qdrant (Phase 5a complete,
+  read cutover live)
+- Email pipeline: `email_messages` / `email_inquirers` tables + `/api/email/outbound-drafts`
+  (PR #104)
 
-Three-tier classification:
+### Financial / Trading / Wealth (NEW in v6)
+- Current mode: **research-only**. `/mnt/fortress_nas/wealth/LIVE_DISABLED`
+  marker enforces no live broker endpoints. Every wealth script checks
+  this file at startup and refuses to run if missing.
+- GPU: spark-3, on-demand, gated via marker file (see Shared GPU Gating
+  section below). No scheduled jobs — operator triggers backtests.
+- Sovereign model: NOT YET ALLOCATED. Research uses Godhead (Claude for
+  thesis analysis, GPT for data munging, DeepSeek-R1 for math).
+  Distilled sovereign model decision deferred until Financial proves
+  out workload patterns — spec'd after 60+ days of real research usage.
+- Judge: not yet scaffolded. Blocked on sovereign model allocation.
+- Godhead routing (per task):
+    - Math reasoning / complex logic: DeepSeek-R1 primary
+    - Strategy / thesis: Claude primary
+    - Real-time market conditions: Grok primary
+    - Code generation (backtest frameworks): GPT primary
+- Vector store: `wealth_research` (to be created on NAS), NOT shared
+  with VRS or Legal — cross-domain retrieval prohibited by design.
+  Ingestion sources: market data, FRED, filings, research papers.
 
-1. **Source module hint (deterministic).** If the request comes from
-   `legal_council`, the task_type defaults to the legal category
-   that module specifies. No inference needed.
+### Master Accounting
+- Compute: spark-2 (lightweight). Books, ledger, statement workflows,
+  Stripe reconciliation — all transactional, CPU-sufficient.
+- Writes: only from accounting lane (per lane architecture). Other
+  lanes emit to `/mnt/fortress_nas/accounting/inbox/` for batch drain.
+- Sovereign model: none needed. Reports and analysis via Godhead
+  (Claude for narrative statements, GPT for SQL generation).
 
-2. **Keyword patterns (deterministic).** If the prompt contains
-   structured markers like "brief:", "draft:", "analyze contract",
-   "calculate pricing for", deterministic rules assign task_type.
+### Acquisitions Pipeline
+- Compute: spark-2 (lightweight). Deal flow, diligence notes, research.
+- Capital requests to Wealth via `/mnt/fortress_nas/wealth/capital_requests/`
+  (one-way, never the reverse).
+- Sovereign model: none needed. Cloud Godhead for analysis.
 
-3. **Small LLM classifier (fallback).** When neither module hint
-   nor keyword pattern resolves, a small classifier (qwen2.5:0.5b
-   on spark-2) assigns task_type from prompt content. Fast, under
-   100ms.
+---
 
-Classification result is logged on every capture in the `task_type`
-field. Analytics and audits can filter by task.
+## Shared GPU gating (spark-3)
 
-## The Judge tier
+spark-3 serves two masters: vision (primary) and Financial GPU (secondary,
+on-demand). Since Financial is operator-triggered and vision is sporadic,
+a scheduler is overkill. v6 uses a marker-file gate:
 
-### Purpose
+**Mechanism:**
+- `/mnt/fortress_nas/spark3/VISION_BUSY` — written by vision jobs at start,
+  removed at end (trap-handler on exit)
+- Financial GPU scripts check for this file at startup:
+    - File exists → Financial script logs "vision busy, deferring" and exits
+      (operator re-runs manually)
+    - File absent → Financial writes `/mnt/fortress_nas/spark3/FINANCIAL_BUSY`
+      and proceeds
+- Vision scripts similarly check for `FINANCIAL_BUSY` and defer if present
 
-Every sovereign response passes through a judge before being returned
-to the user. Judge decides whether sovereign's response is good
-enough to serve, or whether the query should be escalated to the
-task-specialized Godhead teacher.
+**Rules:**
+- No automatic retry / queue. Operator sees the defer message and re-runs
+  when the other workload clears.
+- Marker files include PID + start timestamp so stale markers (from a
+  crashed script) can be identified and cleared.
+- A daily cron at 4am scans for markers older than 12h and logs a
+  warning — prevents silent deadlock if a script crashes before cleanup.
 
-### Architecture — specialized judges per task type
+**Why this is enough for now:**
+- Financial is on-demand (operator-triggered), not scheduled
+- Vision bursts are mostly predictable (check-in/out windows)
+- Worst case: operator sees "deferring" and triggers 30 min later
+- Scheduler layer (proper priority queue) can ship later if contention
+  becomes frequent. Marker files are cheap to replace.
 
-Eight judges, one per primary task category. Each is a small
-instruction-tuned LLM (qwen2.5:1.5b or qwen2.5:3b) fine-tuned on
-labeled examples from its task domain.
+---
 
-**spark-1 (Fortress Legal):**
-- `legal_reasoning_judge` — evaluates legal analysis, statutory application, precedent usage
-- `brief_drafting_judge` — evaluates argument structure, persuasive writing, citation integrity
+## Model routing (v6 atlas)
 
-**spark-4 (CROG-VRS):**
-- `vrs_concierge_judge` — evaluates tone, factual accuracy about properties, brand voice
-- `market_research_judge` — evaluates analytical depth, data citation, currency of info
-- `pricing_math_judge` — evaluates mathematical correctness, pricing rationale
+`tier_routing` defines which nodes serve which tier per task_type:
 
-**spark-2 (Orchestrator):**
-- `code_generation_judge` — evaluates correctness, style, security
-- `real_time_judge` — evaluates recency of information, source credibility
+```yaml
+# Excerpt — see backend/services/model_registry.py for authoritative source
 
-**spark-3 (Vision):**
-- `vision_analysis_judge` — evaluates image description accuracy, damage identification correctness
+fast_tier (qwen2.5:7b, <500ms target):
+  vrs_concierge:        [spark-4, spark-2, spark-1]   # v6 change
+  pricing_math:         [spark-4, spark-2, spark-1]
+  concierge_replies:    [spark-4, spark-2, spark-1]
+  code_generation:      [spark-2, spark-1]
+  real_time:            [spark-2, spark-1]
+  generic:              [spark-2, spark-1, spark-4]
 
-### Judge output format
+deep_tier (qwen2.5:32b, 500-1500ms target):
+  legal_reasoning:      [spark-1]
+  brief_drafting:       [spark-1]
+  contract_analysis:    [spark-1]
+  legal_citations:      [spark-1]
 
-Each judge returns a structured decision:
-
-```json
-{
-  "decision": "confident | uncertain | escalate",
-  "reasoning": "One sentence explaining the decision.",
-  "confidence_score": 0.0-1.0
-}
+vision_tier (llama3.2-vision:90b, latency tolerant):
+  vision_analysis:      [spark-3]
+  vision_photo:         [spark-3]
 ```
 
-Decision definitions:
-
-`confident` — return sovereign response to user as-is, capture for potential training
-`uncertain` — return sovereign response but tag for human review
-`escalate` — discard sovereign response, route to Godhead teacher, return teacher response to user, capture full exchange as high-value training signal
-
-### Judge training — labeling hybrid
-
-Training data for judges comes from a hybrid pipeline:
-
-**Phase A: Godhead-as-labeler at scale.**
-For the first 30-60 days, every sovereign response is evaluated by
-the specialized Godhead teacher: "was this response acceptable? Why
-or why not?" Godhead's judgment becomes the judge's training label.
-This produces thousands of labels per task type quickly but imprints
-Godhead's biases.
-
-**Phase B: Human QC on samples.**
-You (Gary) review a 10% random sample of Godhead labels per week.
-Corrections become higher-weight training signal. This keeps judges
-from drifting into whatever Godhead happens to think is good.
-
-**Phase C: Judge-self-improvement (later).**
-Once judges are running in production, their decisions are logged.
-When judge says "confident" but later evidence shows the response
-was bad (user complaint, manual correction, downstream error), that
-becomes a retraining signal.
-
-### Judge deployment
-
-Each judge runs as an inline call inside `ai_router` after sovereign
-responds but before user sees the response.
-
-Latency budget: judge inference must complete in under 200ms p95.
-This constrains judge model size and prompt length. Small fast
-judges are the design choice, not big accurate judges.
-
-## Escalation flow
-
-End-to-end request lifecycle:
-
-## The capture format — what every row needs
-
-v5 schema (shipped in Phase 3 retag, PR #64):
-
-- `id` — UUID
-- `created_at` — timestamp
-- `source_module` — which fortress module made the call
-- `source_persona` — persona context (e.g., senior_litigator)
-- `user_prompt` — the prompt
-- `assistant_resp` — the final response returned to user
-- `task_type` — classified task type
-- `served_by_endpoint` — actual endpoint that served the response
-- `served_vector_store` — which RAG store was consulted, if any
-- `escalated_from` — sovereign endpoint that was bypassed (NULL if no escalation)
-- `sovereign_attempt` — what sovereign said before escalation (NULL if no escalation)
-- `teacher_endpoint` — Godhead endpoint URL if escalated (NULL otherwise)
-- `teacher_model` — name of Godhead model used (NULL if not escalated)
-- `judge_decision` — confident/uncertain/escalate
-- `judge_reasoning` — judge's explanation
-- `eval_holdout` — Phase 4b marker
-- `status` — pending/exported
-- `capture_metadata` — jsonb extras
-
-## Domain-isolated RAG (from v4, unchanged)
-
-v5 inherits v4's RAG architecture. Vector stores remain:
-- Fortress Legal store on spark-1 only
-- CROG-VRS store on spark-4 only
-- Shared entities store on NAS
-- Cross-domain retrieval prohibited at query layer
-
-Judges see `served_vector_store` as context: a judge evaluating a
-legal response knows the response was grounded in the legal store,
-and can flag if sovereign hallucinated citations not in the retrieved
-context.
-
-## Phase plan v5
-
-### Phase 1 — Plumbing deployed (DONE)
-### Phase 2 — Privilege filter (DONE)
-### Phase 2.5 — Model registry (DONE)
-### Phase 3 — Flywheel capture with v5 tagging (DONE)
-### Phase 4b — Eval harness (DONE)
-### Phase 4c — Adapter routing scaffold (DONE, needs realignment)
-
-### Phase 4e.1 — Labeling infrastructure (NEW, NEXT)
-Godhead-as-labeler pipeline. Manual QC surface. Capture extension
-for (prompt, sovereign_response, godhead_judgment, gary_correction).
-Enables every downstream judge phase.
-
-### Phase 4e.2 — Task type classifier (DONE)
-Task classifier live. Three tiers: module hint → keyword pattern → qwen2.5:0.5b (500ms timeout). See backend/services/task_types.py for module→task and keyword→task mappings. task_type populated on every ai_router and legal_council capture.
-Three-tier classifier: source hint → keyword → small LLM. Wires into
-ai_router at top of request path. Populates task_type on every capture.
-
-**Defect 3 fix (2026-04-19):** Tier 1 module hint can now be overridden by
-content analysis when the prompt strongly contradicts the module's default
-task type. Currently only fires for `pricing_math`: `quote_engine` is
-multi-purpose — it handles both pricing calculations and property
-description/marketing copy tasks. When a quote_engine prompt contains no
-pricing signal (`_PRICING_PATTERNS`) but clear descriptive signal
-(`_DESCRIPTIVE_PATTERNS`), `_detect_content_mismatch` returns `vrs_concierge`
-instead. Pricing signal always wins if present; the override only fires on
-zero pricing + positive descriptive. See `task_classifier.py`.
-
-**Ambiguous multi-purpose modules:** `quote_engine` defers to keyword content.
-`vrs_agent_dispatcher` stays `vrs_concierge` regardless of pricing keywords —
-the override only fires when Tier 1 resolves to `pricing_math`, not when it
-resolves to `vrs_concierge`. If a `vrs_agent_dispatcher` capture contains
-substantive pricing discussion, that is within-scope for `vrs_concierge`
-(staff pricing guidance is a concierge function). If pricing math becomes a
-distinct vrs sub-task with sufficient volume, add `vrs_pricing` to `_TASK_TYPES`
-and update `_MODULE_TO_TASK` in a separate architectural decision.
-
-### Phase 4e.3 — Judge scaffolding (DONE, awaiting training data)
-Highest-volume task type, lowest-risk errors, fastest iteration.
-Proves the judge architecture end-to-end before replicating.
-
-**Path C update (2026-04-19):** Per-task latency budgets + expanded _JUDGE_MAP.
-- `_JUDGE_TIMEOUTS` dict: legal tasks 1000ms, VRS 200ms, code/market 300–500ms.
-  Falls back to `JUDGE_TIMEOUT_MS` env var (default 200ms) for unknown task types.
-- `_JUDGE_MAP` expanded to 15 entries across all task types (all `is_active=False`).
-  Legal judges (legal_reasoning, brief_drafting, legal_citations, contract_analysis)
-  assigned `qwen2.5:32b` on spark-1 (Path C). VRS + code + vision judges assigned
-  `qwen2.5:7b` on their respective nodes.
-- `is_active=False` on all entries: placeholder routing only. No judge fires until
-  training data accumulates and a model is explicitly promoted.
-- `JUDGE_ENABLED=false` (default) unchanged — zero runtime overhead.
-
-### Phase 4e.4 through 4e.10 — remaining judges
-One per primary task type, sequenced by data volume and strategic
-value. Legal reasoning judge ships early despite lower volume because
-its value per correct decision is highest.
-
-### Phase 4a — CROG-VRS distillation (ACTIVE — trainer retargeted 2026-04-19)
-qwen2.5:7b → qwen2.5:7b-crog-vrs. Nightly fine-tune pipeline
-(`src/nightly_finetune.py`) now targets Qwen2.5-7B-Instruct staged at
-`/mnt/fortress_nas/models/Qwen2.5-7B-Instruct` (PR #70).
-
-**Retarget rationale:** ai_router production inference runs on `qwen2.5:7b`
-via NIM/vLLM. Training the same architecture closes the train/serve gap.
-The previous Llama-3.3-70B-Instruct-FP4 target was never served to production
-and required stopping NIM to free ~60 GB for training. Qwen2.5-7B QLoRA
-peaks at ~15 GB, fits alongside NIM on the GB10 (120 GB unified memory)
-without disruption. `NIGHTLY_FINETUNE_STOP_NIM` now defaults to `false`.
-
-Adapter artifacts: `qwen2.5-7b-crog-vrs-<date>/` on NAS.
-Previous Llama-3.3 adapter stubs (`llama-3.3-70b-crog-*`) are pipeline
-development exercises and can be ignored — they contain only error files.
-
-### Phase 4d — Fortress Legal distillation (NEW, later)
-qwen2.5:32b → qwen2.5:32b-fortress-legal. Uses public legal corpus
-PLUS captures where judge_decision = escalate on legal tasks (with
-matter-level redaction). Ships after legal_reasoning_judge is mature.
-
-### Phase 5a — RAG architecture migration (from v4)
-
-**Part 1 — spark-4 VRS Qdrant LIVE (2026-04-19)**
-- Qdrant `latest` running on spark-4 (192.168.0.106:6333) via Docker
-- Data volume: `/mnt/fortress_nas/qdrant-vrs/` (NAS-backed)
-- systemd unit: `fortress-qdrant-vrs.service` (enabled, starts on boot)
-- Collection `fgp_vrs_knowledge` created: 768d Cosine, 4 payload indexes
-  (`source_table`, `record_id`, `property_id`, `category`) — empty, migration deferred
-- Smoke test passed: write → read → delete round-trip from both spark-4 and spark-2
-- Full ingestion audit: `docs/RAG_INGESTION_AUDIT.md`
-
-**Part 2 — Snapshot migration COMPLETE (2026-04-19)**
-- 168 points migrated from spark-2 `fgp_knowledge` → spark-4 `fgp_vrs_knowledge`
-- Tool: `src/rag/migrate_fgp_to_vrs.py` (scroll 3×64-batch + upsert wait=true)
-- Verification: count parity 168==168 ✓, 10/10 sampled vectors byte-identical ✓
-- Elapsed: 1.2s. Idempotent — safe to re-run with --force.
-- spark-2 `fgp_knowledge` is **NOT modified** — remains source of truth for reads.
-- spark-4 `fgp_vrs_knowledge` is a static snapshot. New writes still go to spark-2
-  until Part 3 (ingestion cutover).
-
-**Part 3 — Dual-write ACTIVE (2026-04-19)**
-- `backend/services/qdrant_dual_writer.py` wraps every fgp_knowledge upsert.
-- Primary (spark-2): synchronous, raises on failure — semantics unchanged.
-- Secondary (spark-4): fire-and-forget asyncio.Task, 5s timeout, logs WARNING
-  on failure, never blocks primary. Failure mode: Option B.
-- Two write sites wired: `workers/vectorizer.py` and `services/knowledge_retriever.py`.
-- Feature flag: `ENABLE_QDRANT_VRS_DUAL_WRITE=false` → instant disable, no restart.
-- Parity check tool: `src/rag/verify_dual_write_parity.py [--sample N]`.
-- Reads still target spark-2 fgp_knowledge. No retrieval code changed.
-- Metrics (in-process): `qdrant_vrs_dual_write_{success,failure,skipped}_total`.
-
-**Part 4 — Read cutover SCAFFOLDED (2026-04-19)**
-- Feature flag `READ_FROM_VRS_STORE` (bool, default `false`) added to `backend/core/config.py`.
-- Resolver `resolve_read_endpoint()` in `qdrant_dual_writer.py` returns `(url, collection)`:
-  - `false` → spark-2 `fgp_knowledge` (unchanged behaviour on merge)
-  - `true`  → spark-4 `fgp_vrs_knowledge`
-- Single read site wired: `knowledge_retriever.py:_qdrant_search()`.
-  All callers (`agentic_orchestrator.py`, `dgx_tools.py`) inherit the flag via `semantic_search()`.
-- Startup log emitted on every restart: `qdrant_read_endpoint url=... collection=... flag=...`
-- Parity gate extended: `src/rag/verify_dual_write_parity.py --compare-search QUERY`
-  runs the same query on both endpoints and reports top-5 agreement (≥95% required).
-- Option A rollback: flip flag back to `false`, restart — zero code changes needed.
-
-Promotion workflow (when ready to cut over):
-  1. `python3 -m src.rag.verify_dual_write_parity --compare-search "what does Fallen Timber Lodge look like"` — confirm ≥95% agreement
-  2. Set `READ_FROM_VRS_STORE=true` in `.env`
-  3. `sudo systemctl restart fortress-backend`
-  4. Monitor concierge response quality for 24h (watch `qdrant_semantic_search_hit` log lines)
-  5. If issues: flip back to `false`, restart, investigate
-
-**Part 5 — Write sunset (LATER)**: confirm Part 4 stable ≥24h, then stop dual-writing to
-spark-2 `fgp_knowledge` and decommission spark-2 as VRS Qdrant.
-
-Recommendation: Option A (restart-to-flip) — not hard config swap — because
-`_qdrant_search` is called on every guest concierge interaction (zero downtime tolerance).
-See `docs/RAG_INGESTION_AUDIT.md` for full write/read site table and rationale.
-
-Legal collections (`legal_library`, `legal_ediscovery`) stay on spark-2 permanently;
-they are NOT in Phase 5a scope.
-
-### Phase 5b — NIM migration off spark-2 → spark-1 (Docker/systemd)
-
-**Completed (2026-04-19) — awaiting cutover GO signal.**
-
-Architecture:
-- NIM (`meta/llama-3.1-8b-instruct`, DGX Spark variant) migrated from k8s pod on spark-2
-  to Docker/systemd on spark-1, freeing spark-2's GPU for training/distillation.
-- Service: `deploy/systemd/fortress-nim-sovereign.service` — mirrors the `fortress-qdrant-vrs.service` pattern.
-- GPU access via NVIDIA Container Toolkit CDI (`--gpus all`). Verified on spark-1.
-- Cache: `/mnt/fortress_nas/nim_cache` (pre-existing, NIM has run on spark-1 before).
-- NGC credentials: nvcr.io auth in `~/.docker/config.json` ✓; runtime `NGC_API_KEY` from
-  `/etc/fortress/nim.env` (deployed by cutover script from k8s secret `nim-secrets`).
-
-Endpoint config:
-- New setting: `NIM_SOVEREIGN_URL` / `settings.nim_sovereign_url` (default: `http://192.168.0.104:8000`)
-- `legal_council.py`: `_NIM_ENDPOINT` reads `LEGAL_NIM_ENDPOINT` → `settings.nim_sovereign_url`
-- `legal_deposition_engine.py`: `SOVEREIGN_URL` reads `NIM_SOVEREIGN_URL` → `settings.nim_sovereign_url`
-- Rollback env: `NIM_SOVEREIGN_URL=http://10.43.38.88:8000` + restart backend
-
-Cutover sequence (execute after PR merge, awaiting GO):
-  a. Extract NGC_API_KEY from k8s secret, write to spark-1:/etc/fortress/nim.env
-  b. docker pull nvcr.io/nim/meta/llama-3.1-8b-instruct-dgx-spark:latest on spark-1
-  c. Install + enable fortress-nim-sovereign.service (NOT started yet)
-  d. kubectl scale deployment nim-sovereign --replicas=0  ← REQUIRES GO SIGNAL
-  e. systemctl start fortress-nim-sovereign on spark-1
-  f. Wait for health: python3 -m src.ops.verify_nim_health --url http://192.168.0.104:8000
-  g. Set NIM_SOVEREIGN_URL=http://192.168.0.104:8000 in .env, restart fortress-backend
-  h. Verify end-to-end: test legal query routes to spark-1
-
-Rollback (if anything fails after step d):
-  kubectl scale deployment nim-sovereign --replicas=1
-  Set NIM_SOVEREIGN_URL=http://10.43.38.88:8000 in .env, restart fortress-backend
-
-After 24h stable → Phase 5b cleanup PR deletes k8s nim-sovereign deployment entirely.
-
-Node roles post-cutover:
-- spark-1 (192.168.0.104): Fortress Legal + NIM sovereign inference
-- spark-2 (192.168.0.100): Orchestration + backend + control plane (GPU freed for training)
-- spark-3 (192.168.0.105): Vision
-- spark-4 (192.168.0.106): CROG-VRS + Qdrant VRS
-
-### Phase 6 — Multi-node observability (from v4)
-Extended to surface judge decisions, escalation rates, teacher
-distribution.
-
-## Migration sequence
-
-1. Phase 4e.1 — Labeling infrastructure (~3-5 days)
-2. Phase 4e.2 — Task type classifier (~2-3 days)
-3. Phase 4e.3 — First judge, vrs_concierge (~3-5 days)
-4. Phase 5a part 1 — spark-4 VRS vector store (~2-3 hours)
-5. Phase 4e.4 — vrs_market_research_judge (~3-5 days)
-6. Phase 4a — CROG-VRS distillation (~2-3 hours of code, weeks of
-   capture accumulation)
-7. Phase 4e.5-4e.7 — Remaining VRS + orchestrator judges (~2 weeks total)
-8. Phase 4e.8 — Legal reasoning judge (~1 week, needs clean data)
-9. Phase 5a part 2 — spark-1 legal vector store (~multiple sessions)
-10. Phase 4e.9-4e.10 — Remaining legal and vision judges
-11. Phase 4d — Fortress Legal distillation (~multi-session)
-12. Phase 5b — NIM migration off spark-2 (maintenance window)
-13. Phase 6 — Observability extensions (ongoing)
-
-Total realistic program: **6-12 weeks** for full judge tier across
-all task types plus two distilled models plus RAG migration.
-
-First working end-to-end loop (Phases 4e.1-4e.3 + 4a): **2-3 weeks**.
-
-## Decision log (April 18, 2026 — v5 session)
-
-1. Three-tier architecture. Godhead teaches, Sovereign serves,
-   Judge decides. Not a two-tier fallback model.
-
-2. Specialized Godhead per task type. Claude for legal, Gemini for
-   vision, Grok for real-time, GPT for code, DeepSeek-R1 for math.
-   Fallbacks defined per task.
-
-3. Task type classifier at top of request path. Three-tier: source
-   hint → keyword → small LLM. Deterministic where possible.
-
-4. Judges specialized per task type. Eight judges minimum, one per
-   primary task category. Small instruction-tuned LLMs, distributed
-   across nodes with their domain.
-
-5. Judge output is structured: decision, confidence, reasoning,
-   escalation_category.
-
-6. Labeling via hybrid pipeline. Godhead labels at scale, Gary
-   QCs 10% samples per week, judge self-improvement later.
-
-7. Escalation discards sovereign response, returns Godhead response
-   to user. Sovereign's attempted response captured as training
-   signal but not shown to user.
-
-8. Capture schema v5 includes task_type, judge_decision, judge_reasoning,
-   sovereign_attempt, teacher_endpoint, teacher_model, escalated_from —
-   shipped in Phase 3 retag.
-
-9. Judge-first implementation order. Full judge tier before distillation
-   begins. "Build it right, even if slow."
-
-10. First judge is vrs_concierge_judge. Highest volume, lowest risk
-    per error, fastest iteration to prove architecture.
-
-11. Legal judge uses qwen2.5:32b base with 1000ms inline latency budget
-    (Path C). VRS judges use qwen2.5:7b with 200ms budget. Per-task
-    latency budgets via _JUDGE_TIMEOUTS dict. Rationale: legal stakes per
-    query justify extra latency; low volume makes it UX-tolerable. All
-    judges start is_active=False until training data accumulates and a
-    model is explicitly promoted.
-
-## Risks live after v5
-
-R1-R8 from v2/v3 unchanged. R9-R12 from v4 unchanged.
-
-**New risks from v5:**
-
-R13 — Godhead-as-labeler bias. Judges trained on Godhead's judgments
-inherit Godhead's blind spots. Mitigation: Gary's 10% QC sample is
-not optional. Systematically under-weight label patterns that correlate
-with known Godhead weaknesses (e.g., Claude's over-caution, GPT's
-confident hallucination).
-
-R14 — Judge latency in request path. 200ms p95 inline judge call
-adds latency to every request. Mitigation: small judge models,
-optimized prompts, parallel inference where possible, circuit-breaker
-if judge unreachable (default to serving sovereign response with
-judge_decision=unknown).
-
-R15 — Escalation cost unboundedness. If judges escalate aggressively,
-Godhead API costs scale with traffic. Mitigation: per-judge escalation
-rate SLO (e.g., target <30% escalation rate). Retrain judges that
-over-escalate. Hard cap on daily Godhead spend with alert.
-
-R16 — Judge disagreement with reality. Judge says "confident" but
-response was actually bad. Mitigation: downstream signal capture
-(user complaints, manual corrections, error rates) feeds judge
-retraining. Judge accuracy itself becomes a measurable KPI.
-
-R17 — Task classifier cold start. Small LLM classifier on spark-2
-has no training data initially — uses keyword rules and source
-hints only. Mitigation: acceptable for first weeks. Classifier
-trains on accumulated task_type labels (which the classifier itself
-produced, creating circularity — but also self-correcting as
-misclassifications get surfaced by judge escalation patterns).
+**Key change from v5:** `vrs_concierge` lists spark-4 first. spark-2 and
+spark-1 retained as fallback overflow but deprioritized. Non-VRS fast-tier
+traffic continues to use spark-2/spark-1 primarily — spark-4's GPU stays
+free for CROG-VRS.
+
+**Health probe upgrade (v6):** `model_registry` probe now checks
+`/api/chat` with a minimal inference (1 token, short prompt, 3s timeout)
+instead of only `/api/tags` existence. An Ollama process that has the
+model listed but can't actually serve inference (GPU under load, OOM,
+etc.) is now correctly marked unhealthy. This prevents the failure mode
+v5 suffered: router picked a GPU-starved node because it passed the
+tags check.
+
+---
+
+## Godhead tier (frontier teachers, unchanged from v5)
+
+Task → primary teacher mapping is the v5 table, unchanged:
+
+| Task type            | Primary    | Fallback 1 | Fallback 2 |
+|---------------------|-----------|-----------|-----------|
+| Legal reasoning     | Claude    | GPT       | DeepSeek-R1 |
+| Brief drafting      | Claude    | GPT       | DeepSeek-R1 |
+| Concierge replies   | Claude    | GPT       | —         |
+| Pricing strategy    | Claude    | GPT       | DeepSeek-R1 |
+| Vision (damage)     | Gemini    | Claude    | —         |
+| Real-time facts     | Grok      | Gemini    | —         |
+| Math reasoning      | DeepSeek-R1 | Claude  | GPT       |
+| Code generation     | GPT       | Claude    | —         |
+
+All frontier calls route through LiteLLM gateway at `127.0.0.1:4000`
+on spark-2. When sovereign fails or the judge escalates, the specialized
+teacher responds.
+
+---
+
+## Judge tier (per-task specialized, status unchanged from v5)
+
+All judges scaffolded per v5 Phase 4e.3, `is_active=False` pending
+accumulation of training data. No changes in v6 — the judge plan
+stands as-is.
+
+---
+
+## Risks (new in v6)
+
+**R18 — spark-3 GPU deadlock via marker files.**
+A crashed vision or Financial script could leave a marker file behind,
+blocking the other workload indefinitely. Mitigation: the 4am stale-marker
+janitor plus PID + timestamp in every marker. Operator can manually
+`rm` a stale marker with confidence.
+
+**R19 — Financial on spark-3 contends with vision during damage-claim surges.**
+If a cabin has a big damage event and 50 photos need vision analysis,
+a Financial backtest triggered at the wrong moment will be deferred.
+Acceptable for research-mode. If Financial goes live with production
+inference, contention becomes a real problem and spark-5 procurement
+is back on the table.
+
+**R20 — v6 atlas change affects non-VRS traffic indirectly.**
+Adding spark-4 to fast-tier routing for vrs_concierge doesn't remove
+spark-2/spark-1 from other fast-tier tasks. But the health probe upgrade
+(checking /api/chat) may mark spark-2 unhealthy during training-heavy
+periods, pushing ALL fast-tier traffic to spark-1. Mitigation: monitor
+post-merge for spark-1 saturation. If spark-1 starts failing its own
+probe, we have a real capacity gap the architecture was hiding.
+
+---
+
+## Migration from v5 to v6
+
+Ordered work items:
+
+1. **Atlas fix (in progress as of this writing):** atlas registers
+   qwen2.5:7b on spark-4, tier_routing.fast vrs_concierge routes to
+   spark-4 first. Health probe upgraded from /api/tags to /api/chat.
+   Branch: feat/atlas-vrs-spark4-routing (Claude Code, Part 2).
+
+2. **Merge PR #104 (feat/email-pipeline-parallel)** — email pipeline
+   for CROG-VRS guest inquiries. Parallel tables to SMS. Already tested
+   end-to-end.
+
+3. **Create `/mnt/fortress_nas/spark3/` directory** for marker files.
+   Write the stale-marker janitor script. Schedule 4am cron on spark-2.
+
+4. **Financial spark-3 GPU access:** wealth lane scripts updated to
+   SSH to spark-3 for GPU work. `nrun` helper in wealth lane .lane-env
+   adjusted.
+
+5. **v6 doc (this doc) merged as single source of architectural truth,
+   superseding v5.**
+
+6. **Deferred (not v6 scope, tracked for later):**
+    - Financial sovereign model allocation (after 60 days of research usage)
+    - spark-5 procurement decision (if Financial goes live)
+    - Judge activation (when training data accumulates per Phase 4e)
+    - `reservations_draft_queue` deprecation (after email pipeline stable 48h+)
+
+---
+
+## Decision log (April 21, 2026 — v6 session)
+
+1. Financial enterprise exists and needs a home. spark-3 chosen as
+   shared node (vision primary, Financial secondary via marker-file gating).
+   spark-5 procurement deferred until Financial proves out.
+
+2. v5 routing was never deployed to the atlas. v6 makes it real.
+   qwen2.5:7b added to spark-4's atlas entry, vrs_concierge fast-tier
+   prioritizes spark-4.
+
+3. Health probe upgraded from /api/tags to /api/chat. A node that has
+   the model listed but cannot actually inference is now correctly
+   marked unhealthy. This was the silent bug in v5 that caused
+   training-loaded spark-2 to be picked for vrs_concierge traffic.
+
+4. Marker-file GPU gating preferred over scheduler for v6. Simplest
+   possible mechanism. Upgrade to proper scheduler only if contention
+   becomes frequent in practice.
+
+5. Financial stays research-only via LIVE_DISABLED marker. No sovereign
+   model allocation until operational pattern is proven.
+
+6. Master Accounting and Acquisitions explicitly named as spark-2
+   co-tenants (were implicit in v5).
+
+---
 
 ## What this document does
 
-Iron Dome v5 is the target architecture. Three tiers, specialized
-teachers, specialized judges, domain-isolated infrastructure,
-provenance-tagged captures.
+Iron Dome v6 corrects the v5 deployment gap (atlas never matched doc),
+adds an explicit home for Financial as the fifth enterprise, and
+establishes shared-GPU gating for spark-3. It preserves v5's three-tier
+architecture, all task-type mappings, and the judge scaffolding plan.
 
-Implementation is 6-12 weeks of work. First functional end-to-end
-loop in 2-3 weeks. Every PR from here cites a Phase 4e sub-phase
-or an earlier unfinished phase.
-
-This replaces v4 as the single source of architectural truth.
+This replaces v5 as the single source of architectural truth.
+(END)
