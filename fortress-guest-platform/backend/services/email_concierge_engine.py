@@ -38,7 +38,6 @@ from backend.services.crog_concierge_engine import (
     PERSONA_TIMEOUT_SECONDS,
     run_guest_triage,
     _call_llm,
-    HYDRA_MODEL_120B,
     HYDRA_120B_URL,
 )
 
@@ -123,10 +122,11 @@ incorporates the council's recommendations naturally.
 
 Reply:"""
 
+    # qwen2.5:7b on spark-4 via OpenAI-compat /v1 endpoint — confirmed working
     text, _ = await _call_llm(
         system,
         user,
-        model=HYDRA_MODEL_120B,
+        model="qwen2.5:7b",
         base_url=HYDRA_120B_URL,
         temperature=0.55,
         max_tokens=600,
