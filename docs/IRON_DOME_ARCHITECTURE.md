@@ -1,6 +1,6 @@
 # Iron Dome — Fortress-Prime Sovereign AI Defense System
 
-**Version:** 6.1
+**Version:** 6.2
 **Date:** April 21, 2026
 **Author:** Gary Knight (with Claude)
 **Supersedes:** v5 (April 18, 2026)
@@ -58,6 +58,42 @@ the table.
   60% temporarily. Other nodes compensate via health-probe failover per the
   3-phase probe introduced in PR #105. This exception is time-bounded to the
   epoch duration and does not set a precedent for steady-state overcommit.
+
+### Principle 3 — NAS-canonical model storage
+
+Every model (Ollama, NIM, HuggingFace) **lands on NAS first** at
+`/mnt/fortress_nas/nim-cache/<family>/<model-name>/<tag>/`. Node-local
+model stores are caches — they can be wiped and re-hydrated from NAS
+without data loss.
+
+- **Registry pulls are for updates only** (new tag, new version). Recovery
+  and re-hydration go through NAS, not the registry.
+- If a model is offloaded from a spark node, the NAS copy is **preserved**
+  indefinitely until Gary makes an explicit prune decision.
+- NAS capacity: 63TB total, ~54TB free as of v6.2. No capacity concern for
+  the current model catalog.
+- Re-hydration runbook: `docs/MODEL_NAS_STORAGE_RUNBOOK.md`
+- Pull script: `scripts/nim_pull_to_nas.py`
+
+### Principle 4 — Workload-first NIM selection per enterprise
+
+Each enterprise has a distinct workload profile. NIM selection follows the
+workload, not the other way around. The question is: "What does Nvidia ship
+that is tuned for this exact work?" — not "what general-purpose model fits?"
+
+Enterprise → workload → NIM family mapping (v6.2):
+
+| Enterprise | Workload profile | NIM family |
+|---|---|---|
+| CROG-VRS | Concierge / RAG / customer service / multimodal | Nemotron-Nano (9B text, 12B-VL image-in-email); NeMo Retriever for property/photo retrieval |
+| Fortress Legal | Long-context document reasoning / brief drafting / citations | NIM-sovereign (current) + QLoRA on qwen2.5:7b; audit Nemotron reasoning for long-context |
+| Financial / Wealth | Math reasoning / strategy / forecasting (research-mode today) | Deferred — cloud Godhead (DeepSeek-R1 primary) until operational pattern proves out |
+| Master Accounting | Ledger / categorization / statement synthesis | Cloud-sufficient; no dedicated NIM |
+| Acquisitions | Deal analysis / diligence / research synthesis | Cloud-sufficient; no dedicated NIM needed |
+
+Node assignment is a **consequence** of NIM selection + Principle 2
+(memory discipline) + Principle 3 (NAS availability), not a starting
+constraint.
 
 ---
 
@@ -338,9 +374,11 @@ This replaces v5 as the single source of architectural truth.
 
 ## Changes from v6.0
 
-**v6.1 (April 21, 2026):** Added two Operating Principles — Vendor-optimized
-inference first (NIM/Nemotron preferred on GB10 hardware) and Headroom
-discipline (≤ 60% per-node steady-state, ≥ 40% reserve). These formalize
-architecture decisions implied by the DGX Spark hardware choice and the
-legal_train failover pattern established in PR #105.
+**v6.1 (April 21, 2026):** Added Principles 1 (vendor-optimized inference
+first) and 2 (headroom discipline).
+
+**v6.2 (April 21, 2026):** Added Principles 3 (NAS-canonical model storage)
+and 4 (workload-first NIM selection per enterprise). Formalizes the NAS-first
+pull pipeline implemented during NIM deployment A+C (scripts/nim_pull_to_nas.py,
+docs/MODEL_NAS_STORAGE_RUNBOOK.md). Enterprise → NIM mapping table added.
 (END)
