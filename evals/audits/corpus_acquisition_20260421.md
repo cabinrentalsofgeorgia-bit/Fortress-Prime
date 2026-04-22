@@ -55,3 +55,28 @@ Prior e3 scores (n=195): legal/B=0.5701, legal/C=0.4589
 
 Notes: legal/C +0.100 on proper N=111. Overall sim drop reflects 104 harder records.
 e3.1 launched: 1,779 pairs (original + 314 Pattern C), 3 epochs, started 18:49.
+
+## e3.1 Eval Results and Winner
+
+e3.1: 8h7m, 1779 pairs (+314 Pattern C), 3 epochs. Loss floor 1.047(step105). Eval floor 1.149(step100).
+
+### e3 vs e3.1 Downstream Eval (N=299)
+
+| Domain | e3 | e3.1 | delta |
+|--------|----|----|------|
+| legal/A | 0.8002 | 0.8100 | +0.010 |
+| legal/B | 0.5628 | 0.5710 | +0.008 |
+| legal/C | 0.5590 | 0.7842 | +0.225 |
+| legal/D | 0.8571 | 0.8574 | +0.000 |
+| legal/E | 0.6965 | 0.6879 | -0.009 |
+| OVERALL | 0.6779 | 0.7609 | +0.083 |
+| validity | 0.9231 | 0.9298 | +0.007 |
+| regressions | 23 | 3 | -20 |
+
+### Winner
+
+**`/mnt/fortress_nas/models/legal-instruct-20260421-e3_1/`**
+
+e3.1 wins on all criteria: legal/C +0.225 (0.559->0.784, the target category), overall +0.083, regressions 23->3. E regression -0.009 is below 0.02 threshold.
+
+Production symlink set: /mnt/fortress_nas/models/legal-instruct-production -> e3.1
