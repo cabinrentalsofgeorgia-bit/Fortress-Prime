@@ -1,5 +1,11 @@
 # Phase 1 — Eval Harness Hardening: Gate Results
-_Generated: 2026-04-22_
+_Generated: 2026-04-22 | Updated: 2026-04-22 (STOP decision confirmed)_
+
+## Phase 3 Decision: STOP — No e3.2 training
+See `evals/audits/legal_b_stop_memo_20260422.md` for full diagnostic.
+e3 baseline v2 eval still running (ETA ~12:13); Q2 comparison table will be added as follow-up commit.
+
+---
 
 ## Hardened Metrics: e3.1 (n=299)
 
