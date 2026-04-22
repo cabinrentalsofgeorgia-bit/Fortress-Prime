@@ -49,7 +49,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from config import DB_HOST, DB_NAME, DB_USER, DB_PASS, DB_PORT, NGC_API_KEY
+    from config import DB_HOST, DB_NAME, DB_USER, DB_PASS, DB_PORT, NGC_API_KEY  # type: ignore[attr-defined]
 except ImportError:
     from dotenv import load_dotenv
     load_dotenv(PROJECT_ROOT / ".env")
@@ -531,24 +531,6 @@ def init_nim_arm64_probe_table():
     cur.close()
     conn.close()
     logger.info("nim_arm64_probe_results table ready")
-
-
-def _get_ngc_auth_header(image_path: str) -> dict:
-    """Return an Authorization header for a given nvcr.io image path, or empty dict."""
-    if not NGC_API_KEY:
-        return {}
-    try:
-        auth_url = (
-            f"https://authn.nvidia.com/token"
-            f"?service=ngc&scope=repository:{image_path}:pull"
-        )
-        resp = requests.get(auth_url, auth=("$oauthtoken", NGC_API_KEY), timeout=15)
-        resp.raise_for_status()
-        token = resp.json().get("token", "")
-        return {"Authorization": f"Bearer {token}"} if token else {}
-    except Exception as exc:
-        logger.warning("NGC auth failed for %s: %s", image_path, exc)
-        return {}
 
 
 def _manifest_inspect_via_docker(image_ref: str) -> Optional[dict]:

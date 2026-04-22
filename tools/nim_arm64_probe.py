@@ -30,9 +30,8 @@ import logging
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Import verification functions from scripts/nim_pull_to_nas
