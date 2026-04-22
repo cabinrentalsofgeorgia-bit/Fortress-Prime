@@ -52,7 +52,9 @@ _REPEATED_TOKEN_RE = _re.compile(r"(.{2,}?)\1{10,}")
 _EVAL_BASE_ENV = os.getenv("FINETUNE_BASE_MODEL_DIR",
                            "/mnt/fortress_nas/models/Qwen2.5-7B-Instruct")
 EMBEDDING_MODEL = os.getenv("EVAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-MAX_NEW_TOKENS = int(os.getenv("EVAL_MAX_NEW_TOKENS", "512"))
+# 256 ≈ 190 words — sufficient for all gold responses (max 362w teacher).
+# Prevents 4-5min/record stall when model generates maximum-length outputs.
+MAX_NEW_TOKENS = int(os.getenv("EVAL_MAX_NEW_TOKENS", "256"))
 
 
 def _is_valid_response(text: str, teacher_text: str) -> bool:
