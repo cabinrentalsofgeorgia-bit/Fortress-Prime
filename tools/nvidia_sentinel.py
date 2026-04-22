@@ -10,6 +10,7 @@ Monitors:
     2. Ollama Library — Model tag changes (deepseek-r1:70b, qwen2.5:7b)
     3. NVIDIA Driver — L4T / JetPack / DGX Spark driver releases
     4. ARM64 NIM availability — The critical gate for HYDRA NIM migration
+    5. NIM ARM64 Catalog Audit — Daily manifest-level ARM64 probe with mismatch detection
 
 State:
     Stores last-known digests/versions in Postgres (fortress_db.sentinel_state).
@@ -31,11 +32,12 @@ Governing Documents:
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import json
 import logging
 import argparse
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -130,7 +132,7 @@ def get_db_connection():
 
 
 def init_state_table():
-    """Create the sentinel_state table if it doesn't exist."""
+    """Create the sentinel_state table and nim_arm64_probe_results if they don't exist."""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -148,6 +150,11 @@ def init_state_table():
     cur.close()
     conn.close()
     logger.info("sentinel_state table ready")
+    # Also initialise the Phase 4 probe table
+    try:
+        init_nim_arm64_probe_table()
+    except Exception as exc:
+        logger.warning("nim_arm64_probe_results init failed (non-fatal): %s", exc)
 
 
 def get_state(key: str) -> Optional[str]:
@@ -480,6 +487,350 @@ def log_alert_to_db(alerts: list):
 
 
 # =============================================================================
+# VI-B. NIM ARM64 CATALOG AUDIT (Phase 4)
+# =============================================================================
+
+# NIM images to watch for ARM64 manifest status each day.
+# Combines the three active targets plus the sentinel's existing NGC_IMAGES list.
+NIM_ARM64_WATCH = [
+    "nvcr.io/nim/nvidia/nemotron-nano-12b-v2-vl:latest",
+    "nvcr.io/nim/nvidia/llama-nemotron-embed-1b-v2:latest",
+    "nvcr.io/nim/nvidia/nvidia-nemotron-nano-9b-v2:latest",   # broken — watch for fix
+    "nvcr.io/nim/nvidia/llama-nemotron-nano-8b-v1:latest",
+    "nvcr.io/nim/deepseek-ai/deepseek-r1-distill-llama-70b:latest",
+]
+
+
+def init_nim_arm64_probe_table():
+    """Create the nim_arm64_probe_results table if it does not yet exist."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS nim_arm64_probe_results (
+            id                    SERIAL PRIMARY KEY,
+            probe_date            DATE NOT NULL,
+            image_path            TEXT NOT NULL,
+            tag                   TEXT NOT NULL,
+            stage1_arm64          BOOLEAN,
+            arm64_digest          TEXT,
+            amd64_digest          TEXT,
+            arm64_manifest_bytes  INT,
+            amd64_manifest_bytes  INT,
+            possible_mismatch     BOOLEAN,
+            verdict               TEXT,
+            probe_notes           TEXT,
+            created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (probe_date, image_path, tag)
+        );
+        CREATE INDEX IF NOT EXISTS idx_nim_arm64_probe_date
+            ON nim_arm64_probe_results(probe_date);
+        CREATE INDEX IF NOT EXISTS idx_nim_arm64_probe_image
+            ON nim_arm64_probe_results(image_path);
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+    logger.info("nim_arm64_probe_results table ready")
+
+
+def _get_ngc_auth_header(image_path: str) -> dict:
+    """Return an Authorization header for a given nvcr.io image path, or empty dict."""
+    if not NGC_API_KEY:
+        return {}
+    try:
+        auth_url = (
+            f"https://authn.nvidia.com/token"
+            f"?service=ngc&scope=repository:{image_path}:pull"
+        )
+        resp = requests.get(auth_url, auth=("$oauthtoken", NGC_API_KEY), timeout=15)
+        resp.raise_for_status()
+        token = resp.json().get("token", "")
+        return {"Authorization": f"Bearer {token}"} if token else {}
+    except Exception as exc:
+        logger.warning("NGC auth failed for %s: %s", image_path, exc)
+        return {}
+
+
+def _manifest_inspect_via_docker(image_ref: str) -> Optional[dict]:
+    """
+    Run `docker manifest inspect <image_ref>` and return parsed JSON, or None on error.
+    Uses subprocess — no docker pull, suitable for daily sentinel runs.
+    """
+    try:
+        result = subprocess.run(
+            ["docker", "manifest", "inspect", image_ref],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "docker manifest inspect failed for %s: %s",
+                image_ref, result.stderr.strip(),
+            )
+            return None
+        return json.loads(result.stdout)
+    except Exception as exc:
+        logger.warning("manifest inspect error for %s: %s", image_ref, exc)
+        return None
+
+
+def _parse_manifest_arm64(
+    image_ref: str,
+) -> tuple[bool, Optional[str], Optional[str], Optional[int], Optional[int]]:
+    """
+    Stage-1 manifest check via docker manifest inspect.
+
+    Returns:
+        (stage1_arm64, arm64_digest, amd64_digest, arm64_manifest_bytes, amd64_manifest_bytes)
+
+    arm64_manifest_bytes / amd64_manifest_bytes are the `size` field reported by the
+    registry for each sub-manifest.  If both values are identical, that is the ARM64
+    mismatch signal (same-byte packaging defect — the broken 9B VRS image case).
+    """
+    index = _manifest_inspect_via_docker(image_ref)
+    if index is None:
+        return False, None, None, None, None
+
+    arm64_digest: Optional[str] = None
+    amd64_digest: Optional[str] = None
+    arm64_size: Optional[int] = None
+    amd64_size: Optional[int] = None
+
+    # Multi-arch image index
+    if "manifests" in index:
+        for m in index["manifests"]:
+            plat = m.get("platform", {})
+            arch = plat.get("architecture", "")
+            os_name = plat.get("os", "")
+            digest = m.get("digest")
+            size = m.get("size")
+            if arch == "arm64" and os_name == "linux":
+                arm64_digest = digest
+                arm64_size = size
+            elif arch in ("amd64", "x86_64") and os_name == "linux":
+                amd64_digest = digest
+                amd64_size = size
+    elif index.get("architecture") == "arm64":
+        # Single-arch manifest already arm64
+        arm64_digest = image_ref
+
+    stage1_arm64 = arm64_digest is not None
+    return stage1_arm64, arm64_digest, amd64_digest, arm64_size, amd64_size
+
+
+def _upsert_nim_arm64_probe_result(
+    probe_date: date,
+    image_path: str,
+    tag: str,
+    stage1_arm64: Optional[bool],
+    arm64_digest: Optional[str],
+    amd64_digest: Optional[str],
+    arm64_manifest_bytes: Optional[int],
+    amd64_manifest_bytes: Optional[int],
+    possible_mismatch: Optional[bool],
+    verdict: str,
+    probe_notes: str,
+) -> None:
+    """Upsert a probe result row into nim_arm64_probe_results."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO nim_arm64_probe_results
+                (probe_date, image_path, tag, stage1_arm64, arm64_digest,
+                 amd64_digest, arm64_manifest_bytes, amd64_manifest_bytes,
+                 possible_mismatch, verdict, probe_notes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (probe_date, image_path, tag) DO UPDATE SET
+                stage1_arm64         = EXCLUDED.stage1_arm64,
+                arm64_digest         = EXCLUDED.arm64_digest,
+                amd64_digest         = EXCLUDED.amd64_digest,
+                arm64_manifest_bytes = EXCLUDED.arm64_manifest_bytes,
+                amd64_manifest_bytes = EXCLUDED.amd64_manifest_bytes,
+                possible_mismatch    = EXCLUDED.possible_mismatch,
+                verdict              = EXCLUDED.verdict,
+                probe_notes          = EXCLUDED.probe_notes,
+                created_at           = NOW()
+        """, (
+            probe_date, image_path, tag, stage1_arm64, arm64_digest,
+            amd64_digest, arm64_manifest_bytes, amd64_manifest_bytes,
+            possible_mismatch, verdict, probe_notes,
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as exc:
+        logger.warning("nim_arm64_probe_results write failed for %s: %s", image_path, exc)
+
+
+def _get_yesterday_probe(image_path: str, tag: str) -> Optional[dict]:
+    """Return the probe row from yesterday for the given image, or None."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT stage1_arm64, arm64_digest, arm64_manifest_bytes, amd64_manifest_bytes,
+                   possible_mismatch, verdict
+            FROM nim_arm64_probe_results
+            WHERE image_path = %s AND tag = %s
+              AND probe_date = (CURRENT_DATE - INTERVAL '1 day')::DATE
+            LIMIT 1
+        """, (image_path, tag))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row is None:
+            return None
+        return {
+            "stage1_arm64": row[0],
+            "arm64_digest": row[1],
+            "arm64_manifest_bytes": row[2],
+            "amd64_manifest_bytes": row[3],
+            "possible_mismatch": row[4],
+            "verdict": row[5],
+        }
+    except Exception as exc:
+        logger.warning("Yesterday probe read failed for %s: %s", image_path, exc)
+        return None
+
+
+def audit_nim_arm64_catalog(check_only: bool = False) -> list:
+    """
+    Phase 4 — NIM ARM64 Catalog Audit.
+
+    For each image in NIM_ARM64_WATCH:
+      1. Run stage-1 manifest check only (no pull, no ELF — too slow for daily cron).
+      2. Compare against yesterday's result in nim_arm64_probe_results.
+      3. Detect three alert categories:
+         - ARM64_NEW: arm64 manifest newly appeared
+         - ARM64_REGRESSION: arm64 manifest previously present, now gone
+         - ARM64_MANIFEST_MISMATCH: arm64 and amd64 sub-manifests have identical
+           byte counts (packaging defect signal — same as the broken 9B VRS image)
+
+    Returns list of alert dicts (same shape as other audit phases).
+    """
+    alerts: list = []
+    today = date.today()
+
+    for image_ref in NIM_ARM64_WATCH:
+        # Split "nvcr.io/<image_path>:<tag>"
+        ref_no_registry = image_ref.replace("nvcr.io/", "", 1)
+        if ":" in ref_no_registry:
+            image_path, tag = ref_no_registry.rsplit(":", 1)
+        else:
+            image_path = ref_no_registry
+            tag = "latest"
+
+        logger.info("  [NIM ARM64] Checking %s:%s ...", image_path, tag)
+
+        stage1, arm64_digest, amd64_digest, arm64_bytes, amd64_bytes = (
+            _parse_manifest_arm64(image_ref)
+        )
+
+        # Determine possible mismatch: both manifests exist and share identical byte count
+        possible_mismatch = (
+            arm64_bytes is not None
+            and amd64_bytes is not None
+            and arm64_bytes == amd64_bytes
+        )
+
+        if not stage1:
+            verdict = "NO_ARM64"
+        elif possible_mismatch:
+            verdict = "ARM64_MANIFEST_MISMATCH"
+        else:
+            verdict = "ARM64_OK"
+
+        notes_parts: list[str] = []
+        if arm64_bytes:
+            notes_parts.append(f"arm64_bytes={arm64_bytes}")
+        if amd64_bytes:
+            notes_parts.append(f"amd64_bytes={amd64_bytes}")
+        probe_notes = "; ".join(notes_parts)
+
+        # Persist today's result
+        if not check_only:
+            _upsert_nim_arm64_probe_result(
+                probe_date=today,
+                image_path=image_path,
+                tag=tag,
+                stage1_arm64=stage1,
+                arm64_digest=arm64_digest,
+                amd64_digest=amd64_digest,
+                arm64_manifest_bytes=arm64_bytes,
+                amd64_manifest_bytes=amd64_bytes,
+                possible_mismatch=possible_mismatch,
+                verdict=verdict,
+                probe_notes=probe_notes,
+            )
+
+        # Compare with yesterday
+        yesterday = _get_yesterday_probe(image_path, tag)
+
+        alert: Optional[dict] = None
+
+        if yesterday is None:
+            # First-run for this image — no delta to report
+            logger.info("    [%s] First probe — %s", image_path, verdict)
+        elif not yesterday.get("stage1_arm64") and stage1:
+            # ARM64_NEW: previously absent, now present
+            alert = {
+                "source": "NIM_ARM64_CATALOG",
+                "name": f"ARM64_NEW: {image_path}:{tag}",
+                "priority": "CRITICAL",
+                "message": (
+                    f"ARM64 manifest newly available for {image_ref}. "
+                    f"arm64_digest={arm64_digest} — new candidate ready for pull."
+                ),
+                "arm64": True,
+                "image": image_path,
+                "alert_class": "ARM64_NEW",
+            }
+        elif yesterday.get("stage1_arm64") and not stage1:
+            # ARM64_REGRESSION: previously present, now gone
+            alert = {
+                "source": "NIM_ARM64_CATALOG",
+                "name": f"ARM64_REGRESSION: {image_path}:{tag}",
+                "priority": "HIGH",
+                "message": (
+                    f"ARM64 manifest REMOVED for {image_ref}. "
+                    f"Yesterday had arm64_digest={yesterday.get('arm64_digest')}. "
+                    f"NVIDIA may have re-packaged — check for regression."
+                ),
+                "arm64": False,
+                "image": image_path,
+                "alert_class": "ARM64_REGRESSION",
+            }
+        elif possible_mismatch and not yesterday.get("possible_mismatch"):
+            # ARM64_MANIFEST_MISMATCH: mismatch newly detected (or not flagged yesterday)
+            alert = {
+                "source": "NIM_ARM64_CATALOG",
+                "name": f"ARM64_MANIFEST_MISMATCH: {image_path}:{tag}",
+                "priority": "HIGH",
+                "message": (
+                    f"ARM64/AMD64 manifest byte counts are IDENTICAL for {image_ref} "
+                    f"({arm64_bytes} bytes each). Likely packaging defect — "
+                    f"manifest claims arm64 but layers may be x86. Do NOT pull."
+                ),
+                "arm64": False,
+                "image": image_path,
+                "alert_class": "ARM64_MANIFEST_MISMATCH",
+            }
+        else:
+            logger.info("    [%s] No change — verdict=%s", image_path, verdict)
+
+        if alert:
+            alerts.append(alert)
+            logger.warning(
+                "  NIM ARM64 ALERT [%s] %s: %s",
+                alert["alert_class"], image_path, alert["message"],
+            )
+
+    return alerts
+
+
+# =============================================================================
 # VII. MAIN AUDIT LOOP
 # =============================================================================
 
@@ -518,6 +869,13 @@ def run_audit(check_only: bool = False) -> list:
     if result:
         alerts.append(result)
         logger.warning(f"  ALERT: {result['name']} — {result['message']}")
+
+    # 4. NIM ARM64 Catalog Audit
+    logger.info("\n[Phase 4] NIM ARM64 Catalog Audit")
+    nim_alerts = audit_nim_arm64_catalog(check_only=check_only)
+    for alert in nim_alerts:
+        alerts.append(alert)
+        logger.warning(f"  ALERT: {alert['name']} — {alert['message']}")
 
     # Summary
     logger.info(f"\n{'=' * 60}")
