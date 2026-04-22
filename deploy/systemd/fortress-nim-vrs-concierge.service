@@ -1,0 +1,47 @@
+[Unit]
+Description=Fortress NIM VRS Concierge — nvidia/nvidia-nemotron-nano-9b-v2 on spark-4
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-nim-vrs-concierge.service
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+# NIM startup takes 60-180s on first load; allow 5 minutes
+TimeoutStartSec=300
+
+# NGC_API_KEY required at runtime
+EnvironmentFile=/etc/fortress/nim.env
+
+# Remove stale container from previous run
+ExecStartPre=-/usr/bin/docker stop fortress-nim-vrs-concierge
+ExecStartPre=-/usr/bin/docker rm fortress-nim-vrs-concierge
+
+# Load from NAS if image not in local Docker daemon cache
+ExecStartPre=/bin/bash -c '\
+  if ! docker image inspect nvcr.io/nim/nvidia/nvidia-nemotron-nano-9b-v2:latest >/dev/null 2>&1; then \
+    echo "Loading NIM from NAS cache..."; \
+    docker load < /mnt/fortress_nas/nim-cache/nim/nvidia-nemotron-nano-9b-v2/latest/image.tar.gz; \
+  fi'
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-nim-vrs-concierge \
+  --rm \
+  --gpus all \
+  --shm-size=16g \
+  -p 8100:8000 \
+  -v /mnt/fortress_nas/nim-cache/nim/nvidia-nemotron-nano-9b-v2/nim-weights-cache:/opt/nim/.cache \
+  -e NGC_API_KEY=${NGC_API_KEY} \
+  nvcr.io/nim/nvidia/nvidia-nemotron-nano-9b-v2:latest
+
+ExecStop=/usr/bin/docker stop fortress-nim-vrs-concierge
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nim-vrs-concierge
+
+[Install]
+WantedBy=multi-user.target

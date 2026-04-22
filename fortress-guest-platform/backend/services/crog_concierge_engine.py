@@ -72,6 +72,11 @@ HYDRA_MODEL_120B = os.getenv("HYDRA_MODEL_120B", "gpt-oss:120b")
 SWARM_MODEL = os.getenv("SWARM_MODEL", "qwen2.5:7b")
 HYDRA_MODEL = HYDRA_MODEL_120B
 
+# Deployment A — Nemotron NIM for VRS concierge (spark-4 :8100)
+# Falls back to HYDRA_120B_URL/qwen2.5:7b if NIM is unavailable
+VRS_NIM_URL = os.getenv("VRS_NIM_URL", "http://192.168.0.106:8100/v1").rstrip("/")
+VRS_NIM_MODEL = os.getenv("VRS_NIM_MODEL", "nvidia/nvidia-nemotron-nano-9b-v2")
+
 ALLOW_CLOUD_LLM = os.getenv("ALLOW_CLOUD_LLM", "false").lower() == "true"
 FRONTIER_GATEWAY_API_KEY = os.getenv("LITELLM_MASTER_KEY", _LITELLM_KEY)
 

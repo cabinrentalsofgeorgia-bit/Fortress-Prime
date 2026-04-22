@@ -460,12 +460,15 @@ fortress_prime:
 
       - id: spark-4
         label: "Sovereign"
-        role: "deep_reasoning_redundancy + vrs_fast_primary"
+        role: "deep_reasoning_redundancy + vrs_fast_primary + NIM-VRS"
         management_ip: "192.168.0.106"
         ollama_url: "http://192.168.0.106:11434"
+        nim_url: "http://192.168.0.106:8100/v1"          # Deployment A: nemotron-nano-9b-v2 NIM
         models:
+          - name: "nvidia/nvidia-nemotron-nano-9b-v2"
+            tier: "vrs_fast"         # Iron Dome v6: NIM primary for VRS concierge (Deployment A)
           - name: "qwen2.5:7b"
-            tier: "fast"             # Iron Dome v5: VRS concierge primary
+            tier: "fast"             # Cold standby — fallback if NIM unavailable
           - name: "deepseek-r1:70b"
             tier: "deep"
           - name: "qwen2.5:32b"

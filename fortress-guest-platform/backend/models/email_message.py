@@ -99,6 +99,10 @@ class EmailMessage(Base):
     error_code = Column(String(50))
     error_message = Column(Text)
 
+    # Attachment / Vision enrichment (Deployment C)
+    has_attachments = Column(Boolean, nullable=False, default=False)
+    image_descriptions = Column(JSONB)  # [{"filename": str, "description": str}]
+
     # Audit
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow, index=True)
     extra_data = Column(JSONB)

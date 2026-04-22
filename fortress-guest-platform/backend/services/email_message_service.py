@@ -41,10 +41,13 @@ class EmailMessageService:
         message_id: str,
         received_at: datetime,
         cc: Optional[str] = None,
+        attachments: Optional[list] = None,  # Deployment C: image attachments for VL enrichment
     ) -> EmailMessage:
         """
         Idempotent on imap_uid.  Creates EmailInquirer if new, persists
         inbound EmailMessage.  Returns the existing row on duplicate imap_uid.
+        If attachments are provided and contain images, calls vision_concierge
+        to enrich body_text with [IMAGE: description] before storing.
         """
         # Idempotency: if we've seen this imap_uid before, return the existing row
         existing = await self.db.execute(
@@ -56,6 +59,20 @@ class EmailMessageService:
             return row
 
         inquirer = await self._find_or_create_inquirer(email_from, display_name=None)
+
+        # Deployment C: enrich body with image descriptions if attachments present
+        image_descriptions = None
+        has_attachments = bool(attachments)
+        if attachments:
+            try:
+                from backend.services.vision_concierge import enrich_body_with_image_descriptions
+                body_text, image_descriptions = await enrich_body_with_image_descriptions(
+                    body_text, attachments
+                )
+                if image_descriptions:
+                    image_descriptions = image_descriptions  # already a list[dict]
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("vision_concierge.failed imap_uid=%s err=%s", imap_uid, str(exc)[:200])
 
         excerpt = (body_text or "")[:500]
         msg = EmailMessage(
@@ -69,6 +86,8 @@ class EmailMessageService:
             body_excerpt=excerpt,
             imap_uid=imap_uid,
             imap_message_id=message_id,
+            has_attachments=has_attachments,
+            image_descriptions=image_descriptions,
             received_at=received_at,
             approval_status="pending_approval",
             requires_human_review=True,

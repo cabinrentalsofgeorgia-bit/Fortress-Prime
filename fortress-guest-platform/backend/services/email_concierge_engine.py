@@ -39,6 +39,8 @@ from backend.services.crog_concierge_engine import (
     run_guest_triage,
     _call_llm,
     HYDRA_120B_URL,
+    VRS_NIM_URL,
+    VRS_NIM_MODEL,
 )
 
 import asyncio
@@ -122,15 +124,25 @@ incorporates the council's recommendations naturally.
 
 Reply:"""
 
-    # qwen2.5:7b on spark-4 via OpenAI-compat /v1 endpoint — confirmed working
+    # Deployment A: try Nemotron-Nano-9B NIM first (spark-4 :8100), fall back to qwen2.5:7b
     text, _ = await _call_llm(
         system,
         user,
-        model="qwen2.5:7b",
-        base_url=HYDRA_120B_URL,
+        model=VRS_NIM_MODEL,
+        base_url=VRS_NIM_URL,
         temperature=0.55,
         max_tokens=600,
     )
+    if not (text or "").strip():
+        # NIM unavailable — fall back to Ollama qwen2.5:7b cold standby
+        text, _ = await _call_llm(
+            system,
+            user,
+            model="qwen2.5:7b",
+            base_url=HYDRA_120B_URL,
+            temperature=0.55,
+            max_tokens=600,
+        )
 
     draft = (text or "").strip()
     if not draft:

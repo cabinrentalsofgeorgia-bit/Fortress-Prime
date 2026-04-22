@@ -1,0 +1,48 @@
+[Unit]
+Description=Fortress NIM Vision Concierge — nvidia/nemotron-nano-12b-v2-vl on spark-3
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-nim-vision-concierge.service
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+TimeoutStartSec=300
+
+EnvironmentFile=/etc/fortress/nim.env
+
+ExecStartPre=-/usr/bin/docker stop fortress-nim-vision-concierge
+ExecStartPre=-/usr/bin/docker rm fortress-nim-vision-concierge
+
+# Load from NAS if image not in local Docker daemon cache
+ExecStartPre=/bin/bash -c '\
+  if ! docker image inspect nvcr.io/nim/nvidia/nemotron-nano-12b-v2-vl:latest >/dev/null 2>&1; then \
+    echo "Loading NIM from NAS cache..."; \
+    docker load < /mnt/fortress_nas/nim-cache/nim/nemotron-nano-12b-v2-vl/latest/image.tar.gz; \
+  fi'
+
+# Gate via spark-3 VISION_BUSY marker (prevents Financial GPU contention)
+ExecStartPre=/bin/bash -c '\
+  source /mnt/fortress_nas/spark3/vision_guard.sh || exit 1'
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-nim-vision-concierge \
+  --rm \
+  --gpus all \
+  --shm-size=16g \
+  -p 8101:8000 \
+  -v /mnt/fortress_nas/nim-cache/nim/nemotron-nano-12b-v2-vl/nim-weights-cache:/opt/nim/.cache \
+  -e NGC_API_KEY=${NGC_API_KEY} \
+  nvcr.io/nim/nvidia/nemotron-nano-12b-v2-vl:latest
+
+ExecStop=/usr/bin/docker stop fortress-nim-vision-concierge
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nim-vision-concierge
+
+[Install]
+WantedBy=multi-user.target
