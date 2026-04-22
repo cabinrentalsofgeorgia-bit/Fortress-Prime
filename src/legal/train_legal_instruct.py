@@ -67,10 +67,17 @@ BATCH_SIZE    = int(os.getenv("LEGAL_BATCH_SIZE",   "1"))
 GRAD_ACCUM    = int(os.getenv("LEGAL_GRAD_ACCUM",   "8"))
 EVAL_STEPS    = int(os.getenv("LEGAL_EVAL_STEPS",   "50"))
 MIN_EXAMPLES  = int(os.getenv("LEGAL_MIN_EXAMPLES", "50"))
+TRAINING_SEED = int(os.getenv("LEGAL_SEED",         "42"))
 NTFY_TOPIC    = os.getenv("NTFY_TOPIC", "")
 
-LORA_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj",
-                        "gate_proj", "up_proj", "down_proj"]
+# Default target modules for Qwen/Mistral dense models.
+# Override via LEGAL_LORA_TARGET_MODULES (comma-separated) for other architectures.
+# Phi-3: "qkv_proj,o_proj,gate_up_proj,down_proj"
+_default_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"]
+_modules_env = os.getenv("LEGAL_LORA_TARGET_MODULES", "")
+LORA_TARGET_MODULES = [m.strip() for m in _modules_env.split(",") if m.strip()] \
+                      if _modules_env else _default_modules
 
 # Prompt template — mirrors the chat template the model was trained on
 _SYSTEM = (
@@ -325,6 +332,7 @@ def train(args: argparse.Namespace) -> int:
             optim="adamw_torch_fused",        # no bitsandbytes needed on unified memory
             max_length=MAX_SEQ_LEN, dataset_text_field="text",
             packing=True, report_to="none",
+            seed=TRAINING_SEED, data_seed=TRAINING_SEED,
         )
         trainer = SFTTrainer(
             model=model, args=sft,
