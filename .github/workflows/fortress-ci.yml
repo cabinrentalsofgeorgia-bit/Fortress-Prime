@@ -87,6 +87,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run Python unit tests (no-DB subset)
+        run: |
+          source .venv/bin/activate
+          python -m pytest tests/test_nim_pull_to_nas_verify.py -v --tb=short
+
       - name: Install frontend dependencies
         working-directory: fortress-guest-platform
         run: npm ci
