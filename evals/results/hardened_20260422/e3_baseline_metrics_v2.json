@@ -1,0 +1,56 @@
+{
+  "evaluated_at": "2026-04-22T15:37:13.519823+00:00",
+  "adapter_path": "/mnt/fortress_nas/models/legal-instruct-20260420-e3",
+  "holdout_path": "/mnt/fortress_nas/legal-corpus/training-pairs/holdout-eval-expanded-v2.json",
+  "n_evaluated": 299,
+  "harness_version": "v2",
+  "domain_metrics": {
+    "legal/E": {
+      "n": 86,
+      "similarity_mean": 0.6969,
+      "format_ok_rate": 1.0,
+      "hallucination_rate": 0.349
+    },
+    "legal/D": {
+      "n": 43,
+      "similarity_mean": 0.8553,
+      "format_ok_rate": 1.0,
+      "hallucination_rate": 0.7841
+    },
+    "legal/A": {
+      "n": 45,
+      "similarity_mean": 0.799,
+      "format_ok_rate": 1.0,
+      "hallucination_rate": 0.4556,
+      "holding_present_rate": 0.8444,
+      "holding_term_overlap": 0.6806,
+      "rouge_l": 0.4472
+    },
+    "legal/B": {
+      "n": 14,
+      "similarity_mean": 0.5628,
+      "format_ok_rate": 1.0,
+      "hallucination_rate": 0.0,
+      "topic_recall": 0.0143,
+      "topic_precision": 0.0714,
+      "topic_f1": 0.0238
+    },
+    "legal/C": {
+      "n": 111,
+      "similarity_mean": 0.5594,
+      "format_ok_rate": 0.0,
+      "hallucination_rate": 0.3793,
+      "citation_precision": 0.7027,
+      "citation_recall": 0.8251,
+      "citation_f1": 0.6462
+    }
+  },
+  "overall": {
+    "similarity_mean": 0.6777,
+    "validity_rate": 0.9264,
+    "regression_count": 22,
+    "topic_f1_B": 0.0238,
+    "citation_f1_C": 0.6462,
+    "rouge_l_A": 0.4472
+  }
+}

@@ -1,9 +1,8 @@
 # Phase 1 — Eval Harness Hardening: Gate Results
-_Generated: 2026-04-22 | Updated: 2026-04-22 (STOP decision confirmed)_
+_Generated: 2026-04-22 | Updated: 2026-04-22 15:37 (e3 baseline complete — Q2 final)_
 
 ## Phase 3 Decision: STOP — No e3.2 training
 See `evals/audits/legal_b_stop_memo_20260422.md` for full diagnostic.
-e3 baseline v2 eval still running (ETA ~12:13); Q2 comparison table will be added as follow-up commit.
 
 ---
 
@@ -48,7 +47,61 @@ e3 baseline v2 eval still running (ETA ~12:13); Q2 comparison table will be adde
 | regression_count | 23 | **1** | −22 |
 | validity_rate | 0.9231 | 0.9365 | +0.013 |
 
-e3 baseline hardened metrics: **PENDING** (eval running, ~35 min ETA)
+---
+
+## Q2 — e3 vs e3.1 Hardened Metrics (Full Comparison)
+
+### Overall
+
+| Metric | e3 | e3.1 | Delta |
+|--------|-----|------|-------|
+| overall sim_mean | 0.6777 | **0.7609** | **+0.083** |
+| validity_rate | 0.9264 | 0.9365 | +0.010 |
+| regression_count | 22 | **1** | **−21** |
+| citation_f1_C | 0.6462 | **0.8198** | **+0.174** |
+| topic_f1_B | 0.0238 | 0.0536 | +0.030 (both ~0) |
+| rouge_l_A | 0.4472 | 0.4537 | +0.007 |
+
+### Per-Domain Hardened Metrics
+
+| Domain | Metric | e3 | e3.1 | Delta |
+|--------|--------|----|------|-------|
+| **legal/A** | sim_mean | 0.7990 | 0.8088 | +0.010 |
+| | rouge_l | 0.4472 | **0.4537** | +0.007 |
+| | holding_present_rate | 0.8444 | **0.8667** | +0.022 |
+| | holding_term_overlap | 0.6806 | 0.6915 | +0.011 |
+| | halluc_rate | 0.456 | 0.459 | +0.003 |
+| **legal/B** | sim_mean | 0.5628 | 0.5710 | +0.008 (noise) |
+| | topic_f1 | 0.0238 | 0.0536 | +0.030 (both ~0†) |
+| | topic_recall | 0.0143 | 0.0429 | +0.029 |
+| | topic_precision | 0.0714 | 0.0714 | 0.000 |
+| | halluc_rate | **0.000** | 0.036 | +0.036 |
+| **legal/C** | sim_mean | 0.5594 | **0.7844** | **+0.225** |
+| | citation_f1 | 0.6462 | **0.8198** | **+0.174** |
+| | citation_precision | 0.7027 | **0.9414** | **+0.239** |
+| | citation_recall | 0.8251 | 0.8273 | +0.002 |
+| | format_ok_rate | **0.000** | **0.991** | **+0.991** |
+| | halluc_rate | 0.379 | 0.883 | +0.504† |
+| **legal/D** | sim_mean | 0.8553 | 0.8584 | +0.003 |
+| | halluc_rate | 0.784 | 0.756 | −0.028 |
+| **legal/E** | sim_mean | 0.6969 | 0.6876 | −0.009 |
+| | halluc_rate | 0.349 | 0.378 | +0.029 |
+
+† legal/C halluc_rate increase is expected: higher = more citations generated (correct for Pattern C). e3 format_ok_rate=0.000 means it never produced the "Under [citation]:" prefix required by Pattern C.
+
+### Q2 Verdict
+
+**e3.1 was genuinely better than e3 on every primary metric, with two decisive improvements:**
+
+1. **legal/C: format transformation.** e3 format_ok_rate = 0.000 — it never produced the `Under [citation]:` format. e3.1 = 0.991. The +314 Pattern C court rules pairs taught the format reliably. citation_precision jumped +0.239 (0.703 → 0.941).
+
+2. **legal/C: citation F1 +0.174** (0.646 → 0.820). This is the production-relevant metric. e3 was generating citation content but in the wrong structure; e3.1 delivers both correct citations and correct format.
+
+3. **legal/B: no real improvement.** topic_f1 doubled (0.024 → 0.054) but both are near-zero on broken gold labels. The +0.008 sim delta is noise. B training additions were neutral — confirmed by both Q2 data and the Phase 2 pair quality audit (corpus ceiling = 17 pairs).
+
+4. **legal/A: marginal but consistent.** ROUGE-L +0.007, holding_present +0.022. Small gains across all A metrics.
+
+**e3.1 is unambiguously the correct production adapter.** e3 was pre-broken on legal/C format.
 
 ---
 

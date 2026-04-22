@@ -39,17 +39,16 @@ those framing assumptions with what the data actually shows.
 | Metric | e3 | e3.1 | Delta |
 |---|---|---|---|
 | similarity_mean | 0.5628 | 0.5710 | +0.0082 (noise) |
-| topic_f1 | ~0.05* | 0.0536 | ≈ 0 |
+| topic_f1 | 0.0238 | 0.0536 | +0.030 (both ~0) |
+| topic_recall | 0.0143 | 0.0429 | +0.029 |
+| topic_precision | 0.0714 | 0.0714 | 0.000 |
+| halluc_rate | 0.000 | 0.036 | +0.036 |
 
-*e3 topic_f1 is estimated pending e3 baseline eval completion (~12:13 ETA); the same
-gold data applies, so it will be near zero.
-
-The +0.008 sim gain from e3.1 is within measurement noise. The Pattern B training
-additions in PR #102 (+314 court rules pairs targeted Pattern C, not B) contributed
-nothing measurable to legal/B. This is consistent with the expected outcome: the
-existing 30 training B pairs cannot teach the model to reproduce procedural section
-headers because the model already learned to produce _better_ answers (proper legal
-issue statements).
+The +0.008 sim gain is within measurement noise. topic_f1 doubled (0.024 → 0.054) but
+both are near-zero on broken gold labels — not a real signal. The Pattern B training
+additions contributed nothing measurable. The existing 30 training B pairs cannot teach
+the model to reproduce procedural section headers because the model already generates
+_better_ answers (proper legal issue statements).
 
 ---
 
