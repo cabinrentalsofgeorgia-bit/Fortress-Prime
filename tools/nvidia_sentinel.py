@@ -200,17 +200,21 @@ def set_state(key: str, value: str, source: str = "unknown",
 # =============================================================================
 
 def get_ngc_token(image: str) -> Optional[str]:
-    """Authenticate with NVIDIA NGC and get a bearer token for a specific image."""
+    """Authenticate with NVIDIA NGC and get a bearer token for a specific image.
+
+    Uses nvcr.io/proxy_auth — compatible with nvapi-* key format.
+    Mirrors scripts/nim_pull_to_nas._get_token() which is the proven-working pattern.
+    """
     if not NGC_API_KEY:
         logger.warning("NGC_API_KEY not set — skipping NGC checks")
         return None
 
     try:
         auth_url = (
-            f"https://authn.nvidia.com/token"
-            f"?service=ngc&scope=repository:{image}:pull"
+            f"https://nvcr.io/proxy_auth?account=%24oauthtoken"
+            f"&scope=repository%3A{image}%3Apull"
         )
-        resp = requests.get(auth_url, auth=("$oauthtoken", NGC_API_KEY), timeout=15)
+        resp = requests.get(auth_url, auth=("$oauthtoken", NGC_API_KEY), timeout=20)
         resp.raise_for_status()
         return resp.json().get("token")
     except Exception as e:
@@ -557,22 +561,60 @@ def _manifest_inspect_via_docker(image_ref: str) -> Optional[dict]:
         return None
 
 
+# Standard OCI empty-layer blob (whiteout marker) — always shared, not a code layer.
+_OCI_EMPTY_BLOB = "sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1"
+# Layers at or below this size are structural blobs, not architecture-bearing code.
+_MIN_SUBSTANTIVE_BYTES = 32
+
+
+def _shared_substantive_layer_ratio(
+    arm64_layers: list[dict],
+    amd64_layers: list[dict],
+) -> float:
+    """
+    Fraction of substantive arm64 layer digests that also appear in the amd64 manifest.
+
+    Substantive = not the OCI empty blob and size > _MIN_SUBSTANTIVE_BYTES.
+    Returns 0.0 when either architecture has no substantive layers.
+
+    A ratio > 0.5 indicates that more than half of the architecture-bearing layers
+    are shared between arm64 and amd64 — a strong signal of a packaging defect
+    (genuine arm64 images diverge from amd64 at the OS base layer).
+    """
+    def substantive_digests(layers: list[dict]) -> set[str]:
+        return {
+            la["digest"] for la in layers
+            if la.get("digest") != _OCI_EMPTY_BLOB
+            and la.get("size", 0) > _MIN_SUBSTANTIVE_BYTES
+        }
+
+    arm64_sub = substantive_digests(arm64_layers)
+    amd64_sub = substantive_digests(amd64_layers)
+    denominator = min(len(arm64_sub), len(amd64_sub))
+    if denominator == 0:
+        return 0.0
+    return len(arm64_sub & amd64_sub) / denominator
+
+
 def _parse_manifest_arm64(
     image_ref: str,
-) -> tuple[bool, Optional[str], Optional[str], Optional[int], Optional[int]]:
+) -> tuple[bool, Optional[str], Optional[str], Optional[int], Optional[int], float]:
     """
     Stage-1 manifest check via docker manifest inspect.
 
     Returns:
-        (stage1_arm64, arm64_digest, amd64_digest, arm64_manifest_bytes, amd64_manifest_bytes)
+        (stage1_arm64, arm64_digest, amd64_digest,
+         arm64_manifest_bytes, amd64_manifest_bytes, shared_layer_ratio)
 
-    arm64_manifest_bytes / amd64_manifest_bytes are the `size` field reported by the
-    registry for each sub-manifest.  If both values are identical, that is the ARM64
-    mismatch signal (same-byte packaging defect — the broken 9B VRS image case).
+    shared_layer_ratio is the fraction of substantive (non-whiteout) arm64 layer
+    digests that are identical in the amd64 manifest.  Ratio > 0.5 is the
+    ARM64_MANIFEST_MISMATCH signal (replaces the old byte-size equality heuristic
+    which produced false positives on images with the same layer count but different
+    content — see PR #133 investigation).
     """
     index = _manifest_inspect_via_docker(image_ref)
     if index is None:
-        return False, None, None, None, None
+        return False, None, None, None, None, 0.0
 
     arm64_digest: Optional[str] = None
     amd64_digest: Optional[str] = None
@@ -598,7 +640,20 @@ def _parse_manifest_arm64(
         arm64_digest = image_ref
 
     stage1_arm64 = arm64_digest is not None
-    return stage1_arm64, arm64_digest, amd64_digest, arm64_size, amd64_size
+
+    # Compute shared-layer ratio by fetching each arch's full layer manifest
+    shared_ratio = 0.0
+    if arm64_digest and amd64_digest:
+        base_ref = image_ref.rsplit(":", 1)[0] if ":" in image_ref else image_ref
+        arm64_manifest = _manifest_inspect_via_docker(f"{base_ref}@{arm64_digest}")
+        amd64_manifest = _manifest_inspect_via_docker(f"{base_ref}@{amd64_digest}")
+        if arm64_manifest and amd64_manifest:
+            shared_ratio = _shared_substantive_layer_ratio(
+                arm64_manifest.get("layers", []),
+                amd64_manifest.get("layers", []),
+            )
+
+    return stage1_arm64, arm64_digest, amd64_digest, arm64_size, amd64_size, shared_ratio
 
 
 def _upsert_nim_arm64_probe_result(
@@ -706,16 +761,13 @@ def audit_nim_arm64_catalog(check_only: bool = False) -> list:
 
         logger.info("  [NIM ARM64] Checking %s:%s ...", image_path, tag)
 
-        stage1, arm64_digest, amd64_digest, arm64_bytes, amd64_bytes = (
+        stage1, arm64_digest, amd64_digest, arm64_bytes, amd64_bytes, shared_ratio = (
             _parse_manifest_arm64(image_ref)
         )
 
-        # Determine possible mismatch: both manifests exist and share identical byte count
-        possible_mismatch = (
-            arm64_bytes is not None
-            and amd64_bytes is not None
-            and arm64_bytes == amd64_bytes
-        )
+        # Mismatch: >50% of substantive layers shared between arm64 and amd64.
+        # See PR #133 investigation — byte-size equality was a false positive.
+        possible_mismatch = shared_ratio > 0.5
 
         if not stage1:
             verdict = "NO_ARM64"
@@ -729,6 +781,7 @@ def audit_nim_arm64_catalog(check_only: bool = False) -> list:
             notes_parts.append(f"arm64_bytes={arm64_bytes}")
         if amd64_bytes:
             notes_parts.append(f"amd64_bytes={amd64_bytes}")
+        notes_parts.append(f"shared_layer_ratio={shared_ratio:.2f}")
         probe_notes = "; ".join(notes_parts)
 
         # Persist today's result
