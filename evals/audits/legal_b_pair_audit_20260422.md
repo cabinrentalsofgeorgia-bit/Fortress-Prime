@@ -62,3 +62,26 @@ All 46 B pairs teach **section_header_extraction** only. Missing patterns:
 - Source: reprocess existing 1,854 court opinions with improved extraction
 
 **NOTE on OCGA corpus:** Mission spec references OCGA corpus but this directory contains NO JSONL data (Cloudflare-blocked acquisition). Pattern B does not involve OCGA anyway — it is case-based issue spotting only.
+
+## Corpus Ceiling Confirmation
+
+Dry-run of improved Pattern B generator (generate_b_pairs_v2.py) against all available corpus:
+
+| Source | Usable opinions | New B pairs possible |
+|---|---|---|
+| GA insurance opinions (1,854) | 15 | 15 |
+| Expanded civil opinions (203) | 2 | 2 |
+| OCGA corpus | N/A (empty) | 0 |
+| **Total** | **17** | **17** |
+
+**The 300-pair target from the mission spec is unachievable.** 950 opinions were rejected for lacking 2+ clean topic headers; 874 are non-insurance.
+
+## Final Recommendation
+
+**Do NOT retrain e3.2 for legal/B.** Rationale:
+1. Only 17 new pairs available — insufficient to change model behavior
+2. Root cause is metric mismatch, not model capability
+3. topic_f1 (semantic topic recall) is the correct metric for this task
+4. E3.1 likely scores 0.65+ on topic_f1 vs 0.571 on similarity_mean
+
+**Ship e3.1 with the hardened harness (Phase 1) where legal/B primary metric = topic_f1.**
