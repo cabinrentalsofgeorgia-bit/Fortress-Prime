@@ -37,4 +37,5 @@ python-multipart
 python-docx
 qdrant-client
 twilio>=9.0.0
-stripepytest>=7.0
+stripe
+pytest>=7.0
