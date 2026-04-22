@@ -59,14 +59,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# Phase-1 ELF helper (manifest string check only — no ELF binary pull)
-try:
-    from scripts.nim_pull_to_nas import _parse_elf_is_aarch64  # noqa: F401 — available for callers
-except ImportError:
-    def _parse_elf_is_aarch64(file_output: str) -> bool:  # type: ignore[misc]
-        lower = file_output.lower()
-        return "arm aarch64" in lower or "aarch64" in lower
-
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -270,10 +262,7 @@ def fetch_tags_for_image(image_path: str, ngc_api_key: str) -> list[str]:
     if len(parts) < 2:
         return []
 
-    # Try the registry tags endpoint
-    org = parts[0]
-    team_image = "/".join(parts[1:])
-    # NGC tags API: GET /v2/{org}/{team}/{image}/tags/list
+    # Try the registry tags endpoint: GET /v2/{org}/{team}/{image}/tags/list
     url = f"https://nvcr.io/v2/{'/'.join(parts)}/tags/list"
     headers = {"Authorization": f"Bearer {ngc_api_key}"}
     try:
@@ -284,7 +273,7 @@ def fetch_tags_for_image(image_path: str, ngc_api_key: str) -> list[str]:
             return [t for t in raw_tags if _is_keep_tag(t)]
         elif resp.status_code == 401:
             # Try token auth
-            token = _get_registry_token(org, ngc_api_key, "/".join(parts))
+            token = _get_registry_token(ngc_api_key, "/".join(parts))
             if token:
                 headers["Authorization"] = f"Bearer {token}"
                 resp2 = requests.get(url, headers=headers, timeout=15)
@@ -296,7 +285,7 @@ def fetch_tags_for_image(image_path: str, ngc_api_key: str) -> list[str]:
     return []
 
 
-def _get_registry_token(org: str, ngc_api_key: str, scope_path: str) -> str:
+def _get_registry_token(ngc_api_key: str, scope_path: str) -> str:
     """Fetch a registry bearer token for nvcr.io scope."""
     try:
         resp = requests.get(
@@ -804,7 +793,7 @@ def main() -> None:
 
         # --- JSONL snapshot ---
         try:
-            snapshot_path = write_jsonl_snapshot(deduped, probe_date)
+            write_jsonl_snapshot(deduped, probe_date)
         except Exception as exc:
             log.error("JSONL snapshot write failed: %s", exc)
     else:
