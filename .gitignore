@@ -101,5 +101,10 @@ __pycache__/
 # Background process output
 nohup.out
 
-# Backup files
+# Backup files — env files with live credentials must never be tracked
+*.env.bak
+.env.backup
+.env.telemetry_backup
+*.yaml.bak
+*.yml.bak
 *.bak

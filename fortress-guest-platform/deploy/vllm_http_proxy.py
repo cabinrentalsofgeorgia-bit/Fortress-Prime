@@ -17,6 +17,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 BIND_HOST = os.getenv("VLLM_BRIDGE_BIND", "127.0.0.1")
 BIND_PORT = int(os.getenv("VLLM_BRIDGE_PORT", "18001"))
+# AUDIT NOTE (2026-04-22): Container "vllm-70b-captain" does not exist in `docker ps`.
+# fortress-vllm-bridge.service is active but non-functional. Before re-enabling,
+# stand up the target container or update VLLM_BRIDGE_CONTAINER env var.
 CONTAINER_NAME = os.getenv("VLLM_BRIDGE_CONTAINER", "vllm-70b-captain")
 TARGET_BASE_URL = os.getenv("VLLM_BRIDGE_TARGET_URL", "http://127.0.0.1:8000").rstrip("/")
 DOCKER_BIN = os.getenv("DOCKER_BIN", "/usr/bin/docker")
