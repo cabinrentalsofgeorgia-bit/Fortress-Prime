@@ -32,12 +32,13 @@ Dual-journal commit (capex path):
 import stripe
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.integrations.stripe_payments import StripePayments
+from backend.models.reservation_hold import ReservationHold
 from backend.services.booking_hold_service import BookingHoldError, convert_hold_to_reservation
 
 logger = structlog.get_logger()
@@ -81,6 +82,26 @@ async def stripe_webhook(
             meta_hold = metadata.get("hold_id") or metadata.get("reservation_hold_id")
             meta_hold = str(meta_hold).strip() if meta_hold else None
             if payment_intent_id:
+                # ── Idempotency pre-check ────────────────────────────────────────────
+                # If the hold is already converted (status == "converted" +
+                # converted_reservation_id set), this is a Stripe retry of a
+                # successfully settled payment. Return 200 immediately — the same
+                # response Stripe received the first time — so it stops retrying.
+                # Without this guard the handler raises HTTP 409, which Stripe treats
+                # as a transient error and retries indefinitely.
+                _hold_status = await db.scalar(
+                    select(ReservationHold.status).where(
+                        ReservationHold.payment_intent_id == payment_intent_id
+                    )
+                )
+                if _hold_status == "converted":
+                    logger.info(
+                        "direct_booking_already_processed",
+                        payment_intent_id=payment_intent_id,
+                    )
+                    return {"event_type": event_type, "status": "already_processed"}
+                # ────────────────────────────────────────────────────────────────────
+
                 try:
                     reservation = await convert_hold_to_reservation(
                         payment_intent_id,
@@ -88,6 +109,16 @@ async def stripe_webhook(
                         metadata_hold_id=meta_hold,
                     )
                 except BookingHoldError as exc:
+                    # "Hold already finalized" means a race was won by the client-side
+                    # confirm flow or a concurrent webhook delivery. Treat as success so
+                    # Stripe does not retry (HTTP 409 triggers retries).
+                    if "already finalized" in str(exc).lower():
+                        logger.info(
+                            "direct_booking_already_processed",
+                            payment_intent_id=payment_intent_id,
+                            detail=str(exc),
+                        )
+                        return {"event_type": event_type, "status": "already_processed"}
                     logger.warning(
                         "direct_booking_hold_conversion_rejected",
                         payment_intent_id=payment_intent_id,
