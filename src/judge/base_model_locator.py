@@ -29,19 +29,28 @@ _MODEL_ALIASES: dict[str, list[str]] = {
     "qwen2.5:7b":      ["Qwen--Qwen2.5-7B-Instruct", "Qwen--Qwen2.5-7B"],
     "qwen2.5:0.5b":    ["Qwen--Qwen2.5-0.5B-Instruct"],
     "qwen2.5:1.5b":    ["Qwen--Qwen2.5-1.5B-Instruct"],
+    "qwen2.5:14b":     ["Qwen--Qwen2.5-14B-Instruct"],
     "qwen2.5:32b":     ["Qwen--Qwen2.5-32B-Instruct"],
     "deepseek-r1:70b": ["deepseek-ai--DeepSeek-R1-Distill-Llama-70B"],
+    "mistral:7b-v0.3": ["mistralai--Mistral-7B-Instruct-v0.3"],
+    "phi3:medium":     ["microsoft--Phi-3-medium-128k-instruct"],
 }
 
 # Maps friendly names → actual directory names on NAS (flat, no HF double-dash format).
 # The NAS direct search uses these before falling back to the generic name transform.
 _NAS_ALIASES: dict[str, list[str]] = {
-    "qwen2.5:7b":               ["Qwen2.5-7B-Instruct"],
-    "Qwen/Qwen2.5-7B-Instruct": ["Qwen2.5-7B-Instruct"],
-    "qwen2.5:0.5b":             ["Qwen2.5-0.5B-Instruct"],
-    "qwen2.5:1.5b":             ["Qwen2.5-1.5B-Instruct"],
-    "qwen2.5:32b":              ["Qwen2.5-32B-Instruct"],
-    "deepseek-r1:70b":          ["DeepSeek-R1-Distill-Llama-70B"],
+    "qwen2.5:7b":                              ["Qwen2.5-7B-Instruct"],
+    "Qwen/Qwen2.5-7B-Instruct":               ["Qwen2.5-7B-Instruct"],
+    "qwen2.5:0.5b":                            ["Qwen2.5-0.5B-Instruct"],
+    "qwen2.5:1.5b":                            ["Qwen2.5-1.5B-Instruct"],
+    "qwen2.5:14b":                             ["bases/Qwen2.5-14B-Instruct"],
+    "Qwen/Qwen2.5-14B-Instruct":              ["bases/Qwen2.5-14B-Instruct"],
+    "qwen2.5:32b":                             ["Qwen2.5-32B-Instruct"],
+    "deepseek-r1:70b":                         ["DeepSeek-R1-Distill-Llama-70B"],
+    "mistral:7b-v0.3":                         ["bases/Mistral-7B-Instruct-v0.3"],
+    "mistralai/Mistral-7B-Instruct-v0.3":     ["bases/Mistral-7B-Instruct-v0.3"],
+    "phi3:medium":                             ["bases/Phi-3-medium-128k-instruct"],
+    "microsoft/Phi-3-medium-128k-instruct":   ["bases/Phi-3-medium-128k-instruct"],
 }
 
 
