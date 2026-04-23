@@ -1,3 +1,9 @@
+# PHASE 1 (2026-04-23): SERVICE DISABLED — Audit finding I-03.
+# The vLLM bridge proxy (127.0.0.1:18001 → vllm-70b-captain container) became
+# dead code when the vllm-70b-captain container was retired. Unit file is
+# preserved so Phase 3 (real vLLM stand-up) can re-use or replace it directly.
+# To re-activate: remove these 6 header lines and:
+#   sudo systemctl enable --now fortress-vllm-bridge
 [Unit]
 Description=Fortress vLLM Bridge
 Wants=network-online.target docker.service
