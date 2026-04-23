@@ -14,7 +14,7 @@ TimeoutStartSec=300
 
 # Phase 1 (2026-04-23) — audit findings I-01, I-09:
 # - I-09: NGC_API_KEY moved off docker -e plaintext arg (was visible in ps -ef)
-#   onto --env-file /etc/fortress/nim.env (root:600; docker reads file directly).
+#   onto --env-file /etc/fortress/nim.env (root:admin 640; docker CLI reads file directly).
 # - I-01: NIM_KVCACHE_PERCENT pinned to 0.55 to keep spark-3 RAM <=60% of 121 GiB
 #   per IRON_DOME headroom rule. Was previously unset (NIM vLLM default ~0.9).
 #   If RAM still >60% post-restart, tune down to 0.50 and re-verify.
