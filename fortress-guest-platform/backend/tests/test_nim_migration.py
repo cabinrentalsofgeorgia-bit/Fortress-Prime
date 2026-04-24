@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 class TestNimSovereignConfig:
     def test_nim_sovereign_url_default_is_spark1(self) -> None:
         from backend.core.config import settings
-        assert "192.168.0.104" in settings.nim_sovereign_url
+        assert "192.168.0.109" in settings.nim_sovereign_url
 
     def test_nim_sovereign_url_env_overridable(self, monkeypatch: Any) -> None:
         monkeypatch.setenv("NIM_SOVEREIGN_URL", "http://10.0.0.1:8000")
@@ -52,7 +52,7 @@ def _fresh_deposition(monkeypatch: Any):
 class TestLegalCouncilEndpoint:
     def test_default_points_to_spark1(self, monkeypatch: Any) -> None:
         lc = _fresh_council(monkeypatch)
-        assert "192.168.0.104" in lc._NIM_ENDPOINT, \
+        assert "192.168.0.109" in lc._NIM_ENDPOINT, \
             f"Expected spark-1 IP in _NIM_ENDPOINT, got: {lc._NIM_ENDPOINT}"
 
     def test_env_override_respected(self, monkeypatch: Any) -> None:
@@ -70,7 +70,7 @@ class TestLegalCouncilEndpoint:
 class TestDepositionEndpoint:
     def test_default_points_to_spark1(self, monkeypatch: Any) -> None:
         de = _fresh_deposition(monkeypatch)
-        assert "192.168.0.104" in de.SOVEREIGN_URL, \
+        assert "192.168.0.109" in de.SOVEREIGN_URL, \
             f"Expected spark-1 IP in SOVEREIGN_URL, got: {de.SOVEREIGN_URL}"
         assert "/v1/chat/completions" in de.SOVEREIGN_URL
 
