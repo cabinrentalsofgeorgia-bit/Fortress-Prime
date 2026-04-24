@@ -678,3 +678,80 @@ class TestLegacyLoopNotSpawnedWhenCaptainActive:
         assert "legal_intake_task" not in ctx, \
             "Legacy loop must NOT spawn when legacy_legal_intake_enabled=False"
         assert legacy_spawned["called"] is False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regression — :bind::type pattern is unsafe under SQLAlchemy + asyncpg
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestCaptainAllowInsertUsesCastNotColonColon:
+    """
+    `:name::type` inside a SQLAlchemy text() block collides with asyncpg's
+    param parser — Postgres errors with "syntax error at or near ':'". The
+    workaround is CAST(:name AS type), which is semantically equivalent
+    and parses cleanly. This test scans every SQL-writing module the
+    Captain touches to make sure the pattern doesn't resurface.
+    """
+
+    import re as _re
+    from pathlib import Path as _Path
+
+    # Any bind param followed by :: cast is rejected. Literal casts
+    # like 'foo'::jsonb or column::type are not matched (no leading ':'
+    # before the identifier).
+    _BIND_CAST_RE = _re.compile(r":[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_]")
+
+    # Repo-relative file paths scanned by this regression. Add entries
+    # here when a new module starts writing SQL via text()/sqltext().
+    _SCANNED_FILES = (
+        "fortress-guest-platform/backend/services/captain_multi_mailbox.py",
+        "fortress-guest-platform/backend/services/ai_router.py",
+        "fortress-guest-platform/backend/services/legal_council.py",
+        "fortress-guest-platform/backend/workers/recursive_agent_loop.py",
+    )
+
+    def _repo_root(self) -> "TestCaptainAllowInsertUsesCastNotColonColon._Path":
+        # tests/ -> backend/ -> fortress-guest-platform/ -> <repo root>
+        return self._Path(__file__).resolve().parents[3]
+
+    def test_captain_allow_insert_uses_cast_not_colon_colon(self):
+        """Core fix — captain's ALLOW branch uses CAST(:id AS uuid)."""
+        repo = self._repo_root()
+        src = (
+            repo / "fortress-guest-platform/backend/services/captain_multi_mailbox.py"
+        ).read_text()
+        assert "INSERT INTO llm_training_captures" in src, \
+            "ALLOW-branch INSERT has moved — update this test"
+        # The fix: the bind-param cast is written via CAST(... AS uuid).
+        assert "CAST(:id AS uuid)" in src, \
+            "captain ALLOW INSERT must bind :id via CAST(:id AS uuid)"
+        # The anti-pattern must be absent from THIS file.
+        offenders = self._BIND_CAST_RE.findall(src)
+        assert not offenders, (
+            f"found {len(offenders)} :x::type bind-cast(s) in "
+            f"captain_multi_mailbox.py: {offenders!r}"
+        )
+
+    def test_no_bind_param_colon_colon_cast_in_sql_modules(self):
+        """Preventive scan across every captain-adjacent SQL writer."""
+        repo = self._repo_root()
+        offenders: list[str] = []
+        for rel in self._SCANNED_FILES:
+            path = repo / rel
+            if not path.exists():
+                continue
+            for line_no, line in enumerate(path.read_text().splitlines(), 1):
+                stripped = line.lstrip()
+                # Skip full-line comments; docstrings may legitimately
+                # discuss the forbidden pattern while documenting it.
+                if stripped.startswith("#"):
+                    continue
+                for match in self._BIND_CAST_RE.finditer(line):
+                    offenders.append(
+                        f"{rel}:{line_no}: {match.group()!r} in: {stripped[:120]}"
+                    )
+        assert not offenders, (
+            "found :bind::type SQL casts (unsafe under asyncpg — use "
+            "CAST(:bind AS type) instead):\n  - "
+            + "\n  - ".join(offenders)
+        )
