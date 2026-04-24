@@ -896,6 +896,15 @@ class Settings(BaseSettings):
         default=False, alias="LEGACY_LEGAL_INTAKE_ENABLED"
     )
 
+    # Captain junk/bulk-mail filter. When true (default), every inbound
+    # email runs through captain_junk_filter.classify_junk() BEFORE the
+    # privilege filter — junked mail is dropped with a log line, zero DB
+    # writes. Set false to revert to pre-junk-filter behaviour without
+    # editing code.
+    captain_junk_filter_enabled: bool = Field(
+        default=True, alias="CAPTAIN_JUNK_FILTER_ENABLED"
+    )
+
     # Twilio
     twilio_account_sid: str = Field(default="")
     twilio_auth_token: str = Field(default="")

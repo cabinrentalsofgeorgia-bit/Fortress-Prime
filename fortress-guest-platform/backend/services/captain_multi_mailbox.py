@@ -248,12 +248,28 @@ class FetchedEmail:
     recipient_emails: list[str] = field(default_factory=list)
     attachment_filenames: list[str] = field(default_factory=list)
     message_id: str = ""
+    # Full message headers keyed lowercase, values as lists (one entry per
+    # occurrence). Populated by _parse_rfc822 but default-empty so synthetic
+    # FetchedEmail instances in tests don't have to provide it.
+    headers: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def sender_domain(self) -> str:
         if "@" not in self.sender_email:
             return ""
         return self.sender_email.rsplit("@", 1)[-1].strip().lower()
+
+    def header(self, name: str) -> str:
+        """First value of a header, case-insensitive. Empty string if absent."""
+        values = self.headers.get(name.lower())
+        return values[0] if values else ""
+
+    def headers_present(self, *names: str) -> bool:
+        """True iff any of the named headers is present (non-empty)."""
+        for n in names:
+            if self.headers.get(n.lower()):
+                return True
+        return False
 
 
 def _decode_header_value(raw: Any) -> str:
@@ -329,6 +345,9 @@ def _parse_rfc822(raw_bytes: bytes) -> FetchedEmail:
     ) + _extract_recipient_list(
         msg.get_all("Cc") or []
     )
+    headers: dict[str, list[str]] = {}
+    for name, value in msg.items():
+        headers.setdefault(name.lower(), []).append(_decode_header_value(value))
     return FetchedEmail(
         subject=subject,
         body=_extract_plain_body(msg),
@@ -336,6 +355,7 @@ def _parse_rfc822(raw_bytes: bytes) -> FetchedEmail:
         recipient_emails=recipients,
         attachment_filenames=_extract_attachments(msg),
         message_id=_decode_header_value(msg.get("Message-ID", "")),
+        headers=headers,
     )
 
 
@@ -690,7 +710,36 @@ async def process_email(
     mailbox: MailboxConfig,
     session_factory: Any | None = None,
 ) -> dict[str, str]:
-    """Classify + persist one email. Returns dict with route and routing_tag."""
+    """
+    Classify + persist one email. Returns a dict with:
+      mailbox       — mailbox.name
+      routing_tag   — mailbox.routing_tag
+      route         — 'allow' | 'restricted' | 'block' | 'junk'
+      junk_category — only present when route == 'junk'
+    """
+    # Junk pass runs first — short-circuit before the privilege filter
+    # so newsletters / bounces / marketing blasts never reach the capture
+    # tables and never cost a classify_for_capture() call.
+    if settings.captain_junk_filter_enabled:
+        from backend.services.captain_junk_filter import classify_junk
+        junk = await classify_junk(em)
+        if junk.is_junk:
+            logger.info(
+                "captain_email_junked",
+                mailbox=mailbox.name,
+                routing_tag=mailbox.routing_tag,
+                junk_category=junk.category,
+                reason=junk.reason[:120],
+                confidence=round(junk.confidence, 3),
+                sender_domain=em.sender_domain,
+            )
+            return {
+                "mailbox": mailbox.name,
+                "routing_tag": mailbox.routing_tag,
+                "route": "junk",
+                "junk_category": junk.category,
+            }
+
     decision = classify_email(em, mailbox)
     route = await write_capture(em, mailbox, decision, session_factory=session_factory)
     logger.info(
@@ -722,8 +771,15 @@ async def run_patrol(
     if not mailboxes:
         return {"status": "no_mailboxes", "processed": 0}
 
-    stats: dict[str, int] = {"processed": 0, "allow": 0, "restricted": 0, "block": 0}
+    stats: dict[str, int] = {
+        "processed": 0,
+        "allow": 0,
+        "restricted": 0,
+        "block": 0,
+        "junk": 0,
+    }
     by_tag: dict[str, int] = {}
+    by_junk_category: dict[str, int] = {}
 
     for mailbox in mailboxes:
         try:
@@ -756,8 +812,17 @@ async def run_patrol(
             stats["processed"] += 1
             stats[result["route"]] = stats.get(result["route"], 0) + 1
             by_tag[result["routing_tag"]] = by_tag.get(result["routing_tag"], 0) + 1
+            if result["route"] == "junk":
+                cat = result.get("junk_category", "unknown")
+                by_junk_category[cat] = by_junk_category.get(cat, 0) + 1
 
-    return {"status": "patrol_complete", "mailboxes": len(mailboxes), **stats, "by_tag": by_tag}
+    return {
+        "status": "patrol_complete",
+        "mailboxes": len(mailboxes),
+        **stats,
+        "by_tag": by_tag,
+        "by_junk_category": by_junk_category,
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
