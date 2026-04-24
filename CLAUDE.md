@@ -83,8 +83,11 @@ The **only authorized data path** is: Next.js → Cloudflare Tunnel API call →
 
 ### AI Inference (DEFCON Modes)
 - **DEFCON 5 / SWARM:** Ollama LB → qwen2.5:7b on Spark-02 (fast routing, guest comms)
+- **DEFCON 3 / BRAIN (Tier 2 sovereign reasoning):** `fortress-nim-brain.service` on spark-1 — `nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8` via generic `nvcr.io/nim/nvidia/llm-nim:latest`, vLLM backend, port 8100, 32k context. HF weights staged at `/mnt/fortress_nas/nim-cache/hf/nvidia-Llama-3_3-Nemotron-Super-49B-v1_5-FP8/`. All callers MUST supply a system prompt (e.g. `"detailed thinking on"`) — the model returns garbled output without one.
 - **DEFCON 1 / TITAN:** DeepSeek-R1 on Spark-01 via llama.cpp RPC (deep reasoning, legal, finance)
 - **ARCHITECT:** Google Gemini (planning only — no PII or sovereign data)
+
+> **spark-1 memory pressure (2026-04-23):** The BRAIN service currently uses ≥99% of spark-1's 121 GiB unified memory after load. Track B workload migration (Qdrant, fortress-event-console / redpanda, RAG retriever, chromadb, open-webui → spark-4) is required-before-production to restore the ≥15% headroom rule. Do not put production traffic on BRAIN until Track B completes.
 
 ## Non-Negotiable Rules
 
