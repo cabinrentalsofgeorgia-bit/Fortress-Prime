@@ -1401,7 +1401,7 @@ async def tool_legal_docgen(
             extra={
                 "case_slug": payload.case_slug,
                 "case_number": case_meta["case_number"],
-                "filename": filename,
+                "attachment_filename": filename,
                 "size_bytes": len(docx_bytes),
             },
         )
@@ -1478,7 +1478,7 @@ async def tool_legal_motion_drafter(
                 )
         logger.info(
             "paperclip_tool_legal_motion_drafter_success",
-            extra={"case_number": case_meta["case_number"], "filename": filename},
+            extra={"case_number": case_meta["case_number"], "attachment_filename": filename},
         )
         return DraftMotionExtensionResponse(status="success", data=result)
     except Exception as exc:  # noqa: BLE001
@@ -1559,7 +1559,7 @@ async def tool_legal_opposing_filing_analysis(
                 )
         logger.info(
             "paperclip_tool_legal_opposing_filing_analysis_success",
-            extra={"case_number": case_meta["case_number"], "filename": filename},
+            extra={"case_number": case_meta["case_number"], "attachment_filename": filename},
         )
         return AnalyzeOpposingFilingResponse(status="success", data=result)
     except Exception as exc:  # noqa: BLE001
@@ -1650,7 +1650,7 @@ async def tool_legal_threat_assessor(
                 )
         logger.info(
             "paperclip_tool_legal_threat_assessor_success",
-            extra={"case_number": case_meta["case_number"], "filename": filename},
+            extra={"case_number": case_meta["case_number"], "attachment_filename": filename},
         )
         return LegalThreatAssessorResponse(status="success", data=result)
     except Exception as exc:  # noqa: BLE001
@@ -1800,7 +1800,7 @@ async def tool_legal_draft_answer(
             extra={
                 "case_slug": payload.case_slug,
                 "case_number": case_meta["case_number"],
-                "filename": filename,
+                "attachment_filename": filename,
             },
         )
         return LegalDraftWorkflowResponse(status="success", data=result)
@@ -1945,7 +1945,7 @@ async def tool_legal_deposition_outline(
             )
         logger.info(
             "paperclip_tool_legal_deposition_outline_success",
-            extra={"case_slug": payload.case_slug, "filename": filename},
+            extra={"case_slug": payload.case_slug, "attachment_filename": filename},
         )
         return LegalDepositionOutlineToolResponse(status="success", data=result)
     except ValueError as exc:
