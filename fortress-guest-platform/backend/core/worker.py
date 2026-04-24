@@ -587,23 +587,23 @@ async def startup(ctx: dict[str, Any]) -> None:
         logger.info("recursive_agent_loop_disabled")
 
     if settings.legal_email_intake_enabled:
-        from backend.services.legal_email_intake import run_legal_intake_loop
-        legal_intake_task = asyncio.create_task(
-            run_legal_intake_loop(),
-            name="legal_intake_task",
-        )
-        ctx["legal_intake_task"] = legal_intake_task
-        legal_intake_task.add_done_callback(
-            lambda t: _log_background_task_result("legal_intake_task", t),
-        )
-        logger.info("legal_email_intake_started_in_worker",
-                    interval=settings.legal_email_poll_interval)
-
         from backend.services.captain_multi_mailbox import (
-            run_captain_multi_mailbox_loop,
             load_mailbox_configs,
+            preflight_authenticate,
+            run_captain_multi_mailbox_loop,
+            validate_mailbox_credentials,
         )
+
+        # Fail loud — both steps raise if config is bad or any mailbox
+        # cannot authenticate. Startup aborts before the poll loop is
+        # scheduled, so operators see the failure in the worker boot log
+        # rather than silent failing patrols.
         mailboxes = load_mailbox_configs()
+        validate_mailbox_credentials(mailboxes)
+        preflight_results = await preflight_authenticate(mailboxes)
+        for result in preflight_results:
+            logger.info("captain_preflight_status", **result)
+
         captain_task = asyncio.create_task(
             run_captain_multi_mailbox_loop(),
             name="captain_multi_mailbox_task",
@@ -616,6 +616,28 @@ async def startup(ctx: dict[str, Any]) -> None:
             "captain_multi_mailbox_started_in_worker",
             mailboxes=[m.name for m in mailboxes],
         )
+
+        # Legacy single-mailbox loop — deprecated. Captain owns legal@ now.
+        # Gated behind LEGACY_LEGAL_INTAKE_ENABLED (default false) for
+        # emergency rollback only. If set true while Captain is also running,
+        # both loops race on the legal@ UNSEEN flag.
+        if settings.legacy_legal_intake_enabled:
+            logger.warning(
+                "legacy_legal_intake_enabled_deprecated",
+                note="Captain multi-mailbox supersedes this path. "
+                     "LEGACY_LEGAL_INTAKE_ENABLED is for emergency rollback only.",
+            )
+            from backend.services.legal_email_intake import run_legal_intake_loop
+            legal_intake_task = asyncio.create_task(
+                run_legal_intake_loop(),
+                name="legal_intake_task",
+            )
+            ctx["legal_intake_task"] = legal_intake_task
+            legal_intake_task.add_done_callback(
+                lambda t: _log_background_task_result("legal_intake_task", t),
+            )
+            logger.info("legacy_legal_email_intake_started_in_worker",
+                        interval=settings.legal_email_poll_interval)
     else:
         logger.info("legal_email_intake_disabled")
 

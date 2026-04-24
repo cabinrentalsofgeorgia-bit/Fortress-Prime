@@ -888,6 +888,14 @@ class Settings(BaseSettings):
     legal_email_poll_interval: int = Field(default=120, alias="LEGAL_EMAIL_POLL_INTERVAL")
     legal_email_intake_enabled: bool = Field(default=False, alias="LEGAL_EMAIL_INTAKE_ENABLED")
 
+    # Deprecated — legacy single-mailbox legal_email_intake loop. Captain's
+    # multi-mailbox intake (LEGAL_EMAIL_INTAKE_ENABLED) supersedes this for
+    # legal@cabin-rentals-of-georgia.com. Kept as an emergency-rollback gate
+    # only. Set true only if you need to revert to the pre-captain path.
+    legacy_legal_intake_enabled: bool = Field(
+        default=False, alias="LEGACY_LEGAL_INTAKE_ENABLED"
+    )
+
     # Twilio
     twilio_account_sid: str = Field(default="")
     twilio_auth_token: str = Field(default="")
