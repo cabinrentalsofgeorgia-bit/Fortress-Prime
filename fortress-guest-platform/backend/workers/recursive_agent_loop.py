@@ -190,7 +190,7 @@ async def _handle_guest_dormant(sig: LoopSignal) -> list[LoopSignal]:
                 # Enqueue for reactivation hunter
                 await db.execute(text("""
                     INSERT INTO agent_queue (guest_id, trigger_source, score, status)
-                    VALUES (:gid::uuid, 'dormancy_signal', :score, 'pending')
+                    VALUES (CAST(:gid AS uuid), 'dormancy_signal', :score, 'pending')
                     ON CONFLICT DO NOTHING
                 """), {
                     "gid":   str(guest_id),
@@ -257,7 +257,7 @@ async def _handle_ota_parity_signal(sig: LoopSignal) -> list[LoopSignal]:
                         (event_type, source, description, metadata, occurred_at)
                     VALUES
                         ('ota_parity_signal', 'competitive_sentinel',
-                         :desc, :meta::jsonb, now())
+                         :desc, CAST(:meta AS jsonb), now())
                     ON CONFLICT DO NOTHING
                 """), {
                     "desc": f"OTA competitor at {competitor_url} priced ${abs(delta):.0f} {'below' if delta<0 else 'above'} sovereign rate",
@@ -379,7 +379,7 @@ async def _handle_intelligence_signal(sig: LoopSignal) -> list[LoopSignal]:
                      dedupe_hash, target_tags, source_urls, discovered_at)
                 VALUES
                     (:cat, :title, :summary, :market, :market,
-                     :conf, :dhash, :tags::jsonb, '[]'::jsonb, now())
+                     :conf, :dhash, CAST(:tags AS jsonb), '[]'::jsonb, now())
                 ON CONFLICT (dedupe_hash) DO NOTHING
             """), {
                 "cat":     category[:64],
@@ -469,7 +469,7 @@ async def _handle_legal_deliberation_complete(sig: LoopSignal) -> list[LoopSigna
                         (event_type, source, description, metadata, occurred_at)
                     VALUES
                         ('legal_clearance', 'recursive_agent_loop',
-                         :desc, :meta::jsonb, now())
+                         :desc, CAST(:meta AS jsonb), now())
                 """), {
                     "desc": f"Legal barrier cleared for property {property_id} — {outcome}",
                     "meta": json.dumps({"case_slug": case_slug, "conviction": avg_conviction}),

@@ -649,7 +649,7 @@ async def write_capture(
                         (id, source_module, model_used, user_prompt, assistant_resp,
                          status, capture_metadata)
                     VALUES
-                        (:id::uuid, :module, :model, :prompt, :response,
+                        (CAST(:id AS uuid), :module, :model, :prompt, :response,
                          'pending', CAST(:meta AS jsonb))
                     ON CONFLICT DO NOTHING
                 """),

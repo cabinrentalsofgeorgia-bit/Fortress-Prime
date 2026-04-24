@@ -142,7 +142,7 @@ async def _capture_interaction(
                              task_type, judge_decision, judge_reasoning,
                              capture_metadata)
                         VALUES
-                            (:id::uuid, :module, :model, :prompt, :response, 'pending',
+                            (CAST(:id AS uuid), :module, :model, :prompt, :response, 'pending',
                              :endpoint, :store,
                              :esc_from, :sov_attempt,
                              :t_endpoint, :t_model,
