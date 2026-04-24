@@ -142,6 +142,101 @@ def load_mailbox_configs(raw: str | None = None) -> list[MailboxConfig]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Credential validation (fail loud)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Strings that are clearly placeholders, not real secrets. If a resolved
+# credentials_ref lands on any of these, we treat it as unset.
+_PLACEHOLDER_PASSWORDS: frozenset[str] = frozenset({
+    "",
+    "replace_me",
+    "replaceme",
+    "changeme",
+    "change_me",
+    "placeholder",
+    "dummy",
+    "test",
+    "<set-via-vault>",
+    "set-via-vault",
+    "your-password-here",
+    "todo",
+    "tbd",
+})
+
+
+class MailboxCredentialError(RuntimeError):
+    """Raised when a referenced credential is missing, empty, or a placeholder."""
+
+
+def _is_placeholder(value: str) -> bool:
+    return value.strip().lower() in _PLACEHOLDER_PASSWORDS
+
+
+def validate_mailbox_credentials(mailboxes: list[MailboxConfig]) -> None:
+    """
+    Fail-loud credential check. Does NOT attempt network I/O — that is the
+    job of preflight_authenticate. This only confirms the referenced env
+    vars resolve to something that looks like a real secret.
+
+    Raises MailboxCredentialError listing every missing / placeholder
+    reference in one go (so operators see the full picture on startup,
+    not one failure at a time).
+    """
+    if not mailboxes:
+        return
+
+    problems: list[str] = []
+    seen_gmail_creds: bool | None = None
+
+    for mb in mailboxes:
+        if mb.transport == "imap":
+            if not mb.credentials_ref:
+                problems.append(
+                    f"{mb.name}: imap mailbox has no credentials_ref"
+                )
+                continue
+            value = os.environ.get(mb.credentials_ref, "")
+            if not value:
+                problems.append(
+                    f"{mb.name}: env var {mb.credentials_ref} is unset"
+                )
+            elif _is_placeholder(value):
+                problems.append(
+                    f"{mb.name}: env var {mb.credentials_ref} is a placeholder"
+                )
+        elif mb.transport == "gmail_api":
+            if seen_gmail_creds is None:
+                # Gmail OAuth uses shared settings across all gmail_api entries.
+                from backend.core.config import settings
+                missing: list[str] = []
+                if not settings.gmail_client_id \
+                        or _is_placeholder(settings.gmail_client_id):
+                    missing.append("GMAIL_CLIENT_ID")
+                if not settings.gmail_client_secret \
+                        or _is_placeholder(settings.gmail_client_secret):
+                    missing.append("GMAIL_CLIENT_SECRET")
+                if not settings.gmail_refresh_token \
+                        or _is_placeholder(settings.gmail_refresh_token):
+                    missing.append("GMAIL_REFRESH_TOKEN")
+                seen_gmail_creds = not missing
+                if missing:
+                    problems.append(
+                        f"{mb.name}: gmail OAuth incomplete — missing: "
+                        f"{', '.join(missing)}"
+                    )
+            elif not seen_gmail_creds:
+                problems.append(f"{mb.name}: gmail OAuth incomplete (see above)")
+
+    if problems:
+        # Intentionally terse — no values, only names — to keep secrets out
+        # of error text and logs.
+        raise MailboxCredentialError(
+            "MAILBOXES_CONFIG credential validation failed:\n  - "
+            + "\n  - ".join(problems)
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Email shape
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -285,6 +380,18 @@ class ImapTransport:
         conn.select(self.mailbox.folder)
         return conn
 
+    def verify_credentials(self) -> None:
+        """Connect + login + logout only. Raises on any failure."""
+        conn = self._connect()
+        try:
+            conn.close()
+        except Exception:
+            pass
+        try:
+            conn.logout()
+        except Exception:
+            pass
+
     def fetch_unseen(self) -> list[FetchedEmail]:
         attempts = 0
         last_err: Exception | None = None
@@ -401,6 +508,11 @@ class GmailApiTransport:
         )
         self._service = build("gmail", "v1", credentials=creds, cache_discovery=False)
         return self._service
+
+    def verify_credentials(self) -> None:
+        """Build the service and call users().getProfile() to force auth."""
+        service = self._build_service()
+        service.users().getProfile(userId="me").execute()
 
     def fetch_unseen(self) -> list[FetchedEmail]:
         try:
@@ -646,6 +758,81 @@ async def run_patrol(
             by_tag[result["routing_tag"]] = by_tag.get(result["routing_tag"], 0) + 1
 
     return {"status": "patrol_complete", "mailboxes": len(mailboxes), **stats, "by_tag": by_tag}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Preflight auth check
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PreflightAuthError(RuntimeError):
+    """One or more mailboxes failed live authentication."""
+
+
+async def preflight_authenticate(
+    mailboxes: list[MailboxConfig],
+    gmail_client_factory: Any | None = None,
+) -> list[dict[str, str]]:
+    """
+    Try a real connect + login against every mailbox. Returns a per-mailbox
+    status report (one dict per mailbox). Raises PreflightAuthError if any
+    mailbox fails — collected so the operator sees the full picture.
+
+    Runs every IMAP auth in a thread (imaplib is blocking). Gmail builds are
+    synchronous in the google client but do a live HTTP request during
+    getProfile, so they also run in a thread.
+    """
+    results: list[dict[str, str]] = []
+    failures: list[str] = []
+
+    for mb in mailboxes:
+        try:
+            transport = build_transport(
+                mb, gmail_client_factory=gmail_client_factory
+            )
+        except (MailboxConfigError, ValueError) as exc:
+            results.append({
+                "mailbox": mb.name, "address": mb.address,
+                "status": "config_error", "error": str(exc)[:200],
+            })
+            failures.append(f"{mb.name}: config_error — {str(exc)[:200]}")
+            continue
+
+        try:
+            await asyncio.to_thread(transport.verify_credentials)
+        except Exception as exc:
+            # Error messages from imap/google sometimes include echoes of the
+            # login string — keep it terse and out of the log.
+            err_type = type(exc).__name__
+            results.append({
+                "mailbox": mb.name, "address": mb.address,
+                "status": "auth_failed", "error": err_type,
+            })
+            failures.append(f"{mb.name}: auth_failed — {err_type}")
+            logger.error(
+                "captain_preflight_auth_failed",
+                mailbox=mb.name,
+                address=mb.address,
+                error_type=err_type,
+            )
+            continue
+
+        results.append({
+            "mailbox": mb.name, "address": mb.address, "status": "ok",
+        })
+        logger.info(
+            "captain_preflight_auth_ok",
+            mailbox=mb.name,
+            address=mb.address,
+            transport=mb.transport,
+        )
+
+    if failures:
+        raise PreflightAuthError(
+            "Captain preflight auth failed for "
+            f"{len(failures)}/{len(mailboxes)} mailbox(es):\n  - "
+            + "\n  - ".join(failures)
+        )
+    return results
 
 
 async def run_captain_multi_mailbox_loop(

@@ -21,10 +21,13 @@ from backend.services.captain_multi_mailbox import (
     ImapTransport,
     MailboxConfig,
     MailboxConfigError,
+    MailboxCredentialError,
     classify_email,
     load_mailbox_configs,
+    preflight_authenticate,
     process_email,
     run_patrol,
+    validate_mailbox_credentials,
 )
 from backend.services.privilege_filter import CaptureRoute
 
@@ -457,3 +460,221 @@ class TestWorkerStartupRespectsFlag:
 
         assert "captain_multi_mailbox_task" not in ctx
         assert "legal_intake_task" not in ctx
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Preflight — credential validation (no network)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestPreflightFailsOnMissingPassword:
+    def test_preflight_fails_on_missing_password(self, monkeypatch):
+        """
+        credentials_ref names an env var that isn't set → validate raises
+        MailboxCredentialError listing the offender.
+        """
+        # Make sure the env var is absent for this test.
+        monkeypatch.delenv("MAILPLUS_PASSWORD_MISSING", raising=False)
+
+        mailboxes = [
+            _mailbox(
+                "gary-gk",
+                address="gary@garyknight.com",
+                routing_tag="executive",
+                credentials_ref="MAILPLUS_PASSWORD_MISSING",
+            ),
+        ]
+
+        with pytest.raises(MailboxCredentialError) as exc_info:
+            validate_mailbox_credentials(mailboxes)
+
+        msg = str(exc_info.value)
+        assert "MAILPLUS_PASSWORD_MISSING" in msg
+        assert "unset" in msg
+        # No password value should ever appear — there isn't one, but double
+        # check the message stays credential-text-clean by type.
+        assert "gary-gk" in msg
+
+
+class TestPreflightFailsOnPlaceholderPassword:
+    @pytest.mark.parametrize(
+        "placeholder",
+        ["REPLACE_ME", "changeme", "<set-via-vault>", "dummy", "TODO", ""],
+    )
+    def test_preflight_fails_on_placeholder_password(
+        self, monkeypatch, placeholder: str,
+    ):
+        """
+        Any of the well-known placeholder strings → validate raises. Empty
+        string counts too (treated as unset by validation).
+        """
+        monkeypatch.setenv("MAILPLUS_PASSWORD_LEGAL", placeholder)
+
+        mailboxes = [
+            _mailbox(
+                "legal-cpanel",
+                address="legal@cabin-rentals-of-georgia.com",
+                routing_tag="legal",
+                credentials_ref="MAILPLUS_PASSWORD_LEGAL",
+            ),
+        ]
+
+        with pytest.raises(MailboxCredentialError) as exc_info:
+            validate_mailbox_credentials(mailboxes)
+
+        msg = str(exc_info.value)
+        assert "legal-cpanel" in msg
+        assert "MAILPLUS_PASSWORD_LEGAL" in msg
+        # The placeholder string itself must NOT appear in the error — we
+        # log var name only, never the value. (Empty string trivially passes.)
+        if placeholder:
+            assert placeholder not in msg
+
+
+class TestPreflightPassesWithAllCreds:
+    def test_preflight_passes_with_all_creds(self, monkeypatch):
+        """
+        All IMAP passwords set to real-looking values + Gmail OAuth triple
+        populated + live auth stubbed to succeed → preflight returns a clean
+        status report, no exception.
+        """
+        for ref in ("PW_LEGAL", "PW_GARY", "PW_INFO", "PW_GK"):
+            monkeypatch.setenv(ref, "real-cpanel-password-xyz")
+        monkeypatch.setenv("GMAIL_CLIENT_ID", "client-id-real")
+        monkeypatch.setenv("GMAIL_CLIENT_SECRET", "client-secret-real")
+        monkeypatch.setenv("GMAIL_REFRESH_TOKEN", "refresh-token-real")
+
+        # Inline settings refresh so the Gmail check reads the monkeypatched
+        # env rather than the cached process settings object.
+        from backend.core.config import settings
+        monkeypatch.setattr(settings, "gmail_client_id", "client-id-real")
+        monkeypatch.setattr(settings, "gmail_client_secret", "client-secret-real")
+        monkeypatch.setattr(settings, "gmail_refresh_token", "refresh-token-real")
+
+        host = "mail.cabin-rentals-of-georgia.com"
+        mailboxes = [
+            MailboxConfig(name="crog-gmail", transport="gmail_api",
+                          address="cabin.rentals.of.georgia@gmail.com",
+                          routing_tag="operations"),
+            _mailbox("legal-cpanel", address="legal@crog.com",
+                     routing_tag="legal", host=host,
+                     credentials_ref="PW_LEGAL"),
+            _mailbox("gary-crog", address="gary@crog.com",
+                     routing_tag="executive", host=host,
+                     credentials_ref="PW_GARY"),
+            _mailbox("info-crog", address="info@crog.com",
+                     routing_tag="operations", host=host,
+                     credentials_ref="PW_INFO"),
+            _mailbox("gary-gk", address="gary@gk.com",
+                     routing_tag="executive", host=host,
+                     credentials_ref="PW_GK"),
+        ]
+
+        # Static validation first — must not raise.
+        validate_mailbox_credentials(mailboxes)
+
+        # Live auth — stub both transports to succeed.
+        def _fake_imap_verify(self: ImapTransport) -> None:
+            return None
+
+        monkeypatch.setattr(ImapTransport, "verify_credentials", _fake_imap_verify)
+
+        class _FakeGetProfile:
+            def execute(self) -> dict:
+                return {"emailAddress": "me@gmail.com"}
+
+        class _FakeUsers:
+            def getProfile(self, userId: str) -> _FakeGetProfile:
+                assert userId == "me"
+                return _FakeGetProfile()
+
+        class _FakeService:
+            def users(self) -> _FakeUsers:
+                return _FakeUsers()
+
+        results = asyncio.run(preflight_authenticate(
+            mailboxes,
+            gmail_client_factory=lambda: _FakeService(),
+        ))
+
+        assert len(results) == 5
+        assert all(r["status"] == "ok" for r in results)
+        names = [r["mailbox"] for r in results]
+        assert names == [
+            "crog-gmail", "legal-cpanel", "gary-crog", "info-crog", "gary-gk",
+        ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Legacy loop no longer spawned when Captain is active
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestLegacyLoopNotSpawnedWhenCaptainActive:
+    def test_legacy_loop_not_spawned_when_captain_active(self, monkeypatch):
+        """
+        LEGAL_EMAIL_INTAKE_ENABLED=True + LEGACY_LEGAL_INTAKE_ENABLED=False
+        → Captain spawned, legacy run_legal_intake_loop NOT spawned.
+        """
+        from backend.core import worker
+        from backend.services import captain_multi_mailbox as cmm
+        from backend.services import legal_email_intake as legacy
+
+        monkeypatch.setenv("SEO_GRADING_CONSUMER_ENABLED", "0")
+        monkeypatch.setenv("SEO_REWRITE_CONSUMER_ENABLED", "0")
+        monkeypatch.setenv("SEO_DEPLOY_CONSUMER_ENABLED", "0")
+
+        for attr, val in [
+            ("semrush_shadow_observer_enabled", False),
+            ("research_scout_enabled", False),
+            ("concierge_shadow_draft_enabled", False),
+            ("hunter_queue_sweep_enabled", False),
+            ("async_job_watchdog_enabled", False),
+            ("legal_email_intake_enabled", True),        # Captain path on
+            ("legacy_legal_intake_enabled", False),      # legacy off
+        ]:
+            monkeypatch.setattr(worker.settings, attr, val, raising=False)
+
+        async def _noop_async(*args, **kwargs):
+            return None
+
+        class _FakeStreamlineVRS:
+            def __init__(self) -> None:
+                self.is_configured = False
+
+        monkeypatch.setattr(worker, "enforce_sovereign_boundary", _noop_async)
+        monkeypatch.setattr(worker, "StreamlineVRS", _FakeStreamlineVRS)
+
+        # Bypass captain preflight — we're testing spawn gating, not creds.
+        monkeypatch.setattr(cmm, "load_mailbox_configs", lambda: [])
+        monkeypatch.setattr(cmm, "validate_mailbox_credentials", lambda _mbs: None)
+
+        async def _fake_preflight(mbs, gmail_client_factory=None):
+            return []
+
+        monkeypatch.setattr(cmm, "preflight_authenticate", _fake_preflight)
+
+        async def _fake_captain_loop(stop_event=None):
+            # Immediately exit so the task doesn't linger after the test.
+            return None
+
+        monkeypatch.setattr(
+            cmm, "run_captain_multi_mailbox_loop", _fake_captain_loop,
+        )
+
+        # If the legacy loop is spawned, this will flip the flag. We also
+        # swap it for a no-op coroutine so an accidental spawn doesn't hang.
+        legacy_spawned = {"called": False}
+
+        async def _fake_legacy_loop() -> None:
+            legacy_spawned["called"] = True
+            return None
+
+        monkeypatch.setattr(legacy, "run_legal_intake_loop", _fake_legacy_loop)
+
+        ctx: dict[str, Any] = {}
+        asyncio.run(worker.startup(ctx))
+
+        assert "captain_multi_mailbox_task" in ctx, \
+            "Captain must spawn when legal_email_intake_enabled=True"
+        assert "legal_intake_task" not in ctx, \
+            "Legacy loop must NOT spawn when legacy_legal_intake_enabled=False"
+        assert legacy_spawned["called"] is False
