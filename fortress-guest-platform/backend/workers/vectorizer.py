@@ -9,7 +9,9 @@ Designed to be called:
   - As a post-sync hook from sync_all() in streamline_vrs.py
   - Standalone for backfill:  python -m backend.workers.vectorizer
 
-Embedding model: nomic-embed-text (768-dim) on Nginx LB (Captain:80)
+Embedding model: nomic-embed-text (768-dim) via Ollama on spark-1 (192.168.0.100:11434).
+(Historical: was "Nginx LB (Captain:80)" — the nginx LB is gone; this endpoint now
+ points directly at Ollama's /api/embeddings, which serves the same model + format.)
 """
 
 import hashlib
@@ -27,7 +29,7 @@ from backend.core.qdrant import COLLECTION_NAME, VECTOR_DIM
 
 logger = structlog.get_logger()
 
-EMBED_URL = f"http://192.168.0.100/api/embeddings"
+EMBED_URL = "http://192.168.0.100:11434/api/embeddings"
 EMBED_MODEL = "nomic-embed-text"
 QDRANT_BATCH_SIZE = 50
 MAX_RECORDS_PER_RUN = 500
