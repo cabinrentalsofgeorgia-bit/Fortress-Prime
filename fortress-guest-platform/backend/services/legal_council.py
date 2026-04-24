@@ -184,6 +184,51 @@ _OLLAMA_CTX_DEFAULT = 8192
 _CLOUD_PROVIDERS = {"ANTHROPIC", "ANTHROPIC_OPUS", "OPENAI", "XAI", "XAI_FLAGSHIP",
                     "DEEPSEEK", "DEEPSEEK_REASONER", "GEMINI"}
 
+# Map SEAT_ROUTING provider strings → logical provider names used by the
+# COUNCIL_FRONTIER_PROVIDERS_ENABLED env var. Any SEAT_ROUTING provider not in
+# this map is treated as a local/sovereign backend (HYDRA, SPARK, SWARM, VLLM)
+# and is always allowed — gating only applies to frontier (cloud) providers.
+_FRONTIER_PROVIDER_NORMALIZATION = {
+    "ANTHROPIC":         "anthropic",
+    "ANTHROPIC_OPUS":    "anthropic",
+    "OPENAI":            "openai",
+    "XAI":               "xai",
+    "XAI_FLAGSHIP":      "xai",
+    "DEEPSEEK":          "deepseek",
+    "DEEPSEEK_REASONER": "deepseek",
+    "GEMINI":            "gemini",
+}
+
+
+def _get_enabled_frontier_providers() -> frozenset[str]:
+    """Read the COUNCIL_FRONTIER_PROVIDERS_ENABLED allowlist.
+
+    Comma-separated logical provider names. Default is ``"anthropic"`` —
+    a degraded-mode floor that matches the current operational state on
+    spark-node-2 where only Anthropic upstream auth is known to work
+    (see docs/runbooks/litellm-key-rotation.md). Special token ``"all"``
+    re-enables every frontier provider (legacy 9-seat behavior).
+    """
+    raw = os.getenv("COUNCIL_FRONTIER_PROVIDERS_ENABLED", "anthropic")
+    parts = {p.strip().lower() for p in raw.split(",") if p.strip()}
+    if "google" in parts:
+        parts = (parts - {"google"}) | {"gemini"}
+    return frozenset(parts)
+
+
+def _seat_frontier_provider_enabled(seat: int, enabled: frozenset[str]) -> bool:
+    """True iff the seat's frontier provider is allowlisted, or if the seat
+    routes to a sovereign/local backend (always allowed — gating is for
+    frontier-auth contamination only)."""
+    if "all" in enabled:
+        return True
+    seat_provider = SEAT_ROUTING.get(seat, {}).get("provider", "")
+    norm = _FRONTIER_PROVIDER_NORMALIZATION.get(seat_provider.upper())
+    if norm is None:
+        return True
+    return norm in enabled
+
+
 logger.info(
     "legal_council_config  allow_cloud=%s  anthropic=%s  xai=%s  hydra_32b=%s  hydra_120b=%s  vllm_120b=%s",
     ALLOW_CLOUD_LLM, ANTHROPIC_PROXY, XAI_BASE_URL, HYDRA_32B_URL, HYDRA_120B_URL, VLLM_120B_URL,
@@ -1428,6 +1473,55 @@ async def run_council_deliberation(
                 "message": "No legal personas found in " + PERSONAS_DIR,
             })
         return
+
+    # ── Frontier-provider gating (degraded-mode safeguard) ───────────────
+    # Skip seats whose frontier provider is not allowlisted. This prevents
+    # silent fallback to local Ollama poisoning llm_training_captures with
+    # HYDRA outputs disguised as frontier consensus when an upstream
+    # provider's auth is broken at the gateway.
+    enabled_providers = _get_enabled_frontier_providers()
+    active_personas: List[LegalPersona] = []
+    skipped_personas: List[LegalPersona] = []
+    for _p in personas:
+        (active_personas if _seat_frontier_provider_enabled(_p.seat, enabled_providers)
+         else skipped_personas).append(_p)
+    if skipped_personas:
+        logger.warning(
+            "council_seats_skipped_disabled_provider",
+            extra={
+                "skipped_count": len(skipped_personas),
+                "active_count": len(active_personas),
+                "enabled_providers": sorted(enabled_providers),
+                "skipped_seats": [
+                    {
+                        "seat":     _p.seat,
+                        "persona":  _p.name,
+                        "provider": SEAT_ROUTING.get(_p.seat, {}).get("provider"),
+                    }
+                    for _p in skipped_personas
+                ],
+            },
+        )
+        if progress_callback:
+            await progress_callback({
+                "type": "seats_skipped",
+                "skipped_count": len(skipped_personas),
+                "active_count": len(active_personas),
+                "enabled_providers": sorted(enabled_providers),
+            })
+    if not active_personas:
+        _active_sessions[session_id] = {
+            "status": "error",
+            "error": "All Council seats disabled by COUNCIL_FRONTIER_PROVIDERS_ENABLED",
+        }
+        if progress_callback:
+            await progress_callback({
+                "type": "error",
+                "message": "All Council seats disabled by COUNCIL_FRONTIER_PROVIDERS_ENABLED — "
+                           f"enabled={sorted(enabled_providers)}, no seat routes match",
+            })
+        return
+    personas = active_personas
 
     # ── Pillar 2: Context Freezing — evidence + controlling authority ──
     evidence_vector_ids, evidence_chunks_raw = await freeze_context(
