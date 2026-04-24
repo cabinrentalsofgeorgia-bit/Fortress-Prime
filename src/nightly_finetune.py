@@ -63,6 +63,7 @@ import sys
 import time
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 from judge.base_model_locator import find_base_model
 
@@ -378,6 +379,77 @@ def load_training_data(rolling_days: int) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Step 3: QLoRA training
 # ---------------------------------------------------------------------------
+# QLoRA helpers — extracted so tests can validate the quantization + memory
+# contracts without requiring a GPU. The 2026-04-24 nightly failed on
+# `ValueError: Some modules are dispatched on the CPU or the disk` because
+# bnb 4-bit refused an implicit CPU-offload device_map; the fix is to (a)
+# set `llm_int8_enable_fp32_cpu_offload=True` on the bnb config, (b) pass an
+# explicit `max_memory` dict with GPU headroom + CPU room so `device_map="auto"`
+# has a valid plan even when the GPU is under pressure.
+# ---------------------------------------------------------------------------
+
+FINETUNE_CPU_OFFLOAD_GB = int(os.getenv("FINETUNE_CPU_OFFLOAD_GB", "64"))
+FINETUNE_GPU_HEADROOM_GB = int(os.getenv("FINETUNE_GPU_HEADROOM_GB", "2"))
+
+
+def build_quantization_kwargs(compute_dtype: Any) -> dict:
+    """
+    Return the kwargs passed to transformers.BitsAndBytesConfig. Exposed so
+    tests can assert the CPU-offload flag is always set without needing to
+    import bitsandbytes / instantiate a real config.
+    """
+    return {
+        "load_in_4bit": True,
+        "bnb_4bit_use_double_quant": True,
+        "bnb_4bit_quant_type": "nf4",
+        "bnb_4bit_compute_dtype": compute_dtype,
+        "llm_int8_enable_fp32_cpu_offload": True,
+    }
+
+
+def build_max_memory_map(
+    free_gpu_bytes: int | None,
+    cpu_ram_gb: int = FINETUNE_CPU_OFFLOAD_GB,
+    gpu_headroom_gb: int = FINETUNE_GPU_HEADROOM_GB,
+) -> dict:
+    """
+    Build the `max_memory` dict for `from_pretrained(device_map="auto", ...)`.
+
+    If `free_gpu_bytes` is None or non-positive, returns a CPU-only map
+    (the loader will place everything on CPU rather than erroring out).
+    Otherwise reserves `gpu_headroom_gb` for cuBLAS/workspace and pins the
+    rest as the GPU budget, with `cpu_ram_gb` as the overflow bucket.
+    """
+    if not free_gpu_bytes or free_gpu_bytes <= 0:
+        return {"cpu": f"{int(cpu_ram_gb)}GiB"}
+    free_gb = free_gpu_bytes / (1024 ** 3)
+    usable_gb = max(0, int(free_gb) - int(gpu_headroom_gb))
+    return {"0": f"{usable_gb}GiB", "cpu": f"{int(cpu_ram_gb)}GiB"}
+
+
+def log_gpu_preflight(torch_module: Any) -> dict:
+    """
+    Log free GPU memory before `from_pretrained`. Returns a state dict used
+    by the caller to decide the `max_memory` map. Never raises — on any
+    torch/CUDA error, falls back to the no-GPU path and the caller will
+    place the model on CPU.
+    """
+    state = {"has_gpu": False, "free_bytes": None, "total_bytes": None}
+    try:
+        if torch_module.cuda.is_available():
+            free, total = torch_module.cuda.mem_get_info()
+            state.update(has_gpu=True, free_bytes=int(free), total_bytes=int(total))
+            log.info(
+                "gpu_preflight  free_gb=%.2f  total_gb=%.2f",
+                free / (1024 ** 3), total / (1024 ** 3),
+            )
+        else:
+            log.warning("gpu_preflight  no_cuda_device — falling back to CPU-only")
+    except Exception as e:
+        log.warning("gpu_preflight  error=%s", str(e)[:200])
+    return state
+
+
 def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
     # Import here — deps may have been freshly installed
     import torch
@@ -406,13 +478,21 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    # --- 4-bit NF4 quantization config ---
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
+    # --- Pre-flight GPU inventory ---
+    gpu_state = log_gpu_preflight(torch)
+
+    # --- 4-bit NF4 quantization config (with CPU-offload safety valve) ---
+    bnb_kwargs = build_quantization_kwargs(torch.bfloat16)
+    bnb_config = BitsAndBytesConfig(**bnb_kwargs)
+
+    # --- Explicit max_memory plan so device_map="auto" can dispatch to CPU
+    #     instead of raising when GPU RAM is tight.
+    max_memory = build_max_memory_map(
+        free_gpu_bytes=gpu_state.get("free_bytes"),
+        cpu_ram_gb=FINETUNE_CPU_OFFLOAD_GB,
+        gpu_headroom_gb=FINETUNE_GPU_HEADROOM_GB,
     )
+    log.info("max_memory_plan %s", max_memory)
 
     # --- Load base model ---
     log.info("Loading base model in 4-bit NF4 …")
@@ -420,10 +500,16 @@ def run_qlora_training(records: list[dict], adapter_out: Path) -> None:
         str(BASE_MODEL_DIR),
         quantization_config=bnb_config,
         device_map="auto",
+        max_memory=max_memory,
         trust_remote_code=False,
         torch_dtype=torch.bfloat16,
         attn_implementation="sdpa",
     )
+    try:
+        effective_map = getattr(model, "hf_device_map", None)
+        log.info("effective_device_map %s", str(effective_map)[:500])
+    except Exception:
+        pass
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
     # --- LoRA config ---
