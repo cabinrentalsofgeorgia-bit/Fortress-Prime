@@ -598,6 +598,24 @@ async def startup(ctx: dict[str, Any]) -> None:
         )
         logger.info("legal_email_intake_started_in_worker",
                     interval=settings.legal_email_poll_interval)
+
+        from backend.services.captain_multi_mailbox import (
+            run_captain_multi_mailbox_loop,
+            load_mailbox_configs,
+        )
+        mailboxes = load_mailbox_configs()
+        captain_task = asyncio.create_task(
+            run_captain_multi_mailbox_loop(),
+            name="captain_multi_mailbox_task",
+        )
+        ctx["captain_multi_mailbox_task"] = captain_task
+        captain_task.add_done_callback(
+            lambda t: _log_background_task_result("captain_multi_mailbox_task", t),
+        )
+        logger.info(
+            "captain_multi_mailbox_started_in_worker",
+            mailboxes=[m.name for m in mailboxes],
+        )
     else:
         logger.info("legal_email_intake_disabled")
 
