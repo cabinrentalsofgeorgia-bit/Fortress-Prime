@@ -71,7 +71,27 @@ PERSONAS_DIR = os.getenv(
     "LEGAL_PERSONAS_DIR",
     "/home/admin/Fortress-Prime/personas/legal",
 )
-LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library", "legal_ediscovery"})
+LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library", "legal_ediscovery", "legal_caselaw"})
+
+# Precedent retrieval knobs — legal_caselaw holds the controlling-authority corpus
+# (CourtListener opinions). Defaults picked to fit comfortably inside frontier-model
+# context budgets after case brief + evidence chunks.
+CASELAW_COLLECTION = "legal_caselaw"
+CASELAW_TOP_K = int(os.getenv("LEGAL_COUNCIL_CASELAW_TOP_K", "10"))
+CONTEXT_BUDGET_TOKENS = int(os.getenv("LEGAL_COUNCIL_CONTEXT_BUDGET_TOKENS", "12000"))
+# Approximate char-per-token ratio used for budget enforcement on pre-prompt
+# retrieved context only (not the full seat prompt).
+_CHARS_PER_TOKEN = 4
+
+CASELAW_CONTEXT_HEADER = "--- CONTROLLING AUTHORITY (LEGAL CASE LAW) ---"
+EVIDENCE_CONTEXT_HEADER = "--- CASE EVIDENCE (E-DISCOVERY) ---"
+
+CITATION_INSTRUCTION = (
+    "CITATION DISCIPLINE:\n"
+    "When citing case law, cite only from the [CASE LAW: ...] blocks provided in "
+    "context. Do not invent citations. If no case law block is provided for a "
+    "proposition, state the proposition without a citation and note uncertainty."
+)
 
 from backend.core.config import settings as _cfg
 
@@ -718,6 +738,8 @@ YOUR BIASES & FOCUS:
 {chr(10).join(f'- {b}' for b in persona.bias)}
 {chr(10).join(f'- {f}' for f in persona.focus_areas)}
 
+{CITATION_INSTRUCTION}
+
 CRITICAL DIRECTIVE:
 You are an automated analytical engine operating on bare-metal hardware. You MUST output your ENTIRE response as a single, valid JSON object.
 - DO NOT wrap the JSON in markdown formatting (no ```json).
@@ -1127,6 +1149,144 @@ async def freeze_context(
     return vector_ids, context_chunks
 
 
+def _format_caselaw_citation(payload: Dict[str, Any]) -> str:
+    """Render a [CASE LAW: ...] header line from a legal_caselaw point payload."""
+    case_name = payload.get("case_name") or "<unknown case>"
+    court = payload.get("court") or "<unknown court>"
+    date_filed = payload.get("date_filed") or ""
+    citation_raw = payload.get("citation")
+    if isinstance(citation_raw, list):
+        citation = "; ".join(str(c) for c in citation_raw if c) or "no reporter citation"
+    else:
+        citation = str(citation_raw) if citation_raw else "no reporter citation"
+    return f"[CASE LAW: {case_name}, {court} ({date_filed}) — {citation}]"
+
+
+async def freeze_caselaw_context(
+    case_brief: str,
+    top_k: int = CASELAW_TOP_K,
+) -> Tuple[List[str], List[str]]:
+    """
+    Retrieve top-K controlling-authority chunks from legal_caselaw for the
+    deliberation query. Returns (caselaw_point_refs, context_chunks) where
+    each ref is a string of the form "caselaw:{opinion_id}:{chunk_index}"
+    so vault consumers can reconstruct which opinions were used without
+    touching the vault schema.
+
+    Graceful failure mode: on embed or Qdrant error, returns ([], []) and
+    the council proceeds without precedent context rather than crashing.
+    """
+    logger.info("freeze_caselaw_context_start  collection=%s  top_k=%d", CASELAW_COLLECTION, top_k)
+
+    query_vec = await _embed_text(case_brief)
+    if query_vec is None:
+        logger.warning("freeze_caselaw_context_no_embedding — proceeding without precedent")
+        return [], []
+
+    headers = {"api-key": _cfg.qdrant_api_key} if _cfg.qdrant_api_key else {}
+    body: Dict[str, Any] = {
+        "vector": query_vec,
+        "limit": top_k,
+        "with_payload": True,
+        "with_vector": False,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                f"{_cfg.qdrant_url.rstrip('/')}/collections/{CASELAW_COLLECTION}/points/search",
+                json=body,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("result", [])
+    except Exception as e:
+        logger.warning("freeze_caselaw_context_qdrant_failed  error=%s", str(e)[:200])
+        return [], []
+
+    refs: List[str] = []
+    chunks: List[str] = []
+    for pt in results:
+        payload = pt.get("payload", {})
+        text = payload.get("text_chunk") or payload.get("text") or ""
+        opinion_id = payload.get("opinion_id")
+        chunk_index = payload.get("chunk_index", 0)
+        if not text or opinion_id is None:
+            continue
+        refs.append(f"caselaw:{opinion_id}:{chunk_index}")
+        header = _format_caselaw_citation(payload)
+        chunks.append(f"{header}\n{text}")
+
+    logger.info(
+        "freeze_caselaw_context_complete  refs=%d  chunks=%d  top_score=%.3f",
+        len(refs), len(chunks),
+        results[0].get("score", 0.0) if results else 0.0,
+    )
+    return refs, chunks
+
+
+def _enforce_context_budget(
+    caselaw_chunks: List[str],
+    evidence_chunks: List[str],
+    budget_tokens: int = CONTEXT_BUDGET_TOKENS,
+) -> Tuple[List[str], List[str]]:
+    """
+    Trim retrieved context so the joined string stays within the char-equivalent
+    of budget_tokens. Caselaw (controlling authority) is preserved first; when
+    the budget is exceeded, evidence chunks are dropped from the tail until
+    the total fits. If caselaw alone already exceeds the budget, caselaw is
+    also trimmed from the tail, keeping at least the top-ranked chunk.
+    """
+    budget_chars = max(1, budget_tokens) * _CHARS_PER_TOKEN
+
+    total = sum(len(c) for c in caselaw_chunks) + sum(len(c) for c in evidence_chunks)
+    if total <= budget_chars:
+        return caselaw_chunks, evidence_chunks
+
+    evidence_kept: List[str] = []
+    running = sum(len(c) for c in caselaw_chunks)
+    for chunk in evidence_chunks:
+        if running + len(chunk) > budget_chars:
+            break
+        evidence_kept.append(chunk)
+        running += len(chunk)
+
+    if running <= budget_chars:
+        return caselaw_chunks, evidence_kept
+
+    caselaw_kept: List[str] = []
+    running = 0
+    for chunk in caselaw_chunks:
+        if caselaw_kept and running + len(chunk) > budget_chars:
+            break
+        caselaw_kept.append(chunk)
+        running += len(chunk)
+    return caselaw_kept, []
+
+
+def assemble_frozen_context(
+    caselaw_chunks: List[str],
+    evidence_chunks: List[str],
+    operator_context: str = "",
+) -> str:
+    """
+    Build the final frozen context string passed to every seat. Order is
+    caselaw → evidence → operator_context; sections with no content are
+    skipped so empty headers never leak into seat prompts.
+    """
+    parts: List[str] = []
+    if caselaw_chunks:
+        parts.append(CASELAW_CONTEXT_HEADER)
+        parts.append("\n\n".join(caselaw_chunks))
+    if evidence_chunks:
+        parts.append(EVIDENCE_CONTEXT_HEADER)
+        parts.append("\n\n".join(evidence_chunks))
+    if operator_context:
+        parts.append("--- OPERATOR CONTEXT ---")
+        parts.append(operator_context)
+    return "\n\n".join(parts)
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # Roster Snapshot Builder (Pillar 4 — Hardware & Model Provenance)
 # ═══════════════════════════════════════════════════════════════════════
@@ -1269,19 +1429,36 @@ async def run_council_deliberation(
             })
         return
 
-    # ── Pillar 2: Context Freezing ────────────────────────────────────
-    vector_ids, context_chunks = await freeze_context(case_brief, top_k=20, case_slug=case_slug or None)
+    # ── Pillar 2: Context Freezing — evidence + controlling authority ──
+    evidence_vector_ids, evidence_chunks_raw = await freeze_context(
+        case_brief, top_k=20, case_slug=case_slug or None,
+    )
+    caselaw_refs, caselaw_chunks_raw = await freeze_caselaw_context(
+        case_brief, top_k=CASELAW_TOP_K,
+    )
 
-    frozen_context = "\n\n".join(context_chunks) if context_chunks else context
-    if context and context_chunks:
-        frozen_context = f"{context}\n\n--- RETRIEVED EVIDENCE ---\n\n{frozen_context}"
+    # Enforce retrieved-context token budget (caselaw-first preservation).
+    caselaw_chunks, evidence_chunks = _enforce_context_budget(
+        caselaw_chunks_raw, evidence_chunks_raw, CONTEXT_BUDGET_TOKENS,
+    )
+
+    frozen_context = assemble_frozen_context(caselaw_chunks, evidence_chunks, context)
+
+    # Vault receives both sets of identifiers so audits can verify citation
+    # grounding. Caselaw refs are prefixed "caselaw:{opinion_id}:{chunk_index}".
+    vector_ids = list(evidence_vector_ids) + list(caselaw_refs)
+    context_chunks = list(caselaw_chunks) + list(evidence_chunks)
 
     if progress_callback:
         await progress_callback({
             "type": "context_frozen",
-            "vector_count": len(vector_ids),
-            "chunk_count": len(context_chunks),
+            "vector_count": len(evidence_vector_ids),
+            "chunk_count": len(evidence_chunks),
             "collection": LEGAL_COLLECTION,
+            "caselaw_ref_count": len(caselaw_refs),
+            "caselaw_chunk_count": len(caselaw_chunks),
+            "caselaw_collection": CASELAW_COLLECTION,
+            "context_budget_tokens": CONTEXT_BUDGET_TOKENS,
         })
 
     # ── Pillar 4: Roster Snapshot ─────────────────────────────────────
