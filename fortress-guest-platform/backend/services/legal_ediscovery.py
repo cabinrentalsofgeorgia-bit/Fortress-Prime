@@ -328,11 +328,11 @@ async def process_vault_upload(
 ) -> dict:
     fhash = _file_hash(file_bytes)
 
-    existing = await db.execute(
+    fast_dup = await db.execute(
         text("SELECT id FROM legal.vault_documents WHERE case_slug = :slug AND file_hash = :hash"),
         {"slug": case_slug, "hash": fhash},
     )
-    if existing.fetchone():
+    if fast_dup.fetchone():
         return {"status": "duplicate", "file_name": file_name, "file_hash": fhash}
 
     doc_id = str(uuid4())
@@ -343,11 +343,13 @@ async def process_vault_upload(
     with open(nfs_path, "wb") as f:
         f.write(file_bytes)
 
-    await db.execute(
+    insert_result = await db.execute(
         text("""
             INSERT INTO legal.vault_documents
                 (id, case_slug, file_name, nfs_path, mime_type, file_hash, file_size_bytes, processing_status)
             VALUES (:id, :slug, :fname, :nfs, :mime, :hash, :size, 'pending')
+            ON CONFLICT ON CONSTRAINT uq_vault_documents_case_hash DO NOTHING
+            RETURNING id
         """),
         {
             "id": doc_id, "slug": case_slug, "fname": file_name,
@@ -355,7 +357,14 @@ async def process_vault_upload(
             "size": len(file_bytes),
         },
     )
+    inserted = insert_result.fetchone()
     await db.commit()
+    if inserted is None:
+        try:
+            Path(nfs_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        return {"status": "duplicate", "file_name": file_name, "file_hash": fhash}
     docket_event_emitted = await _emit_docket_updated_event(
         db=db,
         case_slug=case_slug,
@@ -367,6 +376,41 @@ async def process_vault_upload(
 
     try:
         raw_text = _extract_text(file_bytes, mime_type, file_name)
+
+        # ── Image-only PDF guard ──────────────────────────────
+        # If text extraction yields nothing on a PDF, there is no signal
+        # to vectorize and no signal to classify privilege. Mark the row
+        # ocr_failed so the OCR sweep (backend/scripts/ocr_legal_case.py)
+        # can pick it up and the operator has a single state to query for.
+        is_pdf = (
+            "pdf" in (mime_type or "").lower()
+            or file_name.lower().endswith(".pdf")
+        )
+        if is_pdf and not (raw_text or "").strip():
+            await db.execute(
+                text(
+                    "UPDATE legal.vault_documents "
+                    "SET processing_status = 'ocr_failed', error_detail = :err "
+                    "WHERE id = :id"
+                ),
+                {
+                    "id": doc_id,
+                    "err": "Empty text extraction — image-only PDF requires OCR. "
+                           "Run backend/scripts/ocr_legal_case.py for this case.",
+                },
+            )
+            await db.commit()
+            logger.info(
+                "vault_upload_ocr_failed",
+                doc_id=doc_id, case_slug=case_slug, file_name=file_name,
+            )
+            return {
+                "status": "ocr_failed",
+                "document_id": doc_id,
+                "file_name": file_name,
+                "nfs_path": nfs_path,
+                "docket_event_emitted": docket_event_emitted,
+            }
 
         # ── CoCounsel Privilege Shield ────────────────────────
         classification, priv_latency = await _classify_privilege(raw_text, file_name)
