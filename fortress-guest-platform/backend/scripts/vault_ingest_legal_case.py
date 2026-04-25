@@ -509,7 +509,7 @@ async def _ingest_one_inner(
     mime = detect_mime_type(physical_path)
 
     if resume:
-        existing_status = _check_existing_row("fortress_prod", case_slug, fhash)
+        existing_status = _check_existing_row("fortress_db", case_slug, fhash)
         if existing_status in skip_status_set:
             return FileOutcome(
                 path=str(physical_path), logical_subdir=logical_subdir,
@@ -534,11 +534,14 @@ async def _ingest_one_inner(
             status="failed", error=f"read_failed:{exc!s}",
         )
 
-    from backend.core.database import AsyncSessionLocal
+    # legal.vault_documents lives in fortress_db (LegacySession target),
+    # NOT fortress_shadow (AsyncSessionLocal target). This matches the
+    # call pattern in legal_email_intake._ingest_attachments.
+    from backend.services.ediscovery_agent import LegacySession
     from backend.services.legal_ediscovery import process_vault_upload
 
     try:
-        async with AsyncSessionLocal() as db:
+        async with LegacySession() as db:
             result = await process_vault_upload(
                 db=db,
                 case_slug=case_slug,
@@ -559,7 +562,7 @@ async def _ingest_one_inner(
 
     if status in {"completed", "ocr_failed", "locked_privileged"} and doc_id:
         try:
-            _mirror_row_to_fortress_db(case_slug=case_slug, doc_id=doc_id)
+            _mirror_row_db_to_prod(case_slug=case_slug, doc_id=doc_id)
         except Exception as exc:
             return FileOutcome(
                 path=str(physical_path), logical_subdir=logical_subdir,
@@ -593,10 +596,11 @@ def _check_existing_row(dbname: str, case_slug: str, file_hash: str) -> str | No
         conn.close()
 
 
-def _mirror_row_to_fortress_db(*, case_slug: str, doc_id: str) -> None:
-    """After process_vault_upload writes to fortress_prod, copy the row to
-    fortress_db so the UI's LegacySession reads the same data."""
-    src = _connect("fortress_prod")
+def _mirror_row_db_to_prod(*, case_slug: str, doc_id: str) -> None:
+    """After process_vault_upload writes via LegacySession (fortress_db),
+    copy the row to fortress_prod so consumers reading from prod see the
+    same vault state. Idempotent via ON CONFLICT DO UPDATE."""
+    src = _connect("fortress_db")
     try:
         with src.cursor() as cur:
             cur.execute(
@@ -609,13 +613,13 @@ def _mirror_row_to_fortress_db(*, case_slug: str, doc_id: str) -> None:
             row = cur.fetchone()
         if row is None:
             raise RuntimeError(
-                f"row {doc_id} missing in fortress_prod for case {case_slug!r} "
+                f"row {doc_id} missing in fortress_db for case {case_slug!r} "
                 f"— cannot mirror"
             )
     finally:
         src.close()
 
-    dst = _connect("fortress_db")
+    dst = _connect("fortress_prod")
     try:
         with dst.cursor() as cur:
             cur.execute(
