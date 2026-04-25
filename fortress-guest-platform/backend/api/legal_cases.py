@@ -464,7 +464,76 @@ async def get_correspondence_content(corr_id: int):
 
 # ── Case File Download (NAS) ──────────────────────────────────────────
 
-_CASE_SUBDIRS = ("certified_mail", "correspondence", "evidence", "receipts", "filings/incoming", "filings/outgoing")
+# Physical layout used when legal.cases.nas_layout IS NULL — preserves the
+# pre-existing behaviour so canonical cases (Generali, Prime Trust, MVP)
+# keep working unchanged. Logical names (returned to the UI) match the
+# physical paths under /mnt/fortress_nas/sectors/legal/{slug}/.
+_CASE_SUBDIRS = ("certified_mail", "correspondence", "evidence", "receipts",
+                 "filings/incoming", "filings/outgoing")
+_DEFAULT_SUBDIR_MAP: dict[str, str] = {
+    "certified_mail":   "certified_mail",
+    "correspondence":   "correspondence",
+    "evidence":         "evidence",
+    "receipts":         "receipts",
+    "filings_incoming": "filings/incoming",
+    "filings_outgoing": "filings/outgoing",
+}
+
+
+def _resolve_case_layout(
+    slug: str, nas_layout: dict | None,
+) -> tuple[Path, dict[str, str], bool]:
+    """
+    Return (case_root, logical→physical subdir map, recursive_flag).
+
+    NULL nas_layout → canonical {NAS_LEGAL_ROOT}/{slug} + _DEFAULT_SUBDIR_MAP,
+    recursive=False. Populated nas_layout → use the configured `root`
+    + `subdirs` map; missing keys are skipped silently. `recursive`
+    defaults to False when omitted.
+    """
+    if not nas_layout:
+        return Path(NAS_LEGAL_ROOT) / slug, dict(_DEFAULT_SUBDIR_MAP), False
+
+    root = Path(str(nas_layout.get("root") or "")).expanduser()
+    raw_subdirs = nas_layout.get("subdirs") or {}
+    if not isinstance(raw_subdirs, dict):
+        raw_subdirs = {}
+    subdir_map = {
+        str(k): str(v) for k, v in raw_subdirs.items()
+        if v is not None and v != ""
+    }
+    recursive = bool(nas_layout.get("recursive"))
+    return root, subdir_map, recursive
+
+
+def _walk_case_subdir(base: Path, recursive: bool) -> list[Path]:
+    """
+    Yield files under `base`, sorted. Skips:
+      - dotfiles (anywhere in the path)
+      - Synology @eaDir metadata folders
+      - directories themselves
+    """
+    if not base.is_dir():
+        return []
+    candidates = base.rglob("*") if recursive else base.iterdir()
+    out: list[Path] = []
+    for p in candidates:
+        if not p.is_file():
+            continue
+        if any(part.startswith(".") or part == "@eaDir" for part in p.parts):
+            continue
+        out.append(p)
+    out.sort()
+    return out
+
+
+def _is_under(child: Path, parent: Path) -> bool:
+    """True iff `child` is the same as or contained in `parent` after resolving."""
+    try:
+        child.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 @router.get("/cases/{slug}/download/{filename}", summary="Download a file from a case's NAS vault")
@@ -474,23 +543,41 @@ async def download_case_file(slug: str, filename: str):
 
     async with LegacySession() as session:
         case_r = await session.execute(
-            text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
+            text("SELECT id, nas_layout FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
         )
-        if not case_r.fetchone():
+        row = case_r.fetchone()
+        if not row:
             raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
 
-    case_root = Path(NAS_LEGAL_ROOT) / slug
-    for subdir in _CASE_SUBDIRS:
-        candidate = case_root / subdir / filename
-        if candidate.is_file():
-            resolved = candidate.resolve()
-            if not str(resolved).startswith(NAS_LEGAL_ROOT):
-                raise HTTPException(status_code=403, detail="Access denied")
+    nas_layout = getattr(row, "nas_layout", None)
+    case_root, subdir_map, recursive = _resolve_case_layout(slug, nas_layout)
+
+    for logical_name, relative_path in subdir_map.items():
+        d = case_root / relative_path
+        if not d.is_dir():
+            continue
+        if recursive:
+            iterator = (p for p in d.rglob(filename) if p.is_file())
+        else:
+            cand = d / filename
+            iterator = iter([cand]) if cand.is_file() else iter(())
+        for candidate in iterator:
+            if not _is_under(candidate, case_root):
+                # Path-traversal guard: a symlink could escape case_root.
+                continue
             ext = candidate.suffix.lower()
             media_type = MIME_MAP.get(ext, "application/octet-stream")
-            logger.info("legal_file_download", slug=slug, filename=filename, subdir=subdir)
-            return FileResponse(path=str(resolved), media_type=media_type, filename=filename)
+            logger.info(
+                "legal_file_download",
+                slug=slug, filename=filename, subdir=logical_name,
+                custom_layout=bool(nas_layout),
+            )
+            return FileResponse(
+                path=str(candidate.resolve()),
+                media_type=media_type,
+                filename=filename,
+            )
 
     raise HTTPException(status_code=404, detail=f"File '{filename}' not found in case vault")
 
@@ -499,26 +586,29 @@ async def download_case_file(slug: str, filename: str):
 async def list_case_files(slug: str):
     async with LegacySession() as session:
         case_r = await session.execute(
-            text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
+            text("SELECT id, nas_layout FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
         )
-        if not case_r.fetchone():
+        row = case_r.fetchone()
+        if not row:
             raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
 
-    case_root = Path(NAS_LEGAL_ROOT) / slug
+    nas_layout = getattr(row, "nas_layout", None)
+    case_root, subdir_map, recursive = _resolve_case_layout(slug, nas_layout)
+
     files: list[dict[str, Any]] = []
-    for subdir in _CASE_SUBDIRS:
-        d = case_root / subdir
-        if not d.is_dir():
-            continue
-        for f in sorted(d.iterdir()):
-            if f.is_file():
-                files.append({
-                    "filename": f.name,
-                    "subdir": subdir,
-                    "size_bytes": f.stat().st_size,
-                    "download_url": f"{INTERNAL_LEGAL_API_PREFIX}/cases/{slug}/download/{f.name}",
-                })
+    for logical_name, relative_path in subdir_map.items():
+        d = case_root / relative_path
+        for f in _walk_case_subdir(d, recursive):
+            if not _is_under(f, case_root):
+                continue
+            files.append({
+                "filename":     f.name,
+                "subdir":       logical_name,            # logical, not physical
+                "relative_path": str(f.relative_to(d)),  # for nested layouts
+                "size_bytes":   f.stat().st_size,
+                "download_url": f"{INTERNAL_LEGAL_API_PREFIX}/cases/{slug}/download/{f.name}",
+            })
     return {"case_slug": slug, "files": files, "total": len(files)}
 
 
