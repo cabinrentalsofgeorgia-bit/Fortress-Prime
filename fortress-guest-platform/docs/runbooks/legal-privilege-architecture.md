@@ -31,7 +31,7 @@ file_hash + chunk_index is namespaced under
 `f0a17e55-7c0d-4d1f-8c5a-d3b4f0e9a200` (UUID5), so re-ingesting the same
 document upserts to the same Qdrant points and never produces
 duplicates. (The work-product `_upsert_to_qdrant` path still uses
-`uuid4()` and is non-deterministic — Issue #207 tracks the
+`uuid4()` and is non-deterministic — Issue #210 tracks the
 divergence.)
 
 A non-attorney communication (e.g. spousal — see §6) does **not**
@@ -190,7 +190,7 @@ specifically because Knight has elected to put them at issue.
 
 If Knight withdraws the at-issue defense, the privilege snaps back —
 the rows must move back to `legal_privileged_communications` and the
-work-product copies removed. Issue #208 tracks the formal waiver
+work-product copies removed. Issue #211 tracks the formal waiver
 column work.
 
 ---
@@ -341,7 +341,7 @@ log entries** — the audit trail must outlive the data.
    ```
 
 3. **Move chunks Qdrant-side** (manual today; tooling tracked as
-   Issue #209):
+   Issue #212):
 
    ```python
    # Pseudo: scroll privileged collection by case_slug + document_id,
@@ -423,7 +423,7 @@ Apply to both `fortress_prod` and `fortress_db`.
 
 **Coverage limitation:** 11 endpoints with `{slug}` in path do not
 currently use `LegacySession` and therefore don't run alias resolution.
-Tracked as Issue #210; for now, rely on the 12 covered endpoints that
+Tracked as Issue #213; for now, rely on the 12 covered endpoints that
 do (full list in commit `f468f801b`).
 
 **Deprecation path:** when the old-slug telemetry shows zero hits
@@ -542,8 +542,11 @@ SELECT old_slug, new_slug, created_at FROM legal.case_slug_aliases ORDER BY crea
 - `docs/runbooks/legal-vault-documents.md` — vault row state machine
   and dedup contract (the underlying schema this layer assumes)
 - `docs/runbooks/legal-vault-ingest.md` — ingestion pipeline
-- Issue #207 — work-product Qdrant idempotency (UUID4 → UUID5)
-- Issue #208 — formal at-issue waiver column
-- Issue #209 — Qdrant collection migration tooling
-  (privileged → work-product moves)
-- Issue #210 — alias resolution coverage gap (11 endpoints)
+- Issue #209 — `legal.ingest_runs` row lost when case_slug renamed
+  (FK CASCADE on rename); fix via Option C reconstruct + switch to
+  ON DELETE SET NULL going forward
+- Issue #210 — work-product Qdrant idempotency (UUID4 → UUID5)
+- Issue #211 — formal at-issue waiver schema (`privilege_waivers` table)
+- Issue #212 — `migrate_qdrant_chunks.py` (privileged ↔ work-product
+  collection moves)
+- Issue #213 — alias resolution coverage gap (11 endpoints)
