@@ -18,7 +18,7 @@ Adds (idempotently):
     and the live-code writer values (vectorizing/completed/failed)
     plus 'locked_privileged' for the privilege-filter outcome and
     'ocr_failed' for PR D's image-only classification. Vocabulary
-    cleanup is tracked as Issue #193.
+    cleanup is tracked as Issue #194.
   - Indexes for query patterns: case_slug, partial(active states),
     created_at DESC, file_hash.
 
@@ -52,7 +52,7 @@ _STATUS_COMMENT = (
     "Vocabulary is currently bilingual (spec uses processing/complete/error; "
     "current code uses vectorizing/completed/failed). Bilingual vocabulary "
     "is intentional - both are accepted while the cleanup PR is pending. "
-    "See Issue #193."
+    "See Issue #194."
 )
 
 

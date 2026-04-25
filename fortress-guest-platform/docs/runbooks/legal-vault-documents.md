@@ -271,5 +271,5 @@ legacy unnamed unique index.
 - OCR sweep: `backend/scripts/ocr_legal_case.py`
 - Schema tests: `backend/tests/test_vault_documents_integrity.py`
 - Service tests: `backend/tests/test_legal_ediscovery_vault.py`
-- Vocabulary cleanup followup: Issue #193
+- Vocabulary cleanup followup: Issue #194
 - Audit trail (run history): `legal.ingest_runs` (PR D-pre1)
