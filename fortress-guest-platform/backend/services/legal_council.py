@@ -1113,6 +1113,34 @@ def _dedupe_top(items: List[str], limit: int) -> List[str]:
 # legal_library has only 3 points (stale/legacy) — use legal_ediscovery for context freezing
 LEGAL_COLLECTION = "legal_ediscovery"
 
+# PR G — Council pulls from this collection in addition to LEGAL_COLLECTION when
+# COUNCIL_INCLUDE_PRIVILEGED_RETRIEVAL is enabled. Privileged chunks are kept
+# physically separate so the storage layer enforces the privileged track, not
+# just a payload tag.
+PRIVILEGED_COLLECTION = "legal_privileged_communications"
+
+# Warning block appended to deliberation output whenever any privileged chunk
+# was retrieved. Wording is exact per PR G spec; if you change it here, also
+# update apps/command-center deliberation-panel rendering and the runbook.
+FOR_YOUR_EYES_ONLY_WARNING = (
+    "⚠️ FOR YOUR EYES ONLY ⚠️\n"
+    "This deliberation included attorney-client privileged communications. "
+    "Do not use this output in court filings, share with opposing parties, "
+    "or quote externally without explicit privilege review. Treat as "
+    "internal work product subject to attorney-client privilege."
+)
+
+
+def _council_retrieval_flags() -> tuple[bool, bool]:
+    """Read COUNCIL_INCLUDE_PRIVILEGED_RETRIEVAL and COUNCIL_INCLUDE_RELATED_MATTERS
+    at *deliberation time* (not at startup). Both default to true. Either env var
+    can be flipped to "false" / "0" / "no" to disable mid-flight without a
+    restart — emergency containment if a privilege issue surfaces."""
+    def _truthy(name: str, default: bool = True) -> bool:
+        v = os.environ.get(name, "true" if default else "false").strip().lower()
+        return v not in ("false", "0", "no", "off", "")
+    return _truthy("COUNCIL_INCLUDE_PRIVILEGED_RETRIEVAL"), _truthy("COUNCIL_INCLUDE_RELATED_MATTERS")
+
 
 async def _embed_text(text: str) -> Optional[List[float]]:
     """Embed via Ollama OpenAI-compatible /v1/embeddings (backend.core.vector_db)."""
@@ -1192,6 +1220,114 @@ async def freeze_context(
         results[0].get("score", 0.0) if results else 0.0,
     )
     return vector_ids, context_chunks
+
+
+async def freeze_privileged_context(
+    case_brief: str,
+    top_k: int = 10,
+    case_slug: Optional[str] = None,
+) -> Tuple[List[str], List[str]]:
+    """PR G — Pillar 2 sibling: retrieve from legal_privileged_communications.
+
+    Mirrors freeze_context() but targets the privileged collection. Privileged
+    chunks are returned with a [PRIVILEGED] header marker so personas (and
+    later vault audits) can tell them apart from work-product chunks at a
+    glance.
+
+    Returns ([], []) on any failure — same fail-safe behavior as freeze_context.
+    """
+    logger.info(
+        "freeze_privileged_context_start  collection=%s  top_k=%d  case_slug=%s",
+        PRIVILEGED_COLLECTION, top_k, case_slug,
+    )
+
+    query_vec = await _embed_text(case_brief)
+    if query_vec is None:
+        return [], []
+
+    headers = {"api-key": _cfg.qdrant_api_key} if _cfg.qdrant_api_key else {}
+    body: Dict[str, Any] = {
+        "vector": query_vec,
+        "limit": top_k,
+        "with_payload": True,
+        "with_vector": False,
+    }
+    if case_slug:
+        body["filter"] = {"must": [{"key": "case_slug", "match": {"value": case_slug}}]}
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                f"{_cfg.qdrant_url.rstrip('/')}/collections/{PRIVILEGED_COLLECTION}/points/search",
+                json=body,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("result", [])
+    except Exception as e:
+        logger.warning("freeze_privileged_context_qdrant_failed  error=%s", str(e)[:200])
+        return [], []
+
+    vector_ids: List[str] = []
+    context_chunks: List[str] = []
+    for pt in results:
+        point_id = str(pt.get("id", ""))
+        payload = pt.get("payload", {})
+        text = payload.get("text", "")
+        if not (point_id and text):
+            continue
+        vector_ids.append(point_id)
+        source = payload.get("file_name", payload.get("source_file", "unknown"))
+        domain = payload.get("privileged_counsel_domain") or "unknown-counsel"
+        role = payload.get("role") or "unknown-role"
+        # Mark every chunk visibly so personas + vault audits can see at a
+        # glance that this chunk came from the privileged collection.
+        context_chunks.append(
+            f"[PRIVILEGED · {domain} · {role}] [{source}] {text}"
+        )
+
+    logger.info(
+        "freeze_privileged_context_complete  vectors=%d  chunks=%d  case_slug=%s",
+        len(vector_ids), len(context_chunks), case_slug,
+    )
+    return vector_ids, context_chunks
+
+
+async def _resolve_related_matters_slugs(case_slug: str) -> List[str]:
+    """Look up the case's related_matters JSONB array from legal.cases.
+    Returns the list of related case_slug strings (excluding the case itself).
+    Empty list on any failure or when the column is absent / empty."""
+    if not case_slug:
+        return []
+    try:
+        from backend.services.ediscovery_agent import LegacySession
+        from sqlalchemy import text as sa_text
+        async with LegacySession() as db:
+            r = await db.execute(
+                sa_text(
+                    "SELECT related_matters FROM legal.cases WHERE case_slug = :s"
+                ),
+                {"s": case_slug},
+            )
+            row = r.fetchone()
+        if not row or not row[0]:
+            return []
+        raw = row[0]
+        # asyncpg returns JSONB as already-deserialized list/dict
+        if isinstance(raw, list):
+            related = raw
+        elif isinstance(raw, str):
+            try:
+                related = json.loads(raw)
+            except (ValueError, TypeError):
+                return []
+        else:
+            return []
+        return [s for s in related if isinstance(s, str) and s and s != case_slug]
+    except Exception as exc:
+        logger.warning("resolve_related_matters_failed  case=%s  err=%s",
+                       case_slug, str(exc)[:200])
+        return []
 
 
 def _format_caselaw_citation(payload: Dict[str, Any]) -> str:
@@ -1536,12 +1672,60 @@ async def run_council_deliberation(
         caselaw_chunks_raw, evidence_chunks_raw, CONTEXT_BUDGET_TOKENS,
     )
 
+    # ── PR G: privileged retrieval + related_matters expansion ────────
+    # Both flags are read NOW (not at module load) so an operator can flip
+    # them off mid-flight via env var without a backend restart — emergency
+    # containment if a privilege issue surfaces.
+    include_privileged, include_related_matters = _council_retrieval_flags()
+
+    # Expand the case_slug list with related_matters if enabled.
+    case_slugs_for_retrieval: List[str] = [case_slug] if case_slug else []
+    related_slugs: List[str] = []
+    if include_related_matters and case_slug:
+        related_slugs = await _resolve_related_matters_slugs(case_slug)
+        case_slugs_for_retrieval.extend(related_slugs)
+
+    privileged_vector_ids: List[str] = []
+    privileged_chunks: List[str] = []
+    if include_privileged:
+        for slug_for_priv in case_slugs_for_retrieval:
+            v_ids, chunks = await freeze_privileged_context(
+                case_brief, top_k=10, case_slug=slug_for_priv,
+            )
+            privileged_vector_ids.extend(v_ids)
+            privileged_chunks.extend(chunks)
+
+    contains_privileged: bool = len(privileged_chunks) > 0
+
+    # Wrap progress_callback so EVERY downstream event automatically carries
+    # the contains_privileged flag (per PR G spec — UI needs to render the
+    # FOR YOUR EYES ONLY warning the moment a privileged chunk is retrieved,
+    # not just at end-of-deliberation). Existing callback dicts are left
+    # alone; the wrapper only sets the key when not already present.
+    _orig_progress_callback = progress_callback
+    if _orig_progress_callback is not None:
+        async def _privilege_aware_callback(event: Dict[str, Any]) -> None:
+            event.setdefault("contains_privileged", contains_privileged)
+            await _orig_progress_callback(event)
+        progress_callback = _privilege_aware_callback
+
     frozen_context = assemble_frozen_context(caselaw_chunks, evidence_chunks, context)
+    if privileged_chunks:
+        # Append privileged chunks to the frozen context so personas have
+        # them in their working set for this deliberation. They are visibly
+        # marked with [PRIVILEGED · domain · role] tags by
+        # freeze_privileged_context.
+        priv_block = "\n\n".join(privileged_chunks)
+        frozen_context = (
+            f"{frozen_context}\n\n=== PRIVILEGED COMMUNICATIONS ===\n{priv_block}"
+        )
 
     # Vault receives both sets of identifiers so audits can verify citation
     # grounding. Caselaw refs are prefixed "caselaw:{opinion_id}:{chunk_index}".
-    vector_ids = list(evidence_vector_ids) + list(caselaw_refs)
-    context_chunks = list(caselaw_chunks) + list(evidence_chunks)
+    # Privileged vector ids are recorded too — vault is internal to Fortress
+    # and is allowed to know which privileged points fed a deliberation.
+    vector_ids = list(evidence_vector_ids) + list(caselaw_refs) + list(privileged_vector_ids)
+    context_chunks = list(caselaw_chunks) + list(evidence_chunks) + list(privileged_chunks)
 
     if progress_callback:
         await progress_callback({
@@ -1553,6 +1737,13 @@ async def run_council_deliberation(
             "caselaw_chunk_count": len(caselaw_chunks),
             "caselaw_collection": CASELAW_COLLECTION,
             "context_budget_tokens": CONTEXT_BUDGET_TOKENS,
+            # PR G — privileged retrieval + related-matters telemetry
+            "privileged_vector_count": len(privileged_vector_ids),
+            "privileged_chunk_count": len(privileged_chunks),
+            "privileged_collection": PRIVILEGED_COLLECTION,
+            "include_privileged_retrieval": include_privileged,
+            "include_related_matters": include_related_matters,
+            "related_matters_slugs": related_slugs,
         })
 
     # ── Pillar 4: Roster Snapshot ─────────────────────────────────────
@@ -1661,6 +1852,20 @@ async def run_council_deliberation(
         "opinions": [o.to_dict() for o in opinions],
         **consensus,
     }
+
+    # PR G — surface the privilege state on the final result + append the
+    # FOR YOUR EYES ONLY warning block when any privileged chunk was retrieved.
+    # Both the structured flag and the warning text are needed: the structured
+    # flag drives UI rendering, the text block ensures any rendered/exported
+    # surface (PDF, copy-paste, downstream pipeline) carries the warning.
+    result["contains_privileged"] = contains_privileged
+    if contains_privileged:
+        result["privileged_warning"] = FOR_YOUR_EYES_ONLY_WARNING
+        existing_summary = result.get("consensus_summary") or ""
+        result["consensus_summary"] = (
+            (existing_summary + "\n\n" if existing_summary else "")
+            + FOR_YOUR_EYES_ONLY_WARNING
+        )
 
     # ── Pillar 3 + 4: Cryptographic Vault ─────────────────────────────
     event_id = None
