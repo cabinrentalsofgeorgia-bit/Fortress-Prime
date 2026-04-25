@@ -9,13 +9,16 @@ case graph or Qdrant search index.
 """
 from __future__ import annotations
 
+import email
+import email.policy
 import hashlib
 import json
 import time
 import structlog
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
+from typing import Optional
+from uuid import UUID, uuid4, uuid5
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
@@ -32,12 +35,33 @@ logger = structlog.get_logger()
 NAS_VAULT_ROOT = Path("/mnt/fortress_nas/legal_vault")
 LOCAL_VAULT_FALLBACK = Path("/home/admin/Fortress-Prime/data/legal_vault")
 QDRANT_COLLECTION = "legal_ediscovery"
+# PR G — privileged communications go to a physically separate collection so
+# Council retrieval can distinguish work product from privileged content at
+# the storage layer, not just by payload tag.
+QDRANT_PRIVILEGED_COLLECTION = "legal_privileged_communications"
 QDRANT_URL = settings.qdrant_url.rstrip("/")
 EMBED_URL = f"{settings.embed_base_url.rstrip('/')}/api/embeddings"
 EMBED_MODEL = settings.embed_model
 
 SWARM_ENDPOINT = f"{settings.ollama_base_url.rstrip('/')}/v1/chat/completions"
 SWARM_MODEL = settings.ollama_fast_model
+
+# UUID5 namespace for deterministic Qdrant point IDs in the privileged
+# collection. Keyed on (file_hash, chunk_index) so re-runs of the same file
+# upsert to the same point IDs (idempotent), and never produce duplicates.
+_QDRANT_PRIVILEGED_NS = UUID("f0a17e55-7c0d-4d1f-8c5a-d3b4f0e9a200")
+
+# Maps a privileged-counsel email domain to its case-specific attorney_role tag.
+# Source of truth: pr_f_classification_rules.md (v6/v7). Update there first.
+_DOMAIN_TO_ROLE: dict[str, str] = {
+    "mhtlegal.com":        "case_i_phase_1_filing_to_depositions",
+    "fgplaw.com":          "case_i_phase_2_trial_and_general_counsel",
+    "masp-lawfirm.com":    "case_i_trial_cocounsel_and_vanderburge_counsel",
+    "dralaw.com":          "post_judgment_closing_counsel",
+    "wilsonhamilton.com":  "original_transaction_closing_counsel",
+    "wilsonpruittlaw.com": "original_transaction_closing_counsel",
+}
+_KNOWN_PRIVILEGED_DOMAINS = tuple(_DOMAIN_TO_ROLE.keys())
 
 
 # ── Pydantic: Privilege Classification ────────────────────────────
@@ -317,6 +341,126 @@ async def _upsert_to_qdrant(
         return 0
 
 
+# ── Privileged-track helpers (PR G) ───────────────────────────────
+
+def _derive_privileged_counsel_domain(
+    file_bytes: bytes,
+    file_name: str,
+    mime_type: str,
+    raw_text: str,
+) -> Optional[str]:
+    """Return the privileged-counsel email domain that this document was sent to or
+    from, if one of _KNOWN_PRIVILEGED_DOMAINS matches. Returns None when no match.
+
+    Strategy:
+      1. If the file is an email (.eml / message/rfc822), parse RFC-822 headers
+         and look for a privileged domain in From/To/Cc.
+      2. Otherwise, scan the first ~16 KB of extracted text for a privileged
+         domain substring. (PDFs, .docx etc. — names + email addresses commonly
+         appear in headers, signatures, recipient blocks.)
+    """
+    is_email = (
+        "rfc822" in (mime_type or "").lower()
+        or file_name.lower().endswith(".eml")
+    )
+    if is_email:
+        try:
+            msg = email.message_from_bytes(
+                file_bytes, policy=email.policy.default
+            )
+            addrs = " ".join(
+                str(msg.get(h, "") or "") for h in ("From", "To", "Cc", "Bcc", "Reply-To")
+            ).lower()
+            for d in _KNOWN_PRIVILEGED_DOMAINS:
+                if d in addrs:
+                    return d
+        except Exception:
+            pass
+
+    sample = (raw_text or "")[:16384].lower()
+    for d in _KNOWN_PRIVILEGED_DOMAINS:
+        if d in sample:
+            return d
+    return None
+
+
+def _role_for_counsel_domain(domain: Optional[str]) -> Optional[str]:
+    """Map a privileged-counsel domain to its case-specific attorney_role tag.
+    Returns None when domain is None or unmapped."""
+    if not domain:
+        return None
+    return _DOMAIN_TO_ROLE.get(domain.lower())
+
+
+async def _upsert_to_qdrant_privileged(
+    *,
+    doc_id: str,
+    case_slug: str,
+    file_name: str,
+    file_hash: str,
+    privileged_counsel_domain: Optional[str],
+    role: Optional[str],
+    privilege_type: Optional[str],
+    chunks: list[str],
+    vectors: list[list[float]],
+) -> int:
+    """Upsert privileged chunks to the legal_privileged_communications collection.
+
+    Point IDs use UUID5 keyed on (file_hash, chunk_index) so re-runs of the
+    same physical file produce the same point IDs (idempotent upsert; never
+    duplicates points across runs).
+
+    Payload schema per PR G spec:
+      case_slug, document_id, file_name, file_hash, chunk_num, chunk_index,
+      text (≤1000 chars), privileged=true, privileged_counsel_domain, role,
+      privilege_type, ingested_at (UTC ISO-8601).
+    """
+    points: list[dict] = []
+    ingested_at = datetime.now(timezone.utc).isoformat()
+    for idx, (chunk, vector) in enumerate(zip(chunks, vectors)):
+        if not vector:
+            continue
+        point_id = str(uuid5(_QDRANT_PRIVILEGED_NS, f"{file_hash}:{idx}"))
+        points.append({
+            "id": point_id,
+            "vector": vector,
+            "payload": {
+                "case_slug": case_slug,
+                "document_id": doc_id,
+                "file_name": file_name,
+                "file_hash": file_hash,
+                "chunk_num": idx,
+                "chunk_index": idx,
+                "text": chunk[:1000],
+                "privileged": True,
+                "privileged_counsel_domain": privileged_counsel_domain,
+                "role": role,
+                "privilege_type": privilege_type,
+                "ingested_at": ingested_at,
+            },
+        })
+
+    if not points:
+        return 0
+
+    try:
+        resp = await shared_client.put(
+            f"{QDRANT_URL}/collections/{QDRANT_PRIVILEGED_COLLECTION}/points",
+            json={"points": points},
+            timeout=60.0,
+        )
+        resp.raise_for_status()
+        return len(points)
+    except Exception as exc:
+        logger.warning(
+            "qdrant_privileged_upsert_failed",
+            error=str(exc)[:200],
+            doc_id=doc_id,
+            case_slug=case_slug,
+        )
+        return 0
+
+
 # ── Main Ingestion Pipeline ──────────────────────────────────────
 
 async def process_vault_upload(
@@ -416,6 +560,7 @@ async def process_vault_upload(
         classification, priv_latency = await _classify_privilege(raw_text, file_name)
 
         if classification.is_privileged and classification.confidence >= 0.7:
+            # 1. Persist the privilege-log row (existing behavior)
             await _log_privilege(
                 db=db,
                 doc_id=doc_id,
@@ -426,6 +571,58 @@ async def process_vault_upload(
                 latency_ms=priv_latency,
                 snippet=raw_text[:2000],
             )
+
+            # 2. PR G — chunk + embed + upsert into the privileged collection.
+            #    Privileged content STILL gets vectorized so privileged Council
+            #    retrieval can surface it ("for-your-eyes-only" track), but the
+            #    physical store is segregated from work-product (legal_ediscovery).
+            counsel_domain = _derive_privileged_counsel_domain(
+                file_bytes=file_bytes,
+                file_name=file_name,
+                mime_type=mime_type,
+                raw_text=raw_text,
+            )
+            role_tag = _role_for_counsel_domain(counsel_domain)
+
+            priv_chunks = _chunk_document(raw_text)
+            priv_vectors = await _embed_chunks(priv_chunks)
+            priv_indexed = await _upsert_to_qdrant_privileged(
+                doc_id=doc_id,
+                case_slug=case_slug,
+                file_name=file_name,
+                file_hash=fhash,
+                privileged_counsel_domain=counsel_domain,
+                role=role_tag,
+                privilege_type=classification.privilege_type,
+                chunks=priv_chunks,
+                vectors=priv_vectors,
+            )
+
+            # 3. Flip the vault_documents row to its terminal locked_privileged
+            #    state with chunk_count populated (parity with the work-product
+            #    'completed' branch below).
+            await db.execute(
+                text(
+                    "UPDATE legal.vault_documents "
+                    "SET processing_status = 'locked_privileged', chunk_count = :cc "
+                    "WHERE id = :id"
+                ),
+                {"id": doc_id, "cc": len(priv_chunks)},
+            )
+            await db.commit()
+
+            logger.info(
+                "vault_upload_locked_privileged",
+                doc_id=doc_id,
+                case_slug=case_slug,
+                file_name=file_name,
+                privilege_type=classification.privilege_type,
+                privileged_counsel_domain=counsel_domain,
+                role=role_tag,
+                chunks=len(priv_chunks),
+                vectors_indexed=priv_indexed,
+            )
+
             return {
                 "status": "locked_privileged",
                 "document_id": doc_id,
@@ -434,6 +631,10 @@ async def process_vault_upload(
                 "privilege_type": classification.privilege_type,
                 "confidence": classification.confidence,
                 "reasoning": classification.reasoning,
+                "privileged_counsel_domain": counsel_domain,
+                "role": role_tag,
+                "chunks": len(priv_chunks),
+                "vectors_indexed": priv_indexed,
             }
 
         # ── Email Threading & Dedupe (CSV email archives) ─────

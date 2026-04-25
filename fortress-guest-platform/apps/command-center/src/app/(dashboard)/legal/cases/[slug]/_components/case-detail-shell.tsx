@@ -30,6 +30,7 @@ import {
   Clock,
   Eye,
   Loader2,
+  Lock,
   Scale,
   ShieldAlert,
   Swords,
@@ -323,7 +324,47 @@ export function CaseDetailShell({ slug }: { slug: string }) {
               </span>
             </>
           )}
+          {c.case_phase && (
+            <>
+              <span>&middot;</span>
+              <Badge variant="outline" className="text-[10px] capitalize">
+                {c.case_phase.replace(/_/g, " ")}
+              </Badge>
+            </>
+          )}
         </div>
+        {/* PR G — Privileged counsel domains. Each domain = one badge so a
+            quick scan reveals attorney-client relationships without opening
+            the full case detail. */}
+        {Array.isArray(c.privileged_counsel_domains) && c.privileged_counsel_domains.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap text-[10px] pt-1">
+            <Lock className="h-3 w-3 text-purple-400" />
+            <span className="text-zinc-500 uppercase tracking-wider font-semibold">Privileged counsel:</span>
+            {c.privileged_counsel_domains.map((domain) => (
+              <Badge
+                key={domain}
+                variant="outline"
+                className="text-[10px] text-purple-300 border-purple-500/40 bg-purple-500/5"
+              >
+                {domain}
+              </Badge>
+            ))}
+          </div>
+        )}
+        {Array.isArray(c.related_matters) && c.related_matters.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap text-[10px] pt-1 text-zinc-500">
+            <span className="uppercase tracking-wider font-semibold">Related matters:</span>
+            {c.related_matters.map((slug) => (
+              <a
+                key={slug}
+                href={`/legal/cases/${slug}`}
+                className="text-[10px] text-zinc-300 hover:text-zinc-100 underline decoration-dotted underline-offset-2"
+              >
+                {slug}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Three-Tab Command Deck ── */}

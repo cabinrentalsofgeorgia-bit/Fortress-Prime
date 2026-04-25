@@ -52,6 +52,10 @@ export interface LegalCase {
   notes?: string | null;
   our_claim_basis?: string | null;
   days_remaining?: number | null;
+  // PR G — privilege architecture metadata
+  privileged_counsel_domains?: string[] | null;
+  related_matters?: string[] | null;
+  case_phase?: string | null;
 }
 
 export interface LegalDeadline {

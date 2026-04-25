@@ -126,6 +126,11 @@ interface CouncilStreamState {
   finalResult: CouncilDonePayload | null;
   contextFrozen: CouncilContextFrozen | null;
   vaulted: CouncilVaulted | null;
+  // PR G — privilege tracking. The backend wrapper auto-injects
+  // contains_privileged on every SSE event so the UI can flip the warning
+  // banner the moment a privileged chunk is retrieved (not at end of run).
+  containsPrivileged: boolean;
+  privilegedWarning: string | null;
 }
 
 const MAX_EVENTS = 200;
@@ -144,6 +149,8 @@ const INITIAL_STATE: CouncilStreamState = {
   finalResult: null,
   contextFrozen: null,
   vaulted: null,
+  containsPrivileged: false,
+  privilegedWarning: null,
 };
 
 function isBrowser(): boolean {
@@ -393,6 +400,23 @@ export function useCouncilStream(
       };
 
       setState((current) => {
+        // PR G — every SSE event from run_council_deliberation auto-carries
+        // contains_privileged (legal_council.py wraps progress_callback so the
+        // flag is injected even on persona events). Once true, it stays true
+        // for the rest of the deliberation: a single privileged chunk earns
+        // the warning. Picks up privileged_warning from the `done` payload
+        // when present (it's also redundantly appended to consensus_summary
+        // for in-band rendering).
+        const eventContainsPrivileged =
+          payload.contains_privileged === true ||
+          payload.contains_privileged === "true";
+        const nextContainsPrivileged =
+          current.containsPrivileged || eventContainsPrivileged;
+        const nextPrivilegedWarning =
+          typeof payload.privileged_warning === "string"
+            ? payload.privileged_warning
+            : current.privilegedWarning;
+
         let next = {
           ...current,
           lastEventId: eventId ?? current.lastEventId,
@@ -400,6 +424,8 @@ export function useCouncilStream(
             ? String(payload.message ?? "Council stream error")
             : current.error,
           events: [...current.events, nextEvent].slice(-MAX_EVENTS),
+          containsPrivileged: nextContainsPrivileged,
+          privilegedWarning: nextPrivilegedWarning,
         };
 
         if (nextEvent.type === "session_start") {

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Scale, Loader2, CircleStop, Play, Radio } from "lucide-react";
+import { Scale, Loader2, CircleStop, Play, Radio, Lock, ShieldAlert } from "lucide-react";
 import { useCouncilStream } from "@/lib/use-council-stream";
 
 export default function LegalCouncilPage() {
@@ -81,6 +81,38 @@ export default function LegalCouncilPage() {
             <pre className="text-sm text-destructive font-mono whitespace-pre-wrap">
               {council.error}
             </pre>
+          </CardContent>
+        </Card>
+      )}
+
+      {/*
+        PR G — FOR YOUR EYES ONLY warning. Renders the moment any SSE event
+        carries contains_privileged=true, not just at end of deliberation.
+        The `containsPrivileged` flag latches once true (see use-council-stream
+        reducer), so the warning persists for the rest of the deliberation
+        even if some later event omits the flag.
+      */}
+      {council.containsPrivileged && (
+        <Card
+          role="alert"
+          aria-live="polite"
+          className="border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/40"
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-purple-200">
+              <ShieldAlert className="h-4 w-4 text-purple-300" />
+              <span>⚠️ FOR YOUR EYES ONLY ⚠️</span>
+              <Badge variant="outline" className="text-[10px] gap-1 text-purple-200 border-purple-400/50">
+                <Lock className="h-3 w-3" />
+                Privileged
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-purple-100 leading-relaxed">
+              {council.privilegedWarning ??
+                "This deliberation included attorney-client privileged communications. Do not use this output in court filings, share with opposing parties, or quote externally without explicit privilege review. Treat as internal work product subject to attorney-client privilege."}
+            </p>
           </CardContent>
         </Card>
       )}
