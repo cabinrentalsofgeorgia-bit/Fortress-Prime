@@ -376,7 +376,7 @@ def _run_main(
             return False
 
     monkeypatch.setattr(
-        "backend.core.database.AsyncSessionLocal",
+        "backend.services.ediscovery_agent.LegacySession",
         lambda: _FakeAsyncSession(),
     )
     monkeypatch.setattr(
@@ -384,14 +384,13 @@ def _run_main(
         _fake_upload,
     )
 
-    # Mirror writer needs to find the row in fortress_prod after upload — fold
-    # the canonical row into the registry on demand.
+    # Mirror writer is fortress_db → fortress_prod — fake it to record calls.
     inserted_rows: dict[str, tuple] = {}
 
     def _fake_mirror(*, case_slug, doc_id):
         inserted_rows[doc_id] = (case_slug, doc_id)
 
-    monkeypatch.setattr(vil, "_mirror_row_to_fortress_db", _fake_mirror)
+    monkeypatch.setattr(vil, "_mirror_row_db_to_prod", _fake_mirror)
 
     argv = ["--case-slug", case_slug] + (extra_argv or [])
     rc = vil.main(argv)
@@ -870,7 +869,7 @@ def test_privilege_filter_marks_locked_privileged(env, monkeypatch, tmp_path):
 
 
 def test_writes_to_both_fortress_prod_and_fortress_db(env, monkeypatch, tmp_path):
-    """Verify _mirror_row_to_fortress_db is called once per successful upload."""
+    """Verify _mirror_row_db_to_prod is called once per successful upload."""
     case = "dual-db"
     docs = tmp_path / "docs"
     docs.mkdir()
