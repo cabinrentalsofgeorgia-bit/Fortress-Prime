@@ -81,6 +81,53 @@ async def _assert_case_exists_if_supported(session, slug: str) -> None:
         raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
 
 
+async def _resolve_case_slug(session, slug: str) -> str:
+    """Resolve a case_slug, transparently following backward-compat aliases.
+
+    PR G renamed several case slugs (e.g. ``7il-v-knight-ndga`` →
+    ``7il-v-knight-ndga-i``) and recorded the old → new mapping in
+    ``legal.case_slug_aliases``. This helper preserves bookmarks and external
+    links by silently rewriting an old slug to its current canonical form
+    BEFORE downstream queries run. The URL stays at the old slug (no HTTP 301
+    redirect); only the data resolution is rewritten.
+
+    Strategy:
+      1. Fast path — if the slug exists in ``legal.cases``, return it unchanged.
+      2. Otherwise check ``legal.case_slug_aliases``. On a hit, log the
+         (old → new) pair so we can monitor how often legacy slugs are being
+         used after migration, then return the new slug.
+      3. Otherwise return the original slug (caller will 404 it on its own
+         lookup, preserving the existing 404 messaging).
+
+    Resolution is a single small SELECT on each branch. Idempotent: passing a
+    canonical slug returns it unchanged with no extra DB load on the alias
+    table beyond the original cases lookup.
+    """
+    case_r = await session.execute(
+        text("SELECT 1 FROM legal.cases WHERE case_slug = :s"),
+        {"s": slug},
+    )
+    if case_r.fetchone():
+        return slug
+
+    alias_r = await session.execute(
+        text("SELECT new_slug FROM legal.case_slug_aliases WHERE old_slug = :s"),
+        {"s": slug},
+    )
+    row = alias_r.fetchone()
+    if row:
+        new_slug = row[0]
+        logger.info(
+            "case_slug_alias_hit",
+            old_slug=slug,
+            new_slug=new_slug,
+            note="resolved transparently via legal.case_slug_aliases",
+        )
+        return new_slug
+
+    return slug
+
+
 def _compute_days_remaining(critical_date_str: str | None) -> int | None:
     if not critical_date_str:
         return None
@@ -172,6 +219,7 @@ async def list_cases():
 @router.get("/cases/{slug}", summary="Get case detail")
 async def get_case(slug: str):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         result = await session.execute(
             text("SELECT * FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -219,6 +267,7 @@ async def get_case(slug: str):
 @router.get("/cases/{slug}/deadlines", summary="List deadlines for a case")
 async def list_deadlines(slug: str):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(
             text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -260,6 +309,7 @@ async def update_deadline(deadline_id: int, body: DeadlineUpdate):
 @router.get("/cases/{slug}/correspondence", summary="List correspondence for a case")
 async def list_correspondence(slug: str):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(
             text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -299,6 +349,7 @@ class CorrespondenceCreate(BaseModel):
 @router.post("/cases/{slug}/correspondence", summary="Create correspondence")
 async def create_correspondence(slug: str, body: CorrespondenceCreate):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(
             text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -542,6 +593,7 @@ async def download_case_file(slug: str, filename: str):
         raise HTTPException(status_code=400, detail="Invalid filename")
 
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(
             text("SELECT id, nas_layout FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -585,6 +637,7 @@ async def download_case_file(slug: str, filename: str):
 @router.get("/cases/{slug}/files", summary="List all files in a case's NAS vault")
 async def list_case_files(slug: str):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(
             text("SELECT id, nas_layout FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -617,6 +670,7 @@ async def list_case_files(slug: str):
 @router.get("/cases/{slug}/timeline", summary="Unified case timeline")
 async def get_timeline(slug: str):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(
             text("SELECT id FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -692,6 +746,7 @@ class WarRoomStateUpdate(BaseModel):
 @router.get("/cases/{slug}/state", summary="Get war room persistent state")
 async def get_war_room_state(slug: str):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         result = await session.execute(
             text("SELECT active_brief, active_consensus FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -730,6 +785,7 @@ async def patch_war_room_state(slug: str, body: WarRoomStateUpdate):
     query = f"UPDATE legal.cases SET {', '.join(sets)} WHERE case_slug = :slug RETURNING id"
 
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         result = await session.execute(text(query), params)
         row = result.fetchone()
         await session.commit()
@@ -991,6 +1047,7 @@ async def _run_extraction_job(
     correspondence_id: int | None,
 ) -> None:
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         await session.execute(
             text("""
                 UPDATE legal.cases
@@ -1073,6 +1130,7 @@ async def _run_extraction_job(
 @router.post("/cases/{slug}/extract", summary="Queue entity extraction")
 async def trigger_extraction(slug: str, body: ExtractionRequest, background_tasks: BackgroundTasks):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(
             text("SELECT id, notes FROM legal.cases WHERE case_slug = :slug"),
             {"slug": slug},
@@ -1314,6 +1372,7 @@ class SynthesizeRequest(BaseModel):
 @router.post("/cases/{slug}/synthesize", summary="Generate AI synthesis for a legal case")
 async def synthesize_case(slug: str, body: SynthesizeRequest):
     async with LegacySession() as session:
+        slug = await _resolve_case_slug(session, slug)
         case_r = await session.execute(text("SELECT * FROM legal.cases WHERE case_slug = :slug"), {"slug": slug})
         case_row = case_r.fetchone()
         if not case_row:
