@@ -194,7 +194,7 @@ def _preflight_paths_exist(layout: dict[str, Any]) -> None:
         )
 
 
-def _preflight_postgres_writable() -> None:
+def _preflight_postgres_writable(case_slug: str) -> None:
     for dbname in ("fortress_prod", "fortress_db"):
         try:
             conn = _connect(dbname)
@@ -207,13 +207,18 @@ def _preflight_postgres_writable() -> None:
                     raise PreflightError(f"{dbname} SELECT 1 unexpected result")
         finally:
             conn.close()
-    # ingest_runs writability — fail-fast inside fortress_db (tracker target)
+    # ingest_runs writability — uses the real case_slug because PR D-pre1's
+    # FK to legal.cases.case_slug rejects sentinel values. _preflight_case_exists
+    # has already verified the slug is present in both DBs at this point.
     try:
         conn = _connect("fortress_db")
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO legal.ingest_runs (case_slug, script_name, status) "
-                "VALUES ('__preflight__', '__preflight__', 'running') RETURNING id"
+                "INSERT INTO legal.ingest_runs "
+                "(case_slug, script_name, status, args) "
+                "VALUES (%s, '__preflight__', 'running', '{}'::jsonb) "
+                "RETURNING id",
+                (case_slug,),
             )
             row = cur.fetchone()
             if row is None:
@@ -300,7 +305,7 @@ def run_preflight(case_slug: str) -> dict[str, Any]:
     """Run every pre-flight gate. Raises PreflightError on the first failure."""
     layout = _preflight_case_exists(case_slug)
     _preflight_paths_exist(layout)
-    _preflight_postgres_writable()
+    _preflight_postgres_writable(case_slug)
     _preflight_schema_constraints()
     _preflight_qdrant_reachable()
     _preflight_pipeline_importable()
