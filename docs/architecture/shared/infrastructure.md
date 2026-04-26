@@ -6,24 +6,28 @@ Last updated: 2026-04-26
 
 Fortress Prime runs on a local NVIDIA DGX Spark cluster (4 nodes). No cloud databases for sovereign data; transient cloud inference is allowed only for non-PII payloads with ephemeral guarantees per CONSTITUTION.md Article I.
 
-### Cluster topology — division allocation (per [ADR-001](../cross-division/_architectural-decisions.md))
+### Cluster topology — division + shared-services allocation (per [ADR-001](../cross-division/_architectural-decisions.md) + [ADR-002](../cross-division/_architectural-decisions.md))
 
-The 2026-04-26 architectural decision: **one spark per division.** Cross-division services (Captain / Council / Sentinel) placement is OPEN per ADR-002.
+The 2026-04-26 architectural decisions:
+- **ADR-001 (LOCKED):** one spark per division (default rule).
+- **ADR-002 (LOCKED):** Captain + Sentinel stay on Spark 2 permanent (control plane). Council moves to Spark 4 alongside Acquisitions + Wealth — "shared services + intermittent divisions" multi-purpose pattern, an explicit allowable exception to ADR-001.
 
-| Spark | Network | Status | Division | Role / what's hosted today |
+| Spark | Network | Status | Role | What's hosted (target state) |
 |---|---|---|---|---|
-| **Spark 1** | `192.168.0.X` | **ACTIVE** | Fortress Legal | Legal email intake, vault ingestion, privileged communications, Council legal retrieval. Also TITAN tier inference (DeepSeek-R1 671B local) + BRAIN tier (NIM Nemotron 49B). |
-| **Spark 2** | `192.168.0.100` (control plane @ `100.80.122.100`); hostname `spark-2` / `spark-node-2` | **ACTIVE** | CROG-VRS — currently double-duty as **temporary Financial host** (Market Club replacement scaffolding) until Spark 3 provisions; **temporary control plane** (Captain / Council / Sentinel) per ADR-002 OPEN | All Postgres DBs (`fortress_prod`, `fortress_db`, `fortress_shadow`, `fortress_shadow_test`), Qdrant (legal collections), NAS mount, Redis, ARQ, FastAPI for storefront + command-center, cron infra. SWARM tier inference (qwen2.5:7b on Ollama). |
-| **Spark 3** | TBD | **PLANNED — not yet provisioned** | Financial (Master Accounting + Market Club replacement) | Will host: `division_a.*`, `hedge_fund.*` schema (migrated from Spark 2), Market Club scoring engine, accounting services, all financial intelligence. Migration plan blocked on provisioning timeline (see ADR-002 + `divisions/financial.md`). |
-| **Spark 4** | TBD | **PLANNED — not yet provisioned** | TBD; likely **Acquisitions** OR **Wealth** | Operator decides which division ramps first. Current `crog` tmux + Track B migration scratch space lives on `spark-4` informally today, but that's a transient state not a division allocation. |
+| **Spark 1** | `192.168.0.X` | **ACTIVE** | Single-division | Fortress Legal — vault ingestion, privileged communications, Council legal retrieval (queries Spark 4's Council post-cutover). TITAN (DeepSeek-R1 671B) + BRAIN (NIM Nemotron 49B). |
+| **Spark 2** | `192.168.0.100` (ctrl @ `100.80.122.100`); hostname `spark-2` / `spark-node-2` | **ACTIVE** | Multi-purpose: division + shared services | CROG-VRS (storefront + command-center FastAPI + Postgres + Qdrant for legal collections + NAS mount + Redis + ARQ + cron) + **Captain (permanent)** + **Sentinel (permanent)** + SWARM tier inference (qwen2.5:7b on Ollama). |
+| **Spark 3** | TBD | **PLANNED — not yet provisioned** | Single-division | Financial — Master Accounting + Market Club replacement scoring engine. Will receive `division_a.*` + `hedge_fund.*` migration from Spark 2. |
+| **Spark 4** | TBD | **PLANNED — not yet provisioned** | Multi-purpose: shared services + intermittent divisions | **Council** (post-Spark-4 cutover from Spark 2) + Acquisitions + Wealth. Council's bursty workload + the two divisions' intermittent compute profile are compatible on one node. |
 
 ### Migration milestones still to schedule
 
 1. Spark 3 hardware acquired and provisioned
-2. `hedge_fund.*` schema migration from Spark 2 → Spark 3 (with dual-write window per Issue-209 lessons learned)
-3. ADR-002 resolved → Captain / Council / Sentinel placement decision
-4. Spark 4 destination (Acquisitions vs Wealth) confirmed
-5. CROG-VRS sheds its tenant duties (Spark 2 becomes single-purpose)
+2. `hedge_fund.*` + `division_a.*` schema migration from Spark 2 → Spark 3 (dual-write window + Issue-209 CASCADE-safety lessons)
+3. Spark 4 hardware acquired and provisioned (gating dependency for Council migration + Acquisitions/Wealth ramp)
+4. Council Spark 2 → Spark 4 migration (warm-spare → parallel verification week → command-center cutover → 7-day soak → Spark 2 instance retires)
+5. Acquisitions division ramps on Spark 4
+6. Wealth division ramps on Spark 4
+7. Spark 2 sheds Financial tenant (after Spark 3 cutover) — Spark 2's permanent role is "CROG-VRS + Captain + Sentinel" multi-purpose by ADR-002 design, not transitional
 
 ### AI inference tiers ("DEFCON modes")
 
