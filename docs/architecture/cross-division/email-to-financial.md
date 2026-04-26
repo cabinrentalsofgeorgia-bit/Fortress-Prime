@@ -1,15 +1,19 @@
-# Cross-Division Flow: Email → Master Accounting
+# Cross-Division Flow: Email → Financial
 
 Last updated: 2026-04-26
 
 ## Summary
 
-Email-driven financial events reach Master Accounting **not** through email parsing but through Stripe webhooks. Email is the human-visible layer (invoices, payment receipts, bank notifications) but the **trust ledger source-of-truth is Stripe** per CONSTITUTION.md Article III. Email captures land in `email_archive` for evidence; Stripe webhook events drive the immutable ledger.
+Email-driven financial events reach the Financial division (Master Accounting + Market Club replacement) **not** through email parsing but through Stripe webhooks for ledger writes, plus Captain capture for evidence trails and Market Club signal extraction.
+
+The trust ledger source-of-truth is Stripe per CONSTITUTION.md Article III. Email captures land in `email_archive` for evidence; Stripe webhook events drive the immutable ledger; Market Club's scoring engine reads tagged email correspondence (`division=HEDGE_FUND`) for signal extraction.
+
+Pattern reference: this flow follows the same shape established by **PR #225 (case-aware IMAP email backfill, Fortress Legal)** — Captain handles live capture, a separate division-scoped backfill script handles historical pulls. The Financial division will eventually need its own historical-backfill script (analogue of `email_backfill_legal.py`) once the Spark 3 cutover is complete.
 
 ## Path
 
 ```
-[ Inbox emails ]              [ Captain ]              [ Master Accounting ]
+[ Inbox emails ]              [ Captain ]              [ Financial Division ]
    │                              │                            │
    ├─ Stripe receipt    ──┬──► tag division=HEDGE_FUND   ───►  evidence trail
    ├─ Plaid alert         │      │                              (email_archive)
@@ -65,9 +69,12 @@ Email-driven financial events reach Master Accounting **not** through email pars
 ## Cross-references
 
 - Source: [`../shared/captain-email-intake.md`](../shared/captain-email-intake.md)
-- Target division: [`../divisions/master-accounting.md`](../divisions/master-accounting.md)
+- Target division: [`../divisions/financial.md`](../divisions/financial.md) (Master Accounting + Market Club replacement)
+- Pattern reference: PR #225 (case-aware IMAP email backfill, Fortress Legal) — same shape, different division
 - Posting service: `backend/services/trust_ledger.py`
 - Daily auditor: `backend/workers/hermes_daily_auditor.py`
+- Market Club replacement: [`../divisions/market-club.md`](../divisions/market-club.md)
+- Architectural decisions: [`_architectural-decisions.md`](_architectural-decisions.md) ADR-001 (Spark per division), ADR-002 (Captain placement)
 - CONSTITUTION.md Article III — sovereign ledger immutability
 
 Last updated: 2026-04-26
