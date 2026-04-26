@@ -4,6 +4,11 @@ Spark allocation:
 - **Current:** Spark 2
 - **Target:** **Spark 2 permanent** (per ADR-002 LOCKED 2026-04-26 — NAS mounts identically from any spark, per-division NAS paths are already cleanly separated by directory tree, centralization avoids 4× sync overhead with no architectural benefit)
 
+Inference plane (per [ADR-003](../cross-division/_architectural-decisions.md) LOCKED 2026-04-26):
+- Sentinel's NAS walking + chunking + Qdrant upsert (data plane) stays on Spark 2.
+- Sentinel's **embedding workload** routes through the cluster inference plane via LiteLLM — `nomic-embed-text` calls are dispatched to whichever spark's embedding endpoint has capacity.
+- Once the ADR-003 Phase 2 embedding queue lands, Sentinel enqueues chunks rather than blocking on synchronous embedding; workers on each spark drain the queue in parallel.
+
 Last updated: 2026-04-26
 
 ## Technical overview

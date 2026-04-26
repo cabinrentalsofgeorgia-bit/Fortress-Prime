@@ -39,6 +39,8 @@ This map shows **two states** — what runs today, and what we're migrating towa
    │   ─ BRAIN tier                   ─ NAS mount                    │
    │     (NIM Nemotron 49B FP8)       ─ SWARM tier                   │
    │                                    (Ollama qwen2.5:7b)          │
+   │                                  ─ LiteLLM proxy (cluster-wide │
+   │                                    inference router; ADR-003)   │
    │                                  ─ DOUBLE-DUTY ⚠                │
    │                                    + temp Financial scaffolding │
    │                                    + temp control plane         │
@@ -52,6 +54,14 @@ This map shows **two states** — what runs today, and what we're migrating towa
    │     Master Accounting svc                                       │
    │     Market Club scoring                                         │
    │     Financial NAS                                               │
+   │                                                                │
+   │   ── INFERENCE PLANE (current; ADR-003 LOCKED 2026-04-26) ──   │
+   │   Single-endpoint today: only Spark 2 (Ollama qwen2.5:7b +      │
+   │   nomic-embed-text) participates. LiteLLM proxy already running │
+   │   on Spark 2 but routes to a single backend. Spark 1's          │
+   │   TITAN/BRAIN are direct-call legal-only, not yet behind        │
+   │   LiteLLM. ADR-003 Phase 1 will multiply endpoints across all   │
+   │   sparks.                                                       │
    │                                                                │
    └────────────────────────────────────────────────────────────────┘
                                      │
@@ -119,6 +129,34 @@ This map shows **two states** — what runs today, and what we're migrating towa
    │     Spark 3 = single-division (Financial)                      │
    │     Spark 4 = shared svcs + intermittent divs (Council +       │
    │               Acquisitions + Wealth) — multi-purpose pattern  │
+   │                                                                │
+   │   ── INFERENCE PLANE (target; ADR-003 LOCKED 2026-04-26) ──   │
+   │                                                                │
+   │      ┌──────────────── LiteLLM proxy (Spark 2) ────────────┐ │
+   │      │  Cluster-wide router. Per-division virtual keys.    │ │
+   │      │  Phase 4: cost/token tracking per case_slug,         │ │
+   │      │  deliberation, ingestion.                            │ │
+   │      └────┬──────────┬──────────┬──────────┬───────────────┘ │
+   │           ▼          ▼          ▼          ▼                  │
+   │      Spark 1     Spark 2    Spark 3    Spark 4               │
+   │      Ollama/     Ollama     Ollama     Ollama                 │
+   │      vLLM        qwen2.5    (Phase 1   (Phase 1               │
+   │      + TITAN     + nomic-   when prov.) when prov.)           │
+   │      + BRAIN     embed-text                                   │
+   │                                                                │
+   │   Embedding queue (Redis on Spark 2; ADR-003 Phase 2):        │
+   │      process_vault_upload + Sentinel enqueue chunks;          │
+   │      workers on every spark drain queue in parallel.          │
+   │                                                                │
+   │   Council deliberation (ADR-003 Phase 3):                     │
+   │      Logic stays on Spark 4; persona LLM calls dispatched     │
+   │      via LiteLLM, possibly to different sparks in parallel.   │
+   │                                                                │
+   │   Data plane vs. inference plane:                              │
+   │      Data plane (per-division, ADR-001) — schemas, rows,      │
+   │        files, code stay on the division's spark.              │
+   │      Inference plane (cluster-wide, ADR-003) — LLM +          │
+   │        embedding capacity is fungible across sparks.          │
    └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -168,12 +206,25 @@ Operator chooses ramp order. Both divisions co-host with Council on Spark 4 per 
 
 Once Spark 3 cutover (Stage 1+2) lands, Spark 2 sheds the Market Club replacement scaffolding. Spark 2's permanent role is "CROG-VRS + Captain + Sentinel" — multi-purpose by ADR-002 design, not transitional.
 
+### Stage 6 — Inference plane phases (LOCKED per ADR-003)
+
+ADR-003 LOCKED captures architectural direction; the four phases are deliberate, gated work — each phase ships as its own PR with explicit operator authorization. They run independently of the data-plane stages above (1–5).
+
+1. **Phase 1 — Endpoint multiplication.** Install Ollama (or vLLM) on Spark 1, Spark 3 (when provisioned), Spark 4 (when provisioned). Each spark hosts `nomic-embed-text` + an LLM. Register endpoints with LiteLLM. Verify cross-spark inference works.
+2. **Phase 2 — Embedding queue.** Redis-backed queue (Spark 2 hosts Redis). Workers on each spark consume from queue. `process_vault_upload` enqueues chunks rather than synchronous embedding. Resolves Issue #228 Vanderburge ingestion bottleneck.
+3. **Phase 3 — Council load balancing.** Council deliberation steps route through LiteLLM. Multi-LLM persona deliberation can use different endpoints in parallel.
+4. **Phase 4 — Per-division usage accounting.** LiteLLM virtual keys per division. Cost/token tracking per case_slug, per deliberation, per ingestion. Surface in admin dashboard.
+
 ---
 
 ## Cross-references
 
-- [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md) — ADR-001 (LOCKED: one spark per division) + ADR-002 (LOCKED: Captain/Sentinel stay on Spark 2 permanent; Council moves to Spark 4 multi-purpose with Acquisitions + Wealth)
-- [`shared/infrastructure.md`](shared/infrastructure.md) — Spark allocation table + migration milestones
+- [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md) — ADR-001 (LOCKED: one spark per division) + ADR-002 (LOCKED: Captain/Sentinel stay on Spark 2 permanent; Council moves to Spark 4 multi-purpose with Acquisitions + Wealth) + ADR-003 (LOCKED: inference plane is cluster-wide shared via LiteLLM)
+- [`shared/infrastructure.md`](shared/infrastructure.md) — Spark allocation table + inference plane section + migration milestones
+- [`shared/council-deliberation.md`](shared/council-deliberation.md) — Council inference dispatch via LiteLLM (ADR-003)
+- [`shared/captain-email-intake.md`](shared/captain-email-intake.md) — Captain classification via LiteLLM (ADR-003)
+- [`shared/sentinel-nas-walker.md`](shared/sentinel-nas-walker.md) — Sentinel embedding via cluster inference plane (ADR-003)
+- [`divisions/_template.md`](divisions/_template.md) — "Inference consumers" subsection per division
 - [`divisions/financial.md`](divisions/financial.md) — Spark 3 target details + open questions
 - [`divisions/market-club.md`](divisions/market-club.md) — Spark 3 cutover blocked on operator answers (6 questions)
 - [`fortress_atlas.yaml`](../../fortress_atlas.yaml) — runtime sector routing (currently spark-agnostic; future amendment may add per-sector spark allocation)

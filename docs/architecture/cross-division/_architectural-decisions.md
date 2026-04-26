@@ -124,9 +124,82 @@ Sentinel walks NAS. NAS mounts identically from any spark — there is no per-sp
 
 ---
 
+## ADR-003 — Inference plane: shared swarm across all sparks
+
+**Date:** 2026-04-26
+**Status:** **LOCKED 2026-04-26**
+
+**Decision:** Inference compute (LLM + embedding) is a shared cluster-wide resource, distributed across all 4 sparks. Division-owned data and business logic remain isolated per ADR-001. ADR-002 service placement unchanged.
+
+**Data plane / inference plane separation:**
+
+Data plane (per-division, ADR-001 unchanged):
+- Spark 1 owns Legal data, schemas, code
+- Spark 2 owns CROG-VRS data, schemas, code
+- Spark 3 owns Financial data, schemas, code (when provisioned)
+- Spark 4 owns Council deliberation logic + Acquisitions + Wealth (per ADR-002)
+
+Inference plane (cluster-wide, shared):
+- All 4 sparks contribute LLM + embedding capacity
+- LiteLLM proxy (already running on Spark 2) load-balances inference across all endpoints
+- Any division can consume inference from any spark
+- Council deliberation, embedding ingestion, and other LLM workloads route through LiteLLM, not direct endpoint calls
+- 100Gbps ConnectX interconnect makes cross-spark inference calls operationally fine
+
+**Rationale:**
+
+- Maximizes hardware utilization (idle division inference capacity available to busy divisions)
+- Decouples inference scaling from division scaling (add more sparks for compute without restructuring division ownership)
+- Single LiteLLM control point for cost/usage accounting per division (virtual keys per division → per-division usage tracking)
+- Resolves Issue #228 root cause path: parallel embedding dispatch across endpoints reduces per-message latency, currently the Vanderburge ingestion bottleneck
+- Compatible with existing infrastructure (LiteLLM already running, Ollama already on Spark 2)
+
+**Implementation roadmap (NOT executing today, just documenting):**
+
+### Phase 1 — Endpoint multiplication
+- Install Ollama (or vLLM) on Spark 1, Spark 3 when provisioned, Spark 4 when provisioned
+- Each spark hosts its own embedding model (`nomic-embed-text`) + an LLM
+- Register endpoints with LiteLLM proxy
+- Verify inference works from any spark targeting LiteLLM
+
+### Phase 2 — Embedding queue
+- Redis-backed queue (Spark 2 hosts Redis, per ADR-002 control plane location)
+- Worker processes on each spark consume from queue
+- `process_vault_upload` enqueues chunks instead of synchronous embedding calls
+- Workers dispatch to local Ollama endpoint OR via LiteLLM (TBD per implementation)
+
+### Phase 3 — Council load balancing
+- Council deliberation steps route through LiteLLM
+- Multi-LLM deliberation can use different endpoints for different personas in parallel
+
+### Phase 4 — Per-division usage accounting
+- LiteLLM virtual keys per division
+- Cost/token tracking per case_slug, per deliberation, per ingestion
+- Surface in admin dashboard
+
+Each phase is its own PR with explicit operator authorization. ADR-003 LOCKED captures architectural direction; implementation phases are deliberate, gated work.
+
+**Cross-references:**
+
+- ADR-001 (one-spark-per-division) **UNCHANGED**
+- ADR-002 (Captain/Council/Sentinel placement) **UNCHANGED**
+- Council on Spark 4 still owns deliberation logic; ADR-003 just means it can dispatch inference workload to any spark
+- Sentinel on Spark 2 still owns NAS walking; ADR-003 lets it use cluster-wide embedding for indexing
+- Captain on Spark 2 still owns email intake classification; ADR-003 lets it use cluster-wide inference for any LLM-assisted classification
+
+**Open questions deferred to implementation phases:**
+
+- Direct endpoint calls vs. LiteLLM-only routing (worker dispatch pattern)
+- Embedding queue implementation (Redis vs. another queue)
+- Failure semantics when an endpoint is unavailable (retry, circuit-break, degraded mode)
+- Per-division rate limiting via LiteLLM
+- Observability (metrics per endpoint, per division, per workload type)
+
+---
+
 ## How to add an ADR
 
-1. Increment the number (next is ADR-003)
+1. Increment the number (next is ADR-004)
 2. Date it (UTC)
 3. Set status: LOCKED, OPEN, AMENDED, or SUPERSEDED-BY-ADR-N
 4. State the decision in 1-2 sentences
