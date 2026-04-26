@@ -1,5 +1,9 @@
 # Shared: Sentinel — NAS Walker
 
+Spark allocation:
+- **Current:** Spark 2
+- **Target:** **Spark 2 permanent** (per ADR-002 LOCKED 2026-04-26 — NAS mounts identically from any spark, per-division NAS paths are already cleanly separated by directory tree, centralization avoids 4× sync overhead with no architectural benefit)
+
 Last updated: 2026-04-26
 
 ## Technical overview

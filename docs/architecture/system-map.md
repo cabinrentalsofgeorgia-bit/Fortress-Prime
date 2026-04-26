@@ -91,27 +91,34 @@ This map shows **two states** — what runs today, and what we're migrating towa
    ┌────────────────────────────────────────────────────────────────┐
    │                                                                │
    │   SPARK 1            SPARK 2            SPARK 3        SPARK 4 │
-   │   Fortress           CROG-VRS           Financial      TBD     │
-   │   Legal              (single duty)      (active)       (Acq    │
-   │   ACTIVE             ACTIVE             ACTIVE          or     │
-   │                                                         Wealth)│
+   │   Fortress           CROG-VRS +         Financial      Council │
+   │   Legal              Captain +          (single duty)  + Acq.  │
+   │   (single duty)      Sentinel           ACTIVE         + Wealth│
+   │   ACTIVE             (multi-purpose)                   (multi- │
+   │                      ACTIVE                            purpose)│
    │   ─ Legal vault      ─ Storefront       ─ division_a.* ACTIVE  │
    │   ─ Privileged       ─ Command-center   ─ hedge_fund.*         │
-   │     comms            ─ Properties /     ─ Master Acc           │
-   │   ─ Council legal      Bookings           services             │
-   │   ─ TITAN/BRAIN      ─ Stripe handoff   ─ Market Club          │
-   │                        to Spark 3         scoring              │
-   │                                         ─ Financial NAS        │
+   │     comms            ─ Properties /     ─ Master Acc   ─ Council│
+   │   ─ TITAN/BRAIN        Bookings           services       (cross-│
+   │                      ─ ALL Postgres     ─ Market Club    division│
+   │                      ─ ALL Qdrant         scoring        deliber-│
+   │                      ─ NAS mount        ─ Financial NAS  ation) │
+   │                      ─ Captain                         ─ Acq.  │
+   │                        (cross-mailbox                    deal   │
+   │                         classification)                  pipe   │
+   │                      ─ Sentinel                        ─ Wealth│
+   │                        (NAS walker;                      intel  │
+   │                         per-division                            │
+   │                         folders                                 │
+   │                         already separate)                       │
    │                                                                │
-   │     ┌─────────────────────────────────────────────────────┐   │
-   │     │  SHARED INFRASTRUCTURE — placement OPEN per ADR-002 │   │
-   │     │  Captain / Council / Sentinel / Auth / MCP          │   │
-   │     │                                                      │   │
-   │     │  Option A: stays on Spark 2 (control-plane host)    │   │
-   │     │  Option B: dedicated shared-infra spark (+1 node?)  │   │
-   │     │  Option C: per-division replicas                    │   │
-   │     └─────────────────────────────────────────────────────┘   │
-   │                                                                │
+   │   Locked per ADR-001 + ADR-002 (2026-04-26):                   │
+   │     Spark 1 = single-division (Legal)                          │
+   │     Spark 2 = division + shared svcs (CROG-VRS + Captain +     │
+   │               Sentinel) — multi-purpose pattern               │
+   │     Spark 3 = single-division (Financial)                      │
+   │     Spark 4 = shared svcs + intermittent divs (Council +       │
+   │               Acquisitions + Wealth) — multi-purpose pattern  │
    └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -141,23 +148,31 @@ Patterns to apply (informed by PR G phase C lessons + Issue #209):
 
 ⚠️ Per Issue #209, the FK on `legal.ingest_runs.case_slug → legal.cases.case_slug ON DELETE CASCADE` ate the audit row for the PR D 7IL ingestion when Phase C renamed the slug. The Spark 2→3 migration must NOT trigger similar CASCADEs across `division_a.*` audit tables.
 
-### Stage 3 — ADR-002 resolution (Captain / Council / Sentinel placement)
+### Stage 3 — Council migration to Spark 4 (LOCKED per ADR-002)
 
-Operator picks Option A (stay Spark 2 permanent), Option B (dedicated spark), or Option C (per-division replicas). Decision encoded in `_architectural-decisions.md`. Migration plan written for the chosen option.
+After Spark 4 hardware provisions:
 
-### Stage 4 — Spark 4 destination
+1. Stand up Council on Spark 4 as warm-spare (no traffic; Spark 2 keeps serving)
+2. Parallel verification week — run Council on both sparks against the same case_slug inputs; compare frozen-context outputs for byte-equality
+3. Latency check — Spark 4 → Spark 2 Qdrant read-replica latency must stay under per-deliberation budget
+4. Cutover — `apps/command-center` deliberation API endpoint switches to Spark 4
+5. 7-day soak; Spark 2 Council instance retires
 
-Operator picks: Acquisitions or Wealth gets Spark 4. The other waits.
+Captain + Sentinel **stay on Spark 2 permanently** per ADR-002. No migration for them.
 
-### Stage 5 — Spark 2 sheds tenant duties
+### Stage 4 — Acquisitions + Wealth onboarding on Spark 4
 
-Once Stages 1-4 land, Spark 2 returns to single-purpose CROG-VRS hosting. Resource budget recovers. The "double-duty" warning in the current-state diagram resolves.
+Operator chooses ramp order. Both divisions co-host with Council on Spark 4 per ADR-002 multi-purpose pattern. Postgres schemas may live on Spark 4 with cross-spark access from Spark 2 if needed.
+
+### Stage 5 — Spark 2 sheds Financial tenant
+
+Once Spark 3 cutover (Stage 1+2) lands, Spark 2 sheds the Market Club replacement scaffolding. Spark 2's permanent role is "CROG-VRS + Captain + Sentinel" — multi-purpose by ADR-002 design, not transitional.
 
 ---
 
 ## Cross-references
 
-- [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md) — ADR-001 (locked: one spark per division) + ADR-002 (open: shared services)
+- [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md) — ADR-001 (LOCKED: one spark per division) + ADR-002 (LOCKED: Captain/Sentinel stay on Spark 2 permanent; Council moves to Spark 4 multi-purpose with Acquisitions + Wealth)
 - [`shared/infrastructure.md`](shared/infrastructure.md) — Spark allocation table + migration milestones
 - [`divisions/financial.md`](divisions/financial.md) — Spark 3 target details + open questions
 - [`divisions/market-club.md`](divisions/market-club.md) — Spark 3 cutover blocked on operator answers (6 questions)
