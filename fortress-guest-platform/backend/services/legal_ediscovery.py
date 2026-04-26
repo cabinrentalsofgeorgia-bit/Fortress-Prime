@@ -46,10 +46,13 @@ EMBED_MODEL = settings.embed_model
 SWARM_ENDPOINT = f"{settings.ollama_base_url.rstrip('/')}/v1/chat/completions"
 SWARM_MODEL = settings.ollama_fast_model
 
-# UUID5 namespace for deterministic Qdrant point IDs in the privileged
-# collection. Keyed on (file_hash, chunk_index) so re-runs of the same file
-# upsert to the same point IDs (idempotent), and never produce duplicates.
+# UUID5 namespaces for deterministic Qdrant point IDs. Both tracks key on
+# (file_hash, chunk_index) so re-runs of the same file upsert to the same
+# point IDs — idempotent, never produces duplicates. Required by the Phase D
+# reprocess script (Issue #228) so partial-failure retries cannot leak orphan
+# points into the collection.
 _QDRANT_PRIVILEGED_NS = UUID("f0a17e55-7c0d-4d1f-8c5a-d3b4f0e9a200")
+_QDRANT_WORK_PRODUCT_NS = UUID("33f27df1-10c7-4c39-a6bd-085a59bca9b1")
 
 # Maps a privileged-counsel email domain to its case-specific attorney_role tag.
 # Source of truth: pr_f_classification_rules.md (v6/v7). Update there first.
@@ -371,10 +374,17 @@ async def _upsert_to_qdrant(
     doc_id: str,
     case_slug: str,
     file_name: str,
+    file_hash: str,
     chunks: list[str],
     vectors: list[list[float]],
 ) -> tuple[list[str], Optional[dict]]:
     """Work-product upsert. Returns (point_uuids_indexed, failure_dict_or_none).
+
+    Point IDs use UUID5 keyed on (file_hash, chunk_index) so re-runs of the
+    same physical file produce the same point IDs (idempotent upsert; never
+    produces duplicates). This contract is what makes the Phase D reprocess
+    script safe to re-run on partially-failed batches without leaving orphan
+    points behind.
 
     Issue #228 fix: previously returned ``int`` (chunk count) and swallowed
     exceptions, making batch failures indistinguishable from no-vector docs.
@@ -386,7 +396,7 @@ async def _upsert_to_qdrant(
         if not vector:
             continue
         points.append({
-            "id": str(uuid4()),
+            "id": str(uuid5(_QDRANT_WORK_PRODUCT_NS, f"{file_hash}:{idx}")),
             "vector": vector,
             "payload": {
                 "case_slug": case_slug,
@@ -813,7 +823,12 @@ async def process_vault_upload(
 
         vectors = await _embed_chunks(chunks)
         indexed_uuids, indexed_failure = await _upsert_to_qdrant(
-            doc_id, case_slug, file_name, chunks, vectors
+            doc_id=doc_id,
+            case_slug=case_slug,
+            file_name=file_name,
+            file_hash=fhash,
+            chunks=chunks,
+            vectors=vectors,
         )
 
         # Issue #228 visible failure path — work-product track.
