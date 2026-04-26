@@ -46,6 +46,18 @@ Bulleted list. Each entry: service name + how this division uses it. Cross-link 
 - [Council](../shared/council-deliberation.md) — for case-aware deliberation
 - [Sentinel](../shared/sentinel-nas-walker.md) — for NAS document indexing
 
+## Inference consumers
+
+Per [ADR-003](../cross-division/_architectural-decisions.md) LOCKED 2026-04-26, the inference plane (LLM + embedding) is a shared cluster-wide resource routed through the LiteLLM proxy on Spark 2. Each division documents what inference workloads it generates so the cluster can be sized.
+
+Document for this division:
+
+- **LLM workloads** — what calls does this division make? Examples: classification, summarization, parsing, deliberation. Estimate volume (per day / per case / per booking).
+- **Embedding workloads** — what gets embedded? Vault uploads, NAS walks, search index updates. Estimate volume (chunks per day).
+- **Tier preference** — does this division need TITAN/BRAIN tier (deep reasoning), SWARM tier (fast routing), or either?
+- **Latency budget** — synchronous (user is waiting) vs. async (queueable via ADR-003 Phase 2 embedding queue)?
+- **Per-division accounting tag** — what LiteLLM virtual key does this division use? (ADR-003 Phase 4)
+
 ## Key services exposed
 
 Bulleted list. What other divisions or external systems consume this division's output?

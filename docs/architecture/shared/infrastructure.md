@@ -6,18 +6,31 @@ Last updated: 2026-04-26
 
 Fortress Prime runs on a local NVIDIA DGX Spark cluster (4 nodes). No cloud databases for sovereign data; transient cloud inference is allowed only for non-PII payloads with ephemeral guarantees per CONSTITUTION.md Article I.
 
-### Cluster topology — division + shared-services allocation (per [ADR-001](../cross-division/_architectural-decisions.md) + [ADR-002](../cross-division/_architectural-decisions.md))
+### Cluster topology — division + shared-services allocation (per [ADR-001](../cross-division/_architectural-decisions.md) + [ADR-002](../cross-division/_architectural-decisions.md) + [ADR-003](../cross-division/_architectural-decisions.md))
 
 The 2026-04-26 architectural decisions:
 - **ADR-001 (LOCKED):** one spark per division (default rule).
 - **ADR-002 (LOCKED):** Captain + Sentinel stay on Spark 2 permanent (control plane). Council moves to Spark 4 alongside Acquisitions + Wealth — "shared services + intermittent divisions" multi-purpose pattern, an explicit allowable exception to ADR-001.
+- **ADR-003 (LOCKED):** Inference compute (LLM + embedding) is a shared cluster-wide resource. All 4 sparks contribute capacity. LiteLLM proxy on Spark 2 routes workloads. Data plane (per-division) and inference plane (shared) are explicitly separated.
 
-| Spark | Network | Status | Role | What's hosted (target state) |
-|---|---|---|---|---|
-| **Spark 1** | `192.168.0.X` | **ACTIVE** | Single-division | Fortress Legal — vault ingestion, privileged communications, Council legal retrieval (queries Spark 4's Council post-cutover). TITAN (DeepSeek-R1 671B) + BRAIN (NIM Nemotron 49B). |
-| **Spark 2** | `192.168.0.100` (ctrl @ `100.80.122.100`); hostname `spark-2` / `spark-node-2` | **ACTIVE** | Multi-purpose: division + shared services | CROG-VRS (storefront + command-center FastAPI + Postgres + Qdrant for legal collections + NAS mount + Redis + ARQ + cron) + **Captain (permanent)** + **Sentinel (permanent)** + SWARM tier inference (qwen2.5:7b on Ollama). |
-| **Spark 3** | TBD | **PLANNED — not yet provisioned** | Single-division | Financial — Master Accounting + Market Club replacement scoring engine. Will receive `division_a.*` + `hedge_fund.*` migration from Spark 2. |
-| **Spark 4** | TBD | **PLANNED — not yet provisioned** | Multi-purpose: shared services + intermittent divisions | **Council** (post-Spark-4 cutover from Spark 2) + Acquisitions + Wealth. Council's bursty workload + the two divisions' intermittent compute profile are compatible on one node. |
+| Spark | Network | Status | Role | Data plane (target state) | Inference plane contribution |
+|---|---|---|---|---|---|
+| **Spark 1** | `192.168.0.X` | **ACTIVE** | Single-division | Fortress Legal — vault ingestion, privileged communications, Council legal retrieval (queries Spark 4's Council post-cutover). | TITAN (DeepSeek-R1 671B) + BRAIN (NIM Nemotron 49B FP8). Endpoint registered with LiteLLM (Phase 1). |
+| **Spark 2** | `192.168.0.100` (ctrl @ `100.80.122.100`); hostname `spark-2` / `spark-node-2` | **ACTIVE** | Multi-purpose: division + shared services | CROG-VRS (storefront + command-center FastAPI + Postgres + Qdrant for legal collections + NAS mount + Redis + ARQ + cron) + **Captain (permanent)** + **Sentinel (permanent)**. | SWARM tier (Ollama qwen2.5:7b + `nomic-embed-text`). **LiteLLM proxy host** — cluster-wide inference router. |
+| **Spark 3** | TBD | **PLANNED — not yet provisioned** | Single-division | Financial — Master Accounting + Market Club replacement scoring engine. Will receive `division_a.*` + `hedge_fund.*` migration from Spark 2. | Ollama (or vLLM) endpoint with embedding + LLM, registered with LiteLLM (ADR-003 Phase 1). |
+| **Spark 4** | TBD | **PLANNED — not yet provisioned** | Multi-purpose: shared services + intermittent divisions | **Council** (post-Spark-4 cutover from Spark 2) + Acquisitions + Wealth. | Ollama (or vLLM) endpoint with embedding + LLM, registered with LiteLLM (ADR-003 Phase 1). Council deliberation dispatches via LiteLLM (Phase 3). |
+
+### Inference plane (per [ADR-003](../cross-division/_architectural-decisions.md))
+
+Inference compute is **decoupled from division ownership**. Any division can consume inference from any spark via the LiteLLM proxy. This is an architectural separation between the data plane (per-division, ADR-001) and the inference plane (cluster-wide, ADR-003).
+
+- **Router:** LiteLLM proxy on Spark 2 (already running). All LLM + embedding calls from FastAPI, ARQ workers, Captain, Council, and Sentinel route through LiteLLM rather than direct endpoint URLs.
+- **Endpoints:** Each spark hosts its own embedding model (`nomic-embed-text`) + an LLM tier. Endpoints register with LiteLLM as a model pool.
+- **Transport:** 100Gbps ConnectX interconnect; cross-spark inference is operationally fine.
+- **Per-division accounting (ADR-003 Phase 4):** LiteLLM virtual keys per division → cost/token tracking per case_slug, deliberation, ingestion.
+- **Embedding queue (ADR-003 Phase 2):** Redis-backed (Spark 2 hosts Redis); workers on each spark consume from queue; `process_vault_upload` enqueues chunks rather than blocking on synchronous embedding.
+
+Implementation is gated work — each ADR-003 phase is its own PR with operator authorization. Today, only Spark 2 contributes to the inference plane (Ollama qwen2.5:7b + nomic). Spark 1 hosts TITAN/BRAIN for legal-only direct calls. Phase 1 multiplies endpoints across all sparks.
 
 ### Migration milestones still to schedule
 
@@ -30,6 +43,8 @@ The 2026-04-26 architectural decisions:
 7. Spark 2 sheds Financial tenant (after Spark 3 cutover) — Spark 2's permanent role is "CROG-VRS + Captain + Sentinel" multi-purpose by ADR-002 design, not transitional
 
 ### AI inference tiers ("DEFCON modes")
+
+These tiers are **inference-plane resources** per ADR-003 — capacity is shared cluster-wide via LiteLLM, not bound to any one division.
 
 | Tier | Service | Model | Use |
 |---|---|---|---|

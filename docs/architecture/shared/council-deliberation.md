@@ -4,6 +4,12 @@ Spark allocation:
 - **Current:** Spark 2 (tenant of the monorepo)
 - **Target:** **Spark 4** (per ADR-002 LOCKED 2026-04-26 — Spark 4 hosts Council + Acquisitions + Wealth as a "shared services + intermittent divisions" multi-purpose node). Migration is staged after Spark 4 is provisioned: warm-spare → parallel verification week → command-center cutover → 7-day soak → Spark 2 instance retires.
 
+Inference plane (per [ADR-003](../cross-division/_architectural-decisions.md) LOCKED 2026-04-26):
+- Council deliberation **logic** stays on Spark 4 (per ADR-002).
+- Council deliberation **inference workload** routes through the LiteLLM proxy on Spark 2 — Council dispatches to whichever spark's LLM endpoint LiteLLM selects.
+- Multi-persona deliberation can use different endpoints for different personas in parallel (ADR-003 Phase 3).
+- Direct endpoint calls from Council are deprecated in favor of LiteLLM-routed calls.
+
 Last updated: 2026-04-26
 
 ## Technical overview
