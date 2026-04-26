@@ -2,6 +2,9 @@
 
 Owner: TBD (requires operator input)
 Status: **planned, requires operator input**
+Spark allocation:
+- **Current:** No dedicated host. The `wealth` tmux session + worktree (`/home/admin/fortress-worktrees/Fortress-Prime-wealth` on `wealth/main`) live on Spark 2.
+- **Target:** **Spark 4 (PLANNED)** — pending operator confirmation per ADR-001. Wealth may take Spark 4 if Acquisitions can defer; or vice versa. Order TBD.
 Last updated: 2026-04-26
 
 ## Purpose

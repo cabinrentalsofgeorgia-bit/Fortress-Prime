@@ -2,6 +2,9 @@
 
 Owner: Gary Mitchell Knight (operator)
 Status: **active** — operational property-management platform
+Spark allocation:
+- **Current:** **Spark 2 (`192.168.0.100`, control plane @ `100.80.122.100`) — ACTIVE.** Currently double-duty as CROG-VRS host AND temporary Financial-division (Market Club replacement scaffolding) tenant AND control plane.
+- **Target:** Spark 2 remains CROG-VRS's permanent home. Once Spark 3 provisions and Financial migrates off, Spark 2 sheds the tenant role. The control-plane role (Captain / Council / Sentinel) is **OPEN per ADR-002** — may stay on Spark 2 permanently or move to a dedicated shared-infra spark.
 Last updated: 2026-04-26
 
 ## Purpose

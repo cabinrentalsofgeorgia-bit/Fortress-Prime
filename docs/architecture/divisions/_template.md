@@ -1,7 +1,10 @@
 # Division: <Name>
 
 Owner: <person or role>
-Status: <active | closed | planned>
+Status: <active | closed | planned | scaffolding>
+Spark allocation:
+- **Current:** <Spark N (status) — what's hosted here today>
+- **Target:** <Spark N (status) — final home per ADR-001; Same if not migrating>
 Last updated: <YYYY-MM-DD>
 
 ## Purpose

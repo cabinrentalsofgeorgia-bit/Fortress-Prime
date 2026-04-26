@@ -2,6 +2,9 @@
 
 Owner: Gary Mitchell Knight (operator); Architect-persona AI agent
 Status: **active** (per atlas) — but architecture-foundation coverage is **stub**; needs operator input
+Spark allocation:
+- **Current:** Spark 2 (tenant of the monorepo today, no dedicated host)
+- **Target:** **Spark 4 (PLANNED)** likely — pending operator confirmation per ADR-001. Spark 4 may go to Acquisitions or to Wealth depending on which division ramps first.
 Last updated: 2026-04-26
 
 ## Purpose (per `fortress_atlas.yaml`)

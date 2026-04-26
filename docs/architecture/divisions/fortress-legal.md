@@ -2,6 +2,9 @@
 
 Owner: Gary Mitchell Knight (operator)
 Status: **active** — most heavily developed division as of 2026-04-26
+Spark allocation:
+- **Current:** **Spark 1 (`192.168.0.X`) — ACTIVE.** Hosts Legal email intake, vault ingestion, privileged communications, Council legal retrieval. Per ADR-001 (one-spark-per-division).
+- **Target:** Same — Spark 1 is Fortress Legal's permanent home.
 Last updated: 2026-04-26
 
 ## Purpose
