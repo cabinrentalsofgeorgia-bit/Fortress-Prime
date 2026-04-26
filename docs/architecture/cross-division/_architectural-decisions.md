@@ -41,7 +41,7 @@ Format inspired by [Michael Nygard's ADR template](https://cognitect.com/blog/20
 ## ADR-002 — Where do shared services (Captain, Council, Sentinel) live in the target state?
 
 **Date:** 2026-04-26
-**Status:** **OPEN — requires operator input**
+**Status:** **LOCKED 2026-04-26**
 
 **Question:** With ADR-001 locking division ↔ spark as 1:1, where do the cross-cutting shared services run?
 
@@ -74,13 +74,53 @@ Each spark runs its own division-scoped Captain (only that division's mailboxes)
 **Pros:** Maximum blast-radius isolation. Per-division ownership of cross-cutting tooling.
 **Cons:** 4× the operational surface. Email classification spans divisions — Captain by definition sees every mailbox, so dividing it artificially risks miscategorization. Probably wrong for Captain specifically; could work for Sentinel (per-division NAS folders are already well-bounded).
 
-**Recommendation pending operator input:**
+**Decisions (LOCKED 2026-04-26):**
 
-- **Captain:** Option A (Spark 2 permanent) — dividing email by mailbox before classification breaks PR I's cross-case disambiguation
-- **Council:** Option B (dedicated shared) — Council reads across divisions for cross-matter retrieval (PR G); a dedicated spark gives it room without contention
-- **Sentinel:** Option C (per-division replicas) is plausible since each division's NAS scope is already bounded; Option A also fine
+### Captain → **Option A — Spark 2 permanent**
 
-**Status:** **AWAITING OPERATOR DECISION.** When picked, this entry gets amended with the chosen option, the supporting reasoning, and a migration plan. Meanwhile every shared-service doc in `../shared/*.md` notes "Current spark: 2 / Target spark: TBD per ADR-002".
+Cross-mailbox classification IS the value of Captain. Dividing it before classification breaks cross-case disambiguation (PR #225 Sanker routing logic relies on seeing every mailbox to compute date-window fallbacks). Centralization is correct architecture, not a compromise.
+
+### Council → **Option B — Spark 4 dedicated (with co-located intermittent divisions)**
+
+**Refinement of Option B:** rather than provisioning a 5th spark for Council alone, Spark 4 hosts **Council + the planned Acquisitions division + the planned Wealth division**. These three workloads are compatible:
+
+- Council: cross-division read-heavy LLM deliberation, bursty workload (drives spark only when an operator initiates a deliberation)
+- Acquisitions: intermittent deal-pipeline analysis (per-deal bursts)
+- Wealth: lower-frequency intelligence (periodic, not continuous)
+
+Co-locating shared services with intermittent divisions on one spark avoids hardware sprawl while preserving the architectural goal of Council not contending with CROG-VRS guest-traffic peaks.
+
+**New architectural classification:** Spark 4 is the first instance of "shared services + intermittent divisions" — an allowable exception to the strict ADR-001 "one spark per division" rule. Documented in `divisions/_template.md` as a recognized pattern. Future sparks may follow the same pattern if a similar workload-compatibility window appears.
+
+### Sentinel → **Option A — Spark 2 permanent**
+
+Sentinel walks NAS. NAS mounts identically from any spark — there is no per-spark file-system locality benefit. Per-division replicas (Option C) would 4× the file-system traffic on the Synology, 4× the Qdrant collections to sync, 4× the failure modes — for **no architectural benefit** since per-division NAS paths are already cleanly separated by directory tree (`Corporate_Legal/` vs `Business_Prime/` vs `Financial_Ledger/` etc.). Centralization on Spark 2 is correct.
+
+### Updated final architecture (target state)
+
+| Spark | Role | Hosts |
+|---|---|---|
+| **Spark 1** | Single-division | Fortress Legal |
+| **Spark 2** | Multi-purpose: division + shared services | CROG-VRS + **Captain** + **Sentinel** + control plane (Postgres, Qdrant for legal collections, NAS mount, Redis, ARQ, FastAPI) |
+| **Spark 3** | Single-division | Financial — Master Accounting + Market Club replacement |
+| **Spark 4** | Shared services + intermittent divisions | **Council** + Acquisitions + Wealth |
+
+### Migration plan
+
+1. **Stage 1 (gating):** Spark 4 hardware provisioned. Captain + Sentinel remain on Spark 2 forever (no migration needed for them).
+2. **Stage 2:** Stand up Council on Spark 4 as warm-spare (no traffic). Council on Spark 2 keeps serving deliberations.
+3. **Stage 3:** Verification — run Council on both sparks in parallel for one week; compare frozen-context outputs for byte-equality on the same case_slug input. Read-replica latency from Spark 4 → Spark 2's Qdrant must stay under the existing per-deliberation latency budget.
+4. **Stage 4:** Cutover — `apps/command-center` switches its deliberation API endpoint from Spark 2 to Spark 4. Spark 2 Council instance retires after a 7-day soak.
+5. **Stage 5:** Spark 4 onboards Acquisitions and Wealth as the divisions ramp (independent of Council; their schemas may live on Spark 4's Postgres with cross-spark access from Spark 2 if needed).
+
+### Implications already documented downstream
+
+- `shared/captain-email-intake.md` header → Current: Spark 2 / Target: Spark 2 (permanent)
+- `shared/council-deliberation.md` header → Current: Spark 2 / Target: Spark 4 (post-Spark-4 provisioning)
+- `shared/sentinel-nas-walker.md` header → Current: Spark 2 / Target: Spark 2 (permanent)
+- `shared/infrastructure.md` Spark allocation table reflects target state with Spark 4 multi-purpose classification
+- `divisions/_template.md` documents the multi-purpose Spark 4 exception pattern
+- `system-map.md` target diagram + 5-stage migration includes the Spark 4 Council step
 
 ---
 

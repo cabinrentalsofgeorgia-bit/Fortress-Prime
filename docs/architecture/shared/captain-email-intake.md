@@ -1,5 +1,9 @@
 # Shared: Captain — Email Intake
 
+Spark allocation:
+- **Current:** Spark 2
+- **Target:** **Spark 2 permanent** (per ADR-002 LOCKED 2026-04-26 — Captain cross-mailbox classification is its core value; centralization is correct)
+
 Last updated: 2026-04-26
 
 ## Technical overview

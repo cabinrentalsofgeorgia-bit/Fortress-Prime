@@ -1,5 +1,9 @@
 # Shared: Council — Deliberation
 
+Spark allocation:
+- **Current:** Spark 2 (tenant of the monorepo)
+- **Target:** **Spark 4** (per ADR-002 LOCKED 2026-04-26 — Spark 4 hosts Council + Acquisitions + Wealth as a "shared services + intermittent divisions" multi-purpose node). Migration is staged after Spark 4 is provisioned: warm-spare → parallel verification week → command-center cutover → 7-day soak → Spark 2 instance retires.
+
 Last updated: 2026-04-26
 
 ## Technical overview
