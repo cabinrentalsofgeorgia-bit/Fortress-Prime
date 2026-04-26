@@ -15,6 +15,51 @@ Nothing pending.
 
 ---
 
+## 2026-04-26 — Email backfill (PR I), Vanderburge case row, overnight followups
+
+### Merged PRs
+
+- **PR #225** (`297c37267`) — case-aware IMAP email backfill (PR I):
+  `backend/scripts/email_backfill_legal.py` with 27 tests, classifier
+  with rule precedence (docket > domain > username + date window),
+  Sanker cross-case disambiguation (Case I / Case II / Vanderburge /
+  quarantine), per-case rollback support, IngestRunTracker integration,
+  lock + state files. Production run not yet executed — gated for
+  explicit operator authorization.
+
+### Database changes
+
+- **Vanderburge case row INSERT:** `case_slug='vanderburge-v-knight-fannin'`,
+  `status='closed_settled'`, `privileged_counsel_domains=["msp-lawfirm.com"]`,
+  `related_matters` cross-references both 7IL cases. Applied to
+  `fortress_prod` and `fortress_db` (md5-identical content,
+  `ON CONFLICT (case_slug) DO NOTHING` for idempotency).
+
+### Issues filed
+
+- **#218** — `imap_party_audit` pre-2018 archive folder skip
+  (~3-4 min runtime savings per audit invocation)
+- **#219** — PR #214 body still references the legacy
+  `masp-lawfirm.com` typo (docs cleanup)
+- **#220** — `fortress_shadow_test` schema sync gap (legal.*
+  migrations need manual apply)
+- **#221** — PAT scope upgrade (`issues:write` +
+  `pull-requests:write` for cleanup operations)
+- **#222** — `crog` `gmail_watcher` cron failing on
+  `prompts.judge_parser` ModuleNotFoundError
+- **#224** — Vanderburge case row TBD backfills (`case_number`,
+  `judge`, claim basis, opposing-counsel firm)
+
+### Documentation
+
+- This CHANGELOG entry
+- PR I architecture plan at
+  `/mnt/fortress_nas/audits/pr-i-email-backfill-plan-20260426.md`
+- Email coverage audit (party-term backfill scope) at
+  `/mnt/fortress_nas/audits/email-coverage-inventory-20260425b.md`
+
+---
+
 ## 2026-04-25 — Legal stack: 7IL two-case restructure + privileged communications architecture
 
 This is the largest legal-platform change since the original `legal.cases`
