@@ -56,7 +56,7 @@ _QDRANT_PRIVILEGED_NS = UUID("f0a17e55-7c0d-4d1f-8c5a-d3b4f0e9a200")
 _DOMAIN_TO_ROLE: dict[str, str] = {
     "mhtlegal.com":        "case_i_phase_1_filing_to_depositions",
     "fgplaw.com":          "case_i_phase_2_trial_and_general_counsel",
-    "masp-lawfirm.com":    "case_i_trial_cocounsel_and_vanderburge_counsel",
+    "msp-lawfirm.com":     "case_i_trial_cocounsel_and_vanderburge_counsel",
     "dralaw.com":          "post_judgment_closing_counsel",
     "wilsonhamilton.com":  "original_transaction_closing_counsel",
     "wilsonpruittlaw.com": "original_transaction_closing_counsel",
