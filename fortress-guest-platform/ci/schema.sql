@@ -1,8 +1,8 @@
 -- CI schema snapshot for fortress-guest-platform
--- Generated: 2026-04-21T02:49:45Z
+-- Generated: 2026-04-27T00:58:10Z
 -- Source:    fortress_shadow
--- Commit:    3446e105817985d0c870aad9a782c12f06a5d862
--- Alembic:   l7e8f1a2b3c4
+-- Commit:    4e2b575c20faba2e51524202884e9f9077bb69c3
+-- Alembic:   d8e3c1f5b9a6,m8f9a1b2c3d4,o0a1b2c3d4e5
 -- NOTE: geometry/vector types replaced with text for CI compatibility.
 --       postgis/vector extensions omitted (postgres:16 has pgcrypto/uuid-ossp).
 
@@ -18,7 +18,7 @@ SET ROLE TO fortress_admin;
 -- PostgreSQL database dump
 --
 
-\restrict FdO3Ro8PL5WgXQeaZzwcBMCxYm7tASohFPK6iWWOA4tAqKqVEW35qN3uEPfbMbp
+\restrict foZ5tfrT1TJztg5fdNgTY32wXzHLUd5ubKBQIf0737SfhewSmMXs6ZnCerWhTpe
 
 -- Dumped from database version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
@@ -1417,6 +1417,8 @@ CREATE TABLE public.email_messages (
     error_message text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     extra_data jsonb,
+    has_attachments boolean DEFAULT false NOT NULL,
+    image_descriptions jsonb,
     CONSTRAINT ck_email_messages_approval_status CHECK (((approval_status)::text = ANY ((ARRAY['pending_approval'::character varying, 'approved'::character varying, 'rejected'::character varying, 'sent'::character varying, 'send_failed'::character varying, 'no_draft_needed'::character varying])::text[]))),
     CONSTRAINT ck_email_messages_direction CHECK (((direction)::text = ANY ((ARRAY['inbound'::character varying, 'outbound'::character varying])::text[])))
 );
@@ -10119,4 +10121,4 @@ ALTER TABLE ONLY public.yield_simulations
 -- PostgreSQL database dump complete
 --
 
-\unrestrict FdO3Ro8PL5WgXQeaZzwcBMCxYm7tASohFPK6iWWOA4tAqKqVEW35qN3uEPfbMbp
+\unrestrict foZ5tfrT1TJztg5fdNgTY32wXzHLUd5ubKBQIf0737SfhewSmMXs6ZnCerWhTpe

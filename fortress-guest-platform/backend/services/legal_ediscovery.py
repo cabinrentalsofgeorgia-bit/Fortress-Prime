@@ -46,10 +46,13 @@ EMBED_MODEL = settings.embed_model
 SWARM_ENDPOINT = f"{settings.ollama_base_url.rstrip('/')}/v1/chat/completions"
 SWARM_MODEL = settings.ollama_fast_model
 
-# UUID5 namespace for deterministic Qdrant point IDs in the privileged
-# collection. Keyed on (file_hash, chunk_index) so re-runs of the same file
-# upsert to the same point IDs (idempotent), and never produce duplicates.
+# UUID5 namespaces for deterministic Qdrant point IDs. Both tracks key on
+# (file_hash, chunk_index) so re-runs of the same file upsert to the same
+# point IDs — idempotent, never produces duplicates. Required by the Phase D
+# reprocess script (Issue #228) so partial-failure retries cannot leak orphan
+# points into the collection.
 _QDRANT_PRIVILEGED_NS = UUID("f0a17e55-7c0d-4d1f-8c5a-d3b4f0e9a200")
+_QDRANT_WORK_PRODUCT_NS = UUID("33f27df1-10c7-4c39-a6bd-085a59bca9b1")
 
 # Maps a privileged-counsel email domain to its case-specific attorney_role tag.
 # Source of truth: pr_f_classification_rules.md (v6/v7). Update there first.
@@ -291,19 +294,109 @@ async def _embed_chunks(chunks: list[str]) -> list[list[float]]:
 
 # ── Qdrant ────────────────────────────────────────────────────────
 
+async def _batch_upsert_with_verification(
+    url_base: str,
+    collection_name: str,
+    points: list[dict],
+    batch_size: int = 1000,
+) -> tuple[list[str], Optional[dict]]:
+    """Upsert points to Qdrant in fixed-size batches; verify each batch's response.
+
+    Returns
+    -------
+    (successful_uuids, None)
+        Every batch verified; ``successful_uuids`` is the full point-id list.
+    (successful_uuids_so_far, failure_dict)
+        A batch failed verification. ``successful_uuids_so_far`` contains
+        the point IDs of every batch that completed successfully BEFORE the
+        failed one, in submission order. ``failure_dict`` carries:
+            batch_index, expected_count, actual_count,
+            qdrant_collection, qdrant_error_payload,
+            first_failed_uuid, accumulator_so_far_count.
+
+    Issue #228 design note
+    ----------------------
+    The pre-fix path swallowed exceptions and returned 0 (indistinguishable
+    from a no-vectors success). This helper distinguishes three cases:
+
+      * HTTP error / transport exception → caught, recorded with repr(exc).
+      * HTTP 200 but ``result.status != 'completed'``   → caught, recorded.
+      * HTTP 200 + ``result.status == 'completed'``    → batch succeeded,
+        all batch UUIDs appended to the accumulator.
+
+    Each batch carries its own 60s timeout — splitting large messages avoids
+    the single-shot per-document timeout pile-up that contributed to #228 on
+    multi-thousand-chunk emails.
+    """
+    successful: list[str] = []
+    if not points:
+        return successful, None
+
+    for batch_start in range(0, len(points), batch_size):
+        batch = points[batch_start:batch_start + batch_size]
+        first_failed_uuid = batch[0]["id"]
+        actual_count = 0
+        error_payload = ""
+
+        try:
+            resp = await shared_client.put(
+                f"{url_base}/collections/{collection_name}/points",
+                json={"points": batch},
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            body = resp.json()
+            # Qdrant: {"result":{"operation_id":int,"status":"completed"|"acknowledged"},
+            #          "status":"ok","time":float}
+            top_status = body.get("status")
+            result_status = (body.get("result") or {}).get("status")
+            if top_status == "ok" and result_status in ("completed", "acknowledged"):
+                successful.extend(p["id"] for p in batch)
+                continue
+            error_payload = repr(body)[:1024]
+        except Exception as exc:
+            error_payload = (repr(exc) or str(exc) or type(exc).__name__)[:1024]
+
+        return successful, {
+            "batch_index": batch_start // batch_size,
+            "expected_count": len(batch),
+            "actual_count": actual_count,
+            "qdrant_collection": collection_name,
+            "qdrant_error_payload": error_payload,
+            "first_failed_uuid": first_failed_uuid,
+            "accumulator_so_far_count": len(successful),
+        }
+
+    return successful, None
+
+
 async def _upsert_to_qdrant(
     doc_id: str,
     case_slug: str,
     file_name: str,
+    file_hash: str,
     chunks: list[str],
     vectors: list[list[float]],
-) -> int:
+) -> tuple[list[str], Optional[dict]]:
+    """Work-product upsert. Returns (point_uuids_indexed, failure_dict_or_none).
+
+    Point IDs use UUID5 keyed on (file_hash, chunk_index) so re-runs of the
+    same physical file produce the same point IDs (idempotent upsert; never
+    produces duplicates). This contract is what makes the Phase D reprocess
+    script safe to re-run on partially-failed batches without leaving orphan
+    points behind.
+
+    Issue #228 fix: previously returned ``int`` (chunk count) and swallowed
+    exceptions, making batch failures indistinguishable from no-vector docs.
+    Now returns the structured tuple from ``_batch_upsert_with_verification``
+    so the caller can transition the vault row to ``qdrant_upsert_failed``.
+    """
     points = []
     for idx, (chunk, vector) in enumerate(zip(chunks, vectors)):
         if not vector:
             continue
         points.append({
-            "id": str(uuid4()),
+            "id": str(uuid5(_QDRANT_WORK_PRODUCT_NS, f"{file_hash}:{idx}")),
             "vector": vector,
             "payload": {
                 "case_slug": case_slug,
@@ -315,7 +408,7 @@ async def _upsert_to_qdrant(
         })
 
     if not points:
-        return 0
+        return [], None
 
     try:
         await shared_client.put(
@@ -328,17 +421,11 @@ async def _upsert_to_qdrant(
     except Exception:
         pass
 
-    try:
-        resp = await shared_client.put(
-            f"{QDRANT_URL}/collections/{QDRANT_COLLECTION}/points",
-            json={"points": points},
-            timeout=60.0,
-        )
-        resp.raise_for_status()
-        return len(points)
-    except Exception as exc:
-        logger.warning("qdrant_upsert_failed", error=str(exc)[:200])
-        return 0
+    return await _batch_upsert_with_verification(
+        url_base=QDRANT_URL,
+        collection_name=QDRANT_COLLECTION,
+        points=points,
+    )
 
 
 # ── Privileged-track helpers (PR G) ───────────────────────────────
@@ -403,7 +490,7 @@ async def _upsert_to_qdrant_privileged(
     privilege_type: Optional[str],
     chunks: list[str],
     vectors: list[list[float]],
-) -> int:
+) -> tuple[list[str], Optional[dict]]:
     """Upsert privileged chunks to the legal_privileged_communications collection.
 
     Point IDs use UUID5 keyed on (file_hash, chunk_index) so re-runs of the
@@ -414,6 +501,11 @@ async def _upsert_to_qdrant_privileged(
       case_slug, document_id, file_name, file_hash, chunk_num, chunk_index,
       text (≤1000 chars), privileged=true, privileged_counsel_domain, role,
       privilege_type, ingested_at (UTC ISO-8601).
+
+    Issue #228 fix: previously returned ``int`` (chunk count) and swallowed
+    exceptions, making batch failures indistinguishable from no-vector docs.
+    Now returns the structured tuple from ``_batch_upsert_with_verification``
+    so the caller can transition the vault row to ``qdrant_upsert_failed``.
     """
     points: list[dict] = []
     ingested_at = datetime.now(timezone.utc).isoformat()
@@ -441,24 +533,13 @@ async def _upsert_to_qdrant_privileged(
         })
 
     if not points:
-        return 0
+        return [], None
 
-    try:
-        resp = await shared_client.put(
-            f"{QDRANT_URL}/collections/{QDRANT_PRIVILEGED_COLLECTION}/points",
-            json={"points": points},
-            timeout=60.0,
-        )
-        resp.raise_for_status()
-        return len(points)
-    except Exception as exc:
-        logger.warning(
-            "qdrant_privileged_upsert_failed",
-            error=str(exc)[:200],
-            doc_id=doc_id,
-            case_slug=case_slug,
-        )
-        return 0
+    return await _batch_upsert_with_verification(
+        url_base=QDRANT_URL,
+        collection_name=QDRANT_PRIVILEGED_COLLECTION,
+        points=points,
+    )
 
 
 # ── Main Ingestion Pipeline ──────────────────────────────────────
@@ -586,7 +667,7 @@ async def process_vault_upload(
 
             priv_chunks = _chunk_document(raw_text)
             priv_vectors = await _embed_chunks(priv_chunks)
-            priv_indexed = await _upsert_to_qdrant_privileged(
+            priv_indexed_uuids, priv_failure = await _upsert_to_qdrant_privileged(
                 doc_id=doc_id,
                 case_slug=case_slug,
                 file_name=file_name,
@@ -598,16 +679,69 @@ async def process_vault_upload(
                 vectors=priv_vectors,
             )
 
-            # 3. Flip the vault_documents row to its terminal locked_privileged
-            #    state with chunk_count populated (parity with the work-product
-            #    'completed' branch below).
+            # 3a. Issue #228 visible failure path — mark qdrant_upsert_failed,
+            # record the partial accumulator, surface structured error_detail.
+            if priv_failure is not None:
+                err_payload = json.dumps({
+                    **priv_failure,
+                    "occurred_at": datetime.now(timezone.utc).isoformat(),
+                    "track": "privileged",
+                    "doc_id": doc_id,
+                    "case_slug": case_slug,
+                    "file_name": file_name,
+                    "accumulator_so_far": priv_indexed_uuids,
+                })
+                await db.execute(
+                    text(
+                        "UPDATE legal.vault_documents "
+                        "SET processing_status = 'qdrant_upsert_failed', "
+                        "    chunk_count = :cc, "
+                        "    vector_ids = CAST(:vids AS UUID[]), "
+                        "    error_detail = :err "
+                        "WHERE id = :id"
+                    ),
+                    {
+                        "id": doc_id,
+                        "cc": len(priv_chunks),
+                        "vids": priv_indexed_uuids if priv_indexed_uuids else None,
+                        "err": err_payload[:8192],
+                    },
+                )
+                await db.commit()
+                logger.warning(
+                    "vault_upload_qdrant_upsert_failed",
+                    track="privileged",
+                    doc_id=doc_id, case_slug=case_slug, file_name=file_name,
+                    partial_indexed=len(priv_indexed_uuids),
+                    expected=len(priv_chunks),
+                    batch_index=priv_failure["batch_index"],
+                )
+                return {
+                    "status": "qdrant_upsert_failed",
+                    "document_id": doc_id,
+                    "file_name": file_name,
+                    "track": "privileged",
+                    "chunks": len(priv_chunks),
+                    "partial_indexed": len(priv_indexed_uuids),
+                    "failure": priv_failure,
+                }
+
+            # 3b. Flip the vault_documents row to its terminal locked_privileged
+            #    state with chunk_count + vector_ids populated (parity with the
+            #    work-product 'completed' branch below).
             await db.execute(
                 text(
                     "UPDATE legal.vault_documents "
-                    "SET processing_status = 'locked_privileged', chunk_count = :cc "
+                    "SET processing_status = 'locked_privileged', "
+                    "    chunk_count = :cc, "
+                    "    vector_ids = CAST(:vids AS UUID[]) "
                     "WHERE id = :id"
                 ),
-                {"id": doc_id, "cc": len(priv_chunks)},
+                {
+                    "id": doc_id,
+                    "cc": len(priv_chunks),
+                    "vids": priv_indexed_uuids,
+                },
             )
             await db.commit()
 
@@ -620,7 +754,7 @@ async def process_vault_upload(
                 privileged_counsel_domain=counsel_domain,
                 role=role_tag,
                 chunks=len(priv_chunks),
-                vectors_indexed=priv_indexed,
+                vectors_indexed=len(priv_indexed_uuids),
             )
 
             return {
@@ -634,7 +768,7 @@ async def process_vault_upload(
                 "privileged_counsel_domain": counsel_domain,
                 "role": role_tag,
                 "chunks": len(priv_chunks),
-                "vectors_indexed": priv_indexed,
+                "vectors_indexed": len(priv_indexed_uuids),
             }
 
         # ── Email Threading & Dedupe (CSV email archives) ─────
@@ -688,15 +822,70 @@ async def process_vault_upload(
         chunks = _chunk_document(vectorize_text)
 
         vectors = await _embed_chunks(chunks)
-        indexed = await _upsert_to_qdrant(doc_id, case_slug, file_name, chunks, vectors)
+        indexed_uuids, indexed_failure = await _upsert_to_qdrant(
+            doc_id=doc_id,
+            case_slug=case_slug,
+            file_name=file_name,
+            file_hash=fhash,
+            chunks=chunks,
+            vectors=vectors,
+        )
+
+        # Issue #228 visible failure path — work-product track.
+        if indexed_failure is not None:
+            err_payload = json.dumps({
+                **indexed_failure,
+                "occurred_at": datetime.now(timezone.utc).isoformat(),
+                "track": "work_product",
+                "doc_id": doc_id,
+                "case_slug": case_slug,
+                "file_name": file_name,
+                "accumulator_so_far": indexed_uuids,
+            })
+            await db.execute(
+                text(
+                    "UPDATE legal.vault_documents "
+                    "SET processing_status = 'qdrant_upsert_failed', "
+                    "    chunk_count = :cc, "
+                    "    vector_ids = CAST(:vids AS UUID[]), "
+                    "    error_detail = :err "
+                    "WHERE id = :id"
+                ),
+                {
+                    "id": doc_id,
+                    "cc": len(chunks),
+                    "vids": indexed_uuids if indexed_uuids else None,
+                    "err": err_payload[:8192],
+                },
+            )
+            await db.commit()
+            logger.warning(
+                "vault_upload_qdrant_upsert_failed",
+                track="work_product",
+                doc_id=doc_id, case_slug=case_slug, file_name=file_name,
+                partial_indexed=len(indexed_uuids),
+                expected=len(chunks),
+                batch_index=indexed_failure["batch_index"],
+            )
+            return {
+                "status": "qdrant_upsert_failed",
+                "document_id": doc_id,
+                "file_name": file_name,
+                "track": "work_product",
+                "chunks": len(chunks),
+                "partial_indexed": len(indexed_uuids),
+                "failure": indexed_failure,
+            }
 
         await db.execute(
             text("""
                 UPDATE legal.vault_documents
-                SET processing_status = 'completed', chunk_count = :cc
+                SET processing_status = 'completed',
+                    chunk_count = :cc,
+                    vector_ids = CAST(:vids AS UUID[])
                 WHERE id = :id
             """),
-            {"id": doc_id, "cc": len(chunks)},
+            {"id": doc_id, "cc": len(chunks), "vids": indexed_uuids},
         )
         await db.commit()
 
@@ -706,7 +895,7 @@ async def process_vault_upload(
             case_slug=case_slug,
             file_name=file_name,
             chunks=len(chunks),
-            indexed=indexed,
+            indexed=len(indexed_uuids),
             privilege_cleared=True,
         )
 
@@ -715,7 +904,7 @@ async def process_vault_upload(
             "document_id": doc_id,
             "file_name": file_name,
             "chunks": len(chunks),
-            "vectors_indexed": indexed,
+            "vectors_indexed": len(indexed_uuids),
             "nfs_path": nfs_path,
             "docket_event_emitted": docket_event_emitted,
             "privilege_cleared": True,
