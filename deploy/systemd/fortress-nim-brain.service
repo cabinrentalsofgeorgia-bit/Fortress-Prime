@@ -1,5 +1,5 @@
 [Unit]
-Description=Fortress NIM Brain — nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8 on spark-1 (Tier 2 sovereign reasoning)
+Description=Fortress NIM Brain — nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8 on spark-1 / spark-5 / spark-6 (parallel-serving brain fleet, per-host cache via %H)
 Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-nim-brain.service
 Documentation=https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1_5-FP8
 After=docker.service network-online.target remote-fs.target
@@ -40,7 +40,7 @@ ExecStart=/usr/bin/docker run \
   --shm-size=16g \
   -p 8100:8000 \
   -v /mnt/fortress_nas/nim-cache/hf/nvidia-Llama-3_3-Nemotron-Super-49B-v1_5-FP8:/opt/nim/models/nemotron-super-49b-v1-5-fp8:ro \
-  -v /mnt/fortress_nas/nim-cache/hf/llm-nim-runtime-cache:/opt/nim/.cache \
+  -v /mnt/fortress_nas/nim-cache/hf/llm-nim-runtime-cache/%H:/opt/nim/.cache \
   --env-file /etc/fortress/nim.env \
   -e NIM_MODEL_NAME=/opt/nim/models/nemotron-super-49b-v1-5-fp8 \
   -e NIM_SERVED_MODEL_NAME=nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8 \
