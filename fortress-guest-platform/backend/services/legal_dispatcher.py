@@ -1081,3 +1081,218 @@ async def dispatch_event(
                 else error_message
             ),
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Top-level orchestration (Sub-phase 1-2E)
+#
+# Per FLOS-phase-1-2 implementation spec §5 + §7 + §9.
+#
+# Three-level error boundary (mirrors legal_mail_ingester precedent):
+#
+#   Per-event   in dispatch_event()           — handler exception caught;
+#               (1-2D)                          recorded as outcome='error';
+#                                               dispatcher continues to next
+#                                               event in the batch.
+#
+#   Per-cycle   in patrol_dispatcher()        — unexpected exception in cycle
+#               (this sub-phase)                (e.g. DB connection drop);
+#                                               cycle aborts cleanly; loop
+#                                               continues to next sleep/cycle.
+#
+#   Per-loop    in run_legal_dispatcher_loop  — outermost defensive boundary
+#               (this sub-phase)                for the long-running coroutine;
+#                                               sleeps LOOP_BACKOFF_SEC then
+#                                               retries. Back-off only at
+#                                               this level.
+#
+# Cadence-stable sleep — slow cycles do NOT compound lag. If a cycle takes
+# longer than POLL_INTERVAL_SEC, we sleep the floor (1.0s) instead of
+# pretending we slept the full interval. See run_legal_dispatcher_loop().
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _log_task_failure(task: asyncio.Task) -> None:
+    """
+    arq done-callback for crash visibility on the dispatcher coroutine.
+    Mirrors the same callback shape used by legal_mail_ingester
+    (Phase 0a-2 §11). The task should never complete in normal operation
+    (it's a while-True loop); any completion is a signal to log loud.
+    """
+    try:
+        exc = task.exception()
+    except asyncio.CancelledError:
+        logger.info("legal_dispatcher_task_cancelled")
+        return
+    except Exception as inner_exc:
+        logger.error(
+            "legal_dispatcher_task_done_callback_failed",
+            error=str(inner_exc)[:300],
+        )
+        return
+    if exc is not None:
+        logger.error(
+            "legal_dispatcher_task_died",
+            error=str(exc)[:500],
+            error_type=type(exc).__name__,
+        )
+    else:
+        logger.error("legal_dispatcher_task_completed_unexpectedly")
+
+
+async def patrol_dispatcher() -> PatrolResult:
+    """
+    Single-cycle batch processing. Per implementation spec §5 + design v1.1 §5.
+
+    Sequence:
+      0. Pause check (skip cycle if dispatcher_pause has its singleton row)
+      1. Load routes (once per cycle)
+      2. Fetch up to BATCH_SIZE unprocessed events (with retry-budget exclusion)
+      3. dispatch_event() per event; aggregate PatrolResult
+      4. Emit per-cycle structured log
+
+    Returns the PatrolResult so the caller (the loop) can decide cadence
+    based on whether the cycle did real work. Errors from any single event
+    are absorbed by dispatch_event's per-event boundary; this function's
+    outer try/except is the per-cycle boundary for unexpected DB-level
+    failures (connection drops, transaction conflicts, etc.).
+    """
+    result = PatrolResult()
+    cycle_started_monotonic = _time.monotonic()
+
+    try:
+        # ── 0. Pause check ──────────────────────────────────────────────
+        if await _is_dispatcher_paused():
+            result.paused = True
+            result.duration_ms = int((_time.monotonic() - cycle_started_monotonic) * 1000)
+            logger.info(
+                "legal_dispatcher_cycle_paused",
+                duration_ms=result.duration_ms,
+            )
+            return result
+
+        # ── 1. Load routes (once per cycle) ────────────────────────────
+        routes = await _load_routes()
+
+        # ── 2. Fetch batch ──────────────────────────────────────────────
+        events = await _fetch_unprocessed_events(batch_size=BATCH_SIZE)
+        result.fetched = len(events)
+
+        # ── 3. Per-event dispatch ──────────────────────────────────────
+        for event in events:
+            dispatch_result = await dispatch_event(event, routes)
+            if dispatch_result.outcome == OUTCOME_SUCCESS:
+                result.succeeded += 1
+            elif dispatch_result.outcome == OUTCOME_ERROR:
+                result.errored += 1
+            elif dispatch_result.outcome == OUTCOME_DEAD_LETTER:
+                result.dead_lettered += 1
+            elif dispatch_result.outcome == OUTCOME_SKIPPED:
+                result.skipped += 1
+                if dispatch_result.skip_reason:
+                    result.skip_reasons[dispatch_result.skip_reason] = (
+                        result.skip_reasons.get(dispatch_result.skip_reason, 0) + 1
+                    )
+            else:
+                # Defensive — should never reach here unless dispatch_event
+                # is changed to emit a new outcome value without updating
+                # this aggregator. Log so the source bug is obvious.
+                logger.error(
+                    "legal_dispatcher_unknown_outcome",
+                    event_id=dispatch_result.event_id,
+                    outcome=dispatch_result.outcome,
+                )
+
+    except Exception as exc:
+        # Per-cycle boundary. Logs and lets the loop sleep+retry. Events
+        # already dispatched in this cycle keep their state-effects
+        # (per-event work commits as it goes); the unprocessed remainder
+        # of the batch returns to the polling queue automatically since
+        # _fetch_unprocessed_events committed its FOR UPDATE lock on
+        # release.
+        logger.error(
+            "legal_dispatcher_cycle_unexpected_failure",
+            error=str(exc)[:500],
+            error_type=type(exc).__name__,
+            partial_succeeded=result.succeeded,
+            partial_errored=result.errored,
+            partial_skipped=result.skipped,
+            partial_dead_lettered=result.dead_lettered,
+        )
+
+    result.duration_ms = int((_time.monotonic() - cycle_started_monotonic) * 1000)
+
+    # ── 4. Per-cycle structured log ────────────────────────────────────
+    logger.info(
+        "legal_dispatcher_cycle_report",
+        fetched=result.fetched,
+        succeeded=result.succeeded,
+        errored=result.errored,
+        skipped=result.skipped,
+        dead_lettered=result.dead_lettered,
+        skip_reasons=result.skip_reasons,
+        duration_ms=result.duration_ms,
+        paused=result.paused,
+    )
+
+    return result
+
+
+async def run_legal_dispatcher_loop() -> None:
+    """
+    Continuous patrol loop. Started by fortress-arq-worker on boot
+    (registered in Sub-phase 1-2F backend/core/worker.py block, gated on
+    settings.legal_dispatcher_enabled).
+
+    Cadence-stable sleep per implementation spec §9: slow cycles do NOT
+    compound lag. The sleep formula `max(1.0, POLL_INTERVAL_SEC - elapsed)`
+    keeps a 1-second floor so a 10-second cycle still pauses briefly
+    between iterations (avoids pegging the DB on a permanently slow
+    workload).
+
+    Per-loop error boundary is the outermost defensive layer. Any exception
+    that escapes patrol_dispatcher's per-cycle boundary lands here; we log,
+    sleep LOOP_BACKOFF_SEC, and continue. The coroutine is intended to run
+    for the full lifetime of the arq worker process — never returns under
+    normal conditions.
+
+    Default OFF: when settings.legal_dispatcher_enabled is False, the loop
+    sleeps DISABLED_SLEEP_SEC and re-checks. This lets the operator flip
+    the env flag without restarting the worker (Phase 1-5 cutover may use
+    a worker restart anyway, but the polling-flag pattern is consistent
+    with legal_mail_ingester).
+    """
+    logger.info(
+        "legal_dispatcher_loop_started",
+        versioned=DISPATCHER_VERSIONED,
+        batch_size=BATCH_SIZE,
+        poll_interval_sec=POLL_INTERVAL_SEC,
+    )
+
+    while True:
+        if not settings.legal_dispatcher_enabled:
+            logger.info(
+                "legal_dispatcher_disabled",
+                next_check_sec=DISABLED_SLEEP_SEC,
+            )
+            await asyncio.sleep(DISABLED_SLEEP_SEC)
+            continue
+
+        cycle_start = _time.monotonic()
+        try:
+            await patrol_dispatcher()
+        except Exception as exc:
+            # Per-loop boundary — defensive. patrol_dispatcher has its own
+            # per-cycle try/except, so this catches only escaped or
+            # framework-level failures (e.g. asyncio runtime errors).
+            logger.error(
+                "legal_dispatcher_loop_unexpected_failure",
+                error=str(exc)[:500],
+                error_type=type(exc).__name__,
+            )
+            await asyncio.sleep(LOOP_BACKOFF_SEC)
+            continue
+
+        cycle_duration = _time.monotonic() - cycle_start
+        sleep_for = max(1.0, POLL_INTERVAL_SEC - cycle_duration)
+        await asyncio.sleep(sleep_for)
