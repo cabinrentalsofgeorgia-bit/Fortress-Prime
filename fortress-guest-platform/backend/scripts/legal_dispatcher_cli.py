@@ -41,9 +41,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import getpass
+import json as _json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -640,24 +641,370 @@ async def _cmd_dispatcher_replay(args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_dispatcher_dead_letter_list(_args: argparse.Namespace) -> int:
-    print("(dispatcher dead-letter list — implemented in Sub-phase 1-4D)", file=sys.stderr)
-    return 1
+# ─────────────────────────────────────────────────────────────────────────────
+# Read commands (1-4D — posture get / posture history / dead-letter list)
+# ─────────────────────────────────────────────────────────────────────────────
 
 
-async def _cmd_dispatcher_dead_letter_purge(_args: argparse.Namespace) -> int:
-    print("(dispatcher dead-letter purge — implemented in Sub-phase 1-4D)", file=sys.stderr)
-    return 1
+async def _cmd_posture_get(args: argparse.Namespace) -> int:
+    """
+    Read legal.case_posture for one case_slug. Three output paths
+    per spec §7.1:
+      A) Row exists → human-readable summary OR JSON (if --json)
+      B) Row not yet materialized but case exists in legal.cases →
+         informative message about lazy materialization
+      C) case_slug not in legal.cases → ERROR
+
+    Read-only. No DB writes.
+    """
+    case_slug = args.case_slug
+
+    # ── 1. Try load case_posture ────────────────────────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT case_slug, procedural_phase, next_deadline_date,
+                       next_deadline_action, theory_of_defense_state,
+                       top_defense_arguments, top_risk_factors,
+                       exposure_low, exposure_mid, exposure_high,
+                       leverage_score, opposing_counsel_profile,
+                       last_council_consensus, last_council_at,
+                       posture_hash, created_at, updated_at,
+                       created_by_event, updated_by_event
+                FROM legal.case_posture
+                WHERE case_slug = :slug
+            """),
+            {"slug": case_slug},
+        )
+        posture_row = result.fetchone()
+
+    if posture_row is not None:
+        posture = dict(posture_row._mapping)
+        if args.json:
+            # JSON output for tooling — datetime/Decimal serialization
+            # via default=str (same idiom as Phase 1-3A posture_hash).
+            print(_json.dumps(posture, indent=2, default=str, sort_keys=True))
+        else:
+            _print_posture_human(posture)
+        return 0
+
+    # ── 2. case_posture row missing — verify case exists ───────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("SELECT 1 FROM legal.cases WHERE case_slug = :slug LIMIT 1"),
+            {"slug": case_slug},
+        )
+        case_exists = result.scalar() is not None
+
+    if case_exists:
+        # Path B — case in legal.cases but no posture row yet
+        print(
+            f"case_posture row not yet materialized for {case_slug}",
+        )
+        print(
+            f"(case exists in legal.cases but no event has triggered "
+            f"_load_or_create_case_posture yet)",
+        )
+        print(
+            f"First inbound email.received with this case_slug will create the row.",
+        )
+        return 0
+
+    # Path C — case_slug not in legal.cases at all
+    print(
+        f"ERROR: case_slug '{case_slug}' not found in legal.cases.",
+        file=sys.stderr,
+    )
+    return 3
 
 
-async def _cmd_posture_get(_args: argparse.Namespace) -> int:
-    print("(posture get — implemented in Sub-phase 1-4D)", file=sys.stderr)
-    return 1
+def _print_posture_human(posture: dict[str, Any]) -> None:
+    """Render a human-readable case_posture summary."""
+    case_slug = posture["case_slug"]
+    print(f"\ncase_posture for {case_slug}\n")
+
+    print(f"procedural_phase:        {posture['procedural_phase']}")
+    print(f"theory_of_defense_state: {posture['theory_of_defense_state']}")
+
+    # top_defense_arguments — list[dict] per design v1.1 §3 (Phase 2+ population)
+    tda = posture.get("top_defense_arguments") or []
+    if isinstance(tda, list) and tda:
+        print(f"top_defense_arguments:   {len(tda)} arguments")
+        for i, arg in enumerate(tda[:5], start=1):
+            label = arg.get("label", str(arg)) if isinstance(arg, dict) else str(arg)
+            print(f"  {i}. {_truncate(label, 80)}")
+        if len(tda) > 5:
+            print(f"  ... and {len(tda) - 5} more")
+    else:
+        print(f"top_defense_arguments:   [] (Phase 2+ population)")
+
+    # top_risk_factors — dict keyed by rule_id (Phase 1-3B aggregation)
+    factors = posture.get("top_risk_factors") or {}
+    if isinstance(factors, dict) and factors:
+        print(f"top_risk_factors:        {len(factors)} active rules")
+        # Sort by severity (P1 first) then by match_count desc
+        def _factor_sort_key(item: tuple[str, dict[str, Any]]) -> tuple[int, int]:
+            _, f = item
+            severity_rank = 0 if str(f.get("severity") or "").upper() == "P1" else 1
+            return (severity_rank, -int(f.get("match_count") or 0))
+        for rule_id, f in sorted(factors.items(), key=_factor_sort_key):
+            severity = f.get("severity") or "?"
+            count = f.get("match_count") or 0
+            last_match_str = f.get("last_match_at") or "?"
+            # last_match_at is ISO string (Phase 1-3B writes via .isoformat())
+            try:
+                last_match_dt = datetime.fromisoformat(last_match_str.replace("Z", "+00:00"))
+                last_str = _fmt_age(last_match_dt)
+            except (ValueError, AttributeError):
+                last_str = last_match_str
+            print(f"  - {rule_id:<28} {severity:<3} {count} matches, last {last_str}")
+    else:
+        print(f"top_risk_factors:        {{}} (no rules matched yet)")
+
+    # Phase 2+ population fields — show '—' placeholder
+    exposure_low = posture.get("exposure_low")
+    exposure_mid = posture.get("exposure_mid")
+    exposure_high = posture.get("exposure_high")
+    if exposure_low is None and exposure_mid is None and exposure_high is None:
+        print(f"exposure (low/mid/high): — / — / — (Phase 2+ population)")
+    else:
+        print(f"exposure (low/mid/high): {exposure_low} / {exposure_mid} / {exposure_high}")
+
+    leverage = posture.get("leverage_score")
+    print(f"leverage_score:          {leverage if leverage is not None else '— (Phase 2+ population)'}")
+
+    last_council = posture.get("last_council_consensus")
+    if last_council:
+        print(f"last_council_consensus:  {_truncate(_json.dumps(last_council, default=str), 60)}")
+        print(f"last_council_at:         {_fmt_ts(posture.get('last_council_at'))}")
+    else:
+        print(f"last_council_consensus:  — (Phase 2+ population)")
+
+    # System fields
+    posture_hash = posture.get("posture_hash") or ""
+    print(f"posture_hash:            {posture_hash[:16]}{'...' if len(posture_hash) > 16 else ''}")
+    print(f"created_at:              {_fmt_ts(posture.get('created_at'))}")
+    print(f"updated_at:              {_fmt_ts(posture.get('updated_at'))} ({_fmt_age(posture.get('updated_at'))})")
+    print(f"created_by_event:        {posture.get('created_by_event')}")
+    print(f"updated_by_event:        {posture.get('updated_by_event')}")
 
 
-async def _cmd_posture_history(_args: argparse.Namespace) -> int:
-    print("(posture history — implemented in Sub-phase 1-4D)", file=sys.stderr)
-    return 1
+async def _cmd_posture_history(args: argparse.Namespace) -> int:
+    """
+    Walk legal.event_log for case_slug in time order. Read-only.
+    Uses idx_event_log_case_slug partial index (Phase 0a-1).
+    """
+    case_slug = args.case_slug
+    limit = int(args.limit)
+
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT id, event_type, emitted_at, emitted_by,
+                       processed_at, processed_by,
+                       result->>'status' AS result_status
+                FROM legal.event_log
+                WHERE case_slug = :case_slug
+                ORDER BY emitted_at DESC
+                LIMIT :limit
+            """),
+            {"case_slug": case_slug, "limit": limit},
+        )
+        rows = result.fetchall()
+
+    if not rows:
+        print(f"No events found in legal.event_log for case_slug={case_slug!r}")
+        return 0
+
+    print(f"\nposture history for {case_slug} (last {len(rows)} of {limit} requested)\n")
+    print(
+        f"  {'emitted_at':<22} {'event_type':<30} {'emitted_by':<28} "
+        f"{'proc':<5} {'result_status'}"
+    )
+    print("  " + "-" * 100)
+    for r in rows:
+        proc = "✓" if r.processed_at is not None else "—"
+        emitted_str = _fmt_ts(r.emitted_at)
+        result_status = r.result_status or "(unprocessed)"
+        print(
+            f"  {emitted_str:<22} {_truncate(r.event_type, 30):<30} "
+            f"{_truncate(r.emitted_by, 28):<28} {proc:<5} {result_status}"
+        )
+    print()
+    return 0
+
+
+async def _cmd_dispatcher_dead_letter_list(args: argparse.Namespace) -> int:
+    """
+    Read legal.dispatcher_dead_letter ordered by dead_lettered_at DESC.
+    Read-only.
+    """
+    limit = int(args.limit)
+
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT id, original_event_id, event_type, case_slug,
+                       final_error, attempts, dead_lettered_at
+                FROM legal.dispatcher_dead_letter
+                ORDER BY dead_lettered_at DESC
+                LIMIT :limit
+            """),
+            {"limit": limit},
+        )
+        rows = result.fetchall()
+
+    if not rows:
+        print("dispatcher_dead_letter is empty.")
+        return 0
+
+    print(f"\ndispatcher_dead_letter — {len(rows)} most recent (limit {limit})\n")
+    print(
+        f"  {'id':<6} {'orig_event':<10} {'event_type':<30} {'case_slug':<28} "
+        f"{'attempts':<8} {'age':<10} error"
+    )
+    print("  " + "-" * 110)
+    for r in rows:
+        age = _fmt_age(r.dead_lettered_at)
+        case_disp = r.case_slug or "(none)"
+        print(
+            f"  {r.id:<6} {r.original_event_id:<10} "
+            f"{_truncate(r.event_type, 30):<30} {_truncate(case_disp, 28):<28} "
+            f"{r.attempts:<8} {age:<10} {_truncate(r.final_error, 50)}"
+        )
+    print()
+    print(
+        f"To purge older entries: "
+        f"legal_dispatcher_cli dispatcher dead-letter purge --before YYYY-MM-DD --confirm"
+    )
+    return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `dispatcher dead-letter purge` (1-4D — operator-triggered retention)
+#
+# Per Q3 LOCKED + spec §9.2/§9.3. Plan-by-default + three validation
+# guards (parse / future / 24-hour-floor) + bilateral DELETE.
+#
+# Three exit codes (consistent with Phase 0a-3 backfill --since):
+#   exit 9  — --before failed to parse as YYYY-MM-DD
+#   exit 11 — --before in the future
+#   exit 12 — --before within last 24 hours (defensive fresh-data floor)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _parse_iso_date(arg: str) -> Optional[datetime]:
+    """Parse YYYY-MM-DD → datetime at UTC midnight. Returns None on parse fail."""
+    try:
+        return datetime.fromisoformat(arg).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+async def _cmd_dispatcher_dead_letter_purge(args: argparse.Namespace) -> int:
+    """
+    Bilateral DELETE of legal.dispatcher_dead_letter rows older than --before.
+    Plan-by-default; --confirm to execute.
+    """
+    # ── 1. Parse --before ───────────────────────────────────────────────
+    before_dt = _parse_iso_date(args.before)
+    if before_dt is None:
+        print(
+            f"ERROR: --before {args.before!r} is not a valid ISO date (YYYY-MM-DD)",
+            file=sys.stderr,
+        )
+        return 9
+
+    now_utc = datetime.now(timezone.utc)
+
+    # ── 2. Future-date rejection ────────────────────────────────────────
+    if before_dt > now_utc:
+        print(
+            f"ERROR: --before {args.before} is in the future "
+            f"(today is {now_utc.date().isoformat()})",
+            file=sys.stderr,
+        )
+        return 11
+
+    # ── 3. 24-hour-floor rejection ─────────────────────────────────────
+    # Defensive: prevent accidental purge of fresh dead-letters operator
+    # may still need for triage. Per spec §9.3 LOCKED.
+    twenty_four_hours_ago = now_utc - timedelta(hours=24)
+    if before_dt > twenty_four_hours_ago:
+        print(
+            f"ERROR: --before {args.before} is within the last 24 hours.",
+            file=sys.stderr,
+        )
+        print(
+            f"Defensive guard: dead-letters younger than 24 hours may still be needed for triage.",
+            file=sys.stderr,
+        )
+        print(
+            f"To purge anyway, wait until {(twenty_four_hours_ago).date().isoformat()} "
+            f"or extend the floor in code.",
+            file=sys.stderr,
+        )
+        return 12
+
+    # ── 4. Plan mode: count what would be deleted ───────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*) FROM legal.dispatcher_dead_letter "
+                "WHERE dead_lettered_at < :before"
+            ),
+            {"before": before_dt},
+        )
+        plan_count = int(result.scalar() or 0)
+
+    print(f"\nDLQ PURGE PLAN — before {args.before}")
+    print(f"  rows older than {args.before}: {plan_count}")
+    print()
+
+    if plan_count == 0:
+        print("Nothing to purge.")
+        return 0
+
+    if not args.confirm:
+        print(f"Plan mode (no --confirm). Pass --confirm to execute.")
+        print(
+            f"This would DELETE {plan_count} legal.dispatcher_dead_letter row(s) "
+            f"(bilateral)."
+        )
+        return 0
+
+    # ── 5. Execute mode (--confirm) — bilateral DELETE ─────────────────
+    delete_sql = text(
+        "DELETE FROM legal.dispatcher_dead_letter WHERE dead_lettered_at < :before"
+    )
+    params = {"before": before_dt}
+
+    # Legacy (canonical)
+    try:
+        async with LegacySession() as db:
+            await db.execute(delete_sql, params)
+            await db.commit()
+    except Exception as exc:
+        print(f"ERROR: legacy DLQ purge failed: {exc}", file=sys.stderr)
+        return 8
+
+    # Prod mirror
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(delete_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy purge succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    print(f"PURGED {plan_count} dispatcher_dead_letter row(s) older than {args.before}")
+    if not prod_mirrored:
+        print("  mirror: legacy=ok prod=FAILED (re-run purge --confirm to retry mirror)")
+    return 0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
