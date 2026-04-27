@@ -32,14 +32,29 @@ This file (Phase 0a-2) implements:
 """
 from __future__ import annotations
 
+import email as email_lib
 import imaplib
 import json
 import os
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Optional
+from email.message import Message
+from email.utils import parsedate_to_datetime
+from typing import Any, Iterable, Optional
 
 import structlog
+
+# Reuse Captain's well-tested parsing utilities (DRY — no parser drift).
+# These are pure functions; importing does not couple our service to
+# Captain's runtime state or coexistence policy.
+from backend.services.captain_multi_mailbox import (
+    _decode_header_value,
+    _extract_address,
+    _extract_attachments,
+    _extract_plain_body,
+    _extract_recipient_list,
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -315,11 +330,306 @@ class LegalMailIngesterTransport:
         return []
 
     def _fetch_with(self, conn: imaplib.IMAP4_SSL) -> list[dict[str, Any]]:
-        """Inner fetch — banded SEARCH + BODY.PEEK[] loop. Stub in 2A; full impl in 2B."""
-        # Sub-phase 2A: stub returns [] without issuing SEARCH/FETCH.
-        # Sub-phase 2B will implement:
-        #   1. banded UID SEARCH: UNSEEN SINCE <today - search_band_days>
-        #   2. cap UIDs at mailbox.max_messages_per_patrol
-        #   3. per-UID BODY.PEEK[] (no flag mutation)
-        #   4. parse to dict with raw_bytes + uid + folder + host + alias
-        return []
+        """
+        Banded UID SEARCH + per-UID BODY.PEEK[].
+
+        Per design v1.1 §3.2: never issue an unbounded SEARCH UNSEEN — that's
+        how gary-gk hits Issue #177's >1MB overflow. We always pair UNSEEN with
+        a SINCE date floor (default 30 days back, configurable per-mailbox).
+
+        Per design v1.1 §3.4 (Captain coexistence): use BODY.PEEK[] not
+        (RFC822) — preserves the \\Seen flag. Captain marks \\Seen on its own
+        cycle; we never mutate server-side state.
+
+        Returns list of dicts each containing:
+          uid, raw_bytes, host, folder, mailbox_alias
+        """
+        since_date = (date.today() - timedelta(days=self.mailbox.search_band_days))
+        search_predicate = f"UNSEEN SINCE {_imap_date(since_date)}"
+
+        typ, data = conn.uid("SEARCH", search_predicate)
+        if typ != "OK" or not data or not data[0]:
+            return []
+
+        uids = data[0].split()[: self.mailbox.max_messages_per_patrol]
+        if not uids:
+            return []
+
+        out: list[dict[str, Any]] = []
+        for uid_bytes in uids:
+            uid = uid_bytes.decode("ascii", errors="replace")
+            try:
+                # BODY.PEEK[] — server returns full message, does NOT mark \\Seen.
+                # Captain runs in parallel with regular FETCH that marks \\Seen;
+                # the two paths see the same UNSEEN set without contention.
+                typ, fetch_data = conn.uid("FETCH", uid, "(BODY.PEEK[])")
+                if typ != "OK" or not fetch_data:
+                    continue
+
+                raw_bytes: Optional[bytes] = None
+                for entry in fetch_data:
+                    if isinstance(entry, tuple) and len(entry) >= 2:
+                        candidate = entry[1]
+                        if isinstance(candidate, (bytes, bytearray)):
+                            raw_bytes = bytes(candidate)
+                            break
+                if raw_bytes is None:
+                    continue
+
+                out.append({
+                    "uid": uid,
+                    "raw_bytes": raw_bytes,
+                    "host": self.mailbox.host,
+                    "folder": self.mailbox.folder,
+                    "mailbox_alias": self.mailbox.name,
+                    "transport": self.mailbox.transport,
+                })
+            except Exception as exc:
+                # Per design v1.1 §1: per-message try/except so one bad email
+                # never aborts a patrol. Logged but patrol continues.
+                logger.warning(
+                    "legal_mail_message_fetch_failed",
+                    mailbox=self.mailbox.name,
+                    uid=uid,
+                    error=str(exc)[:200],
+                )
+                continue
+
+        return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Email parsing — produces a structured ParsedMessage from raw IMAP bytes.
+# Reuses Captain's _parse_rfc822 conventions but emits a richer record
+# tailored for the email_archive output contract (§3.6) + event payload (§5).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class ParsedMessage:
+    """
+    Result of parsing one IMAP message + Stage 1 classification.
+
+    Sub-phase 2C will use these fields directly when writing to email_archive:
+      - sender, subject, body, sent_at, message_id, to/cc/bcc → email_archive cols
+      - file_path constructed from {host, folder, uid}
+      - category constructed from {transport, mailbox_alias}
+
+    Sub-phase 2D will use these fields when emitting to legal.event_log:
+      - case_slug + privilege_class + watchdog_matches → event payload
+    """
+    # Source identity (drives file_path + category)
+    uid: str
+    host: str
+    folder: str
+    mailbox_alias: str
+    transport: str
+    routing_tag: str
+
+    # Parsed headers + body
+    sender: str
+    sender_domain: str
+    subject: str
+    body: str
+    message_id: str
+    to_addresses: list[str] = field(default_factory=list)
+    cc_addresses: list[str] = field(default_factory=list)
+    bcc_addresses: list[str] = field(default_factory=list)
+    sent_at: Optional[datetime] = None
+    attachment_filenames: list[str] = field(default_factory=list)
+
+    # Stage 1 classification (per design v1.1 §5)
+    case_slug: Optional[str] = None
+    privilege_class: Optional[str] = None  # 'work_product' | 'privileged' | 'public'
+    watchdog_matches: list[dict[str, Any]] = field(default_factory=list)
+    priority: Optional[str] = None  # 'P1' | 'P2' | 'P3' from priority_sender_rules
+
+    # Construction helpers — keep email_archive output contract centralized
+    @property
+    def file_path(self) -> str:
+        """Canonical, replayable identifier per design v1.1 §3.6."""
+        return f"imap://{self.host}/{self.folder}/{self.uid}"
+
+    @property
+    def category(self) -> str:
+        """legacy_case_manager.py compat per §3.6 — file_path LIKE 'imap://%' check."""
+        return f"imap_{self.transport}_{self.mailbox_alias}"
+
+
+def parse_message(raw_bytes: bytes, source: dict[str, Any], routing_tag: str) -> Optional[ParsedMessage]:
+    """
+    Parse IMAP raw bytes into a ParsedMessage. Returns None on parse failure
+    (caller should log + skip; one bad email never aborts a patrol per §1).
+
+    `source` is the dict from LegalMailIngesterTransport._fetch_with:
+      uid, host, folder, mailbox_alias, transport
+    """
+    try:
+        msg: Message = email_lib.message_from_bytes(raw_bytes)
+    except Exception:
+        return None
+
+    subject = _decode_header_value(msg.get("Subject", ""))
+    from_header = _decode_header_value(msg.get("From", ""))
+    sender = _extract_address(from_header).lower()
+    sender_domain = sender.rsplit("@", 1)[-1] if "@" in sender else ""
+
+    to_addrs = _extract_recipient_list(msg.get_all("To") or [])
+    cc_addrs = _extract_recipient_list(msg.get_all("Cc") or [])
+    bcc_addrs = _extract_recipient_list(msg.get_all("Bcc") or [])
+
+    message_id = (msg.get("Message-ID") or "").strip()
+    body = _extract_plain_body(msg)
+    attachments = _extract_attachments(msg)
+
+    sent_at: Optional[datetime] = None
+    date_header = msg.get("Date")
+    if date_header:
+        try:
+            sent_at = parsedate_to_datetime(date_header)
+        except (TypeError, ValueError):
+            sent_at = None
+
+    return ParsedMessage(
+        uid=str(source["uid"]),
+        host=str(source["host"]),
+        folder=str(source["folder"]),
+        mailbox_alias=str(source["mailbox_alias"]),
+        transport=str(source["transport"]),
+        routing_tag=routing_tag,
+        sender=sender,
+        sender_domain=sender_domain,
+        subject=subject,
+        body=body,
+        message_id=message_id,
+        to_addresses=to_addrs,
+        cc_addresses=cc_addrs,
+        bcc_addresses=bcc_addrs,
+        sent_at=sent_at,
+        attachment_filenames=attachments,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1 classifier — lightweight, deterministic, ~1ms/message (per §5)
+#
+# Three-step classification:
+#   1. ILIKE match against priority_sender_rules (sender_pattern → case_slug + priority)
+#   2. Heuristic regex on subject for known case identifiers
+#   3. Mailbox routing_tag inheritance for default privilege_class
+#
+# Stage 2 (heavyweight LLM-backed _classify_privilege) fires only when the
+# message attaches to a case via correspondence/vault — not in this pipeline.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# Compiled at module load — cheap regex lookups on every inbound message.
+# Pattern format: (regex, case_slug). First match wins.
+# Regexes use word boundaries / token boundaries to avoid spurious matches
+# (e.g., "fish-trap" inside an unrelated string).
+_SUBJECT_CASE_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"\bSUV20260000?13\b", re.IGNORECASE), "fish-trap-suv2026000013"),
+    (re.compile(r"\bfish[\s-]?trap\b", re.IGNORECASE),  "fish-trap-suv2026000013"),
+    (re.compile(r"\bgenerali\b", re.IGNORECASE),        "fish-trap-suv2026000013"),
+    (re.compile(r"\b23-11161\b"),                       "prime-trust-23-11161"),
+    (re.compile(r"\bprime[\s-]?trust\b", re.IGNORECASE),"prime-trust-23-11161"),
+    (re.compile(r"\bdetweiler\b", re.IGNORECASE),       "prime-trust-23-11161"),
+    (re.compile(r"\b7[\s-]?IL\b", re.IGNORECASE),       "7il-v-knight-ndga-ii"),  # active case II default
+    (re.compile(r"\bvanderb[ue]rg[h]?\b", re.IGNORECASE), "vanderburge-v-knight-fannin"),  # closed; tag for archive
+]
+
+
+def _ilike_match(pattern: str, value: str) -> bool:
+    """Mimic Postgres ILIKE in-memory: % is wildcard, case-insensitive."""
+    if not pattern or not value:
+        return False
+    # Convert SQL ILIKE pattern to Python regex.
+    # % → .*, _ → . (per SQL spec); other chars literal.
+    regex_pattern = re.escape(pattern).replace(r"\%", ".*").replace(r"\_", ".")
+    return re.search(regex_pattern, value, re.IGNORECASE) is not None
+
+
+def classify_inbound(
+    message: ParsedMessage,
+    priority_sender_rules: list[dict[str, Any]],
+    watchdog_rules: list[dict[str, Any]],
+) -> ParsedMessage:
+    """
+    Mutate ParsedMessage in-place with Stage 1 classification results.
+
+    `priority_sender_rules` is a list of rule dicts pre-loaded once per patrol:
+        {sender_pattern, priority, case_slug, rationale}
+
+    `watchdog_rules` is a list of case_watchdog rules pre-loaded once per patrol:
+        {id, case_slug, search_type ('sender'|'body'), search_term, priority}
+
+    Returns the same ParsedMessage (now with case_slug, privilege_class,
+    watchdog_matches, priority populated).
+    """
+    # ── Step 1: priority_sender_rules match ─────────────────────────────
+    # First match wins. We check sender + sender_domain against each pattern.
+    for rule in priority_sender_rules:
+        pattern = str(rule.get("sender_pattern") or "")
+        if _ilike_match(pattern, message.sender) or _ilike_match(pattern, message.sender_domain):
+            message.priority = str(rule.get("priority") or "")
+            rule_case = rule.get("case_slug")
+            if rule_case and not message.case_slug:
+                message.case_slug = str(rule_case)
+            break
+
+    # ── Step 2: subject regex for case identifiers ─────────────────────
+    # Only if Step 1 didn't already assign a case_slug (priority_sender_rules
+    # is more authoritative when it matches). Body is NOT scanned at Stage 1
+    # (deferred to Stage 2 heavyweight classifier per §5 boundary).
+    if not message.case_slug:
+        for pattern, case_slug in _SUBJECT_CASE_PATTERNS:
+            if pattern.search(message.subject or ""):
+                message.case_slug = case_slug
+                break
+
+    # ── Step 3: routing_tag inheritance for default privilege_class ────
+    # Per design v1.1 §5 + §3.5:
+    #   - 'legal' / 'litigation' tagged mailbox → 'work_product' default
+    #   - other (executive, etc.) → no default ('public' if mailbox is
+    #     non-legal; this service only sees legal-tagged mailboxes anyway)
+    # Stage 2 may upgrade to 'privileged' on attorney-client signals.
+    if message.routing_tag in LEGAL_ROUTING_TAGS:
+        message.privilege_class = "work_product"
+    else:
+        message.privilege_class = "public"
+
+    # ── Watchdog match ─────────────────────────────────────────────────
+    # Per design v1.1 §5 + §8 (event payload includes watchdog_matches[]).
+    # Same in-memory scan; case_watchdog rules pre-loaded per patrol.
+    matches: list[dict[str, Any]] = []
+    haystack_subject = (message.subject or "").lower()
+    haystack_body = (message.body or "").lower()
+    for rule in watchdog_rules:
+        if not rule.get("is_active", True):
+            continue
+        # Optionally narrow by case_slug if rule is case-specific
+        rule_case = rule.get("case_slug")
+        if rule_case and message.case_slug and rule_case != message.case_slug:
+            continue
+        search_type = str(rule.get("search_type") or "").lower()
+        term = str(rule.get("search_term") or "").lower()
+        if not term:
+            continue
+        match_hit = False
+        if search_type == "sender":
+            if term in message.sender or term in message.sender_domain:
+                match_hit = True
+        elif search_type == "body":
+            if term in haystack_subject or term in haystack_body:
+                match_hit = True
+        if match_hit:
+            matches.append({
+                "rule_id": rule.get("id"),
+                "case_slug": rule_case,
+                "priority": rule.get("priority"),
+                "search_term": rule.get("search_term"),
+                "search_type": rule.get("search_type"),
+            })
+    message.watchdog_matches = matches
+
+    return message
