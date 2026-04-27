@@ -208,3 +208,53 @@ inputs. Any change to one requires changes to all three.
 between NAS and IMAP for the same alert (would surface as duplicate
 attempt → conflict → audit log). One-off verification queries can be
 run if needed.
+
+---
+
+## Amendment 2026-04-27 — Dochia v1 architecture (daily-only)
+
+After Phase 3 IMAP harvest completed, full corpus inspection (24,204
+observations across NAS + IMAP) confirmed INO MarketClub ships only
+daily Trade Triangles via the gary@garyknight.com subscription. Weekly
+and monthly Trade Triangles do NOT exist in the source data. The IMAP
+probe across the full mailbox returned zero matches for "Weekly Trade
+Triangle" or "Monthly Trade Triangle" subjects from any sender.
+
+This invalidates the original Dochia design assumption that calibration
+would fit weights for all four components (monthly/weekly/daily/momentum
+at 40/25/15/20).
+
+**Decision:** Dochia v1 calibrates as daily-only.
+
+- New parameter set: `dochia_v1_daily_only`
+- Weights: monthly=0, weekly=0, daily=70, momentum=30
+- Calibration corpus: 24,204 daily observations from 2024-03-18 to
+  2026-04-21
+- Composite formula and view (`v_signal_scores_composite`) unchanged —
+  the multi-tier weighted-sum architecture remains. Only this parameter
+  set sets monthly/weekly to zero.
+
+**Rationale for honest naming over silent zero-fill:**
+The parameter_set_id explicitly contains "daily_only" so consumers
+selecting parameters cannot mistake v1 for a multi-tier model. This
+prevents downstream code from reading the composite as "calibrated
+across four timeframes" when it's actually calibrated across one.
+
+**Future v2 path (NOT this sprint):**
+When weekly/monthly truth becomes available — most likely via Polygon.io
+EOD bars synthesizing Donchian channels at higher timeframes — a
+`dochia_v2_multi_tier` parameter set can be calibrated and weights
+revert to the v0 estimate or whatever the data fits. The schema and
+view do not change. Only a new row in `scoring_parameters`.
+
+**Tradeoff accepted:** No multi-timeframe alignment signal in v1. A
+Green Daily Trade Triangle in a stock with Red Monthly trend produces
+the same composite as a Green Daily in a Green Monthly stock. Real
+signal lost; recovered when v2 ships.
+
+**Calibration methodology (TBD):**
+The actual fit method (logistic regression, gradient boosting,
+constrained optimization, etc.) is deferred to the calibration sprint
+ADR. This amendment locks only the *architecture* — daily-only,
+parameter set name, weight schema. Methodology gets its own ADR before
+fitting code runs.
