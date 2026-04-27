@@ -40,6 +40,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import getpass
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -58,6 +60,7 @@ from backend.services.legal_dispatcher import (  # noqa: E402
     DISPATCHER_VERSIONED,
     POLL_INTERVAL_SEC,
 )
+from backend.services.legal_mail_ingester import ProdSession  # noqa: E402
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -304,14 +307,153 @@ async def _cmd_dispatcher_status(_args: argparse.Namespace) -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-async def _cmd_dispatcher_pause(_args: argparse.Namespace) -> int:
-    print("(dispatcher pause — implemented in Sub-phase 1-4B)", file=sys.stderr)
-    return 1
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutator helpers (1-4B)
+#
+# Operator identity resolution mirrors PR #247 _resolve_operator() helper
+# exactly — same chain, same fallback, same tolerance for missing env vars.
+# Bilateral discipline mirrors PR #247 pause/resume + Phase 1-2 1-2C
+# bilateral writes. Note: dispatcher_pause is a singleton-row table with
+# INTEGER PK (CHECK singleton_id=1), NOT a BIGSERIAL sequence — so there
+# is no setval call; bilateral mirror is just a parallel INSERT/UPDATE/
+# DELETE on the singleton key.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _resolve_operator() -> str:
+    """
+    Resolve operator identity for the audit trail in dispatcher_pause.paused_by.
+
+    Resolution order (matches PR #247 _resolve_operator verbatim):
+      1. FLOS_OPERATOR     — explicit override for ops scripts
+      2. SUDO_USER         — when invoked under sudo
+      3. USER / LOGNAME    — the underlying caller
+      4. getpass.getuser() — process-owner fallback
+      5. 'unknown'         — last-resort default; column is NOT NULL
+
+    Always returns a non-empty string.
+    """
+    for var in ("FLOS_OPERATOR", "SUDO_USER", "USER", "LOGNAME"):
+        v = os.environ.get(var)
+        if v:
+            return v
+    try:
+        return getpass.getuser() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+async def _cmd_dispatcher_pause(args: argparse.Namespace) -> int:
+    """
+    Bilateral UPSERT into legal.dispatcher_pause for the singleton row.
+    The patrol loop (Phase 1-2 _is_dispatcher_paused) checks this table
+    each cycle and skips dispatching while a row exists.
+
+    Re-pause behavior (ON CONFLICT DO UPDATE): refreshes paused_at +
+    paused_by + reason. Operator can update pause context without an
+    intervening resume cycle.
+
+    Bilateral: legacy first, prod mirror second. Mirror failure logs
+    warning, does not fail the command — patrol loop reads from
+    fortress_db (legacy), so the control signal is effective even if
+    prod mirror lags. Drift surfaced in Phase 1-6 24h soak.
+    """
+    operator = _resolve_operator()
+    reason = args.reason or f"operator pause via CLI by {operator}"
+
+    upsert_sql = text("""
+        INSERT INTO legal.dispatcher_pause
+            (singleton_id, paused_by, reason, paused_at)
+        VALUES
+            (1, :operator, :reason, NOW())
+        ON CONFLICT (singleton_id) DO UPDATE
+        SET paused_by = EXCLUDED.paused_by,
+            reason    = EXCLUDED.reason,
+            paused_at = EXCLUDED.paused_at
+        RETURNING paused_at
+    """)
+    params = {"operator": operator, "reason": reason}
+
+    # Legacy (canonical) write
+    async with LegacySession() as db:
+        result = await db.execute(upsert_sql, params)
+        row = result.fetchone()
+        await db.commit()
+    paused_at = row.paused_at if row is not None else None
+
+    # Prod mirror — log-but-don't-fail
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(upsert_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy write succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    print(f"PAUSED dispatcher")
+    print(f"  by:     {operator}")
+    print(f"  reason: {reason}")
+    if paused_at is not None:
+        print(f"  at:     {_fmt_age(paused_at)}")
+    if not prod_mirrored:
+        print("  mirror: legacy=ok prod=FAILED (re-run pause to retry mirror)")
+    print()
+    print("The dispatcher loop will skip its next cycle. To resume:")
+    print("  legal_dispatcher_cli dispatcher resume")
+    return 0
 
 
 async def _cmd_dispatcher_resume(_args: argparse.Namespace) -> int:
-    print("(dispatcher resume — implemented in Sub-phase 1-4B)", file=sys.stderr)
-    return 1
+    """
+    Bilateral DELETE of legal.dispatcher_pause singleton row. Idempotent —
+    NOOP exit 0 if no row exists.
+
+    On success, surfaces previous pause metadata (by / reason / since)
+    for audit close-out.
+
+    Bilateral: legacy first, prod mirror second. Mirror failure logged
+    but does not fail the command (drift mode per ADR-001 +
+    Phase 1-2 clarification #3).
+    """
+    delete_sql = text("""
+        DELETE FROM legal.dispatcher_pause
+        WHERE singleton_id = 1
+        RETURNING paused_at, paused_by, reason
+    """)
+
+    async with LegacySession() as db:
+        result = await db.execute(delete_sql)
+        deleted = result.fetchone()
+        await db.commit()
+
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(delete_sql)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy delete succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    if deleted is None:
+        print("NOOP — dispatcher was not paused. Nothing to resume.")
+    else:
+        print("RESUMED dispatcher")
+        print(f"  was paused by:     {deleted.paused_by}")
+        print(f"  was paused reason: {deleted.reason or '(no reason given)'}")
+        print(f"  was paused since:  {_fmt_age(deleted.paused_at)}")
+        if not prod_mirrored:
+            print("  mirror: legacy=ok prod=FAILED (re-run resume to retry mirror)")
+        print()
+        print("The dispatcher loop will resume polling on its next cycle.")
+    return 0
 
 
 async def _cmd_dispatcher_replay(_args: argparse.Namespace) -> int:
