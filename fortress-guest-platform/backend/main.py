@@ -102,6 +102,7 @@ from backend.api import system_health as system_health_api
 from backend.api import system_nodes as system_nodes_api
 from backend.api import system_dashboard as system_dashboard_api
 from backend.api import internal_health as internal_health_api
+from backend.api import legal_mail_health as legal_mail_health_api
 from backend.api import ops as ops_api
 from backend.api import vrs_health as vrs_health_api
 from backend.api import vrs_treasury as vrs_treasury_api
@@ -533,6 +534,11 @@ async def health_check():
 # ---------------------------------------------------------------------------
 app.include_router(auth_api.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(internal_health_api.router, tags=["Internal Health"])
+app.include_router(
+    legal_mail_health_api.router,
+    prefix="/api/internal",
+    tags=["Internal Health — Legal Mail"],
+)
 app.include_router(properties.router, prefix="/api/properties", tags=["Properties"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["Reservations"])
 app.include_router(guests.router, prefix="/api/guests", tags=["Guests"])
