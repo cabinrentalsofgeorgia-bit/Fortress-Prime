@@ -2,10 +2,10 @@
   "alembic_revisions": [
     "d8e3c1f5b9a6",
     "m8f9a1b2c3d4",
-    "q2b3c4d5e6f7"
+    "r3c4d5e6f7g8"
   ],
-  "alembic_versions_tree": "87f2bd4aef3724ba8d2a33dc28366e8fc6f0409e",
-  "generated_at": "2026-04-27T19:37:00Z",
-  "source_db": "fortress_snapshot_0a_1",
-  "source_commit": "859e41fc24e5c1f42c6f1f0986dc9a351c205d8c"
+  "alembic_versions_tree": "de8bc5817455331cef35d24d86776589c1c23661",
+  "generated_at": "2026-04-27T20:20:40Z",
+  "source_db": "fortress_snapshot_1_1",
+  "source_commit": "921a96e609d085f5125722a42bcca89c29444763"
 }
