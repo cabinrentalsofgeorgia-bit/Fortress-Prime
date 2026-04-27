@@ -58,17 +58,24 @@ trailing 90-day window. Output written to
 
 Exclusion file pointer: `calibration/excluded_tickers.json`
 
-### Known partition coverage gap
+### Partition coverage
 
-`hedge_fund.eod_bars` is partitioned monthly from **2024-09-01** per
-ADR-0001 D6 / migration 0002. Bars before that date are filtered
-client-side by `backfill_eod_bars.py` (count surfaced as
-`bars_dropped_pre_partition` above). For corpus alerts in approximately
-the first 9 months of 2024-2025 the 63-prior-bar requirement cannot be
-met from the current partition set; those tickers/alerts are surfaced
-as exclusions in `excluded_tickers.json`. Decision needed before
-calibration step 5 begins: backfill earlier partitions, or accept the
-exclusion as a corpus-shape constraint.
+`hedge_fund.eod_bars` is partitioned monthly from **2023-09-01** after
+migration `0004_extend_eod_partitions` (this PR) extended
+coverage backward by 12 months from the original 2024-09-01 floor in
+migration 0002.
+
+**Rationale:** the corpus's earliest alert is 2024-03-18 and the
+longest Donchian lookback is 63 trading days. The original 2024-09-01
+floor would have starved approximately the first 9 months of corpus
+alerts (~8k observations) of prior history. Extending to 2023-09-01
+gives a comfortable margin — every alert in the corpus has at least
+~125 prior trading days of bar history available.
+
+`backfill_eod_bars.py` retains a defense-in-depth client-side
+`PARTITION_FLOOR` of 2023-09-01 in case the migration hasn't been
+applied; after `alembic upgrade head` runs, `bars_dropped_pre_partition`
+should be zero.
 
 ---
 

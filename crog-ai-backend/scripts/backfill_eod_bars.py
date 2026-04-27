@@ -21,14 +21,13 @@ Architecture:
   scripts/state/no_data_tickers.json.
 - Idempotent inserts: ON CONFLICT (ticker, bar_date) DO NOTHING.
 
-Partition coverage gap (known issue):
-hedge_fund.eod_bars is partitioned monthly from 2024-09-01 (per
-ADR-0001 D6). Bars before that date have no destination partition and
-would raise an integrity error if inserted. We filter them client-side
-and report a per-ticker `dropped_pre_partition` count. The downstream
-audit script (audit_corpus_coverage.py) will surface tickers whose
-calibration alerts now lack 63 prior bars — caller must decide whether
-to backfill earlier partitions before fitting begins.
+Partition coverage:
+hedge_fund.eod_bars is partitioned monthly from 2023-09-01 onward after
+migration 0004_extend_eod_partitions extended coverage backward.
+PARTITION_FLOOR is the defense-in-depth client-side floor — if 0004
+hasn't been applied yet, bars before 2023-09-01 are dropped client-side
+and surfaced as `bars_dropped_pre_partition` rather than triggering a
+Postgres integrity error. After 0004 is applied, drops should be zero.
 
 Usage:
     cd ~/Fortress-Prime/crog-ai-backend
@@ -74,12 +73,18 @@ POLYGON_API_KEY = os.environ.get("POLYGON_API_KEY", "")
 POLYGON_BASE = "https://api.polygon.io"
 SOURCE_VENDOR = "polygon"
 
-# Earliest partition in hedge_fund.eod_bars per ADR-0001 D6 / migration 0002.
-PARTITION_FLOOR = date(2024, 9, 1)
+# Earliest partition in hedge_fund.eod_bars after migration
+# 0004_extend_eod_partitions extends coverage backward to 2023-09.
+# Defense in depth: if 0004 hasn't been applied yet, bars before this
+# floor are still dropped client-side rather than triggering a partition
+# integrity error.
+PARTITION_FLOOR = date(2023, 9, 1)
 
-# Backfill range. Polygon paid tier returns up to 50,000 bars in one call,
-# so 5 years fits comfortably in a single request per ticker.
-BACKFILL_START = "2024-01-01"
+# Backfill range. The corpus's earliest alert (2024-03-18) needs 63
+# prior trading days, so we fetch from 2023-09-01 to give a comfortable
+# margin past 63 trading days. Polygon paid tier returns up to 50,000
+# bars per call, so the full window fits in one request per ticker.
+BACKFILL_START = "2023-09-01"
 BACKFILL_END = datetime.now(UTC).date().isoformat()
 
 # Bounded HTTP concurrency. Paid tier has no documented rate cap but we
