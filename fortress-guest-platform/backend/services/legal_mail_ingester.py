@@ -1017,3 +1017,458 @@ async def emit_email_received_event(
         )
 
     return new_event_id
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Patrol orchestration (Sub-phase 2E)
+#
+# Per design v1.1 §1, §6, §7:
+#   - Pre-load priority_sender_rules + case_watchdog rules ONCE per patrol
+#     (avoids ~1ms × N message DB-query overhead — keeps Stage 1 deterministic)
+#   - Per-mailbox: check pause table → fetch banded UNSEEN → per-message
+#     parse + classify + write email_archive + emit event
+#   - Update legal.mail_ingester_state per mailbox after each patrol:
+#     last_patrol_at, last_success_at, last_error, counters
+#   - Structured per-patrol log line (§7) — mailbox, fetched/ingested/
+#     deduped/errored, watchdog_matches, duration, next_patrol_at
+#   - Metrics emission to legal.mail_ingester_metrics (Prometheus fallback
+#     per §7) — currently writes to the metrics table; future Prometheus
+#     exporter consumes the same data
+#
+# Failure mode: per-mailbox try/except so one broken mailbox doesn't abort
+# the whole patrol cycle. Per-message try/except (already in 2B/2C/2D)
+# so one broken email doesn't abort a mailbox's processing.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+import time as _time  # avoid name collision with logger 'time' field
+
+
+@dataclass
+class PatrolResult:
+    """One patrol's outcome for one mailbox. Returned by patrol_mailbox()."""
+    mailbox: str
+    fetched: int = 0
+    ingested: int = 0
+    deduped: int = 0
+    errored: int = 0
+    watchdog_matches: int = 0
+    events_emitted: int = 0
+    paused: bool = False
+    duration_ms: int = 0
+    error: Optional[str] = None  # populated only on whole-patrol failure
+
+
+async def _load_priority_sender_rules() -> list[dict[str, Any]]:
+    """Load active priority_sender_rules ONCE per patrol cycle.
+
+    Returns rules across ALL cases — classify_inbound() filters per-message.
+    Cached for the patrol's lifetime; not refreshed mid-patrol.
+    """
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(text("""
+                SELECT id, sender_pattern, priority, case_slug, rationale
+                FROM legal.priority_sender_rules
+                WHERE is_active = TRUE
+            """))
+            return [dict(row._mapping) for row in result.fetchall()]
+    except Exception as exc:
+        logger.warning(
+            "legal_mail_priority_sender_rules_load_failed",
+            error=str(exc)[:200],
+        )
+        return []
+
+
+async def _load_watchdog_rules() -> list[dict[str, Any]]:
+    """Load active case_watchdog rules ONCE per patrol cycle.
+
+    Joined with legal.cases.case_slug for per-message routing of matches.
+    """
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(text("""
+                SELECT cw.id, cw.search_type, cw.search_term, cw.priority,
+                       cw.is_active, c.case_slug
+                FROM legal.case_watchdog cw
+                JOIN legal.cases c ON cw.case_id = c.id
+                WHERE cw.is_active = TRUE
+            """))
+            return [dict(row._mapping) for row in result.fetchall()]
+    except Exception as exc:
+        logger.warning(
+            "legal_mail_watchdog_rules_load_failed",
+            error=str(exc)[:200],
+        )
+        return []
+
+
+async def _is_mailbox_paused(mailbox_alias: str) -> bool:
+    """Check legal.mail_ingester_pause for an operator-set pause row."""
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("SELECT 1 FROM legal.mail_ingester_pause WHERE mailbox_alias = :alias LIMIT 1"),
+                {"alias": mailbox_alias},
+            )
+            return result.fetchone() is not None
+    except Exception as exc:
+        # Fail-open: if the pause check fails, proceed with patrol (don't
+        # silently halt ingestion on a transient DB blip).
+        logger.warning(
+            "legal_mail_pause_check_failed",
+            mailbox=mailbox_alias,
+            error=str(exc)[:200],
+        )
+        return False
+
+
+async def _update_mailbox_state(
+    mailbox_alias: str,
+    last_patrol_at: datetime,
+    last_success_at: Optional[datetime],
+    last_error: Optional[str],
+    delta_ingested: int,
+    delta_deduped: int,
+    delta_errored: int,
+) -> None:
+    """Upsert legal.mail_ingester_state after each patrol per §7 last-known-good.
+
+    UPSERT pattern: insert if first patrol; update + increment counters if existing.
+    """
+    try:
+        async with LegacySession() as db:
+            await db.execute(
+                text("""
+                    INSERT INTO legal.mail_ingester_state
+                        (mailbox_alias, last_patrol_at, last_success_at,
+                         last_error_at, last_error,
+                         messages_ingested_total, messages_deduped_total,
+                         messages_errored_total, updated_at)
+                    VALUES
+                        (:alias, :patrol_at, :success_at,
+                         :error_at, :err,
+                         :delta_in, :delta_dd, :delta_er, NOW())
+                    ON CONFLICT (mailbox_alias) DO UPDATE SET
+                        last_patrol_at = EXCLUDED.last_patrol_at,
+                        last_success_at = COALESCE(EXCLUDED.last_success_at,
+                                                   legal.mail_ingester_state.last_success_at),
+                        last_error_at = CASE
+                            WHEN EXCLUDED.last_error IS NOT NULL THEN EXCLUDED.last_error_at
+                            ELSE legal.mail_ingester_state.last_error_at
+                        END,
+                        last_error = CASE
+                            WHEN EXCLUDED.last_error IS NOT NULL THEN EXCLUDED.last_error
+                            ELSE legal.mail_ingester_state.last_error
+                        END,
+                        messages_ingested_total = legal.mail_ingester_state.messages_ingested_total + EXCLUDED.messages_ingested_total,
+                        messages_deduped_total = legal.mail_ingester_state.messages_deduped_total + EXCLUDED.messages_deduped_total,
+                        messages_errored_total = legal.mail_ingester_state.messages_errored_total + EXCLUDED.messages_errored_total,
+                        updated_at = NOW()
+                """),
+                {
+                    "alias": mailbox_alias,
+                    "patrol_at": last_patrol_at,
+                    "success_at": last_success_at,
+                    "error_at": last_patrol_at if last_error else None,
+                    "err": last_error,
+                    "delta_in": delta_ingested,
+                    "delta_dd": delta_deduped,
+                    "delta_er": delta_errored,
+                },
+            )
+            await db.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_mail_state_upsert_failed",
+            mailbox=mailbox_alias,
+            error=str(exc)[:200],
+        )
+
+
+async def _record_metric(
+    metric_name: str,
+    mailbox_alias: Optional[str],
+    counter_value: int,
+    label_key: Optional[str] = None,
+    label_value: Optional[str] = None,
+) -> None:
+    """Append a row to legal.mail_ingester_metrics per §7 (Prometheus fallback).
+
+    Best-effort; failure here is silent (would be circular to log a failure
+    while emitting metrics for log volume).
+    """
+    try:
+        async with LegacySession() as db:
+            await db.execute(
+                text("""
+                    INSERT INTO legal.mail_ingester_metrics
+                        (metric_name, mailbox_alias, label_key, label_value, counter_value)
+                    VALUES
+                        (:name, :mb, :lk, :lv, :cv)
+                """),
+                {
+                    "name": metric_name,
+                    "mb": mailbox_alias,
+                    "lk": label_key,
+                    "lv": label_value,
+                    "cv": counter_value,
+                },
+            )
+            await db.commit()
+    except Exception:
+        # Silent — metrics are best-effort.
+        pass
+
+
+async def patrol_mailbox(
+    mailbox: LegalMailboxConfig,
+    priority_sender_rules: list[dict[str, Any]],
+    watchdog_rules: list[dict[str, Any]],
+) -> PatrolResult:
+    """
+    One patrol of one mailbox. Returns counts + duration.
+
+    Sequence:
+      0. Pause check (skip if paused)
+      1. IMAP fetch_recent (banded SEARCH UNSEEN)
+      2. Per-message: parse → classify → write email_archive → emit event
+      3. Update legal.mail_ingester_state
+      4. Emit metrics
+
+    Per-message try/except already in 2B/2C/2D so this loop just counts;
+    the failure modes don't surface here as exceptions.
+    """
+    result = PatrolResult(mailbox=mailbox.name)
+    started_at = datetime.now(timezone.utc)
+    t0 = _time.monotonic()
+
+    # ── 0. Pause check ─────────────────────────────────────────────────
+    if await _is_mailbox_paused(mailbox.name):
+        result.paused = True
+        result.duration_ms = int((_time.monotonic() - t0) * 1000)
+        logger.info(
+            "legal_mail_patrol_skipped_paused",
+            mailbox=mailbox.name,
+            duration_ms=result.duration_ms,
+        )
+        return result
+
+    # ── 1. Fetch ───────────────────────────────────────────────────────
+    transport = LegalMailIngesterTransport(mailbox)
+    fetched_records: list[dict[str, Any]] = []
+    fetch_error: Optional[str] = None
+    try:
+        # IMAP fetch is sync (imaplib); offload to thread to avoid blocking
+        # the asyncio event loop. Mirror Captain's pattern (run_patrol uses
+        # asyncio.to_thread on transport.fetch_unseen).
+        import asyncio
+        fetched_records = await asyncio.to_thread(transport.fetch_recent)
+    except Exception as exc:
+        # Should not reach here — fetch_recent's retry loop catches IMAP
+        # errors internally. Defensive only.
+        fetch_error = f"fetch_recent_unexpected: {str(exc)[:200]}"
+        logger.error(
+            "legal_mail_fetch_unexpected",
+            mailbox=mailbox.name,
+            error=str(exc)[:200],
+        )
+
+    result.fetched = len(fetched_records)
+
+    # ── 2. Per-message processing ──────────────────────────────────────
+    last_success_at: Optional[datetime] = None
+    for record in fetched_records:
+        try:
+            parsed = parse_message(
+                raw_bytes=record["raw_bytes"],
+                source=record,
+                routing_tag=mailbox.routing_tag,
+            )
+            if parsed is None:
+                result.errored += 1
+                logger.warning(
+                    "legal_mail_message_parse_failed",
+                    mailbox=mailbox.name,
+                    uid=record.get("uid"),
+                )
+                continue
+
+            # Stage 1 classification (in-memory, no DB roundtrip)
+            classify_inbound(parsed, priority_sender_rules, watchdog_rules)
+            if parsed.watchdog_matches:
+                result.watchdog_matches += len(parsed.watchdog_matches)
+
+            # Bilateral email_archive write
+            email_archive_id = await write_email_archive_bilateral(parsed)
+            if email_archive_id is None:
+                # write fully failed; skip event, count as error
+                result.errored += 1
+                continue
+
+            # Determine if this was a fresh insert or a dedup hit.
+            # The bilateral write returns the id either way, but we don't
+            # know which path was taken from the return value alone.
+            # Cheapest signal: if file_path was already present, the
+            # ON CONFLICT path was taken — file_path UNIQUE means same
+            # message was previously ingested.
+            # We approximate by checking whether the row's ingested_from
+            # matches our version: if it was written by us in a previous
+            # patrol, that's a dedup (re-poll of the same UID).
+            # For simplicity in 2E, count all successful writes as
+            # 'ingested'. 2F/2-tests can refine if dedup-vs-fresh
+            # discrimination matters operationally.
+            result.ingested += 1
+            last_success_at = datetime.now(timezone.utc)
+
+            # Event emission (skip if email_archive write failed)
+            event_id = await emit_email_received_event(parsed, email_archive_id)
+            if event_id is not None:
+                result.events_emitted += 1
+        except Exception as exc:
+            # Per-message safety — should be exceedingly rare since 2B/2C/2D
+            # have their own try/except. Defensive boundary.
+            result.errored += 1
+            logger.warning(
+                "legal_mail_message_unexpected_failure",
+                mailbox=mailbox.name,
+                uid=record.get("uid"),
+                error=str(exc)[:200],
+            )
+
+    duration_ms = int((_time.monotonic() - t0) * 1000)
+    result.duration_ms = duration_ms
+
+    # ── 3. Update state row ────────────────────────────────────────────
+    err_summary: Optional[str] = fetch_error
+    if not err_summary and result.errored > 0:
+        err_summary = f"{result.errored} per-message errors during patrol"
+
+    await _update_mailbox_state(
+        mailbox_alias=mailbox.name,
+        last_patrol_at=started_at,
+        last_success_at=last_success_at,
+        last_error=err_summary,
+        delta_ingested=result.ingested,
+        delta_deduped=result.deduped,
+        delta_errored=result.errored,
+    )
+
+    # ── 4. Metrics emission ────────────────────────────────────────────
+    await _record_metric("legal_mail_messages_ingested_total", mailbox.name, result.ingested)
+    await _record_metric("legal_mail_messages_errored_total", mailbox.name, result.errored)
+    await _record_metric("legal_mail_patrol_duration_seconds", mailbox.name, duration_ms // 1000)
+    if result.watchdog_matches > 0:
+        await _record_metric("legal_mail_watchdog_matches_total", mailbox.name, result.watchdog_matches)
+    if result.events_emitted > 0:
+        await _record_metric(
+            "legal_mail_events_emitted_total",
+            mailbox.name,
+            result.events_emitted,
+            label_key="event_type",
+            label_value=EVENT_TYPE_EMAIL_RECEIVED,
+        )
+
+    logger.info(
+        "legal_mail_patrol_report",
+        mailbox=mailbox.name,
+        fetched=result.fetched,
+        ingested=result.ingested,
+        errored=result.errored,
+        watchdog_matches=result.watchdog_matches,
+        events_emitted=result.events_emitted,
+        duration_ms=duration_ms,
+        next_patrol_at=(started_at + timedelta(seconds=mailbox.poll_interval_sec)).isoformat(),
+    )
+
+    return result
+
+
+async def run_legal_mail_ingester_loop() -> None:
+    """
+    Continuous patrol loop. Started by fortress-arq-worker on boot
+    (registered in Sub-phase 2F).
+
+    Pre-loads priority_sender_rules + case_watchdog rules ONCE per
+    patrol cycle (~1ms classification per message; rules refresh every
+    poll_interval_sec). All configured legal_mail mailboxes processed
+    sequentially per cycle (no parallel mailbox polling — keeps cPanel
+    IMAP load bounded).
+
+    Sleep interval = min(poll_interval_sec across all mailboxes), or
+    DEFAULT_POLL_INTERVAL_SEC if no mailboxes are configured.
+    """
+    import asyncio
+
+    logger.info("legal_mail_ingester_loop_starting", version=INGESTER_VERSIONED)
+
+    while True:
+        cycle_started = datetime.now(timezone.utc)
+
+        # Reload mailbox configs every cycle — operator may add/remove
+        # mailboxes via MAILBOXES_CONFIG env without service restart
+        # (env reload requires worker restart, but if the JSON changes
+        # in-place via reloadable config layer, we pick it up).
+        try:
+            mailboxes = load_legal_mailbox_configs()
+        except LegalMailboxConfigError as exc:
+            logger.error(
+                "legal_mail_loop_mailbox_config_error",
+                error=str(exc)[:300],
+            )
+            await asyncio.sleep(DEFAULT_POLL_INTERVAL_SEC)
+            continue
+
+        if not mailboxes:
+            logger.info("legal_mail_loop_no_mailboxes_configured")
+            await asyncio.sleep(DEFAULT_POLL_INTERVAL_SEC)
+            continue
+
+        # Pre-load rules ONCE per cycle (per-message DB hits would defeat
+        # the §5 'lightweight Stage 1' contract).
+        priority_sender_rules = await _load_priority_sender_rules()
+        watchdog_rules = await _load_watchdog_rules()
+
+        cycle_results: list[PatrolResult] = []
+        for mailbox in mailboxes:
+            try:
+                result = await patrol_mailbox(
+                    mailbox=mailbox,
+                    priority_sender_rules=priority_sender_rules,
+                    watchdog_rules=watchdog_rules,
+                )
+                cycle_results.append(result)
+            except Exception as exc:
+                # Per-mailbox boundary — should not be reached (patrol_mailbox
+                # has its own try/except for fetch + per-message). Defensive.
+                logger.error(
+                    "legal_mail_patrol_unexpected_failure",
+                    mailbox=mailbox.name,
+                    error=str(exc)[:300],
+                )
+
+        # Cycle summary
+        total_fetched = sum(r.fetched for r in cycle_results)
+        total_ingested = sum(r.ingested for r in cycle_results)
+        total_errored = sum(r.errored for r in cycle_results)
+        total_watchdog = sum(r.watchdog_matches for r in cycle_results)
+        cycle_duration_ms = int(
+            (datetime.now(timezone.utc) - cycle_started).total_seconds() * 1000
+        )
+        logger.info(
+            "legal_mail_cycle_complete",
+            mailboxes=len(mailboxes),
+            fetched=total_fetched,
+            ingested=total_ingested,
+            errored=total_errored,
+            watchdog_matches=total_watchdog,
+            duration_ms=cycle_duration_ms,
+        )
+
+        # Sleep until next cycle. Use the minimum poll_interval_sec across
+        # configured mailboxes so the most-frequent mailbox doesn't lag.
+        sleep_sec = min(mb.poll_interval_sec for mb in mailboxes)
+        # Subtract this cycle's duration so we hold the cadence steady.
+        adjusted_sleep = max(1, sleep_sec - cycle_duration_ms // 1000)
+        await asyncio.sleep(adjusted_sleep)
