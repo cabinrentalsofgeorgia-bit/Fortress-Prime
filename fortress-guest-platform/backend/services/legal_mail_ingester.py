@@ -282,6 +282,94 @@ class LegalMailIngesterTransport:
         except Exception:
             pass
 
+    def probe(self, limit_subjects: int = 5) -> dict[str, Any]:
+        """
+        Read-only IMAP credential + connectivity probe used by the operator
+        CLI dry-run (Phase 0a-3 §6).
+
+        Connects, runs the same banded SEARCH the patrol uses, and returns
+        the UID count plus a small header-only preview of the most recent
+        UIDs in the band. Header-only fetch (BODY.PEEK[HEADER.FIELDS ...])
+        is bandwidth-cheap and preserves \\Seen — Captain coexistence holds
+        even during operator probes.
+
+        Never writes to email_archive, event_log, or any DB. Never marks
+        \\Seen. Per §11 cutover discipline, this is the operator's
+        validation gate before flipping LEGAL_MAIL_INGESTER_ENABLED=true.
+
+        Returns dict:
+          host, folder, since_date (str), search_predicate (str),
+          uids_in_band (int), recent_subjects (list of dicts with
+          uid, subject, sender, date_header)
+        """
+        since_date = (date.today() - timedelta(days=self.mailbox.search_band_days))
+        search_predicate = f"UNSEEN SINCE {_imap_date(since_date)}"
+
+        conn = self._connect()
+        try:
+            typ, data = conn.uid("SEARCH", search_predicate)
+            if typ != "OK" or not data or not data[0]:
+                uids: list[bytes] = []
+            else:
+                uids = data[0].split()
+
+            previews: list[dict[str, Any]] = []
+            # Preview most-recent UIDs first (IMAP returns ascending UIDs;
+            # tail of list is newest)
+            preview_uids = uids[-limit_subjects:] if uids else []
+            for uid_bytes in reversed(preview_uids):
+                uid = uid_bytes.decode("ascii", errors="replace")
+                try:
+                    typ, fetch_data = conn.uid(
+                        "FETCH",
+                        uid,
+                        "(BODY.PEEK[HEADER.FIELDS (SUBJECT FROM DATE)])",
+                    )
+                    if typ != "OK" or not fetch_data:
+                        continue
+                    header_bytes: Optional[bytes] = None
+                    for entry in fetch_data:
+                        if isinstance(entry, tuple) and len(entry) >= 2:
+                            candidate = entry[1]
+                            if isinstance(candidate, (bytes, bytearray)):
+                                header_bytes = bytes(candidate)
+                                break
+                    if header_bytes is None:
+                        continue
+                    msg = email_lib.message_from_bytes(header_bytes)
+                    previews.append({
+                        "uid": uid,
+                        "subject": (msg.get("Subject") or "").strip()[:120],
+                        "sender": (msg.get("From") or "").strip()[:120],
+                        "date_header": (msg.get("Date") or "").strip(),
+                    })
+                except Exception as exc:
+                    logger.warning(
+                        "legal_mail_probe_preview_failed",
+                        mailbox=self.mailbox.name,
+                        uid=uid,
+                        error=str(exc)[:200],
+                    )
+                    continue
+
+            return {
+                "host": self.mailbox.host,
+                "folder": self.mailbox.folder,
+                "since_date": since_date.isoformat(),
+                "search_predicate": search_predicate,
+                "uids_in_band": len(uids),
+                "recent_subjects": previews,
+            }
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            try:
+                conn.logout()
+            except Exception:
+                pass
+
     def fetch_recent(self) -> list[dict[str, Any]]:
         """
         Fetch UNSEEN messages within the date band, capped at max_messages_per_patrol.

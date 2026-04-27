@@ -19,9 +19,9 @@ is failing, when its last successful patrol was, and what error fired.
 Implemented sub-phases:
   3A: argparse skeleton + `status` subcommand (read-only)
   3B: pause / resume mutators (bilateral write to legal.mail_ingester_pause)
+  3C: poll --dry-run (IMAP credential validation; no DB writes)
 
 Pending sub-phases:
-  3C: poll --dry-run (IMAP credential validation)
   3D: backfill --since (forward-only recovery)
 """
 from __future__ import annotations
@@ -46,6 +46,7 @@ from backend.services.ediscovery_agent import LegacySession  # noqa: E402
 from backend.services.legal_mail_ingester import (  # noqa: E402
     INGESTER_VERSIONED,
     LegalMailboxConfigError,
+    LegalMailIngesterTransport,
     ProdSession,
     load_legal_mailbox_configs,
 )
@@ -447,9 +448,115 @@ async def _cmd_resume(args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_poll(_args: argparse.Namespace) -> int:
-    print("(poll subcommand — implemented in Sub-phase 3C)", file=sys.stderr)
-    return 1
+# ─────────────────────────────────────────────────────────────────────────────
+# `poll --dry-run` subcommand (3C)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _cmd_poll(args: argparse.Namespace) -> int:
+    """
+    Read-only IMAP credential + connectivity probe for one mailbox.
+
+    Required gate before flipping LEGAL_MAIL_INGESTER_ENABLED=true. The
+    probe connects, runs the same banded SEARCH the patrol uses, and
+    surfaces UID count + a header-only preview of the most recent
+    messages in the band — without touching email_archive, event_log,
+    or the \\Seen flag.
+
+    --dry-run is required (no live polling supported via CLI). The flag
+    is enforced rather than implicit so accidental invocation can never
+    write to email_archive.
+    """
+    if not args.dry_run:
+        print(
+            "ERROR: --dry-run is required. CLI does not support live polling — "
+            "the patrol loop in worker.py is the only path that writes.",
+            file=sys.stderr,
+        )
+        return 4
+
+    alias = _validate_mailbox_alias(args.mailbox)
+    if alias is None:
+        print(
+            f"ERROR: mailbox {args.mailbox!r} is not configured with ingester=legal_mail",
+            file=sys.stderr,
+        )
+        return 3
+
+    try:
+        configs = load_legal_mailbox_configs()
+    except LegalMailboxConfigError as exc:
+        print(f"ERROR: MAILBOXES_CONFIG malformed: {exc}", file=sys.stderr)
+        return 2
+
+    cfg = next((c for c in configs if c.name == alias), None)
+    if cfg is None:
+        print(f"ERROR: mailbox {alias!r} resolved but config missing (race?)",
+              file=sys.stderr)
+        return 3
+
+    if cfg.transport != "imap":
+        print(
+            f"ERROR: mailbox {alias!r} transport={cfg.transport!r}; "
+            "only imap probes are supported",
+            file=sys.stderr,
+        )
+        return 5
+
+    print(f"\nDry-run probe — mailbox={alias!r} ({INGESTER_VERSIONED})")
+    print(f"  host:     {cfg.host}:{cfg.port}")
+    print(f"  folder:   {cfg.folder}")
+    print(f"  band:     UNSEEN SINCE today - {cfg.search_band_days} days")
+    print(f"  max/poll: {cfg.max_messages_per_patrol}")
+    print()
+    print("Connecting…")
+
+    try:
+        transport = LegalMailIngesterTransport(cfg)
+    except (ValueError, LegalMailboxConfigError) as exc:
+        print(f"ERROR: transport setup failed: {exc}", file=sys.stderr)
+        return 6
+
+    # imaplib is sync; offload to a thread so we don't block the event loop.
+    # Probe path is short-lived (one connect / one SEARCH / N header fetches).
+    try:
+        result = await asyncio.to_thread(transport.probe, args.limit)
+    except LegalMailboxConfigError as exc:
+        # Specific signal — credentials_ref unset / empty
+        print(f"ERROR: credential resolution failed: {exc}", file=sys.stderr)
+        print("  Check the credentials_ref entry in MAILBOXES_CONFIG and the matching .env var.",
+              file=sys.stderr)
+        return 7
+    except Exception as exc:
+        # Generic IMAP error — login failure, host unreachable, TLS rejection, etc.
+        # Surface cleanly so the operator sees the actual server response.
+        print(f"ERROR: probe failed: {type(exc).__name__}: {exc}",
+              file=sys.stderr)
+        return 8
+
+    print(f"  ✓ login OK")
+    print(f"  ✓ folder selected (readonly)")
+    print(f"  ✓ SEARCH executed: {result['search_predicate']}")
+    print()
+    print(f"UIDs in band (UNSEEN since {result['since_date']}): {result['uids_in_band']}")
+
+    previews = result.get("recent_subjects") or []
+    if previews:
+        print()
+        print(f"Most recent {len(previews)} subject(s) (header-only fetch — \\Seen NOT mutated):")
+        print("-" * 100)
+        for p in previews:
+            print(f"  uid {p['uid']:>8}  {p['date_header'][:32]:<32}  {p['sender'][:30]:<30}")
+            print(f"             └─ {p['subject']}")
+        print("-" * 100)
+    else:
+        print()
+        print("(no messages currently in band — band is empty or all already \\Seen)")
+
+    print()
+    print("Probe complete. NO writes to email_archive, event_log, or any DB.")
+    print("\\Seen flag NOT mutated — Captain coexistence preserved.")
+    return 0
 
 
 async def _cmd_backfill(_args: argparse.Namespace) -> int:
@@ -503,10 +610,17 @@ def _build_parser() -> argparse.ArgumentParser:
                           help="Mailbox alias (idempotent if not currently paused)")
     p_resume.set_defaults(func=_cmd_resume)
 
-    p_poll = sub.add_parser("poll", help="(3C) Single-shot dry-run poll")
-    p_poll.add_argument("--mailbox", required=True)
+    # poll: read-only IMAP probe (--dry-run required — no live polling via CLI)
+    p_poll = sub.add_parser(
+        "poll",
+        help="Dry-run IMAP probe — connects, runs banded SEARCH, surfaces preview (no DB writes)",
+    )
+    p_poll.add_argument("--mailbox", required=True,
+                        help="Mailbox alias to probe")
     p_poll.add_argument("--dry-run", action="store_true",
-                        help="Required (no live polling supported via CLI)")
+                        help="Required — CLI never performs live polling")
+    p_poll.add_argument("--limit", type=int, default=5,
+                        help="Number of recent subjects to preview (default: 5; header-only fetch)")
     p_poll.set_defaults(func=_cmd_poll)
 
     p_backfill = sub.add_parser("backfill", help="(3D) Forward-only date-banded recovery")
