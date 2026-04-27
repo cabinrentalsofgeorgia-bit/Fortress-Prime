@@ -896,6 +896,17 @@ class Settings(BaseSettings):
         default=False, alias="LEGACY_LEGAL_INTAKE_ENABLED"
     )
 
+    # FLOS Phase 0a-2 — legal_mail_ingester (separate pipeline from Captain).
+    # Polls mailboxes tagged with `ingester=legal_mail` in MAILBOXES_CONFIG,
+    # writes bilateral to email_archive (fortress_db + fortress_prod), emits
+    # to legal.event_log. Coexists with Captain (BODY.PEEK[] preserves
+    # \\Seen so Captain's parallel polling sees the same UNSEEN set).
+    # Default OFF during Phase 0a-2 rollout — flip ON after Phase 0a-3
+    # validation (CLI + health endpoint) per design v1.1 §11.
+    legal_mail_ingester_enabled: bool = Field(
+        default=False, alias="LEGAL_MAIL_INGESTER_ENABLED"
+    )
+
     # Captain junk/bulk-mail filter. When true (default), every inbound
     # email runs through captain_junk_filter.classify_junk() BEFORE the
     # privilege filter — junked mail is dropped with a log line, zero DB
