@@ -907,6 +907,19 @@ class Settings(BaseSettings):
         default=False, alias="LEGAL_MAIL_INGESTER_ENABLED"
     )
 
+    # FLOS Phase 1-2 — legal_dispatcher (consumer side of the FLOS event
+    # architecture). Polls legal.event_log for unprocessed rows, dispatches
+    # to handlers in the in-file _HANDLERS registry, records attempt
+    # outcomes to legal.dispatcher_event_attempts, emits dead-letter events
+    # when retries are exhausted. Single writer to legal.case_posture
+    # (Principle 1; case_posture writes ship in Phase 1-3 handlers).
+    # Default OFF during Phase 1-2/1-3/1-4 rollout — flip ON after Phase
+    # 1-4 (CLI + health endpoint) validation per design v1.1 §11 +
+    # implementation spec §1 cutover gating.
+    legal_dispatcher_enabled: bool = Field(
+        default=False, alias="LEGAL_DISPATCHER_ENABLED"
+    )
+
     # Captain junk/bulk-mail filter. When true (default), every inbound
     # email runs through captain_junk_filter.classify_junk() BEFORE the
     # privilege filter — junked mail is dropped with a log line, zero DB

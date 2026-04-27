@@ -1112,34 +1112,6 @@ async def dispatch_event(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _log_task_failure(task: asyncio.Task) -> None:
-    """
-    arq done-callback for crash visibility on the dispatcher coroutine.
-    Mirrors the same callback shape used by legal_mail_ingester
-    (Phase 0a-2 §11). The task should never complete in normal operation
-    (it's a while-True loop); any completion is a signal to log loud.
-    """
-    try:
-        exc = task.exception()
-    except asyncio.CancelledError:
-        logger.info("legal_dispatcher_task_cancelled")
-        return
-    except Exception as inner_exc:
-        logger.error(
-            "legal_dispatcher_task_done_callback_failed",
-            error=str(inner_exc)[:300],
-        )
-        return
-    if exc is not None:
-        logger.error(
-            "legal_dispatcher_task_died",
-            error=str(exc)[:500],
-            error_type=type(exc).__name__,
-        )
-    else:
-        logger.error("legal_dispatcher_task_completed_unexpectedly")
-
-
 async def patrol_dispatcher() -> PatrolResult:
     """
     Single-cycle batch processing. Per implementation spec §5 + design v1.1 §5.

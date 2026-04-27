@@ -689,6 +689,39 @@ async def startup(ctx: dict[str, Any]) -> None:
     else:
         logger.info("legal_mail_ingester_disabled")
 
+    # FLOS Phase 1-2 — legal_dispatcher. Consumer side of the FLOS event
+    # architecture; polls legal.event_log, dispatches to handlers in the
+    # in-file _HANDLERS registry (Q5 LOCKED Option B, populated in Phase
+    # 1-3), records attempt outcomes to legal.dispatcher_event_attempts,
+    # emits dead-letter events when retries exhausted. Gated behind
+    # LEGAL_DISPATCHER_ENABLED (default False during rollout); flip ON
+    # after Phase 1-4 validation (CLI + health endpoint) per design
+    # v1.1 §11 + implementation spec §1.
+    if settings.legal_dispatcher_enabled:
+        from backend.services.legal_dispatcher import (
+            BATCH_SIZE as LEGAL_DISPATCHER_BATCH_SIZE,
+            DISPATCHER_VERSIONED,
+            POLL_INTERVAL_SEC as LEGAL_DISPATCHER_POLL_SEC,
+            run_legal_dispatcher_loop,
+        )
+
+        legal_dispatcher_task = asyncio.create_task(
+            run_legal_dispatcher_loop(),
+            name="legal_dispatcher_task",
+        )
+        ctx["legal_dispatcher_task"] = legal_dispatcher_task
+        legal_dispatcher_task.add_done_callback(
+            lambda t: _log_background_task_result("legal_dispatcher_task", t),
+        )
+        logger.info(
+            "legal_dispatcher_started_in_worker",
+            version=DISPATCHER_VERSIONED,
+            batch_size=LEGAL_DISPATCHER_BATCH_SIZE,
+            poll_interval_sec=LEGAL_DISPATCHER_POLL_SEC,
+        )
+    else:
+        logger.info("legal_dispatcher_disabled")
+
     reservation_confirmed_task = asyncio.create_task(
         _reservation_confirmed_consumer_loop(),
         name="reservation_confirmed_consumer_task",
