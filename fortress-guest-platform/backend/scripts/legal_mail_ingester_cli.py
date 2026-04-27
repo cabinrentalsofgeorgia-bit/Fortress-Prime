@@ -16,13 +16,11 @@ tables directly. The CLI surfaces health. When something looks off, the
 operator runs `fgp legal mail status` and immediately sees which mailbox
 is failing, when its last successful patrol was, and what error fired.
 
-This file (Sub-phase 3A) implements:
-  - argparse skeleton with subcommands
-  - `status` subcommand (read-only)
-  - shared helpers (DB connection, output formatting)
+Implemented sub-phases:
+  3A: argparse skeleton + `status` subcommand (read-only)
+  3B: pause / resume mutators (bilateral write to legal.mail_ingester_pause)
 
-Subsequent sub-phases extend the same file:
-  3B: pause / resume mutators
+Pending sub-phases:
   3C: poll --dry-run (IMAP credential validation)
   3D: backfill --since (forward-only recovery)
 """
@@ -30,6 +28,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import getpass
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -46,6 +46,7 @@ from backend.services.ediscovery_agent import LegacySession  # noqa: E402
 from backend.services.legal_mail_ingester import (  # noqa: E402
     INGESTER_VERSIONED,
     LegalMailboxConfigError,
+    ProdSession,
     load_legal_mailbox_configs,
 )
 
@@ -267,15 +268,183 @@ async def _cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
-# Stubs for 3B/3C/3D — filled in subsequent sub-phases
-async def _cmd_pause(_args: argparse.Namespace) -> int:
-    print("(pause subcommand — implemented in Sub-phase 3B)", file=sys.stderr)
-    return 1
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutator helpers (3B)
+# ─────────────────────────────────────────────────────────────────────────────
 
 
-async def _cmd_resume(_args: argparse.Namespace) -> int:
-    print("(resume subcommand — implemented in Sub-phase 3B)", file=sys.stderr)
-    return 1
+def _resolve_operator() -> str:
+    """
+    Resolve the operator identity for the audit trail in mail_ingester_pause.
+
+    Resolution order:
+      1. FLOS_OPERATOR env var (explicit override for ops scripts)
+      2. SUDO_USER (when invoked under sudo)
+      3. USER / LOGNAME / getpass.getuser() (the underlying caller)
+
+    The pause table requires paused_by NOT NULL — so we always return a
+    non-empty string. Defaults to 'unknown' rather than raising; CLI must
+    never fail because of a missing env var, the audit row is more useful
+    than a hard failure.
+    """
+    for var in ("FLOS_OPERATOR", "SUDO_USER", "USER", "LOGNAME"):
+        v = os.environ.get(var)
+        if v:
+            return v
+    try:
+        return getpass.getuser() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _validate_mailbox_alias(alias: str) -> Optional[str]:
+    """
+    Confirm `alias` is one of the configured legal mailboxes.
+
+    Returns the canonical alias on match, or None if no match.
+    Returning None lets the caller print a helpful error listing valid
+    aliases instead of silently writing pause rows for nonsense names.
+    """
+    try:
+        configs = load_legal_mailbox_configs()
+    except LegalMailboxConfigError:
+        return None
+    for cfg in configs:
+        if cfg.name == alias:
+            return cfg.name
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `pause` and `resume` subcommands (3B)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _cmd_pause(args: argparse.Namespace) -> int:
+    """
+    Insert (or refresh) a row in legal.mail_ingester_pause for the given
+    mailbox. The patrol loop checks this table every cycle via
+    _is_mailbox_paused() and skips the mailbox while a row exists.
+
+    Bilateral: legacy then prod. Prod failure is logged but doesn't fail
+    the command — pause is a control-plane signal and the patrol loop
+    reads from fortress_db (legacy) anyway. The mirror exists so the prod
+    side has the audit trail.
+    """
+    alias = _validate_mailbox_alias(args.mailbox)
+    if alias is None:
+        print(
+            f"ERROR: mailbox {args.mailbox!r} is not configured with ingester=legal_mail",
+            file=sys.stderr,
+        )
+        try:
+            valid = [c.name for c in load_legal_mailbox_configs()]
+            if valid:
+                print(f"  configured aliases: {', '.join(valid)}", file=sys.stderr)
+        except LegalMailboxConfigError:
+            pass
+        return 3
+
+    operator = _resolve_operator()
+    reason = args.reason or f"operator pause via CLI by {operator}"
+
+    upsert_sql = text("""
+        INSERT INTO legal.mail_ingester_pause
+            (mailbox_alias, paused_by, reason, paused_at)
+        VALUES
+            (:alias, :operator, :reason, NOW())
+        ON CONFLICT (mailbox_alias) DO UPDATE
+        SET paused_by = EXCLUDED.paused_by,
+            reason    = EXCLUDED.reason,
+            paused_at = EXCLUDED.paused_at
+        RETURNING paused_at
+    """)
+    params = {"alias": alias, "operator": operator, "reason": reason}
+
+    # Legacy (canonical) write
+    async with LegacySession() as db:
+        r = await db.execute(upsert_sql, params)
+        row = r.fetchone()
+        await db.commit()
+    paused_at = row.paused_at if row is not None else None
+
+    # Prod mirror — log-but-don't-fail
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(upsert_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy write succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    print(f"PAUSED mailbox={alias!r}")
+    print(f"  by:     {operator}")
+    print(f"  reason: {reason}")
+    if paused_at is not None:
+        print(f"  at:     {_fmt_age(paused_at)}")
+    if not prod_mirrored:
+        print("  mirror: legacy=ok prod=FAILED (re-run pause to retry mirror)")
+    print()
+    print(f"Patrol loop will skip {alias!r} on its next cycle.")
+    print(f"To resume: fgp legal mail resume --mailbox {alias}")
+    return 0
+
+
+async def _cmd_resume(args: argparse.Namespace) -> int:
+    """
+    Delete the pause row for the given mailbox. If no row exists, this is
+    a no-op and returns 0 (idempotent — operator may run resume defensively).
+
+    Bilateral: legacy then prod. Prod failure logged but doesn't fail.
+    """
+    alias = _validate_mailbox_alias(args.mailbox)
+    if alias is None:
+        print(
+            f"ERROR: mailbox {args.mailbox!r} is not configured with ingester=legal_mail",
+            file=sys.stderr,
+        )
+        return 3
+
+    delete_sql = text("""
+        DELETE FROM legal.mail_ingester_pause
+        WHERE mailbox_alias = :alias
+        RETURNING paused_at, paused_by, reason
+    """)
+    params = {"alias": alias}
+
+    async with LegacySession() as db:
+        r = await db.execute(delete_sql, params)
+        deleted = r.fetchone()
+        await db.commit()
+
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(delete_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy delete succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    if deleted is None:
+        print(f"NOOP — mailbox {alias!r} was not paused. Nothing to resume.")
+    else:
+        print(f"RESUMED mailbox={alias!r}")
+        print(f"  was paused by:     {deleted.paused_by}")
+        print(f"  was paused reason: {deleted.reason}")
+        print(f"  was paused since:  {_fmt_age(deleted.paused_at)}")
+        if not prod_mirrored:
+            print("  mirror: legacy=ok prod=FAILED (re-run resume to retry mirror)")
+        print()
+        print(f"Patrol loop will resume polling {alias!r} on its next cycle.")
+    return 0
 
 
 async def _cmd_poll(_args: argparse.Namespace) -> int:
@@ -314,14 +483,24 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_status.set_defaults(func=_cmd_status)
 
-    # pause / resume / poll / backfill — stubs in 3A
-    p_pause = sub.add_parser("pause", help="(3B) Pause a mailbox")
-    p_pause.add_argument("--mailbox", required=True)
-    p_pause.add_argument("--reason", default=None)
+    # pause: write legal.mail_ingester_pause row (bilateral)
+    p_pause = sub.add_parser(
+        "pause",
+        help="Pause a mailbox — patrol loop will skip it next cycle",
+    )
+    p_pause.add_argument("--mailbox", required=True,
+                         help="Mailbox alias (must be configured in MAILBOXES_CONFIG)")
+    p_pause.add_argument("--reason", default=None,
+                         help="Why this mailbox is being paused (recorded in audit trail)")
     p_pause.set_defaults(func=_cmd_pause)
 
-    p_resume = sub.add_parser("resume", help="(3B) Resume a paused mailbox")
-    p_resume.add_argument("--mailbox", required=True)
+    # resume: delete legal.mail_ingester_pause row (bilateral)
+    p_resume = sub.add_parser(
+        "resume",
+        help="Resume a paused mailbox — patrol loop polls it next cycle",
+    )
+    p_resume.add_argument("--mailbox", required=True,
+                          help="Mailbox alias (idempotent if not currently paused)")
     p_resume.set_defaults(func=_cmd_resume)
 
     p_poll = sub.add_parser("poll", help="(3C) Single-shot dry-run poll")
