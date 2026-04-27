@@ -1,8 +1,8 @@
 -- CI schema snapshot for fortress-guest-platform
--- Generated: 2026-04-27T19:37:00Z
--- Source:    fortress_snapshot_0a_1
--- Commit:    859e41fc24e5c1f42c6f1f0986dc9a351c205d8c
--- Alembic:   d8e3c1f5b9a6,m8f9a1b2c3d4,q2b3c4d5e6f7
+-- Generated: 2026-04-27T20:20:40Z
+-- Source:    fortress_snapshot_1_1
+-- Commit:    921a96e609d085f5125722a42bcca89c29444763
+-- Alembic:   d8e3c1f5b9a6,m8f9a1b2c3d4,r3c4d5e6f7g8
 -- NOTE: geometry/vector types replaced with text for CI compatibility.
 --       postgis/vector extensions omitted (postgres:16 has pgcrypto/uuid-ossp).
 
@@ -18,7 +18,7 @@ SET ROLE TO fortress_admin;
 -- PostgreSQL database dump
 --
 
-\restrict YJeY4MxXMci8nmcQ37m9ixOtGJPKeF13E2Shgxfwwmv045ww2nmoLEJ8YukyunV
+\restrict 6glhhmNFUUBlRcfYZYc3EwpCGkUjw3QDUKC0Vgk9Hmty4plx7PpxkVVyG8cZj9y
 
 -- Dumped from database version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
@@ -540,6 +540,36 @@ CREATE TABLE legal.case_graph_nodes_v2 (
 
 
 --
+-- Name: case_posture; Type: TABLE; Schema: legal; Owner: -
+--
+
+CREATE TABLE legal.case_posture (
+    case_slug text NOT NULL,
+    procedural_phase text DEFAULT 'pre-suit'::text NOT NULL,
+    next_deadline_date date,
+    next_deadline_action text,
+    theory_of_defense_state text DEFAULT 'drafting'::text NOT NULL,
+    top_defense_arguments jsonb DEFAULT '[]'::jsonb NOT NULL,
+    top_risk_factors jsonb DEFAULT '{}'::jsonb NOT NULL,
+    exposure_low numeric(12,2),
+    exposure_mid numeric(12,2),
+    exposure_high numeric(12,2),
+    leverage_score numeric(4,2),
+    opposing_counsel_profile jsonb,
+    last_council_consensus jsonb,
+    last_council_at timestamp with time zone,
+    posture_hash text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by_event bigint,
+    updated_by_event bigint,
+    CONSTRAINT chk_case_posture_leverage_score CHECK (((leverage_score IS NULL) OR ((leverage_score >= '-1.00'::numeric) AND (leverage_score <= 1.00)))),
+    CONSTRAINT chk_case_posture_procedural_phase CHECK ((procedural_phase = ANY (ARRAY['pre-suit'::text, 'answer-due'::text, 'discovery'::text, 'motion'::text, 'trial-prep'::text, 'settlement'::text, 'post-trial'::text, 'closed'::text]))),
+    CONSTRAINT chk_case_posture_theory_of_defense_state CHECK ((theory_of_defense_state = ANY (ARRAY['drafting'::text, 'validated'::text, 'locked'::text])))
+);
+
+
+--
 -- Name: case_statements; Type: TABLE; Schema: legal; Owner: -
 --
 
@@ -674,6 +704,107 @@ CREATE TABLE legal.discovery_draft_packs_v2 (
     target_entity character varying(255) NOT NULL,
     status character varying(32) NOT NULL,
     created_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: dispatcher_dead_letter; Type: TABLE; Schema: legal; Owner: -
+--
+
+CREATE TABLE legal.dispatcher_dead_letter (
+    id bigint NOT NULL,
+    original_event_id bigint NOT NULL,
+    event_type text NOT NULL,
+    case_slug text,
+    final_error text NOT NULL,
+    attempts integer NOT NULL,
+    dead_lettered_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT chk_dispatcher_dead_letter_attempts_positive CHECK ((attempts >= 1))
+);
+
+
+--
+-- Name: dispatcher_dead_letter_id_seq; Type: SEQUENCE; Schema: legal; Owner: -
+--
+
+CREATE SEQUENCE legal.dispatcher_dead_letter_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: dispatcher_dead_letter_id_seq; Type: SEQUENCE OWNED BY; Schema: legal; Owner: -
+--
+
+ALTER SEQUENCE legal.dispatcher_dead_letter_id_seq OWNED BY legal.dispatcher_dead_letter.id;
+
+
+--
+-- Name: dispatcher_event_attempts; Type: TABLE; Schema: legal; Owner: -
+--
+
+CREATE TABLE legal.dispatcher_event_attempts (
+    id bigint NOT NULL,
+    event_id bigint NOT NULL,
+    attempt_number integer NOT NULL,
+    outcome text NOT NULL,
+    error_message text,
+    duration_ms integer,
+    attempted_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT chk_dispatcher_event_attempts_attempt_positive CHECK ((attempt_number >= 1)),
+    CONSTRAINT chk_dispatcher_event_attempts_outcome CHECK ((outcome = ANY (ARRAY['success'::text, 'error'::text, 'dead_letter'::text])))
+);
+
+
+--
+-- Name: dispatcher_event_attempts_id_seq; Type: SEQUENCE; Schema: legal; Owner: -
+--
+
+CREATE SEQUENCE legal.dispatcher_event_attempts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: dispatcher_event_attempts_id_seq; Type: SEQUENCE OWNED BY; Schema: legal; Owner: -
+--
+
+ALTER SEQUENCE legal.dispatcher_event_attempts_id_seq OWNED BY legal.dispatcher_event_attempts.id;
+
+
+--
+-- Name: dispatcher_pause; Type: TABLE; Schema: legal; Owner: -
+--
+
+CREATE TABLE legal.dispatcher_pause (
+    singleton_id integer DEFAULT 1 NOT NULL,
+    paused_at timestamp with time zone DEFAULT now() NOT NULL,
+    paused_by text NOT NULL,
+    reason text,
+    CONSTRAINT chk_dispatcher_pause_singleton CHECK ((singleton_id = 1))
+);
+
+
+--
+-- Name: dispatcher_routes; Type: TABLE; Schema: legal; Owner: -
+--
+
+CREATE TABLE legal.dispatcher_routes (
+    event_type text NOT NULL,
+    handler_module text NOT NULL,
+    handler_function text NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    max_retries integer DEFAULT 5 NOT NULL,
+    description text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT chk_dispatcher_routes_max_retries_nonnegative CHECK ((max_retries >= 0))
 );
 
 
@@ -4103,6 +4234,20 @@ ALTER TABLE ONLY legal.cases ALTER COLUMN id SET DEFAULT nextval('legal.cases_id
 
 
 --
+-- Name: dispatcher_dead_letter id; Type: DEFAULT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_dead_letter ALTER COLUMN id SET DEFAULT nextval('legal.dispatcher_dead_letter_id_seq'::regclass);
+
+
+--
+-- Name: dispatcher_event_attempts id; Type: DEFAULT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_event_attempts ALTER COLUMN id SET DEFAULT nextval('legal.dispatcher_event_attempts_id_seq'::regclass);
+
+
+--
 -- Name: event_log id; Type: DEFAULT; Schema: legal; Owner: -
 --
 
@@ -4481,6 +4626,14 @@ ALTER TABLE ONLY legal.case_graph_nodes_v2
 
 
 --
+-- Name: case_posture case_posture_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.case_posture
+    ADD CONSTRAINT case_posture_pkey PRIMARY KEY (case_slug);
+
+
+--
 -- Name: case_statements case_statements_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
 --
 
@@ -4534,6 +4687,38 @@ ALTER TABLE ONLY legal.discovery_draft_items_v2
 
 ALTER TABLE ONLY legal.discovery_draft_packs_v2
     ADD CONSTRAINT discovery_draft_packs_v2_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dispatcher_dead_letter dispatcher_dead_letter_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_dead_letter
+    ADD CONSTRAINT dispatcher_dead_letter_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dispatcher_event_attempts dispatcher_event_attempts_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_event_attempts
+    ADD CONSTRAINT dispatcher_event_attempts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dispatcher_pause dispatcher_pause_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_pause
+    ADD CONSTRAINT dispatcher_pause_pkey PRIMARY KEY (singleton_id);
+
+
+--
+-- Name: dispatcher_routes dispatcher_routes_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_routes
+    ADD CONSTRAINT dispatcher_routes_pkey PRIMARY KEY (event_type);
 
 
 --
@@ -6138,6 +6323,48 @@ CREATE UNIQUE INDEX ix_iot_schema_digital_twins_device_id ON iot_schema.digital_
 --
 
 CREATE INDEX ix_iot_schema_digital_twins_property_id ON iot_schema.digital_twins USING btree (property_id);
+
+
+--
+-- Name: idx_case_posture_next_deadline; Type: INDEX; Schema: legal; Owner: -
+--
+
+CREATE INDEX idx_case_posture_next_deadline ON legal.case_posture USING btree (next_deadline_date) WHERE (next_deadline_date IS NOT NULL);
+
+
+--
+-- Name: idx_dispatcher_dead_letter_dead_lettered_at; Type: INDEX; Schema: legal; Owner: -
+--
+
+CREATE INDEX idx_dispatcher_dead_letter_dead_lettered_at ON legal.dispatcher_dead_letter USING btree (dead_lettered_at DESC);
+
+
+--
+-- Name: idx_dispatcher_dead_letter_event_type; Type: INDEX; Schema: legal; Owner: -
+--
+
+CREATE INDEX idx_dispatcher_dead_letter_event_type ON legal.dispatcher_dead_letter USING btree (event_type, dead_lettered_at DESC);
+
+
+--
+-- Name: idx_dispatcher_event_attempts_attempted_at; Type: INDEX; Schema: legal; Owner: -
+--
+
+CREATE INDEX idx_dispatcher_event_attempts_attempted_at ON legal.dispatcher_event_attempts USING btree (attempted_at DESC);
+
+
+--
+-- Name: idx_dispatcher_event_attempts_event_id; Type: INDEX; Schema: legal; Owner: -
+--
+
+CREATE INDEX idx_dispatcher_event_attempts_event_id ON legal.dispatcher_event_attempts USING btree (event_id);
+
+
+--
+-- Name: idx_dispatcher_event_attempts_outcome_recent; Type: INDEX; Schema: legal; Owner: -
+--
+
+CREATE INDEX idx_dispatcher_event_attempts_outcome_recent ON legal.dispatcher_event_attempts USING btree (attempted_at DESC) WHERE (outcome = ANY (ARRAY['error'::text, 'dead_letter'::text]));
 
 
 --
@@ -9418,11 +9645,43 @@ ALTER TABLE ONLY legal.case_graph_nodes
 
 
 --
+-- Name: case_posture case_posture_created_by_event_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.case_posture
+    ADD CONSTRAINT case_posture_created_by_event_fkey FOREIGN KEY (created_by_event) REFERENCES legal.event_log(id);
+
+
+--
+-- Name: case_posture case_posture_updated_by_event_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.case_posture
+    ADD CONSTRAINT case_posture_updated_by_event_fkey FOREIGN KEY (updated_by_event) REFERENCES legal.event_log(id);
+
+
+--
 -- Name: discovery_draft_items_v2 discovery_draft_items_v2_pack_id_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
 --
 
 ALTER TABLE ONLY legal.discovery_draft_items_v2
     ADD CONSTRAINT discovery_draft_items_v2_pack_id_fkey FOREIGN KEY (pack_id) REFERENCES legal.discovery_draft_packs_v2(id) ON DELETE CASCADE;
+
+
+--
+-- Name: dispatcher_dead_letter dispatcher_dead_letter_original_event_id_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_dead_letter
+    ADD CONSTRAINT dispatcher_dead_letter_original_event_id_fkey FOREIGN KEY (original_event_id) REFERENCES legal.event_log(id);
+
+
+--
+-- Name: dispatcher_event_attempts dispatcher_event_attempts_event_id_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
+--
+
+ALTER TABLE ONLY legal.dispatcher_event_attempts
+    ADD CONSTRAINT dispatcher_event_attempts_event_id_fkey FOREIGN KEY (event_id) REFERENCES legal.event_log(id);
 
 
 --
@@ -10341,4 +10600,4 @@ ALTER TABLE ONLY public.yield_simulations
 -- PostgreSQL database dump complete
 --
 
-\unrestrict YJeY4MxXMci8nmcQ37m9ixOtGJPKeF13E2Shgxfwwmv045ww2nmoLEJ8YukyunV
+\unrestrict 6glhhmNFUUBlRcfYZYc3EwpCGkUjw3QDUKC0Vgk9Hmty4plx7PpxkVVyG8cZj9y
