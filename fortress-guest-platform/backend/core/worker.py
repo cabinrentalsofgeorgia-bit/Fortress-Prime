@@ -641,6 +641,54 @@ async def startup(ctx: dict[str, Any]) -> None:
     else:
         logger.info("legal_email_intake_disabled")
 
+    # FLOS Phase 0a-2 — legal_mail_ingester. Coexists with Captain on
+    # legal-tagged mailboxes (ingester=legal_mail in MAILBOXES_CONFIG).
+    # BODY.PEEK[] read mode preserves \\Seen so Captain's parallel polling
+    # sees the same UNSEEN set. Bilateral write to email_archive +
+    # legal.event_log. Gated behind LEGAL_MAIL_INGESTER_ENABLED (default
+    # False during rollout); flip ON after Phase 0a-3 validation per
+    # design v1.1 §11.
+    if settings.legal_mail_ingester_enabled:
+        from backend.services.legal_mail_ingester import (
+            INGESTER_VERSIONED,
+            load_legal_mailbox_configs,
+            run_legal_mail_ingester_loop,
+        )
+
+        # Pre-load mailbox configs once at startup to fail loud if
+        # MAILBOXES_CONFIG is malformed for legal-track use. Mirrors
+        # Captain's "fail loud at boot" pattern (lines 600-606 above).
+        try:
+            legal_mailboxes = load_legal_mailbox_configs()
+            logger.info(
+                "legal_mail_ingester_preflight_ok",
+                version=INGESTER_VERSIONED,
+                mailboxes=[m.name for m in legal_mailboxes],
+                count=len(legal_mailboxes),
+            )
+        except Exception as exc:
+            logger.error(
+                "legal_mail_ingester_preflight_failed",
+                error=str(exc)[:300],
+            )
+            legal_mailboxes = []
+
+        legal_mail_ingester_task = asyncio.create_task(
+            run_legal_mail_ingester_loop(),
+            name="legal_mail_ingester_task",
+        )
+        ctx["legal_mail_ingester_task"] = legal_mail_ingester_task
+        legal_mail_ingester_task.add_done_callback(
+            lambda t: _log_background_task_result("legal_mail_ingester_task", t),
+        )
+        logger.info(
+            "legal_mail_ingester_started_in_worker",
+            version=INGESTER_VERSIONED,
+            mailbox_count=len(legal_mailboxes),
+        )
+    else:
+        logger.info("legal_mail_ingester_disabled")
+
     reservation_confirmed_task = asyncio.create_task(
         _reservation_confirmed_consumer_loop(),
         name="reservation_confirmed_consumer_task",
