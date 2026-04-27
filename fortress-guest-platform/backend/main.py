@@ -103,6 +103,7 @@ from backend.api import system_nodes as system_nodes_api
 from backend.api import system_dashboard as system_dashboard_api
 from backend.api import internal_health as internal_health_api
 from backend.api import legal_mail_health as legal_mail_health_api
+from backend.api import legal_dispatcher_health as legal_dispatcher_health_api
 from backend.api import ops as ops_api
 from backend.api import vrs_health as vrs_health_api
 from backend.api import vrs_treasury as vrs_treasury_api
@@ -538,6 +539,11 @@ app.include_router(
     legal_mail_health_api.router,
     prefix="/api/internal",
     tags=["Internal Health — Legal Mail"],
+)
+app.include_router(
+    legal_dispatcher_health_api.router,
+    prefix="/api/internal",
+    tags=["Internal Health — Legal Dispatcher"],
 )
 app.include_router(properties.router, prefix="/api/properties", tags=["Properties"])
 app.include_router(reservations.router, prefix="/api/reservations", tags=["Reservations"])

@@ -1,0 +1,1121 @@
+"""
+legal_dispatcher_cli.py — operator interface for the legal_dispatcher.
+
+Phase 1-4 implementation per:
+  docs/architecture/cross-division/FLOS-phase-1-4-cli-health-implementation.md
+
+Subcommands (mirrors PR #247 legal_mail_ingester_cli.py conventions
+verbatim — argparse, async-internal via asyncio.run, direct DB access
+via LegacySession + ProdSession, no JWT — operator script):
+
+  dispatcher status                                — surface dispatcher state
+  dispatcher pause [--reason "..."]                — bilateral pause (1-4B)
+  dispatcher resume                                — bilateral resume  (1-4B)
+  dispatcher replay --event-id N [--confirm]       — clear processed_at (1-4C)
+  dispatcher dead-letter list [--limit 50]         — read DLQ          (1-4D)
+  dispatcher dead-letter purge --before YYYY-MM-DD --confirm
+                                                   — bilateral DLQ purge (1-4D)
+  posture get --case-slug X [--json]               — read case_posture (1-4D)
+  posture history --case-slug X [--limit 20]       — walk event_log    (1-4D)
+
+This file (Sub-phase 1-4A) implements:
+  - argparse skeleton with all 8 subcommands declared (nested
+    `dispatcher`/`posture` topic groups; `dead-letter` further nested
+    under `dispatcher`)
+  - `dispatcher status` subcommand (read-only)
+  - shared helpers (DB connection, output formatting)
+
+Subsequent sub-phases extend the same file:
+  1-4B: pause / resume mutators (bilateral writes to dispatcher_pause)
+  1-4C: replay (plan-by-default + dead-letter-emitted refusal guard)
+  1-4D: posture get / posture history / dead-letter list / dead-letter purge
+  1-4E: companion file backend/api/legal_dispatcher_health.py + main.py
+        registration (no edits to this file)
+
+Validation gate before Phase 1-5 cutover: operator runs
+`legal_dispatcher_cli.py dispatcher status` to verify routes loaded +
+queue empty before flipping LEGAL_DISPATCHER_ENABLED=true.
+"""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import getpass
+import json as _json
+import os
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Optional
+
+# Ensure project root is on sys.path so we can import backend.* modules
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from sqlalchemy import text  # noqa: E402
+
+from backend.services.ediscovery_agent import LegacySession  # noqa: E402
+from backend.services.legal_dispatcher import (  # noqa: E402
+    BATCH_SIZE,
+    DISPATCHER_VERSIONED,
+    POLL_INTERVAL_SEC,
+)
+from backend.services.legal_mail_ingester import ProdSession  # noqa: E402
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Output formatting helpers (inline-pasted from PR #247 per established
+# Phase 0a-3 precedent — kept per-CLI rather than shared-imported)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _fmt_ts(ts: Optional[datetime]) -> str:
+    """Format a TIMESTAMPTZ for table display. None → '(never)'."""
+    if ts is None:
+        return "(never)"
+    return ts.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _fmt_age(ts: Optional[datetime]) -> str:
+    """Time elapsed since `ts` in human-readable form. None → '(never)'."""
+    if ts is None:
+        return "(never)"
+    delta = datetime.now(timezone.utc) - ts.astimezone(timezone.utc)
+    secs = int(delta.total_seconds())
+    if secs < 60:
+        return f"{secs}s ago"
+    if secs < 3600:
+        return f"{secs // 60}m ago"
+    if secs < 86400:
+        return f"{secs // 3600}h ago"
+    return f"{secs // 86400}d ago"
+
+
+def _truncate(s: Optional[str], maxlen: int = 60) -> str:
+    """Truncate long strings (last_error etc.) for table display."""
+    if not s:
+        return ""
+    if len(s) <= maxlen:
+        return s
+    return s[: maxlen - 3] + "..."
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `dispatcher status` subcommand (1-4A — read-only)
+#
+# Reads four data sources and emits a human-readable report:
+#   1. legal.dispatcher_routes      — event_type → handler map
+#   2. legal.dispatcher_pause       — singleton pause state
+#   3. legal.event_log              — queue depth + oldest unprocessed age
+#   4. legal.dispatcher_event_attempts — last-hour aggregates
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _query_routes() -> list[dict[str, Any]]:
+    """Read dispatcher_routes ordered by event_type."""
+    async with LegacySession() as db:
+        result = await db.execute(text("""
+            SELECT event_type, handler_module, handler_function, enabled, max_retries
+            FROM legal.dispatcher_routes
+            ORDER BY event_type
+        """))
+        return [dict(r._mapping) for r in result.fetchall()]
+
+
+async def _query_pause() -> Optional[dict[str, Any]]:
+    """Read dispatcher_pause singleton row. None if not paused."""
+    async with LegacySession() as db:
+        result = await db.execute(text("""
+            SELECT paused_at, paused_by, reason
+            FROM legal.dispatcher_pause
+            WHERE singleton_id = 1
+            LIMIT 1
+        """))
+        row = result.fetchone()
+        return dict(row._mapping) if row is not None else None
+
+
+async def _query_queue() -> dict[str, Any]:
+    """Read queue depth + oldest unprocessed age in one query."""
+    async with LegacySession() as db:
+        result = await db.execute(text("""
+            SELECT
+                COUNT(*) AS unprocessed_total,
+                EXTRACT(EPOCH FROM (NOW() - MIN(emitted_at))) AS oldest_unprocessed_age_sec
+            FROM legal.event_log
+            WHERE processed_at IS NULL
+        """))
+        row = result.fetchone()
+        if row is None:
+            return {"unprocessed_total": 0, "oldest_unprocessed_age_sec": None}
+        age_sec = row.oldest_unprocessed_age_sec
+        return {
+            "unprocessed_total": int(row.unprocessed_total or 0),
+            "oldest_unprocessed_age_sec": float(age_sec) if age_sec is not None else None,
+        }
+
+
+async def _query_last_hour_aggregates() -> dict[str, Any]:
+    """Read last-hour aggregates from dispatcher_event_attempts."""
+    async with LegacySession() as db:
+        result = await db.execute(text("""
+            SELECT
+                SUM(CASE WHEN outcome = 'success'     THEN 1 ELSE 0 END) AS processed_last_hour,
+                SUM(CASE WHEN outcome = 'error'       THEN 1 ELSE 0 END) AS failed_last_hour,
+                SUM(CASE WHEN outcome = 'dead_letter' THEN 1 ELSE 0 END) AS dead_lettered_last_hour,
+                AVG(duration_ms)                                          AS mean_handler_ms,
+                PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration_ms) AS p99_handler_ms
+            FROM legal.dispatcher_event_attempts
+            WHERE attempted_at >= NOW() - INTERVAL '1 hour'
+        """))
+        row = result.fetchone()
+        if row is None:
+            return {
+                "processed_last_hour": 0,
+                "failed_last_hour": 0,
+                "dead_lettered_last_hour": 0,
+                "mean_handler_ms": None,
+                "p99_handler_ms": None,
+            }
+        return {
+            "processed_last_hour": int(row.processed_last_hour or 0),
+            "failed_last_hour": int(row.failed_last_hour or 0),
+            "dead_lettered_last_hour": int(row.dead_lettered_last_hour or 0),
+            "mean_handler_ms": float(row.mean_handler_ms) if row.mean_handler_ms is not None else None,
+            "p99_handler_ms": float(row.p99_handler_ms) if row.p99_handler_ms is not None else None,
+        }
+
+
+def _print_status(
+    routes: list[dict[str, Any]],
+    pause: Optional[dict[str, Any]],
+    queue: dict[str, Any],
+    aggregates: dict[str, Any],
+    flag_enabled: bool,
+) -> None:
+    """Render the operator-readable status report."""
+    enabled_count = sum(1 for r in routes if r["enabled"])
+    placeholder_count = len(routes) - enabled_count
+
+    # Compute overall_status (matches health endpoint semantics — Phase 1-4E)
+    if not flag_enabled:
+        overall = "disabled"
+    elif aggregates["failed_last_hour"] > 0 or aggregates["dead_lettered_last_hour"] > 0:
+        overall = "degraded"
+    elif (
+        queue["oldest_unprocessed_age_sec"] is not None
+        and queue["oldest_unprocessed_age_sec"] > 60.0  # LAG_THRESHOLD_SEC LOCKED
+    ):
+        overall = "lagging"
+    else:
+        overall = "ok"
+
+    print(f"\nlegal_dispatcher ({DISPATCHER_VERSIONED}) — operator status")
+    print("=" * 100)
+    print(f"flag enabled:         {str(flag_enabled).lower()}")
+    print(f"overall:              {overall}")
+    print(f"poll cadence:         every {POLL_INTERVAL_SEC}s; batch size {BATCH_SIZE}")
+    print()
+
+    # ── Routes table ────────────────────────────────────────────────────
+    print(f"routes ({len(routes)} total, {enabled_count} live, {placeholder_count} placeholder)")
+    print(f"  {'event_type':<32} {'handler':<48} {'enabled':<8} {'max_retries'}")
+    for r in routes:
+        handler_disp = _truncate(r["handler_function"], 47)
+        print(
+            f"  {r['event_type']:<32} {handler_disp:<48} "
+            f"{str(r['enabled']).lower():<8} {r['max_retries']}"
+        )
+    print()
+
+    # ── Queue ───────────────────────────────────────────────────────────
+    print("queue")
+    print(f"  unprocessed_total:    {queue['unprocessed_total']}")
+    if queue["oldest_unprocessed_age_sec"] is None:
+        print(f"  oldest_unprocessed:   (none)")
+    else:
+        age_sec = queue["oldest_unprocessed_age_sec"]
+        print(f"  oldest_unprocessed:   {age_sec:.1f}s ago")
+    print()
+
+    # ── Last-hour aggregates ────────────────────────────────────────────
+    print("last hour (from dispatcher_event_attempts)")
+    print(f"  processed:            {aggregates['processed_last_hour']}")
+    print(f"  failed:               {aggregates['failed_last_hour']}")
+    print(f"  dead_lettered:        {aggregates['dead_lettered_last_hour']}")
+    if aggregates["mean_handler_ms"] is not None:
+        print(f"  mean_handler_ms:      {aggregates['mean_handler_ms']:.1f}")
+    else:
+        print(f"  mean_handler_ms:      —")
+    if aggregates["p99_handler_ms"] is not None:
+        print(f"  p99_handler_ms:       {aggregates['p99_handler_ms']:.1f}")
+    else:
+        print(f"  p99_handler_ms:       —")
+    print()
+
+    # ── Pause state ─────────────────────────────────────────────────────
+    print("pause")
+    if pause is None:
+        print("  not paused")
+    else:
+        print(f"  paused_at:            {_fmt_ts(pause['paused_at'])} ({_fmt_age(pause['paused_at'])})")
+        print(f"  paused_by:            {pause['paused_by']}")
+        print(f"  reason:               {pause.get('reason') or '(no reason given)'}")
+    print()
+
+    # ── Operator-friendly summary signals ───────────────────────────────
+    if not flag_enabled:
+        print("dispatcher disabled at boot; CLI mutators still work; flip "
+              "LEGAL_DISPATCHER_ENABLED=true to start the loop")
+    elif pause is not None:
+        print("DISPATCHER PAUSED — see paused_by / reason; resume with "
+              "`legal_dispatcher_cli dispatcher resume`")
+    elif overall == "lagging":
+        print(f"queue lag — oldest unprocessed event is "
+              f"{queue['oldest_unprocessed_age_sec']:.1f}s old; "
+              f"investigate handler latency or pause/replay if needed")
+    elif overall == "degraded":
+        print(f"failed/dead-lettered events in last hour — check "
+              f"`legal_dispatcher_cli dispatcher dead-letter list` and recent attempts")
+    else:
+        print("all routes loaded; queue healthy; dispatcher running normally")
+
+
+async def _cmd_dispatcher_status(_args: argparse.Namespace) -> int:
+    """Read state from 4 sources; render report."""
+    # Imports placed inside the function so they don't fire on argparse-only
+    # invocations (--help). Same idiom as PR #247.
+    from backend.core.config import settings
+
+    routes = await _query_routes()
+    pause = await _query_pause()
+    queue = await _query_queue()
+    aggregates = await _query_last_hour_aggregates()
+
+    _print_status(
+        routes=routes,
+        pause=pause,
+        queue=queue,
+        aggregates=aggregates,
+        flag_enabled=bool(settings.legal_dispatcher_enabled),
+    )
+    return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stub command handlers for sub-phases 1-4B / 1-4C / 1-4D
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mutator helpers (1-4B)
+#
+# Operator identity resolution mirrors PR #247 _resolve_operator() helper
+# exactly — same chain, same fallback, same tolerance for missing env vars.
+# Bilateral discipline mirrors PR #247 pause/resume + Phase 1-2 1-2C
+# bilateral writes. Note: dispatcher_pause is a singleton-row table with
+# INTEGER PK (CHECK singleton_id=1), NOT a BIGSERIAL sequence — so there
+# is no setval call; bilateral mirror is just a parallel INSERT/UPDATE/
+# DELETE on the singleton key.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _resolve_operator() -> str:
+    """
+    Resolve operator identity for the audit trail in dispatcher_pause.paused_by.
+
+    Resolution order (matches PR #247 _resolve_operator verbatim):
+      1. FLOS_OPERATOR     — explicit override for ops scripts
+      2. SUDO_USER         — when invoked under sudo
+      3. USER / LOGNAME    — the underlying caller
+      4. getpass.getuser() — process-owner fallback
+      5. 'unknown'         — last-resort default; column is NOT NULL
+
+    Always returns a non-empty string.
+    """
+    for var in ("FLOS_OPERATOR", "SUDO_USER", "USER", "LOGNAME"):
+        v = os.environ.get(var)
+        if v:
+            return v
+    try:
+        return getpass.getuser() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+async def _cmd_dispatcher_pause(args: argparse.Namespace) -> int:
+    """
+    Bilateral UPSERT into legal.dispatcher_pause for the singleton row.
+    The patrol loop (Phase 1-2 _is_dispatcher_paused) checks this table
+    each cycle and skips dispatching while a row exists.
+
+    Re-pause behavior (ON CONFLICT DO UPDATE): refreshes paused_at +
+    paused_by + reason. Operator can update pause context without an
+    intervening resume cycle.
+
+    Bilateral: legacy first, prod mirror second. Mirror failure logs
+    warning, does not fail the command — patrol loop reads from
+    fortress_db (legacy), so the control signal is effective even if
+    prod mirror lags. Drift surfaced in Phase 1-6 24h soak.
+    """
+    operator = _resolve_operator()
+    reason = args.reason or f"operator pause via CLI by {operator}"
+
+    upsert_sql = text("""
+        INSERT INTO legal.dispatcher_pause
+            (singleton_id, paused_by, reason, paused_at)
+        VALUES
+            (1, :operator, :reason, NOW())
+        ON CONFLICT (singleton_id) DO UPDATE
+        SET paused_by = EXCLUDED.paused_by,
+            reason    = EXCLUDED.reason,
+            paused_at = EXCLUDED.paused_at
+        RETURNING paused_at
+    """)
+    params = {"operator": operator, "reason": reason}
+
+    # Legacy (canonical) write
+    async with LegacySession() as db:
+        result = await db.execute(upsert_sql, params)
+        row = result.fetchone()
+        await db.commit()
+    paused_at = row.paused_at if row is not None else None
+
+    # Prod mirror — log-but-don't-fail
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(upsert_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy write succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    print(f"PAUSED dispatcher")
+    print(f"  by:     {operator}")
+    print(f"  reason: {reason}")
+    if paused_at is not None:
+        print(f"  at:     {_fmt_age(paused_at)}")
+    if not prod_mirrored:
+        print("  mirror: legacy=ok prod=FAILED (re-run pause to retry mirror)")
+    print()
+    print("The dispatcher loop will skip its next cycle. To resume:")
+    print("  legal_dispatcher_cli dispatcher resume")
+    return 0
+
+
+async def _cmd_dispatcher_resume(_args: argparse.Namespace) -> int:
+    """
+    Bilateral DELETE of legal.dispatcher_pause singleton row. Idempotent —
+    NOOP exit 0 if no row exists.
+
+    On success, surfaces previous pause metadata (by / reason / since)
+    for audit close-out.
+
+    Bilateral: legacy first, prod mirror second. Mirror failure logged
+    but does not fail the command (drift mode per ADR-001 +
+    Phase 1-2 clarification #3).
+    """
+    delete_sql = text("""
+        DELETE FROM legal.dispatcher_pause
+        WHERE singleton_id = 1
+        RETURNING paused_at, paused_by, reason
+    """)
+
+    async with LegacySession() as db:
+        result = await db.execute(delete_sql)
+        deleted = result.fetchone()
+        await db.commit()
+
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(delete_sql)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy delete succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    if deleted is None:
+        print("NOOP — dispatcher was not paused. Nothing to resume.")
+    else:
+        print("RESUMED dispatcher")
+        print(f"  was paused by:     {deleted.paused_by}")
+        print(f"  was paused reason: {deleted.reason or '(no reason given)'}")
+        print(f"  was paused since:  {_fmt_age(deleted.paused_at)}")
+        if not prod_mirrored:
+            print("  mirror: legacy=ok prod=FAILED (re-run resume to retry mirror)")
+        print()
+        print("The dispatcher loop will resume polling on its next cycle.")
+    return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `replay` subcommand (1-4C)
+#
+# Plan-by-default (terraform-style). Per spec §6 LOCKED.
+#
+# Use case: a handler bug caused some events to record outcome='error' or
+# dead-letter; operator fixes the bug, ships a new handler, and replays
+# the affected events. Replay clears event_log.processed_at + processed_by
+# + result AND deletes the corresponding dispatcher_event_attempts rows.
+# The event re-enters the polling queue on the next dispatcher cycle.
+#
+# Three guards, each with a distinct exit code:
+#   exit 3  — event_id not found in legal.event_log
+#   exit 13 — refuse: event was emitted by 'legal_dispatcher:dead_letter'
+#             (these are observability re-emits; the right replay target
+#              is the original event whose handler failed)
+#   exit 14 — refuse: event_id is itself part of an in-flight dead-letter
+#             observation (defensive — extremely rare race condition)
+#
+# Plan mode (default — no --confirm) writes nothing; just shows what
+# would happen. --confirm executes the bilateral clear.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _cmd_dispatcher_replay(args: argparse.Namespace) -> int:
+    """
+    Replay one event by clearing its processing state. Plan-by-default
+    (no --confirm); --confirm to execute.
+
+    See module comment block above for guard rationale + exit codes.
+    """
+    event_id = int(args.event_id)
+
+    # ── 1. Fetch the event ──────────────────────────────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT id, event_type, case_slug, emitted_at, emitted_by,
+                       processed_at, processed_by, event_payload
+                FROM legal.event_log
+                WHERE id = :event_id
+            """),
+            {"event_id": event_id},
+        )
+        event_row = result.fetchone()
+
+    if event_row is None:
+        print(
+            f"ERROR: event_id={event_id} not found in legal.event_log",
+            file=sys.stderr,
+        )
+        return 3
+
+    # ── 2. Dead-letter-emitted refusal guard ───────────────────────────
+    # Refuse to replay events that were themselves emitted by the
+    # dead-letter pathway (Phase 1-2 1-2D step 4 re-emit). Replaying a
+    # dead-letter observability event doesn't undo the original failure;
+    # the right target is the original event whose handler failed, whose
+    # id is preserved in this event's payload.
+    if event_row.emitted_by == "legal_dispatcher:dead_letter":
+        original_id = (event_row.event_payload or {}).get("original_event_id")
+        print(
+            f"ERROR: event {event_id} was emitted by legal_dispatcher:dead_letter "
+            f"(observability re-emit).",
+            file=sys.stderr,
+        )
+        print(
+            "Replaying it doesn't undo the dead-letter; replay the original event "
+            "whose handler failed.",
+            file=sys.stderr,
+        )
+        if original_id is not None:
+            print(
+                f"Original event_id is in the payload: {original_id}. Try:",
+                file=sys.stderr,
+            )
+            print(
+                f"  legal_dispatcher_cli dispatcher replay --event-id {original_id} "
+                f"--confirm",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "  (could not locate original_event_id in payload — inspect manually)",
+                file=sys.stderr,
+            )
+        return 13
+
+    # ── 3. Fetch attempt count for plan/audit display ──────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT COUNT(*)                AS attempt_count,
+                       MAX(attempted_at)       AS last_attempt_at,
+                       (SELECT outcome FROM legal.dispatcher_event_attempts
+                        WHERE event_id = :event_id
+                        ORDER BY attempted_at DESC LIMIT 1) AS last_outcome
+                FROM legal.dispatcher_event_attempts
+                WHERE event_id = :event_id
+            """),
+            {"event_id": event_id},
+        )
+        attempts_row = result.fetchone()
+    assert attempts_row is not None  # COUNT(*) always returns a row
+    attempt_count = int(attempts_row.attempt_count or 0)
+    last_attempt_at = attempts_row.last_attempt_at
+    last_outcome = attempts_row.last_outcome
+
+    # ── 4. Render plan ──────────────────────────────────────────────────
+    age_str = _fmt_age(event_row.emitted_at)
+    processed_str = _fmt_age(event_row.processed_at) if event_row.processed_at else "(never)"
+
+    print(f"\nREPLAY PLAN — event_id={event_id}")
+    print(f"  event_type:        {event_row.event_type}")
+    print(f"  case_slug:         {event_row.case_slug or '(none)'}")
+    print(f"  emitted_at:        {_fmt_ts(event_row.emitted_at)} ({age_str})")
+    print(f"  emitted_by:        {event_row.emitted_by}")
+    print(f"  processed_at:      {_fmt_ts(event_row.processed_at)} ({processed_str})")
+    print(f"  processed_by:      {event_row.processed_by or '(none)'}")
+    print(f"  attempt_count:     {attempt_count}")
+    if last_attempt_at is not None:
+        print(f"  last_attempt_at:   {_fmt_ts(last_attempt_at)} ({_fmt_age(last_attempt_at)})")
+    print(f"  last_outcome:      {last_outcome or '(no attempts)'}")
+    print()
+    print("This will:")
+    print("  - UPDATE legal.event_log SET processed_at=NULL, processed_by=NULL, "
+          "result=NULL (bilateral)")
+    print(f"  - DELETE {attempt_count} legal.dispatcher_event_attempts row(s) "
+          f"for event_id={event_id} (bilateral)")
+    print("  - Event re-enters polling queue on next dispatcher cycle")
+    print()
+
+    # ── 5. Plan mode (default — no --confirm) ──────────────────────────
+    if not args.confirm:
+        print("Plan mode (no --confirm). Pass --confirm to execute.")
+        return 0
+
+    # ── 6. Execute mode (--confirm) — bilateral writes ─────────────────
+    update_sql = text("""
+        UPDATE legal.event_log
+        SET processed_at = NULL, processed_by = NULL, result = NULL
+        WHERE id = :event_id
+    """)
+    delete_sql = text(
+        "DELETE FROM legal.dispatcher_event_attempts WHERE event_id = :event_id"
+    )
+    params = {"event_id": event_id}
+
+    # Legacy (canonical) — both writes in one transaction
+    try:
+        async with LegacySession() as db:
+            await db.execute(update_sql, params)
+            await db.execute(delete_sql, params)
+            await db.commit()
+    except Exception as exc:
+        print(f"ERROR: legacy replay write failed: {exc}", file=sys.stderr)
+        return 8
+
+    # Prod mirror — same two writes; failure logs warning, doesn't fail
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(update_sql, params)
+            await prod.execute(delete_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy commit succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    print(f"REPLAYED event_id={event_id}")
+    print(f"  cleared processed_at / processed_by / result")
+    print(f"  deleted {attempt_count} dispatcher_event_attempts row(s)")
+    if not prod_mirrored:
+        print("  mirror: legacy=ok prod=FAILED (re-run replay --confirm to retry mirror)")
+    print()
+    print(
+        f"Event will be picked up on the next dispatcher cycle (~{POLL_INTERVAL_SEC}s)"
+    )
+    return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Read commands (1-4D — posture get / posture history / dead-letter list)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _cmd_posture_get(args: argparse.Namespace) -> int:
+    """
+    Read legal.case_posture for one case_slug. Three output paths
+    per spec §7.1:
+      A) Row exists → human-readable summary OR JSON (if --json)
+      B) Row not yet materialized but case exists in legal.cases →
+         informative message about lazy materialization
+      C) case_slug not in legal.cases → ERROR
+
+    Read-only. No DB writes.
+    """
+    case_slug = args.case_slug
+
+    # ── 1. Try load case_posture ────────────────────────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT case_slug, procedural_phase, next_deadline_date,
+                       next_deadline_action, theory_of_defense_state,
+                       top_defense_arguments, top_risk_factors,
+                       exposure_low, exposure_mid, exposure_high,
+                       leverage_score, opposing_counsel_profile,
+                       last_council_consensus, last_council_at,
+                       posture_hash, created_at, updated_at,
+                       created_by_event, updated_by_event
+                FROM legal.case_posture
+                WHERE case_slug = :slug
+            """),
+            {"slug": case_slug},
+        )
+        posture_row = result.fetchone()
+
+    if posture_row is not None:
+        posture = dict(posture_row._mapping)
+        if args.json:
+            # JSON output for tooling — datetime/Decimal serialization
+            # via default=str (same idiom as Phase 1-3A posture_hash).
+            print(_json.dumps(posture, indent=2, default=str, sort_keys=True))
+        else:
+            _print_posture_human(posture)
+        return 0
+
+    # ── 2. case_posture row missing — verify case exists ───────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("SELECT 1 FROM legal.cases WHERE case_slug = :slug LIMIT 1"),
+            {"slug": case_slug},
+        )
+        case_exists = result.scalar() is not None
+
+    if case_exists:
+        # Path B — case in legal.cases but no posture row yet
+        print(
+            f"case_posture row not yet materialized for {case_slug}",
+        )
+        print(
+            f"(case exists in legal.cases but no event has triggered "
+            f"_load_or_create_case_posture yet)",
+        )
+        print(
+            f"First inbound email.received with this case_slug will create the row.",
+        )
+        return 0
+
+    # Path C — case_slug not in legal.cases at all
+    print(
+        f"ERROR: case_slug '{case_slug}' not found in legal.cases.",
+        file=sys.stderr,
+    )
+    return 3
+
+
+def _print_posture_human(posture: dict[str, Any]) -> None:
+    """Render a human-readable case_posture summary."""
+    case_slug = posture["case_slug"]
+    print(f"\ncase_posture for {case_slug}\n")
+
+    print(f"procedural_phase:        {posture['procedural_phase']}")
+    print(f"theory_of_defense_state: {posture['theory_of_defense_state']}")
+
+    # top_defense_arguments — list[dict] per design v1.1 §3 (Phase 2+ population)
+    tda = posture.get("top_defense_arguments") or []
+    if isinstance(tda, list) and tda:
+        print(f"top_defense_arguments:   {len(tda)} arguments")
+        for i, arg in enumerate(tda[:5], start=1):
+            label = arg.get("label", str(arg)) if isinstance(arg, dict) else str(arg)
+            print(f"  {i}. {_truncate(label, 80)}")
+        if len(tda) > 5:
+            print(f"  ... and {len(tda) - 5} more")
+    else:
+        print(f"top_defense_arguments:   [] (Phase 2+ population)")
+
+    # top_risk_factors — dict keyed by rule_id (Phase 1-3B aggregation)
+    factors = posture.get("top_risk_factors") or {}
+    if isinstance(factors, dict) and factors:
+        print(f"top_risk_factors:        {len(factors)} active rules")
+        # Sort by severity (P1 first) then by match_count desc
+        def _factor_sort_key(item: tuple[str, dict[str, Any]]) -> tuple[int, int]:
+            _, f = item
+            severity_rank = 0 if str(f.get("severity") or "").upper() == "P1" else 1
+            return (severity_rank, -int(f.get("match_count") or 0))
+        for rule_id, f in sorted(factors.items(), key=_factor_sort_key):
+            severity = f.get("severity") or "?"
+            count = f.get("match_count") or 0
+            last_match_str = f.get("last_match_at") or "?"
+            # last_match_at is ISO string (Phase 1-3B writes via .isoformat())
+            try:
+                last_match_dt = datetime.fromisoformat(last_match_str.replace("Z", "+00:00"))
+                last_str = _fmt_age(last_match_dt)
+            except (ValueError, AttributeError):
+                last_str = last_match_str
+            print(f"  - {rule_id:<28} {severity:<3} {count} matches, last {last_str}")
+    else:
+        print(f"top_risk_factors:        {{}} (no rules matched yet)")
+
+    # Phase 2+ population fields — show '—' placeholder
+    exposure_low = posture.get("exposure_low")
+    exposure_mid = posture.get("exposure_mid")
+    exposure_high = posture.get("exposure_high")
+    if exposure_low is None and exposure_mid is None and exposure_high is None:
+        print(f"exposure (low/mid/high): — / — / — (Phase 2+ population)")
+    else:
+        print(f"exposure (low/mid/high): {exposure_low} / {exposure_mid} / {exposure_high}")
+
+    leverage = posture.get("leverage_score")
+    print(f"leverage_score:          {leverage if leverage is not None else '— (Phase 2+ population)'}")
+
+    last_council = posture.get("last_council_consensus")
+    if last_council:
+        print(f"last_council_consensus:  {_truncate(_json.dumps(last_council, default=str), 60)}")
+        print(f"last_council_at:         {_fmt_ts(posture.get('last_council_at'))}")
+    else:
+        print(f"last_council_consensus:  — (Phase 2+ population)")
+
+    # System fields
+    posture_hash = posture.get("posture_hash") or ""
+    print(f"posture_hash:            {posture_hash[:16]}{'...' if len(posture_hash) > 16 else ''}")
+    print(f"created_at:              {_fmt_ts(posture.get('created_at'))}")
+    print(f"updated_at:              {_fmt_ts(posture.get('updated_at'))} ({_fmt_age(posture.get('updated_at'))})")
+    print(f"created_by_event:        {posture.get('created_by_event')}")
+    print(f"updated_by_event:        {posture.get('updated_by_event')}")
+
+
+async def _cmd_posture_history(args: argparse.Namespace) -> int:
+    """
+    Walk legal.event_log for case_slug in time order. Read-only.
+    Uses idx_event_log_case_slug partial index (Phase 0a-1).
+    """
+    case_slug = args.case_slug
+    limit = int(args.limit)
+
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT id, event_type, emitted_at, emitted_by,
+                       processed_at, processed_by,
+                       result->>'status' AS result_status
+                FROM legal.event_log
+                WHERE case_slug = :case_slug
+                ORDER BY emitted_at DESC
+                LIMIT :limit
+            """),
+            {"case_slug": case_slug, "limit": limit},
+        )
+        rows = result.fetchall()
+
+    if not rows:
+        print(f"No events found in legal.event_log for case_slug={case_slug!r}")
+        return 0
+
+    print(f"\nposture history for {case_slug} (last {len(rows)} of {limit} requested)\n")
+    print(
+        f"  {'emitted_at':<22} {'event_type':<30} {'emitted_by':<28} "
+        f"{'proc':<5} {'result_status'}"
+    )
+    print("  " + "-" * 100)
+    for r in rows:
+        proc = "✓" if r.processed_at is not None else "—"
+        emitted_str = _fmt_ts(r.emitted_at)
+        result_status = r.result_status or "(unprocessed)"
+        print(
+            f"  {emitted_str:<22} {_truncate(r.event_type, 30):<30} "
+            f"{_truncate(r.emitted_by, 28):<28} {proc:<5} {result_status}"
+        )
+    print()
+    return 0
+
+
+async def _cmd_dispatcher_dead_letter_list(args: argparse.Namespace) -> int:
+    """
+    Read legal.dispatcher_dead_letter ordered by dead_lettered_at DESC.
+    Read-only.
+    """
+    limit = int(args.limit)
+
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT id, original_event_id, event_type, case_slug,
+                       final_error, attempts, dead_lettered_at
+                FROM legal.dispatcher_dead_letter
+                ORDER BY dead_lettered_at DESC
+                LIMIT :limit
+            """),
+            {"limit": limit},
+        )
+        rows = result.fetchall()
+
+    if not rows:
+        print("dispatcher_dead_letter is empty.")
+        return 0
+
+    print(f"\ndispatcher_dead_letter — {len(rows)} most recent (limit {limit})\n")
+    print(
+        f"  {'id':<6} {'orig_event':<10} {'event_type':<30} {'case_slug':<28} "
+        f"{'attempts':<8} {'age':<10} error"
+    )
+    print("  " + "-" * 110)
+    for r in rows:
+        age = _fmt_age(r.dead_lettered_at)
+        case_disp = r.case_slug or "(none)"
+        print(
+            f"  {r.id:<6} {r.original_event_id:<10} "
+            f"{_truncate(r.event_type, 30):<30} {_truncate(case_disp, 28):<28} "
+            f"{r.attempts:<8} {age:<10} {_truncate(r.final_error, 50)}"
+        )
+    print()
+    print(
+        f"To purge older entries: "
+        f"legal_dispatcher_cli dispatcher dead-letter purge --before YYYY-MM-DD --confirm"
+    )
+    return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `dispatcher dead-letter purge` (1-4D — operator-triggered retention)
+#
+# Per Q3 LOCKED + spec §9.2/§9.3. Plan-by-default + three validation
+# guards (parse / future / 24-hour-floor) + bilateral DELETE.
+#
+# Three exit codes (consistent with Phase 0a-3 backfill --since):
+#   exit 9  — --before failed to parse as YYYY-MM-DD
+#   exit 11 — --before in the future
+#   exit 12 — --before within last 24 hours (defensive fresh-data floor)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _parse_iso_date(arg: str) -> Optional[datetime]:
+    """Parse YYYY-MM-DD → datetime at UTC midnight. Returns None on parse fail."""
+    try:
+        return datetime.fromisoformat(arg).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+async def _cmd_dispatcher_dead_letter_purge(args: argparse.Namespace) -> int:
+    """
+    Bilateral DELETE of legal.dispatcher_dead_letter rows older than --before.
+    Plan-by-default; --confirm to execute.
+    """
+    # ── 1. Parse --before ───────────────────────────────────────────────
+    before_dt = _parse_iso_date(args.before)
+    if before_dt is None:
+        print(
+            f"ERROR: --before {args.before!r} is not a valid ISO date (YYYY-MM-DD)",
+            file=sys.stderr,
+        )
+        return 9
+
+    now_utc = datetime.now(timezone.utc)
+
+    # ── 2. Future-date rejection ────────────────────────────────────────
+    if before_dt > now_utc:
+        print(
+            f"ERROR: --before {args.before} is in the future "
+            f"(today is {now_utc.date().isoformat()})",
+            file=sys.stderr,
+        )
+        return 11
+
+    # ── 3. 24-hour-floor rejection ─────────────────────────────────────
+    # Defensive: prevent accidental purge of fresh dead-letters operator
+    # may still need for triage. Per spec §9.3 LOCKED.
+    twenty_four_hours_ago = now_utc - timedelta(hours=24)
+    if before_dt > twenty_four_hours_ago:
+        print(
+            f"ERROR: --before {args.before} is within the last 24 hours.",
+            file=sys.stderr,
+        )
+        print(
+            f"Defensive guard: dead-letters younger than 24 hours may still be needed for triage.",
+            file=sys.stderr,
+        )
+        print(
+            f"To purge anyway, wait until {(twenty_four_hours_ago).date().isoformat()} "
+            f"or extend the floor in code.",
+            file=sys.stderr,
+        )
+        return 12
+
+    # ── 4. Plan mode: count what would be deleted ───────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*) FROM legal.dispatcher_dead_letter "
+                "WHERE dead_lettered_at < :before"
+            ),
+            {"before": before_dt},
+        )
+        plan_count = int(result.scalar() or 0)
+
+    print(f"\nDLQ PURGE PLAN — before {args.before}")
+    print(f"  rows older than {args.before}: {plan_count}")
+    print()
+
+    if plan_count == 0:
+        print("Nothing to purge.")
+        return 0
+
+    if not args.confirm:
+        print(f"Plan mode (no --confirm). Pass --confirm to execute.")
+        print(
+            f"This would DELETE {plan_count} legal.dispatcher_dead_letter row(s) "
+            f"(bilateral)."
+        )
+        return 0
+
+    # ── 5. Execute mode (--confirm) — bilateral DELETE ─────────────────
+    delete_sql = text(
+        "DELETE FROM legal.dispatcher_dead_letter WHERE dead_lettered_at < :before"
+    )
+    params = {"before": before_dt}
+
+    # Legacy (canonical)
+    try:
+        async with LegacySession() as db:
+            await db.execute(delete_sql, params)
+            await db.commit()
+    except Exception as exc:
+        print(f"ERROR: legacy DLQ purge failed: {exc}", file=sys.stderr)
+        return 8
+
+    # Prod mirror
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(delete_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy purge succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    print(f"PURGED {plan_count} dispatcher_dead_letter row(s) older than {args.before}")
+    if not prod_mirrored:
+        print("  mirror: legacy=ok prod=FAILED (re-run purge --confirm to retry mirror)")
+    return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# argparse setup — three-level nesting:
+#   top → topic (dispatcher | posture) → subcommand (and dead-letter further
+#   sub-subparses to list | purge)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="legal_dispatcher_cli",
+        description=(
+            "Operator interface for the legal_dispatcher. "
+            "Read backend/services/legal_dispatcher.py for service details."
+        ),
+    )
+    topic_subs = p.add_subparsers(dest="topic", required=True)
+
+    # ── topic: dispatcher ───────────────────────────────────────────────
+    p_dispatcher = topic_subs.add_parser(
+        "dispatcher",
+        help="dispatcher control: status, pause, resume, replay, dead-letter ops",
+    )
+    cmd_subs = p_dispatcher.add_subparsers(dest="command", required=True)
+
+    p_status = cmd_subs.add_parser(
+        "status", help="Show dispatcher state (routes, queue, last-hour metrics)"
+    )
+    p_status.set_defaults(func=_cmd_dispatcher_status)
+
+    p_pause = cmd_subs.add_parser(
+        "pause", help="(1-4B) Pause the dispatcher — bilateral write to dispatcher_pause"
+    )
+    p_pause.add_argument(
+        "--reason", default=None,
+        help="Why the dispatcher is being paused (recorded in audit trail)",
+    )
+    p_pause.set_defaults(func=_cmd_dispatcher_pause)
+
+    p_resume = cmd_subs.add_parser(
+        "resume", help="(1-4B) Resume the dispatcher — bilateral delete from dispatcher_pause"
+    )
+    p_resume.set_defaults(func=_cmd_dispatcher_resume)
+
+    p_replay = cmd_subs.add_parser(
+        "replay", help="(1-4C) Replay one event — plan-by-default; --confirm to execute"
+    )
+    p_replay.add_argument("--event-id", type=int, required=True,
+                          help="legal.event_log.id of the event to replay")
+    p_replay.add_argument("--confirm", action="store_true",
+                          help="Required to execute; without it, plan only")
+    p_replay.set_defaults(func=_cmd_dispatcher_replay)
+
+    # dispatcher dead-letter (sub-subparser)
+    p_dlq = cmd_subs.add_parser(
+        "dead-letter",
+        help="(1-4D) Dead-letter queue ops: list, purge",
+    )
+    dlq_subs = p_dlq.add_subparsers(dest="dlq_command", required=True)
+
+    p_dlq_list = dlq_subs.add_parser(
+        "list", help="(1-4D) List dispatcher_dead_letter rows ordered by dead_lettered_at DESC"
+    )
+    p_dlq_list.add_argument("--limit", type=int, default=50,
+                            help="Maximum rows to display (default: 50)")
+    p_dlq_list.set_defaults(func=_cmd_dispatcher_dead_letter_list)
+
+    p_dlq_purge = dlq_subs.add_parser(
+        "purge",
+        help="(1-4D) Operator-triggered DLQ purge — plan-by-default; --confirm to execute",
+    )
+    p_dlq_purge.add_argument("--before", required=True,
+                             help="ISO date YYYY-MM-DD; rows older than this date deleted")
+    p_dlq_purge.add_argument("--confirm", action="store_true",
+                             help="Required to execute; without it, plan only")
+    p_dlq_purge.set_defaults(func=_cmd_dispatcher_dead_letter_purge)
+
+    # ── topic: posture ──────────────────────────────────────────────────
+    p_posture = topic_subs.add_parser(
+        "posture",
+        help="case_posture inspection: get, history",
+    )
+    posture_subs = p_posture.add_subparsers(dest="command", required=True)
+
+    p_posture_get = posture_subs.add_parser(
+        "get", help="(1-4D) Read case_posture row for one case"
+    )
+    p_posture_get.add_argument("--case-slug", required=True,
+                               help="legal.case_posture.case_slug to surface")
+    p_posture_get.add_argument("--json", action="store_true",
+                               help="Emit full row as JSON for tooling")
+    p_posture_get.set_defaults(func=_cmd_posture_get)
+
+    p_posture_history = posture_subs.add_parser(
+        "history", help="(1-4D) Walk legal.event_log for one case in time order"
+    )
+    p_posture_history.add_argument("--case-slug", required=True,
+                                   help="legal.event_log.case_slug to filter on")
+    p_posture_history.add_argument("--limit", type=int, default=20,
+                                   help="Maximum events to display (default: 20)")
+    p_posture_history.set_defaults(func=_cmd_posture_history)
+
+    return p
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    return asyncio.run(args.func(args))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
