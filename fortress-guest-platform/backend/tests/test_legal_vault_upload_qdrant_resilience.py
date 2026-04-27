@@ -58,6 +58,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import re
 import sys
 from argparse import Namespace
 from pathlib import Path
@@ -81,20 +83,39 @@ from backend.services.legal_ediscovery import (
     _QDRANT_WORK_PRODUCT_NS,
     _batch_upsert_with_verification,
 )
-from backend.tests.db_helpers import get_test_dsn
-
-
 # ─── fixtures ──────────────────────────────────────────────────────────────
 
 
 CASE_SLUG = "test-case-228-resilience"
 
-DSN = get_test_dsn()
+
+def _admin_test_dsn() -> dict:
+    """fortress_admin connection targeting fortress_shadow_test (DDL +
+    write access into the legal schema).
+
+    Mirrors test_legal_7il_restructure.py:_admin_test_dsn — POSTGRES_ADMIN_URI
+    is the fortress_admin role; we rewrite the dbname to fortress_shadow_test
+    so test fixtures can INSERT/DELETE into legal.* without privilege errors.
+    The TEST_DATABASE_URL DSN (fortress_api role) is read-only on legal and
+    cannot be used for fixture seed/teardown.
+    """
+    uri = os.environ.get("POSTGRES_ADMIN_URI", "")
+    m = re.match(
+        r"postgresql(?:\+\w+)?://([^:]+):([^@]+)@([^:/]+):?(\d+)?/[^?]+",
+        uri,
+    )
+    if not m:
+        pytest.skip("POSTGRES_ADMIN_URI not set; can't run DDL-required tests")
+    user, pw, host, port = m.groups()
+    return {"host": host, "port": int(port or 5432), "user": user,
+            "password": pw, "dbname": "fortress_shadow_test"}
 
 
 @pytest.fixture(scope="module")
 def shadow_test_conn():
-    conn = psycopg2.connect(DSN)
+    """psycopg2 connection to fortress_shadow_test as fortress_admin so the
+    fixture can seed legal.cases + legal.vault_documents and clean them up."""
+    conn = psycopg2.connect(**_admin_test_dsn())
     conn.autocommit = True
     try:
         yield conn
@@ -398,7 +419,15 @@ async def test_status_transition_qdrant_upsert_failed_on_batch_failure(
 ):
     """A vault row whose upsert hits a batch failure transitions to
     processing_status='qdrant_upsert_failed' with the partial accumulator
-    persisted in vector_ids and error_detail populated."""
+    persisted in vector_ids and error_detail populated.
+
+    Note on assertion strategy: error_detail is stored truncated at exactly
+    8192 chars by the Phase B writer (legal_ediscovery.py:707). When the
+    untruncated JSON exceeds 8192 chars, the truncation cut falls inside a
+    string value and breaks the JSON syntactically — operators read the
+    column for log context, not for programmatic re-parsing. This test
+    therefore asserts on substring presence + the truncation length
+    contract, not on json.loads() round-trip."""
     doc_id = str(uuid4())
     fhash = "2" * 64
     points = _make_synthetic_points(2500, fhash, _QDRANT_WORK_PRODUCT_NS)
@@ -431,6 +460,9 @@ async def test_status_transition_qdrant_upsert_failed_on_batch_failure(
         "file_name": "synthetic.pdf",
         "accumulator_so_far": uuids,
     })
+    # 2000 partial UUIDs makes err_payload well over 8192 chars; the writer
+    # truncates to that exact length before persisting.
+    assert len(err_payload) > 8192
 
     _seed_failed_row(shadow_test_conn, doc_id, fhash,
                      chunk_count=2500, vector_ids=uuids,
@@ -441,9 +473,15 @@ async def test_status_transition_qdrant_upsert_failed_on_batch_failure(
     assert row["processing_status"] == "qdrant_upsert_failed"
     assert row["chunk_count"] == 2500
     assert len(row["vector_ids"]) == 2000
-    parsed = json.loads(row["error_detail"])
-    assert parsed["batch_index"] == 2
-    assert parsed["track"] == "work_product"
+    # Truncation contract — exactly 8192 chars persisted.
+    assert row["error_detail"] is not None
+    assert len(row["error_detail"]) == 8192
+    # Substring presence — the writer's marshalling shape is preserved at
+    # the head of the payload (everything before the truncation point).
+    assert '"track": "work_product"' in row["error_detail"]
+    assert '"batch_index": 2' in row["error_detail"]
+    assert '"expected_count"' in row["error_detail"]
+    assert '"qdrant_collection"' in row["error_detail"]
     _delete_vault_row(shadow_test_conn, doc_id)
 
 
@@ -660,7 +698,7 @@ def test_backfill_idempotency_already_populated_rows_untouched(shadow_test_conn)
 
     def patched_connect(dbname: str):
         captured.append((dbname,))
-        return psycopg2.connect(DSN)
+        return psycopg2.connect(**_admin_test_dsn())
 
     with patch.object(backfill_vector_ids, "_connect", patched_connect):
         # Attempt to overwrite with new UUIDs — must be a no-op due to
@@ -732,7 +770,7 @@ def test_reprocess_idempotency_recovered_rows_skipped(shadow_test_conn):
         processing_status="completed",
     )
 
-    with patch.object(reprocess, "_connect", lambda _db: psycopg2.connect(DSN)):
+    with patch.object(reprocess, "_connect", lambda _db: psycopg2.connect(**_admin_test_dsn())):
         candidates = reprocess._list_candidates(
             case_slug=CASE_SLUG, doc_id_filter=None, limit=None,
         )
@@ -765,7 +803,7 @@ def test_reprocess_doc_id_file_filter_intersects_candidates(
     id_file = tmp_path / "ids.txt"
     id_file.write_text(f"{doc_in_both}\n{doc_only_in_file}\n# comment\n\n")
 
-    with patch.object(reprocess, "_connect", lambda _db: psycopg2.connect(DSN)):
+    with patch.object(reprocess, "_connect", lambda _db: psycopg2.connect(**_admin_test_dsn())):
         filter_set = reprocess._read_doc_id_file(id_file)
         candidates = reprocess._list_candidates(
             case_slug=CASE_SLUG, doc_id_filter=filter_set, limit=None,
@@ -833,7 +871,14 @@ def test_cross_db_consistency_backfill_writes_to_both_dbs(shadow_test_conn):
 
     def patched_connect(dbname: str):
         captured_dbs.append(dbname)
-        return psycopg2.connect(DSN)
+        # Mirror the production contract — backfill_vector_ids._connect
+        # (line 148) sets autocommit=True so each per-DB UPDATE persists
+        # before the next connection opens. Without this, the first UPDATE
+        # would roll back at conn.close() and the second would see
+        # vector_ids still NULL → both rowcount=1 → wrote==2.
+        conn = psycopg2.connect(**_admin_test_dsn())
+        conn.autocommit = True
+        return conn
 
     with patch.object(backfill_vector_ids, "_connect", patched_connect):
         new_uuids = [
@@ -868,7 +913,7 @@ def test_cross_db_consistency_reprocess_writes_to_both_dbs(shadow_test_conn):
 
     def patched_connect(dbname: str):
         captured_dbs.append(dbname)
-        return psycopg2.connect(DSN)
+        return psycopg2.connect(**_admin_test_dsn())
 
     cand = reprocess._Candidate(
         doc_id=doc_id, file_name="x.pdf", nfs_path="/tmp/x.pdf",
@@ -959,7 +1004,7 @@ def test_persist_state_uses_atomic_single_statement_update(shadow_test_conn):
         def close(self): self._real.close()
 
     def patched_connect(_db: str) -> _CapturingConn:
-        return _CapturingConn(psycopg2.connect(DSN))
+        return _CapturingConn(psycopg2.connect(**_admin_test_dsn()))
 
     doc_id = str(uuid4())
     _seed_failed_row(shadow_test_conn, doc_id, "3a" * 32,
