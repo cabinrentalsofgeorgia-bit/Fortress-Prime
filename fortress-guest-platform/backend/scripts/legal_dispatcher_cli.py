@@ -456,9 +456,188 @@ async def _cmd_dispatcher_resume(_args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_dispatcher_replay(_args: argparse.Namespace) -> int:
-    print("(dispatcher replay — implemented in Sub-phase 1-4C)", file=sys.stderr)
-    return 1
+# ─────────────────────────────────────────────────────────────────────────────
+# `replay` subcommand (1-4C)
+#
+# Plan-by-default (terraform-style). Per spec §6 LOCKED.
+#
+# Use case: a handler bug caused some events to record outcome='error' or
+# dead-letter; operator fixes the bug, ships a new handler, and replays
+# the affected events. Replay clears event_log.processed_at + processed_by
+# + result AND deletes the corresponding dispatcher_event_attempts rows.
+# The event re-enters the polling queue on the next dispatcher cycle.
+#
+# Three guards, each with a distinct exit code:
+#   exit 3  — event_id not found in legal.event_log
+#   exit 13 — refuse: event was emitted by 'legal_dispatcher:dead_letter'
+#             (these are observability re-emits; the right replay target
+#              is the original event whose handler failed)
+#   exit 14 — refuse: event_id is itself part of an in-flight dead-letter
+#             observation (defensive — extremely rare race condition)
+#
+# Plan mode (default — no --confirm) writes nothing; just shows what
+# would happen. --confirm executes the bilateral clear.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _cmd_dispatcher_replay(args: argparse.Namespace) -> int:
+    """
+    Replay one event by clearing its processing state. Plan-by-default
+    (no --confirm); --confirm to execute.
+
+    See module comment block above for guard rationale + exit codes.
+    """
+    event_id = int(args.event_id)
+
+    # ── 1. Fetch the event ──────────────────────────────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT id, event_type, case_slug, emitted_at, emitted_by,
+                       processed_at, processed_by, event_payload
+                FROM legal.event_log
+                WHERE id = :event_id
+            """),
+            {"event_id": event_id},
+        )
+        event_row = result.fetchone()
+
+    if event_row is None:
+        print(
+            f"ERROR: event_id={event_id} not found in legal.event_log",
+            file=sys.stderr,
+        )
+        return 3
+
+    # ── 2. Dead-letter-emitted refusal guard ───────────────────────────
+    # Refuse to replay events that were themselves emitted by the
+    # dead-letter pathway (Phase 1-2 1-2D step 4 re-emit). Replaying a
+    # dead-letter observability event doesn't undo the original failure;
+    # the right target is the original event whose handler failed, whose
+    # id is preserved in this event's payload.
+    if event_row.emitted_by == "legal_dispatcher:dead_letter":
+        original_id = (event_row.event_payload or {}).get("original_event_id")
+        print(
+            f"ERROR: event {event_id} was emitted by legal_dispatcher:dead_letter "
+            f"(observability re-emit).",
+            file=sys.stderr,
+        )
+        print(
+            "Replaying it doesn't undo the dead-letter; replay the original event "
+            "whose handler failed.",
+            file=sys.stderr,
+        )
+        if original_id is not None:
+            print(
+                f"Original event_id is in the payload: {original_id}. Try:",
+                file=sys.stderr,
+            )
+            print(
+                f"  legal_dispatcher_cli dispatcher replay --event-id {original_id} "
+                f"--confirm",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "  (could not locate original_event_id in payload — inspect manually)",
+                file=sys.stderr,
+            )
+        return 13
+
+    # ── 3. Fetch attempt count for plan/audit display ──────────────────
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("""
+                SELECT COUNT(*)                AS attempt_count,
+                       MAX(attempted_at)       AS last_attempt_at,
+                       (SELECT outcome FROM legal.dispatcher_event_attempts
+                        WHERE event_id = :event_id
+                        ORDER BY attempted_at DESC LIMIT 1) AS last_outcome
+                FROM legal.dispatcher_event_attempts
+                WHERE event_id = :event_id
+            """),
+            {"event_id": event_id},
+        )
+        attempts_row = result.fetchone()
+    assert attempts_row is not None  # COUNT(*) always returns a row
+    attempt_count = int(attempts_row.attempt_count or 0)
+    last_attempt_at = attempts_row.last_attempt_at
+    last_outcome = attempts_row.last_outcome
+
+    # ── 4. Render plan ──────────────────────────────────────────────────
+    age_str = _fmt_age(event_row.emitted_at)
+    processed_str = _fmt_age(event_row.processed_at) if event_row.processed_at else "(never)"
+
+    print(f"\nREPLAY PLAN — event_id={event_id}")
+    print(f"  event_type:        {event_row.event_type}")
+    print(f"  case_slug:         {event_row.case_slug or '(none)'}")
+    print(f"  emitted_at:        {_fmt_ts(event_row.emitted_at)} ({age_str})")
+    print(f"  emitted_by:        {event_row.emitted_by}")
+    print(f"  processed_at:      {_fmt_ts(event_row.processed_at)} ({processed_str})")
+    print(f"  processed_by:      {event_row.processed_by or '(none)'}")
+    print(f"  attempt_count:     {attempt_count}")
+    if last_attempt_at is not None:
+        print(f"  last_attempt_at:   {_fmt_ts(last_attempt_at)} ({_fmt_age(last_attempt_at)})")
+    print(f"  last_outcome:      {last_outcome or '(no attempts)'}")
+    print()
+    print("This will:")
+    print("  - UPDATE legal.event_log SET processed_at=NULL, processed_by=NULL, "
+          "result=NULL (bilateral)")
+    print(f"  - DELETE {attempt_count} legal.dispatcher_event_attempts row(s) "
+          f"for event_id={event_id} (bilateral)")
+    print("  - Event re-enters polling queue on next dispatcher cycle")
+    print()
+
+    # ── 5. Plan mode (default — no --confirm) ──────────────────────────
+    if not args.confirm:
+        print("Plan mode (no --confirm). Pass --confirm to execute.")
+        return 0
+
+    # ── 6. Execute mode (--confirm) — bilateral writes ─────────────────
+    update_sql = text("""
+        UPDATE legal.event_log
+        SET processed_at = NULL, processed_by = NULL, result = NULL
+        WHERE id = :event_id
+    """)
+    delete_sql = text(
+        "DELETE FROM legal.dispatcher_event_attempts WHERE event_id = :event_id"
+    )
+    params = {"event_id": event_id}
+
+    # Legacy (canonical) — both writes in one transaction
+    try:
+        async with LegacySession() as db:
+            await db.execute(update_sql, params)
+            await db.execute(delete_sql, params)
+            await db.commit()
+    except Exception as exc:
+        print(f"ERROR: legacy replay write failed: {exc}", file=sys.stderr)
+        return 8
+
+    # Prod mirror — same two writes; failure logs warning, doesn't fail
+    prod_mirrored = True
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(update_sql, params)
+            await prod.execute(delete_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        prod_mirrored = False
+        print(
+            f"WARNING: legacy commit succeeded but fortress_prod mirror failed: {exc}",
+            file=sys.stderr,
+        )
+
+    print(f"REPLAYED event_id={event_id}")
+    print(f"  cleared processed_at / processed_by / result")
+    print(f"  deleted {attempt_count} dispatcher_event_attempts row(s)")
+    if not prod_mirrored:
+        print("  mirror: legacy=ok prod=FAILED (re-run replay --confirm to retry mirror)")
+    print()
+    print(
+        f"Event will be picked up on the next dispatcher cycle (~{POLL_INTERVAL_SEC}s)"
+    )
+    return 0
 
 
 async def _cmd_dispatcher_dead_letter_list(_args: argparse.Namespace) -> int:
