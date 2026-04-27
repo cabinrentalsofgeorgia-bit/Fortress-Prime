@@ -20,9 +20,7 @@ Implemented sub-phases:
   3A: argparse skeleton + `status` subcommand (read-only)
   3B: pause / resume mutators (bilateral write to legal.mail_ingester_pause)
   3C: poll --dry-run (IMAP credential validation; no DB writes)
-
-Pending sub-phases:
-  3D: backfill --since (forward-only recovery)
+  3D: backfill --since YYYY-MM-DD (forward-only; hard floor 2026-03-26)
 """
 from __future__ import annotations
 
@@ -31,7 +29,8 @@ import asyncio
 import getpass
 import os
 import sys
-from datetime import datetime, timezone
+import time
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -44,11 +43,21 @@ from sqlalchemy import text  # noqa: E402
 
 from backend.services.ediscovery_agent import LegacySession  # noqa: E402
 from backend.services.legal_mail_ingester import (  # noqa: E402
+    BACKFILL_HARD_FLOOR,
     INGESTER_VERSIONED,
     LegalMailboxConfigError,
     LegalMailIngesterTransport,
     ProdSession,
+    classify_inbound,
+    emit_email_received_event,
     load_legal_mailbox_configs,
+    parse_message,
+    write_email_archive_bilateral,
+)
+from backend.services.legal_mail_ingester import (  # noqa: E402
+    _is_mailbox_paused,
+    _load_priority_sender_rules,
+    _load_watchdog_rules,
 )
 
 
@@ -559,9 +568,277 @@ async def _cmd_poll(args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_backfill(_args: argparse.Namespace) -> int:
-    print("(backfill subcommand — implemented in Sub-phase 3D)", file=sys.stderr)
-    return 1
+# ─────────────────────────────────────────────────────────────────────────────
+# `backfill --mailbox X --since YYYY-MM-DD` subcommand (3D)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _parse_since(arg: str) -> Optional[date]:
+    """Parse --since as ISO date YYYY-MM-DD. Returns None on malformed."""
+    try:
+        return date.fromisoformat(arg)
+    except ValueError:
+        return None
+
+
+async def _cmd_backfill(args: argparse.Namespace) -> int:
+    """
+    Forward-only date-banded recovery (design v1.1 §6, LOCKED Q3).
+
+    Operator-explicit recovery for the gap between the legacy producer's
+    last write (2026-03-25) and the legal_mail_ingester's first patrol.
+
+    Two modes:
+      - Plan (default, no --confirm):
+        Connects, runs SEARCH SINCE <date>, prints UID count + intent,
+        no DB writes, no body fetches.
+      - Execute (--confirm):
+        Fetches up to --limit messages, parses, classifies, writes
+        bilaterally, emits events. Same idempotency as patrol path
+        (file_path UNIQUE constraint dedups already-ingested messages).
+
+    Hard floor BACKFILL_HARD_FLOOR = 2026-03-26 — any earlier --since is
+    rejected (would re-process Captain-handled messages from before the
+    legacy producer outage). To extend, edit the constant in the service.
+
+    \\Seen flag is NEVER mutated (BODY.PEEK[]) — Captain coexistence holds
+    even during backfill.
+    """
+    # ── 1. Parse --since ─────────────────────────────────────────────────
+    since = _parse_since(args.since)
+    if since is None:
+        print(
+            f"ERROR: --since {args.since!r} is not a valid ISO date (YYYY-MM-DD)",
+            file=sys.stderr,
+        )
+        return 9
+
+    # ── 2. Hard floor enforcement ────────────────────────────────────────
+    if since < BACKFILL_HARD_FLOOR:
+        print(
+            f"ERROR: --since {since.isoformat()} is before BACKFILL_HARD_FLOOR "
+            f"{BACKFILL_HARD_FLOOR.isoformat()}",
+            file=sys.stderr,
+        )
+        print(
+            "  The legacy producer last wrote on 2026-03-25; pre-floor backfill "
+            "would re-process Captain-handled messages.",
+            file=sys.stderr,
+        )
+        print(
+            "  To extend: edit BACKFILL_HARD_FLOOR in backend/services/legal_mail_ingester.py",
+            file=sys.stderr,
+        )
+        return 10
+
+    # ── 3. Future-date rejection ─────────────────────────────────────────
+    today = date.today()
+    if since > today:
+        print(
+            f"ERROR: --since {since.isoformat()} is in the future (today is {today.isoformat()})",
+            file=sys.stderr,
+        )
+        return 11
+
+    # ── 4. Mailbox alias validation ──────────────────────────────────────
+    alias = _validate_mailbox_alias(args.mailbox)
+    if alias is None:
+        print(
+            f"ERROR: mailbox {args.mailbox!r} is not configured with ingester=legal_mail",
+            file=sys.stderr,
+        )
+        return 3
+
+    try:
+        configs = load_legal_mailbox_configs()
+    except LegalMailboxConfigError as exc:
+        print(f"ERROR: MAILBOXES_CONFIG malformed: {exc}", file=sys.stderr)
+        return 2
+
+    cfg = next((c for c in configs if c.name == alias), None)
+    if cfg is None:
+        print(f"ERROR: mailbox {alias!r} resolved but config missing (race?)",
+              file=sys.stderr)
+        return 3
+
+    if cfg.transport != "imap":
+        print(
+            f"ERROR: mailbox {alias!r} transport={cfg.transport!r}; "
+            "only imap backfills are supported",
+            file=sys.stderr,
+        )
+        return 5
+
+    # ── 5. Pause warning (advisory — operator may proceed anyway) ────────
+    paused = await _is_mailbox_paused(alias)
+    if paused:
+        print(
+            f"NOTE: mailbox {alias!r} is currently paused. Backfill will proceed "
+            f"(operator-explicit override) but the patrol loop will continue to skip it "
+            f"until 'fgp legal mail resume --mailbox {alias}'.",
+            file=sys.stderr,
+        )
+
+    # ── 6. Build transport ───────────────────────────────────────────────
+    try:
+        transport = LegalMailIngesterTransport(cfg)
+    except (ValueError, LegalMailboxConfigError) as exc:
+        print(f"ERROR: transport setup failed: {exc}", file=sys.stderr)
+        return 6
+
+    # ── 7. Plan header ───────────────────────────────────────────────────
+    print(f"\nBackfill — mailbox={alias!r} ({INGESTER_VERSIONED})")
+    print(f"  host:        {cfg.host}:{cfg.port}")
+    print(f"  folder:      {cfg.folder}")
+    print(f"  since:       {since.isoformat()} (hard floor {BACKFILL_HARD_FLOOR.isoformat()} ✓)")
+    print(f"  limit:       {args.limit}")
+    print(f"  routing tag: {cfg.routing_tag}")
+    print()
+
+    # ── 8. Plan mode (default — no --confirm) ────────────────────────────
+    if not args.confirm:
+        print("Connecting (plan mode — no body fetch, no DB writes)…")
+        try:
+            count = await asyncio.to_thread(transport.search_count_for_backfill, since)
+        except LegalMailboxConfigError as exc:
+            print(f"ERROR: credential resolution failed: {exc}", file=sys.stderr)
+            return 7
+        except Exception as exc:
+            print(f"ERROR: SEARCH failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 8
+        print(f"  ✓ SEARCH SINCE {since.isoformat()}: {count} messages match")
+        print()
+        print("This is a plan. To execute the backfill (writes to email_archive + event_log):")
+        print(
+            f"  fgp legal mail backfill --mailbox {alias} --since {since.isoformat()} "
+            f"--limit {args.limit} --confirm"
+        )
+        print()
+        print("Backfill will:")
+        print("  - parse each message (header + body)")
+        print("  - classify Stage 1 (priority/case/watchdog)")
+        print("  - write to email_archive (bilateral; deduped via file_path UNIQUE)")
+        print("  - emit email.received event to legal.event_log")
+        print("  - NOT mutate IMAP \\Seen flag (BODY.PEEK[])")
+        return 0
+
+    # ── 9. Execute mode (--confirm) ──────────────────────────────────────
+    print("Connecting (execute mode — bilateral writes will occur)…")
+    try:
+        records = await asyncio.to_thread(
+            transport.fetch_for_backfill, since, args.limit,
+        )
+    except LegalMailboxConfigError as exc:
+        print(f"ERROR: credential resolution failed: {exc}", file=sys.stderr)
+        return 7
+    except Exception as exc:
+        print(f"ERROR: backfill fetch failed: {type(exc).__name__}: {exc}",
+              file=sys.stderr)
+        return 8
+
+    fetched = len(records)
+    print(f"  ✓ fetched {fetched} message(s) (limit was {args.limit})")
+    if fetched == 0:
+        print()
+        print("No messages to ingest. Done.")
+        return 0
+
+    # Load classifier rules once
+    print("  ✓ loading classifier rules…")
+    priority_sender_rules = await _load_priority_sender_rules()
+    watchdog_rules = await _load_watchdog_rules()
+
+    print()
+    print(f"Processing {fetched} messages…")
+    print("-" * 100)
+
+    ingested = 0
+    deduped = 0
+    errored = 0
+    watchdog_matches = 0
+    events_emitted = 0
+    t0 = time.monotonic()
+
+    # Mirror patrol_mailbox()'s per-message loop; idempotency via file_path
+    # UNIQUE handles already-ingested messages (write_email_archive_bilateral
+    # returns the existing id on conflict).
+    for i, record in enumerate(records, start=1):
+        uid = record.get("uid", "?")
+        try:
+            parsed = parse_message(
+                raw_bytes=record["raw_bytes"],
+                source=record,
+                routing_tag=cfg.routing_tag,
+            )
+            if parsed is None:
+                errored += 1
+                print(f"  [{i:>4}/{fetched}]  uid {uid:>8}  PARSE_FAILED")
+                continue
+
+            classify_inbound(parsed, priority_sender_rules, watchdog_rules)
+
+            # Pre-check: does a row with this file_path already exist?
+            # file_path is UNIQUE on email_archive, so this is the
+            # authoritative dedup signal. Doing the check explicitly
+            # (vs inferring from write return value) lets us report
+            # accurate fresh/dedup counts AND avoid emitting a duplicate
+            # email.received event for messages already in email_archive.
+            async with LegacySession() as db:
+                r = await db.execute(
+                    text(
+                        "SELECT id, ingested_from FROM email_archive "
+                        "WHERE file_path = :fp"
+                    ),
+                    {"fp": parsed.file_path},
+                )
+                existing = r.fetchone()
+
+            if existing is not None:
+                deduped += 1
+                tag = f"DEDUPED (id={existing.id}, ingested_from={existing.ingested_from})"
+                print(f"  [{i:>4}/{fetched}]  uid {uid:>8}  {tag}")
+                continue
+
+            # Fresh — perform bilateral write + emit event
+            if parsed.watchdog_matches:
+                watchdog_matches += len(parsed.watchdog_matches)
+
+            email_archive_id = await write_email_archive_bilateral(parsed)
+            if email_archive_id is None:
+                errored += 1
+                print(f"  [{i:>4}/{fetched}]  uid {uid:>8}  WRITE_FAILED")
+                continue
+
+            ingested += 1
+            event_id = await emit_email_received_event(parsed, email_archive_id)
+            if event_id is not None:
+                events_emitted += 1
+            tag = "INGESTED"
+            if parsed.watchdog_matches:
+                tag += f" [+{len(parsed.watchdog_matches)} wd]"
+            print(f"  [{i:>4}/{fetched}]  uid {uid:>8}  {tag}")
+        except Exception as exc:
+            errored += 1
+            print(f"  [{i:>4}/{fetched}]  uid {uid:>8}  ERROR: {type(exc).__name__}: {str(exc)[:80]}")
+
+    duration = time.monotonic() - t0
+
+    print("-" * 100)
+    print()
+    print(f"Backfill complete — mailbox={alias!r}")
+    print(f"  fetched:        {fetched}")
+    print(f"  ingested:       {ingested}")
+    print(f"  deduped:        {deduped}")
+    print(f"  errored:        {errored}")
+    print(f"  watchdog hits:  {watchdog_matches}")
+    print(f"  events emitted: {events_emitted}")
+    print(f"  duration:       {duration:.1f}s")
+    print()
+    if errored == 0:
+        print("All messages processed without errors. \\Seen flag NOT mutated.")
+        return 0
+    print(f"NOTE: {errored} message(s) failed. Check logs for details.")
+    return 0  # backfill is best-effort; partial success is not a CLI failure
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -623,10 +900,19 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Number of recent subjects to preview (default: 5; header-only fetch)")
     p_poll.set_defaults(func=_cmd_poll)
 
-    p_backfill = sub.add_parser("backfill", help="(3D) Forward-only date-banded recovery")
-    p_backfill.add_argument("--mailbox", required=True)
+    # backfill: forward-only recovery for the legacy producer outage gap
+    p_backfill = sub.add_parser(
+        "backfill",
+        help="Forward-only date-banded recovery (default plan mode; --confirm to execute)",
+    )
+    p_backfill.add_argument("--mailbox", required=True,
+                            help="Mailbox alias to backfill")
     p_backfill.add_argument("--since", required=True,
                             help="ISO date YYYY-MM-DD; hard floor 2026-03-26 per design v1.1 §6")
+    p_backfill.add_argument("--limit", type=int, default=200,
+                            help="Maximum messages to process this invocation (default: 200)")
+    p_backfill.add_argument("--confirm", action="store_true",
+                            help="Required to execute writes; without this flag, plan-only")
     p_backfill.set_defaults(func=_cmd_backfill)
 
     return p

@@ -230,6 +230,13 @@ def _imap_date(d: date) -> str:
 SEARCH_TIMEOUT_S = 60
 RETRY_BACKOFFS_S = (2.0, 8.0)
 
+# Hard floor for forward-only backfill (Phase 0a-3 §6, design v1.1 LOCKED Q3).
+# The legacy multi-mailbox producer last wrote to email_archive on 2026-03-25.
+# Any --since before 2026-03-26 would re-process Captain-handled messages that
+# were already in email_archive (under a different ingested_from); blocking is
+# protective. To extend, operator must edit this constant explicitly.
+BACKFILL_HARD_FLOOR: date = date(2026, 3, 26)
+
 
 class LegalMailIngesterTransport:
     """
@@ -360,6 +367,110 @@ class LegalMailIngesterTransport:
                 "uids_in_band": len(uids),
                 "recent_subjects": previews,
             }
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            try:
+                conn.logout()
+            except Exception:
+                pass
+
+    def fetch_for_backfill(
+        self,
+        since_date: date,
+        max_messages: int,
+    ) -> list[dict[str, Any]]:
+        """
+        Operator-explicit forward-only backfill fetch (Phase 0a-3 §6).
+
+        Differs from fetch_recent() in two ways:
+          1. SEARCH predicate is `SINCE <date>` only — NOT `UNSEEN SINCE <date>`.
+             The legacy producer outage left messages that Captain marked
+             \\Seen but were never written to email_archive; backfill must
+             see them.
+          2. The date is operator-supplied (with hard floor enforced by the
+             CLI), not derived from search_band_days. The CLI is responsible
+             for rejecting --since values before BACKFILL_HARD_FLOOR.
+
+        Same Captain-coexistence discipline as the patrol path:
+          - readonly=True on SELECT (inherited from _connect())
+          - BODY.PEEK[] on FETCH (does not mutate \\Seen)
+
+        max_messages is the hard cap on returned records to bound any one
+        invocation. Operator can run repeated backfills with different
+        --since windows for larger ranges.
+
+        Returns the same record shape as fetch_recent():
+          uid, raw_bytes, host, folder, mailbox_alias, transport
+        """
+        search_predicate = f"SINCE {_imap_date(since_date)}"
+
+        conn = self._connect()
+        try:
+            typ, data = conn.uid("SEARCH", search_predicate)
+            if typ != "OK" or not data or not data[0]:
+                return []
+            uids = data[0].split()[:max_messages]
+            if not uids:
+                return []
+
+            out: list[dict[str, Any]] = []
+            for uid_bytes in uids:
+                uid = uid_bytes.decode("ascii", errors="replace")
+                try:
+                    typ, fetch_data = conn.uid("FETCH", uid, "(BODY.PEEK[])")
+                    if typ != "OK" or not fetch_data:
+                        continue
+                    raw_bytes: Optional[bytes] = None
+                    for entry in fetch_data:
+                        if isinstance(entry, tuple) and len(entry) >= 2:
+                            candidate = entry[1]
+                            if isinstance(candidate, (bytes, bytearray)):
+                                raw_bytes = bytes(candidate)
+                                break
+                    if raw_bytes is None:
+                        continue
+                    out.append({
+                        "uid": uid,
+                        "raw_bytes": raw_bytes,
+                        "host": self.mailbox.host,
+                        "folder": self.mailbox.folder,
+                        "mailbox_alias": self.mailbox.name,
+                        "transport": self.mailbox.transport,
+                    })
+                except Exception as exc:
+                    logger.warning(
+                        "legal_mail_backfill_message_fetch_failed",
+                        mailbox=self.mailbox.name,
+                        uid=uid,
+                        error=str(exc)[:200],
+                    )
+                    continue
+            return out
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            try:
+                conn.logout()
+            except Exception:
+                pass
+
+    def search_count_for_backfill(self, since_date: date) -> int:
+        """
+        Cardinality-only probe for backfill plan mode. Connects, runs
+        `SEARCH SINCE <date>`, returns UID count without fetching bodies.
+        """
+        search_predicate = f"SINCE {_imap_date(since_date)}"
+        conn = self._connect()
+        try:
+            typ, data = conn.uid("SEARCH", search_predicate)
+            if typ != "OK" or not data or not data[0]:
+                return 0
+            return len(data[0].split())
         finally:
             try:
                 conn.close()
