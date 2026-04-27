@@ -18,3 +18,7 @@ htmlcov/
 logs/
 data/
 tmp/
+
+# Calibration artifacts (per-run outputs, not source of truth)
+scripts/state/
+calibration/
