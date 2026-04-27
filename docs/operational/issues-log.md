@@ -72,6 +72,46 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 - **Status:** RESOLVED
 - **Note:** see "Stale FORTRESS_DB_* credentials" above for underlying issue
 
+### Issue: running fortress-backend lacks FLOS endpoints (Gap A)
+
+- **Discovered:** during command-center ↔ FLOS pipeline audit (2026-04-27 evening)
+- **Symptom:** `curl http://127.0.0.1:8000/openapi.json` → 0 FLOS endpoints registered (no dispatcher_*, mail/health, event_log, case_posture, legal_mail_*, legal_dispatcher_*). 80 legacy `/api/internal/legal/*` endpoints (cases, deadlines, council, etc.) are registered.
+- **Root cause:** `fortress-backend.service` started Sun 2026-04-26 21:07 EDT against `main` HEAD `b458d8867`, which predates today's FLOS Phase 1-3 / 1-4 / 1-5 work. Today's PRs are on `feat/flos-phase-1-*` branches and have not merged to main. uvicorn caches imports at startup; the source files exist on the working tree (feat branch checkout) but the running process never imported them.
+- **Remediation options:** (A1) merge FLOS feat branches to main and restart `fortress-backend`; (A2) restart against current feat-branch working tree without merge; (A3) defer until Phase 1-6 soak completes.
+- **Recommended:** A1 after Phase 1-6 soak validates end-to-end flow.
+- **Status:** OPEN
+- **Ticket:** N/A (operational/deployment state, not a code defect)
+- **Note:** Gap B (#257 JWT/static-bearer) is moot until this is resolved — the endpoint must be registered before middleware order matters.
+
+### Issue: command-center has zero FLOS UI surface (Gap C)
+
+- **Discovered:** during command-center ↔ FLOS pipeline audit
+- **Symptom:** `grep -rnE '/api/internal/legal/(dispatcher|mail)/' apps/command-center/src/` returns 0 hits. None of the 8 FLOS surfaces (event_log, case_posture, dispatcher_routes, dispatcher_event_attempts, dispatcher_dead_letter, dispatcher_pause, legal_mail_ingester health, legal_dispatcher health) have a UI consumer.
+- **Root cause:** today's work was scoped backend-only. UI not in Phase 1-x design.
+- **Remediation options:** (G1) add `/legal/flos` page consuming dispatcher/mail health + dead-letter + posture endpoints (~1-2 days, requires Gap A + B closed); (G2) defer UI for now, observe via psql/CLI/soak log only; (G3) add minimal ops widget to existing `/legal` dashboard.
+- **Recommended:** G2 through Phase 1-6 soak window; revisit G1 vs G3 after soak completes.
+- **Status:** DEFERRED
+- **Ticket:** N/A (deferred sprint item)
+
+### Issue: crog-ai-backend README claims Vercel hosting but reality is self-hosted
+
+- **Discovered:** during command-center ↔ FLOS pipeline audit
+- **Symptom:** `crog-ai-backend/README.md` describes "Vercel (React frontend at crog-ai.com)". Reality: crog-ai.com is served by self-hosted Next.js 16 standalone build on spark-2 port 3005 via Cloudflare Tunnel. Confirmed via `ss -tlnp`, `/proc/<pid>/cwd`, and `/etc/cloudflared/config.yml`.
+- **Root cause:** doc drift — README never updated when hosting model migrated from Vercel to self-hosted.
+- **Remediation:** update `crog-ai-backend/README.md` in next docs sweep to describe Cloudflare Tunnel + self-hosted Next.js architecture.
+- **Status:** OPEN
+- **Ticket:** N/A — defer to docs sweep; low priority.
+
+### Issue: command-center has `pg` runtime dep + DATABASE_URL — potential CLAUDE.md violation
+
+- **Discovered:** during command-center ↔ FLOS pipeline audit
+- **Symptom:** `apps/command-center/package.json` lists `"pg": "^8.20.0"` as runtime dep. `apps/command-center/.env.local` has `DATABASE_URL`, `POSTGRES_ADMIN_URI`, `POSTGRES_API_URI`. CLAUDE.md says "the frontend must never import `pg`, `asyncpg`, `psycopg2`, or any database driver."
+- **Root cause:** unknown without trace. Possibilities: (i) genuine violation — server components or BFF routes connect directly to postgres; (ii) server-side-only utility (e.g., a build script in `scripts/`) uses pg and got hoisted to the package; (iii) historical artifact, no longer imported.
+- **Remediation:** trace `grep -rn "from 'pg'\\|require('pg')" apps/command-center/src/` to find live importers. If none in src, audit `apps/command-center/scripts/`. If unused, remove from dependencies.
+- **Status:** OPEN
+- **Ticket:** N/A — investigation needed before deciding repair vs remove.
+- **Note:** if direct DB access from command-center is real, this also violates the CLAUDE.md "only authorized data path" rule (Next.js → Cloudflare Tunnel → FastAPI → Postgres).
+
 ### Issue: gh PAT cannot attach labels to issues
 
 - **Discovered:** during T5 ticket filing verification (`gh issue view 261 --json labels`)
@@ -81,6 +121,17 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 - **Status:** OPEN
 - **Ticket:** N/A — local CLI/auth config gap, not a Fortress-Prime code issue
 - **Note:** the 7 new labels created earlier in the session (`legal`, `auth`, `post-flos-cutover`, `alembic`, `imap`, `pre-existing`, `.env`) all exist on the repo — only the *attachment* failed.
+
+### Issue: legal.cases.opposing_counsel stale for 7il-v-knight-ndga-ii
+
+- **Discovered:** during Case II complaint extraction from Thor James inbox dump
+- **Symptom:** `legal.cases.opposing_counsel` for `7il-v-knight-ndga-ii` says "Brian S. Goldberg, Esq., Freeman Mathis & Gary LLP, brian.goldberg@fmglaw.com"
+- **Reality:** Complaint signature (Document 1, p.18, filed 2026-04-15) shows Buchalter LLP, 3475 Piedmont Rd NE, Suite 1100, Atlanta GA 30305, bgoldberg@buchalter.com, GA Bar 128007. Andrew Pinter co-counsel.
+- **Root cause:** DB row prepared from outdated info or early-research guess; never reconciled when the operative complaint arrived from Thor James on 2026-04-23.
+- **Remediation:** UPDATE legal.cases SET opposing_counsel = '<corrected JSONB>' WHERE case_slug = '7il-v-knight-ndga-ii'. Operator authorizes when ready (proposed statement in curation manifest / inline in audit response).
+- **Status:** OPEN (deferred until JSONB schema migration scheduled)
+- **Ticket:** GH #262
+- **Note:** this drift compromises (a) the brief generator (would print wrong firm in the brief) and (b) Captain's domain-allowlist for legal-track classification (would whitelist fmglaw.com instead of buchalter.com, missing real opposing-counsel emails). Two-part fix: Part 1 schema migration text→JSONB, Part 2 data correction + audit pass across all active cases.
 
 ---
 
@@ -93,6 +144,7 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 | T3  | #259 | captain: gary-crog unknown-8bit encoding           | OPEN        |
 | T4  | #260 | captain: gary-gk SEARCH overflow                   | OPEN        |
 | T5  | #261 | legal: stale FORTRESS_DB_* keys in .env            | OPEN        |
+| T8  | #262 | legal: opposing_counsel stale + needs JSONB migration | OPEN (deferred) |
 
 ---
 
