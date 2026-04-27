@@ -166,3 +166,132 @@ class DispatcherRoute:
 
 
 _HANDLERS: dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]] = {}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Read paths (Sub-phase 1-2B)
+#
+# Three queries against fortress_db (LegacySession) — all read-only:
+#   1. _load_routes()              — per-cycle pre-load of dispatcher_routes
+#   2. _is_dispatcher_paused()     — single-row check on dispatcher_pause
+#   3. _fetch_unprocessed_events() — polling SELECT with retry-exclusion
+#
+# Per design v1.1 §5.1 (LOCKED). LegacySession is canonical for reads;
+# fortress_prod is a forward-only mirror written through bilateral helpers
+# (ProdSession), which land in 1-2C.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _load_routes() -> dict[str, DispatcherRoute]:
+    """
+    Per-cycle pre-load of legal.dispatcher_routes. Returns a dict keyed by
+    event_type. Phase 1-2D's dispatch_event() consults this dict for
+    enabled / max_retries; the actual handler callable comes from the
+    in-file _HANDLERS registry (Q5 LOCKED Option B), not from the
+    handler_module + handler_function columns.
+
+    Mirrors legal_mail_ingester._load_priority_sender_rules() (Phase 0a-2)
+    in shape and intent: one query per cycle avoids N× DB reads inside the
+    inner per-event loop.
+    """
+    select_sql = text("""
+        SELECT event_type, handler_module, handler_function, enabled, max_retries
+        FROM legal.dispatcher_routes
+    """)
+    out: dict[str, DispatcherRoute] = {}
+    async with LegacySession() as db:
+        result = await db.execute(select_sql)
+        for row in result.fetchall():
+            route = DispatcherRoute(
+                event_type=row.event_type,
+                handler_module=row.handler_module,
+                handler_function=row.handler_function,
+                enabled=bool(row.enabled),
+                max_retries=int(row.max_retries),
+            )
+            out[route.event_type] = route
+    return out
+
+
+async def _is_dispatcher_paused() -> bool:
+    """
+    True iff legal.dispatcher_pause has its singleton row present.
+
+    Per design v1.1 §6 the pause table is a single-row control: at most
+    one row exists at a time (CHECK singleton_id = 1 enforces this).
+    Pause survives worker restart; resumption is operator-explicit via
+    the Phase 1-4 CLI.
+    """
+    check_sql = text(
+        "SELECT 1 FROM legal.dispatcher_pause WHERE singleton_id = 1 LIMIT 1"
+    )
+    async with LegacySession() as db:
+        result = await db.execute(check_sql)
+        return result.scalar() is not None
+
+
+async def _fetch_unprocessed_events(batch_size: int = BATCH_SIZE) -> list[dict[str, Any]]:
+    """
+    Poll legal.event_log for unprocessed events that have not yet exhausted
+    their retry budget. Returns a list of row dicts, ordered chronologically
+    (FIFO by emitted_at).
+
+    Per design v1.1 §5.1 (LOCKED). Reads:
+      - legal.event_log                  WHERE processed_at IS NULL
+      - legal.dispatcher_event_attempts  for the per-event attempt count
+      - legal.dispatcher_routes          for max_retries
+
+    The retry-exclusion sub-query joins event_log against
+    dispatcher_event_attempts ⋈ dispatcher_routes so events that have
+    already hit their max_retries are not re-dispatched. Phase 1-2D's
+    _maybe_dead_letter() sets processed_at on dead-lettered events so
+    they leave the polling queue entirely; this sub-query is the
+    belt-and-suspenders second-line defense.
+
+    FOR UPDATE SKIP LOCKED reserves rows for the calling transaction so
+    a future scale-out (multiple dispatcher workers) does not double-
+    dispatch. For Phase 1 single-worker the lock is essentially free —
+    the index covers the WHERE and there is no contention.
+
+    The function returns plain dicts (not row objects) so the caller can
+    pass payloads directly to handlers without holding a session.
+    """
+    select_sql = text("""
+        SELECT
+            id, event_type, case_slug, event_payload, emitted_at, emitted_by
+        FROM legal.event_log el
+        WHERE processed_at IS NULL
+          AND id NOT IN (
+              SELECT dea.event_id
+              FROM legal.dispatcher_event_attempts dea
+              JOIN legal.dispatcher_routes dr
+                  ON dr.event_type = el.event_type
+              WHERE dea.event_id = el.id
+              GROUP BY dea.event_id, dr.max_retries
+              HAVING COUNT(*) >= dr.max_retries
+          )
+        ORDER BY emitted_at ASC
+        LIMIT :batch_size
+        FOR UPDATE SKIP LOCKED
+    """)
+
+    out: list[dict[str, Any]] = []
+    async with LegacySession() as db:
+        result = await db.execute(select_sql, {"batch_size": batch_size})
+        for row in result.fetchall():
+            out.append({
+                "id": int(row.id),
+                "event_type": row.event_type,
+                "case_slug": row.case_slug,
+                "event_payload": row.event_payload,
+                "emitted_at": row.emitted_at,
+                "emitted_by": row.emitted_by,
+            })
+        # FOR UPDATE SKIP LOCKED holds the row lock until commit/rollback.
+        # We need the events out of the lock for handler dispatch; commit
+        # releases the lock immediately. Per design v1.1 §5.1 + §10:
+        # the dispatcher is the only writer to event_log.processed_at, so
+        # there is no race between this read and a subsequent UPDATE in
+        # 1-2D's _mark_processed.
+        await db.commit()
+    return out
