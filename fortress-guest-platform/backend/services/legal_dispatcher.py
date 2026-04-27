@@ -295,3 +295,163 @@ async def _fetch_unprocessed_events(batch_size: int = BATCH_SIZE) -> list[dict[s
         # 1-2D's _mark_processed.
         await db.commit()
     return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Bilateral write foundation (Sub-phase 1-2C)
+#
+# Per FLOS-phase-1-2 implementation spec clarification #4:
+# 1-2C establishes the write-side bilateral discipline foundation. Subsequent
+# 1-2D + 1-2E build on this pattern. The forced-id + setval implementation
+# below mirrors Phase 0a-2 §10 write_email_archive_bilateral() in
+# legal_mail_ingester.py exactly:
+#
+#   1. Legacy INSERT with RETURNING id, then commit                     (canonical)
+#   2. ProdSession INSERT (id, ...) VALUES (:forced_id, ...)            (mirror)
+#      followed by setval(seq, GREATEST(forced_id, last_value))         (sequence)
+#   3. Mirror failure logs + does not raise (drift mode)                (per #3)
+#
+# Drift acknowledgment (LOCKED clarification #3):
+# Legacy is canonical. _fetch_unprocessed_events() reads only Legacy. State
+# correctness is preserved when the prod mirror lags. Drift is surfaced
+# during Phase 1-6 24h soak via row-count parity check. Repair pass for
+# delta rows is a Phase 1-6 add-on (operator-triggered, not automatic).
+#
+# Schema-shape note: dispatcher_event_attempts has no UNIQUE constraint on
+# (event_id, attempt_number), so the dedup-on-conflict branch from
+# write_email_archive_bilateral (where file_path is UNIQUE) is structurally
+# absent here. Same bilateral discipline, simpler conflict surface.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _record_attempt(
+    event_id: int,
+    attempt_number: int,
+    outcome: str,
+    duration_ms: Optional[int],
+    error_message: Optional[str],
+) -> Optional[int]:
+    """
+    Insert one row into legal.dispatcher_event_attempts (bilateral).
+
+    Outcome MUST be one of OUTCOME_SUCCESS, OUTCOME_ERROR, OUTCOME_DEAD_LETTER
+    — these are the values accepted by chk_dispatcher_event_attempts_outcome
+    (Phase 1-1 LOCKED). OUTCOME_SKIPPED is in-process-only and must NOT be
+    passed here (skipped events do not write attempt rows; the dispatcher
+    treats unregistered handlers as a non-failure posture per Phase 1-2
+    clarification #2).
+
+    Returns the legacy id on success. Returns None if the legacy write fails
+    (caller decides whether to abort the per-event flow). Mirror failure logs
+    a warning and is NOT propagated — drift mode per clarification #3.
+    """
+    if outcome not in (OUTCOME_SUCCESS, OUTCOME_ERROR, OUTCOME_DEAD_LETTER):
+        # Defensive guard: would otherwise hit the DB CHECK and raise. Catch
+        # locally with a clear log so the source bug is obvious.
+        logger.error(
+            "legal_dispatcher_record_attempt_invalid_outcome",
+            event_id=event_id,
+            attempt_number=attempt_number,
+            outcome=outcome,
+        )
+        return None
+
+    # Truncate at the spec-defined boundary so the column never overflows.
+    if error_message is not None and len(error_message) > MAX_ERROR_MESSAGE_LEN:
+        error_message = error_message[:MAX_ERROR_MESSAGE_LEN]
+
+    row = {
+        "event_id": event_id,
+        "attempt_number": attempt_number,
+        "outcome": outcome,
+        "error_message": error_message,
+        "duration_ms": duration_ms,
+    }
+
+    # ── 1. Write to fortress_db (canonical) ─────────────────────────────
+    new_id: Optional[int] = None
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("""
+                    INSERT INTO legal.dispatcher_event_attempts
+                        (event_id, attempt_number, outcome, error_message,
+                         duration_ms, attempted_at)
+                    VALUES
+                        (:event_id, :attempt_number, :outcome, :error_message,
+                         :duration_ms, NOW())
+                    RETURNING id
+                """),
+                row,
+            )
+            row_obj = result.fetchone()
+            if row_obj is not None:
+                new_id = int(row_obj.id)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_attempt_db_failed",
+            event_id=event_id,
+            attempt_number=attempt_number,
+            outcome=outcome,
+            error=str(exc)[:300],
+        )
+        return None
+
+    if new_id is None:
+        # RETURNING produced no row but no exception — should not happen on
+        # an unconstrained INSERT against this table. Defensive log only.
+        logger.warning(
+            "legal_dispatcher_attempt_no_id_returned",
+            event_id=event_id,
+            attempt_number=attempt_number,
+        )
+        return None
+
+    # ── 2. Mirror to fortress_prod with forced matching id ─────────────
+    # Per ADR-001 + design v1.1 §10 + clarification #4. Legacy commit has
+    # already happened; mirror failure logs the drift and returns the
+    # canonical id anyway. State correctness rides on Legacy.
+    mirror_row = {**row, "forced_id": new_id}
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(
+                text("""
+                    INSERT INTO legal.dispatcher_event_attempts
+                        (id, event_id, attempt_number, outcome, error_message,
+                         duration_ms, attempted_at)
+                    VALUES
+                        (:forced_id, :event_id, :attempt_number, :outcome,
+                         :error_message, :duration_ms, NOW())
+                    ON CONFLICT (id) DO NOTHING
+                """),
+                mirror_row,
+            )
+            # Advance the prod sequence so future autogenerated ids don't
+            # collide with our forced ones. setval(seq, GREATEST(N, current))
+            # is idempotent + monotonic; running twice with same N is a no-op.
+            await prod.execute(
+                text("""
+                    SELECT setval(
+                        'legal.dispatcher_event_attempts_id_seq',
+                        GREATEST(
+                            :forced_id,
+                            (SELECT last_value FROM legal.dispatcher_event_attempts_id_seq)
+                        )
+                    )
+                """),
+                {"forced_id": new_id},
+            )
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_attempt_prod_mirror_failed",
+            attempt_id=new_id,
+            event_id=event_id,
+            attempt_number=attempt_number,
+            error=str(exc)[:300],
+        )
+        # Mirror drift acknowledged — Phase 1-6 24h soak surfaces; repair
+        # pass is operator-triggered Phase 1-6 add-on. Return Legacy id.
+
+    return new_id
