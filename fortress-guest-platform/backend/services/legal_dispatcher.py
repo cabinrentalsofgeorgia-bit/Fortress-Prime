@@ -2303,3 +2303,68 @@ async def _handle_operator_input(event: dict[str, Any]) -> dict[str, Any]:
         "case_slug": case_slug,
         "fields_updated": list(fields.keys()),
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3D — _handle_dead_letter
+#
+# Per design v1.1 §6.6 + spec §7 LOCKED — observability ONLY.
+#
+# Closes the dead-letter loop. Phase 1-2 1-2D _maybe_dead_letter (step 4)
+# emits a 'dispatcher.dead_letter' event into legal.event_log so this
+# event surfaces in the same observability plane as every other event.
+# This handler is the consumer — it surfaces the dead-letter to ops via
+# structured log and writes nothing.
+#
+# CRITICAL constraints (LOCKED v1.1 §6.6 + spec §7):
+#   - Does NOT emit further events. A failure in this handler's own
+#     dispatch could itself dead-letter, which would re-emit, which
+#     would re-fail, ad infinitum. Pure observability avoids the loop.
+#   - Does NOT write to case_posture. Dead-letters are observability,
+#     not state. case_posture mutations come from email.received +
+#     watchdog.matched + operator.input only.
+#   - Does NOT write to legal.dispatcher_dead_letter. Phase 1-2 1-2D
+#     _insert_dead_letter_log already wrote that row in step 3 of the
+#     4-step sequence. Double-writing would create duplicate audit rows.
+#
+# The handler's only effect is a structured log emission. The dispatcher's
+# _mark_processed (Phase 1-2) writes the return dict to event_log.result.
+#
+# Idempotency: trivially idempotent (no state mutation; only structured
+# logging). Same event re-applied produces an identical log line and an
+# identical return value.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_dead_letter(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3D handler for dispatcher.dead_letter events emitted by
+    legal_dispatcher:v1 (Phase 1-2 1-2D _maybe_dead_letter step 4).
+
+    See module-level comment block above for the three NOT-DOES
+    constraints + idempotency rationale.
+
+    Returns the observation result. The dispatcher's _mark_processed
+    writes this dict to legal.event_log.result.
+    """
+    event_id = int(event["id"])
+    payload = event.get("event_payload") or {}
+
+    # Structured log — the only side effect of this handler.
+    # Operator surface (Phase 1-4 CLI + health endpoint) reads
+    # legal.dispatcher_dead_letter for the long-term audit; this log
+    # provides real-time observability via the structlog pipeline.
+    logger.warning(
+        "legal_dispatcher_dead_letter_observed",
+        event_id=event_id,
+        original_event_id=payload.get("original_event_id"),
+        original_event_type=payload.get("original_event_type"),
+        case_slug=event.get("case_slug"),
+        final_error=payload.get("final_error"),
+        attempts=payload.get("attempts"),
+    )
+
+    return {
+        "status": "observed",
+        "original_event_id": payload.get("original_event_id"),
+    }
