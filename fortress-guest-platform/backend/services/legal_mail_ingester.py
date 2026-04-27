@@ -862,3 +862,158 @@ async def write_email_archive_bilateral(message: ParsedMessage) -> Optional[int]
         # Return the fortress_db id anyway — primary write succeeded.
 
     return new_id
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Event emission to legal.event_log
+#
+# Per design v1.1 §5 + §8:
+#   - event_type = 'email.received'
+#   - emitted_by = 'legal_mail_ingester:v1' (matches event_log CHECK regex)
+#   - payload includes case_slug, sender, subject, received_at, message_id,
+#     privilege_class, watchdog_matches[], email_archive_id, ingester_version
+#   - Phase 1 dispatcher will consume rows where processed_at IS NULL
+#
+# Bilateral mirror per ADR-001: same write pattern as email_archive
+# (fortress_db canonical + fortress_prod mirror).
+# Failure mode: log + don't raise; one bad event shouldn't abort the patrol.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+EVENT_TYPE_EMAIL_RECEIVED = "email.received"
+
+
+def _build_event_payload(message: ParsedMessage, email_archive_id: int) -> dict[str, Any]:
+    """Construct the event payload dict per design v1.1 §5.
+
+    Stored as JSONB in legal.event_log.event_payload. Phase 1 dispatcher
+    routes on event_type + reads case_slug/priority/watchdog_matches to
+    decide downstream action (case_posture update, operator alert, etc.).
+    """
+    return {
+        "event_type": EVENT_TYPE_EMAIL_RECEIVED,
+        "ingester_version": INGESTER_VERSIONED,
+        "mailbox": message.mailbox_alias,
+        "received_at": datetime.now(timezone.utc).isoformat(),
+        "sender": message.sender,
+        "sender_domain": message.sender_domain,
+        "subject": message.subject,
+        "message_id": message.message_id,
+        "case_slug": message.case_slug,
+        "privilege_class": message.privilege_class,
+        "priority": message.priority,
+        "watchdog_matches": message.watchdog_matches,
+        "email_archive_id": email_archive_id,
+        "file_path": message.file_path,
+        "category": message.category,
+        # sent_at as ISO-8601 if parseable; null otherwise. Useful for
+        # downstream deadline calculation (response-due windows).
+        "sent_at": message.sent_at.isoformat() if message.sent_at else None,
+    }
+
+
+async def emit_email_received_event(
+    message: ParsedMessage,
+    email_archive_id: int,
+) -> Optional[int]:
+    """
+    Emit an email.received event to legal.event_log on both fortress_db
+    and fortress_prod (bilateral per ADR-001).
+
+    Returns the event_log.id from fortress_db on success (canonical store),
+    None on primary failure. Mirror failure to fortress_prod is logged but
+    does not raise — same pattern as email_archive bilateral write (§10).
+
+    Should be called by 2E orchestrator AFTER write_email_archive_bilateral
+    returns a non-None id. If email_archive write failed, no event emitted.
+    """
+    payload = _build_event_payload(message, email_archive_id)
+
+    # serialize once; pass to both inserts as the same JSON string
+    payload_json = json.dumps(payload, default=str, ensure_ascii=False)
+
+    # ── 1. Write to fortress_db (canonical) ─────────────────────────────
+    new_event_id: Optional[int] = None
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (event_type, case_slug, event_payload, emitted_by)
+                    VALUES
+                        (:event_type, :case_slug, CAST(:payload AS JSONB), :emitted_by)
+                    RETURNING id
+                """),
+                {
+                    "event_type": EVENT_TYPE_EMAIL_RECEIVED,
+                    "case_slug": message.case_slug,
+                    "payload": payload_json,
+                    "emitted_by": INGESTER_VERSIONED,
+                },
+            )
+            row_obj = result.fetchone()
+            if row_obj is not None:
+                new_event_id = int(row_obj.id)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_mail_event_log_db_failed",
+            email_archive_id=email_archive_id,
+            case_slug=message.case_slug,
+            error=str(exc)[:300],
+        )
+        return None
+
+    if new_event_id is None:
+        # Should not happen — event_log has no UNIQUE constraints that
+        # would silently DROP an INSERT. Defensive only.
+        logger.warning(
+            "legal_mail_event_log_no_id_returned",
+            email_archive_id=email_archive_id,
+        )
+        return None
+
+    # ── 2. Mirror to fortress_prod with forced matching id ─────────────
+    # Same forced-id + setval pattern as email_archive write (§10).
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (id, event_type, case_slug, event_payload, emitted_by)
+                    VALUES
+                        (:forced_id, :event_type, :case_slug,
+                         CAST(:payload AS JSONB), :emitted_by)
+                    ON CONFLICT (id) DO NOTHING
+                """),
+                {
+                    "forced_id": new_event_id,
+                    "event_type": EVENT_TYPE_EMAIL_RECEIVED,
+                    "case_slug": message.case_slug,
+                    "payload": payload_json,
+                    "emitted_by": INGESTER_VERSIONED,
+                },
+            )
+            # Advance prod's event_log sequence so future autogenerated ids
+            # don't collide with our forced one (same pattern as email_archive).
+            await prod.execute(
+                text("""
+                    SELECT setval(
+                        'legal.event_log_id_seq',
+                        GREATEST(:forced_id, (SELECT last_value FROM legal.event_log_id_seq))
+                    )
+                """),
+                {"forced_id": new_event_id},
+            )
+            await prod.commit()
+    except Exception as exc:
+        # Event mirror drift — log + continue. Phase 1 dispatcher reads from
+        # fortress_db (canonical), so a missing prod row doesn't block routing.
+        logger.warning(
+            "legal_mail_event_log_prod_mirror_failed",
+            event_log_id=new_event_id,
+            email_archive_id=email_archive_id,
+            error=str(exc)[:300],
+        )
+
+    return new_event_id
