@@ -48,6 +48,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -56,6 +57,7 @@ from typing import Any
 import httpx
 import psycopg
 import structlog
+from aiolimiter import AsyncLimiter
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 from tqdm.asyncio import tqdm
@@ -87,18 +89,40 @@ PARTITION_FLOOR = date(2023, 9, 1)
 BACKFILL_START = "2023-09-01"
 BACKFILL_END = datetime.now(UTC).date().isoformat()
 
-# Bounded HTTP concurrency. Paid tier has no documented rate cap but we
-# don't need to sustain more than 50 parallel sockets to hit the ~5 min
-# budget on ~700 tickers.
-HTTP_CONCURRENCY = 50
+# Polygon Stocks Starter is rate-limited despite being a paid tier — our
+# first backfill attempt at HTTP_CONCURRENCY=50 hit instant 429s on every
+# ticker after the first ~19 succeeded. Empirically we sustained ~20
+# calls/min before throttling kicked in. We now gate at 10 RPS via
+# `_RATE_LIMITER` (below) and keep HTTP_CONCURRENCY low — the limiter is
+# the actual throttle; concurrency only governs how many sockets are open.
+HTTP_CONCURRENCY = 5
 HTTP_TIMEOUT_SECONDS = 30.0
-MAX_RETRIES = 5
+MAX_RETRIES = 10
 MAX_BACKOFF_SECONDS = 60.0
+# Per-ticker total backoff budget at MAX_RETRIES=10 with capped exponential:
+#   1 + 2 + 4 + 8 + 16 + 32 + 60*4 = 303s ≈ 5 minutes
 
 STATE_DIR = PROJECT_ROOT / "scripts" / "state"
 STATE_FILE = STATE_DIR / "backfill_state.json"
 ERROR_LOG = STATE_DIR / "backfill_errors.log"
 NO_DATA_FILE = STATE_DIR / "no_data_tickers.json"
+
+# ---------------------------------------------------------------------------
+# Rate limiting (module-level, shared across coroutines)
+# ---------------------------------------------------------------------------
+#
+# AsyncLimiter is a leaky bucket: max_rate tokens accumulate in a bucket of
+# capacity max_rate, draining at max_rate/time_period per second. With
+# (10, 1.0) the first 10 calls burst, then the remainder are paced at 10/sec.
+# This is conservative under the ~20 calls/min ceiling we observed
+# empirically when the tier started returning 429s. Acquire BEFORE the
+# HTTP call so the limiter actually gates outbound requests (acquiring after
+# would let bursts of unlimited concurrent requests fly).
+_RATE_LIMITER = AsyncLimiter(max_rate=10, time_period=1.0)
+
+# Total HTTP attempts made (including retries). Single-threaded asyncio
+# means a plain int increment is safe.
+_HTTP_CALL_COUNTER = 0
 
 INSERT_SQL = """
 INSERT INTO hedge_fund.eod_bars (
@@ -168,9 +192,16 @@ async def fetch_ticker_bars(
 ) -> tuple[list[dict[str, Any]] | None, str | None]:
     """Fetch daily aggregate bars for one ticker.
 
-    Returns (results, error). On error, results is None. On no-data,
-    results is [].
+    Acquires the module-level rate limiter BEFORE every HTTP call (including
+    retries). Returns (results, error). On error, results is None. On
+    no-data, results is [].
+
+    429 logging policy: log at INFO for the first 1-2 consecutive 429s on
+    a single ticker (expected with the limiter), promote to WARNING from
+    the 3rd consecutive onward (signal of pathology — the limiter alone
+    should be preventing 429s).
     """
+    global _HTTP_CALL_COUNTER
     url = f"{POLYGON_BASE}/v2/aggs/ticker/{ticker}/range/1/day/{BACKFILL_START}/{BACKFILL_END}"
     params = {
         "adjusted": "true",
@@ -179,15 +210,27 @@ async def fetch_ticker_bars(
         "apiKey": POLYGON_API_KEY,
     }
     backoff = 1.0
+    consecutive_429 = 0
     for attempt in range(MAX_RETRIES):
         try:
-            r = await client.get(url, params=params, timeout=HTTP_TIMEOUT_SECONDS)
+            async with _RATE_LIMITER:
+                _HTTP_CALL_COUNTER += 1
+                r = await client.get(url, params=params, timeout=HTTP_TIMEOUT_SECONDS)
             if r.status_code == 429:
+                consecutive_429 += 1
                 wait = min(backoff, MAX_BACKOFF_SECONDS)
-                log.warning("rate_limited", ticker=ticker, attempt=attempt, wait=wait)
+                log_method = log.warning if consecutive_429 >= 3 else log.info
+                log_method(
+                    "rate_limited_429",
+                    ticker=ticker,
+                    attempt=attempt,
+                    consecutive=consecutive_429,
+                    wait=wait,
+                )
                 await asyncio.sleep(wait)
                 backoff *= 2
                 continue
+            consecutive_429 = 0
             r.raise_for_status()
             payload = r.json()
             return payload.get("results") or [], None
@@ -360,6 +403,7 @@ async def main_async(args: argparse.Namespace) -> int:
         failed = 0
         bars_inserted = 0
         bars_dropped_pre_partition = 0
+        wall_start = time.monotonic()
 
         async with httpx.AsyncClient() as client:
             tasks = [
@@ -393,6 +437,10 @@ async def main_async(args: argparse.Namespace) -> int:
         state["finished_at"] = datetime.now(UTC).isoformat()
         save_state(state)
 
+    wall_seconds = time.monotonic() - wall_start
+    effective_rate_per_sec = (
+        _HTTP_CALL_COUNTER / wall_seconds if wall_seconds > 0 else 0.0
+    )
     summary = {
         "tickers_attempted": attempted,
         "tickers_succeeded": succeeded,
@@ -400,6 +448,10 @@ async def main_async(args: argparse.Namespace) -> int:
         "tickers_failed": failed,
         "bars_inserted": bars_inserted,
         "bars_dropped_pre_partition": bars_dropped_pre_partition,
+        "http_calls_made": _HTTP_CALL_COUNTER,
+        "wall_seconds": round(wall_seconds, 2),
+        "effective_rate_per_sec": round(effective_rate_per_sec, 3),
+        "effective_rate_per_min": round(effective_rate_per_sec * 60, 1),
     }
     log.info("backfill_complete", **summary)
 
