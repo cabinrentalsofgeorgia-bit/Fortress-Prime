@@ -36,9 +36,11 @@ LEGAL_DISPATCHER_ENABLED). Phase 1-5 cutover is the explicit flag flip.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json as _json
 import time as _time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Optional
 
 import structlog
@@ -146,26 +148,33 @@ class DispatcherRoute:
 # legal.dispatcher_routes table is metadata only; it is consulted for
 # enabled/max_retries/audit but the actual callable comes from this dict.
 #
-# Phase 1-2 keeps this dict empty by design — no handlers ship in this
-# sub-phase. Phase 1-3 sub-phases 1-3A through 1-3E populate it with:
-#   "email.received"                  → _handle_email_received
-#   "watchdog.matched"                → _handle_watchdog_matched
-#   "operator.input"                  → _handle_operator_input
-#   "dispatcher.dead_letter"          → _handle_dead_letter
-#   "vault.document_ingested"         → _handle_vault_document_ingested  (placeholder)
-#   "council.deliberation_complete"   → _handle_council_deliberation_complete  (placeholder)
+# The dict itself is defined at the END of this file (after all handler
+# functions are defined — Python parses top-to-bottom). dispatch_event
+# (defined here, called via the patrol loop) resolves _HANDLERS at call
+# time, so this forward reference is safe.
+#
+# Phase 1-2 declared the dict empty here at module top. Phase 1-3E moved
+# the declaration to end-of-file with all 6 handlers wired (4 enabled
+# live + 2 placeholder-disabled per legal.dispatcher_routes seed in the
+# Phase 1-1 r3c4d5e6f7g8 migration).
 #
 # Handler signature: async def handler(event: dict) -> dict
 #   - event: row dict from legal.event_log SELECT
 #   - return: jsonb-serializable result for legal.event_log.result column
 #
 # When _HANDLERS.get(event_type) returns None, the dispatcher marks the
-# event skipped with reason='handler_not_registered' — NOT an error.
-# This is the correct posture: an event we don't know how to handle is
-# not a failure, it's an indication that the handler hasn't shipped yet.
+# event skipped with reason='handler_not_registered' — NOT an error
+# (Phase 1-2 clarification #2). This applies to event types that have a
+# row in dispatcher_routes but no entry in this dict; the route is the
+# DB-side audit/config layer, the dict is the runtime resolver.
+#
+# Forward declaration below is required so dispatch_event (defined later)
+# resolves the _HANDLERS symbol cleanly under static analysis. The dict
+# is REBOUND at end-of-file with the full handler registry.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# Forward declaration — rebound at end of file with all 6 handlers wired.
 _HANDLERS: dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]] = {}
 
 
@@ -1268,3 +1277,1215 @@ async def run_legal_dispatcher_loop() -> None:
         cycle_duration = _time.monotonic() - cycle_start
         sleep_for = max(1.0, POLL_INTERVAL_SEC - cycle_duration)
         await asyncio.sleep(sleep_for)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Event handlers — Phase 1-3 (Q5 LOCKED Option B in-file callables)
+#
+# Per FLOS-phase-1-3-event-handlers-implementation.md.
+#
+# Phase 1-3 is the first sub-phase where legal.case_posture is mutated.
+# Principle 1 (events drive state) is enforced operationally from this
+# sub-phase forward: the dispatcher is the only writer to case_posture;
+# every mutation cites updated_by_event for Principle 4 audit attribution.
+#
+# Sub-phase scope:
+#   1-3A (this commit) — shared helpers + email.received handler
+#   1-3B               — watchdog.matched handler (consumes 1-3A re-emissions)
+#   1-3C               — operator.input handler with allowlist
+#   1-3D               — dispatcher.dead_letter handler (observability only)
+#   1-3E               — placeholder stubs + populate _HANDLERS dict
+#
+# Handler signature (LOCKED):
+#   async def _handle_<event_type>(event: dict[str, Any]) -> dict[str, Any]
+# Returns a JSONB-serializable result dict for legal.event_log.result.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared helpers (Sub-phase 1-3A)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# Phase 1 canonicalization input set for posture_hash. Order is fixed; the
+# JSON serialization uses sort_keys=True so dict ordering is irrelevant, but
+# the SET of fields below is what defines hash semantics. Phase 2+ field
+# additions append to this list (and the field set is versioned in code via
+# the explicit constant; design v1.1 §3 PROPOSED a posture_hash_version
+# column add — deferred unless drift detection proves necessary).
+_POSTURE_HASH_FIELDS: tuple[str, ...] = (
+    "case_slug",
+    "procedural_phase",
+    "theory_of_defense_state",
+    "top_defense_arguments",
+    "top_risk_factors",
+)
+
+
+# Whitelist of case_posture columns the dispatcher may write via
+# _bilateral_write_case_posture. Broader than OPERATOR_INPUT_ALLOWED_FIELDS
+# (1-3C scope) because the dispatcher writes more fields than operators
+# (e.g. 1-3B updates top_risk_factors; 1-3C operator.input cannot).
+#
+# NOT INCLUDED (system-managed; set automatically by the helper):
+#   case_slug          — WHERE clause; never updated
+#   created_at         — DEFAULT NOW() at INSERT only
+#   updated_at         — set automatically on every UPDATE
+#   posture_hash       — recomputed automatically on every UPDATE
+#   created_by_event   — set on INSERT only; immutable thereafter
+#   updated_by_event   — set automatically on every UPDATE
+_CASE_POSTURE_WRITABLE_FIELDS: frozenset[str] = frozenset({
+    "procedural_phase",
+    "theory_of_defense_state",
+    "next_deadline_date",
+    "next_deadline_action",
+    "top_defense_arguments",
+    "top_risk_factors",
+    "exposure_low",
+    "exposure_mid",
+    "exposure_high",
+    "leverage_score",
+    "opposing_counsel_profile",
+    "last_council_consensus",
+    "last_council_at",
+})
+
+# Columns that need explicit JSONB binding when written via raw SQL. Other
+# columns use direct parameter binding; SQLAlchemy + asyncpg handle the rest.
+_CASE_POSTURE_JSONB_FIELDS: frozenset[str] = frozenset({
+    "top_defense_arguments",
+    "top_risk_factors",
+    "opposing_counsel_profile",
+    "last_council_consensus",
+})
+
+
+def _compute_posture_hash(posture: dict[str, Any]) -> str:
+    """
+    SHA-256 over a JSON-canonicalized projection of the Phase 1-populated
+    fields per design v1.1 §3 + spec §3.3 LOCKED.
+
+    The canonicalization input set is fixed at five fields:
+      case_slug, procedural_phase, theory_of_defense_state,
+      top_defense_arguments, top_risk_factors
+
+    Phase 2+ field additions extend _POSTURE_HASH_FIELDS in code; if the
+    set changes we may need a posture_hash_version column add to detect
+    cross-version drift, but that's deferred unless operationally relevant.
+
+    JSON canonicalization: sort_keys=True + compact separators ensures
+    identical input dicts produce identical hash output regardless of
+    Python dict ordering or whitespace.
+    """
+    canonical_input = {field: posture.get(field) for field in _POSTURE_HASH_FIELDS}
+    canonical_json = _json.dumps(
+        canonical_input, sort_keys=True, separators=(",", ":"), default=str
+    )
+    return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+
+async def _case_exists_in_legal_cases(case_slug: str) -> bool:
+    """
+    Verify case_slug references a row in legal.cases.
+
+    Phase 1-3A scope: existence check only. legal.cases has a `status`
+    column but no documented "active" status enum yet — operator may
+    refine this to a status-based filter in 1-3B+ if needed (e.g.
+    `WHERE case_slug = :slug AND status NOT IN ('closed', 'archived')`).
+    For Phase 1-3A, any row in legal.cases is sufficient.
+    """
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("SELECT 1 FROM legal.cases WHERE case_slug = :slug LIMIT 1"),
+            {"slug": case_slug},
+        )
+        return result.scalar() is not None
+
+
+async def _load_or_create_case_posture(
+    case_slug: str,
+    event_id: int,
+) -> Optional[dict[str, Any]]:
+    """
+    Load the existing case_posture row OR create a fresh row with Phase 1-1
+    schema defaults. Returns the row as a dict, or None if case_slug does
+    not match a row in legal.cases.
+
+    Returns None (NOT a stub posture) when the case is not found — caller
+    decides whether to skip-no-active-case or surface the miss. This keeps
+    the helper a pure read-or-create primitive without per-handler policy
+    leaks.
+
+    Defaults applied on CREATE (matches Phase 1-1 schema CHECK constraints):
+      procedural_phase = 'pre-suit'
+      theory_of_defense_state = 'drafting'
+      top_defense_arguments = []
+      top_risk_factors = {}
+      created_by_event = updated_by_event = event_id
+      posture_hash = _compute_posture_hash(canonical_input)
+
+    Bilateral on CREATE: legacy INSERT first, prod mirror second. Mirror
+    failure logs warning and does NOT raise (drift mode per Phase 1-2
+    clarification #3 LOCKED).
+
+    Idempotency: re-call with same case_slug returns the existing row;
+    the create path is taken at most once per case.
+    """
+    select_sql = text("""
+        SELECT case_slug, procedural_phase, next_deadline_date,
+               next_deadline_action, theory_of_defense_state,
+               top_defense_arguments, top_risk_factors,
+               exposure_low, exposure_mid, exposure_high, leverage_score,
+               opposing_counsel_profile, last_council_consensus,
+               last_council_at, posture_hash, created_at, updated_at,
+               created_by_event, updated_by_event
+        FROM legal.case_posture
+        WHERE case_slug = :slug
+    """)
+
+    # ── 1. Try load ─────────────────────────────────────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(select_sql, {"slug": case_slug})
+        row = result.fetchone()
+        if row is not None:
+            return dict(row._mapping)
+
+    # ── 2. Verify case is a valid matter ────────────────────────────────
+    if not await _case_exists_in_legal_cases(case_slug):
+        logger.info(
+            "legal_dispatcher_case_posture_skip_unknown_case",
+            case_slug=case_slug,
+            event_id=event_id,
+        )
+        return None
+
+    # ── 3. Create new row with defaults ─────────────────────────────────
+    fresh_posture = {
+        "case_slug": case_slug,
+        "procedural_phase": "pre-suit",
+        "theory_of_defense_state": "drafting",
+        "top_defense_arguments": [],
+        "top_risk_factors": {},
+    }
+    new_hash = _compute_posture_hash(fresh_posture)
+
+    insert_sql = text("""
+        INSERT INTO legal.case_posture
+            (case_slug, procedural_phase, theory_of_defense_state,
+             top_defense_arguments, top_risk_factors,
+             posture_hash, created_at, updated_at,
+             created_by_event, updated_by_event)
+        VALUES
+            (:case_slug, 'pre-suit', 'drafting',
+             CAST(:top_defense_arguments AS jsonb),
+             CAST(:top_risk_factors AS jsonb),
+             :posture_hash, NOW(), NOW(),
+             :event_id, :event_id)
+        ON CONFLICT (case_slug) DO NOTHING
+    """)
+    insert_params = {
+        "case_slug": case_slug,
+        "top_defense_arguments": _json.dumps([]),
+        "top_risk_factors": _json.dumps({}),
+        "posture_hash": new_hash,
+        "event_id": event_id,
+    }
+
+    # ── 3a. Legacy (canonical) INSERT ────────────────────────────────────
+    try:
+        async with LegacySession() as db:
+            await db.execute(insert_sql, insert_params)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_case_posture_create_db_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+        return None
+
+    # ── 3b. Prod mirror INSERT (drift mode) ──────────────────────────────
+    # case_posture PK is case_slug (TEXT), not BIGSERIAL — so there is no
+    # sequence to setval. ON CONFLICT (case_slug) DO NOTHING handles a
+    # second-mirror scenario (e.g. partial mirror retry) idempotently.
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(insert_sql, insert_params)
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_case_posture_create_prod_mirror_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+        # Drift mode — Phase 1-6 24h soak surfaces.
+
+    # ── 4. Re-read so caller sees the canonical row (timestamps + hash) ─
+    async with LegacySession() as db:
+        result = await db.execute(select_sql, {"slug": case_slug})
+        row = result.fetchone()
+        if row is not None:
+            return dict(row._mapping)
+
+    # Race condition or DB failure between INSERT and SELECT — log and
+    # return None so caller bails cleanly.
+    logger.error(
+        "legal_dispatcher_case_posture_post_create_select_failed",
+        case_slug=case_slug,
+        event_id=event_id,
+    )
+    return None
+
+
+async def _bilateral_write_case_posture(
+    case_slug: str,
+    updates: dict[str, Any],
+    event_id: int,
+) -> bool:
+    """
+    UPDATE the case_posture row with the supplied field map. Bilateral
+    (legacy first, prod mirror second). Always sets updated_by_event,
+    updated_at, posture_hash.
+
+    Per Phase 1-3 spec §3.2 + §10 mutation discipline LOCKED:
+      - Cite updated_by_event = event_id (Principle 4 source attribution)
+      - Bump updated_at = NOW()
+      - Recompute posture_hash AFTER all field mutations applied
+      - Bilateral (mirror failure logs + does not raise — drift mode)
+
+    Empty `updates` dict is valid: the function still bumps the audit
+    timestamps + recomputes posture_hash. That's the "1-3A timestamp-only
+    refresh" semantic for email.received events that don't change state
+    fields (per §4 LOCKED scope).
+
+    Field validation: keys in `updates` are validated against
+    _CASE_POSTURE_WRITABLE_FIELDS. Unknown keys log error and the call
+    aborts before touching the DB. This is the second line of defense
+    against bad input; the first is per-handler validation (e.g.
+    1-3C OPERATOR_INPUT_ALLOWED_FIELDS, which is a stricter subset).
+
+    Returns True iff the legacy UPDATE succeeded.
+    """
+    # ── 1. Validate field keys ──────────────────────────────────────────
+    invalid = [k for k in updates if k not in _CASE_POSTURE_WRITABLE_FIELDS]
+    if invalid:
+        logger.error(
+            "legal_dispatcher_case_posture_invalid_field_keys",
+            case_slug=case_slug,
+            invalid_keys=invalid,
+            event_id=event_id,
+        )
+        return False
+
+    # ── 2. Re-read current state to compute new posture_hash ───────────
+    select_sql = text("""
+        SELECT case_slug, procedural_phase, theory_of_defense_state,
+               top_defense_arguments, top_risk_factors
+        FROM legal.case_posture
+        WHERE case_slug = :slug
+    """)
+    async with LegacySession() as db:
+        result = await db.execute(select_sql, {"slug": case_slug})
+        current = result.fetchone()
+        if current is None:
+            logger.error(
+                "legal_dispatcher_case_posture_update_no_row",
+                case_slug=case_slug,
+                event_id=event_id,
+            )
+            return False
+        # Apply pending updates over current state for hash purposes.
+        merged = dict(current._mapping)
+        merged.update(updates)
+    new_hash = _compute_posture_hash(merged)
+
+    # ── 3. Build dynamic UPDATE SET clause ──────────────────────────────
+    # Keys come from _CASE_POSTURE_WRITABLE_FIELDS (validated above), so
+    # f-string interpolation here is safe — no user-supplied column names.
+    set_clauses: list[str] = []
+    params: dict[str, Any] = {
+        "case_slug": case_slug,
+        "event_id": event_id,
+        "new_hash": new_hash,
+    }
+    for key, value in updates.items():
+        if key in _CASE_POSTURE_JSONB_FIELDS:
+            set_clauses.append(f"{key} = CAST(:{key} AS jsonb)")
+            params[key] = _json.dumps(value) if value is not None else None
+        else:
+            set_clauses.append(f"{key} = :{key}")
+            params[key] = value
+    # Always include audit columns
+    set_clauses.append("updated_by_event = :event_id")
+    set_clauses.append("updated_at = NOW()")
+    set_clauses.append("posture_hash = :new_hash")
+
+    update_sql = text(
+        "UPDATE legal.case_posture SET "
+        + ", ".join(set_clauses)
+        + " WHERE case_slug = :case_slug"
+    )
+
+    # ── 4. Legacy (canonical) UPDATE ────────────────────────────────────
+    try:
+        async with LegacySession() as db:
+            await db.execute(update_sql, params)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_case_posture_update_db_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+        return False
+
+    # ── 5. Prod mirror UPDATE (drift mode) ──────────────────────────────
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(update_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_case_posture_update_prod_mirror_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+
+    return True
+
+
+async def _emit_watchdog_event(
+    case_slug: str,
+    match: dict[str, Any],
+    source_event_id: int,
+) -> Optional[int]:
+    """
+    Emit a fresh watchdog.matched event into legal.event_log. Used by
+    _handle_email_received to re-route watchdog match payloads to
+    _handle_watchdog_matched (Phase 1-3B handler).
+
+    Bilateral with forced-id + setval pattern — same shape as
+    _emit_dead_letter_event (1-2D §6 step 4).
+
+    emitted_by = DISPATCHER_VERSIONED ('legal_dispatcher:v1') because the
+    dispatcher is the producer of this re-emitted event. The original
+    email.received event's emitted_by tag is preserved in the payload's
+    source_event_id field for the audit chain.
+
+    Returns new event_id on success; None on legacy failure. Mirror
+    failure logs and continues (drift mode).
+    """
+    payload = {
+        "rule_id": match.get("rule_id"),
+        "rule_name": match.get("rule_name"),
+        "severity": match.get("severity"),
+        "match_type": match.get("match_type"),
+        "search_term": match.get("search_term"),
+        "source_event_id": source_event_id,
+    }
+    row = {
+        "event_type": "watchdog.matched",
+        "case_slug": case_slug,
+        "event_payload_json": _json.dumps(payload),
+        "emitted_by": DISPATCHER_VERSIONED,
+    }
+
+    new_id: Optional[int] = None
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (event_type, case_slug, event_payload, emitted_at, emitted_by)
+                    VALUES
+                        (:event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    RETURNING id
+                """),
+                row,
+            )
+            row_obj = result.fetchone()
+            if row_obj is not None:
+                new_id = int(row_obj.id)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_watchdog_event_db_failed",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+            rule_id=match.get("rule_id"),
+            error=str(exc)[:300],
+        )
+        return None
+
+    if new_id is None:
+        logger.warning(
+            "legal_dispatcher_watchdog_event_no_id_returned",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+        )
+        return None
+
+    mirror_row = {**row, "forced_id": new_id}
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (id, event_type, case_slug, event_payload,
+                         emitted_at, emitted_by)
+                    VALUES
+                        (:forced_id, :event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    ON CONFLICT (id) DO NOTHING
+                """),
+                mirror_row,
+            )
+            await prod.execute(
+                text("""
+                    SELECT setval(
+                        'legal.event_log_id_seq',
+                        GREATEST(
+                            :forced_id,
+                            (SELECT last_value FROM legal.event_log_id_seq)
+                        )
+                    )
+                """),
+                {"forced_id": new_id},
+            )
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_watchdog_event_prod_mirror_failed",
+            new_event_id=new_id,
+            source_event_id=source_event_id,
+            error=str(exc)[:300],
+        )
+
+    return new_id
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3A — _handle_email_received
+#
+# Per design v1.1 §6.1 LOCKED scope + spec §4 LOCKED.
+# Triggered by legal_mail_ingester:v1 on every inbound legal email.
+#
+# Scope (LOCKED v1.1 §6.1):
+#   1. Skip if event.case_slug is null or doesn't match an active case
+#   2. Load or create case_posture row for case_slug
+#   3. For each watchdog_match in event_payload, emit watchdog.matched event
+#   4. Refresh case_posture audit timestamps (no field mutations)
+#
+# Removed from v1.1 scope (deferred to Phase 2+):
+#   - procedural_phase mutation logic (operator-defined rules without an
+#     operator-defined ruleset; Phase 2+ adds legal.procedural_phase_rules
+#     table and a separate handler)
+#
+# Idempotency (Principle 6 LOCKED):
+#   Same event re-applied yields same case_posture state. Re-emitted
+#   watchdog events would create duplicate watchdog.matched rows — but
+#   this only happens during operator-driven recovery; the dispatcher's
+#   polling-exclusion sub-query (Phase 1-2 §5.1) prevents same-event
+#   re-application in steady-state.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_email_received(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3A handler for email.received events emitted by
+    legal_mail_ingester:v1 (Phase 0a-2 producer).
+
+    See module-level comment block above for full scope rationale.
+
+    Returns one of:
+      {"status": "skipped_no_case_slug"}
+      {"status": "skipped_no_active_case", "case_slug": <slug>}
+      {"status": "success", "case_slug": <slug>, "watchdog_events_emitted": N}
+
+    The dispatcher's _mark_processed (Phase 1-2 §5.2) writes this return
+    dict to legal.event_log.result.
+    """
+    event_id = int(event["id"])
+    case_slug = event.get("case_slug")
+    payload = event.get("event_payload") or {}
+
+    # ── 1. Skip checks ───────────────────────────────────────────────────
+    if not case_slug:
+        return {"status": "skipped_no_case_slug"}
+
+    posture = await _load_or_create_case_posture(case_slug, event_id)
+    if posture is None:
+        return {
+            "status": "skipped_no_active_case",
+            "case_slug": case_slug,
+        }
+
+    # ── 2. Re-emit watchdog.matched events ──────────────────────────────
+    matches = payload.get("watchdog_matches") or []
+    emitted = 0
+    for match in matches:
+        if not isinstance(match, dict):
+            # Defensive: legal_mail_ingester emits watchdog_matches as a
+            # list of dicts per design v1.1 §8 event_payload spec. If a
+            # producer ever drifts to scalar entries, log and skip
+            # rather than crash the handler.
+            logger.warning(
+                "legal_dispatcher_watchdog_match_non_dict",
+                case_slug=case_slug,
+                event_id=event_id,
+            )
+            continue
+        new_event_id = await _emit_watchdog_event(case_slug, match, event_id)
+        if new_event_id is not None:
+            emitted += 1
+
+    # ── 3. Refresh case_posture audit timestamps ────────────────────────
+    # Empty updates dict triggers updated_by_event/updated_at/posture_hash
+    # refresh only — no field mutations per LOCKED v1.1 §6.1.
+    await _bilateral_write_case_posture(
+        case_slug=case_slug,
+        updates={},
+        event_id=event_id,
+    )
+
+    return {
+        "status": "success",
+        "case_slug": case_slug,
+        "watchdog_events_emitted": emitted,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Operator alert emission helper (Sub-phase 1-3B)
+#
+# Used by _handle_watchdog_matched when severity == 'P1'. Bilateral INSERT
+# into legal.event_log with event_type='operator.alert'. Same forced-id +
+# setval pattern as _emit_watchdog_event (1-3A) and _emit_dead_letter_event
+# (1-2D §6 step 4).
+#
+# Phase 1-3 emits the event but its CONSUMER ships in Phase 2+ (operator
+# alert routing — paging, notification, dashboard surface). Until the
+# consumer ships, operator.alert events accumulate in event_log; the
+# dispatcher's _HANDLERS dict has no entry for 'operator.alert' so each
+# event records a skip with reason='handler_not_registered' (per Phase 1-2
+# clarification #2 — no DB write for skips).
+#
+# Phase 2+ adds:
+#   1. legal.dispatcher_routes seed row for 'operator.alert'
+#      (handler_module=..., handler_function='handle_operator_alert',
+#       enabled=TRUE)
+#   2. _HANDLERS['operator.alert'] = _handle_operator_alert in this file
+#   3. Operator-facing surfaces (CLI, paging, dashboard alert queue)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _emit_operator_alert(
+    case_slug: str,
+    source_payload: dict[str, Any],
+    source_event_id: int,
+) -> Optional[int]:
+    """
+    Emit a fresh operator.alert event into legal.event_log. Triggered by
+    1-3B handler when watchdog severity == 'P1'.
+
+    Per spec §5 (LOCKED). The alert payload preserves the full watchdog
+    match context so the Phase 2+ consumer can decide alert routing
+    without rejoining the original event_log row.
+
+    emitted_by = DISPATCHER_VERSIONED. The original watchdog event's id
+    is preserved in payload.source_event_id for the audit chain
+    (legal_mail_ingester → email.received → legal_dispatcher emits
+    watchdog.matched → legal_dispatcher emits operator.alert).
+
+    Returns new event_id on success; None on legacy failure. Mirror
+    failure logs and continues (drift mode).
+    """
+    payload = {
+        "rule_id": source_payload.get("rule_id"),
+        "rule_name": source_payload.get("rule_name"),
+        "severity": source_payload.get("severity"),
+        "match_type": source_payload.get("match_type"),
+        "search_term": source_payload.get("search_term"),
+        "source_event_id": source_event_id,
+        "alert_reason": "watchdog_severity_p1",
+    }
+    row = {
+        "event_type": "operator.alert",
+        "case_slug": case_slug,
+        "event_payload_json": _json.dumps(payload),
+        "emitted_by": DISPATCHER_VERSIONED,
+    }
+
+    new_id: Optional[int] = None
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (event_type, case_slug, event_payload, emitted_at, emitted_by)
+                    VALUES
+                        (:event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    RETURNING id
+                """),
+                row,
+            )
+            row_obj = result.fetchone()
+            if row_obj is not None:
+                new_id = int(row_obj.id)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_operator_alert_db_failed",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+            rule_id=source_payload.get("rule_id"),
+            error=str(exc)[:300],
+        )
+        return None
+
+    if new_id is None:
+        logger.warning(
+            "legal_dispatcher_operator_alert_no_id_returned",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+        )
+        return None
+
+    mirror_row = {**row, "forced_id": new_id}
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (id, event_type, case_slug, event_payload,
+                         emitted_at, emitted_by)
+                    VALUES
+                        (:forced_id, :event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    ON CONFLICT (id) DO NOTHING
+                """),
+                mirror_row,
+            )
+            await prod.execute(
+                text("""
+                    SELECT setval(
+                        'legal.event_log_id_seq',
+                        GREATEST(
+                            :forced_id,
+                            (SELECT last_value FROM legal.event_log_id_seq)
+                        )
+                    )
+                """),
+                {"forced_id": new_id},
+            )
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_operator_alert_prod_mirror_failed",
+            new_event_id=new_id,
+            source_event_id=source_event_id,
+            error=str(exc)[:300],
+        )
+
+    return new_id
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3B — _handle_watchdog_matched
+#
+# Per design v1.1 §6.2 LOCKED scope (per-rule aggregation) + spec §5 LOCKED.
+# Triggered by 1-3A re-emission when an inbound email matches one or more
+# watchdog rules. Second writer to legal.case_posture in Phase 1.
+#
+# Aggregation contract (LOCKED v1.1 §6.2):
+#   top_risk_factors is a JSONB dict keyed by rule_id. Each unique rule_id
+#   occupies exactly ONE entry. Repeated matches of the same rule increment
+#   match_count + update last_match_at; they do NOT create new entries.
+#
+# Bounded-growth property:
+#   |top_risk_factors entries| <= |active watchdog rules per case|
+#   Typical: 10-30 rules per case → at most 10-30 dict entries.
+#   This is the LOCKED contract that distinguishes v1.1 from v1's
+#   "append capped at 50" representation.
+#
+# Phase 1-6 24h soak verification (per spec §13):
+#   - Single rule matched N times → 1 dict entry with match_count=N
+#   - N distinct rules matched → N dict entries (NOT N×match_count entries)
+#   - Unbounded match_count growth on a single rule entry signals replay
+#     pathology (recovery operation iterating the same event)
+#
+# Idempotency note:
+#   Re-applying the same event increments match_count by 1. Acceptable
+#   because:
+#     1. Polling-exclusion sub-query (Phase 1-2 §5.1) prevents
+#        same-event re-application in steady state
+#     2. Replay is operator-driven; match_count reflects emission count,
+#        which is the desired audit semantic
+#     3. Phase 1-6 24h soak detects unbounded growth as a recovery
+#        red flag
+#   If Phase 2+ requires stricter idempotency, switch to
+#   max(match_count, current+1) or add (event_id, rule_id) UNIQUE constraint.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_watchdog_matched(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3B handler for watchdog.matched events emitted by
+    legal_dispatcher:v1 (1-3A re-emission).
+
+    See module-level comment block above for aggregation contract +
+    bounded-growth property + idempotency rationale.
+
+    Returns one of:
+      {"status": "skipped_missing_required_fields"}
+      {"status": "skipped_no_active_case", "case_slug": <slug>}
+      {"status": "success", "rule_id": <id>, "match_count": <n>,
+       "operator_alert_emitted": <bool>}
+    """
+    event_id = int(event["id"])
+    case_slug = event.get("case_slug")
+    payload = event.get("event_payload") or {}
+    rule_id = payload.get("rule_id")
+
+    # ── 1. Required-field validation ────────────────────────────────────
+    if not case_slug or not rule_id:
+        return {"status": "skipped_missing_required_fields"}
+
+    # ── 2. Load case_posture (or create lazily) ────────────────────────
+    posture = await _load_or_create_case_posture(case_slug, event_id)
+    if posture is None:
+        return {
+            "status": "skipped_no_active_case",
+            "case_slug": case_slug,
+        }
+
+    # ── 3. Per-rule aggregation in top_risk_factors dict ───────────────
+    # The dict is keyed by rule_id. Same rule_id matched N times → 1
+    # entry with match_count=N. Distinct rule_ids → multiple entries.
+    # Bounded by active watchdog rule count per case (~10-30 typical).
+    current_factors = posture.get("top_risk_factors") or {}
+    # Defensive: legacy data or migration drift might leave this as a
+    # list (v1 representation) instead of a dict. Coerce + log.
+    if not isinstance(current_factors, dict):
+        logger.warning(
+            "legal_dispatcher_top_risk_factors_unexpected_type",
+            case_slug=case_slug,
+            actual_type=type(current_factors).__name__,
+            event_id=event_id,
+        )
+        current_factors = {}
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    rule_id_str = str(rule_id)
+    existing = current_factors.get(rule_id_str)
+    if isinstance(existing, dict):
+        # Increment match_count + refresh last_match_at; preserve
+        # first_match_at, severity, rule_name from the original entry.
+        existing["last_match_at"] = now_iso
+        existing["match_count"] = int(existing.get("match_count", 0)) + 1
+        match_count = existing["match_count"]
+    else:
+        # New rule_id — insert fresh entry with both timestamps set to now.
+        current_factors[rule_id_str] = {
+            "rule_id": rule_id_str,
+            "rule_name": payload.get("rule_name"),
+            "severity": payload.get("severity"),
+            "first_match_at": now_iso,
+            "last_match_at": now_iso,
+            "match_count": 1,
+        }
+        match_count = 1
+
+    # ── 4. Bilateral case_posture write ─────────────────────────────────
+    write_ok = await _bilateral_write_case_posture(
+        case_slug=case_slug,
+        updates={"top_risk_factors": current_factors},
+        event_id=event_id,
+    )
+    if not write_ok:
+        # _bilateral_write_case_posture already logged the failure cause.
+        # Return error status so dispatcher records outcome=ERROR; retry
+        # budget applies and the event eventually dead-letters if the
+        # condition persists.
+        return {
+            "status": "error_case_posture_write_failed",
+            "case_slug": case_slug,
+            "rule_id": rule_id_str,
+        }
+
+    # ── 5. Emit operator.alert for P1 severity ──────────────────────────
+    # The alert event lands in event_log with emitted_by=DISPATCHER_VERSIONED.
+    # Phase 1-3 has no _HANDLERS entry for operator.alert, so the dispatcher
+    # records a handler_not_registered skip per clarification #2 (no DB
+    # write for skips). Phase 2+ ships the alert handler.
+    operator_alert_emitted = False
+    if str(payload.get("severity") or "").upper() == "P1":
+        alert_event_id = await _emit_operator_alert(
+            case_slug=case_slug,
+            source_payload=payload,
+            source_event_id=event_id,
+        )
+        operator_alert_emitted = alert_event_id is not None
+
+    return {
+        "status": "success",
+        "case_slug": case_slug,
+        "rule_id": rule_id_str,
+        "match_count": match_count,
+        "operator_alert_emitted": operator_alert_emitted,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3C — _handle_operator_input
+#
+# Per design v1.1 §6.3 + spec §6 + §6.1 LOCKED.
+# Triggered by future operator CLI commands (Phase 2+). For Phase 1-3 the
+# route is wired but live operator commands ship in Phase 2+ — only test
+# fixture events exercise this handler during Phase 1-3 development.
+#
+# OPERATOR_INPUT_ALLOWED_FIELDS (LOCKED — operator decision):
+#   procedural_phase, theory_of_defense_state, top_defense_arguments,
+#   exposure_low, exposure_mid, exposure_high, leverage_score,
+#   opposing_counsel_profile
+#
+# These 8 fields are a STRICT SUBSET of _CASE_POSTURE_WRITABLE_FIELDS (1-3A).
+# Blocked fields (NOT in operator allowlist):
+#   top_risk_factors            — dispatcher-managed via 1-3B aggregation;
+#                                 operator override would corrupt match_count
+#                                 + last_match_at semantics
+#   last_council_consensus      — Phase 2+ council handler writes; protect
+#   last_council_at               from operator races
+#   next_deadline_date          — Phase 2+ deadline projection writes;
+#   next_deadline_action          protect from operator races
+#   case_slug                   — primary key, immutable
+#   created_at / updated_at     — system-managed timestamps
+#   posture_hash                — system-recomputed on every write
+#   created_by_event /          — system-managed audit FKs
+#   updated_by_event
+#
+# Phase 2+ may add operator.curate_risk_factor event type for emergency
+# top_risk_factors curation if operationally needed; not Phase 1 scope.
+#
+# Event payload contract (LOCKED v1.1 §6.3):
+#   {
+#     "command": "set_field",
+#     "case_slug": "<slug>",
+#     "fields": {
+#       "<field_name>": <value>,
+#       ...
+#     }
+#   }
+#
+# Currently the only command is 'set_field'. Phase 2+ may add 'unset_field'
+# (set NULL), 'append_to_jsonb_array', etc. — those would land as separate
+# command branches in this handler, each with its own validation.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# LOCKED — operator decision per Phase 1-3 spec §6.1.
+OPERATOR_INPUT_ALLOWED_FIELDS: frozenset[str] = frozenset({
+    "procedural_phase",
+    "theory_of_defense_state",
+    "top_defense_arguments",
+    "exposure_low",
+    "exposure_mid",
+    "exposure_high",
+    "leverage_score",
+    "opposing_counsel_profile",
+})
+
+# Defense-in-depth assertion at module load: the operator allowlist must
+# be a strict subset of the dispatcher's writable field set. If a future
+# edit to either constant breaks this invariant, this assertion fires at
+# import time so the source bug is obvious.
+assert OPERATOR_INPUT_ALLOWED_FIELDS.issubset(_CASE_POSTURE_WRITABLE_FIELDS), (
+    "OPERATOR_INPUT_ALLOWED_FIELDS must be a subset of "
+    "_CASE_POSTURE_WRITABLE_FIELDS — operator cannot mutate fields the "
+    "dispatcher itself does not consider writable."
+)
+
+
+async def _handle_operator_input(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3C handler for operator.input events.
+
+    Validates payload structure + command + field allowlist before
+    delegating mutation to _bilateral_write_case_posture (1-3A).
+
+    DB-layer CHECK constraints enforce enum/range values
+    (procedural_phase, theory_of_defense_state, leverage_score), so
+    invalid VALUES fail at the DB layer with a clear error_message
+    surfaced via dispatcher_event_attempts.outcome='error'. This handler
+    only validates field NAMES against the allowlist; it does not
+    re-validate values that the schema already guards.
+
+    Returns one of:
+      {"status": "skipped_unknown_command", "command": <command>}
+      {"status": "skipped_missing_case_slug"}
+      {"status": "skipped_no_fields"}
+      {"status": "skipped_no_active_case", "case_slug": <slug>}
+      {"status": "rejected_invalid_fields", "invalid": [<field_names>]}
+      {"status": "error_case_posture_write_failed", ...}
+      {"status": "success", "case_slug": <slug>,
+       "fields_updated": [<field_names>]}
+    """
+    event_id = int(event["id"])
+    payload = event.get("event_payload") or {}
+
+    command = payload.get("command")
+    case_slug = payload.get("case_slug")
+    fields = payload.get("fields") or {}
+
+    # ── 1. Command validation ───────────────────────────────────────────
+    # Phase 1-3 supports only 'set_field'. Phase 2+ may add additional
+    # commands; until then, unknown commands are treated as no-ops
+    # (skip, not error) so future producers don't dead-letter their
+    # events while their consumer ships.
+    if command != "set_field":
+        return {
+            "status": "skipped_unknown_command",
+            "command": command,
+        }
+
+    # ── 2. Required-field validation ────────────────────────────────────
+    if not case_slug:
+        return {"status": "skipped_missing_case_slug"}
+    if not isinstance(fields, dict) or not fields:
+        return {"status": "skipped_no_fields"}
+
+    # ── 3. Load or create case_posture ──────────────────────────────────
+    posture = await _load_or_create_case_posture(case_slug, event_id)
+    if posture is None:
+        return {
+            "status": "skipped_no_active_case",
+            "case_slug": case_slug,
+        }
+
+    # ── 4. Field allowlist validation ───────────────────────────────────
+    # Reject the entire mutation set if ANY field is not in the allowlist.
+    # All-or-nothing semantics: an operator command that names both
+    # allowed and disallowed fields is rejected wholesale rather than
+    # silently dropping the disallowed ones (which could surprise the
+    # operator and leave the case_posture in a half-applied state).
+    invalid = [f for f in fields if f not in OPERATOR_INPUT_ALLOWED_FIELDS]
+    if invalid:
+        logger.warning(
+            "legal_dispatcher_operator_input_rejected_invalid_fields",
+            case_slug=case_slug,
+            event_id=event_id,
+            invalid_fields=invalid,
+        )
+        return {
+            "status": "rejected_invalid_fields",
+            "case_slug": case_slug,
+            "invalid": invalid,
+        }
+
+    # ── 5. Apply mutations ──────────────────────────────────────────────
+    # _bilateral_write_case_posture handles JSONB casting (top_defense_
+    # arguments, opposing_counsel_profile) automatically via
+    # _CASE_POSTURE_JSONB_FIELDS. DB-layer CHECK constraints enforce
+    # enum/range values; invalid values raise and are recorded as
+    # outcome='error' by the dispatcher.
+    write_ok = await _bilateral_write_case_posture(
+        case_slug=case_slug,
+        updates=dict(fields),
+        event_id=event_id,
+    )
+    if not write_ok:
+        return {
+            "status": "error_case_posture_write_failed",
+            "case_slug": case_slug,
+        }
+
+    return {
+        "status": "success",
+        "case_slug": case_slug,
+        "fields_updated": list(fields.keys()),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3D — _handle_dead_letter
+#
+# Per design v1.1 §6.6 + spec §7 LOCKED — observability ONLY.
+#
+# Closes the dead-letter loop. Phase 1-2 1-2D _maybe_dead_letter (step 4)
+# emits a 'dispatcher.dead_letter' event into legal.event_log so this
+# event surfaces in the same observability plane as every other event.
+# This handler is the consumer — it surfaces the dead-letter to ops via
+# structured log and writes nothing.
+#
+# CRITICAL constraints (LOCKED v1.1 §6.6 + spec §7):
+#   - Does NOT emit further events. A failure in this handler's own
+#     dispatch could itself dead-letter, which would re-emit, which
+#     would re-fail, ad infinitum. Pure observability avoids the loop.
+#   - Does NOT write to case_posture. Dead-letters are observability,
+#     not state. case_posture mutations come from email.received +
+#     watchdog.matched + operator.input only.
+#   - Does NOT write to legal.dispatcher_dead_letter. Phase 1-2 1-2D
+#     _insert_dead_letter_log already wrote that row in step 3 of the
+#     4-step sequence. Double-writing would create duplicate audit rows.
+#
+# The handler's only effect is a structured log emission. The dispatcher's
+# _mark_processed (Phase 1-2) writes the return dict to event_log.result.
+#
+# Idempotency: trivially idempotent (no state mutation; only structured
+# logging). Same event re-applied produces an identical log line and an
+# identical return value.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_dead_letter(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3D handler for dispatcher.dead_letter events emitted by
+    legal_dispatcher:v1 (Phase 1-2 1-2D _maybe_dead_letter step 4).
+
+    See module-level comment block above for the three NOT-DOES
+    constraints + idempotency rationale.
+
+    Returns the observation result. The dispatcher's _mark_processed
+    writes this dict to legal.event_log.result.
+    """
+    event_id = int(event["id"])
+    payload = event.get("event_payload") or {}
+
+    # Structured log — the only side effect of this handler.
+    # Operator surface (Phase 1-4 CLI + health endpoint) reads
+    # legal.dispatcher_dead_letter for the long-term audit; this log
+    # provides real-time observability via the structlog pipeline.
+    logger.warning(
+        "legal_dispatcher_dead_letter_observed",
+        event_id=event_id,
+        original_event_id=payload.get("original_event_id"),
+        original_event_type=payload.get("original_event_type"),
+        case_slug=event.get("case_slug"),
+        final_error=payload.get("final_error"),
+        attempts=payload.get("attempts"),
+    )
+
+    return {
+        "status": "observed",
+        "original_event_id": payload.get("original_event_id"),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handlers 1-3E — placeholder stubs for unshipped producers
+#
+# Per spec §8 LOCKED. Both handlers are stubs that return
+# placeholder_not_implemented; their producer services have not yet
+# shipped, so dispatcher_routes.enabled is FALSE for both event types
+# (Phase 1-1 r3c4d5e6f7g8 seed rows).
+#
+# The dispatcher's flow under enabled=FALSE:
+#   1. Polling SELECT returns the event (filter is processed_at IS NULL,
+#      not enabled)
+#   2. dispatch_event looks up the route → finds enabled=FALSE
+#   3. Marks skipped with reason='route_disabled' (no DB write)
+#   4. Continues to next event
+#
+# So the stub handlers below are NEVER invoked in Phase 1-3 — they exist
+# only to satisfy the _HANDLERS dict shape (1:1 with dispatcher_routes
+# seed rows) and to fail-loud-with-clear-message in the case where
+# operator flips enabled=TRUE before swapping in real handler bodies.
+#
+# Activation in Phase 2+:
+#   1. operator: UPDATE legal.dispatcher_routes SET enabled = TRUE
+#                WHERE event_type IN ('vault.document_ingested',
+#                                     'council.deliberation_complete')
+#   2. PR replaces the stub bodies with real handlers
+#
+# Activation order matters: enabling the route BEFORE shipping the real
+# handler means events would dispatch to these stubs and get
+# 'placeholder_not_implemented' results (which the dispatcher records as
+# success — not an error). That's the safe default; no dead-letter loop.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_vault_document_ingested(_event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3E placeholder stub. Activated in Phase 2+ when the Vault
+    ingester producer ships and starts emitting vault.document_ingested
+    events into legal.event_log.
+
+    Phase 1-3 dispatcher_routes seed: enabled=FALSE — the dispatcher
+    short-circuits with skipped_route_disabled before reaching this
+    stub. The stub exists for the case where operator flips enabled=TRUE
+    before the real handler is wired.
+    """
+    return {
+        "status": "placeholder_not_implemented",
+        "event_type": "vault.document_ingested",
+        "note": "Vault ingester producer ships in Phase 2+ candidate work",
+    }
+
+
+async def _handle_council_deliberation_complete(_event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3E placeholder stub. Activated in Phase 2+ when the Council
+    audit migration to event_log ships (FLOS-design-v1 §3.5).
+
+    Phase 1-3 dispatcher_routes seed: enabled=FALSE — same posture as
+    _handle_vault_document_ingested above.
+    """
+    return {
+        "status": "placeholder_not_implemented",
+        "event_type": "council.deliberation_complete",
+        "note": "Council audit migration to event_log is Phase 2+ work",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _HANDLERS dict — populated registry (Sub-phase 1-3E)
+#
+# Replaces the empty forward declaration at module top. The 6 keys
+# correspond exactly to the 6 seed rows in legal.dispatcher_routes
+# (Phase 1-1 r3c4d5e6f7g8 migration):
+#   4 enabled=TRUE   — email.received, watchdog.matched, operator.input,
+#                      dispatcher.dead_letter (live handlers, this PR)
+#   2 enabled=FALSE  — vault.document_ingested,
+#                      council.deliberation_complete (placeholder stubs)
+#
+# Order in the dict is purely cosmetic — runtime lookup is O(1) hash.
+# Order chosen for readability: live handlers first, placeholders last.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+_HANDLERS = {
+    "email.received":                _handle_email_received,
+    "watchdog.matched":              _handle_watchdog_matched,
+    "operator.input":                _handle_operator_input,
+    "dispatcher.dead_letter":        _handle_dead_letter,
+    "vault.document_ingested":       _handle_vault_document_ingested,
+    "council.deliberation_complete": _handle_council_deliberation_complete,
+}
+
+
+# Defense-in-depth assertion at module load: the in-memory _HANDLERS
+# registry must cover every event_type seeded in Phase 1-1's
+# dispatcher_routes (or be a strict superset). If a future schema seed
+# adds a new event_type without a matching handler entry, this assertion
+# does NOT fire (we'd need a runtime DB-vs-code check); but if a future
+# code edit to _HANDLERS drops a key that 1-1 seeded, the dispatcher
+# would skip that event type with handler_not_registered which is
+# loud-enough at runtime. The Phase 1-6 24h soak verifies coverage.
+_EXPECTED_HANDLER_KEYS: frozenset[str] = frozenset({
+    "email.received",
+    "watchdog.matched",
+    "operator.input",
+    "dispatcher.dead_letter",
+    "vault.document_ingested",
+    "council.deliberation_complete",
+})
+assert frozenset(_HANDLERS.keys()) == _EXPECTED_HANDLER_KEYS, (
+    "_HANDLERS registry diverged from expected keyset — verify against "
+    "legal.dispatcher_routes seed in Phase 1-1 migration r3c4d5e6f7g8."
+)
