@@ -41,9 +41,11 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from email.message import Message
 from email.utils import parsedate_to_datetime
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 
 import structlog
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # Reuse Captain's well-tested parsing utilities (DRY — no parser drift).
 # These are pure functions; importing does not couple our service to
@@ -55,6 +57,8 @@ from backend.services.captain_multi_mailbox import (
     _extract_plain_body,
     _extract_recipient_list,
 )
+from backend.core.config import settings
+from backend.services.ediscovery_agent import LegacySession
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -633,3 +637,228 @@ def classify_inbound(
     message.watchdog_matches = matches
 
     return message
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Bilateral mirror write to email_archive
+#
+# Per design v1.1 §10 (LOCKED Q5) + ADR-001:
+#   - Write to fortress_db (LegacySession) — canonical store
+#   - Mirror to fortress_prod (ProdSession) with forced matching id
+#   - Idempotency via file_path UNIQUE constraint (already on email_archive)
+#   - ingested_from='legal_mail_ingester:v1' (matches CHECK regex from 0a-1)
+#
+# Mirror failure mode: log + continue (don't block primary ingestion). The
+# 2E orchestrator updates legal.mail_ingester_state to flag mirror drift for
+# later reconciliation.
+#
+# Note on AsyncSessionLocal vs ProdSession: backend/core/database.py's
+# AsyncSessionLocal targets settings.database_url (typically fortress_shadow
+# at runtime). fortress_prod requires its own engine — built here by string-
+# replacing the DB name in settings.database_url, mirroring the pattern in
+# backend/services/ediscovery_agent.py for LegacySession (fortress_db).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _build_prod_db_url() -> str:
+    """Construct the fortress_prod URL by replacing the DB name in settings.database_url.
+
+    Mirrors the LegacySession construction pattern in ediscovery_agent.py.
+    Tolerates whichever runtime DB the API is currently pointed at.
+    """
+    url = (
+        settings.database_url
+        .replace("/fortress_db", "/fortress_prod")
+        .replace("/fortress_shadow_test", "/fortress_prod")
+        .replace("/fortress_shadow", "/fortress_prod")
+        .replace("/fortress_guest", "/fortress_prod")
+    )
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    return url
+
+
+_prod_engine = create_async_engine(
+    _build_prod_db_url(),
+    echo=False,
+    pool_size=5,
+    max_overflow=3,
+    pool_pre_ping=True,
+)
+
+ProdSession = async_sessionmaker(
+    _prod_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+
+# Column list — single source of truth for the INSERT column order.
+# Must align with email_archive schema on fortress_db AND fortress_prod
+# (verified bilaterally by Phase 0a-1 migration).
+_EMAIL_ARCHIVE_COLUMNS = (
+    "category",
+    "file_path",
+    "sender",
+    "subject",
+    "content",
+    "sent_at",
+    "to_addresses",
+    "cc_addresses",
+    "bcc_addresses",
+    "message_id",
+    "ingested_from",
+)
+
+
+def _row_dict_for_insert(message: ParsedMessage) -> dict[str, Any]:
+    """Build the SQLAlchemy parameter dict for an email_archive INSERT.
+
+    Centralizes the §3.6 output contract. file_path + category use ParsedMessage
+    properties so the URL/category schema stays single-source-of-truth.
+    """
+    # Comma-join recipient lists for storage (existing schema is text columns,
+    # not text[]). Matches the pattern legal_case_manager queries against.
+    return {
+        "category": message.category,
+        "file_path": message.file_path,
+        "sender": message.sender,
+        "subject": message.subject,
+        "content": message.body,
+        "sent_at": message.sent_at,
+        "to_addresses": ", ".join(message.to_addresses) if message.to_addresses else None,
+        "cc_addresses": ", ".join(message.cc_addresses) if message.cc_addresses else None,
+        "bcc_addresses": ", ".join(message.bcc_addresses) if message.bcc_addresses else None,
+        "message_id": message.message_id or None,
+        "ingested_from": INGESTER_VERSIONED,
+    }
+
+
+async def write_email_archive_bilateral(message: ParsedMessage) -> Optional[int]:
+    """
+    Bilateral mirror write to email_archive (fortress_db + fortress_prod).
+
+    Returns the email_archive id from fortress_db on success (canonical store
+    governs id assignment). Returns None if fortress_db write fails. Mirror
+    drift to fortress_prod is logged but not raised — caller (2E orchestrator)
+    decides whether to retry or flag for reconciliation.
+
+    Idempotency: ON CONFLICT (file_path) DO NOTHING. Re-poll of an already-
+    ingested message returns the existing id (via the existence-check fallback)
+    or None if the conflict path was taken silently.
+
+    Per design v1.1 §10: forward-only mirror. No attempt to backfill the 224-
+    row split-brain delta in historical rows; this path only covers new writes.
+    """
+    row = _row_dict_for_insert(message)
+
+    # ── 1. Write to fortress_db (canonical) ─────────────────────────────
+    new_id: Optional[int] = None
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("""
+                    INSERT INTO email_archive
+                        (category, file_path, sender, subject, content, sent_at,
+                         to_addresses, cc_addresses, bcc_addresses, message_id,
+                         ingested_from)
+                    VALUES
+                        (:category, :file_path, :sender, :subject, :content, :sent_at,
+                         :to_addresses, :cc_addresses, :bcc_addresses, :message_id,
+                         :ingested_from)
+                    ON CONFLICT (file_path) DO NOTHING
+                    RETURNING id
+                """),
+                row,
+            )
+            row_obj = result.fetchone()
+            if row_obj is not None:
+                new_id = int(row_obj.id)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_mail_email_archive_db_failed",
+            mailbox=message.mailbox_alias,
+            uid=message.uid,
+            file_path=message.file_path,
+            error=str(exc)[:300],
+        )
+        return None
+
+    if new_id is None:
+        # Conflict path — file_path already present; recover the existing id.
+        try:
+            async with LegacySession() as db:
+                result = await db.execute(
+                    text("SELECT id FROM email_archive WHERE file_path = :fp"),
+                    {"fp": message.file_path},
+                )
+                row_obj = result.fetchone()
+                if row_obj is not None:
+                    new_id = int(row_obj.id)
+        except Exception as exc:
+            logger.warning(
+                "legal_mail_email_archive_existing_id_lookup_failed",
+                file_path=message.file_path,
+                error=str(exc)[:200],
+            )
+
+        if new_id is None:
+            # Re-conflict (race) or schema misalignment — bail out without mirror.
+            logger.warning(
+                "legal_mail_email_archive_dedup_no_id",
+                file_path=message.file_path,
+            )
+            return None
+
+        # Already ingested previously — no need to mirror again. Idempotent return.
+        return new_id
+
+    # ── 2. Mirror to fortress_prod with forced matching id ─────────────
+    # Per ADR-001 + design v1.1 §10. If this fails, fortress_db write is
+    # already committed — log the drift, return new_id, let 2E flag it.
+    mirror_row = {**row, "forced_id": new_id}
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(
+                text("""
+                    INSERT INTO email_archive
+                        (id, category, file_path, sender, subject, content, sent_at,
+                         to_addresses, cc_addresses, bcc_addresses, message_id,
+                         ingested_from)
+                    VALUES
+                        (:forced_id, :category, :file_path, :sender, :subject,
+                         :content, :sent_at, :to_addresses, :cc_addresses,
+                         :bcc_addresses, :message_id, :ingested_from)
+                    ON CONFLICT (file_path) DO NOTHING
+                """),
+                mirror_row,
+            )
+            # Manually advance the prod sequence so future autogenerated ids
+            # don't collide with our forced ones. setval(seq, max(N, current))
+            # is idempotent + monotonic; running it twice with the same N is
+            # a no-op the second time.
+            await prod.execute(
+                text("""
+                    SELECT setval(
+                        'email_archive_id_seq',
+                        GREATEST(:forced_id, (SELECT last_value FROM email_archive_id_seq))
+                    )
+                """),
+                {"forced_id": new_id},
+            )
+            await prod.commit()
+    except Exception as exc:
+        # Mirror drift — log structured event for the 2E orchestrator to
+        # surface in legal.mail_ingester_state.last_error / mirror_drift counter.
+        logger.warning(
+            "legal_mail_email_archive_prod_mirror_failed",
+            email_archive_id=new_id,
+            file_path=message.file_path,
+            error=str(exc)[:300],
+        )
+        # Return the fortress_db id anyway — primary write succeeded.
+
+    return new_id
