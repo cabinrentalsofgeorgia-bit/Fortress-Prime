@@ -1851,3 +1851,285 @@ async def _handle_email_received(event: dict[str, Any]) -> dict[str, Any]:
         "case_slug": case_slug,
         "watchdog_events_emitted": emitted,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Operator alert emission helper (Sub-phase 1-3B)
+#
+# Used by _handle_watchdog_matched when severity == 'P1'. Bilateral INSERT
+# into legal.event_log with event_type='operator.alert'. Same forced-id +
+# setval pattern as _emit_watchdog_event (1-3A) and _emit_dead_letter_event
+# (1-2D §6 step 4).
+#
+# Phase 1-3 emits the event but its CONSUMER ships in Phase 2+ (operator
+# alert routing — paging, notification, dashboard surface). Until the
+# consumer ships, operator.alert events accumulate in event_log; the
+# dispatcher's _HANDLERS dict has no entry for 'operator.alert' so each
+# event records a skip with reason='handler_not_registered' (per Phase 1-2
+# clarification #2 — no DB write for skips).
+#
+# Phase 2+ adds:
+#   1. legal.dispatcher_routes seed row for 'operator.alert'
+#      (handler_module=..., handler_function='handle_operator_alert',
+#       enabled=TRUE)
+#   2. _HANDLERS['operator.alert'] = _handle_operator_alert in this file
+#   3. Operator-facing surfaces (CLI, paging, dashboard alert queue)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _emit_operator_alert(
+    case_slug: str,
+    source_payload: dict[str, Any],
+    source_event_id: int,
+) -> Optional[int]:
+    """
+    Emit a fresh operator.alert event into legal.event_log. Triggered by
+    1-3B handler when watchdog severity == 'P1'.
+
+    Per spec §5 (LOCKED). The alert payload preserves the full watchdog
+    match context so the Phase 2+ consumer can decide alert routing
+    without rejoining the original event_log row.
+
+    emitted_by = DISPATCHER_VERSIONED. The original watchdog event's id
+    is preserved in payload.source_event_id for the audit chain
+    (legal_mail_ingester → email.received → legal_dispatcher emits
+    watchdog.matched → legal_dispatcher emits operator.alert).
+
+    Returns new event_id on success; None on legacy failure. Mirror
+    failure logs and continues (drift mode).
+    """
+    payload = {
+        "rule_id": source_payload.get("rule_id"),
+        "rule_name": source_payload.get("rule_name"),
+        "severity": source_payload.get("severity"),
+        "match_type": source_payload.get("match_type"),
+        "search_term": source_payload.get("search_term"),
+        "source_event_id": source_event_id,
+        "alert_reason": "watchdog_severity_p1",
+    }
+    row = {
+        "event_type": "operator.alert",
+        "case_slug": case_slug,
+        "event_payload_json": _json.dumps(payload),
+        "emitted_by": DISPATCHER_VERSIONED,
+    }
+
+    new_id: Optional[int] = None
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (event_type, case_slug, event_payload, emitted_at, emitted_by)
+                    VALUES
+                        (:event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    RETURNING id
+                """),
+                row,
+            )
+            row_obj = result.fetchone()
+            if row_obj is not None:
+                new_id = int(row_obj.id)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_operator_alert_db_failed",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+            rule_id=source_payload.get("rule_id"),
+            error=str(exc)[:300],
+        )
+        return None
+
+    if new_id is None:
+        logger.warning(
+            "legal_dispatcher_operator_alert_no_id_returned",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+        )
+        return None
+
+    mirror_row = {**row, "forced_id": new_id}
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (id, event_type, case_slug, event_payload,
+                         emitted_at, emitted_by)
+                    VALUES
+                        (:forced_id, :event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    ON CONFLICT (id) DO NOTHING
+                """),
+                mirror_row,
+            )
+            await prod.execute(
+                text("""
+                    SELECT setval(
+                        'legal.event_log_id_seq',
+                        GREATEST(
+                            :forced_id,
+                            (SELECT last_value FROM legal.event_log_id_seq)
+                        )
+                    )
+                """),
+                {"forced_id": new_id},
+            )
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_operator_alert_prod_mirror_failed",
+            new_event_id=new_id,
+            source_event_id=source_event_id,
+            error=str(exc)[:300],
+        )
+
+    return new_id
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3B — _handle_watchdog_matched
+#
+# Per design v1.1 §6.2 LOCKED scope (per-rule aggregation) + spec §5 LOCKED.
+# Triggered by 1-3A re-emission when an inbound email matches one or more
+# watchdog rules. Second writer to legal.case_posture in Phase 1.
+#
+# Aggregation contract (LOCKED v1.1 §6.2):
+#   top_risk_factors is a JSONB dict keyed by rule_id. Each unique rule_id
+#   occupies exactly ONE entry. Repeated matches of the same rule increment
+#   match_count + update last_match_at; they do NOT create new entries.
+#
+# Bounded-growth property:
+#   |top_risk_factors entries| <= |active watchdog rules per case|
+#   Typical: 10-30 rules per case → at most 10-30 dict entries.
+#   This is the LOCKED contract that distinguishes v1.1 from v1's
+#   "append capped at 50" representation.
+#
+# Phase 1-6 24h soak verification (per spec §13):
+#   - Single rule matched N times → 1 dict entry with match_count=N
+#   - N distinct rules matched → N dict entries (NOT N×match_count entries)
+#   - Unbounded match_count growth on a single rule entry signals replay
+#     pathology (recovery operation iterating the same event)
+#
+# Idempotency note:
+#   Re-applying the same event increments match_count by 1. Acceptable
+#   because:
+#     1. Polling-exclusion sub-query (Phase 1-2 §5.1) prevents
+#        same-event re-application in steady state
+#     2. Replay is operator-driven; match_count reflects emission count,
+#        which is the desired audit semantic
+#     3. Phase 1-6 24h soak detects unbounded growth as a recovery
+#        red flag
+#   If Phase 2+ requires stricter idempotency, switch to
+#   max(match_count, current+1) or add (event_id, rule_id) UNIQUE constraint.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_watchdog_matched(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3B handler for watchdog.matched events emitted by
+    legal_dispatcher:v1 (1-3A re-emission).
+
+    See module-level comment block above for aggregation contract +
+    bounded-growth property + idempotency rationale.
+
+    Returns one of:
+      {"status": "skipped_missing_required_fields"}
+      {"status": "skipped_no_active_case", "case_slug": <slug>}
+      {"status": "success", "rule_id": <id>, "match_count": <n>,
+       "operator_alert_emitted": <bool>}
+    """
+    event_id = int(event["id"])
+    case_slug = event.get("case_slug")
+    payload = event.get("event_payload") or {}
+    rule_id = payload.get("rule_id")
+
+    # ── 1. Required-field validation ────────────────────────────────────
+    if not case_slug or not rule_id:
+        return {"status": "skipped_missing_required_fields"}
+
+    # ── 2. Load case_posture (or create lazily) ────────────────────────
+    posture = await _load_or_create_case_posture(case_slug, event_id)
+    if posture is None:
+        return {
+            "status": "skipped_no_active_case",
+            "case_slug": case_slug,
+        }
+
+    # ── 3. Per-rule aggregation in top_risk_factors dict ───────────────
+    # The dict is keyed by rule_id. Same rule_id matched N times → 1
+    # entry with match_count=N. Distinct rule_ids → multiple entries.
+    # Bounded by active watchdog rule count per case (~10-30 typical).
+    current_factors = posture.get("top_risk_factors") or {}
+    # Defensive: legacy data or migration drift might leave this as a
+    # list (v1 representation) instead of a dict. Coerce + log.
+    if not isinstance(current_factors, dict):
+        logger.warning(
+            "legal_dispatcher_top_risk_factors_unexpected_type",
+            case_slug=case_slug,
+            actual_type=type(current_factors).__name__,
+            event_id=event_id,
+        )
+        current_factors = {}
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    rule_id_str = str(rule_id)
+    existing = current_factors.get(rule_id_str)
+    if isinstance(existing, dict):
+        # Increment match_count + refresh last_match_at; preserve
+        # first_match_at, severity, rule_name from the original entry.
+        existing["last_match_at"] = now_iso
+        existing["match_count"] = int(existing.get("match_count", 0)) + 1
+        match_count = existing["match_count"]
+    else:
+        # New rule_id — insert fresh entry with both timestamps set to now.
+        current_factors[rule_id_str] = {
+            "rule_id": rule_id_str,
+            "rule_name": payload.get("rule_name"),
+            "severity": payload.get("severity"),
+            "first_match_at": now_iso,
+            "last_match_at": now_iso,
+            "match_count": 1,
+        }
+        match_count = 1
+
+    # ── 4. Bilateral case_posture write ─────────────────────────────────
+    write_ok = await _bilateral_write_case_posture(
+        case_slug=case_slug,
+        updates={"top_risk_factors": current_factors},
+        event_id=event_id,
+    )
+    if not write_ok:
+        # _bilateral_write_case_posture already logged the failure cause.
+        # Return error status so dispatcher records outcome=ERROR; retry
+        # budget applies and the event eventually dead-letters if the
+        # condition persists.
+        return {
+            "status": "error_case_posture_write_failed",
+            "case_slug": case_slug,
+            "rule_id": rule_id_str,
+        }
+
+    # ── 5. Emit operator.alert for P1 severity ──────────────────────────
+    # The alert event lands in event_log with emitted_by=DISPATCHER_VERSIONED.
+    # Phase 1-3 has no _HANDLERS entry for operator.alert, so the dispatcher
+    # records a handler_not_registered skip per clarification #2 (no DB
+    # write for skips). Phase 2+ ships the alert handler.
+    operator_alert_emitted = False
+    if str(payload.get("severity") or "").upper() == "P1":
+        alert_event_id = await _emit_operator_alert(
+            case_slug=case_slug,
+            source_payload=payload,
+            source_event_id=event_id,
+        )
+        operator_alert_emitted = alert_event_id is not None
+
+    return {
+        "status": "success",
+        "case_slug": case_slug,
+        "rule_id": rule_id_str,
+        "match_count": match_count,
+        "operator_alert_emitted": operator_alert_emitted,
+    }
