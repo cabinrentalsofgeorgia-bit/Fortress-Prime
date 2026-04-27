@@ -148,26 +148,33 @@ class DispatcherRoute:
 # legal.dispatcher_routes table is metadata only; it is consulted for
 # enabled/max_retries/audit but the actual callable comes from this dict.
 #
-# Phase 1-2 keeps this dict empty by design — no handlers ship in this
-# sub-phase. Phase 1-3 sub-phases 1-3A through 1-3E populate it with:
-#   "email.received"                  → _handle_email_received
-#   "watchdog.matched"                → _handle_watchdog_matched
-#   "operator.input"                  → _handle_operator_input
-#   "dispatcher.dead_letter"          → _handle_dead_letter
-#   "vault.document_ingested"         → _handle_vault_document_ingested  (placeholder)
-#   "council.deliberation_complete"   → _handle_council_deliberation_complete  (placeholder)
+# The dict itself is defined at the END of this file (after all handler
+# functions are defined — Python parses top-to-bottom). dispatch_event
+# (defined here, called via the patrol loop) resolves _HANDLERS at call
+# time, so this forward reference is safe.
+#
+# Phase 1-2 declared the dict empty here at module top. Phase 1-3E moved
+# the declaration to end-of-file with all 6 handlers wired (4 enabled
+# live + 2 placeholder-disabled per legal.dispatcher_routes seed in the
+# Phase 1-1 r3c4d5e6f7g8 migration).
 #
 # Handler signature: async def handler(event: dict) -> dict
 #   - event: row dict from legal.event_log SELECT
 #   - return: jsonb-serializable result for legal.event_log.result column
 #
 # When _HANDLERS.get(event_type) returns None, the dispatcher marks the
-# event skipped with reason='handler_not_registered' — NOT an error.
-# This is the correct posture: an event we don't know how to handle is
-# not a failure, it's an indication that the handler hasn't shipped yet.
+# event skipped with reason='handler_not_registered' — NOT an error
+# (Phase 1-2 clarification #2). This applies to event types that have a
+# row in dispatcher_routes but no entry in this dict; the route is the
+# DB-side audit/config layer, the dict is the runtime resolver.
+#
+# Forward declaration below is required so dispatch_event (defined later)
+# resolves the _HANDLERS symbol cleanly under static analysis. The dict
+# is REBOUND at end-of-file with the full handler registry.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# Forward declaration — rebound at end of file with all 6 handlers wired.
 _HANDLERS: dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]] = {}
 
 
@@ -2368,3 +2375,117 @@ async def _handle_dead_letter(event: dict[str, Any]) -> dict[str, Any]:
         "status": "observed",
         "original_event_id": payload.get("original_event_id"),
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handlers 1-3E — placeholder stubs for unshipped producers
+#
+# Per spec §8 LOCKED. Both handlers are stubs that return
+# placeholder_not_implemented; their producer services have not yet
+# shipped, so dispatcher_routes.enabled is FALSE for both event types
+# (Phase 1-1 r3c4d5e6f7g8 seed rows).
+#
+# The dispatcher's flow under enabled=FALSE:
+#   1. Polling SELECT returns the event (filter is processed_at IS NULL,
+#      not enabled)
+#   2. dispatch_event looks up the route → finds enabled=FALSE
+#   3. Marks skipped with reason='route_disabled' (no DB write)
+#   4. Continues to next event
+#
+# So the stub handlers below are NEVER invoked in Phase 1-3 — they exist
+# only to satisfy the _HANDLERS dict shape (1:1 with dispatcher_routes
+# seed rows) and to fail-loud-with-clear-message in the case where
+# operator flips enabled=TRUE before swapping in real handler bodies.
+#
+# Activation in Phase 2+:
+#   1. operator: UPDATE legal.dispatcher_routes SET enabled = TRUE
+#                WHERE event_type IN ('vault.document_ingested',
+#                                     'council.deliberation_complete')
+#   2. PR replaces the stub bodies with real handlers
+#
+# Activation order matters: enabling the route BEFORE shipping the real
+# handler means events would dispatch to these stubs and get
+# 'placeholder_not_implemented' results (which the dispatcher records as
+# success — not an error). That's the safe default; no dead-letter loop.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_vault_document_ingested(_event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3E placeholder stub. Activated in Phase 2+ when the Vault
+    ingester producer ships and starts emitting vault.document_ingested
+    events into legal.event_log.
+
+    Phase 1-3 dispatcher_routes seed: enabled=FALSE — the dispatcher
+    short-circuits with skipped_route_disabled before reaching this
+    stub. The stub exists for the case where operator flips enabled=TRUE
+    before the real handler is wired.
+    """
+    return {
+        "status": "placeholder_not_implemented",
+        "event_type": "vault.document_ingested",
+        "note": "Vault ingester producer ships in Phase 2+ candidate work",
+    }
+
+
+async def _handle_council_deliberation_complete(_event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3E placeholder stub. Activated in Phase 2+ when the Council
+    audit migration to event_log ships (FLOS-design-v1 §3.5).
+
+    Phase 1-3 dispatcher_routes seed: enabled=FALSE — same posture as
+    _handle_vault_document_ingested above.
+    """
+    return {
+        "status": "placeholder_not_implemented",
+        "event_type": "council.deliberation_complete",
+        "note": "Council audit migration to event_log is Phase 2+ work",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _HANDLERS dict — populated registry (Sub-phase 1-3E)
+#
+# Replaces the empty forward declaration at module top. The 6 keys
+# correspond exactly to the 6 seed rows in legal.dispatcher_routes
+# (Phase 1-1 r3c4d5e6f7g8 migration):
+#   4 enabled=TRUE   — email.received, watchdog.matched, operator.input,
+#                      dispatcher.dead_letter (live handlers, this PR)
+#   2 enabled=FALSE  — vault.document_ingested,
+#                      council.deliberation_complete (placeholder stubs)
+#
+# Order in the dict is purely cosmetic — runtime lookup is O(1) hash.
+# Order chosen for readability: live handlers first, placeholders last.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+_HANDLERS = {
+    "email.received":                _handle_email_received,
+    "watchdog.matched":              _handle_watchdog_matched,
+    "operator.input":                _handle_operator_input,
+    "dispatcher.dead_letter":        _handle_dead_letter,
+    "vault.document_ingested":       _handle_vault_document_ingested,
+    "council.deliberation_complete": _handle_council_deliberation_complete,
+}
+
+
+# Defense-in-depth assertion at module load: the in-memory _HANDLERS
+# registry must cover every event_type seeded in Phase 1-1's
+# dispatcher_routes (or be a strict superset). If a future schema seed
+# adds a new event_type without a matching handler entry, this assertion
+# does NOT fire (we'd need a runtime DB-vs-code check); but if a future
+# code edit to _HANDLERS drops a key that 1-1 seeded, the dispatcher
+# would skip that event type with handler_not_registered which is
+# loud-enough at runtime. The Phase 1-6 24h soak verifies coverage.
+_EXPECTED_HANDLER_KEYS: frozenset[str] = frozenset({
+    "email.received",
+    "watchdog.matched",
+    "operator.input",
+    "dispatcher.dead_letter",
+    "vault.document_ingested",
+    "council.deliberation_complete",
+})
+assert frozenset(_HANDLERS.keys()) == _EXPECTED_HANDLER_KEYS, (
+    "_HANDLERS registry diverged from expected keyset — verify against "
+    "legal.dispatcher_routes seed in Phase 1-1 migration r3c4d5e6f7g8."
+)
