@@ -2133,3 +2133,173 @@ async def _handle_watchdog_matched(event: dict[str, Any]) -> dict[str, Any]:
         "match_count": match_count,
         "operator_alert_emitted": operator_alert_emitted,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3C — _handle_operator_input
+#
+# Per design v1.1 §6.3 + spec §6 + §6.1 LOCKED.
+# Triggered by future operator CLI commands (Phase 2+). For Phase 1-3 the
+# route is wired but live operator commands ship in Phase 2+ — only test
+# fixture events exercise this handler during Phase 1-3 development.
+#
+# OPERATOR_INPUT_ALLOWED_FIELDS (LOCKED — operator decision):
+#   procedural_phase, theory_of_defense_state, top_defense_arguments,
+#   exposure_low, exposure_mid, exposure_high, leverage_score,
+#   opposing_counsel_profile
+#
+# These 8 fields are a STRICT SUBSET of _CASE_POSTURE_WRITABLE_FIELDS (1-3A).
+# Blocked fields (NOT in operator allowlist):
+#   top_risk_factors            — dispatcher-managed via 1-3B aggregation;
+#                                 operator override would corrupt match_count
+#                                 + last_match_at semantics
+#   last_council_consensus      — Phase 2+ council handler writes; protect
+#   last_council_at               from operator races
+#   next_deadline_date          — Phase 2+ deadline projection writes;
+#   next_deadline_action          protect from operator races
+#   case_slug                   — primary key, immutable
+#   created_at / updated_at     — system-managed timestamps
+#   posture_hash                — system-recomputed on every write
+#   created_by_event /          — system-managed audit FKs
+#   updated_by_event
+#
+# Phase 2+ may add operator.curate_risk_factor event type for emergency
+# top_risk_factors curation if operationally needed; not Phase 1 scope.
+#
+# Event payload contract (LOCKED v1.1 §6.3):
+#   {
+#     "command": "set_field",
+#     "case_slug": "<slug>",
+#     "fields": {
+#       "<field_name>": <value>,
+#       ...
+#     }
+#   }
+#
+# Currently the only command is 'set_field'. Phase 2+ may add 'unset_field'
+# (set NULL), 'append_to_jsonb_array', etc. — those would land as separate
+# command branches in this handler, each with its own validation.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# LOCKED — operator decision per Phase 1-3 spec §6.1.
+OPERATOR_INPUT_ALLOWED_FIELDS: frozenset[str] = frozenset({
+    "procedural_phase",
+    "theory_of_defense_state",
+    "top_defense_arguments",
+    "exposure_low",
+    "exposure_mid",
+    "exposure_high",
+    "leverage_score",
+    "opposing_counsel_profile",
+})
+
+# Defense-in-depth assertion at module load: the operator allowlist must
+# be a strict subset of the dispatcher's writable field set. If a future
+# edit to either constant breaks this invariant, this assertion fires at
+# import time so the source bug is obvious.
+assert OPERATOR_INPUT_ALLOWED_FIELDS.issubset(_CASE_POSTURE_WRITABLE_FIELDS), (
+    "OPERATOR_INPUT_ALLOWED_FIELDS must be a subset of "
+    "_CASE_POSTURE_WRITABLE_FIELDS — operator cannot mutate fields the "
+    "dispatcher itself does not consider writable."
+)
+
+
+async def _handle_operator_input(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3C handler for operator.input events.
+
+    Validates payload structure + command + field allowlist before
+    delegating mutation to _bilateral_write_case_posture (1-3A).
+
+    DB-layer CHECK constraints enforce enum/range values
+    (procedural_phase, theory_of_defense_state, leverage_score), so
+    invalid VALUES fail at the DB layer with a clear error_message
+    surfaced via dispatcher_event_attempts.outcome='error'. This handler
+    only validates field NAMES against the allowlist; it does not
+    re-validate values that the schema already guards.
+
+    Returns one of:
+      {"status": "skipped_unknown_command", "command": <command>}
+      {"status": "skipped_missing_case_slug"}
+      {"status": "skipped_no_fields"}
+      {"status": "skipped_no_active_case", "case_slug": <slug>}
+      {"status": "rejected_invalid_fields", "invalid": [<field_names>]}
+      {"status": "error_case_posture_write_failed", ...}
+      {"status": "success", "case_slug": <slug>,
+       "fields_updated": [<field_names>]}
+    """
+    event_id = int(event["id"])
+    payload = event.get("event_payload") or {}
+
+    command = payload.get("command")
+    case_slug = payload.get("case_slug")
+    fields = payload.get("fields") or {}
+
+    # ── 1. Command validation ───────────────────────────────────────────
+    # Phase 1-3 supports only 'set_field'. Phase 2+ may add additional
+    # commands; until then, unknown commands are treated as no-ops
+    # (skip, not error) so future producers don't dead-letter their
+    # events while their consumer ships.
+    if command != "set_field":
+        return {
+            "status": "skipped_unknown_command",
+            "command": command,
+        }
+
+    # ── 2. Required-field validation ────────────────────────────────────
+    if not case_slug:
+        return {"status": "skipped_missing_case_slug"}
+    if not isinstance(fields, dict) or not fields:
+        return {"status": "skipped_no_fields"}
+
+    # ── 3. Load or create case_posture ──────────────────────────────────
+    posture = await _load_or_create_case_posture(case_slug, event_id)
+    if posture is None:
+        return {
+            "status": "skipped_no_active_case",
+            "case_slug": case_slug,
+        }
+
+    # ── 4. Field allowlist validation ───────────────────────────────────
+    # Reject the entire mutation set if ANY field is not in the allowlist.
+    # All-or-nothing semantics: an operator command that names both
+    # allowed and disallowed fields is rejected wholesale rather than
+    # silently dropping the disallowed ones (which could surprise the
+    # operator and leave the case_posture in a half-applied state).
+    invalid = [f for f in fields if f not in OPERATOR_INPUT_ALLOWED_FIELDS]
+    if invalid:
+        logger.warning(
+            "legal_dispatcher_operator_input_rejected_invalid_fields",
+            case_slug=case_slug,
+            event_id=event_id,
+            invalid_fields=invalid,
+        )
+        return {
+            "status": "rejected_invalid_fields",
+            "case_slug": case_slug,
+            "invalid": invalid,
+        }
+
+    # ── 5. Apply mutations ──────────────────────────────────────────────
+    # _bilateral_write_case_posture handles JSONB casting (top_defense_
+    # arguments, opposing_counsel_profile) automatically via
+    # _CASE_POSTURE_JSONB_FIELDS. DB-layer CHECK constraints enforce
+    # enum/range values; invalid values raise and are recorded as
+    # outcome='error' by the dispatcher.
+    write_ok = await _bilateral_write_case_posture(
+        case_slug=case_slug,
+        updates=dict(fields),
+        event_id=event_id,
+    )
+    if not write_ok:
+        return {
+            "status": "error_case_posture_write_failed",
+            "case_slug": case_slug,
+        }
+
+    return {
+        "status": "success",
+        "case_slug": case_slug,
+        "fields_updated": list(fields.keys()),
+    }
