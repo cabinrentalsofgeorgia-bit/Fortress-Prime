@@ -36,9 +36,11 @@ LEGAL_DISPATCHER_ENABLED). Phase 1-5 cutover is the explicit flag flip.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json as _json
 import time as _time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Optional
 
 import structlog
@@ -1268,3 +1270,584 @@ async def run_legal_dispatcher_loop() -> None:
         cycle_duration = _time.monotonic() - cycle_start
         sleep_for = max(1.0, POLL_INTERVAL_SEC - cycle_duration)
         await asyncio.sleep(sleep_for)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Event handlers — Phase 1-3 (Q5 LOCKED Option B in-file callables)
+#
+# Per FLOS-phase-1-3-event-handlers-implementation.md.
+#
+# Phase 1-3 is the first sub-phase where legal.case_posture is mutated.
+# Principle 1 (events drive state) is enforced operationally from this
+# sub-phase forward: the dispatcher is the only writer to case_posture;
+# every mutation cites updated_by_event for Principle 4 audit attribution.
+#
+# Sub-phase scope:
+#   1-3A (this commit) — shared helpers + email.received handler
+#   1-3B               — watchdog.matched handler (consumes 1-3A re-emissions)
+#   1-3C               — operator.input handler with allowlist
+#   1-3D               — dispatcher.dead_letter handler (observability only)
+#   1-3E               — placeholder stubs + populate _HANDLERS dict
+#
+# Handler signature (LOCKED):
+#   async def _handle_<event_type>(event: dict[str, Any]) -> dict[str, Any]
+# Returns a JSONB-serializable result dict for legal.event_log.result.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared helpers (Sub-phase 1-3A)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# Phase 1 canonicalization input set for posture_hash. Order is fixed; the
+# JSON serialization uses sort_keys=True so dict ordering is irrelevant, but
+# the SET of fields below is what defines hash semantics. Phase 2+ field
+# additions append to this list (and the field set is versioned in code via
+# the explicit constant; design v1.1 §3 PROPOSED a posture_hash_version
+# column add — deferred unless drift detection proves necessary).
+_POSTURE_HASH_FIELDS: tuple[str, ...] = (
+    "case_slug",
+    "procedural_phase",
+    "theory_of_defense_state",
+    "top_defense_arguments",
+    "top_risk_factors",
+)
+
+
+# Whitelist of case_posture columns the dispatcher may write via
+# _bilateral_write_case_posture. Broader than OPERATOR_INPUT_ALLOWED_FIELDS
+# (1-3C scope) because the dispatcher writes more fields than operators
+# (e.g. 1-3B updates top_risk_factors; 1-3C operator.input cannot).
+#
+# NOT INCLUDED (system-managed; set automatically by the helper):
+#   case_slug          — WHERE clause; never updated
+#   created_at         — DEFAULT NOW() at INSERT only
+#   updated_at         — set automatically on every UPDATE
+#   posture_hash       — recomputed automatically on every UPDATE
+#   created_by_event   — set on INSERT only; immutable thereafter
+#   updated_by_event   — set automatically on every UPDATE
+_CASE_POSTURE_WRITABLE_FIELDS: frozenset[str] = frozenset({
+    "procedural_phase",
+    "theory_of_defense_state",
+    "next_deadline_date",
+    "next_deadline_action",
+    "top_defense_arguments",
+    "top_risk_factors",
+    "exposure_low",
+    "exposure_mid",
+    "exposure_high",
+    "leverage_score",
+    "opposing_counsel_profile",
+    "last_council_consensus",
+    "last_council_at",
+})
+
+# Columns that need explicit JSONB binding when written via raw SQL. Other
+# columns use direct parameter binding; SQLAlchemy + asyncpg handle the rest.
+_CASE_POSTURE_JSONB_FIELDS: frozenset[str] = frozenset({
+    "top_defense_arguments",
+    "top_risk_factors",
+    "opposing_counsel_profile",
+    "last_council_consensus",
+})
+
+
+def _compute_posture_hash(posture: dict[str, Any]) -> str:
+    """
+    SHA-256 over a JSON-canonicalized projection of the Phase 1-populated
+    fields per design v1.1 §3 + spec §3.3 LOCKED.
+
+    The canonicalization input set is fixed at five fields:
+      case_slug, procedural_phase, theory_of_defense_state,
+      top_defense_arguments, top_risk_factors
+
+    Phase 2+ field additions extend _POSTURE_HASH_FIELDS in code; if the
+    set changes we may need a posture_hash_version column add to detect
+    cross-version drift, but that's deferred unless operationally relevant.
+
+    JSON canonicalization: sort_keys=True + compact separators ensures
+    identical input dicts produce identical hash output regardless of
+    Python dict ordering or whitespace.
+    """
+    canonical_input = {field: posture.get(field) for field in _POSTURE_HASH_FIELDS}
+    canonical_json = _json.dumps(
+        canonical_input, sort_keys=True, separators=(",", ":"), default=str
+    )
+    return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+
+async def _case_exists_in_legal_cases(case_slug: str) -> bool:
+    """
+    Verify case_slug references a row in legal.cases.
+
+    Phase 1-3A scope: existence check only. legal.cases has a `status`
+    column but no documented "active" status enum yet — operator may
+    refine this to a status-based filter in 1-3B+ if needed (e.g.
+    `WHERE case_slug = :slug AND status NOT IN ('closed', 'archived')`).
+    For Phase 1-3A, any row in legal.cases is sufficient.
+    """
+    async with LegacySession() as db:
+        result = await db.execute(
+            text("SELECT 1 FROM legal.cases WHERE case_slug = :slug LIMIT 1"),
+            {"slug": case_slug},
+        )
+        return result.scalar() is not None
+
+
+async def _load_or_create_case_posture(
+    case_slug: str,
+    event_id: int,
+) -> Optional[dict[str, Any]]:
+    """
+    Load the existing case_posture row OR create a fresh row with Phase 1-1
+    schema defaults. Returns the row as a dict, or None if case_slug does
+    not match a row in legal.cases.
+
+    Returns None (NOT a stub posture) when the case is not found — caller
+    decides whether to skip-no-active-case or surface the miss. This keeps
+    the helper a pure read-or-create primitive without per-handler policy
+    leaks.
+
+    Defaults applied on CREATE (matches Phase 1-1 schema CHECK constraints):
+      procedural_phase = 'pre-suit'
+      theory_of_defense_state = 'drafting'
+      top_defense_arguments = []
+      top_risk_factors = {}
+      created_by_event = updated_by_event = event_id
+      posture_hash = _compute_posture_hash(canonical_input)
+
+    Bilateral on CREATE: legacy INSERT first, prod mirror second. Mirror
+    failure logs warning and does NOT raise (drift mode per Phase 1-2
+    clarification #3 LOCKED).
+
+    Idempotency: re-call with same case_slug returns the existing row;
+    the create path is taken at most once per case.
+    """
+    select_sql = text("""
+        SELECT case_slug, procedural_phase, next_deadline_date,
+               next_deadline_action, theory_of_defense_state,
+               top_defense_arguments, top_risk_factors,
+               exposure_low, exposure_mid, exposure_high, leverage_score,
+               opposing_counsel_profile, last_council_consensus,
+               last_council_at, posture_hash, created_at, updated_at,
+               created_by_event, updated_by_event
+        FROM legal.case_posture
+        WHERE case_slug = :slug
+    """)
+
+    # ── 1. Try load ─────────────────────────────────────────────────────
+    async with LegacySession() as db:
+        result = await db.execute(select_sql, {"slug": case_slug})
+        row = result.fetchone()
+        if row is not None:
+            return dict(row._mapping)
+
+    # ── 2. Verify case is a valid matter ────────────────────────────────
+    if not await _case_exists_in_legal_cases(case_slug):
+        logger.info(
+            "legal_dispatcher_case_posture_skip_unknown_case",
+            case_slug=case_slug,
+            event_id=event_id,
+        )
+        return None
+
+    # ── 3. Create new row with defaults ─────────────────────────────────
+    fresh_posture = {
+        "case_slug": case_slug,
+        "procedural_phase": "pre-suit",
+        "theory_of_defense_state": "drafting",
+        "top_defense_arguments": [],
+        "top_risk_factors": {},
+    }
+    new_hash = _compute_posture_hash(fresh_posture)
+
+    insert_sql = text("""
+        INSERT INTO legal.case_posture
+            (case_slug, procedural_phase, theory_of_defense_state,
+             top_defense_arguments, top_risk_factors,
+             posture_hash, created_at, updated_at,
+             created_by_event, updated_by_event)
+        VALUES
+            (:case_slug, 'pre-suit', 'drafting',
+             CAST(:top_defense_arguments AS jsonb),
+             CAST(:top_risk_factors AS jsonb),
+             :posture_hash, NOW(), NOW(),
+             :event_id, :event_id)
+        ON CONFLICT (case_slug) DO NOTHING
+    """)
+    insert_params = {
+        "case_slug": case_slug,
+        "top_defense_arguments": _json.dumps([]),
+        "top_risk_factors": _json.dumps({}),
+        "posture_hash": new_hash,
+        "event_id": event_id,
+    }
+
+    # ── 3a. Legacy (canonical) INSERT ────────────────────────────────────
+    try:
+        async with LegacySession() as db:
+            await db.execute(insert_sql, insert_params)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_case_posture_create_db_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+        return None
+
+    # ── 3b. Prod mirror INSERT (drift mode) ──────────────────────────────
+    # case_posture PK is case_slug (TEXT), not BIGSERIAL — so there is no
+    # sequence to setval. ON CONFLICT (case_slug) DO NOTHING handles a
+    # second-mirror scenario (e.g. partial mirror retry) idempotently.
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(insert_sql, insert_params)
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_case_posture_create_prod_mirror_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+        # Drift mode — Phase 1-6 24h soak surfaces.
+
+    # ── 4. Re-read so caller sees the canonical row (timestamps + hash) ─
+    async with LegacySession() as db:
+        result = await db.execute(select_sql, {"slug": case_slug})
+        row = result.fetchone()
+        if row is not None:
+            return dict(row._mapping)
+
+    # Race condition or DB failure between INSERT and SELECT — log and
+    # return None so caller bails cleanly.
+    logger.error(
+        "legal_dispatcher_case_posture_post_create_select_failed",
+        case_slug=case_slug,
+        event_id=event_id,
+    )
+    return None
+
+
+async def _bilateral_write_case_posture(
+    case_slug: str,
+    updates: dict[str, Any],
+    event_id: int,
+) -> bool:
+    """
+    UPDATE the case_posture row with the supplied field map. Bilateral
+    (legacy first, prod mirror second). Always sets updated_by_event,
+    updated_at, posture_hash.
+
+    Per Phase 1-3 spec §3.2 + §10 mutation discipline LOCKED:
+      - Cite updated_by_event = event_id (Principle 4 source attribution)
+      - Bump updated_at = NOW()
+      - Recompute posture_hash AFTER all field mutations applied
+      - Bilateral (mirror failure logs + does not raise — drift mode)
+
+    Empty `updates` dict is valid: the function still bumps the audit
+    timestamps + recomputes posture_hash. That's the "1-3A timestamp-only
+    refresh" semantic for email.received events that don't change state
+    fields (per §4 LOCKED scope).
+
+    Field validation: keys in `updates` are validated against
+    _CASE_POSTURE_WRITABLE_FIELDS. Unknown keys log error and the call
+    aborts before touching the DB. This is the second line of defense
+    against bad input; the first is per-handler validation (e.g.
+    1-3C OPERATOR_INPUT_ALLOWED_FIELDS, which is a stricter subset).
+
+    Returns True iff the legacy UPDATE succeeded.
+    """
+    # ── 1. Validate field keys ──────────────────────────────────────────
+    invalid = [k for k in updates if k not in _CASE_POSTURE_WRITABLE_FIELDS]
+    if invalid:
+        logger.error(
+            "legal_dispatcher_case_posture_invalid_field_keys",
+            case_slug=case_slug,
+            invalid_keys=invalid,
+            event_id=event_id,
+        )
+        return False
+
+    # ── 2. Re-read current state to compute new posture_hash ───────────
+    select_sql = text("""
+        SELECT case_slug, procedural_phase, theory_of_defense_state,
+               top_defense_arguments, top_risk_factors
+        FROM legal.case_posture
+        WHERE case_slug = :slug
+    """)
+    async with LegacySession() as db:
+        result = await db.execute(select_sql, {"slug": case_slug})
+        current = result.fetchone()
+        if current is None:
+            logger.error(
+                "legal_dispatcher_case_posture_update_no_row",
+                case_slug=case_slug,
+                event_id=event_id,
+            )
+            return False
+        # Apply pending updates over current state for hash purposes.
+        merged = dict(current._mapping)
+        merged.update(updates)
+    new_hash = _compute_posture_hash(merged)
+
+    # ── 3. Build dynamic UPDATE SET clause ──────────────────────────────
+    # Keys come from _CASE_POSTURE_WRITABLE_FIELDS (validated above), so
+    # f-string interpolation here is safe — no user-supplied column names.
+    set_clauses: list[str] = []
+    params: dict[str, Any] = {
+        "case_slug": case_slug,
+        "event_id": event_id,
+        "new_hash": new_hash,
+    }
+    for key, value in updates.items():
+        if key in _CASE_POSTURE_JSONB_FIELDS:
+            set_clauses.append(f"{key} = CAST(:{key} AS jsonb)")
+            params[key] = _json.dumps(value) if value is not None else None
+        else:
+            set_clauses.append(f"{key} = :{key}")
+            params[key] = value
+    # Always include audit columns
+    set_clauses.append("updated_by_event = :event_id")
+    set_clauses.append("updated_at = NOW()")
+    set_clauses.append("posture_hash = :new_hash")
+
+    update_sql = text(
+        "UPDATE legal.case_posture SET "
+        + ", ".join(set_clauses)
+        + " WHERE case_slug = :case_slug"
+    )
+
+    # ── 4. Legacy (canonical) UPDATE ────────────────────────────────────
+    try:
+        async with LegacySession() as db:
+            await db.execute(update_sql, params)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_case_posture_update_db_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+        return False
+
+    # ── 5. Prod mirror UPDATE (drift mode) ──────────────────────────────
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(update_sql, params)
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_case_posture_update_prod_mirror_failed",
+            case_slug=case_slug,
+            event_id=event_id,
+            error=str(exc)[:300],
+        )
+
+    return True
+
+
+async def _emit_watchdog_event(
+    case_slug: str,
+    match: dict[str, Any],
+    source_event_id: int,
+) -> Optional[int]:
+    """
+    Emit a fresh watchdog.matched event into legal.event_log. Used by
+    _handle_email_received to re-route watchdog match payloads to
+    _handle_watchdog_matched (Phase 1-3B handler).
+
+    Bilateral with forced-id + setval pattern — same shape as
+    _emit_dead_letter_event (1-2D §6 step 4).
+
+    emitted_by = DISPATCHER_VERSIONED ('legal_dispatcher:v1') because the
+    dispatcher is the producer of this re-emitted event. The original
+    email.received event's emitted_by tag is preserved in the payload's
+    source_event_id field for the audit chain.
+
+    Returns new event_id on success; None on legacy failure. Mirror
+    failure logs and continues (drift mode).
+    """
+    payload = {
+        "rule_id": match.get("rule_id"),
+        "rule_name": match.get("rule_name"),
+        "severity": match.get("severity"),
+        "match_type": match.get("match_type"),
+        "search_term": match.get("search_term"),
+        "source_event_id": source_event_id,
+    }
+    row = {
+        "event_type": "watchdog.matched",
+        "case_slug": case_slug,
+        "event_payload_json": _json.dumps(payload),
+        "emitted_by": DISPATCHER_VERSIONED,
+    }
+
+    new_id: Optional[int] = None
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (event_type, case_slug, event_payload, emitted_at, emitted_by)
+                    VALUES
+                        (:event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    RETURNING id
+                """),
+                row,
+            )
+            row_obj = result.fetchone()
+            if row_obj is not None:
+                new_id = int(row_obj.id)
+            await db.commit()
+    except Exception as exc:
+        logger.error(
+            "legal_dispatcher_watchdog_event_db_failed",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+            rule_id=match.get("rule_id"),
+            error=str(exc)[:300],
+        )
+        return None
+
+    if new_id is None:
+        logger.warning(
+            "legal_dispatcher_watchdog_event_no_id_returned",
+            case_slug=case_slug,
+            source_event_id=source_event_id,
+        )
+        return None
+
+    mirror_row = {**row, "forced_id": new_id}
+    try:
+        async with ProdSession() as prod:
+            await prod.execute(
+                text("""
+                    INSERT INTO legal.event_log
+                        (id, event_type, case_slug, event_payload,
+                         emitted_at, emitted_by)
+                    VALUES
+                        (:forced_id, :event_type, :case_slug,
+                         CAST(:event_payload_json AS jsonb), NOW(), :emitted_by)
+                    ON CONFLICT (id) DO NOTHING
+                """),
+                mirror_row,
+            )
+            await prod.execute(
+                text("""
+                    SELECT setval(
+                        'legal.event_log_id_seq',
+                        GREATEST(
+                            :forced_id,
+                            (SELECT last_value FROM legal.event_log_id_seq)
+                        )
+                    )
+                """),
+                {"forced_id": new_id},
+            )
+            await prod.commit()
+    except Exception as exc:
+        logger.warning(
+            "legal_dispatcher_watchdog_event_prod_mirror_failed",
+            new_event_id=new_id,
+            source_event_id=source_event_id,
+            error=str(exc)[:300],
+        )
+
+    return new_id
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handler 1-3A — _handle_email_received
+#
+# Per design v1.1 §6.1 LOCKED scope + spec §4 LOCKED.
+# Triggered by legal_mail_ingester:v1 on every inbound legal email.
+#
+# Scope (LOCKED v1.1 §6.1):
+#   1. Skip if event.case_slug is null or doesn't match an active case
+#   2. Load or create case_posture row for case_slug
+#   3. For each watchdog_match in event_payload, emit watchdog.matched event
+#   4. Refresh case_posture audit timestamps (no field mutations)
+#
+# Removed from v1.1 scope (deferred to Phase 2+):
+#   - procedural_phase mutation logic (operator-defined rules without an
+#     operator-defined ruleset; Phase 2+ adds legal.procedural_phase_rules
+#     table and a separate handler)
+#
+# Idempotency (Principle 6 LOCKED):
+#   Same event re-applied yields same case_posture state. Re-emitted
+#   watchdog events would create duplicate watchdog.matched rows — but
+#   this only happens during operator-driven recovery; the dispatcher's
+#   polling-exclusion sub-query (Phase 1-2 §5.1) prevents same-event
+#   re-application in steady-state.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _handle_email_received(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    Phase 1-3A handler for email.received events emitted by
+    legal_mail_ingester:v1 (Phase 0a-2 producer).
+
+    See module-level comment block above for full scope rationale.
+
+    Returns one of:
+      {"status": "skipped_no_case_slug"}
+      {"status": "skipped_no_active_case", "case_slug": <slug>}
+      {"status": "success", "case_slug": <slug>, "watchdog_events_emitted": N}
+
+    The dispatcher's _mark_processed (Phase 1-2 §5.2) writes this return
+    dict to legal.event_log.result.
+    """
+    event_id = int(event["id"])
+    case_slug = event.get("case_slug")
+    payload = event.get("event_payload") or {}
+
+    # ── 1. Skip checks ───────────────────────────────────────────────────
+    if not case_slug:
+        return {"status": "skipped_no_case_slug"}
+
+    posture = await _load_or_create_case_posture(case_slug, event_id)
+    if posture is None:
+        return {
+            "status": "skipped_no_active_case",
+            "case_slug": case_slug,
+        }
+
+    # ── 2. Re-emit watchdog.matched events ──────────────────────────────
+    matches = payload.get("watchdog_matches") or []
+    emitted = 0
+    for match in matches:
+        if not isinstance(match, dict):
+            # Defensive: legal_mail_ingester emits watchdog_matches as a
+            # list of dicts per design v1.1 §8 event_payload spec. If a
+            # producer ever drifts to scalar entries, log and skip
+            # rather than crash the handler.
+            logger.warning(
+                "legal_dispatcher_watchdog_match_non_dict",
+                case_slug=case_slug,
+                event_id=event_id,
+            )
+            continue
+        new_event_id = await _emit_watchdog_event(case_slug, match, event_id)
+        if new_event_id is not None:
+            emitted += 1
+
+    # ── 3. Refresh case_posture audit timestamps ────────────────────────
+    # Empty updates dict triggers updated_by_event/updated_at/posture_hash
+    # refresh only — no field mutations per LOCKED v1.1 §6.1.
+    await _bilateral_write_case_posture(
+        case_slug=case_slug,
+        updates={},
+        event_id=event_id,
+    )
+
+    return {
+        "status": "success",
+        "case_slug": case_slug,
+        "watchdog_events_emitted": emitted,
+    }
