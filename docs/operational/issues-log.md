@@ -255,3 +255,14 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 **Fix applied (today):** spark-1 M2-INSTALL filters `ray[default]==`, `ray[serve]==`, `vllm==` from requirements.txt before install (matching hermes pattern).
 **Long-term:** split `backend/requirements.txt` into `requirements-base.txt` (universal) + `requirements-inference.txt` (ray/vllm path only). Install-time selects which to apply.
 **Open work:** upstream split + documentation.
+
+### M-010 — backend/requirements.txt missing at least 4 additional runtime deps
+
+**Severity:** medium (extends M-008 scope)
+**Surfaced:** M2-5-FIX-RETRY on spark-1 (2026-04-28)
+**Effect:** After alembic was pinned (M-008 workaround), running `alembic upgrade head` failed with `ModuleNotFoundError: No module named 'structlog'` from `backend/alembic/env.py:11` import chain (env.py → backend.core.config → backend.core.database → structlog).
+**Hermes precedent:** `deploy/hermes/Dockerfile` already installs 4 packages outside `requirements.txt`: `psycopg2-binary python-docx structlog tenacity`. Same pattern as alembic — runtime deps required to import the codebase, never added to the manifest.
+**Root cause:** Same as M-008 — historical ad-hoc installs on spark-2 that drifted from `requirements.txt`. Hermes Dockerfile worked around it; the alembic CLI path doesn't.
+**Fix applied (today):** spark-1 M2-INSTALL-EXTRA pins the 4 hermes deps to spark-2's installed versions (structlog, tenacity, python-docx, psycopg2-binary).
+**Long-term:** combined with M-008, the requirements.txt fix needs to add: alembic + structlog + tenacity + python-docx + psycopg2-binary at minimum. May need fuller audit since strict env.py import only validates one code path.
+**Open work:** upstream PR adding all 5 packages to `requirements.txt`.
