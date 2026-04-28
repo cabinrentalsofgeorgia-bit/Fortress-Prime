@@ -60,7 +60,7 @@ Postgres tuning, role creation, schema replication. Operator generates passwords
 - M2-5: install Alembic chain, run `alembic upgrade head` to current schema
 - M2-6: verify legal.* tables exist + match spark-2 row counts (empty initially)
 
-**Status:** READY — pending operator authorization
+**Status:** COMPLETE
 
 ---
 
@@ -74,7 +74,7 @@ Spark-2 dispatcher writes bilaterally to spark-2 + spark-1. Validate row counts 
 
 **Exit:** zero row count divergence over 4-hour window; matching checksums.
 
-**Status:** PENDING M2
+**Status:** READY — pending operator authorization
 
 ---
 
@@ -142,6 +142,8 @@ Track B uses spark-2 only. Migration does not block it.
 | Dispatcher writes lost during M4 cutover | Brief downtime acceptable; Phase 0a `email_archive.ingested_from` attribution preserves audit trail | Operator |
 | `~/Fortress-Prime.legacy` on spark-1 contains drift from main | Renamed not deleted; available for inspection if anything looks off | Operator |
 | `fortress_admin` credential rotation needed | Operator generates on spark-1 directly; spark-2 credential rotated separately as routine hygiene | Operator |
+| Migration DAG cannot fast-forward to fresh DB on spark-1 due to brownfield assumptions (M-013 through M-016) | Path 2 schema-clone bypasses DAG walk. Long-term fix is the schema-migration audit PR (filed in issues-log). | Operator |
+| fortress_db + fortress_shadow_test on spark-1 are empty post-M2 | M3 prep step: re-apply /tmp/spark-2-fortress_prod-schema-cleaned.sql to both DBs (schema is identical) before dual-write begins | Claude Code on spark-1 |
 
 ---
 
@@ -150,6 +152,7 @@ Track B uses spark-2 only. Migration does not block it.
 | Date/time | Phase | Outcome | Notes |
 |---|---|---|---|
 | 2026-04-28 | M1 | IN PROGRESS | Pre-flight clean; auto-mode prompt handed to spark-1 |
+| 2026-04-28 | M2 | COMPLETE | Path 2 (pg_dump --schema-only from spark-2) chosen after multi-head DAG ambiguity blocked native alembic upgrade. fortress_prod schema mirrored, alembic_version stamped to spark-2's 2 heads via direct INSERT (alembic stamp doesn't support multi-head subset stamping). 5 extensions pre-created as postgres. fortress_db + fortress_shadow_test left empty (M3 prep). 45 min total. |
 
 ---
 
@@ -201,6 +204,7 @@ These are in place from recovery + needrestart work. Review at end of M5:
 - `/etc/systemd/system/fortress-brain.service.d/10-legacy-path.conf` — drop-in pinning brain ExecStart to `.legacy`. **Mismatched with current symlink.** If brain ever restarts, this drop-in wins and brain starts from .legacy. Remove before any future brain restart so it follows the symlink to the new tree.
 - `/etc/needrestart/conf.d/99-fortress-quiet.conf` — needrestart auto-restart suppression. Remove post-M5 once migration window closes.
 - `~/Fortress-Prime.legacy` on spark-1 — kept until M5 verification window closes (24-72h post-M4). Provides rollback path if M3/M4 surface unexpected behavior.
+- `/tmp/spark-2-fortress_prod-schema-cleaned.sql` on spark-1 — the cleaned pg_dump output used for M2 apply. Retained for re-apply against fortress_db + fortress_shadow_test during M3 prep, then delete.
 
 ---
 
