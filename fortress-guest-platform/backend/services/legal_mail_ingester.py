@@ -740,7 +740,16 @@ def parse_message(raw_bytes: bytes, source: dict[str, Any], routing_tag: str) ->
     date_header = msg.get("Date")
     if date_header:
         try:
-            sent_at = parsedate_to_datetime(date_header)
+            parsed_dt = parsedate_to_datetime(date_header)
+            # email_archive.sent_at is TIMESTAMP WITHOUT TIME ZONE — convert
+            # to UTC then strip tzinfo to produce a naive datetime asyncpg
+            # will accept. RFC 2822 dates from IMAP carry an offset; without
+            # this conversion asyncpg raises "can't subtract offset-naive
+            # and offset-aware datetimes" on the encoder path.
+            if parsed_dt is not None and parsed_dt.tzinfo is not None:
+                from datetime import timezone as _tz
+                parsed_dt = parsed_dt.astimezone(_tz.utc).replace(tzinfo=None)
+            sent_at = parsed_dt
         except (TypeError, ValueError):
             sent_at = None
 
