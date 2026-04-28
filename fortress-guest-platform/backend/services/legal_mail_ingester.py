@@ -59,6 +59,7 @@ from backend.services.captain_multi_mailbox import (
 )
 from backend.core.config import settings
 from backend.services.ediscovery_agent import LegacySession
+from backend.services.spark1_session import Spark1Session
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -912,6 +913,62 @@ _EMAIL_ARCHIVE_COLUMNS = (
 )
 
 
+async def _write_spark1_mirror(row: dict, table: str) -> None:
+    """
+    Third-target write to spark-1 fortress_prod.
+
+    Logged-and-non-fatal: failures here do NOT roll back the prior
+    bilateral writes and do NOT raise. They emit a structured warning.
+
+    Behavior is gated by LEGAL_M3_SPARK1_MIRROR_ENABLED flag. When
+    flag is False (default), this function returns immediately without
+    opening a session.
+    """
+    if not settings.LEGAL_M3_SPARK1_MIRROR_ENABLED:
+        return
+
+    try:
+        async with Spark1Session() as mirror:
+            if table == "email_archive":
+                await mirror.execute(
+                    text("""
+                        INSERT INTO email_archive
+                            (id, category, file_path, sender, subject, content, sent_at,
+                             to_addresses, cc_addresses, bcc_addresses, message_id,
+                             ingested_from)
+                        VALUES
+                            (:id, :category, :file_path, :sender, :subject,
+                             :content, :sent_at, :to_addresses, :cc_addresses,
+                             :bcc_addresses, :message_id, :ingested_from)
+                        ON CONFLICT (file_path) DO NOTHING
+                    """),
+                    row,
+                )
+            elif table == "legal.event_log":
+                await mirror.execute(
+                    text("""
+                        INSERT INTO legal.event_log
+                            (id, event_type, case_slug, event_payload, emitted_at, emitted_by)
+                        VALUES
+                            (:id, :event_type, :case_slug,
+                             CAST(:event_payload AS jsonb), NOW(), :emitted_by)
+                        ON CONFLICT (id) DO NOTHING
+                    """),
+                    row,
+                )
+            await mirror.commit()
+    except Exception as e:
+        logger.warning(
+            "spark1_mirror_write_failed",
+            table=table,
+            row_id=row.get("id"),
+            case_slug=row.get("case_slug"),
+            error=str(e),
+            exc_info=True,
+        )
+        # do NOT re-raise
+
+
 def _row_dict_for_insert(message: ParsedMessage) -> dict[str, Any]:
     """Build the SQLAlchemy parameter dict for an email_archive INSERT.
 
@@ -1059,6 +1116,9 @@ async def write_email_archive_bilateral(message: ParsedMessage) -> Optional[int]
             error=str(exc)[:300],
         )
         # Return the fortress_db id anyway — primary write succeeded.
+
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({**row, "id": new_id}, "email_archive")
 
     return new_id
 
@@ -1214,6 +1274,15 @@ async def emit_email_received_event(
             email_archive_id=email_archive_id,
             error=str(exc)[:300],
         )
+
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({
+        "id": new_event_id,
+        "event_type": EVENT_TYPE_EMAIL_RECEIVED,
+        "case_slug": message.case_slug,
+        "event_payload": payload_json,
+        "emitted_by": INGESTER_VERSIONED,
+    }, "legal.event_log")
 
     return new_event_id
 

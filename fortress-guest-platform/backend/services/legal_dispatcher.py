@@ -49,6 +49,7 @@ from sqlalchemy import text  # noqa: F401 — used in 1-2B onward
 from backend.core.config import settings  # noqa: F401 — used in 1-2E + 1-2F
 from backend.services.ediscovery_agent import LegacySession  # noqa: F401 — used in 1-2B onward
 from backend.services.legal_mail_ingester import ProdSession  # noqa: F401 — used in 1-2C onward
+from backend.services.spark1_session import Spark1Session
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -176,6 +177,84 @@ class DispatcherRoute:
 
 # Forward declaration — rebound at end of file with all 6 handlers wired.
 _HANDLERS: dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]] = {}
+
+
+async def _write_spark1_mirror(row: dict, table: str) -> None:
+    """
+    Third-target write to spark-1 fortress_prod.
+
+    Logged-and-non-fatal: failures here do NOT roll back the prior
+    bilateral writes and do NOT raise. They emit a structured warning.
+
+    Behavior is gated by LEGAL_M3_SPARK1_MIRROR_ENABLED flag. When
+    flag is False (default), this function returns immediately without
+    opening a session.
+    """
+    if not settings.LEGAL_M3_SPARK1_MIRROR_ENABLED:
+        return
+
+    try:
+        async with Spark1Session() as mirror:
+            if table == "legal.dispatcher_event_attempts":
+                await mirror.execute(
+                    text("""
+                        INSERT INTO legal.dispatcher_event_attempts
+                            (id, event_id, attempt_number, outcome, error_message,
+                             duration_ms, attempted_at)
+                        VALUES
+                            (:id, :event_id, :attempt_number, :outcome,
+                             :error_message, :duration_ms, NOW())
+                        ON CONFLICT (id) DO NOTHING
+                    """),
+                    row,
+                )
+            elif table == "legal.event_log":
+                await mirror.execute(
+                    text("""
+                        INSERT INTO legal.event_log
+                            (id, event_type, case_slug, event_payload, emitted_at, emitted_by)
+                        VALUES
+                            (:id, :event_type, :case_slug,
+                             CAST(:event_payload AS jsonb), NOW(), :emitted_by)
+                        ON CONFLICT (id) DO NOTHING
+                    """),
+                    row,
+                )
+            elif table.startswith("UPDATE legal.event_log"):
+                await mirror.execute(
+                    text("""
+                        UPDATE legal.event_log
+                        SET processed_at = NOW(),
+                            processed_by = :processed_by,
+                            result = CAST(:result AS jsonb)
+                        WHERE id = :event_id
+                    """),
+                    row,
+                )
+            elif table == "legal.dispatcher_dead_letter":
+                await mirror.execute(
+                    text("""
+                        INSERT INTO legal.dispatcher_dead_letter
+                            (id, original_event_id, event_type, case_slug,
+                             final_error, attempts, dead_lettered_at)
+                        VALUES
+                            (:id, :original_event_id, :event_type, :case_slug,
+                             :final_error, :attempts, NOW())
+                        ON CONFLICT (id) DO NOTHING
+                    """),
+                    row,
+                )
+            await mirror.commit()
+    except Exception as e:
+        logger.warning(
+            "spark1_mirror_write_failed",
+            table=table,
+            row_id=row.get("id"),
+            case_slug=row.get("case_slug"),
+            error=str(e),
+            exc_info=True,
+        )
+        # do NOT re-raise
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -464,6 +543,16 @@ async def _record_attempt(
         # Mirror drift acknowledged — Phase 1-6 24h soak surfaces; repair
         # pass is operator-triggered Phase 1-6 add-on. Return Legacy id.
 
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({
+        "id": new_id,
+        "event_id": event_id,
+        "attempt_number": attempt_number,
+        "outcome": outcome,
+        "error_message": error_message,
+        "duration_ms": duration_ms,
+    }, "legal.dispatcher_event_attempts")
+
     return new_id
 
 
@@ -623,6 +712,13 @@ async def _mark_processed(
         )
         # Mirror drift — Phase 1-6 24h soak surfaces.
 
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({
+        "event_id": event_id,
+        "processed_by": processed_by,
+        "result": _json.dumps(result_payload) if result_payload is not None else None,
+    }, "UPDATE legal.event_log")
+
     return legacy_ok
 
 
@@ -723,6 +819,16 @@ async def _insert_dead_letter_log(
             original_event_id=original_event_id,
             error=str(exc)[:300],
         )
+
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({
+        "id": new_id,
+        "original_event_id": original_event_id,
+        "event_type": event_type,
+        "case_slug": case_slug,
+        "final_error": final_error[:MAX_ERROR_MESSAGE_LEN] if final_error and len(final_error) > MAX_ERROR_MESSAGE_LEN else final_error,
+        "attempts": attempts,
+    }, "legal.dispatcher_dead_letter")
 
     return new_id
 
@@ -835,6 +941,15 @@ async def _emit_dead_letter_event(
             original_event_id=original_event_id,
             error=str(exc)[:300],
         )
+
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({
+        "id": new_id,
+        "event_type": DEAD_LETTER_EVENT_TYPE,
+        "case_slug": case_slug,
+        "event_payload": _json.dumps(payload),
+        "emitted_by": DISPATCHER_VERSIONED,
+    }, "legal.event_log")
 
     return new_id
 
@@ -1766,6 +1881,15 @@ async def _emit_watchdog_event(
             error=str(exc)[:300],
         )
 
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({
+        "id": new_id,
+        "event_type": "watchdog.matched",
+        "case_slug": case_slug,
+        "event_payload": _json.dumps(payload),
+        "emitted_by": DISPATCHER_VERSIONED,
+    }, "legal.event_log")
+
     return new_id
 
 
@@ -1992,6 +2116,15 @@ async def _emit_operator_alert(
             source_event_id=source_event_id,
             error=str(exc)[:300],
         )
+
+    # ── 3. Mirror to spark-1 fortress_prod (M3 trilateral catchup) ────
+    await _write_spark1_mirror({
+        "id": new_id,
+        "event_type": "operator.alert",
+        "case_slug": case_slug,
+        "event_payload": _json.dumps(payload),
+        "emitted_by": DISPATCHER_VERSIONED,
+    }, "legal.event_log")
 
     return new_id
 

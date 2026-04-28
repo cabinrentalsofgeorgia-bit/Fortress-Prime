@@ -920,6 +920,10 @@ class Settings(BaseSettings):
         default=False, alias="LEGAL_DISPATCHER_ENABLED"
     )
 
+    # M3 — Spark-1 mirror (catchup phase of legal migration)
+    LEGAL_M3_SPARK1_MIRROR_ENABLED: bool = False
+    SPARK1_DATABASE_URL: str = ""
+
     # Captain junk/bulk-mail filter. When true (default), every inbound
     # email runs through captain_junk_filter.classify_junk() BEFORE the
     # privilege filter — junked mail is dropped with a log line, zero DB
