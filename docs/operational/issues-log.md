@@ -266,3 +266,13 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 **Fix applied (today):** spark-1 M2-INSTALL-EXTRA pins the 4 hermes deps to spark-2's installed versions (structlog, tenacity, python-docx, psycopg2-binary).
 **Long-term:** combined with M-008, the requirements.txt fix needs to add: alembic + structlog + tenacity + python-docx + psycopg2-binary at minimum. May need fuller audit since strict env.py import only validates one code path.
 **Open work:** upstream PR adding all 5 packages to `requirements.txt`.
+
+### M-011 — openssl rand -base64 generates non-URL-safe characters that break Postgres URIs
+
+**Severity:** low (process, easy fix once known)
+**Surfaced:** M2-5-FIX-RETRY-3 on spark-1 (2026-04-28)
+**Effect:** `openssl rand -base64 32` produces standard base64 charset including `/` and `+`. When interpolated into a Postgres connection URI as the password, `/` is treated as the path separator, and `urlsplit` fails to parse the URI cleanly. pydantic-settings raises ValidationError on the POSTGRES_API_URI value before alembic even attempts to connect.
+**Root cause:** Standard base64 charset is not URL-safe by spec. URL-safe base64 (RFC 4648 §5) uses `-` and `_` instead, but `openssl rand -base64` does not emit URL-safe variant.
+**Fix applied (today):** Regenerate with `openssl rand -hex 32` — produces only `[0-9a-f]`, 256 bits of entropy, URL-safe by construction.
+**Prevention:** Any future credential bootstrap that interpolates passwords into URIs should use `openssl rand -hex N` (or `openssl rand -base64 N | tr '/+' '-_'` for URL-safe base64). Document in any future credential-generation runbook.
+**Open work:** add to spark-1-legal-migration-runbook.md as a credential-generation note.
