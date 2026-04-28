@@ -45,7 +45,7 @@ Prepare spark-1 for Postgres, Redis, repo, credential storage. No data touched.
 
 **Exit:** all 6 sub-phases PASS, RAM ≥ 30 GiB available, all services daemonized.
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 
 ---
 
@@ -60,7 +60,7 @@ Postgres tuning, role creation, schema replication. Operator generates passwords
 - M2-5: install Alembic chain, run `alembic upgrade head` to current schema
 - M2-6: verify legal.* tables exist + match spark-2 row counts (empty initially)
 
-**Status:** PENDING M1 completion + operator authorization
+**Status:** READY — pending operator authorization
 
 ---
 
