@@ -159,3 +159,56 @@ Track B uses spark-2 only. Migration does not block it.
 - Update each phase's Status field as it completes
 - Add risk register entries as new risks surface
 - Reference this doc in every PR + commit during the sprint
+
+---
+
+## Status log update — 2026-04-28
+
+| Date/time (UTC) | Phase | Outcome | Notes |
+|---|---|---|---|
+| 2026-04-28 | M1-1 | PASS w/ collateral | Rename succeeded; broke fortress-brain.service via hardcoded venv shebang |
+| 2026-04-28 | Recovery R1-R10 | PASS | Symlink restore: ~/Fortress-Prime → ~/Fortress-Prime.legacy. Brain back up. |
+| 2026-04-28 | M1-2 | PASS | postgresql-16, redis-server, build-essential, libpq-dev, python3-venv, python3-dev, ocrmypdf installed |
+| 2026-04-28 | M1-3 | PASS | uv installed, PATH appended to ~/.bashrc |
+| 2026-04-28 | M1-4 | PASS | Cloned to ~/Fortress-Prime.new at HEAD e87b20edd |
+| 2026-04-28 | M1-5 | PASS | postgres + redis active on default config |
+| 2026-04-28 | M1-6a | PASS | /etc/fortress created, chmod 700, owned admin |
+| 2026-04-28 | M1-6b | PASS | Atomic symlink repointed: ~/Fortress-Prime → ~/Fortress-Prime.new |
+| 2026-04-28 | M1-6c | PASS | All 3 inference services active post-repoint, RAM stable |
+
+**M1 complete.** All 3 protected inference services (NIM-sovereign, fortress-brain, ollama) remained continuously active throughout migration. No data touched. RAM available stable at 47 GiB.
+
+Update phase M1 status field at top of doc from `IN PROGRESS` to `COMPLETE`.
+Update phase M2 status field from `PENDING M1 completion + operator authorization` to `READY — pending operator authorization`.
+
+---
+
+## Risk register — additions from M1
+
+| Risk | Mitigation | Owner |
+|---|---|---|
+| Renaming a repo dir breaks any systemd unit with hardcoded paths | Audit `systemctl status` for any service whose ExecStart references the dir before renaming. Fix forward via drop-in override, not unit file edit. | Operator + Claude Code |
+| Python venv shebangs hardcode the venv's parent path; rename breaks every wrapper script in `venv/bin/` | Symlink restore (parent → renamed dir) avoids touching venv internals. Long-term: recreate venvs after migration completes. | Operator |
+| `needrestart` triggers cascade restarts during apt install | Suppress via `/etc/needrestart/conf.d/99-fortress-quiet.conf` for migration window. Remove post-M5. | Claude Code on spark-1 |
+| GitHub deploy key authorization required for `git clone` and `git push` from new host | Operator adds spark-1 ed25519 deploy key with write access via GitHub UI. Document the key fingerprint in runbook for future audit. | Operator |
+
+---
+
+## Outstanding artifacts requiring cleanup
+
+These are in place from recovery + needrestart work. Review at end of M5:
+
+- `/etc/systemd/system/fortress-brain.service.d/10-legacy-path.conf` — drop-in pinning brain ExecStart to `.legacy`. **Mismatched with current symlink.** If brain ever restarts, this drop-in wins and brain starts from .legacy. Remove before any future brain restart so it follows the symlink to the new tree.
+- `/etc/needrestart/conf.d/99-fortress-quiet.conf` — needrestart auto-restart suppression. Remove post-M5 once migration window closes.
+- `~/Fortress-Prime.legacy` on spark-1 — kept until M5 verification window closes (24-72h post-M4). Provides rollback path if M3/M4 surface unexpected behavior.
+
+---
+
+## Spark-1 deploy key fingerprint (reference)
+
+For future audit:
+- **Title:** `spark-1 (Fortress Legal migration)`
+- **Key type:** ed25519
+- **Fingerprint:** `SHA256:P532moZ/del210PNnn5RTZ0B4qNXrWKj4H46W0sl7WY`
+- **Access:** read+write
+- **Added:** 2026-04-28
