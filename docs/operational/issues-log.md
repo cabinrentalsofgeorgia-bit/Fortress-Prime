@@ -276,3 +276,48 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 **Fix applied (today):** Regenerate with `openssl rand -hex 32` — produces only `[0-9a-f]`, 256 bits of entropy, URL-safe by construction.
 **Prevention:** Any future credential bootstrap that interpolates passwords into URIs should use `openssl rand -hex N` (or `openssl rand -base64 N | tr '/+' '-_'` for URL-safe base64). Document in any future credential-generation runbook.
 **Open work:** add to spark-1-legal-migration-runbook.md as a credential-generation note.
+
+### M-012 — spark-1-legal-migration-runbook.md present in PR #264 but absent from repo HEAD at investigation time
+
+**Severity:** low (process)
+**Surfaced:** Path 2 investigation on spark-1 (2026-04-28)
+**Effect:** Senior-engineer prompt referenced the runbook as authoritative; runbook was committed on a feature branch that hadn't merged at the moment Claude Code on spark-1 went looking for it.
+**Root cause:** Runbook was authored as part of M1 sprint, committed to docs/spark-1-legal-migration-runbook branch, then the M1 status update PR #264 hadn't merged yet when M2 work began.
+**Fix applied:** PR #264 merged. Runbook now on main.
+**Open work:** none — historical artifact.
+
+### M-013 — Migration DAG not divisionally clean
+
+**Severity:** medium (architectural)
+**Surfaced:** M2-5-FIX-RETRY-5 multi-head investigation (2026-04-28)
+**Effect:** Applying any legal head's ancestry chain pulls in guest-platform migrations (seo_patches, hunter_recovery, channex_webhooks, intelligence_pricing, etc.). The migration tree is interleaved across divisions.
+**Root cause:** Migrations were authored before ADR-001 (one-spark-per-division) was locked. No branch isolation between legal and guest-platform domains in the alembic chain.
+**Implication:** ADR-001's "one-spark-per-division" cannot be fully enforced at the schema level without restructuring migrations. Each spark's database will carry tables it doesn't strictly own.
+**Workaround applied (today):** Path 2 schema-clone from spark-2 — copies whatever's there, alembic_version stamped, no DAG walk required.
+**Long-term:** Either (a) split alembic chain into per-division trees + a shared base, or (b) accept divisionally-impure schemas on each spark and document the rationale. Decision for separate ADR.
+
+### M-014 — Baseline migration 0eecc0b42908 is brownfield-only
+
+**Severity:** medium (blocks fresh-DB installs)
+**Surfaced:** M2-5-FIX-RETRY-5 (2026-04-28)
+**Effect:** 0eecc0b42908 is a no-op stamp recording that pre-alembic tables (e.g., `properties`) exist. On spark-2 those tables exist from before alembic was introduced. On a fresh DB they don't, and subsequent migrations FK against them.
+**Root cause:** Original alembic adoption stamped existing schema rather than reverse-engineering CREATE TABLE statements into a true baseline migration.
+**Workaround applied:** Path 2 — pg_dump --schema-only from spark-2 to bypass DAG walk entirely.
+**Long-term:** Author a proper baseline migration that creates pre-alembic tables (properties + others identified from the dump). New 0_baseline_*.py replaces 0eecc0b42908. Existing brownfield deployments stamp through it as a no-op via alembic env.py logic.
+
+### M-015 — 26118e0ba71f_create_seo_patch_tables FKs to properties without declaring depends_on
+
+**Severity:** medium (DAG correctness)
+**Surfaced:** M2-5-FIX-RETRY-5 (2026-04-28)
+**Effect:** seo_patches migration FKs to `properties` table that's created in a different branch (4757badd7918_emergency_schema_fix). Alembic's DAG walker doesn't know about the cross-branch dependency, so it tries to apply seo_patches before properties exists on a fresh DB.
+**Root cause:** Migration author didn't add `depends_on = ('4757badd7918',)` to the migration's metadata.
+**Fix path:** Add `depends_on` to seo_patches migration. Audit all migrations for similar undeclared cross-branch FKs.
+**Open work:** separate PR — schema migration audit.
+
+### M-016 — 4757badd7918_emergency_schema_fix is undocumented + possibly orphaned
+
+**Severity:** medium (process + DAG)
+**Surfaced:** M2-5-FIX-RETRY-5 (2026-04-28)
+**Effect:** 4757badd7918 creates `properties` and likely other baseline tables. It exists as the de-facto fresh-DB workaround but is undocumented and not declared as a dependency by any migration that needs it. Whether it's reachable from any current head is unclear.
+**Fix path:** (a) Verify whether 4757badd7918 is on the ancestry of any current head. (b) If not, fold its CREATE TABLE statements into a proper baseline migration (per M-014) and delete 4757badd7918. (c) If yes, document its purpose in the migration's docstring.
+**Open work:** combined with M-014 + M-015 in a schema-migration audit PR.
