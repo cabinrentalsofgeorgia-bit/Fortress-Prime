@@ -234,3 +234,13 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 **Status:** misroute folder treated as logical re-route via section-7-source-manifest.md; .eml files NOT physically moved.  
 **Fix path:** maps to B2 (cross-case email link table) in case-briefing-build-plan.md. Captain classifier needs to emit multiple links per email, not single classification.  
 **Blocks:** comprehensive privilege review for any future case will hit the same pattern.
+
+### M-008 — alembic missing from backend/requirements.txt despite being a runtime dependency
+
+**Severity:** medium (process, blocks migration to new hosts)
+**Surfaced:** M2-INVESTIGATE on spark-1 (2026-04-28)
+**Effect:** Production deployments use alembic for schema migrations (PRs #245-#256 all required it). Spark-2's venv has alembic installed but it's not in `backend/requirements.txt`. Any new host installation has to discover this gap by failing first, then mirror the installed version off spark-2 manually.
+**Root cause:** alembic was installed ad-hoc on spark-2 at some point and never added to `requirements.txt`. The next host repeats the discovery.
+**Fix path:** Separate PR — `pip freeze | grep alembic` on spark-2 to get the canonical version, add to `backend/requirements.txt`, merge.
+**Workaround applied:** spark-1 M2-INSTALL pins alembic to spark-2's installed version.
+**Open work:** upstream `requirements.txt` fix.
