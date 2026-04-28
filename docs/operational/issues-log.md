@@ -133,6 +133,18 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 - **Ticket:** GH #262
 - **Note:** this drift compromises (a) the brief generator (would print wrong firm in the brief) and (b) Captain's domain-allowlist for legal-track classification (would whitelist fmglaw.com instead of buchalter.com, missing real opposing-counsel emails). Two-part fix: Part 1 schema migration text→JSONB, Part 2 data correction + audit pass across all active cases.
 
+## 2026-04-28
+
+### Issue: PR G phase F backend tests broke after upstream `_upsert_to_qdrant_privileged` return-shape change
+
+- **Discovered:** re-running PR G phase F backend test suite at the start of phase G work
+- **Symptom:** 3 of 37 backend tests fail (`test_upsert_to_qdrant_privileged_uses_uuid5_deterministic_ids`, `test_privileged_collection_payload_dual_field_chunk_num_and_chunk_index`, `test_process_vault_upload_routes_privileged_to_separate_collection`, `test_process_vault_upload_non_privileged_uses_work_product_collection`). All assertions about the privileged-upsert return value fail because the function now returns `tuple[list[str], Optional[dict]]` instead of `int`.
+- **Root cause:** an upstream edit to `backend/services/legal_ediscovery.py` (referenced as Issue #228 in the file's comment block) changed `_upsert_to_qdrant_privileged` to return `(successful_uuids, batch_failure_descriptor)` so partial-failure retries can replay only the failed batch instead of re-uploading the whole document. The phase F tests were written against the original `int` return.
+- **Remediation:** update the 3 affected tests to (a) unpack the tuple, (b) assert on `len(successful_ids)` instead of the bare int, (c) update mocks of `_upsert_to_qdrant_privileged` in pipeline tests to return a tuple. UI tests (20) are unaffected and still pass.
+- **Status:** RESOLVED (3 tests adapted to new tuple return; 37/37 backend tests + 20/20 UI tests green)
+- **Ticket:** N/A — phase F test maintenance, not a code defect
+- **Note:** also noticed the `_DOMAIN_TO_ROLE` Sanker entry was corrected from `masp-lawfirm.com` → `msp-lawfirm.com`. The `test_role_for_counsel_domain_maps_correctly` test iterates the live dict so it auto-adapts. The `/tmp/pr_f_classification_rules.md` draft still has the old spelling — separate cleanup, no test impact. Fix mechanics: (1) unpack the tuple `(successful, failure)`, assert `len(successful) == N` + `failure is None`; (2) update pipeline-test mocks to return `(["uuid-list"], None)` instead of `int`; (3) the deterministic-UUID test's `_FakeResp` now provides a `.json()` returning the Qdrant `{"status":"ok","result":{"status":"completed",...}}` shape that `_batch_upsert_with_verification` now requires.
+
 ---
 
 ## Tickets filed
