@@ -244,3 +244,14 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 **Fix path:** Separate PR — `pip freeze | grep alembic` on spark-2 to get the canonical version, add to `backend/requirements.txt`, merge.
 **Workaround applied:** spark-1 M2-INSTALL pins alembic to spark-2's installed version.
 **Open work:** upstream `requirements.txt` fix.
+
+### M-009 — backend/requirements.txt has Python 3.12-incompatible inference pins
+
+**Severity:** medium (blocks fresh installs, requires hermes-style filter)
+**Surfaced:** M2-INSTALL on spark-1 (2026-04-28)
+**Effect:** `ray[default]==2.10.0`, `ray[serve]==2.10.0`, `vllm==0.4.0` are pinned to versions that don't publish cp312 wheels. Spark-2 has them installed because the original install was on Python 3.11 (or sourced ray from elsewhere). On Ubuntu 24.04 (Python 3.12 only), uv hard-fails dependency resolution.
+**Root cause:** Pins predate Python 3.12 wheel availability for those packages. Inference deps are co-mingled in `backend/requirements.txt` with Alembic/SQLAlchemy/asyncpg, even though they're only needed by the AI inference path — not by migrations or the guest-platform backend itself.
+**Existing precedent:** `deploy/hermes/Dockerfile` already filters these three pins out before `pip install` for the same reason.
+**Fix applied (today):** spark-1 M2-INSTALL filters `ray[default]==`, `ray[serve]==`, `vllm==` from requirements.txt before install (matching hermes pattern).
+**Long-term:** split `backend/requirements.txt` into `requirements-base.txt` (universal) + `requirements-inference.txt` (ray/vllm path only). Install-time selects which to apply.
+**Open work:** upstream split + documentation.
