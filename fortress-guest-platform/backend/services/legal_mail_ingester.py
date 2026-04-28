@@ -482,13 +482,18 @@ class LegalMailIngesterTransport:
             except Exception:
                 pass
 
-    def fetch_recent(self) -> list[dict[str, Any]]:
+    def fetch_recent(
+        self,
+        last_seen_uid: Optional[str] = None,
+    ) -> tuple[list[dict[str, Any]], Optional[str]]:
         """
-        Fetch UNSEEN messages within the date band, capped at max_messages_per_patrol.
+        Fetch new messages since last_seen_uid (or bootstrap with date band
+        if None), capped at max_messages_per_patrol.
 
-        Sub-phase 2A returns an empty list — full implementation lands in 2B.
         Connection retry pattern is in place (mirrors Captain's 2-attempt
         reconnect-on-abort for cPanel keep-alive drops).
+
+        Returns (records, new_last_seen_uid).
         """
         attempts = 0
         last_err: Exception | None = None
@@ -497,7 +502,7 @@ class LegalMailIngesterTransport:
             conn: Optional[imaplib.IMAP4_SSL] = None
             try:
                 conn = self._connect()
-                return self._fetch_with(conn)
+                return self._fetch_with(conn, last_seen_uid)
             except (imaplib.IMAP4.abort, EOFError, OSError, imaplib.IMAP4.error) as exc:
                 last_err = exc
                 if attempts == 1:
@@ -513,7 +518,7 @@ class LegalMailIngesterTransport:
                     mailbox=self.mailbox.name,
                     error=str(exc)[:200],
                 )
-                return []
+                return [], last_seen_uid
             finally:
                 if conn is not None:
                     try:
@@ -531,33 +536,73 @@ class LegalMailIngesterTransport:
                 mailbox=self.mailbox.name,
                 error=str(last_err)[:200],
             )
-        return []
+        return [], last_seen_uid
 
-    def _fetch_with(self, conn: imaplib.IMAP4_SSL) -> list[dict[str, Any]]:
+    def _fetch_with(
+        self,
+        conn: imaplib.IMAP4_SSL,
+        last_seen_uid: Optional[str] = None,
+    ) -> tuple[list[dict[str, Any]], Optional[str]]:
         """
         Banded UID SEARCH + per-UID BODY.PEEK[].
 
-        Per design v1.1 §3.2: never issue an unbounded SEARCH UNSEEN — that's
-        how gary-gk hits Issue #177's >1MB overflow. We always pair UNSEEN with
-        a SINCE date floor (default 30 days back, configurable per-mailbox).
+        Bootstrap (last_seen_uid is None): SEARCH SINCE <date>. Captures
+        all messages in band regardless of \\Seen flag.
+
+        Steady-state (last_seen_uid is set): SEARCH UID <last+1>:*.
+        Captures every new message, doesn't depend on \\Seen.
 
         Per design v1.1 §3.4 (Captain coexistence): use BODY.PEEK[] not
         (RFC822) — preserves the \\Seen flag. Captain marks \\Seen on its own
         cycle; we never mutate server-side state.
 
-        Returns list of dicts each containing:
-          uid, raw_bytes, host, folder, mailbox_alias
+        Returns (records, new_last_seen_uid). new_last_seen_uid is the
+        highest UID seen this patrol, or last_seen_uid if no new messages.
         """
         since_date = (date.today() - timedelta(days=self.mailbox.search_band_days))
-        search_predicate = f"UNSEEN SINCE {_imap_date(since_date)}"
+
+        next_uid: Optional[int] = None
+        if last_seen_uid:
+            # Steady state: anything strictly greater than the watermark.
+            try:
+                next_uid = int(last_seen_uid) + 1
+            except (ValueError, TypeError):
+                # Corrupt watermark — fail safe to bootstrap.
+                logger.warning(
+                    "legal_mail_watermark_invalid",
+                    mailbox=self.mailbox.name,
+                    value=last_seen_uid,
+                )
+                next_uid = None
+                search_predicate = f"SINCE {_imap_date(since_date)}"
+            else:
+                search_predicate = f"UID {next_uid}:*"
+        else:
+            # Bootstrap: date-banded, no UNSEEN.
+            search_predicate = f"SINCE {_imap_date(since_date)}"
 
         typ, data = conn.uid("SEARCH", search_predicate)
         if typ != "OK" or not data or not data[0]:
-            return []
+            return [], last_seen_uid
 
-        uids = data[0].split()[: self.mailbox.max_messages_per_patrol]
+        uid_tokens = data[0].split()
+
+        # IMAP UID quirk: `UID <next>:*` returns at least one UID even if no
+        # messages have UID >= next — the server returns the highest UID
+        # instead. Filter to UIDs strictly >= next_uid.
+        if next_uid is not None:
+            filtered: list[bytes] = []
+            for u in uid_tokens:
+                try:
+                    if int(u) >= next_uid:
+                        filtered.append(u)
+                except (ValueError, TypeError):
+                    continue
+            uid_tokens = filtered
+
+        uids = uid_tokens[: self.mailbox.max_messages_per_patrol]
         if not uids:
-            return []
+            return [], last_seen_uid
 
         out: list[dict[str, Any]] = []
         for uid_bytes in uids:
@@ -599,7 +644,12 @@ class LegalMailIngesterTransport:
                 )
                 continue
 
-        return out
+        # IMAP returns UIDs ascending — last token is highest. If the fetch
+        # loop produced no records but the SEARCH found UIDs, still advance
+        # to the highest UID seen; otherwise hold the prior watermark.
+        new_last_seen_uid = uids[-1].decode("ascii", errors="replace") if uids else last_seen_uid
+
+        return out, new_last_seen_uid
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1392,6 +1442,36 @@ async def _is_mailbox_paused(mailbox_alias: str) -> bool:
         return False
 
 
+async def _load_last_seen_uid(mailbox_alias: str) -> Optional[str]:
+    """Load the last_seen_uid watermark from legal.mail_ingester_state.
+
+    Returns None if no row yet (first patrol) OR if the column is
+    actually NULL OR if the read fails. None signals 'bootstrap mode' —
+    the caller falls back to date-banded SEARCH for one patrol, then
+    establishes the watermark from the highest UID seen.
+    """
+    try:
+        async with LegacySession() as db:
+            result = await db.execute(
+                text(
+                    "SELECT last_seen_uid FROM legal.mail_ingester_state "
+                    "WHERE mailbox_alias = :alias LIMIT 1"
+                ),
+                {"alias": mailbox_alias},
+            )
+            row = result.fetchone()
+            if row is None:
+                return None
+            return row[0]  # may be None even if row exists
+    except Exception as exc:
+        logger.warning(
+            "legal_mail_watermark_load_failed",
+            mailbox=mailbox_alias,
+            error=str(exc)[:200],
+        )
+        return None  # fail-open: bootstrap if read fails
+
+
 async def _update_mailbox_state(
     mailbox_alias: str,
     last_patrol_at: datetime,
@@ -1400,6 +1480,7 @@ async def _update_mailbox_state(
     delta_ingested: int,
     delta_deduped: int,
     delta_errored: int,
+    new_last_seen_uid: Optional[str] = None,
 ) -> None:
     """Upsert legal.mail_ingester_state after each patrol per §7 last-known-good.
 
@@ -1413,11 +1494,11 @@ async def _update_mailbox_state(
                         (mailbox_alias, last_patrol_at, last_success_at,
                          last_error_at, last_error,
                          messages_ingested_total, messages_deduped_total,
-                         messages_errored_total, updated_at)
+                         messages_errored_total, last_seen_uid, updated_at)
                     VALUES
                         (:alias, :patrol_at, :success_at,
                          :error_at, :err,
-                         :delta_in, :delta_dd, :delta_er, NOW())
+                         :delta_in, :delta_dd, :delta_er, :uid, NOW())
                     ON CONFLICT (mailbox_alias) DO UPDATE SET
                         last_patrol_at = EXCLUDED.last_patrol_at,
                         last_success_at = COALESCE(EXCLUDED.last_success_at,
@@ -1433,6 +1514,7 @@ async def _update_mailbox_state(
                         messages_ingested_total = legal.mail_ingester_state.messages_ingested_total + EXCLUDED.messages_ingested_total,
                         messages_deduped_total = legal.mail_ingester_state.messages_deduped_total + EXCLUDED.messages_deduped_total,
                         messages_errored_total = legal.mail_ingester_state.messages_errored_total + EXCLUDED.messages_errored_total,
+                        last_seen_uid = COALESCE(EXCLUDED.last_seen_uid, legal.mail_ingester_state.last_seen_uid),
                         updated_at = NOW()
                 """),
                 {
@@ -1444,6 +1526,7 @@ async def _update_mailbox_state(
                     "delta_in": delta_ingested,
                     "delta_dd": delta_deduped,
                     "delta_er": delta_errored,
+                    "uid": new_last_seen_uid,
                 },
             )
             await db.commit()
@@ -1524,15 +1607,19 @@ async def patrol_mailbox(
         return result
 
     # ── 1. Fetch ───────────────────────────────────────────────────────
+    prior_uid = await _load_last_seen_uid(mailbox.name)
     transport = LegalMailIngesterTransport(mailbox)
     fetched_records: list[dict[str, Any]] = []
+    new_last_seen_uid: Optional[str] = prior_uid
     fetch_error: Optional[str] = None
     try:
         # IMAP fetch is sync (imaplib); offload to thread to avoid blocking
         # the asyncio event loop. Mirror Captain's pattern (run_patrol uses
         # asyncio.to_thread on transport.fetch_unseen).
         import asyncio
-        fetched_records = await asyncio.to_thread(transport.fetch_recent)
+        fetched_records, new_last_seen_uid = await asyncio.to_thread(
+            transport.fetch_recent, prior_uid
+        )
     except Exception as exc:
         # Should not reach here — fetch_recent's retry loop catches IMAP
         # errors internally. Defensive only.
@@ -1621,6 +1708,7 @@ async def patrol_mailbox(
         delta_ingested=result.ingested,
         delta_deduped=result.deduped,
         delta_errored=result.errored,
+        new_last_seen_uid=new_last_seen_uid,
     )
 
     # ── 4. Metrics emission ────────────────────────────────────────────
