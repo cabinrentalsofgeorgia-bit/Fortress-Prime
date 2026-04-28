@@ -652,14 +652,17 @@ async def test_process_vault_upload_routes_privileged_to_separate_collection(
     )
 
     work_product_calls: list = []
+    # Both upsert helpers now return tuple[list[str], Optional[dict]] per Issue
+    # #228 (partial-failure recovery). Mocks return (["uuid-a","uuid-b"], None)
+    # for the success path so callers can len() the successful list.
     monkeypatch.setattr(
         legal_ediscovery, "_upsert_to_qdrant",
-        AsyncMock(side_effect=lambda *a, **kw: work_product_calls.append((a, kw)) or 2),
+        AsyncMock(side_effect=lambda *a, **kw: work_product_calls.append((a, kw)) or (["u1", "u2"], None)),
     )
     privileged_calls: list = []
     monkeypatch.setattr(
         legal_ediscovery, "_upsert_to_qdrant_privileged",
-        AsyncMock(side_effect=lambda **kw: privileged_calls.append(kw) or 2),
+        AsyncMock(side_effect=lambda **kw: privileged_calls.append(kw) or (["u1", "u2"], None)),
     )
     monkeypatch.setattr(legal_ediscovery, "_emit_docket_updated_event",
                         AsyncMock(return_value=False))
@@ -704,12 +707,12 @@ async def test_process_vault_upload_non_privileged_uses_work_product_collection(
     work_product_calls: list = []
     monkeypatch.setattr(
         legal_ediscovery, "_upsert_to_qdrant",
-        AsyncMock(side_effect=lambda *a, **kw: work_product_calls.append((a, kw)) or 1),
+        AsyncMock(side_effect=lambda *a, **kw: work_product_calls.append((a, kw)) or (["u1"], None)),
     )
     privileged_calls: list = []
     monkeypatch.setattr(
         legal_ediscovery, "_upsert_to_qdrant_privileged",
-        AsyncMock(side_effect=lambda **kw: privileged_calls.append(kw) or 1),
+        AsyncMock(side_effect=lambda **kw: privileged_calls.append(kw) or (["u1"], None)),
     )
     monkeypatch.setattr(legal_ediscovery, "_emit_docket_updated_event",
                         AsyncMock(return_value=False))
@@ -737,14 +740,22 @@ async def test_upsert_to_qdrant_privileged_uses_uuid5_deterministic_ids(monkeypa
     """Same (file_hash, chunk_index) MUST produce the same point id across runs.
     Re-runs of the same physical file must NOT duplicate Qdrant points."""
     captured = []
+    # Per Issue #228, _batch_upsert_with_verification now reads the response
+    # body and requires status=ok + result.status=completed (or acknowledged).
+    # Mock has to honor that contract.
     class _FakeResp:
         def raise_for_status(self): return None
+        def json(self):
+            return {"result": {"operation_id": 1, "status": "completed"},
+                    "status": "ok", "time": 0.001}
     fake_client = MagicMock()
     fake_client.put = AsyncMock(side_effect=lambda url, **kw: (captured.append(kw.get("json")), _FakeResp())[1])
     monkeypatch.setattr(legal_ediscovery, "shared_client", fake_client)
 
+    # Function now returns tuple[list[str], Optional[dict]]
+    # — (successful_uuids, batch_failure_descriptor_or_None) per Issue #228.
     # First run
-    n1 = await _upsert_to_qdrant_privileged(
+    successful_1, failure_1 = await _upsert_to_qdrant_privileged(
         doc_id="doc-A", case_slug="test-case-i", file_name="x.eml",
         file_hash="hashAAA", privileged_counsel_domain="mhtlegal.com",
         role="case_i_phase_1_filing_to_depositions",
@@ -754,7 +765,7 @@ async def test_upsert_to_qdrant_privileged_uses_uuid5_deterministic_ids(monkeypa
     )
     # Second run — *same* file_hash, simulating a re-ingest. doc_id is
     # different (a new uuid4 from the INSERT) but file_hash + idx are stable.
-    n2 = await _upsert_to_qdrant_privileged(
+    successful_2, failure_2 = await _upsert_to_qdrant_privileged(
         doc_id="doc-B-different",
         case_slug="test-case-i", file_name="x.eml",
         file_hash="hashAAA", privileged_counsel_domain="mhtlegal.com",
@@ -763,13 +774,16 @@ async def test_upsert_to_qdrant_privileged_uses_uuid5_deterministic_ids(monkeypa
         chunks=["a", "b"],
         vectors=[[0.1] * 4, [0.2] * 4],
     )
-    assert n1 == 2 and n2 == 2
+    assert len(successful_1) == 2 and len(successful_2) == 2
+    assert failure_1 is None and failure_2 is None
     ids_run1 = sorted(p["id"] for p in captured[0]["points"])
     ids_run2 = sorted(p["id"] for p in captured[1]["points"])
     assert ids_run1 == ids_run2, (
         "deterministic UUID5 must produce identical point IDs on re-run "
         "with the same file_hash+chunk_index"
     )
+    # Successful uuids returned should match the captured-points uuids.
+    assert sorted(successful_1) == ids_run1
 
     # Sanity: ids really come from uuid5
     expected_a = str(uuid5(_QDRANT_PRIVILEGED_NS, "hashAAA:0"))
@@ -784,13 +798,19 @@ async def test_privileged_collection_payload_dual_field_chunk_num_and_chunk_inde
     """File 1 spec divergence — payload includes BOTH chunk_num and chunk_index
     so Council retrieval can use either field name. Both must be present and equal."""
     captured = []
+    # Per Issue #228, _batch_upsert_with_verification now reads the response
+    # body and requires status=ok + result.status=completed (or acknowledged).
+    # Mock has to honor that contract.
     class _FakeResp:
         def raise_for_status(self): return None
+        def json(self):
+            return {"result": {"operation_id": 1, "status": "completed"},
+                    "status": "ok", "time": 0.001}
     fake_client = MagicMock()
     fake_client.put = AsyncMock(side_effect=lambda url, **kw: (captured.append(kw.get("json")), _FakeResp())[1])
     monkeypatch.setattr(legal_ediscovery, "shared_client", fake_client)
 
-    await _upsert_to_qdrant_privileged(
+    successful, failure = await _upsert_to_qdrant_privileged(
         doc_id="d1", case_slug="test-case-i", file_name="x.eml",
         file_hash="h1", privileged_counsel_domain="fgplaw.com",
         role="case_i_phase_2_trial_and_general_counsel",
@@ -798,6 +818,8 @@ async def test_privileged_collection_payload_dual_field_chunk_num_and_chunk_inde
         chunks=["chunk-zero", "chunk-one", "chunk-two"],
         vectors=[[0.1] * 4, [0.2] * 4, [0.3] * 4],
     )
+    assert failure is None
+    assert len(successful) == 3
     points = captured[0]["points"]
     assert len(points) == 3
     for i, p in enumerate(points):
