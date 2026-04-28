@@ -168,3 +168,69 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 - Status transitions: OPEN → IN-PROGRESS (when work begins) → RESOLVED (verified fixed) OR DEFERRED (decision to not fix now)
 - Ticket field references GH issue number once filed
 - Note field captures context that doesn't fit other fields (e.g., links to design doc revisions needed)
+
+---
+
+## 2026-04-28 — Fortress Legal migration to spark-1 (issues surfaced during M1/M2 prep)
+
+### M-001 — fortress-brain.service had hardcoded venv path
+
+**Severity:** medium  
+**Surfaced:** M1-1 (rename of `~/Fortress-Prime` → `~/Fortress-Prime.legacy`)  
+**Effect:** systemd unit ExecStart pointed at `/home/admin/Fortress-Prime/venv/bin/streamlit`; rename broke the path; unit failed 5x and went into permanent failed state.  
+**Root cause:** Python venv shebangs hardcode the venv's parent path at venv creation time. Renaming any directory above a venv breaks every wrapper script in `venv/bin/`.  
+**Fix applied:** Recovery R1-R10. Symlink restore (`~/Fortress-Prime` → `~/Fortress-Prime.legacy`) + drop-in override at `/etc/systemd/system/fortress-brain.service.d/10-legacy-path.conf`.  
+**Long-term:** Recreate venvs after migration completes (M5 followup). Audit all systemd units for hardcoded repo paths before any future rename.  
+**Open work:** drop-in cleanup post-M5.
+
+### M-002 — needrestart triggered cascade restart attempts during apt install
+
+**Severity:** low  
+**Surfaced:** M1-2 (apt install postgresql-16 + redis + deps)  
+**Effect:** needrestart's auto-restart hook surfaced fortress-brain in its restart list while the unit was already failed from M-001, creating ambiguous interaction.  
+**Fix applied:** `/etc/needrestart/conf.d/99-fortress-quiet.conf` set `$nrconf{restart} = 'l';` for migration window.  
+**Open work:** remove post-M5.
+
+### M-003 — GitHub deploy key required for spark-1 git access
+
+**Severity:** low (process, not technical)  
+**Surfaced:** M1-4 (clone Fortress-Prime fresh)  
+**Effect:** SSH auth failed at clone — spark-1's ed25519 pubkey was not in repo's Deploy Keys.  
+**Fix applied:** Operator added pubkey via GitHub UI with write access. Fingerprint `SHA256:P532moZ/del210PNnn5RTZ0B4qNXrWKj4H46W0sl7WY` recorded in spark-1-legal-migration-runbook.md.  
+**Long-term:** Document deploy-key provisioning as standard step in any future cross-spark migration runbook.
+
+### M-004 — fortress-guest-platform missing pyproject.toml + alembic in deps
+
+**Severity:** high (blocking M2-5)  
+**Surfaced:** M2-5-FIX (alembic upgrade head on spark-1)  
+**Effect:** `uv pip install -e .` fails — no `pyproject.toml`, no `setup.py`, no `setup.cfg` in `~/Fortress-Prime/fortress-guest-platform/`. `alembic` is not in `backend/requirements.txt`. Production schema migrations have shipped via this repo (#245-#256) so an install path exists; it's undocumented.  
+**Status:** M2-INVESTIGATE phase running to surface canonical install ritual (Docker? install script? venv on spark-2?).  
+**Fix path TBD:** depends on investigation outcome. Likely needs a separate PR adding `pyproject.toml` + alembic to deps, or a documented install script.  
+**Blocks:** M2-5 → M3 → M4 → M5 → Phase 1-6 soak.
+
+### M-005 — Hardcoded postgres credential in labeling_pipeline.py
+
+**Severity:** medium (security)  
+**Surfaced:** M2-INVESTIGATE  
+**Effect:** `backend/services/labeling_pipeline.py` contains literal `postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow`. The password is the placeholder string `fortress`, suggesting either dev-mode legacy or a never-rotated default.  
+**Status:** logged, not touched during migration.  
+**Fix path:** separate PR — replace with env-var read, rotate any production deployment that uses this string.  
+**Risk if ignored:** if production fortress_admin's password ever became `fortress`, this would be a credential leak in source. If not, low immediate risk but will fail at M3 dual-write.
+
+### M-006 — Query A name-collision noise (86% noise, surnames matching non-counsel)
+
+**Severity:** medium (operator-time waste, not data integrity)  
+**Surfaced:** Track B Case II privilege review  
+**Effect:** SQL substring match on counsel surnames against `email_archive.sender` returned 30/37 rows that are HR/employee correspondence (River Underwood at gmail, etc.) rather than legal counsel.  
+**Root cause:** No counsel registry table; queries use surname substring instead of authorized counsel email/domain.  
+**Fix applied (today):** Pivoted to LLM-based bulk classification (qwen2.5:7b on Ollama) — produced section-7-source-manifest.md with 42 entries from union of (Query A v2, vanderburge-misroute folder, additional ILIKE matches).  
+**Long-term:** Build `legal.counsel_registry` table seeded from operative pleadings + LOAs. Captain classifier consults registry during Stage 1 triage. Filed as B-track work; not started.
+
+### M-007 — 147 vanderburge-misroute emails contain Case I + Case II counsel correspondence
+
+**Severity:** medium (data quality)  
+**Surfaced:** vanderburge-misroute LLM probe (2026-04-28)  
+**Effect:** Captain classifier originally tagged 147 emails as `case_slug='vanderburge-v-knight-fannin'`. LLM probe surfaced these include the missing MHT Legal correspondence (Ethan Underwood 2021-06-09, Stanton Kincaid 2022-03-10) — the defense counsel mail that v2/v3 SQL queries against email_archive could not locate.  
+**Status:** misroute folder treated as logical re-route via section-7-source-manifest.md; .eml files NOT physically moved.  
+**Fix path:** maps to B2 (cross-case email link table) in case-briefing-build-plan.md. Captain classifier needs to emit multiple links per email, not single classification.  
+**Blocks:** comprehensive privilege review for any future case will hit the same pattern.
