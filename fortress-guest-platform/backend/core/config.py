@@ -606,6 +606,14 @@ class Settings(BaseSettings):
         alias="BRAIN_BASE_URL",
         description="OpenAI-compatible /v1 base URL for the BRAIN inference service (spark-5).",
     )
+    # Phase B drafting orchestrator (case_briefing_compose.py) — output root.
+    # Default points at the canonical NAS filings/outgoing/ layout. Operator
+    # may override with `--output-dir` on the CLI for ad-hoc / dry-run output.
+    case_briefing_output_root: str = Field(
+        default="/mnt/fortress_nas/Corporate_Legal/Business_Legal",
+        alias="CASE_BRIEFING_OUTPUT_ROOT",
+        description="NAS root under which `case_briefing_cli compose` writes briefing packages (`<root>/<case_slug>/filings/outgoing/`).",
+    )
 
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0")
