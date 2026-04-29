@@ -61,19 +61,23 @@ the table.
 
 ---
 
-## Enterprise → node assignments (v6)
+## Enterprise → node assignments (v6, amended 2026-04-29 by ADR-003 Phase 1)
 
 | Node    | IP              | Primary Role                        | Secondary Role                         |
 |---------|-----------------|-------------------------------------|----------------------------------------|
-| spark-1 | 192.168.0.104   | Fortress Legal (sovereign + NIM)    | Legal vector store host               |
-| spark-2 | 192.168.0.100   | Orchestration + backend + control   | Accounting + Acquisitions co-tenants  |
-| spark-3 | 192.168.0.105   | Vision                              | Financial GPU (on-demand, gated)      |
-| spark-4 | 192.168.0.106   | CROG-VRS (sovereign + Qdrant VRS)   | —                                     |
+| spark-1 | 192.168.0.104   | Fortress Legal app (vault, ingestion, privilege)    | Legal vector store host (no inference) |
+| spark-2 | 192.168.0.100   | Orchestration + backend + control + LiteLLM gateway | Captain / Council / Sentinel permanent (per ADR-002 amended) |
+| spark-3 | 192.168.0.105   | Financial + Acquisitions + Wealth co-tenants (planned, until Spark-7+) | — |
+| spark-4 | 192.168.0.106   | Inference cluster member (Phase 3) | — (was CROG-VRS host; CROG-VRS data moves with Phase 3 plan) |
+| spark-5 | 192.168.0.109   | **BRAIN inference (NIM Llama-3.3-Nemotron-49B-FP8)**, Ray head | Inference cluster head |
+| spark-6 | 192.168.0.115   | Inference cluster worker (Phase 2 — cable pending) | — |
 
-**Changes from v5:**
-- spark-3 adds Financial as a gated co-tenant (v5 was vision-only)
-- Accounting and Acquisitions explicitly named as spark-2 co-tenants
-- spark-4 CROG-VRS routing made real via atlas registration
+**Changes from prior v6:**
+- ADR-003 Phase 1 (LOCKED 2026-04-29) moves BRAIN inference off spark-1 onto the dedicated **spark-5 NIM** at `http://spark-5:8100`. spark-1 is now app-tier only — no NIM, no TITAN, no inference tenancy.
+- LiteLLM gateway on spark-2 now routes the legal tier (`legal-reasoning` / `legal-classification` / `legal-summarization` / `legal-brain` model names) to spark-5. **Audit finding A-02 (cloud legal inference) — RESOLVED 2026-04-29 at the routing layer.** Production seat-level cutover (`legal_council.py` `SEAT_ROUTING`) ships in a follow-up Phase B PR; sovereign route is **available** but not yet **traffic-cutover** at the consumer layer.
+- Council moves from the planned Spark-4 Option B host back to spark-2 control plane (Option A across the board) per ADR-002 amended 2026-04-29.
+
+**Sovereignty claim (post-cutover):** Legal-tier inference terminates on sovereign hardware (spark-5 NIM). The previous v6 statement that legal inference was sovereign was inaccurate at the routing layer until 2026-04-29; it is now accurate at the routing layer. Operator must complete the Phase B `SEAT_ROUTING` migration before this is true at the consumer layer.
 
 ---
 

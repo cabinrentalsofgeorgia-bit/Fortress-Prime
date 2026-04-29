@@ -36,6 +36,8 @@ Format inspired by [Michael Nygard's ADR template](https://cognitect.com/blog/20
 - Financial division's `master-accounting.md` was renamed to `financial.md` to reflect both Master Accounting AND the Market Club replacement co-tenancy
 - Spark 3 provisioning is the gating dependency for the Spark 2 → Spark 3 migration of `division_a.*` + `hedge_fund.*`
 
+**Amended 2026-04-29 by ADR-003 (2026-04-29 — Dedicated inference cluster):** ADR-001's "one spark per division" rule applies to *app* divisions. Inference is a shared cross-division resource hosted on a dedicated cluster (Sparks 4/5/6) per ADR-003. Acquisitions and Wealth co-tenant on Spark-3 with Financial until Spark-7+ lands.
+
 ---
 
 ## ADR-002 — Where do shared services (Captain, Council, Sentinel) live in the target state?
@@ -122,12 +124,14 @@ Sentinel walks NAS. NAS mounts identically from any spark — there is no per-sp
 - `divisions/_template.md` documents the multi-purpose Spark 4 exception pattern
 - `system-map.md` target diagram + 5-stage migration includes the Spark 4 Council step
 
+**Amended 2026-04-29 by ADR-003 (2026-04-29 — Dedicated inference cluster):** the **Council → Spark-4 (Option B with Acquisitions+Wealth co-location)** decision is reversed. Council joins Captain and Sentinel on the **spark-2 control plane (Option A across the board)**. Spark-4 becomes an inference-tier node — not a Council host, not a co-tenant of Acquisitions/Wealth. Acquisitions and Wealth co-tenant on Spark-3 with Financial until Spark-7+ lands. The "shared services + intermittent divisions" multi-purpose-Spark-4 pattern documented above no longer describes the target state; the target Council host is spark-2 control plane permanently.
+
 ---
 
-## ADR-003 — Inference plane: shared swarm across all sparks
+## ADR-003 (2026-04-26) — Inference plane: shared swarm across all sparks
 
 **Date:** 2026-04-26
-**Status:** **LOCKED 2026-04-26**
+**Status:** **SUPERSEDED-BY ADR-003 (2026-04-29)** — see entry below. Original "shared swarm across all sparks" decision is no longer the target state; inference now consolidates on a dedicated 4/5/6 cluster.
 
 **Decision:** Inference compute (LLM + embedding) is a shared cluster-wide resource, distributed across all 4 sparks. Division-owned data and business logic remain isolated per ADR-001. ADR-002 service placement unchanged.
 
@@ -197,6 +201,53 @@ Each phase is its own PR with explicit operator authorization. ADR-003 LOCKED ca
 
 ---
 
+## ADR-003 (2026-04-29) — Dedicated inference cluster on Sparks 4/5/6
+
+**Date:** 2026-04-29
+**Status:** **LOCKED** — operator decision 2026-04-29
+**Phase 3 sizing:** **Pattern 1 — TP=2 + 1 hot replica** (locked at decision time)
+**Supersedes:** ADR-003 (2026-04-26 — "Inference plane: shared swarm across all sparks") above. The shared-swarm decision was made before the dedicated-inference-cluster topology was on the table; this ADR replaces it.
+**Amends:** ADR-001 (one spark per division — see amendment paragraph in ADR-001 entry). **Amends:** ADR-002 (Council placement — see amendment paragraph in ADR-002 entry; Council moves from Spark-4 Option B back to spark-2 Option A).
+
+**Canonical document:** `docs/architecture/cross-division/ADR-003-inference-cluster-topology.md` (full decision text, rationale, tradeoffs, Phase 1/2/3 rollout, tensor-parallel sizing analysis).
+
+**Decision (one-paragraph summary for registry readers):**
+Sparks **4, 5, and 6** form a dedicated inference cluster. No division apps tenant on these nodes. App workloads consolidate to Sparks 1/2/3 (1 = Legal; 2 = CROG-VRS + control plane permanently hosting Captain + Council + Sentinel + LiteLLM; 3 = Financial + Acquisitions + Wealth co-tenants until Spark-7+). All BRAIN-tier and TITAN-tier inference traffic from any division terminates on the 4/5/6 cluster via the LiteLLM gateway on spark-2.
+
+**Phased rollout:**
+
+- **Phase 1 (this PR):** Spark-5 serves Nemotron-Super-49B-FP8 NIM at port 8100. LiteLLM gateway on spark-2 routes BRAIN tier → spark-5. Closes audit finding A-02 (cloud legal inference).
+- **Phase 2:** Spark-6 cable cutover (10GbE → ConnectX). Spark-5 (head) + Spark-6 (worker) form a Ray cluster running vLLM with `--tensor-parallel-size 2` over NCCL/RDMA. Single OpenAI-compatible endpoint, 128K context, 2× throughput.
+- **Phase 3:** Spark-4 joins inference cluster (software-only — Spark-4 already on ConnectX). **Phase 3 sizing locked: Pattern 1 — TP=2 + 1 hot replica.** Two Sparks tensor-parallel one 49B instance, third Spark runs a second 49B instance, LiteLLM load-balances. Doubles throughput, gives a live failover node, no model-architecture constraint (49B's 64 attention heads are not divisible by 3, so literal TP=3 will not run).
+
+**Allocation (post-Phase 3):**
+
+| Spark | Fabric | Role | Tenants |
+|---|---|---|---|
+| Spark 1 | ConnectX | App | Fortress Legal |
+| Spark 2 | ConnectX | App + control plane | CROG-VRS, Captain, Sentinel, **Council** (post-revert), Postgres, Qdrant (legal), Redis, ARQ, FastAPI, **LiteLLM gateway** |
+| Spark 3 | ConnectX | App | Financial; Acquisitions + Wealth co-tenant pending Spark-7+ |
+| Spark 4 | ConnectX | Inference | Ray worker (Phase 3) |
+| Spark 5 | ConnectX | Inference | Ray head; Nemotron-Super-49B-FP8 NIM |
+| Spark 6 | 10GbE → ConnectX (cable pending) | Inference | Ray worker (Phase 2+) |
+
+**Rationale (capsule — full text in canonical doc):**
+- Boundary clarity: inference is a shared cross-division resource; tying it to a division Spark creates noisy-neighbor risk and memory pressure (the spark-1 ≥99% memory under BRAIN load symptom from 2026-04-23 is the example).
+- NVIDIA reference path: Ray + vLLM + NIM over ConnectX-7 is what `build.nvidia.com/spark` documents.
+- Closes audit A-02: legal inference moves from cloud to spark-5 NIM in Phase 1.
+- Frees spark-1 for Fortress Legal app work (vault ingestion, privilege classification, Qdrant upserts, Council orchestration).
+
+**Implications:**
+- `shared/infrastructure.md` DEFCON tier table: BRAIN tier moves spark-1 → spark-5 (and 5+6 at Phase 2; 4/5/6 at Phase 3).
+- `system-map.md`: redrawn for app/inference split — current state and target state.
+- `006-nemoclaw-ray-deployment.md`: Ray worker list narrows to spark-4/5/6 only. Orchestrator stays on spark-2 control plane.
+- `IRON_DOME` v6.1: sovereignty claim becomes accurate after Phase 1 cutover.
+- LiteLLM config (Phase 1): legal routes cloud → `http://spark-5:8100/v1`.
+
+**Open question deferred to Phase 2 completion:** what event moves Spark-4 from "app spark for Acquisitions or Wealth" to "inference cluster member"? Suggested triggers: (a) Acquisitions/Wealth workloads stay light enough to co-tenant on Spark-3, OR (b) BRAIN-tier traffic outgrows TP=2 throughput. Operator confirms criterion at Phase 2 completion.
+
+---
+
 ## How to add an ADR
 
 1. Increment the number (next is ADR-004)
@@ -206,4 +257,4 @@ Each phase is its own PR with explicit operator authorization. ADR-003 LOCKED ca
 5. Rationale: why this over alternatives
 6. Implications: what changes downstream
 
-Last updated: 2026-04-26
+Last updated: 2026-04-29 (ADR-003 v2 LOCKED; ADR-001 + ADR-002 amended)

@@ -1,4 +1,45 @@
 model_list:
+  # ──────────────────────────────────────────────────────────────────────────
+  # SOVEREIGN LEGAL ROUTES (ADR-003 Phase 1 — 2026-04-29)
+  # All legal-tier inference terminates on spark-5 NIM. Closes audit finding A-02
+  # (cloud legal inference). The aliases below all resolve to the same backend.
+  # See docs/operational/litellm-legal-cutover-2026-04-29.md for cutover record.
+  # ──────────────────────────────────────────────────────────────────────────
+  - model_name: legal-reasoning
+    litellm_params:
+      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
+      api_base: http://spark-5:8100/v1
+      api_key: dummy   # NIM does not require auth on the internal Tailscale/LAN
+      timeout: 600     # streaming long-context legal RAG calls
+
+  - model_name: legal-classification
+    litellm_params:
+      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
+      api_base: http://spark-5:8100/v1
+      api_key: dummy
+      timeout: 600
+
+  - model_name: legal-summarization
+    litellm_params:
+      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
+      api_base: http://spark-5:8100/v1
+      api_key: dummy
+      timeout: 600
+
+  - model_name: legal-brain
+    litellm_params:
+      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
+      api_base: http://spark-5:8100/v1
+      api_key: dummy
+      timeout: 600
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # CLOUD ROUTES — non-legal use only after ADR-003 Phase 1.
+  # Kept active for non-legal callers AND as emergency rollback path for legal
+  # traffic if the sovereign route fails. Operator can flip
+  # COUNCIL_FRONTIER_PROVIDERS_ENABLED in legal_council.py to re-enable cloud
+  # routing for legal seats.
+  # ──────────────────────────────────────────────────────────────────────────
   - model_name: nemotron-3-super-120b
     litellm_params:
       model: nvidia_nim/nvidia/nemotron-3-super-120b-a12b
@@ -19,6 +60,12 @@ model_list:
     litellm_params:
       model: xai/grok-3
       api_key: os.environ/XAI_API_KEY
+
+# Cloud emergency-fallback aliases (DISABLED 2026-04-29 per ADR-003 Phase 1 — uncomment to re-enable):
+# - model_name: legal-reasoning-cloud-fallback
+#   litellm_params:
+#     model: anthropic/claude-sonnet-4-20250514
+#     api_key: os.environ/ANTHROPIC_API_KEY
 
 litellm_settings:
   drop_params: true

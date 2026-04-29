@@ -1,15 +1,12 @@
 # 006 NemoClaw Ray Deployment
 
-This document defines the operator path for moving NemoClaw from standalone node-local bootstrap into the live Fortress Prime Ray matrix. It is paired with `deploy/compute/v1.0_nemoclaw_ray_manifest.yaml` and assumes the four-node Ray baseline is already durable:
+This document defines the operator path for moving NemoClaw from standalone node-local bootstrap into the live Fortress Prime Ray matrix. It is paired with `deploy/compute/v1.0_nemoclaw_ray_manifest.yaml`.
 
-- `192.168.0.100` head
-- `192.168.0.104` worker
-- `192.168.0.105` worker
-- `192.168.0.106` worker
+> **2026-04-29 — superseding ADR-003 (v2):** the Ray cluster narrows from "all four current nodes" to **the dedicated inference cluster only — Sparks 4, 5, 6**. The 2026-04-29 ADR-003 (Dedicated inference cluster on Sparks 4/5/6) explicitly carves inference compute out of app-tier Sparks 1, 2, 3. NemoClaw's orchestrator boundary remains on spark-2 control plane (`100.80.122.100:8000`) — the orchestrator dispatches to the inference cluster but is **not** a Ray host itself.
 
 ## Intent
 
-NemoClaw remains a singular sovereign control plane, but its execution substrate moves under Ray governance. The Alpha Orchestrator stays pinned to `spark-node-2` at `192.168.0.100`, while heavyweight execution fans out across Ray workers instead of ad hoc terminal-launched processes.
+NemoClaw remains a singular sovereign control plane, but its execution substrate moves under Ray governance. The Alpha Orchestrator stays pinned to **spark-node-2 control plane** (`100.80.122.100:8000`), while heavyweight execution fans out across the dedicated inference Ray cluster (Sparks 4/5/6 per ADR-003 v2) instead of ad hoc terminal-launched processes.
 
 This preserves the doctrine already established in `005-nemoclaw-swarm-architecture.md`:
 
@@ -18,14 +15,20 @@ This preserves the doctrine already established in `005-nemoclaw-swarm-architect
 - local-first execution
 - Redis and PostgreSQL as authoritative choreography and state layers
 
-## Live Ray Baseline
+## Live Ray Baseline (post-ADR-003 v2)
 
-The cluster is already operating with systemd-managed Ray units:
+The Ray cluster is the inference-tier cluster only. Worker placement follows ADR-003's phased rollout:
 
-- `fortress-ray-head.service` on `192.168.0.100`
-- `fortress-ray-worker.service` on `192.168.0.104`
-- `fortress-ray-worker.service` on `192.168.0.105`
-- `fortress-ray-worker.service` on `192.168.0.106`
+| Service | Host | Spark | Phase |
+|---|---|---|---|
+| `fortress-ray-head.service` | spark-5 (`192.168.0.109`) | Spark-5 | **Phase 1+** (active today) |
+| `fortress-ray-worker.service` | spark-6 (`192.168.0.115`) | Spark-6 | **Phase 2** (cable-gated — 10GbE → ConnectX) |
+| `fortress-ray-worker.service` | spark-4 (`192.168.0.106`) | Spark-4 | **Phase 3** (Acquisitions/Wealth co-tenancy gated) |
+
+**Removed (no longer Ray hosts under ADR-003 v2):**
+- `192.168.0.100` (spark-2) — was head; now the **NemoClaw orchestrator + LiteLLM gateway** host. Dispatches to the inference cluster, does not host Ray.
+- `192.168.0.104` (spark-1) — was worker; now the **Fortress Legal app** host. No inference tenancy.
+- `192.168.0.105` (spark-3) — was worker; now the **Financial + Acquisitions + Wealth app** host (when provisioned). No inference tenancy.
 
 The canonical health command is:
 
@@ -43,9 +46,9 @@ The canonical deployment contract lives in:
 
 The contract fixes these deployment truths:
 
-- Head address is `192.168.0.100:6390`
-- Ray dashboard is `http://192.168.0.100:8265`
-- NemoClaw control-plane boundary is now `http://192.168.0.100:8000`
+- Head address is `spark-5:6390` (post-ADR-003 v2; was `192.168.0.100:6390` under the four-node baseline)
+- Ray dashboard is `http://spark-5:8265`
+- **NemoClaw orchestrator** control-plane boundary remains `http://192.168.0.100:8000` (spark-2 control plane). Orchestrator dispatches to the Ray inference cluster on spark-5; it is not itself a Ray node.
 - OpenShell gateway health remains `http://127.0.0.1:8080/health`
 - NemoClaw local dashboard remains `http://127.0.0.1:18789`
 
