@@ -598,6 +598,14 @@ class Settings(BaseSettings):
     # Replaces k8s ClusterIP 10.43.38.88:8000 after cutover.
     # Model: meta/llama-3.1-8b-instruct (DGX Spark variant)
     nim_sovereign_url: str = Field(default="http://192.168.0.104:8000")
+    # Phase A5 — BRAIN (Tier 2 sovereign reasoning) inference endpoint.
+    # Currently NIM 2.0.1 / vLLM serving nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8
+    # on spark-5:8100, reached over Tailscale by hostname.
+    brain_base_url: str = Field(
+        default="http://spark-5:8100",
+        alias="BRAIN_BASE_URL",
+        description="OpenAI-compatible /v1 base URL for the BRAIN inference service (spark-5).",
+    )
 
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0")
