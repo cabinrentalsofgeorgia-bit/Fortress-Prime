@@ -3,9 +3,9 @@
 Owner: Gary Mitchell Knight (operator); Architect-persona AI agent
 Status: **active** (per atlas) — but architecture-foundation coverage is **stub**; needs operator input
 Spark allocation:
-- **Current:** Spark 2 (tenant of the monorepo today, no dedicated host)
-- **Target:** **Spark 4 (PLANNED)** likely — pending operator confirmation per ADR-001. Spark 4 may go to Acquisitions or to Wealth depending on which division ramps first.
-Last updated: 2026-04-26
+- **Current:** Spark 2 (tenant of the monorepo, co-tenant with control plane + CROG-VRS + Financial + Wealth)
+- **Target (locked 2026-04-29 by ADR-004):** **Spark 2 (PERMANENT)** — Acquisitions stays on spark-2 with the control plane permanently. The previous "Spark 4 PLANNED" target under ADR-001 is canceled by ADR-004; Spark 4 wipes and joins the inference cluster instead. Logical isolation (Postgres role, schema, ARQ queue) replaces the planned physical isolation; both are early-stage divisions and dedicated-spark blast-radius isolation is operator-judged overkill.
+Last updated: 2026-04-29
 
 ## Purpose (per `fortress_atlas.yaml`)
 

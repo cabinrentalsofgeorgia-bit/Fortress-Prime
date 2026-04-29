@@ -4,8 +4,8 @@ Owner: TBD (requires operator input)
 Status: **planned, requires operator input**
 Spark allocation:
 - **Current:** No dedicated host. The `wealth` tmux session + worktree (`/home/admin/fortress-worktrees/Fortress-Prime-wealth` on `wealth/main`) live on Spark 2.
-- **Target:** **Spark 4 (PLANNED)** — pending operator confirmation per ADR-001. Wealth may take Spark 4 if Acquisitions can defer; or vice versa. Order TBD.
-Last updated: 2026-04-26
+- **Target (locked 2026-04-29 by ADR-004):** **Spark 2 (PERMANENT)** — Wealth stays on spark-2 with the control plane permanently, co-tenanting with CROG-VRS + Financial + Acquisitions. The previous "Spark 4 PLANNED" target under ADR-001 is canceled by ADR-004; Spark 4 wipes and joins the inference cluster instead. Both Wealth and Acquisitions are early-stage and operator-judged not to need dedicated-spark blast-radius isolation; logical isolation (Postgres role, schema, ARQ queue) is sufficient.
+Last updated: 2026-04-29
 
 ## Purpose
 
