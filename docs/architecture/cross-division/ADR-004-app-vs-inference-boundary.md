@@ -93,6 +93,79 @@ Nemotron-Super-49B-v1.5-FP8 has **64 attention heads**. TP=4 divides cleanly (16
 - ADR-001 (LOCKED, partially superseded by this ADR for non-Legal divisions)
 - ADR-002 (LOCKED, amended 2026-04-29 by ADR-003 v2 — Council on spark-2 Option A)
 - ADR-003 (LOCKED 2026-04-29 — dedicated inference cluster; **expanded** by this ADR from 4/5/6 to 3/4/5/6)
-- `docs/operational/briefs/spark-3-4-wipe-and-rebuild-2026-04-29.md` — operational brief for the spark-3/4 wipe execution (not run in this PR)
+- `docs/operational/briefs/spark-3-4-wipe-and-rebuild-2026-04-29.md` — operational brief for the spark-3/4 wipe execution (superseded — see Amendment 2026-04-29 below)
 
-Last updated: 2026-04-29
+---
+
+## Amendment 2026-04-29 — Retain-and-Document supersedes Wipe-and-Rebuild
+
+**Driver:** Read-only audits of spark-3 and spark-4 on 2026-04-29 confirmed both nodes are already 90% inference-cluster members operationally. ADR-004's wipe-and-rebuild plan was over-engineered for the actual state. An attempted "cleanup-and-verify" path (remove redundant ollama) hit a production-callers issue and was rolled back cleanly within minutes. Both nodes return to operational baseline; this amendment codifies the resulting policy.
+
+**Revised disposition:**
+
+| Spark | Original ADR-004 plan | Amendment v2 plan |
+|---|---|---|
+| Spark-3 | Wipe + reinstall + Ray worker join | Retain all current workloads. Document state. Plan service consolidation only after caller migration. |
+| Spark-4 | Wipe + reinstall + Ray worker join | Retain all current workloads. Document state. Plan service consolidation only after caller migration. |
+
+**Spark-3 current state (operator-confirmed, RETAINED):**
+
+| Service | Status | Production callers |
+|---|---|---|
+| Vision NIM (`fortress-nim-vision-concierge`) | Active 6+d | Production sovereign workload |
+| ollama (Docker container, port 11434) | Active | `crog_concierge_engine.HYDRA_32B_URL` default, `persona_template.HYDRA_HEAD_3` default, `fortress_atlas.yaml` (vision_specialist), other doc references |
+| ollama models | qwen2.5:7b (privilege classifier), llama3.2-vision:90b, llama3.2-vision:latest, nomic-embed-text:latest | Various |
+| `fortress-ray-worker.service` | Active, enabled | Inference cluster member |
+| docling-shredder container | Active 13+d | Legal PDF parser |
+| llama.cpp build | Present | TITAN-tier serving infrastructure |
+| nccl-tests | Present | Fabric verification |
+| Cached NIM images | nv-embedqa-e5-v5 (4.27 GB), deepseek-r1-distill-llama-70b (15 GB), cosmos-reason2-2b, nemotron-3-super-120b weights | Future deployment candidates |
+| ConnectX 100Gbps fabric | UP, RoCE enumerated cleanly | Inference cluster |
+| Postgres / app data | none | — |
+
+**Spark-4 current state (operator-confirmed, RETAINED):**
+
+| Service | Status | Production callers |
+|---|---|---|
+| ollama.service (systemd, port 11434) | Active, enabled | `fortress-guest-platform/.env` SWARM_URL + HYDRA_FALLBACK_URL, `ingest_taylor_sent_tarball.py`, `reclassify_other_topics.py`, `sent_mail_retriever.py`, `crog_concierge_engine.HYDRA_120B_URL` default, `persona_template.HYDRA_HEAD_4` default, `fortress_atlas.yaml` (deep_reasoning_redundancy + vrs_fast_primary) |
+| ollama models | qwen2.5:7b, qwen2.5:32b, deepseek-r1:70b, nomic-embed-text:latest, llava:latest, mistral:latest | SWARM tier per fortress_atlas.yaml |
+| `fortress-qdrant-vrs.service` | Active 4+d | VRS dual-write target |
+| SenseVoice container (ARM64) | Active 4+d | Deposition ASR (current, replace when NIM ASR ARM64 ships) |
+| `fortress-ray-worker.service` | Active, enabled | Inference cluster member |
+| llama.cpp build | Present | TITAN serving |
+| nccl-tests | Present | Fabric verification |
+| ConnectX 100Gbps fabric | Link UP, RDMA enumeration empty (P3 follow-up) | Inference cluster |
+| Postgres / app data | none | — |
+
+**What CHANGES under this amendment:** nothing in production. Both nodes stay as-is.
+
+**What this amendment SETTLES:**
+
+1. Both spark-3 + spark-4 are formally inference-cluster members per ADR-004 boundary. Their app-tier services (ollama, qdrant-vrs, sensevoice) are retained as inference-adjacent capabilities.
+2. The "spark-2 = canonical SWARM" doc story is incorrect. Reality: SWARM is distributed across spark-2, spark-3, spark-4 ollama instances. The doc story will be reconciled in a separate fortress_atlas.yaml + CLAUDE.md update PR.
+3. Service consolidation (collapsing multiple ollama instances onto fewer nodes) is a future migration that requires caller-rewrite work before any service removal. Not happening in this PR or this session.
+
+**Open follow-ups (filed as separate issues):**
+- Spark-4 RDMA enumeration debug (`ibstat` empty) — P3
+- VRS dual-write retirement triggers fortress-qdrant-vrs migration to spark-2 — P5 monitoring
+- NIM ASR ARM64 availability triggers SenseVoice replacement — P3 monitoring
+- Doc/config reconciliation — fortress_atlas.yaml + CLAUDE.md need updating to match reality. P3.
+- Ollama consolidation migration — proper caller-migration plan before any service removal. P4.
+
+**Rationale for amendment v2:**
+
+The wipe-and-rebuild assumption was that spark-3/4 were dirty app nodes needing cleanup. Reality:
+- App cruft requiring removal — confirmed absent
+- Driver/CUDA stack stale — confirmed current (driver 580.142, GB10 GPU, RDMA modules loaded)
+- Storage clutter — confirmed minor (17% used spark-3, 7% used spark-4)
+- Not on inference fabric — confirmed FALSE (both on dedicated 10.10.10.x and 10.10.11.x)
+- Services redundant with spark-2 — confirmed FALSE (ollama on spark-3/4 hosts models spark-2 doesn't have, called by hardcoded URLs)
+
+Wipe-and-rebuild would have destroyed the working SWARM tier. Cleanup-and-verify (the first amendment attempt) destroyed it temporarily (10 minutes), caught fast, rolled back clean. Retain-and-document is the correct shape.
+
+**Cross-references for the amendment:**
+- Lessons-learned doc: `docs/operational/incident-2026-04-29-ollama-removal.md`
+- Retained-state record + caller surface: `docs/operational/spark-3-4-retained-state-2026-04-29.md`
+- Original wipe brief (header-noted as superseded): `docs/operational/briefs/spark-3-4-wipe-and-rebuild-2026-04-29.md`
+
+Last updated: 2026-04-29 (Amendment v2 — retain-and-document supersedes wipe-and-rebuild)

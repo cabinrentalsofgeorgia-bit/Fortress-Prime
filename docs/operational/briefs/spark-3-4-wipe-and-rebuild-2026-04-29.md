@@ -1,9 +1,14 @@
 # Spark-3 + Spark-4 Wipe-and-Rebuild — Operational Brief
 
+> **⚠ SUPERSEDED 2026-04-29 by ADR-004 Amendment v2 (retain-and-document).**
+> See `docs/architecture/cross-division/ADR-004-app-vs-inference-boundary.md` § Amendment 2026-04-29 for the corrected disposition. The wipe-and-rebuild approach in this brief is **not the current plan**; spark-3 + spark-4 are retained as inference-cluster members with their existing workloads (ollama, qdrant-vrs, sensevoice) preserved. Service consolidation is gated on caller migration (P4). This brief is preserved as a durable record of the original plan; do not execute it.
+>
+> Companion docs: `docs/operational/incident-2026-04-29-ollama-removal.md`, `docs/operational/spark-3-4-retained-state-2026-04-29.md`.
+
 **Date:** 2026-04-29
-**Status:** PLANNED — execution gated on Spark-6 cable cutover (ADR-003 Phase 2)
-**Driver:** ADR-004 (LOCKED 2026-04-29) — Sparks 3/4 join the inference cluster
-**Target operator-execution date:** TBD post-Spark-6 join
+**Status:** SUPERSEDED 2026-04-29 (originally PLANNED — execution gated on Spark-6 cable cutover, ADR-003 Phase 2)
+**Driver:** ADR-004 (LOCKED 2026-04-29) — original plan: Sparks 3/4 join the inference cluster via wipe-and-rebuild
+**Target operator-execution date:** N/A — superseded
 
 > **This brief describes the execution; it does not execute the wipe.** A separate operator-authorized session runs the wipe. Until then, this is a durable record of the plan.
 

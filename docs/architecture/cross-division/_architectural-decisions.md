@@ -310,6 +310,27 @@ The boundary that drives spark allocation is **app vs inference**, not division-
 
 Phase order: Spark 6 first (Phase 2 — cable land), then 3 + 4 together (one wipe-rebuild cycle). Don't wipe 3 or 4 before 6 lands — TP=4 across 4 nodes needs all four on ConnectX fabric.
 
+### Amendment 2026-04-29 — Retain-and-Document supersedes Wipe-and-Rebuild
+
+Read-only audits of spark-3 and spark-4 on 2026-04-29 confirmed both nodes are already 90% inference-cluster members operationally. ADR-004's wipe-and-rebuild plan was over-engineered for the actual state. An attempted "cleanup-and-verify" path (remove redundant ollama on spark-3 + spark-4) hit a production-callers issue and was rolled back cleanly within ~10 minutes. Both nodes back to baseline; this amendment codifies the resulting policy.
+
+**Revised disposition:** Spark-3 + Spark-4 retain all current workloads. Document state. Plan service consolidation only after caller migration. No production changes from this amendment.
+
+**What it settles:**
+1. Spark-3 + Spark-4 are formally inference-cluster members per the ADR-004 boundary; their app-tier services (ollama, qdrant-vrs, sensevoice) are retained as inference-adjacent capabilities.
+2. The "spark-2 = canonical SWARM" doc story is incorrect. Reality: SWARM is distributed across spark-2, spark-3, spark-4 ollama instances. Doc/config reconciliation is filed as a separate P3 issue.
+3. Service consolidation (collapsing multiple ollama instances) is a future migration that requires caller-rewrite work first. Filed P4. Not happening in this PR or session.
+
+**Why amendment v2:** the wipe-and-rebuild assumption was that spark-3/4 were dirty app nodes needing cleanup; reality is neither node has app cruft, drivers are current, fabric is dedicated, and ollama on spark-3/4 hosts models spark-2 doesn't have (called by hardcoded URLs). Wipe-and-rebuild would have destroyed the working SWARM tier. Retain-and-document is the correct shape.
+
+**Companion docs (this PR):**
+- Canonical amendment text: `docs/architecture/cross-division/ADR-004-app-vs-inference-boundary.md` § Amendment 2026-04-29
+- Incident lessons: `docs/operational/incident-2026-04-29-ollama-removal.md`
+- Retained-state record + caller surface: `docs/operational/spark-3-4-retained-state-2026-04-29.md`
+- Original wipe brief is header-noted as superseded; not deleted.
+
+**Open follow-ups (filed as separate issues):** Spark-4 RDMA enumeration debug (P3), VRS Qdrant migration trigger (P5 monitoring), NIM ASR ARM64 monitor (P3), doc/config reconciliation (P3), ollama consolidation migration (P4).
+
 ---
 
 ## How to add an ADR
@@ -321,4 +342,4 @@ Phase order: Spark 6 first (Phase 2 — cable land), then 3 + 4 together (one wi
 5. Rationale: why this over alternatives
 6. Implications: what changes downstream
 
-Last updated: 2026-04-29 (ADR-004 LOCKED; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
+Last updated: 2026-04-29 (ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
