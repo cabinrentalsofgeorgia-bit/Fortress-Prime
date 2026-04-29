@@ -2,7 +2,7 @@
 
 **Operator:** Gary Knight
 **Established:** 2026-04-29
-**Updated:** 2026-04-29 (v1.1 — ADR-004 LOCKED)
+**Updated:** 2026-04-29 (v1.2 — ADR-004 amendment v2 retain-and-document)
 **Cadence:** Updated on change (priorities shift, P0 added/closed, blockers move)
 
 ---
@@ -113,6 +113,7 @@ One chat session per day.
 - No meta-observations about quality of work.
 - Answer the question, give the decision, move on.
 - When operator needs a click, give the exact URL — no "go to settings, find this".
+- **Audit callers before removing any service.** Hard constraint, not best practice. Even "doc-only" decisions to stop a service touch the caller surface. Run `grep -rn` against the endpoint pattern across `.py`, `.yaml`, `.env*`, `.sh`, `.md` before approving any removal. Captured durable in `docs/operational/incident-2026-04-29-ollama-removal.md`.
 
 ---
 
@@ -175,8 +176,10 @@ Maintained tracks. Each updates as items land or shift.
 | Phase A5 BRAIN+RAG probe | MERGED PR #280; revised contracts (TTFT-based, semantic-equivalence determinism) | — |
 | ADR-003 Phase 1 LiteLLM cutover | **MERGED PR #285** 2026-04-29; A-02 closed at routing layer | — |
 | ADR-003 Phase 2 Spark-6 cable cutover | BLOCKED on cable; gates ADR-004 wipe | Operator |
-| ADR-004 Phase 3 Spark-4 wipe-and-rebuild | PLANNED — gated on Phase 2 completion. See `docs/operational/briefs/spark-3-4-wipe-and-rebuild-2026-04-29.md` | Operator + Claude Code |
-| ADR-004 Phase 4 Spark-3 wipe-and-rebuild | PLANNED — gated on Phase 3 validation | Operator + Claude Code |
+| ADR-004 amendment v2 (retain-and-document) | this PR — supersedes wipe-and-rebuild for spark-3/4 (after 2026-04-29 ollama-removal incident). See `docs/architecture/cross-division/ADR-004-app-vs-inference-boundary.md` § Amendment 2026-04-29 | Operator merge |
+| Spark-3/4 retained-state record | this PR — `docs/operational/spark-3-4-retained-state-2026-04-29.md` (caller surface enumerated) | — |
+| ADR-004 Phase 3 Spark-4 wipe-and-rebuild | SUPERSEDED by amendment v2 — wipe deferred indefinitely; service consolidation gated on caller migration (P4) | — |
+| ADR-004 Phase 4 Spark-3 wipe-and-rebuild | SUPERSEDED by amendment v2 — wipe deferred indefinitely; service consolidation gated on caller migration (P4) | — |
 | Caselaw corpus audit | PENDING — verify `legal_caselaw` (~2,711 GA) and `legal_caselaw_federal` (0 points per qdrant-collections.md) | Chat → Claude Code |
 | TITAN service path | UNKNOWN — DeepSeek-R1 671B placement on the post-ADR-004 4-node cluster (more headroom than 3-node) | Future brief |
 | Council BRAIN integration (Phase B) | PENDING — `legal_council.py` `SEAT_ROUTING` migration to use `legal-reasoning` (consumer-layer cutover; routing layer done in PR #285) | Future brief |
@@ -202,6 +205,7 @@ Maintained tracks. Each updates as items land or shift.
 | D-02 trust ledger triggers missing | OPEN | 2026-04-22 audit |
 | Issue #221 PAT scope upgrade | OPEN | auth-and-secrets.md |
 | Issue #282 privileged collection coverage | OPEN | Phase A5 surfacing |
+| 2026-04-29 ollama removal incident | RESOLVED 2026-04-29 (rollback + lessons captured in `incident-2026-04-29-ollama-removal.md`) | Internal incident, not external audit |
 
 ### 6.5 Architectural follow-ups (P4)
 
@@ -211,6 +215,11 @@ Maintained tracks. Each updates as items land or shift.
 | M3 brief revision (`fortress_app` → `fortress_api`) | PENDING |
 | Spark-1 role parity audit | PENDING |
 | Issue #279 alembic-merge on spark-2 fortress_db | OPEN — gates M3 activation |
+| Spark-4 RDMA enumeration debug (`ibstat` empty despite link UP) | OPEN issue (P3) |
+| Doc/config reconciliation (fortress_atlas.yaml + CLAUDE.md SWARM tier) | OPEN issue (P3) |
+| NIM ASR ARM64 monitor (SenseVoice replacement trigger) | OPEN issue (P3) |
+| VRS Qdrant migration trigger (fortress-qdrant-vrs on spark-4) | OPEN issue (P5 — monitoring) |
+| Ollama consolidation migration | OPEN issue (P4 — gated on caller migration per `spark-3-4-retained-state-2026-04-29.md`) |
 
 ---
 
@@ -219,24 +228,19 @@ Maintained tracks. Each updates as items land or shift.
 Update this section as items land. Replace, don't append.
 
 **In flight:**
-- ADR-004 LOCKED + Spark-3/4 wipe-and-rebuild brief (this PR — `adr/004-app-vs-inference-boundary`)
+- ADR-004 amendment v2 (retain-and-document) + 2026-04-29 ollama-removal incident lessons (this PR — `adr/004-amendment-retain-and-document`)
 
 **Operator open:**
 - Personal Gmail/Mac sweep for Argo engagement letter
 - Review OCR'd content of the 14 PDFs from Track A
 
 **Chat queue:**
-- Caselaw corpus audit brief (verify `legal_caselaw_federal` has 0 points; ingest path needed?)
-- Phase B drafting orchestrator brief
+- TIER 1 NIM stack deployment briefs (after NGC catalog refresh unblocks — PR #292)
+- Phase B drafting orchestrator MERGED (PR #290) — operator decision on next deepen-vs-broaden cycle
 
 **Closed today:**
-- PR #277 BRAIN incident RESOLVED
-- PR #278 Phase A1 spark-1 legal overlays MERGED
-- PR #280 Phase A5 BRAIN+RAG probe MERGED (revised contracts)
-- PR #281 Track A Case II briefing v2 MERGED
-- PR #283 ADR-003 doc MERGED
-- PR #284 MASTER-PLAN.md v1 + Phase 1 brief archive MERGED
-- PR #285 ADR-003 LOCKED + Phase 1 LiteLLM cutover MERGED (A-02 closed at routing layer)
+- PR #277-291 (12 PRs across BRAIN incident, Phase A1/A5, Track A briefing, ADR-003 + ADR-004 LOCK, MASTER-PLAN v1, LiteLLM cutover, caselaw + NAS audits, Council cutover, Phase B orchestrator, NIM stack audit)
+- 2026-04-29 ollama removal incident — RESOLVED via clean rollback (~10 min); lessons captured in this PR
 - Issue #279 filed (alembic merge prereq)
 - Issue #282 filed (privileged collection coverage)
 
@@ -265,6 +269,7 @@ If the chat assistant catches itself doing any of these, stop and reset:
 - **Long responses to short questions.** Crisp wins.
 - **Re-explaining context that's in this document.** Reference, don't restate.
 - **Treating any P5 item as urgent.** P0–P4 win every contest until counsel-hire is closed.
+- **Acting on doc story without verifying config story.** Production runs config. If the two diverge, config is reality. Always grep for callers before any service removal. (Captured 2026-04-29 ollama-removal incident — `docs/operational/incident-2026-04-29-ollama-removal.md`.)
 
 ---
 
@@ -289,6 +294,7 @@ If the chat assistant catches itself doing any of these, stop and reset:
 |---|---|---|
 | 2026-04-29 | v1 | Initial master plan |
 | 2026-04-29 | v1.1 | ADR-004 LOCKED — app vs inference boundary. §5 ADR table + spark allocation + DEFCON tier updated. §6.2 work tracks updated (Phase 1 MERGED PR #285; ADR-004 Phase 3/4 wipes added). §6.4 A-02 marked resolved-at-routing-layer. Today's snapshot reflects ADR-004 as in-flight. |
+| 2026-04-29 | v1.2 | ADR-004 amendment v2 — retain-and-document supersedes wipe-and-rebuild. §4.4 + §6.2 + §6.4 + §6.5 + §7 + §9 updated. Captures 2026-04-29 ollama-removal incident lessons (rollback within 10 min; root cause = doc/config divergence; durable principle: audit callers before removing any service). |
 
 ---
 
