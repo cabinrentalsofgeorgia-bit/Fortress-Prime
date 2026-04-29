@@ -1,0 +1,83 @@
+{
+  "case_slug_canonical": "7il-v-knight-ndga-i",
+  "case_slug_input": "7il-v-knight-ndga-i",
+  "completion_tokens": 1416,
+  "contains_privileged": false,
+  "error": null,
+  "finish_reason": "stop",
+  "grounding_evidence": {
+    "matched_count": 9,
+    "matched_sources": [
+      "#65 7IL's MSJ.pdf",
+      "#58 Jt. Mtn. for Ext. of Deadline to File MSJ.pdf",
+      "#84 Jt. Mtn. to Ext. Time.pdf",
+      "#71 7 IL RIOT Knight MSJ.pdf",
+      "#70 RIOT 7 IL MSJ.pdf",
+      "2023.01.11 DN - GB.docx.pdf",
+      "#87 EOA - Sanker.pdf",
+      "#110 Proposed Verdict Form.pdf",
+      "2023.01.27 DN - AW.docx.pdf"
+    ]
+  },
+  "include_privileged": true,
+  "max_tokens": 2000,
+  "pass_conditions": {
+    "finish_reason_stop": true,
+    "grounding_min_citations": true,
+    "latency_under_gate": false,
+    "no_error": true,
+    "retrieval_min_chunks": true
+  },
+  "probe_version": "phase-a5-1",
+  "prompt_tokens": 4676,
+  "question": "Summarize the procedural posture of Case I as of 2024-03-12, including counsel changes and dispositive motion practice.",
+  "related_matters": [
+    "7il-v-knight-ndga-ii"
+  ],
+  "response_text": "<think>\nOkay, let's tackle this query. The user wants a summary of the procedural posture of Case I as of March 12, 2024, including counsel changes and dispositive motion practice. First, I need to go through all the provided case evidence to gather relevant information.\n\nLooking at the documents, there's a joint motion to extend the deadline for filing a motion for summary judgment. In [#58 Jt. Mtn. for Ext. of Deadline to File MSJ.pdf], the parties requested a 45-day extension through October 13, 2023. Then, in [#65 7IL's MSJ.pdf], there's a motion for summary judgment filed on October 17, 2023, which suggests the extension was granted. \n\nNext, in [#84 Jt. Mtn. to Ext. Time.pdf], filed on March 18, 2024, the parties requested an extension for the joint pretrial order until March 22, 2024, due to scheduling issues with Defendant's counsel. This indicates that as of March 2024, the case was still in the pretrial phase, with the pretrial order deadline extended.\n\nRegarding counsel changes, [#87 EOA - Sanker.pdf] shows Jason B. Sanker entering an appearance for the Defendant on March 25, 2024. However, the user's date is March 12, 2024, so this might be after the relevant date. But since the document is part of the case evidence, it's worth noting if there are any other counsel changes before March 12. Other documents like [#2023.01.11 DN - GB.docx.pdf] and [#2023.01.27 DN - AW.docx.pdf] mention Frank G. Podesta of FGPLaw, LLC as counsel for Gary Knight, which seems consistent. There's no mention of other counsel changes before March 12, 2024, except possibly Sanker's appearance, but the date is March 25, which is after March 12. So as of March 12, the counsel might still be Frank G. Podesta for the Defendant.\n\nDispositive motions: The Plaintiff filed a Motion for Summary Judgment on December 5, 2023, as per [#71 7 IL RIOT Knight MSJ.pdf] and [#70 RIOT 7 IL MSJ.pdf]. The Defendant's response would have been due after that, but there's a mention in [#84 Jt. Mtn. to Ext. Time.pdf] that the Plaintiff filed a Motion for Reconsideration, and the Defendant's response was due by March 30, 2024. However, as of March 12, 2024, the status of these motions isn't clear from the evidence. The court granted the extension for the pretrial order, but the summary judgment motions might still be pending.\n\nAlso, looking at the docket numbers, Document 84 is filed on March 18, 2024, which is after the date in question. So as of March 12, 2024, the case was likely still awaiting the court's decision on the summary judgment motions, with the pretrial order deadline approaching. The joint pretrial order was due by March 8, 2024, per Doc. 78 mentioned in [#84], but the parties requested an extension to March 22, which was filed on March 18. So as of March 12, the original March 8 deadline had passed, and the motion for extension was pending.\n\nPutting it all together: As of March 12, 2024, the case was in the pretrial phase with motions for summary judgment pending. The Plaintiff had filed their MSJ in December 2023, and the Defendant's response was due by March 30, 2024, after the court granted an extension. The joint pretrial order was due March 8, but the parties sought an extension to March 22, which was pending as of March 12. Counsel for the Defendant was Frank G. Podesta, with no changes noted before March 12, though Jason Sanker entered later in March 25.\n</think>\n\nAs of March 12, 2024, the procedural posture of *7 IL Properties, LLC v. Gary Knight* (Case 2:21-cv-00226-RWS) is as follows:  \n\n### **Dispositive Motion Practice**  \n1. **Plaintiff\u2019s Motion for Summary Judgment**:  \n   - Filed on **December 5, 2023** ([#71 7 IL RIOT Knight MSJ.pdf], [#70 RIOT 7 IL MSJ.pdf]).  \n   - The Court granted Plaintiff\u2019s Motion for Reconsideration, and Defendant\u2019s response to the motion was due **by March 30, 2024** ([#84 Jt. Mtn. to Ext. Time.pdf], referencing Doc. 81 and 82).  \n\n2. **Deadline Extensions**:  \n   - The original deadline for motions for summary judgment was **August 30, 2023**, but the parties jointly requested and were granted a 45-day extension through **October 13, 2023** ([#58 Jt. Mtn. for Ext. of Deadline to File MSJ.pdf]).  \n   - Plaintiff filed its motion on **October 17, 2023** ([#65 7IL's MSJ.pdf]), within the extended deadline.  \n\n### **Counsel Changes**  \n- **Defendant\u2019s Counsel**:  \n  - Frank G. Podesta of FGPLaw, LLC, represented Gary Knight throughout the case, as evidenced by multiple filings (e.g., [#2023.01.11 DN - GB.docx.pdf], [#2023.01.27 DN - AW.docx.pdf], [#110 Proposed Verdict Form.pdf]).  \n  - **Jason B. Sanker** of McRae, Smith, Peek, Harman & Monroe, LLP, entered an appearance for Defendant on **March 25, 2024** ([#87 EOA - Sanker.pdf]), but this occurred **after** March 12, 2024.  \n\n### **Pretrial Scheduling**  \n- The Court ordered the parties to file a **consolidated pretrial order by March 8, 2024** ([#84 Jt. Mtn. to Ext. Time.pdf], referencing Doc. 78).  \n- On **March 18, 2024**, the parties jointly requested an extension to **March 22, 2024**, due to Defendant\u2019s counsel\u2019s scheduling conflicts ([#84 Jt. Mtn. to Ext. Time.pdf]). As of March 12, 2024, this motion was pending.  \n\n### **Status as of March 12, 2024**  \n- The case was in the **pretrial phase**, with summary judgment motions pending resolution.  \n- The original March 8, 2024, deadline for the pretrial order had passed, but the parties\u2019 motion to extend to March 22, 2024, was unresolved.  \n- No counsel changes had been formalized before March 12, 2024; Frank Podesta remained Defendant\u2019s counsel of record.  \n\nNo evidence addresses trial dates, verdicts, or final judgments as of this date.",
+  "result": "FAIL",
+  "retrieved_chunk_counts": {
+    "privileged": 0,
+    "work_product": 30
+  },
+  "retrieved_chunk_ids": {
+    "privileged": [],
+    "work_product": [
+      "942206c6-d8d8-4ab0-ac4b-628d2de9b2be",
+      "1b40c076-748c-4421-9395-d8a9e18cb79f",
+      "bf4ef001-0767-462f-b113-e5fa5b00232f",
+      "3010f615-6980-45e1-9ef4-3bb947cbbfd3",
+      "eabd4112-06fd-4dfe-915a-7957fa729fe7",
+      "c44bcd34-53b1-42fa-8a2d-a5296b48ebc8",
+      "1c426360-dec1-487c-bf9e-14da4be18799",
+      "f39aca99-4d7d-4f7f-8894-8f8efddd3e3a",
+      "99cc5ff6-f2da-48fa-85c4-87918faf55a0",
+      "5355d8cd-7aa6-4fa7-870f-b5197b5ad993",
+      "a7ec88c1-16a8-48c9-9113-f1953adf4bbe",
+      "62335be2-1c68-4578-9092-47f5de5173d8",
+      "64fc51a5-6a40-4801-aa84-badfb91e6e4c",
+      "920f11b2-c963-4eb8-88d6-7919b5a27c06",
+      "c6e91323-d15d-4003-a9a4-a11f14dc727a",
+      "0e1c13e0-b7ce-4b46-96ce-337335e07c5b",
+      "94977099-6478-4a7a-9611-7f3f7d4f2720",
+      "d67ccf23-51b5-4286-8050-204384ab4057",
+      "62f1ccff-4f92-4d61-b806-c71f8296a458",
+      "8dd1dcea-da72-4b99-a97c-2f8cac124df4",
+      "94d2323f-2f2a-44a0-b0e8-0da2895d1944",
+      "e6db428f-96a7-4ee7-8174-74f2c5f5cc8b",
+      "9c3fc3c1-62d9-4f3d-8584-7e0c8d9b4a74",
+      "a7722e9a-7c12-4cc3-9a40-027a9788cd78",
+      "666f386b-fe7f-4a1d-af2d-c5280a86fd64",
+      "a7ef8d64-bb81-4636-8b40-196dd3028d25",
+      "9ae8a762-d859-4e35-a7f0-38618cacf04c",
+      "5dff6cc5-f4f7-479e-adea-0bca48cdfe70",
+      "3b80ea80-b9d7-4da2-b804-4ac528b5b80d",
+      "42ab2320-0f79-4b75-96b6-a1033199b95a"
+    ]
+  },
+  "started_at_utc": "2026-04-29T16:23:11.980182+00:00",
+  "temperature": 0.0,
+  "top_k": 15,
+  "total_elapsed_seconds": 366.385,
+  "ttft_seconds": 0.3079281789250672
+}
