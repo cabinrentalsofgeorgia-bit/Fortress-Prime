@@ -12,7 +12,7 @@
 
 1. Verifies the legal schema is intact on spark-1 (no mutation).
 2. Verifies NAS mount and legal directories.
-3. Resolves the stale `fortress_app` reference (autonomous decision tree).
+3. Surfaces the `fortress_app` contract divergence (canonical 004 vs spark-2 `fgp_app` vs M3 runbook `fortress_app`) and drops the dead `POSTGRES_FORTRESS_APP_PASSWORD` line from admin.env per operator instruction.
 4. Tightens `fortress-brain.service` Streamlit bind from `0.0.0.0` to `127.0.0.1` (sovereignty fix).
 5. Files the alembic-divergence issue that blocks M3 activation.
 6. Writes durable migration provenance.
@@ -22,7 +22,7 @@
 - No `alembic upgrade` on spark-1 (heads divergent — see Issue filed by this PR).
 - No role create / drop / alter on spark-1 (canonical 004 roles already in place).
 - No mutation to `public.*`, `division_a.*`, `hedge_fund.*`, or any `alembic_version` row.
-- No write to admin.env values (rename action proved unsafe — see §3 below).
+- No mutation to admin.env credential values; only the dead `POSTGRES_FORTRESS_APP_PASSWORD` key is removed (see §3).
 - No consumer service wired to spark-1 Postgres (M3 owns first write path).
 - No UFW config change (separate audit follow-up).
 
@@ -39,9 +39,9 @@ sudo ss -tlnp | grep 5432
 Expected:
 - Roles `fortress_admin` (CREATEDB), `fortress_api` (login only).
 - Postgres listening on `127.0.0.1:5432` and `192.168.0.104:5432`.
-- No `fortress_app` role.
+- No `fortress_app` role yet — M3 runbook prescribes its creation later; Phase A1 does not create it.
 
-If a fortress role is missing or `fortress_app` exists: STOP — pre-conditions for Phase A1 not met.
+If `fortress_admin` or `fortress_api` is missing: STOP — pre-conditions for Phase A1 not met.
 
 ## §2 — Legal schema verification (read-only)
 
@@ -87,17 +87,34 @@ grep -rIn "POSTGRES_FORTRESS_APP_PASSWORD" \
   --include="*.sh" --include="*.toml" --include="*.cfg" --include="*.ini"
 ```
 
-**Decision tree:**
+**2026-04-29 grep result (post-pull tree):**
 
-- **No hits anywhere → conclusion 3a (stale).** This is what 2026-04-29 found.
-  
-  Brief's prescribed action is "rename APP → API in admin.env, value carried over." **DO NOT execute this literally** if both APP and API entries already exist with different values — doing so overwrites the working `fortress_api` password.
-  
-  On 2026-04-29 admin.env had three keys: `ADMIN_PASSWORD`, `APP_PASSWORD` (44 chars), `API_PASSWORD` (64 chars). Values differ. **Action taken: no-op.** Document the residual APP key in `spark-2-to-spark-1-migration-provenance.md` and leave the file alone. Cleanup is a one-line `sed` follow-up if operator wants the APP key gone.
+`fortress_app` hits exist in canonical templates and runbook documentation:
 
-- **Hits in service code (`backend/services/*.py`, `backend/core/database.py`, `backend/core/config.py`) → conclusion 3b (intentional third role).** STOP. Surface to operator. Do not create the role.
+- `fortress-guest-platform/.env.example:195` — `SPARK1_DATABASE_URL` template uses `fortress_app`
+- `docs/runbooks/m3-spark1-mirror-activation.md:42-46, 74` — `CREATE USER fortress_app` + grants + `Environment=SPARK1_DATABASE_URL`
+- `docs/operational/spark-1-legal-migration-runbook.md:57-58` — M2-2 / M2-3 reference `fortress_app`
 
-- **Hits in both → 3b with ambiguity.** STOP.
+`POSTGRES_FORTRESS_APP_PASSWORD` only appears in admin.env on spark-1 and in this PR's own descriptive docs. Zero hits in `backend/services/*.py`, `backend/core/*.py`, or `alembic/versions/*.py`.
+
+**Reality across both hosts:**
+
+- spark-1 `\du`: `fortress_admin` (Create role, Create DB), `fortress_api`, `postgres`. **No `fortress_app`.**
+- spark-2 `\du` (canonical source-of-truth): `admin`, `crog_ai_app`, `fgp_app`, `fortress_admin` (Superuser), `fortress_api`, `miner_bot`, `paperclip_admin`, `postgres`, `trader_bot`. **Also no `fortress_app`** — spark-2's FGP runtime role is `fgp_app`.
+
+**Conclusion:** the reshaped brief's clean 3a/3b dichotomy doesn't fit. `fortress_app` is a name in templates and the M3 runbook but a role nowhere in the cluster. Three names are floating around for the same conceptual runtime role: canonical 004 says `fortress_api`, spark-2 reality is `fgp_app`, M3 runbook prescribes `fortress_app`. Resolving "which is canonical for spark-1" is operator's call and out of Phase A1 scope.
+
+**Phase A1 action (per operator decision 2026-04-29):** drop the `POSTGRES_FORTRESS_APP_PASSWORD` line from `/etc/fortress/admin.env`. The credential authenticates no role on any host; it is dead under all four reads of the contract reconciliation question. The naming reconciliation itself follows separately.
+
+```bash
+# inspect before
+grep -E '^[A-Z_]+=' /etc/fortress/admin.env | cut -d= -f1
+# expected: ADMIN, APP, API
+sed -i '/^POSTGRES_FORTRESS_APP_PASSWORD=/d' /etc/fortress/admin.env
+# inspect after
+grep -E '^[A-Z_]+=' /etc/fortress/admin.env | cut -d= -f1
+# expected: ADMIN, API
+```
 
 ## §4 — NAS mount + legal directories (read-only)
 
@@ -170,7 +187,7 @@ See body in `~/spark1-phase-a1-reshaped-brief.md` §9. Labels: `M3-blocker`, `al
 |---|---|---|
 | Legal schema present | `\dt legal.*` against `fortress_db` and `fortress_prod` | 38 tables, 12 spot-checks all return 1 |
 | NAS mount | `mountpoint /mnt/fortress_nas` | "is a mountpoint" |
-| `fortress_app` resolution | grep over repo | 0 hits → 3a no-op (or 3b STOP and surface) |
+| `fortress_app` contract resolution | grep over repo + spark-2 `\du` | hits in templates + M3 runbook, role absent on both hosts → drop dead APP_PASSWORD line, defer naming reconciliation to operator |
 | Streamlit bind | `ss -tlnp \| grep 8501` | `127.0.0.1:8501` (NOT `0.0.0.0`) |
 | Provenance doc | `git log docs/operational/spark-2-to-spark-1-migration-provenance.md` | committed in this branch |
 | State snapshot | `git log docs/operational/spark1-current-state-2026-04-29.md` | committed in this branch |

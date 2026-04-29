@@ -16,11 +16,11 @@ Until Phase A1, the spark-2 → spark-1 migration lived in operator's head and a
 
 - **2026-04-28 08:02 EDT** — apt bootstrap on spark-1 by `admin` user: `postgresql-16`, `postgresql-contrib-16`, `redis-server`, `build-essential`, `libpq-dev`, `python3-venv`, `python3-dev`, `ocrmypdf`. Postgres 16.13 from Ubuntu repo (not PGDG). Redis from Ubuntu repo. OCR toolchain (`ocrmypdf`, `pikepdf`, `lxml`, etc.) installed alongside.
 - **2026-04-28 ~08:30 EDT** — `~/Fortress-Prime` renamed to `~/Fortress-Prime.legacy`; fresh clone of `cabinrentalsofgeorgia-bit/Fortress-Prime` to `~/Fortress-Prime.new` with symlink `~/Fortress-Prime` → `~/Fortress-Prime.new`.
-- **2026-04-28 10:39 EDT** — `/etc/fortress/admin.env` written by operator (mode 600, `admin:admin`). Contains `POSTGRES_FORTRESS_ADMIN_PASSWORD`, `POSTGRES_FORTRESS_API_PASSWORD`, and a stale `POSTGRES_FORTRESS_APP_PASSWORD` (residual from earlier draft of `spark-1-legal-migration-runbook.md` M2-2 step that referenced `fortress_app` before canonical 004 contract was finalized).
+- **2026-04-28 10:39 EDT** — `/etc/fortress/admin.env` written by operator (mode 600, `admin:admin`). Contains `POSTGRES_FORTRESS_ADMIN_PASSWORD`, `POSTGRES_FORTRESS_API_PASSWORD`, and `POSTGRES_FORTRESS_APP_PASSWORD`. The APP key was pre-staged in anticipation of the M3 runbook's `CREATE USER fortress_app` step (per `docs/runbooks/m3-spark1-mirror-activation.md:42`), but the role itself was never created on spark-1 (M3 hasn't run yet) and does not exist on spark-2 either (spark-2's FGP runtime role is `fgp_app`). Phase A1 (2026-04-29) drops the APP_PASSWORD line because the credential authenticates no role anywhere — see "Known issues" #2 for the unresolved naming reconciliation.
 - **2026-04-28 10:52 EDT** — `postgresql-16-postgis-3` and `postgresql-16-pgvector` installed.
 - **2026-04-28 ~11:13 EDT** — `postgresql.conf` tuned for spark-1's RAM profile (8 GB shared_buffers, 24 GB effective_cache_size, 200 max_connections, `pg_stat_statements` preloaded). `pg_hba.conf` opened for `fortress_admin` from spark-2's LAN IP into `fortress_prod` only.
 - **2026-04-28 11:16 EDT** — `postgresql@16-main.service` started.
-- **2026-04-28 (during the day)** — Roles `fortress_admin` (CREATEDB) and `fortress_api` (login only) created on spark-1; matches canonical 004 Postgres contract. **No `fortress_app` role created** despite admin.env key — explicit choice by operator to follow canonical contract over the older runbook draft.
+- **2026-04-28 (during the day)** — Roles `fortress_admin` (Create role + Create DB, *not* Superuser) and `fortress_api` (login only) created on spark-1. **NOT** created on spark-1: `fortress_app` (referenced by M3 runbook + `.env.example`), `fgp_app` (the canonical FGP runtime role on spark-2), and per-service roles spark-2 has (`crog_ai_app`, `miner_bot`, `trader_bot`). Privilege divergence to surface: spark-2's `fortress_admin` is **Superuser**; spark-1's is **Create role, Create DB**. Whether spark-1 should match spark-2's privilege set is an operator decision tied to the canonical-name question (see "Known issues" #2).
 - **2026-04-28 (during the day)** — Schema dump from spark-2 `fortress_db` loaded into spark-1's `fortress_db`, `fortress_prod`, and `fortress_shadow_test` (the third DB is the CROG-AI shadow-testing convention). All three DBs identical: 13 schemas, 291 tables, 36 MB each, zero application data.
 - **2026-04-28 22:49 EDT** — Original `flos-phase-a1-postgres-spark1-brief.md` saved in `~/`. Brief assumed clean-host install — an assumption that no longer matched reality. Operator paused execution, asked for state capture instead.
 - **2026-04-28 23:30 EDT** — Comprehensive state captured in `docs/operational/spark1-current-state-2026-04-29.md` (this PR also commits that file into the repo for durability).
@@ -47,7 +47,19 @@ Until Phase A1, the spark-2 → spark-1 migration lived in operator's head and a
    
    This blocks M3 activation step 4 (`alembic upgrade head`). Phase A1 (additive overlays) is unblocked. Tracking issue filed by this PR.
 
-2. **Stale `fortress_app` reference in admin.env.** Three password keys exist (`ADMIN`, `APP`, `API`); only `fortress_admin` and `fortress_api` are real DB roles. Zero code references `fortress_app` or `POSTGRES_FORTRESS_APP_PASSWORD` anywhere in the repo (verified via grep over `*.py`, `*.env*`, `*.yaml`, `*.yml`, `*.sh`, `*.toml`, `*.cfg`, `*.ini`, `*.md`). The APP key is dead weight from the earlier runbook draft that named the runtime role `fortress_app` before the canonical 004 contract settled on `fortress_api`. Phase A1 leaves admin.env unchanged because the brief's literal "rename APP→API value-carried-over" would overwrite the working `fortress_api` password (APP and API values differ). The APP key is harmless residual; cleanup is a one-line follow-up if desired.
+2. **`fortress_app` canonical-name reconciliation (operator-owned).** `fortress_app` is referenced in:
+
+   - `fortress-guest-platform/.env.example:195` — the `SPARK1_DATABASE_URL` template
+   - `docs/runbooks/m3-spark1-mirror-activation.md:42-46, 74` — `CREATE USER` + grants + `Environment=SPARK1_DATABASE_URL`
+   - `docs/operational/spark-1-legal-migration-runbook.md:57-58` — M2-2 / M2-3 steps
+
+   …yet the role exists on **neither** spark-1 nor spark-2. Spark-2's runtime role for FGP is `fgp_app`. Three names are floating around for the same conceptual runtime role:
+
+   - canonical 004 contract (per `flos-phase-a1-postgres-spark1-brief.md` Section 3): `fortress_api`, with explicit "DO NOT create `fgp_app`"
+   - spark-2 operational reality: `fgp_app` (which the original brief forbade)
+   - M3 mirror activation runbook + `.env.example`: `fortress_app`
+
+   This naming divergence is unresolved as of Phase A1. Phase A1 (2026-04-29) drops the dead `POSTGRES_FORTRESS_APP_PASSWORD` line from `/etc/fortress/admin.env` because it authenticates no role anywhere. The "which name is canonical for spark-1's runtime role" question follows separately as an operator decision.
 
 ## Authoritative artifacts
 
@@ -66,4 +78,4 @@ Until Phase A1, the spark-2 → spark-1 migration lived in operator's head and a
 - `fortress_admin` — canonical owner role per 004 contract (CREATEDB; for migrations, ownership)
 - `fortress_api` — canonical runtime role per 004 contract (login only; for service authentication)
 
-`fortress_app` is **not** a canonical role — see "Known issues" above.
+`fortress_app` is currently a name without a role on either host — see "Known issues" #2 for the unresolved naming reconciliation. Spark-2's per-service FGP runtime role is `fgp_app`; canonical 004 contract says `fortress_api`; M3 runbook prescribes `fortress_app`. Operator will pick.
