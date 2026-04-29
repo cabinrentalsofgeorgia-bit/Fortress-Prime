@@ -126,14 +126,21 @@ HYDRA_120B_URL  = os.getenv("HYDRA_120B_URL",     _LOCAL_OLLAMA).rstrip("/")
 VLLM_120B_URL   = os.getenv("VLLM_120B_URL",      _LOCAL_OLLAMA).rstrip("/")
 
 # ── Model name constants ─────────────────────────────────────────────────────
-ANTHROPIC_MODEL        = os.getenv("ANTHROPIC_MODEL",        "claude-sonnet-4-6")
-ANTHROPIC_OPUS_MODEL   = os.getenv("ANTHROPIC_OPUS_MODEL",   "claude-opus-4-6")
-OPENAI_MODEL           = os.getenv("OPENAI_MODEL",           "gpt-4o")
-XAI_MODEL              = os.getenv("XAI_MODEL",              "grok-4")
-XAI_MODEL_FLAGSHIP     = os.getenv("XAI_MODEL_FLAGSHIP",     "grok-4")
-DEEPSEEK_MODEL         = os.getenv("DEEPSEEK_MODEL",         "deepseek-chat")
-DEEPSEEK_REASONER_MODEL= os.getenv("DEEPSEEK_REASONER_MODEL","deepseek-reasoner")
-GEMINI_MODEL           = os.getenv("GEMINI_MODEL",           "gemini-2.5-pro")
+# ── Council consumer cutover (ADR-003 Phase 1 follow-up, 2026-04-29) ────────
+# Defaults are now the sovereign aliases established by PR #285's LiteLLM
+# config: every "frontier" provider routes through the spark-2 LiteLLM gateway
+# → sovereign Nemotron-49B-FP8 NIM on spark-5. The env-var override path is
+# preserved as the rollback contract: set ANTHROPIC_MODEL=claude-sonnet-4-6
+# (etc.) to revert any seat to the cloud provider.
+# Mapping: reasoning seats → legal-reasoning; counselor (Gemini-style) → legal-summarization.
+ANTHROPIC_MODEL        = os.getenv("ANTHROPIC_MODEL",        "legal-reasoning")
+ANTHROPIC_OPUS_MODEL   = os.getenv("ANTHROPIC_OPUS_MODEL",   "legal-reasoning")
+OPENAI_MODEL           = os.getenv("OPENAI_MODEL",           "legal-reasoning")
+XAI_MODEL              = os.getenv("XAI_MODEL",              "legal-reasoning")
+XAI_MODEL_FLAGSHIP     = os.getenv("XAI_MODEL_FLAGSHIP",     "legal-reasoning")
+DEEPSEEK_MODEL         = os.getenv("DEEPSEEK_MODEL",         "legal-reasoning")
+DEEPSEEK_REASONER_MODEL= os.getenv("DEEPSEEK_REASONER_MODEL","legal-reasoning")
+GEMINI_MODEL           = os.getenv("GEMINI_MODEL",           "legal-summarization")
 SPARK2_MODEL       = os.getenv("SPARK2_MODEL",     "qwen2.5:7b")
 SPARK_LOCAL_MODEL  = os.getenv("SPARK_LOCAL_MODEL","qwen2.5:7b")
 SWARM_MODEL        = os.getenv("SWARM_MODEL",      "qwen2.5:7b")
@@ -562,6 +569,17 @@ async def _call_llm(
                 if is_local_reasoning:
                     effective_user = f"/no_think\n{user_prompt}"
 
+                # Stream by default for sovereign legal-* aliases — matches the
+                # BrainClient discipline (PR #280 / Phase A5 §7.2). At spark-5's
+                # ~3.7 tok/s for 4096 max_tokens, non-streaming would blow past
+                # LiteLLM's request_timeout. Local Ollama / vLLM fallbacks stay
+                # non-streaming because the existing fallback path already
+                # caps max_tokens for them and doesn't need TTFT discipline.
+                use_streaming = (
+                    base_url == _LITELLM_BASE
+                    and model.startswith("legal-")
+                )
+
                 payload: dict[str, Any] = {
                     "model": model,
                     "messages": [
@@ -571,6 +589,8 @@ async def _call_llm(
                     "temperature": temperature,
                     "max_tokens": max_tokens,
                 }
+                if use_streaming:
+                    payload["stream"] = True
 
                 if is_ollama:
                     ctx = _OLLAMA_CTX_LIMITS.get(base_url, _OLLAMA_CTX_DEFAULT)
@@ -580,22 +600,68 @@ async def _call_llm(
                     payload["response_format"] = {"type": "json_object"}
                     payload.pop("max_tokens", None)
 
-                resp = await client.post(
-                    f"{base_url}/chat/completions",
-                    json=payload,
-                    headers=headers,
-                )
+                if use_streaming:
+                    chunks: list[str] = []
+                    finish_reason: str | None = None
+                    async with client.stream(
+                        "POST",
+                        f"{base_url}/chat/completions",
+                        json=payload,
+                        headers=headers,
+                    ) as resp:
+                        if resp.status_code == 200:
+                            async for raw_line in resp.aiter_lines():
+                                if not raw_line:
+                                    continue
+                                line = raw_line.strip()
+                                if not line.startswith("data:"):
+                                    continue
+                                data_part = line[5:].strip()
+                                if data_part == "[DONE]":
+                                    break
+                                try:
+                                    event = json.loads(data_part)
+                                except json.JSONDecodeError:
+                                    continue
+                                choices = event.get("choices") or []
+                                if not choices:
+                                    continue
+                                delta = choices[0].get("delta") or {}
+                                piece = delta.get("content")
+                                if piece:
+                                    chunks.append(piece)
+                                fr = choices[0].get("finish_reason")
+                                if fr:
+                                    finish_reason = fr
+                            if chunks:
+                                content = "".join(chunks)
+                                return content, model
+                            logger.warning(
+                                "Primary LLM %s @ %s streamed empty content (finish=%s), falling back",
+                                model, base_url, finish_reason,
+                            )
+                        else:
+                            logger.warning(
+                                "Primary LLM %s @ %s returned %d on stream open, falling back",
+                                model, base_url, resp.status_code,
+                            )
+                else:
+                    resp = await client.post(
+                        f"{base_url}/chat/completions",
+                        json=payload,
+                        headers=headers,
+                    )
 
-                if resp.status_code == 200:
-                    data = resp.json()
-                    content = _extract_content(data)
-                    if content:
-                        return content, model
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        content = _extract_content(data)
+                        if content:
+                            return content, model
 
-                logger.warning(
-                    "Primary LLM %s @ %s returned %d, falling back",
-                    model, base_url, resp.status_code,
-                )
+                    logger.warning(
+                        "Primary LLM %s @ %s returned %d, falling back",
+                        model, base_url, resp.status_code,
+                    )
             except Exception as e:
                 logger.warning("Primary LLM %s failed: %s, falling back", model, e)
 
