@@ -6,19 +6,20 @@ Last updated: 2026-04-26
 
 Fortress Prime runs on a local NVIDIA DGX Spark cluster (4 nodes). No cloud databases for sovereign data; transient cloud inference is allowed only for non-PII payloads with ephemeral guarantees per CONSTITUTION.md Article I.
 
-### Cluster topology — app + dedicated inference cluster (per [ADR-001 amended](../cross-division/_architectural-decisions.md) + [ADR-002 amended](../cross-division/_architectural-decisions.md) + [ADR-003 (2026-04-29) LOCKED](../cross-division/_architectural-decisions.md))
+### Cluster topology — app vs inference (per [ADR-001 partially superseded](../cross-division/_architectural-decisions.md) + [ADR-002 amended](../cross-division/_architectural-decisions.md) + [ADR-003 expanded](../cross-division/_architectural-decisions.md) + [ADR-004 (2026-04-29) LOCKED](../cross-division/_architectural-decisions.md))
 
 The 2026-04-29 architectural decisions:
-- **ADR-001 (LOCKED 2026-04-26, amended 2026-04-29):** one spark per *app* division. Inference is a shared cross-division resource on a dedicated cluster (Sparks 4/5/6) per ADR-003. Acquisitions + Wealth co-tenant on Spark-3 with Financial until Spark-7+ lands.
-- **ADR-002 (LOCKED 2026-04-26, amended 2026-04-29):** Captain + Council + Sentinel all stay on Spark 2 permanent (control plane). The previous Council → Spark-4 Option B decision is reversed by ADR-003 (2026-04-29); Spark-4 becomes an inference-tier node, not a Council host.
-- **ADR-003 (LOCKED 2026-04-29):** Sparks 4/5/6 form a dedicated inference cluster. No division apps tenant on these nodes. All BRAIN-tier and TITAN-tier inference traffic terminates on the 4/5/6 cluster via the LiteLLM gateway on spark-2. Phase 3 sizing locked: **Pattern 1 — TP=2 + 1 hot replica**.
+- **ADR-001 (LOCKED 2026-04-26, partially superseded 2026-04-29 by ADR-004):** the "one spark per division" rule is retired except for **Fortress Legal on Spark 1**. All non-Legal app workloads co-tenant on Spark 2.
+- **ADR-002 (LOCKED 2026-04-26, amended 2026-04-29 by ADR-003 v2):** Captain + Council + Sentinel all stay on Spark 2 permanent (control plane). Council → Spark-4 Option B is reversed.
+- **ADR-003 (LOCKED 2026-04-29, expanded 2026-04-29 by ADR-004):** dedicated inference cluster. **Now 4 nodes (3/4/5/6)** post-Spark-3/4 wipe-and-rebuild — was 4/5/6 at original lock.
+- **ADR-004 (LOCKED 2026-04-29):** boundary that drives spark allocation is **app vs inference**, not division-per-spark. Spark 1 = single-tenant app (Legal). Spark 2 = multi-tenant app + control plane (everything non-Legal). Sparks 3/4/5/6 = inference cluster. Phase 4 sizing default: **Pattern 2 (TP=2 + TP=2)**.
 
 | Spark | Network | Status | Role | Tenants |
 |---|---|---|---|---|
-| **Spark 1** | `192.168.0.X` | **ACTIVE** | App | Fortress Legal — vault ingestion, privileged communications, Council legal retrieval consumer. **No inference tenancy under ADR-003** (BRAIN moved to spark-5). |
-| **Spark 2** | `192.168.0.100` (ctrl @ `100.80.122.100`); hostname `spark-2` / `spark-node-2` | **ACTIVE** | App + control plane | CROG-VRS, **Captain**, **Council**, **Sentinel**, Postgres, Qdrant (legal), Redis, ARQ, FastAPI, **LiteLLM gateway**. SWARM tier kept here for fast-path / degraded-mode (Ollama qwen2.5:7b + `nomic-embed-text`). |
-| **Spark 3** | TBD | **PLANNED — not yet provisioned** | App | Financial (Master Accounting + Market Club replacement); **Acquisitions + Wealth co-tenants** until Spark-7+ lands. Receives `division_a.*` + `hedge_fund.*` migration from Spark 2. |
-| **Spark 4** | ConnectX | **PLANNED — Phase 3** | Inference | Ray worker — joins the inference cluster at Phase 3 (software-only cutover). |
+| **Spark 1** | `192.168.0.X` | **ACTIVE** | App — single tenant | **Fortress Legal** — vault ingestion, privileged communications, Council legal retrieval consumer. No inference tenancy under ADR-003 (BRAIN moved to spark-5). |
+| **Spark 2** | `192.168.0.100` (ctrl @ `100.80.122.100`); hostname `spark-2` / `spark-node-2` | **ACTIVE** | App — control plane + multi-tenant | CROG-VRS, **Captain**, **Council**, **Sentinel**, Postgres, Qdrant (legal), Redis, ARQ, FastAPI, **LiteLLM gateway**, **Financial** (Master Accounting + Market Club replacement), **Acquisitions**, **Wealth**. SWARM tier kept here for fast-path / degraded-mode (Ollama qwen2.5:7b + `nomic-embed-text`). |
+| **Spark 3** | ConnectX | **PLANNED — Phase 4 (post-wipe)** | Inference | Ray worker — joins inference cluster after wipe-and-rebuild. ADR-001's "Spark 3 PLANNED for Financial" target is canceled by ADR-004; Financial stays on Spark 2 permanently. |
+| **Spark 4** | ConnectX | **PLANNED — Phase 3 (post-wipe)** | Inference | Ray worker — joins inference cluster after wipe-and-rebuild. ADR-001's "Spark 4 PLANNED for Acquisitions/Wealth" target is canceled by ADR-004; both stay on Spark 2 permanently. |
 | **Spark 5** | ConnectX | **ACTIVE** | Inference | Ray head; **Nemotron-Super-49B-FP8 NIM** (current BRAIN tier; port 8100). |
 | **Spark 6** | 10GbE → ConnectX (cable pending) | **STAGED — Phase 2** | Inference | Ray worker; pairs with Spark 5 for `--tensor-parallel-size 2` over NCCL/RDMA once cable lands. |
 
@@ -36,24 +37,24 @@ Implementation is gated work — each ADR-003 phase is its own PR with operator 
 
 ### Migration milestones still to schedule
 
-1. **ADR-003 Phase 1** — LiteLLM legal-routes cutover cloud → spark-5 NIM (this PR; closes audit A-02)
+1. ~~ADR-003 Phase 1~~ — LiteLLM legal-routes cutover cloud → spark-5 NIM. **Done 2026-04-29 (PR #285).** Closed audit A-02 at routing layer.
 2. M3 trilateral additive write (PR `feat/m3-trilateral-spark1-mirror`, default-OFF)
 3. M3 activation prereq: alembic merge on spark-2 (Issue #279)
-4. **ADR-003 Phase 2** — Spark-6 cable cutover (10GbE → ConnectX); Spark-5 + Spark-6 form Ray cluster running vLLM with TP=2 over NCCL/RDMA
-5. Spark-3 hardware acquired and provisioned (Financial)
-6. `hedge_fund.*` + `division_a.*` migration from Spark-2 → Spark-3
-7. **ADR-003 Phase 3** — Spark-4 joins inference cluster (software-only cutover); Acquisitions + Wealth co-tenant on Spark-3
-8. CROG-VRS sheds tenant duties (Spark-2 single-purpose control plane)
+4. **ADR-003 Phase 2** — Spark-6 cable cutover (10GbE → ConnectX); Spark-5 + Spark-6 form Ray cluster running vLLM with TP=2 over NCCL/RDMA. **Gates the Spark-3/4 wipe per ADR-004.**
+5. **ADR-004 Phase 3 (Spark-4 wipe-and-rebuild)** — see `docs/operational/briefs/spark-3-4-wipe-and-rebuild-2026-04-29.md`. Spark-4 joins the inference cluster.
+6. **ADR-004 Phase 4 (Spark-3 wipe-and-rebuild)** — same brief. Spark-3 joins the inference cluster. 4-node cluster goes live with default sizing **Pattern 2 (TP=2 + TP=2)**.
+7. CROG-VRS sheds tenant duties — **canceled by ADR-004**. Spark-2 stays multi-tenant permanently (CROG-VRS + Captain + Sentinel + Council + LiteLLM gateway + Financial + Acquisitions + Wealth).
+8. ~~Spark-3 hardware acquisition for Financial~~ — **canceled by ADR-004.** Financial stays on Spark-2 permanently; Spark-3 wipes and joins inference cluster instead.
 
 ### AI inference tiers ("DEFCON modes")
 
-These tiers consolidate on the **dedicated inference cluster (Sparks 4/5/6)** per ADR-003 (2026-04-29). The LiteLLM gateway on spark-2 routes BRAIN-tier and TITAN-tier traffic to the cluster. SWARM tier remains on spark-2 for fast-path / degraded-mode operation.
+These tiers consolidate on the **dedicated inference cluster** per ADR-003 (LOCKED 2026-04-29) and ADR-004 (LOCKED 2026-04-29 — expansion to 4 nodes). The LiteLLM gateway on spark-2 routes BRAIN-tier and TITAN-tier traffic to the cluster. SWARM tier remains on spark-2 for fast-path / degraded-mode operation.
 
 | Tier | Service | Model | Host | Use |
 |---|---|---|---|---|
 | DEFCON 5 — SWARM | Ollama LB | qwen2.5:7b | spark-2 | Fast routing, guest comms, light classification, degraded-mode fallback |
-| DEFCON 3 — BRAIN | `fortress-nim-brain.service` (port 8100) | `nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8` via NIM 2.0.1 | **spark-5** (Phase 1, today); spark-5 + spark-6 TP=2 (Phase 2); 4/5/6 Pattern 1 (Phase 3) | Tier-2 sovereign reasoning; legal RAG; case briefing |
-| DEFCON 1 — TITAN | DeepSeek-R1 671B local (llama.cpp RPC) | DeepSeek-R1 | TBD inference cluster placement | Deep reasoning: legal, finance |
+| DEFCON 3 — BRAIN | `fortress-nim-brain.service` (port 8100) | `nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8` via NIM 2.0.1 | **spark-5** (today); spark-5 + spark-6 TP=2 (Phase 2); spark-4 + spark-5 + spark-6 (Phase 3); **spark-3 + spark-4 + spark-5 + spark-6 — Pattern 2 (TP=2 + TP=2)** at full ADR-004 endpoint | Tier-2 sovereign reasoning; legal RAG; case briefing |
+| DEFCON 1 — TITAN | DeepSeek-R1 671B local (llama.cpp RPC) | DeepSeek-R1 | TBD — inference cluster placement (4-node cluster gives headroom) | Deep reasoning: legal, finance |
 | ARCHITECT | Google Gemini (cloud, planning only) | Gemini 2.5+ | external | Strategic planning. Never PII / sovereign data. |
 
 ### Network

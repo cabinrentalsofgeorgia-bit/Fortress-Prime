@@ -38,6 +38,8 @@ Format inspired by [Michael Nygard's ADR template](https://cognitect.com/blog/20
 
 **Amended 2026-04-29 by ADR-003 (2026-04-29 — Dedicated inference cluster):** ADR-001's "one spark per division" rule applies to *app* divisions. Inference is a shared cross-division resource hosted on a dedicated cluster (Sparks 4/5/6) per ADR-003. Acquisitions and Wealth co-tenant on Spark-3 with Financial until Spark-7+ lands.
 
+**Partially superseded 2026-04-29 by ADR-004 (App vs Inference Boundary):** the "one spark per division" rule is retired except for **Fortress Legal on Spark 1**. All non-Legal app workloads (CROG-VRS + control plane + Financial + Acquisitions + Wealth) co-tenant on Spark 2 permanently. Spark 3 and Spark 4 leave the app tier entirely and join the inference cluster (post-wipe). The allocation table in this ADR-001 entry above is **historical** — see the ADR-004 entry below for the current allocation. ADR-001 is preserved in this log (per the "locked decisions are immutable" rule); ADR-004 records the supersession explicitly.
+
 ---
 
 ## ADR-002 — Where do shared services (Captain, Council, Sentinel) live in the target state?
@@ -246,6 +248,68 @@ Sparks **4, 5, and 6** form a dedicated inference cluster. No division apps tena
 
 **Open question deferred to Phase 2 completion:** what event moves Spark-4 from "app spark for Acquisitions or Wealth" to "inference cluster member"? Suggested triggers: (a) Acquisitions/Wealth workloads stay light enough to co-tenant on Spark-3, OR (b) BRAIN-tier traffic outgrows TP=2 throughput. Operator confirms criterion at Phase 2 completion.
 
+**Expanded 2026-04-29 by ADR-004 (App vs Inference Boundary):** the inference cluster grows from **3 nodes (4/5/6)** to **4 nodes (3/4/5/6)**. Open question above is closed: Spark-4 is now an inference-cluster member by allocation, not by trigger event; Acquisitions/Wealth co-tenant on Spark-2 instead. Phase 4 sizing default is **TP=2 + TP=2** (two independent TP=2 instances, LiteLLM load-balances). See the ADR-004 entry below for the full sizing analysis (Pattern 1/2/3 at 4 nodes).
+
+---
+
+## ADR-004 (2026-04-29) — App vs Inference Boundary
+
+**Date:** 2026-04-29
+**Status:** **LOCKED** — operator decision 2026-04-29
+**Supersedes:** Partial supersession of ADR-001's "one spark per division" rule (retired except for Fortress Legal on Spark 1). Cross-division services portion of ADR-002 stays resolved (Captain/Council/Sentinel on spark-2 control plane, Option A across the board per ADR-003 v2 amendment).
+**Expands:** ADR-003's inference cluster designation grows from Sparks 4/5/6 to **Sparks 3/4/5/6**.
+
+**Canonical document:** `docs/architecture/cross-division/ADR-004-app-vs-inference-boundary.md` (full decision text, rationale, tradeoffs, Phase 4 sizing analysis, phase rollout).
+
+**Decision (one-paragraph summary for registry readers):**
+
+The boundary that drives spark allocation is **app vs inference**, not division-per-spark. Division-per-spark is abandoned for everything except **Fortress Legal** (which keeps its own spark for sovereignty + privilege isolation). Spark 1 is the only single-tenant app spark. Spark 2 carries CROG-VRS + control plane + LiteLLM gateway + Financial + Acquisitions + Wealth permanently. Sparks 3/4/5/6 form the dedicated inference cluster (post-wipe of 3 and 4 — operational brief at `docs/operational/briefs/spark-3-4-wipe-and-rebuild-2026-04-29.md`, gated on Spark-6 cable cutover).
+
+**Allocation (post-wipe of 3+4):**
+
+| Spark | Fabric | Role | Tenants |
+|---|---|---|---|
+| Spark 1 | ConnectX | App — single tenant | Fortress Legal |
+| Spark 2 | ConnectX | App — control plane + multi-tenant | CROG-VRS, Captain, Sentinel, Postgres, Qdrant (legal), Redis, ARQ, FastAPI, **LiteLLM gateway**, **Financial** (Master Accounting + Market Club replacement), **Acquisitions**, **Wealth** |
+| Spark 3 | ConnectX | Inference (post-wipe) | Ray worker |
+| Spark 4 | ConnectX | Inference (post-wipe) | Ray worker |
+| Spark 5 | ConnectX | Inference (active) | Ray head; Nemotron-Super-49B-FP8 NIM |
+| Spark 6 | 10GbE → ConnectX (cable pending) | Inference (Phase 2) | Ray worker |
+
+**Phase 4 sizing (4-node cluster):** default **Pattern 2 — TP=2 + TP=2** (two independent TP=2 instances, LiteLLM load-balances; one instance can fail without taking the other down). Pattern 1 (TP=4 single instance) reserved for if BRAIN-tier latency becomes the bottleneck. Pattern 3 (TP=2 + 2× single-Spark instances) reserved for if concurrent legal-app calls saturate the cluster.
+
+**Rationale (capsule — full text in canonical doc):**
+- Inference is the choke point for white-shoe-grade legal output. A 4-node inference cluster (3/4/5/6) on Pattern 2 doubles ADR-003's 3-node cluster capacity at the same Pattern-1 redundancy floor.
+- Spark-2 has historically carried all enterprises. The "one spark per division" rule was an aspirational target that assumed enough hardware to enforce it; in reality non-Legal divisions share spark-2 already and the migration cost beats the marginal benefit.
+- Fortress Legal is the exception. Privilege + audit + waiver concerns justify dedicated hardware. Spark-1 stays single-tenant.
+- Per-division resource budgeting becomes a spark-2 operational concern, not an architectural rule. Logical isolation (Postgres roles, Qdrant collections, ARQ queues) is sufficient.
+- Closes the "spark-3 timeline" question. Financial's spark-3 migration under ADR-001 is canceled — Financial stays on spark-2 permanently.
+
+**Tradeoffs accepted:**
+- Spark-2 carries more load (mitigated by per-division logical isolation; inference workload is entirely off-box on the spark-3/4/5/6 cluster).
+- No inter-enterprise blast-radius isolation on spark-2 (mitigated by separate database roles, schema isolation, process isolation).
+- Acquisitions + Wealth never get dedicated sparks (operator-accepted; both are early-stage).
+- Spark-3 + Spark-4 require wipe-and-rebuild to join the inference cluster (operational brief is the execution doc; not run from this PR).
+
+**Implications already in motion:**
+- ADR-001's allocation table is historical (supersession note added above).
+- ADR-003's inference cluster designation expanded (expansion note added above).
+- `docs/architecture/divisions/financial.md`, `acquisitions.md`, `wealth.md`, `market-club.md` updated: spark allocation changes from "Spark 3 / Spark 4 PLANNED" to "Spark 2 — co-tenant with control plane".
+- `docs/architecture/shared/infrastructure.md` topology table updated.
+- `docs/architecture/system-map.md` redrawn (current state + target state).
+- `docs/operational/MASTER-PLAN.md` §5 architectural foundation table + §6 work tracks updated.
+
+**Phase rollout:**
+
+| Phase | Node | Status | Action |
+|---|---|---|---|
+| Phase 1 (TODAY) | Spark 5 | ACTIVE | Single-spark BRAIN serving via NIM |
+| Phase 2 | Spark 6 | BLOCKED on cable | Joins TP=2 with Spark 5 |
+| Phase 3 | Spark 4 | PLANNED | Wipe + join inference cluster (TP=2 + TP=2 with Spark 3, OR TP=4 across 5/6+4) |
+| Phase 4 (this ADR) | Spark 3 | PLANNED | Wipe + join inference cluster |
+
+Phase order: Spark 6 first (Phase 2 — cable land), then 3 + 4 together (one wipe-rebuild cycle). Don't wipe 3 or 4 before 6 lands — TP=4 across 4 nodes needs all four on ConnectX fabric.
+
 ---
 
 ## How to add an ADR
@@ -257,4 +321,4 @@ Sparks **4, 5, and 6** form a dedicated inference cluster. No division apps tena
 5. Rationale: why this over alternatives
 6. Implications: what changes downstream
 
-Last updated: 2026-04-29 (ADR-003 v2 LOCKED; ADR-001 + ADR-002 amended)
+Last updated: 2026-04-29 (ADR-004 LOCKED; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)

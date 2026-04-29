@@ -2,7 +2,7 @@
 
 **Operator:** Gary Knight
 **Established:** 2026-04-29
-**Updated:** 2026-04-29 (v1)
+**Updated:** 2026-04-29 (v1.1 — ADR-004 LOCKED)
 **Cadence:** Updated on change (priorities shift, P0 added/closed, blockers move)
 
 ---
@@ -122,19 +122,20 @@ These ADRs are settled. Reference them before proposing changes.
 
 | ADR | Status | Decision (one line) |
 |---|---|---|
-| ADR-001 | LOCKED 2026-04-26, amended by ADR-003 | One spark per *app* division (1=Legal, 2=CROG-VRS+ctrl plane, 3=Financial+Acq+Wealth co-tenant) |
-| ADR-002 | LOCKED 2026-04-29 (resolved by ADR-003) | Captain/Council/Sentinel = Option A, stay on spark-2 control plane permanently |
-| ADR-003 | LOCKED 2026-04-29 | Sparks 4/5/6 form dedicated inference cluster; Phase 3 sizing = TP=2 + hot replica |
+| ADR-001 | LOCKED 2026-04-26, partially superseded 2026-04-29 by ADR-004 | One spark per division — retired except for Fortress Legal on Spark 1; non-Legal divisions co-tenant on Spark 2 permanently |
+| ADR-002 | LOCKED 2026-04-26, amended 2026-04-29 by ADR-003 v2 | Captain/Council/Sentinel = Option A, stay on spark-2 control plane permanently (Council reverted from Spark-4) |
+| ADR-003 | LOCKED 2026-04-29, expanded 2026-04-29 by ADR-004 | Dedicated inference cluster — **now 4 nodes (3/4/5/6)**; was 4/5/6 at original lock. Phase 3/4 sizing default = Pattern 2 (TP=2 + TP=2) |
+| ADR-004 | LOCKED 2026-04-29 | Boundary that drives spark allocation is **app vs inference**, not division-per-spark. Spark 1 = Legal single-tenant. Spark 2 = multi-tenant + control plane. Sparks 3/4/5/6 = inference cluster. |
 
-### 5.1 Spark allocation (post-ADR-003)
+### 5.1 Spark allocation (post-ADR-004)
 
 | Spark | Fabric | Role | Tenants |
 |---|---|---|---|
-| Spark 1 | ConnectX | App | Fortress Legal |
-| Spark 2 | ConnectX | App + control plane | CROG-VRS, Captain, Sentinel, Postgres, Qdrant (legal), Redis, ARQ, FastAPI, LiteLLM gateway |
-| Spark 3 | ConnectX | App | Financial; Acquisitions + Wealth co-tenant pending Spark-7+ |
-| Spark 4 | ConnectX | Inference (Phase 3) | Ray worker, joins inference cluster |
-| Spark 5 | ConnectX | Inference (active) | Ray head; Nemotron-Super-49B-FP8 NIM; LLAMA-3.3 |
+| Spark 1 | ConnectX | App — single tenant | Fortress Legal |
+| Spark 2 | ConnectX | App — control plane + multi-tenant | CROG-VRS, Captain, Council, Sentinel, Postgres, Qdrant (legal), Redis, ARQ, FastAPI, LiteLLM gateway, **Financial** (Master Accounting + Market Club replacement), **Acquisitions**, **Wealth** |
+| Spark 3 | ConnectX | Inference (post-wipe — ADR-004 Phase 4) | Ray worker; joins inference cluster after wipe-and-rebuild |
+| Spark 4 | ConnectX | Inference (post-wipe — ADR-004 Phase 3) | Ray worker; joins inference cluster after wipe-and-rebuild |
+| Spark 5 | ConnectX | Inference (active) | Ray head; Nemotron-Super-49B-FP8 NIM; Llama-3.3 |
 | Spark 6 | 10GbE → ConnectX (cable pending) | Inference (Phase 2) | Ray worker, TP=2 partner with Spark 5 |
 
 ### 5.2 Inference tier (DEFCON)
@@ -142,8 +143,8 @@ These ADRs are settled. Reference them before proposing changes.
 | Tier | Service | Model | Host |
 |---|---|---|---|
 | SWARM | Ollama LB | qwen2.5:7b | spark-2 |
-| BRAIN | fortress-nim-brain.service :8100 | Llama-3.3-Nemotron-Super-49B-v1.5-FP8 (NIM 2.0.1) | spark-5 (today); spark-5+6 TP=2 (Phase 2); 4/5/6 Pattern 1 (Phase 3) |
-| TITAN | DeepSeek-R1 671B llama.cpp RPC | DeepSeek-R1 | TBD inference cluster placement |
+| BRAIN | fortress-nim-brain.service :8100 | Llama-3.3-Nemotron-Super-49B-v1.5-FP8 (NIM 2.0.1) | spark-5 (today); spark-5+6 TP=2 (Phase 2); spark-4+5+6 (Phase 3); **spark-3+4+5+6 Pattern 2 (TP=2 + TP=2)** at full ADR-004 endpoint |
+| TITAN | DeepSeek-R1 671B llama.cpp RPC | DeepSeek-R1 | TBD inference cluster placement (4-node cluster gives headroom) |
 | ARCHITECT | Google Gemini (cloud, planning only) | Gemini 2.5+ | external — never PII |
 
 ---
@@ -172,11 +173,13 @@ Maintained tracks. Each updates as items land or shift.
 | BRAIN incident INC-2026-04-28 | RESOLVED PR #277; durable on main | — |
 | Phase A1 spark-1 legal overlays | MERGED PR #278 | — |
 | Phase A5 BRAIN+RAG probe | MERGED PR #280; revised contracts (TTFT-based, semantic-equivalence determinism) | — |
-| ADR-003 Phase 1 LiteLLM cutover | IN FLIGHT branch `adr/003-inference-cluster-topology` on spark-2 | Claude Code |
-| ADR-003 Phase 2 Spark-6 cable cutover | BLOCKED on cable | Operator |
-| ADR-003 Phase 3 Spark-4 join | DEFERRED post-Phase 2 | — |
+| ADR-003 Phase 1 LiteLLM cutover | **MERGED PR #285** 2026-04-29; A-02 closed at routing layer | — |
+| ADR-003 Phase 2 Spark-6 cable cutover | BLOCKED on cable; gates ADR-004 wipe | Operator |
+| ADR-004 Phase 3 Spark-4 wipe-and-rebuild | PLANNED — gated on Phase 2 completion. See `docs/operational/briefs/spark-3-4-wipe-and-rebuild-2026-04-29.md` | Operator + Claude Code |
+| ADR-004 Phase 4 Spark-3 wipe-and-rebuild | PLANNED — gated on Phase 3 validation | Operator + Claude Code |
 | Caselaw corpus audit | PENDING — verify `legal_caselaw` (~2,711 GA) and `legal_caselaw_federal` (0 points per qdrant-collections.md) | Chat → Claude Code |
-| TITAN service path | UNKNOWN — DeepSeek-R1 671B placement after ADR-003 inference cluster lands | Future brief |
+| TITAN service path | UNKNOWN — DeepSeek-R1 671B placement on the post-ADR-004 4-node cluster (more headroom than 3-node) | Future brief |
+| Council BRAIN integration (Phase B) | PENDING — `legal_council.py` `SEAT_ROUTING` migration to use `legal-reasoning` (consumer-layer cutover; routing layer done in PR #285) | Future brief |
 
 ### 6.3 Legal application capabilities (P2)
 
@@ -193,7 +196,7 @@ Maintained tracks. Each updates as items land or shift.
 
 | Item | Status | Source |
 |---|---|---|
-| A-02 cloud legal inference | RESOLVING via ADR-003 Phase 1 | 2026-04-22 audit |
+| A-02 cloud legal inference | **RESOLVED at routing layer** (PR #285); consumer-layer cutover (`legal_council.py SEAT_ROUTING`) is Phase B follow-up | 2026-04-22 audit |
 | S-01 UFW disabled spark-2 | OPEN | 2026-04-22 audit |
 | A-01 Stripe webhook double-settlement | OPEN | 2026-04-22 audit |
 | D-02 trust ledger triggers missing | OPEN | 2026-04-22 audit |
@@ -216,7 +219,7 @@ Maintained tracks. Each updates as items land or shift.
 Update this section as items land. Replace, don't append.
 
 **In flight:**
-- ADR-003 Phase 1 LiteLLM cutover on spark-2 (branch `adr/003-inference-cluster-topology`)
+- ADR-004 LOCKED + Spark-3/4 wipe-and-rebuild brief (this PR — `adr/004-app-vs-inference-boundary`)
 
 **Operator open:**
 - Personal Gmail/Mac sweep for Argo engagement letter
@@ -231,6 +234,9 @@ Update this section as items land. Replace, don't append.
 - PR #278 Phase A1 spark-1 legal overlays MERGED
 - PR #280 Phase A5 BRAIN+RAG probe MERGED (revised contracts)
 - PR #281 Track A Case II briefing v2 MERGED
+- PR #283 ADR-003 doc MERGED
+- PR #284 MASTER-PLAN.md v1 + Phase 1 brief archive MERGED
+- PR #285 ADR-003 LOCKED + Phase 1 LiteLLM cutover MERGED (A-02 closed at routing layer)
 - Issue #279 filed (alembic merge prereq)
 - Issue #282 filed (privileged collection coverage)
 
@@ -282,6 +288,7 @@ If the chat assistant catches itself doing any of these, stop and reset:
 | Date | Version | Changes |
 |---|---|---|
 | 2026-04-29 | v1 | Initial master plan |
+| 2026-04-29 | v1.1 | ADR-004 LOCKED — app vs inference boundary. §5 ADR table + spark allocation + DEFCON tier updated. §6.2 work tracks updated (Phase 1 MERGED PR #285; ADR-004 Phase 3/4 wipes added). §6.4 A-02 marked resolved-at-routing-layer. Today's snapshot reflects ADR-004 as in-flight. |
 
 ---
 

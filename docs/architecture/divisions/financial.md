@@ -4,8 +4,8 @@ Owner: Gary Mitchell Knight (operator); Comptroller-persona AI agent
 Status: **active** (Master Accounting subsystem) | **scaffolding** (Market Club replacement, see [`market-club.md`](market-club.md))
 Spark allocation:
 - **Current:** Spark 2 (control plane @ `100.80.122.100`) — Master Accounting services + the Market Club replacement scaffolding live here as a tenant of the monorepo
-- **Target:** **Spark 3 (PLANNED)** — full migration of `division_a.*`, `hedge_fund.*`, Market Club scoring engine, and all financial intelligence to the dedicated Financial spark once provisioned
-Last updated: 2026-04-26
+- **Target (locked 2026-04-29 by ADR-004):** **Spark 2 (PERMANENT)** — Financial co-tenants on spark-2 with the control plane, CROG-VRS, Acquisitions, and Wealth. The previous "Spark 3 PLANNED" target under ADR-001 is canceled by ADR-004 ("App vs Inference Boundary"); Spark 3 leaves the app tier and joins the inference cluster (post-wipe).
+Last updated: 2026-04-29
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Enterprise-wide financial oversight + market intelligence. The Financial divisio
 1. **Master Accounting** — sovereign immutable trust ledger driven by Stripe webhooks; double-entry mirror of QuickBooks Online; daily hash-chain audit by Hermes. Stripe is the **only authoritative trigger** for ledger writes (per CONSTITUTION.md Article III). Streamline (PMS) supplies reconciliation metadata, never ledger truth.
 2. **Market Club replacement** — scoring engine + signal pipeline replacing a legacy Market Club / Marriott Club source (operator confirmation required — see [`market-club.md`](market-club.md)). Currently at scaffolding stage; produces hedge_fund signals for the trust ledger's investment-tracking subsystem.
 
-Per the architectural decision logged 2026-04-26 in `cross-division/_architectural-decisions.md`: **one spark per division**. Financial migrates to Spark 3 once that hardware is provisioned. Until then, Spark 2 hosts both (Spark 2 is doing double-duty as Financial host AND CROG-VRS host AND control plane).
+Per ADR-004 (LOCKED 2026-04-29): the "one spark per division" rule is retired except for Fortress Legal. Financial stays on **Spark 2 permanently** alongside CROG-VRS, Captain, Sentinel, the LiteLLM gateway, Acquisitions, and Wealth. Logical isolation (Postgres roles, schema separation, ARQ queue prefixes) replaces the planned physical isolation. ADR-001's earlier "migrate to Spark 3" plan is canceled — Spark 3 wipes and joins the inference cluster instead.
 
 ## Key data stores
 
@@ -31,10 +31,7 @@ Today (Spark 2 / `fortress_prod`):
 
 Both `trust_transactions` and `trust_ledger_entries` carry triggers `trg_immutable_*` that raise on UPDATE/DELETE.
 
-After Spark 3 cutover (timeline + scope: open question — see [`../cross-division/_architectural-decisions.md`](../cross-division/_architectural-decisions.md) ADR-002):
-- `division_a.*` and `hedge_fund.*` schemas migrate to Spark 3's Postgres instance
-- `public.trust_*` may stay on Spark 2 (control-plane) or migrate to Spark 3 — open question
-- Cross-spark connectivity from CROG-VRS (Spark 2) to Spark 3 ledger reads is an open question
+**Spark 3 cutover canceled per ADR-004 (2026-04-29):** all Financial schemas (`division_a.*`, `hedge_fund.*`, `public.trust_*`, etc.) stay on Spark 2's Postgres permanently. Cross-spark Postgres-read complexity is no longer in scope. The `division_a` Postgres role is the per-division logical-isolation boundary; physical isolation (separate spark) is replaced by role + schema + queue separation.
 
 ### Qdrant
 

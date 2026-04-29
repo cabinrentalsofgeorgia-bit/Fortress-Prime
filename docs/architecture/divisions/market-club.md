@@ -3,9 +3,9 @@
 Owner: TBD (requires operator input)
 Status: **scaffolding** — code lives on Spark 2 as part of the Financial division during the temporary co-tenancy period; full spec blocked on operator answers
 Spark allocation:
-- **Current:** Spark 2 (control plane @ `100.80.122.100`) — temporary tenant of the monorepo until Spark 3 is provisioned
-- **Target:** **Spark 3 (PLANNED)** — co-located with Master Accounting + `hedge_fund.*` schema migration as the unified Financial division
-Last updated: 2026-04-26
+- **Current:** Spark 2 (control plane @ `100.80.122.100`) — tenant of the monorepo, co-tenant with Master Accounting + CROG-VRS + control plane
+- **Target (locked 2026-04-29 by ADR-004):** **Spark 2 (PERMANENT)** — Market Club replacement stays on spark-2 with the rest of Financial. The previous "Spark 3 PLANNED" target under ADR-001 is canceled by ADR-004; Spark 3 wipes and joins the inference cluster instead.
+Last updated: 2026-04-29
 
 ## Purpose
 
@@ -20,17 +20,9 @@ The 6 specific questions blocking the full Market Club spec:
 1. **What is being replaced?** Marriott Club / `MarriottClub.com` / a different vendor / an internal legacy script set? Concrete identity needed before scoping the replacement.
 2. **What is Dochia and what role does it serve?** Surfaces in operator conversation but absent from the repo + atlas. Is it the new signal source, a scoring component, a vendor, an internal codename for the replacement, something else?
 3. **What is the backup signal source?** When the primary Market Club replacement is unavailable (provisioning gap, vendor outage, data quality alarm), what's the fallback path? Is there a legacy `src/market_sentinel.py` / `src/market_watcher.py` continuity plan?
-4. **When does Spark 3 get provisioned?** Concrete date (or quarter) needed for the cutover plan. Today the scaffolding lives on Spark 2 as a tenant; the move to Spark 3 is the architectural-decision-pending milestone (ADR-002).
-5. **Which `fortress_db` / `fortress_prod` schemas migrate to Spark 3?** Candidate list:
-   - `hedge_fund.market_signals` (definite)
-   - `hedge_fund.watchlist` (definite)
-   - `hedge_fund.active_strategies` (definite)
-   - `hedge_fund.extraction_log` (likely)
-   - `division_a.transactions` (open — depends on Master Accounting placement)
-   - `division_a.chart_of_accounts`, `general_ledger`, `journal_entries` (open — same)
-   - `public.trust_transactions`, `trust_ledger_entries` (open — control-plane co-location vs Financial-spark co-location)
-   - `public.market_intel`, `revenue_ledger`, `finance_invoices` (open)
-6. **What's the cutover plan from Spark 2 to Spark 3?** Step sequence, downtime budget, rollback path, dual-write window, verification checks. Today the scaffolding doesn't yet have a defined migration runbook because Spark 3 isn't provisioned.
+4. ~~**When does Spark 3 get provisioned?**~~ **Closed 2026-04-29 by ADR-004:** Spark 3 wipes and joins the inference cluster instead. Market Club scaffolding stays on Spark 2 permanently.
+5. ~~**Which `fortress_db` / `fortress_prod` schemas migrate to Spark 3?**~~ **Closed 2026-04-29 by ADR-004:** no schema migration. All Financial schemas stay on Spark 2 — `hedge_fund.*`, `division_a.*`, `public.trust_*`, `public.market_intel`, `revenue_ledger`, `finance_invoices` — under the existing logical-isolation contract (Postgres roles + schema separation).
+6. ~~**What's the cutover plan from Spark 2 to Spark 3?**~~ **Closed 2026-04-29 by ADR-004:** no cutover. Market Club replacement scaffolding's permanent home is Spark 2.
 
 ## Stub-then-fill discipline
 
