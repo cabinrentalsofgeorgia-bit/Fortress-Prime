@@ -89,6 +89,8 @@ The **only authorized data path** is: Next.js → Cloudflare Tunnel API call →
 
 > **spark-1 memory pressure (2026-04-23):** The BRAIN service currently uses ≥99% of spark-1's 121 GiB unified memory after load. Track B workload migration (Qdrant, fortress-event-console / redpanda, RAG retriever, chromadb, open-webui → spark-4) is required-before-production to restore the ≥15% headroom rule. Do not put production traffic on BRAIN until Track B completes.
 
+> **2026-04-28 update:** This guidance reflects a 2026-04-23 snapshot. Diagnostic verification on 2026-04-28 found this section does not match production state: 49B Nemotron deployment lives on spark-5 (not spark-1); spark-1 currently runs only NIM Sovereign 8B + Ray worker + Ollama with 52 GB free memory. Memory pressure described above does not apply to current spark-1 state. Treat this section as advisory-not-authoritative pending operator decision on canonical BRAIN tier placement. See INC-2026-04-28-flos-silent-intake.md Item #11.
+
 ## Non-Negotiable Rules
 
 ### Sovereign Ledger Immutability
