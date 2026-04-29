@@ -1,10 +1,13 @@
 ## ADR-003 — Dedicated inference cluster on Sparks 4/5/6
 
 **Date:** 2026-04-29
-**Status:** **PROPOSED** — awaiting operator lock
+**Status:** **LOCKED** — operator decision 2026-04-29
+**Phase 3 sizing (locked at decision time):** **Pattern 1 — TP=2 + 1 hot replica** (see "Tensor-parallel sizing at 3 nodes" below). Operator selected this default at lock time; Pattern 2 / Pattern 3 remain documented but not active.
 
-**Supersedes:** Partial amendment to ADR-001 (one spark per division). ADR-001's app-tenancy rule remains in force; this ADR carves out a shared inference tier that ADR-001 did not anticipate.
-**Relates to:** ADR-002 (cross-division services placement, OPEN)
+**Supersedes:** Earlier ADR-003 (2026-04-26 — "Inference plane: shared swarm across all sparks") in `_architectural-decisions.md`. The shared-swarm decision was made before the dedicated-inference-cluster topology was on the table; this ADR replaces it.
+**Amends:**
+- **ADR-001 (one spark per division)** — app-tenancy rule remains in force; this ADR carves out a shared inference tier that ADR-001 did not anticipate. Acquisitions + Wealth co-tenant on Spark-3 with Financial until Spark-7+ lands.
+- **ADR-002 (Captain/Council/Sentinel placement)** — reverses the 2026-04-26 Council → Spark-4 Option B decision. Council now joins Captain and Sentinel on the spark-2 control plane (Option A across the board). Spark-4 becomes an inference-tier node, not a Council host.
 
 ---
 

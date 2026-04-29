@@ -1,12 +1,12 @@
 # Fortress Prime System Map
 
-Last updated: 2026-04-26
+Last updated: 2026-04-29 (ADR-003 v2 LOCKED; app/inference split)
 
-This map shows **two states** — what runs today, and what we're migrating toward — plus the migration path between them. Source-of-truth for the architectural decisions that shape both: [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md).
+This map shows **two states** — what runs today, and what we're migrating toward — plus the migration path between them. Source-of-truth for the architectural decisions that shape both: [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md). The app-tier ↔ inference-tier split below reflects ADR-003 (2026-04-29 LOCKED — dedicated inference cluster on Sparks 4/5/6) which supersedes the 2026-04-26 "shared swarm across all sparks" ADR-003.
 
 ---
 
-## Current state (2026-04-26)
+## Current state (2026-04-29 — Phase 1 of ADR-003 v2)
 
 ```
                     ┌─────────────────────────────────────┐
@@ -26,43 +26,43 @@ This map shows **two states** — what runs today, and what we're migrating towa
                   ▼                                      ▼
    ┌────────────────────────────────────────────────────────────────┐
    │                                                                │
-   │   SPARK 1 — Fortress Legal       SPARK 2 — CROG-VRS + control  │
-   │   (192.168.0.X) ACTIVE           (192.168.0.100,                │
-   │                                   ctrl @ 100.80.122.100)        │
-   │   ─ Legal email intake            ACTIVE                        │
-   │   ─ Vault ingestion (PR D)       ─ FastAPI :8000                │
-   │   ─ Privileged communications    ─ All Postgres DBs             │
-   │     Qdrant (UUID5 IDs)             (fortress_prod, fortress_db, │
-   │   ─ Council legal retrieval        fortress_shadow, *_test)     │
-   │   ─ TITAN tier                   ─ Qdrant (legal collections)   │
-   │     (DeepSeek-R1 671B)           ─ Redis + ARQ                  │
-   │   ─ BRAIN tier                   ─ NAS mount                    │
-   │     (NIM Nemotron 49B FP8)       ─ SWARM tier                   │
-   │                                    (Ollama qwen2.5:7b)          │
-   │                                  ─ LiteLLM proxy (cluster-wide │
-   │                                    inference router; ADR-003)   │
-   │                                  ─ DOUBLE-DUTY ⚠                │
-   │                                    + temp Financial scaffolding │
-   │                                    + temp control plane         │
-   │                                      (Captain/Council/Sentinel) │
-   │                                                                │
-   │   SPARK 3 — Financial            SPARK 4 — TBD                  │
-   │   PLANNED (not provisioned)      PLANNED (not provisioned)      │
-   │   ─ Will host:                   ─ Likely Acquisitions OR       │
-   │     division_a.* schema             Wealth (operator picks      │
-   │     hedge_fund.* schema             which division ramps first) │
-   │     Master Accounting svc                                       │
-   │     Market Club scoring                                         │
-   │     Financial NAS                                               │
-   │                                                                │
-   │   ── INFERENCE PLANE (current; ADR-003 LOCKED 2026-04-26) ──   │
-   │   Single-endpoint today: only Spark 2 (Ollama qwen2.5:7b +      │
-   │   nomic-embed-text) participates. LiteLLM proxy already running │
-   │   on Spark 2 but routes to a single backend. Spark 1's          │
-   │   TITAN/BRAIN are direct-call legal-only, not yet behind        │
-   │   LiteLLM. ADR-003 Phase 1 will multiply endpoints across all   │
-   │   sparks.                                                       │
-   │                                                                │
+   │   APP TIER                          INFERENCE TIER             │
+   │   ━━━━━━━━━━━━━━━━━━━━━━━━━━        ━━━━━━━━━━━━━━━━━━━━━━━    │
+   │   SPARK 1 — Fortress Legal          SPARK 5 — BRAIN (active)   │
+   │   (192.168.0.X) ACTIVE              ConnectX, Tailscale         │
+   │   ─ Legal email intake              ─ fortress-nim-brain :8100  │
+   │   ─ Vault ingestion (PR D)          ─ Llama-3.3-Nemotron-Super- │
+   │   ─ Privileged comms                  49B-v1.5-FP8 (NIM 2.0.1)  │
+   │     Qdrant (UUID5 IDs)              ─ Ray head (Phase 2 ready)  │
+   │   ─ Legal app (no inference)                                    │
+   │                                     SPARK 6 — staged            │
+   │   SPARK 2 — CROG-VRS + control      10GbE → ConnectX (cable     │
+   │   (192.168.0.100,                    pending)                   │
+   │    ctrl @ 100.80.122.100) ACTIVE    ─ Docker / NGC login done   │
+   │   ─ FastAPI :8000                   ─ NIM image cached on NAS   │
+   │   ─ All Postgres DBs                ─ No inference traffic yet  │
+   │     (fortress_prod, fortress_db,                                │
+   │      fortress_shadow, *_test)       SPARK 4 — app today,        │
+   │   ─ Qdrant (legal collections)      inference at Phase 3        │
+   │   ─ Redis + ARQ                     ─ ConnectX                  │
+   │   ─ NAS mount                       ─ Currently planned for     │
+   │   ─ SWARM tier                        Acquisitions OR Wealth;   │
+   │     (Ollama qwen2.5:7b)               will join inference       │
+   │   ─ LiteLLM gateway                   cluster at Phase 3 with   │
+   │     ▸ legal routes →                  Acq+Wealth co-tenanting   │
+   │       http://spark-5:8100             on Spark-3                │
+   │       (ADR-003 Phase 1)             ──────────────────────────  │
+   │   ─ Captain / Council / Sentinel    LiteLLM (spark-2) routes    │
+   │     (ADR-002 Option A — perm.)      BRAIN tier → spark-5.       │
+   │                                     SWARM stays on spark-2 as   │
+   │   SPARK 3 — Financial               fast-path / degraded-mode.  │
+   │   PLANNED (not provisioned)                                     │
+   │   ─ Will host:                                                  │
+   │     division_a.* + hedge_fund.*                                 │
+   │     Master Accounting + Market                                  │
+   │     Club + Acquisitions + Wealth                                │
+   │     co-tenants                                                  │
+   │                                                                 │
    └────────────────────────────────────────────────────────────────┘
                                      │
                           ┌──────────▼─────────┐
@@ -76,19 +76,20 @@ This map shows **two states** — what runs today, and what we're migrating towa
                           └────────────────────┘
 ```
 
-### Connection legend (current)
+### Connection legend (current — Phase 1 of ADR-003 v2)
 
 | Edge | Description |
 |---|---|
 | Storefront → Tunnel → Spark 2 FastAPI | Public guest traffic; bookings, listings, content. No DB driver in the frontend. |
 | Command-center → Tunnel → Spark 2 FastAPI | Internal staff + AI agent traffic. Vault, Council, deliberation, dashboards. |
-| Spark 1 ↔ Spark 2 (LAN) | Cross-spark for legal Postgres reads (Spark 2's DBs, Spark 1's services), Council retrieval (Spark 1 reads Spark 2's Qdrant) |
+| Spark 1 ↔ Spark 2 (LAN) | Cross-spark for legal Postgres reads (Spark 2's DBs, Spark 1's services), Council retrieval (Spark 2 Council reads Spark 2's Qdrant — Council is now spark-2-permanent per ADR-002 amended). |
+| Spark 2 → Spark 5 (LAN / Tailscale) | LiteLLM gateway routes BRAIN-tier inference to spark-5 NIM at `http://spark-5:8100` (ADR-003 Phase 1; closes audit A-02). |
 | Spark 2 → External | Stripe webhooks (in), Twilio SMS (out), Streamline + Channex (PMS sync), Plaid (banking), QuickBooks (accounting mirror), cPanel IMAP (Captain) |
-| Spark 1 → External | TITAN/BRAIN inference local; ARCHITECT (Gemini) cloud — planning only, no PII |
+| Spark 1 → External | ARCHITECT (Gemini) cloud — planning only, no PII. **No more local TITAN/BRAIN on spark-1 — moved to inference cluster.** |
 
 ---
 
-## Target state (post-migration)
+## Target state (Phase 3 endpoint of ADR-003 v2 — Pattern 1)
 
 ```
                   ┌──────────────────────────────────────┐
@@ -100,63 +101,43 @@ This map shows **two states** — what runs today, and what we're migrating towa
                                    ▼
    ┌────────────────────────────────────────────────────────────────┐
    │                                                                │
-   │   SPARK 1            SPARK 2            SPARK 3        SPARK 4 │
-   │   Fortress           CROG-VRS +         Financial      Council │
-   │   Legal              Captain +          (single duty)  + Acq.  │
-   │   (single duty)      Sentinel           ACTIVE         + Wealth│
-   │   ACTIVE             (multi-purpose)                   (multi- │
-   │                      ACTIVE                            purpose)│
-   │   ─ Legal vault      ─ Storefront       ─ division_a.* ACTIVE  │
-   │   ─ Privileged       ─ Command-center   ─ hedge_fund.*         │
-   │     comms            ─ Properties /     ─ Master Acc   ─ Council│
-   │   ─ TITAN/BRAIN        Bookings           services       (cross-│
-   │                      ─ ALL Postgres     ─ Market Club    division│
-   │                      ─ ALL Qdrant         scoring        deliber-│
-   │                      ─ NAS mount        ─ Financial NAS  ation) │
-   │                      ─ Captain                         ─ Acq.  │
-   │                        (cross-mailbox                    deal   │
-   │                         classification)                  pipe   │
-   │                      ─ Sentinel                        ─ Wealth│
-   │                        (NAS walker;                      intel  │
-   │                         per-division                            │
-   │                         folders                                 │
-   │                         already separate)                       │
-   │                                                                │
-   │   Locked per ADR-001 + ADR-002 (2026-04-26):                   │
-   │     Spark 1 = single-division (Legal)                          │
-   │     Spark 2 = division + shared svcs (CROG-VRS + Captain +     │
-   │               Sentinel) — multi-purpose pattern               │
-   │     Spark 3 = single-division (Financial)                      │
-   │     Spark 4 = shared svcs + intermittent divs (Council +       │
-   │               Acquisitions + Wealth) — multi-purpose pattern  │
-   │                                                                │
-   │   ── INFERENCE PLANE (target; ADR-003 LOCKED 2026-04-26) ──   │
-   │                                                                │
-   │      ┌──────────────── LiteLLM proxy (Spark 2) ────────────┐ │
-   │      │  Cluster-wide router. Per-division virtual keys.    │ │
-   │      │  Phase 4: cost/token tracking per case_slug,         │ │
-   │      │  deliberation, ingestion.                            │ │
-   │      └────┬──────────┬──────────┬──────────┬───────────────┘ │
-   │           ▼          ▼          ▼          ▼                  │
-   │      Spark 1     Spark 2    Spark 3    Spark 4               │
-   │      Ollama/     Ollama     Ollama     Ollama                 │
-   │      vLLM        qwen2.5    (Phase 1   (Phase 1               │
-   │      + TITAN     + nomic-   when prov.) when prov.)           │
-   │      + BRAIN     embed-text                                   │
-   │                                                                │
-   │   Embedding queue (Redis on Spark 2; ADR-003 Phase 2):        │
-   │      process_vault_upload + Sentinel enqueue chunks;          │
-   │      workers on every spark drain queue in parallel.          │
-   │                                                                │
-   │   Council deliberation (ADR-003 Phase 3):                     │
-   │      Logic stays on Spark 4; persona LLM calls dispatched     │
-   │      via LiteLLM, possibly to different sparks in parallel.   │
-   │                                                                │
-   │   Data plane vs. inference plane:                              │
-   │      Data plane (per-division, ADR-001) — schemas, rows,      │
-   │        files, code stay on the division's spark.              │
-   │      Inference plane (cluster-wide, ADR-003) — LLM +          │
-   │        embedding capacity is fungible across sparks.          │
+   │   APP TIER                          INFERENCE TIER (Pattern 1) │
+   │   ━━━━━━━━━━━━━━━━━━━━━━━━━━        ━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+   │   SPARK 1 — Fortress Legal          SPARK 4 — Pattern 1        │
+   │   ─ Legal vault                       hot replica host         │
+   │   ─ Privileged communications        ─ Single 49B instance     │
+   │   ─ Council legal-retrieval            (failover target)       │
+   │     consumer (no inference)           ─ Joins inference cluster│
+   │                                         at Phase 3             │
+   │   SPARK 2 — Control plane           SPARK 5 — TP=2 head         │
+   │   (CROG-VRS + ctrl)                  ─ vLLM TP=2 with Spark-6  │
+   │   ─ FastAPI :8000                    ─ Ray head node            │
+   │   ─ All Postgres                     ─ Instance 1 of 2          │
+   │   ─ Qdrant (legal)                                              │
+   │   ─ Redis + ARQ                     SPARK 6 — TP=2 worker      │
+   │   ─ NAS mount                        ─ vLLM TP=2 with Spark-5  │
+   │   ─ SWARM tier                       ─ ConnectX (Phase 2 cable)│
+   │     (Ollama qwen2.5:7b)                                        │
+   │   ─ LiteLLM gateway                 ──────────────────────────  │
+   │     ▸ load-balances 2               LiteLLM (spark-2) load-     │
+   │       BRAIN instances:              balances 2 instances:       │
+   │       1. TP=2 (5+6)                  1. TP=2 over 5+6           │
+   │       2. Single (4)                  2. Single 49B on 4         │
+   │   ─ Captain (perm.)                 Hot failover if instance    │
+   │   ─ Council (perm.)                 fails (Pattern 1, locked    │
+   │   ─ Sentinel (perm.)                at decision time per        │
+   │                                     ADR-003 Phase 3 sizing).    │
+   │   SPARK 3 — Financial +                                         │
+   │   Acquisitions + Wealth                                         │
+   │   (until Spark-7+)                                              │
+   │   ─ division_a.* + hedge_fund.*                                 │
+   │   ─ Master Accounting               Why Pattern 1:              │
+   │   ─ Market Club replacement         49B has 64 attention heads. │
+   │   ─ Acquisitions deal pipe           TP requires n_heads %      │
+   │   ─ Wealth intelligence              tp_size == 0. 64 / 3 ≠ 0,  │
+   │                                     so literal TP=3 won't run.  │
+   │                                     TP=2 + hot replica gives    │
+   │                                     2× throughput AND failover. │
    └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -164,67 +145,46 @@ This map shows **two states** — what runs today, and what we're migrating towa
 
 ## Migration path
 
-### Stage 1 — Spark 3 provisioning (gating dependency)
+### Stage 1 — ADR-003 Phase 1 (this PR) — LiteLLM legal-routes cutover
 
-**Status:** Hardware not yet acquired. Timeline operator-confirmed (open question per ADR-002 / `divisions/financial.md`).
+Cloud → spark-5 NIM. Closes audit finding A-02 (sovereign legal inference). LiteLLM gateway on spark-2 routes BRAIN-tier traffic to `http://spark-5:8100`. Cloud routes preserved as commented-out emergency fallback. Single verification probe gates the cutover.
 
-When Spark 3 lands:
-1. Provision Postgres (matched version + tuning to Spark 2's instance)
-2. Provision Qdrant if Financial collections move (open question — most Qdrant stays on Spark 2 because legal collections live there; Financial may not need a Qdrant of its own)
-3. Stand up Master Accounting services as warm-spare on Spark 3 (no traffic yet)
-4. Stand up Market Club scoring engine on Spark 3 in parallel with Spark 2 scaffolding
+### Stage 2 — ADR-003 Phase 2 — Spark-6 cable cutover (TP=2)
 
-### Stage 2 — `hedge_fund.*` + `division_a.*` schema migration
+Spark-6 moves from 10GbE to ConnectX-7. Spark-5 (head) + Spark-6 (worker) form a Ray cluster running vLLM with `--tensor-parallel-size 2` over NCCL/RDMA. Single OpenAI-compatible endpoint, 128K context, 2× throughput. Cable acquisition is the gating dependency.
 
-Patterns to apply (informed by PR G phase C lessons + Issue #209):
+### Stage 3 — Spark-3 provisioning + Financial migration
 
-1. **Dual-write window:** scripts on Spark 2 begin writing to both Spark 2 and Spark 3 Postgres; reads still served by Spark 2
-2. **Verification window:** compare row counts + checksums daily
-3. **Read switchover:** Spark 3 becomes the read source; Spark 2 becomes follower
-4. **Write switchover:** Spark 3 becomes the canonical writer; Spark 2 stops accepting Financial-domain writes
-5. **Cleanup:** drop Financial schemas from Spark 2 (after operator-confirmed verification window)
+When Spark-3 hardware lands:
 
-⚠️ Per Issue #209, the FK on `legal.ingest_runs.case_slug → legal.cases.case_slug ON DELETE CASCADE` ate the audit row for the PR D 7IL ingestion when Phase C renamed the slug. The Spark 2→3 migration must NOT trigger similar CASCADEs across `division_a.*` audit tables.
+1. Provision Postgres (matched version + tuning to spark-2's instance)
+2. Provision Qdrant if Financial collections move (open question — most Qdrant stays on spark-2 because legal collections live there; Financial may not need a Qdrant of its own)
+3. Stand up Master Accounting services as warm-spare on Spark-3 (no traffic yet)
+4. Stand up Market Club scoring engine on Spark-3 in parallel with spark-2 scaffolding
+5. Migrate `hedge_fund.*` + `division_a.*` schemas spark-2 → spark-3 using dual-write → verify → read switchover → write switchover → cleanup pattern (informed by PR G phase C lessons + Issue #209)
 
-### Stage 3 — Council migration to Spark 4 (LOCKED per ADR-002)
+⚠️ Per Issue #209, the FK on `legal.ingest_runs.case_slug → legal.cases.case_slug ON DELETE CASCADE` ate the audit row for the PR D 7IL ingestion when Phase C renamed the slug. The spark-2 → spark-3 migration must NOT trigger similar CASCADEs across `division_a.*` audit tables.
 
-After Spark 4 hardware provisions:
+### Stage 4 — ADR-003 Phase 3 — Spark-4 joins inference cluster
 
-1. Stand up Council on Spark 4 as warm-spare (no traffic; Spark 2 keeps serving)
-2. Parallel verification week — run Council on both sparks against the same case_slug inputs; compare frozen-context outputs for byte-equality
-3. Latency check — Spark 4 → Spark 2 Qdrant read-replica latency must stay under per-deliberation budget
-4. Cutover — `apps/command-center` deliberation API endpoint switches to Spark 4
-5. 7-day soak; Spark 2 Council instance retires
+Software-only cutover. Spark-4 already on ConnectX. Acquisitions and Wealth co-tenant on Spark-3 with Financial. Inference cluster reaches **Pattern 1 sizing (TP=2 + 1 hot replica)** as locked at the 2026-04-29 decision.
 
-Captain + Sentinel **stay on Spark 2 permanently** per ADR-002. No migration for them.
+Trigger criteria for Phase 3 (operator confirms at Phase 2 completion): (a) Acquisitions/Wealth workloads stay light enough to co-tenant on Spark-3, OR (b) BRAIN-tier traffic outgrows TP=2 throughput.
 
-### Stage 4 — Acquisitions + Wealth onboarding on Spark 4
+### Stage 5 — Spark-7+ — Acquisitions or Wealth gets dedicated app spark
 
-Operator chooses ramp order. Both divisions co-host with Council on Spark 4 per ADR-002 multi-purpose pattern. Postgres schemas may live on Spark 4 with cross-spark access from Spark 2 if needed.
-
-### Stage 5 — Spark 2 sheds Financial tenant
-
-Once Spark 3 cutover (Stage 1+2) lands, Spark 2 sheds the Market Club replacement scaffolding. Spark 2's permanent role is "CROG-VRS + Captain + Sentinel" — multi-purpose by ADR-002 design, not transitional.
-
-### Stage 6 — Inference plane phases (LOCKED per ADR-003)
-
-ADR-003 LOCKED captures architectural direction; the four phases are deliberate, gated work — each phase ships as its own PR with explicit operator authorization. They run independently of the data-plane stages above (1–5).
-
-1. **Phase 1 — Endpoint multiplication.** Install Ollama (or vLLM) on Spark 1, Spark 3 (when provisioned), Spark 4 (when provisioned). Each spark hosts `nomic-embed-text` + an LLM. Register endpoints with LiteLLM. Verify cross-spark inference works.
-2. **Phase 2 — Embedding queue.** Redis-backed queue (Spark 2 hosts Redis). Workers on each spark consume from queue. `process_vault_upload` enqueues chunks rather than synchronous embedding. Resolves Issue #228 Vanderburge ingestion bottleneck.
-3. **Phase 3 — Council load balancing.** Council deliberation steps route through LiteLLM. Multi-LLM persona deliberation can use different endpoints in parallel.
-4. **Phase 4 — Per-division usage accounting.** LiteLLM virtual keys per division. Cost/token tracking per case_slug, per deliberation, per ingestion. Surface in admin dashboard.
+Once additional hardware is acquired, the first of Acquisitions / Wealth ramps off Spark-3 onto its own app spark. Order is operator's call.
 
 ---
 
 ## Cross-references
 
-- [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md) — ADR-001 (LOCKED: one spark per division) + ADR-002 (LOCKED: Captain/Sentinel stay on Spark 2 permanent; Council moves to Spark 4 multi-purpose with Acquisitions + Wealth) + ADR-003 (LOCKED: inference plane is cluster-wide shared via LiteLLM)
-- [`shared/infrastructure.md`](shared/infrastructure.md) — Spark allocation table + inference plane section + migration milestones
-- [`shared/council-deliberation.md`](shared/council-deliberation.md) — Council inference dispatch via LiteLLM (ADR-003)
-- [`shared/captain-email-intake.md`](shared/captain-email-intake.md) — Captain classification via LiteLLM (ADR-003)
-- [`shared/sentinel-nas-walker.md`](shared/sentinel-nas-walker.md) — Sentinel embedding via cluster inference plane (ADR-003)
-- [`divisions/_template.md`](divisions/_template.md) — "Inference consumers" subsection per division
-- [`divisions/financial.md`](divisions/financial.md) — Spark 3 target details + open questions
-- [`divisions/market-club.md`](divisions/market-club.md) — Spark 3 cutover blocked on operator answers (6 questions)
+- [`cross-division/_architectural-decisions.md`](cross-division/_architectural-decisions.md) — ADR-001 (LOCKED, amended 2026-04-29: one spark per app division; inference is shared cluster) + ADR-002 (LOCKED, amended 2026-04-29: Captain/Council/Sentinel all permanent on spark-2 control plane — reverses the earlier Council → Spark-4 decision) + ADR-003 (LOCKED 2026-04-29: dedicated inference cluster on Sparks 4/5/6, Phase 3 sizing Pattern 1 TP=2 + hot replica)
+- [`cross-division/ADR-003-inference-cluster-topology.md`](cross-division/ADR-003-inference-cluster-topology.md) — canonical ADR-003 v2 document
+- [`shared/infrastructure.md`](shared/infrastructure.md) — Spark allocation table + DEFCON tier table + migration milestones (post-ADR-003 v2)
+- [`shared/council-deliberation.md`](shared/council-deliberation.md) — Council on spark-2 control plane (ADR-002 Option A across the board)
+- [`shared/captain-email-intake.md`](shared/captain-email-intake.md) — Captain on spark-2 control plane
+- [`shared/sentinel-nas-walker.md`](shared/sentinel-nas-walker.md) — Sentinel on spark-2 control plane
+- [`divisions/_template.md`](divisions/_template.md) — "Inference consumers" subsection per division (now consume spark-5 NIM via LiteLLM)
+- [`divisions/financial.md`](divisions/financial.md) — Spark-3 target details + Acquisitions/Wealth co-tenancy until Spark-7+
 - [`fortress_atlas.yaml`](../../fortress_atlas.yaml) — runtime sector routing (currently spark-agnostic; future amendment may add per-sector spark allocation)
