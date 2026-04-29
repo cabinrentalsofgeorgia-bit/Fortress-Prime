@@ -1,0 +1,12 @@
+[Unit]
+Description=Fortress Prime Brain (Streamlit)
+After=network.target
+
+[Service]
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+ExecStart=/home/admin/Fortress-Prime/venv/bin/streamlit run app.py --server.port 8501 --server.headless true
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
