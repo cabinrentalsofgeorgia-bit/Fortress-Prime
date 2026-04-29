@@ -1,0 +1,69 @@
+[Unit]
+Description=Fortress NIM Embed — llama-nemotron-embed-1b-v2 on spark-3
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-nim-embed.service
+After=docker.service network-online.target
+Requires=docker.service
+
+# ============================================================================
+# DRAFT — NOT YET DEPLOYED. DO NOT `systemctl enable / start` AS-IS.
+#
+# STOP gate hit during 2026-04-29 deployment per brief §8:
+#   The brief specifies host port 8101 for this NIM. That port is already
+#   bound on spark-3 by `fortress-nim-vision-concierge.service` (Vision NIM,
+#   nemotron-nano-12b-v2-vl). §8 forbids modifying Vision NIM.
+#
+#   `sudo ss -tlnp | grep 8101` on spark-3 (2026-04-29):
+#     LISTEN 0.0.0.0:8101  users:(("docker-proxy",pid=707167))
+#     LISTEN [::]:8101     users:(("docker-proxy",pid=707176))
+#
+# Operator decision required before activation:
+#   Option 1: re-port to 8102 (next free, sequential)
+#   Option 2: re-port to a different free port in 8100-8199
+#   Option 3: deploy to spark-4 instead (per brief §4 fallback)
+#
+# Once port resolved: edit `-p <PORT>:8000` below, daemon-reload, enable,
+# start. Re-verify §5.4 health check + §5.6 gateway probe + §6 quality
+# validation before promoting to "deployed."
+# ============================================================================
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+TimeoutStartSec=300
+
+EnvironmentFile=/etc/fortress/nim.env
+
+ExecStartPre=-/usr/bin/docker stop fortress-nim-embed
+ExecStartPre=-/usr/bin/docker rm fortress-nim-embed
+
+# Load from NAS if pinned image not in local Docker daemon cache
+# Pinned to arm64 image digest sha256:c559ea63... (loaded 2026-04-29 from
+# /mnt/fortress_nas/nim-cache/nim/llama-nemotron-embed-1b-v2/latest/image.tar)
+ExecStartPre=/bin/bash -c '\
+  if ! docker image inspect nvcr.io/nim/nvidia/llama-nemotron-embed-1b-v2:latest >/dev/null 2>&1; then \
+    echo "Loading NIM from NAS cache..."; \
+    docker load < /mnt/fortress_nas/nim-cache/nim/llama-nemotron-embed-1b-v2/latest/image.tar; \
+  fi'
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-nim-embed \
+  --rm \
+  --gpus all \
+  --shm-size=4g \
+  -p 8101:8000 \
+  -v /mnt/fortress_nas/nim-cache/nim/llama-nemotron-embed-1b-v2/nim-weights-cache:/opt/nim/.cache \
+  --env-file /etc/fortress/nim.env \
+  -e NIM_MODEL_PROFILE=auto \
+  nvcr.io/nim/nvidia/llama-nemotron-embed-1b-v2:latest
+
+ExecStop=/usr/bin/docker stop fortress-nim-embed
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nim-embed
+
+[Install]
+WantedBy=multi-user.target
