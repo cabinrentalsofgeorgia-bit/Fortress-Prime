@@ -1,0 +1,60 @@
+[Unit]
+Description=Fortress NIM Brain — nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8 on spark-1 (Tier 2 sovereign reasoning)
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-nim-brain.service
+Documentation=https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1_5-FP8
+After=docker.service network-online.target remote-fs.target
+Requires=docker.service
+RequiresMountsFor=/mnt/fortress_nas
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+TimeoutStartSec=1200
+
+# Phase 5c (2026-04-23) — Tier 2 sovereign brain on spark-1 (GB10, ARM64).
+# Deployment path: generic llm-nim + FP8 weights bind-mounted from NAS.
+# History: dedicated v1.5 NIM 2.0.3 deadlocked on PyTorch CC 12.1 for GB10
+# Blackwell; bf16 weights exceeded unified memory with host workload. FP8
+# (~49 GiB) fits at NIM_KVCACHE_PERCENT=0.84 (empirical — 0.85 narrowly
+# fails vLLM startup check when host workload holds ~19 GiB of 121.69 GiB).
+# - NGC_API_KEY via --env-file /etc/fortress/nim.env (audit I-09 pattern).
+# - NIM_FORCE_TRUST_REMOTE_CODE=1 required for DeciLM custom modeling code.
+# - NIM_MODEL_PROFILE=vllm forces the known-good backend on GB10.
+# - Container-side mount path uses hyphens (no dots) — HF dynamic module
+#   loader creates a Python package from the basename; dots break import.
+# - NIM_DISABLE_CUDA_GRAPH=1 — vLLM's CUDA graph capture hits
+#   cudaErrorStreamCaptureUnsupported on Blackwell/SM 12.1 during warmup.
+#   5-15% throughput cost; remove when a Blackwell-aware vLLM/NIM ships.
+
+ExecStartPre=-/usr/bin/docker stop fortress-nim-brain
+ExecStartPre=-/usr/bin/docker rm fortress-nim-brain
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-nim-brain \
+  --rm \
+  --runtime=nvidia \
+  --gpus all \
+  --shm-size=16g \
+  -p 8100:8000 \
+  -v /mnt/fortress_nas/nim-cache/hf/llm-nim-runtime-cache/spark-5:/opt/nim/.cache \
+  --env-file /etc/fortress/nim.env \
+  -e NIM_SERVED_MODEL_NAME=nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8 \
+  -e NIM_MODEL_PROFILE=f85944b2ec3fe893b85d22702f0f9dedeae0b4b38440478988c60e423223a0ad \
+  -e NIM_FORCE_TRUST_REMOTE_CODE=1 \
+  -e NIM_KVCACHE_PERCENT=0.84 \
+  -e NIM_MAX_MODEL_LEN=32768 \
+  -e NIM_DISABLE_CUDA_GRAPH=1 \
+  -e "NIM_PASSTHROUGH_ARGS=--disable-custom-all-reduce --compilation-config '{\"pass_config\": {\"fuse_allreduce_rms\": false}}'" \
+  nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1.5@sha256:4399cafb558c0846eb1f3c510a3b3ccd9c1fd0b1b7eec9719467519a21a6c156
+
+ExecStop=/usr/bin/docker stop fortress-nim-brain
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nim-brain
+
+[Install]
+WantedBy=multi-user.target
