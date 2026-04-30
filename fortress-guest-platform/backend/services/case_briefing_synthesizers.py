@@ -202,7 +202,7 @@ async def synthesize_synthesis_section(
     packet: GroundingPacket,
     *,
     brain_client: BrainClient,
-    max_tokens: int = 2000,
+    max_tokens: int = 8000,  # Cascade fix per PR #326: BrainClient default raised to 8000 to give nemotron_v3 reasoning trace room to complete before content emission. Pre-fix 2000 cap caused Track A (PR #323) to hit finish_reason=length on all 5 synthesis sections with reasoning consuming the full budget.
 ) -> SectionResult:
     """Run a BRAIN call against the packet and produce a SectionResult."""
     title_map = {
