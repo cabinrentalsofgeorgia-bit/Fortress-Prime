@@ -333,13 +333,55 @@ Read-only audits of spark-3 and spark-4 on 2026-04-29 confirmed both nodes are a
 
 ---
 
+## ADR-006 (2026-04-30) — Phase 2 Partner Reassignment (spark-5 + spark-4 in lieu of spark-5 + spark-6)
+
+**Date:** 2026-04-30
+**Status:** **PROPOSED** — awaiting operator lock
+**Supersedes:** ADR-003 §Phase 2 partner choice. ADR-003's overall inference cluster intent (Sparks 4/5/6 expanded to 3/4/5/6 per ADR-004 amendment v2) remains in force. ADR-003 Pattern 1 sizing (TP=2 + hot replica) remains the locked Phase 3 sizing decision.
+**Relates to:** ADR-001 (LOCKED, amended), ADR-002 (LOCKED, resolved by ADR-003), ADR-003 (LOCKED 2026-04-29 + Phase 1 cutover PR #285), ADR-004 amendment v2 (LOCKED 2026-04-29, retain-and-document, PR #293).
+
+**Canonical document:** `docs/architecture/cross-division/ADR-006-phase-2-partner-reassignment.md` (full decision text, rationale, tradeoffs, consequences).
+
+**Decision (one-paragraph summary for registry readers):**
+
+Phase 2 TP=2 BRAIN partnership is reassigned from spark-5 + spark-6 to **spark-5 + spark-4**. Spark-6 is deferred to Phase 3+ as hot replica once its ConnectX hardware status resolves. The spark-6 hardware gap (`lspci | grep -i mellanox` returns nothing per PR #309 audit) makes its Phase 2 partnership operator-paced and unbounded; spark-4 has working ConnectX fabric (10.10.10.4 + 10.10.11.4, 100Gbps, MTU 9000, Ray worker active) and is available today. ADR-003 Pattern 1 sizing (TP=2 + hot replica) remains the locked Phase 3 design — only the partner identity changes.
+
+**Rationale (capsule — full text in canonical doc):**
+- Spark-6 hardware gap is operator-paced; waiting risks counsel-hire critical path (~46 days remaining per master plan §2 case clock).
+- Spark-4 has working ConnectX fabric per audit + RDMA driver srcversion matching cluster canonical.
+- Spark-4 RAM headroom permits TP=2 partnership (working set estimate ~30GB; read-only verification 2026-04-30 measured 5.6 GiB actual RSS; 128GB envelope; BRAIN-half ~25GB → total ~30–55GB committed, ~70–95GB headroom).
+- Spark-5 RAM headroom IMPROVES under TP=2 (92% utilization standalone → ~25GB BRAIN-half post-split).
+- ADR-004 v2's retain-and-document intent is satisfied: spark-4 keeps existing services, TP=2 added additively, no wipe.
+- Spark-6 path not abandoned — joins Phase 3 hot replica when hardware resolves.
+
+**Tradeoffs accepted:**
+- Spark-4's app workload co-tenants with TP=2 BRAIN-half (memory pressure ~30GB → ~55GB; acceptable within 128GB envelope).
+- Optional Ollama migration off spark-4 deferred to operational brief execution.
+- qdrant-vrs + SenseVoice stay on spark-4 (no inference contention expected).
+- Phase 2 deviates from ADR-003's locked design — operator-locked decisions amended via subsequent ADRs.
+- Spark-6 hot replica delivery date unknown; Phase 3 + Phase 4 gated on hardware resolution.
+
+**Consequences:**
+- Master plan §5.1 cluster IP truth table needs spark-4 role updated to "App + Inference partner" post-cutover.
+- Master plan §5.2 inference tier table: BRAIN service updates from "spark-5:8100 standalone NIM" to "spark-5+spark-4 TP=2 vLLM endpoint spark-5:8000 (or VIP)".
+- Master plan §6.2 inference platform: ADR-003 Phase 2 status moves from "BLOCKED on cable" to "EXECUTING per ADR-006".
+- ADR-003 Phase 3 (hot replica) + Phase 4 (4-node sizing) status: gated on spark-6 hardware resolution, not just cable.
+- Spark-4 RDMA enumeration debug Issue #294 becomes higher priority — spark-4 is now an RDMA endpoint.
+- ADR-004 v2 retain-and-document scope extended: spark-4 now holds inference + app co-tenancy, not just app + Ray worker.
+
+**Companion docs (this PR):**
+- Canonical ADR text: `docs/architecture/cross-division/ADR-006-phase-2-partner-reassignment.md`
+- Operational cutover brief: `docs/operational/briefs/tp2-brain-phase-2-cutover-2026-04-30.md` (drafted; execution is a separate authorized PR)
+
+---
+
 ## How to add an ADR
 
-1. Increment the number (next is ADR-004)
+1. Increment the number (next is ADR-007)
 2. Date it (UTC)
-3. Set status: LOCKED, OPEN, AMENDED, or SUPERSEDED-BY-ADR-N
+3. Set status: LOCKED, OPEN, PROPOSED, AMENDED, or SUPERSEDED-BY-ADR-N
 4. State the decision in 1-2 sentences
 5. Rationale: why this over alternatives
 6. Implications: what changes downstream
 
-Last updated: 2026-04-29 (ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
+Last updated: 2026-04-30 (ADR-006 PROPOSED — Phase 2 partner reassignment from spark-6 to spark-4; ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
