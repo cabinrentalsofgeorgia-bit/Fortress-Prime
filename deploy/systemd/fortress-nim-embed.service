@@ -1,0 +1,61 @@
+[Unit]
+Description=Fortress NIM Embed — llama-nemotron-embed-1b-v2 on spark-3
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/fortress-nim-embed.service
+After=docker.service network-online.target
+Requires=docker.service
+
+# Activated 2026-04-29 per llama-nemotron-embed-deployment-brief.md.
+#
+# Two corrections to brief defaults:
+# 1. Host port 8102 (NOT brief-default 8101 — that was already bound by
+#    Vision NIM `fortress-nim-vision-concierge.service`; operator chose 8102
+#    to avoid colliding with Vision NIM and honor §8 hard constraint
+#    forbidding Vision NIM modification).
+# 2. NIM_MODEL_PROFILE pinned to the only compatible profile on this GB10
+#    host (model_type:onnx|precision:fp16). Brief default `auto` failed with
+#    "no matching profile_id or profile description in manifest" — that
+#    keyword is not supported by this NIM. Profile discovered via
+#    `docker run --rm --gpus all <image> list-model-profiles` 2026-04-29.
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+TimeoutStartSec=300
+
+EnvironmentFile=/etc/fortress/nim.env
+
+ExecStartPre=-/usr/bin/docker stop fortress-nim-embed
+ExecStartPre=-/usr/bin/docker rm fortress-nim-embed
+
+# Load from NAS if pinned image not in local Docker daemon cache
+# Image: nvcr.io/nim/nvidia/llama-nemotron-embed-1b-v2:latest
+# arm64, image ID sha256:c559ea63...
+# (loaded 2026-04-29 from /mnt/fortress_nas/nim-cache/nim/llama-nemotron-embed-1b-v2/latest/image.tar)
+ExecStartPre=/bin/bash -c '\
+  if ! docker image inspect nvcr.io/nim/nvidia/llama-nemotron-embed-1b-v2:latest >/dev/null 2>&1; then \
+    echo "Loading NIM from NAS cache..."; \
+    docker load < /mnt/fortress_nas/nim-cache/nim/llama-nemotron-embed-1b-v2/latest/image.tar; \
+  fi'
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-nim-embed \
+  --rm \
+  --gpus all \
+  --shm-size=4g \
+  -p 8102:8000 \
+  -v /mnt/fortress_nas/nim-cache/nim/llama-nemotron-embed-1b-v2/nim-weights-cache:/opt/nim/.cache \
+  --env-file /etc/fortress/nim.env \
+  -e NIM_MODEL_PROFILE=e28f17c9c13a99055d065f88d725bf93c23b3aab14acd68f16323de1353fc528 \
+  nvcr.io/nim/nvidia/llama-nemotron-embed-1b-v2:latest
+
+ExecStop=/usr/bin/docker stop fortress-nim-embed
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nim-embed
+
+[Install]
+WantedBy=multi-user.target
