@@ -141,4 +141,21 @@ The Nano-9B failure mode (first-person bleed-through, `<think>` block leakage) i
 
 ---
 
+## Operator decision (recorded 2026-04-30 per Phase 9 brief §3.1)
+
+**Verdict: B / C accepted.** Lock-readiness unchanged.
+
+Rationale per operator: Super-120B's precision-filter behavior (6 sources considered → 3 cited in content) is correct quality, not under-citation. Section 5 specifically validated by content substance:
+- 5 distinct defense theories articulated
+- 2 explicitly flagged as "thin or contradicted" per prompt instruction
+- `finish_reason=stop` (model voluntarily terminated, not max_tokens hit)
+
+The Nano-9B citation count floor (≥18) was calibrated against promiscuous-cite behavior. Under a precision-filter model, **raw citation count is the wrong metric for argumentative sections**. Section-type-specific quality criteria filed as P3 follow-up issue ("Section-type-specific quality criteria for Phase B smoke" — Phase 9 brief §9.4).
+
+**Applied across:**
+- ADR-007 lock-readiness criteria — unchanged; soak continues 2026-04-30 → 2026-05-14
+- Phase 9 brief proceeded under this decision (Wave 2 alias surgery + BRAIN-49B retirement + soak instrumentation in PR #322)
+
+---
+
 End of Section 5 smoke supplemental.
