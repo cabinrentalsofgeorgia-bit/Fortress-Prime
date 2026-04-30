@@ -1,0 +1,17 @@
+# Phase 9 soak metric collector — runs hourly on spark-2.
+# Source: docs/operational/phase-9-wave-2-alias-surgery-brief.md §8.2
+# Deploys to /etc/cron.d/phase-9-soak (operator: sudo cp + chmod 644).
+#
+# 14-day soak window: starts 2026-04-30 (per Phase 7 smoke completion).
+# Target end-date: 2026-05-14 (operator-confirmed, not set in stone).
+#
+# Output goes to /mnt/fortress_nas/audits/phase-9-soak/<YYYY-MM-DD>.log
+# Aggregator (separate cron) at 00:05 UTC reads daily file → summary.
+#
+# LITELLM_MASTER_KEY: collector falls back to reading from litellm_config.yaml
+# directly if env var unset; cron does not need to source secrets.
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Hourly collection
+0 * * * * admin /usr/bin/python3 /home/admin/Fortress-Prime/fortress-guest-platform/backend/scripts/phase_9_soak_collect.py
