@@ -375,13 +375,73 @@ Phase 2 TP=2 BRAIN partnership is reassigned from spark-5 + spark-6 to **spark-5
 
 ---
 
+## ADR-007 (2026-04-30) — Nemotron-3-Super-120B-A12B-NVFP4 TP=2 (spark-3 + spark-4) as Fortress Legal synthesizer
+
+**Date:** 2026-04-30
+**Status:** **PROPOSED** — operator review + 14-day stability soak required for lock
+**Supersedes:** Nano-9B-based synthesis path (Phase B v0.3.5, the most recent attempt). Phase B v0.3.5 + earlier v0.2 / v0.3 could not solve Nano-9B's first-person-planning-prose-bleeding-into-content failure mode at the synthesizer level — the format failure was structural to a single-content-stream model emitting both reasoning and answer in one channel.
+**Stacks on:** ADR-006 LOCKED (spark-3 + spark-4 partnership for TP=2 BRAIN), PR #309 (fabric audit), PR #310 (fabric cutover prep), PR #315 (ADR-006), PR #320 (spark-3 sysctl).
+
+**Canonical document:** `docs/operational/nemotron-3-super-tp2-deployment.md` (full deployment evidence: Phase 4 build/stage, Phase 5 prereqs, Phase 6 launch transcript, Phase 7 smoke verdict, mitigation table, rollback path).
+
+**Decision (one-paragraph summary for registry readers):**
+
+Deploy `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4` on spark-3 + spark-4 as a tensor-parallel-size=2 instance, served via the community `eugr/spark-vllm-docker` container (built as-is, no PR #141 cu130→cu132 patch applied) with Ray distributed executor over ConnectX RoCE (fabric A `10.10.10.0/24`, `NCCL_IB_HCA=rocep1s0f0,roceP2p1s0f1`, MTU 9000, 97.98 Gbps verified). vLLM config: `cutlass` MoE backend, `TRITON_ATTN` attention, `nemotron_v3` reasoning parser, `qwen3_coder` tool-call parser, `kv_cache_dtype=fp8`, `max_model_len=262144` (256k; 1M deferred), `gpu_memory_utilization=0.7`, `max_num_seqs=10`, `load_format=fastsafetensors`, MTP/speculative decoding NOT enabled. Endpoint: `http://10.10.10.3:8000/v1`, served-model-name `nemotron-3-super`. **Supersedes Nano-9B as the Fortress Legal synthesizer.**
+
+**Validation (Phase 7 smoke, Case I Section 2 — the worst Nano-9B failure point):**
+
+All 4 objective criteria passed:
+1. Output tokens 5,560 ≥ 3,000 ✅
+2. **Citation count 18 ≥ 18** ✅ (Nano-9B floor never cleared)
+3. No first-person planning prose in `content` ✅ (0 matches for "Let me / I'll / I'm going to / Wait / Let's / First, I"; 5 matches landed in `message.reasoning` field where they belong)
+4. No `<think>` blocks in `content` ✅ (`nemotron_v3` parser separates reasoning by architecture)
+
+Steady-state metrics: 19.97 tok/s output (~83% of NVIDIA's claimed 24 tok/s); 278s wall per section; 9,614 prompt tokens + 5,560 completion tokens; 95–97 GiB RAM committed per node (78%); `finish_reason: stop` (clean termination, not max_tokens).
+
+**Operator quality verdict:** PASS. *"Format compliance is the decisive shift — `nemotron_v3` parser separates reasoning from content by architecture, killing the entire Nano-9B failure mode."*
+
+**Rationale (capsule):**
+- Nano-9B's structural format failure cannot be patched at the synthesizer level. Only architectural separation of reasoning and content fixes it. NemotronH `nemotron_v3` parser does this.
+- TP=2 across two GB10 (single-GPU/node) Sparks via Ray-managed placement group is the field-verified deployment path per `eugr/spark-vllm-docker`. NVIDIA's NGC vLLM container was the original brief's target but operator pivoted to community Docker after the operator's own research confirmed end-to-end TP=2 verification on this exact hardware.
+- 120B-NVFP4 fits 2× GB10 unified memory (~85 GiB committed per rank at `gpu_memory_utilization=0.7`) with ~25 GiB headroom per node. ADR-006 RAM math validated.
+- 256k context (`max_model_len=262144`) is sufficient for full case-evidence packets up to ~9,600 prompt tokens (Phase 7 measurement) without exhausting KV cache budget.
+
+**Tradeoffs accepted:**
+- Wall time per section ~4.6 min vs Nano-9B's faster but unusable output. Quality > speed for counsel-hire path.
+- Spark-3 vision NIM (:8101) + embed NIM (:8102) stopped to free GPU; restart commands documented; long-term disposition deferred to follow-up F4.
+- Spark-3 → spark-4 ssh trust deployed (admin ed25519 pubkey added to spark-4 `authorized_keys` Phase 5 Q1) — durable change; no rollback planned.
+- Custom recipe `recipes/nemotron-3-super-nvfp4-local.yaml` diverges from upstream eugr/spark-vllm-docker (cleared `model:` field + local mount path); Fortress-specific, won't conflict with upstream `git pull`.
+- Build-as-is path on cu130 channel is supported by upstream's `torch==2.11.0` pin; if upstream changes the pin in a future commit, must re-evaluate at next image rebuild.
+
+**Consequences:**
+- `infrastructure.md` DEFCON tier table: BRAIN tier moves from "spark-5 standalone NIM" to "spark-3 + spark-4 TP=2 vLLM (Nemotron-Super-120B-NVFP4)".
+- Master plan §5.2 inference tier table updated.
+- Spark-3 + spark-4 are now joint inference-cluster members (TP=2 partnership) per ADR-006; ADR-007 commits them to the Nemotron-Super model serving role.
+- Phase 9 caller-retarget brief unblocked (separate PR after ADR-007 lock): point Phase B synthesis + Council deliberation + legal-brief callers at `nemotron-3-super`, retire Nano-9B path.
+- IRON_DOME sovereignty: Fortress Legal synthesis remains on-premises; no change to compliance posture.
+
+**Open follow-ups (not blocking lock):**
+1. **F1** — Caller retarget brief: Phase B + Council + legal-brief callers point at `nemotron-3-super` (P0 separate brief after lock).
+2. **F2** — Parallel section synthesis (5 concurrent via `--max-num-seqs 10` headroom) for wall-time reduction (P2).
+3. **F3** — MTP / `--speculative_config` evaluation post-soak (P3).
+4. **F4** — Re-evaluate spark-3 NIM disposition (vision + embed): move, retire, or co-tenant (P2).
+5. **F5** — Sustained-bandwidth iperf3 across fabric A + B (P3).
+
+**Lock pending:** operator review of this PR + 14-day stability soak.
+
+**Companion docs (this PR):**
+- Canonical deployment doc: `docs/operational/nemotron-3-super-tp2-deployment.md`
+- Per-phase evidence: `docs/operational/phase-2-netplan-mtu9000-evidence-2026-04-30.md`, `phase-4-model-container-stage-evidence-2026-04-30.md`, `phase-5-prereqs-evidence-2026-04-30.md`
+
+---
+
 ## How to add an ADR
 
-1. Increment the number (next is ADR-007)
+1. Increment the number (next is ADR-008)
 2. Date it (UTC)
 3. Set status: LOCKED, OPEN, PROPOSED, AMENDED, or SUPERSEDED-BY-ADR-N
 4. State the decision in 1-2 sentences
 5. Rationale: why this over alternatives
 6. Implications: what changes downstream
 
-Last updated: 2026-04-30 (ADR-006 LOCKED — Phase 2 partner reassignment from spark-6 to spark-4, operator concurrence Gary Knight; ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
+Last updated: 2026-04-30 (ADR-007 PROPOSED — Nemotron-3-Super-120B-A12B-NVFP4 TP=2 on spark-3+spark-4 supersedes Nano-9B as Fortress Legal synthesizer; Phase 7 smoke on Case I Section 2 cleared all 4 objective criteria; ADR-006 LOCKED — Phase 2 partner reassignment from spark-6 to spark-4, operator concurrence Gary Knight; ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
