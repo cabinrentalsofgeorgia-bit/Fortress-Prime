@@ -336,7 +336,7 @@ Read-only audits of spark-3 and spark-4 on 2026-04-29 confirmed both nodes are a
 ## ADR-006 (2026-04-30) — Phase 2 Partner Reassignment (spark-5 + spark-4 in lieu of spark-5 + spark-6)
 
 **Date:** 2026-04-30
-**Status:** **PROPOSED** — awaiting operator lock
+**Status:** **LOCKED 2026-04-30** — operator concurrence Gary Knight
 **Supersedes:** ADR-003 §Phase 2 partner choice. ADR-003's overall inference cluster intent (Sparks 4/5/6 expanded to 3/4/5/6 per ADR-004 amendment v2) remains in force. ADR-003 Pattern 1 sizing (TP=2 + hot replica) remains the locked Phase 3 sizing decision.
 **Relates to:** ADR-001 (LOCKED, amended), ADR-002 (LOCKED, resolved by ADR-003), ADR-003 (LOCKED 2026-04-29 + Phase 1 cutover PR #285), ADR-004 amendment v2 (LOCKED 2026-04-29, retain-and-document, PR #293).
 
@@ -384,4 +384,4 @@ Phase 2 TP=2 BRAIN partnership is reassigned from spark-5 + spark-6 to **spark-5
 5. Rationale: why this over alternatives
 6. Implications: what changes downstream
 
-Last updated: 2026-04-30 (ADR-006 PROPOSED — Phase 2 partner reassignment from spark-6 to spark-4; ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
+Last updated: 2026-04-30 (ADR-006 LOCKED — Phase 2 partner reassignment from spark-6 to spark-4, operator concurrence Gary Knight; ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)

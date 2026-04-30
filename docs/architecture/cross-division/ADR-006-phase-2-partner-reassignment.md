@@ -1,7 +1,7 @@
 # ADR-006 — Phase 2 Partner Reassignment (spark-5 + spark-4 in lieu of spark-5 + spark-6)
 
 **Date:** 2026-04-30
-**Status:** PROPOSED — awaiting operator lock
+**Status:** **LOCKED 2026-04-30** — operator concurrence Gary Knight
 
 **Supersedes:** ADR-003 §Phase 2 partner choice. ADR-003's overall
 inference cluster intent (Sparks 4/5/6 expanded to 3/4/5/6 per ADR-004
@@ -146,4 +146,4 @@ Spark-4 is available today.
 
 ---
 
-Last updated: 2026-04-30 (PROPOSED — awaiting operator lock)
+Last updated: 2026-04-30 (LOCKED — operator concurrence Gary Knight)
