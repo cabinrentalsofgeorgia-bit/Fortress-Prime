@@ -195,6 +195,56 @@ def _scalar(v) -> str:
     return s if s else "_unknown_"
 
 
+# ── Per-section reasoning policy (Phase 3, post-#330 + #331 empirical) ────────
+
+# Per-section reasoning controls applied by the orchestrator. PR #331's three-run
+# §4 isolation showed:
+#   - enable_thinking=True alone is a no-op (chat-template default is True)
+#   - low_effort=True is the load-bearing knob for reasoning suppression
+#   - thinking_token_budget is empirically inert at low_effort=True on §4-class
+#     prompts (kept in BrainClient as defensive ceiling but NOT routed here)
+#
+# Mechanical / categorization sections (§2 Critical Timeline, §7 Email Intel)
+# get enable_thinking=False to recover from the Issue #328 runaway-reasoning
+# failure mode where unbounded thinking exhausted the token cap with zero
+# content emitted. Doctrinal sections (§4/§5/§9) get low_effort=True to bound
+# reasoning while preserving substantive analysis. §8 (light reasoning) uses
+# the same pattern with a smaller content cap.
+SECTION_REASONING_POLICY: dict[str, dict] = {
+    "section_02_critical_timeline": {
+        "enable_thinking": False,
+        "max_tokens": 4000,
+    },
+    "section_04_claims_analysis": {
+        "enable_thinking": True,
+        "low_effort": True,
+        "max_tokens": 8000,
+    },
+    "section_05_key_defenses_identified": {
+        # §5 needs full reasoning depth — Phase 3 probe (2026-04-30) showed
+        # low_effort=True compresses overlapping defenses and DROPS the
+        # non-affirmative denial subsection (4 explicit denials missing).
+        # With low_effort=False, §5 reproduces the 19:45Z baseline:
+        # 6,271 chars / 19,090 reasoning / 270s wall / 4 denial entries.
+        # Defense lawyers enumerate denials on the record; quietly dropping
+        # them is bad operational hygiene for a brief intended to inform
+        # counsel pitches.
+        "enable_thinking": True,
+        "low_effort": False,
+        "max_tokens": 8000,
+    },
+    "section_07_email_intelligence_report": {
+        "enable_thinking": False,
+        "max_tokens": 4000,
+    },
+    "section_08_financial_exposure_analysis": {
+        "enable_thinking": True,
+        "low_effort": True,
+        "max_tokens": 4000,
+    },
+}
+
+
 # ── Synthesis synthesizers ────────────────────────────────────────────────────
 
 async def synthesize_synthesis_section(
@@ -202,7 +252,9 @@ async def synthesize_synthesis_section(
     packet: GroundingPacket,
     *,
     brain_client: BrainClient,
-    max_tokens: int = 8000,  # Cascade fix per PR #326: BrainClient default raised to 8000 to give nemotron_v3 reasoning trace room to complete before content emission. Pre-fix 2000 cap caused Track A (PR #323) to hit finish_reason=length on all 5 synthesis sections with reasoning consuming the full budget.
+    max_tokens: int = 8000,  # PR #327 cap (kept as fallback when no per-section policy applies).
+    enable_thinking: Optional[bool] = None,
+    low_effort: Optional[bool] = None,
 ) -> SectionResult:
     """Run a BRAIN call against the packet and produce a SectionResult."""
     title_map = {
@@ -242,6 +294,8 @@ async def synthesize_synthesis_section(
             max_tokens=max_tokens,
             temperature=0.0,
             stream=True,
+            enable_thinking=enable_thinking,
+            low_effort=low_effort,
         ),
     )
     async for chunk in iterator:

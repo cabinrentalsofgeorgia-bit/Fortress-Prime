@@ -360,8 +360,15 @@ async def stage_2_synthesize(
             )
         elif mode == SECTION_MODE_SYNTHESIS:
             try:
+                policy = syn.SECTION_REASONING_POLICY.get(section_id, {})
+                policy_kwargs = {
+                    k: v for k, v in policy.items() if v is not None
+                }
                 result = await syn.synthesize_synthesis_section(
-                    section_id, packet, brain_client=client
+                    section_id,
+                    packet,
+                    brain_client=client,
+                    **policy_kwargs,
                 )
                 if len(result.grounding_citations) < GROUNDING_MIN_CITATIONS:
                     result.fail_reason = (
