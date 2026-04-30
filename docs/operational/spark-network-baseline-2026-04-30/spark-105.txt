@@ -1,0 +1,228 @@
+=== HOSTNAME ===
+spark-3
+Linux spark-3 6.17.0-1014-nvidia #14-Ubuntu SMP PREEMPT_DYNAMIC Tue Mar 17 19:01:40 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+
+=== KERNEL ===
+Linux version 6.17.0-1014-nvidia (buildd@bos03-arm64-009) (aarch64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #14-Ubuntu SMP PREEMPT_DYNAMIC Tue Mar 17 19:01:40 UTC 2026
+
+=== NETPLAN ===
+total 44
+drwxr-xr-x   2 root root  4096 Apr 25 16:26 .
+drwxr-xr-x 183 root root 12288 Apr 25 15:38 ..
+-rw-------   1 root root   251 Apr 25 16:26 01-netcfg.yaml
+-rw-------   1 root root   248 Apr 25 13:03 01-netcfg.yaml.bak.20260425_130333
+-rw-------   1 root root   251 Apr 25 14:46 01-netcfg.yaml.bak.20260425_144637
+-rw-------   1 root root   367 Apr 25 14:54 01-netcfg.yaml.bak.20260425_145426
+-rw-------   1 root root   441 Apr 25 16:26 01-netcfg.yaml.bak.20260425_162631
+-rw-------   1 root root   245 Apr 25 15:14 99-mellanox-roce.yaml
+-rw-r--r--   1 root root   101 Apr 25 14:46 99-mellanox-roce.yaml.bak.20260425_144637
+--- /etc/netplan/01-netcfg.yaml ---
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enP7s7:
+      dhcp4: false
+      addresses:
+        - 192.168.0.105/24
+      routes:
+        - to: default
+          via: 192.168.0.1
+      nameservers:
+        addresses: [8.8.8.8, 1.1.1.1]
+--- /etc/netplan/99-mellanox-roce.yaml ---
+network:
+  version: 2
+  ethernets:
+    enp1s0f0np0:
+      addresses: [10.10.10.3/24]
+      mtu: 9000
+    enp1s0f1np1:
+      dhcp4: false
+      optional: true
+    enP2p1s0f1np1:
+      addresses: [10.10.11.3/24]
+      mtu: 9000
+      dhcp4: false
+
+=== ip addr ===
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+2: enP7s7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    altname enP7p1s0
+    inet 192.168.0.105/24 brd 192.168.0.255 scope global enP7s7
+       valid_lft forever preferred_lft forever
+3: enp1s0f0np0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc mq state UP group default qlen 1000
+    inet 10.10.10.3/24 brd 10.10.10.255 scope global enp1s0f0np0
+       valid_lft forever preferred_lft forever
+6: enP2p1s0f1np1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc mq state UP group default qlen 1000
+    inet 10.10.11.3/24 brd 10.10.11.255 scope global enP2p1s0f1np1
+       valid_lft forever preferred_lft forever
+8: tailscale0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1200 qdisc fq_codel state UNKNOWN group default qlen 500
+    inet 100.96.44.85/32 scope global tailscale0
+       valid_lft forever preferred_lft forever
+9: docker_gwbridge: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    inet 172.18.0.1/16 brd 172.18.255.255 scope global docker_gwbridge
+       valid_lft forever preferred_lft forever
+10: br-3b2b2d221c7e: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    inet 172.20.0.1/16 brd 172.20.255.255 scope global br-3b2b2d221c7e
+       valid_lft forever preferred_lft forever
+11: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+12: br-84b5d6064b6c: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    inet 172.19.0.1/16 brd 172.19.255.255 scope global br-84b5d6064b6c
+       valid_lft forever preferred_lft forever
+15: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN group default 
+    inet 10.42.2.0/32 scope global flannel.1
+       valid_lft forever preferred_lft forever
+28: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000
+    inet 10.42.2.1/24 brd 10.42.2.255 scope global cni0
+       valid_lft forever preferred_lft forever
+
+=== ip link (with mtu) ===
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00 promiscuity 0  allmulti 0 minmtu 0 maxmtu 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+2: enP7s7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 4c:bb:47:80:2d:15 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 9194 addrgenmode eui64 numtxqueues 16 numrxqueues 16 gso_max_size 64000 gso_max_segs 64 tso_max_size 64000 tso_max_segs 64 gro_max_size 65536 parentbus pci parentdev 0007:01:00.0 
+    altname enP7p1s0
+3: enp1s0f0np0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 4c:bb:47:80:2d:16 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 9978 addrgenmode eui64 numtxqueues 424 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 portname p0 switchid 162d80000347bb4c parentbus pci parentdev 0000:01:00.0 
+4: enp1s0f1np1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 4c:bb:47:80:2d:17 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 9978 addrgenmode eui64 numtxqueues 424 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 portname p1 switchid 162d80000347bb4c parentbus pci parentdev 0000:01:00.1 
+5: enP2p1s0f0np0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 4c:bb:47:80:2d:1a brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 9978 addrgenmode eui64 numtxqueues 424 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 portname p0 switchid 162d80000347bb4c parentbus pci parentdev 0002:01:00.0 
+6: enP2p1s0f1np1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 4c:bb:47:80:2d:1b brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 9978 addrgenmode eui64 numtxqueues 424 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 portname p1 switchid 162d80000347bb4c parentbus pci parentdev 0002:01:00.1 
+7: wlP9s9: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DORMANT group default qlen 1000
+    link/ether 50:2e:91:5b:49:ea brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 256 maxmtu 2304 addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 parentbus pci parentdev 0009:01:00.0 
+    altname wlP9p1s0
+8: tailscale0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1200 qdisc fq_codel state UNKNOWN mode DEFAULT group default qlen 500
+    link/none  promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    tun type tun pi off vnet_hdr on persist off numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 
+9: docker_gwbridge: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether ee:89:2e:4e:26:c1 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    bridge forward_delay 1500 hello_time 200 max_age 2000 ageing_time 30000 stp_state 0 priority 32768 vlan_filtering 0 vlan_protocol 802.1Q bridge_id 8000.ee:89:2e:4e:26:c1 designated_root 8000.ee:89:2e:4e:26:c1 root_port 0 root_path_cost 0 topology_change 0 topology_change_detected 0 hello_timer    0.00 tcn_timer    0.00 topology_change_timer    0.00 gc_timer   21.19 vlan_default_pvid 1 vlan_stats_enabled 0 vlan_stats_per_port 0 group_fwd_mask 0 group_address 01:80:c2:00:00:00 mcast_snooping 1 no_linklocal_learn 0 mcast_vlan_snooping 0 mcast_router 1 mcast_query_use_ifaddr 0 mcast_querier 0 mcast_hash_elasticity 16 mcast_hash_max 4096 mcast_last_member_count 2 mcast_startup_query_count 2 mcast_last_member_interval 100 mcast_membership_interval 26000 mcast_querier_interval 25500 mcast_query_interval 12500 mcast_query_response_interval 1000 mcast_startup_query_interval 3125 mcast_stats_enabled 0 mcast_igmp_version 2 mcast_mld_version 1 nf_call_iptables 0 nf_call_ip6tables 0 nf_call_arptables 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+10: br-3b2b2d221c7e: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DEFAULT group default 
+    link/ether 9a:b1:ad:b8:34:34 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    bridge forward_delay 1500 hello_time 200 max_age 2000 ageing_time 30000 stp_state 0 priority 32768 vlan_filtering 0 vlan_protocol 802.1Q bridge_id 8000.9a:b1:ad:b8:34:34 designated_root 8000.9a:b1:ad:b8:34:34 root_port 0 root_path_cost 0 topology_change 0 topology_change_detected 0 hello_timer    0.00 tcn_timer    0.00 topology_change_timer    0.00 gc_timer  152.26 vlan_default_pvid 1 vlan_stats_enabled 0 vlan_stats_per_port 0 group_fwd_mask 0 group_address 01:80:c2:00:00:00 mcast_snooping 1 no_linklocal_learn 0 mcast_vlan_snooping 0 mcast_router 1 mcast_query_use_ifaddr 0 mcast_querier 0 mcast_hash_elasticity 16 mcast_hash_max 4096 mcast_last_member_count 2 mcast_startup_query_count 2 mcast_last_member_interval 100 mcast_membership_interval 26000 mcast_querier_interval 25500 mcast_query_interval 12500 mcast_query_response_interval 1000 mcast_startup_query_interval 3125 mcast_stats_enabled 0 mcast_igmp_version 2 mcast_mld_version 1 nf_call_iptables 0 nf_call_ip6tables 0 nf_call_arptables 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 
+11: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default 
+    link/ether 36:a1:d1:d6:d4:52 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    bridge forward_delay 1500 hello_time 200 max_age 2000 ageing_time 30000 stp_state 0 priority 32768 vlan_filtering 0 vlan_protocol 802.1Q bridge_id 8000.36:a1:d1:d6:d4:52 designated_root 8000.36:a1:d1:d6:d4:52 root_port 0 root_path_cost 0 topology_change 0 topology_change_detected 0 hello_timer    0.00 tcn_timer    0.00 topology_change_timer    0.00 gc_timer  192.71 vlan_default_pvid 1 vlan_stats_enabled 0 vlan_stats_per_port 0 group_fwd_mask 0 group_address 01:80:c2:00:00:00 mcast_snooping 1 no_linklocal_learn 0 mcast_vlan_snooping 0 mcast_router 1 mcast_query_use_ifaddr 0 mcast_querier 0 mcast_hash_elasticity 16 mcast_hash_max 4096 mcast_last_member_count 2 mcast_startup_query_count 2 mcast_last_member_interval 100 mcast_membership_interval 26000 mcast_querier_interval 25500 mcast_query_interval 12500 mcast_query_response_interval 1000 mcast_startup_query_interval 3125 mcast_stats_enabled 0 mcast_igmp_version 2 mcast_mld_version 1 nf_call_iptables 0 nf_call_ip6tables 0 nf_call_arptables 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+12: br-84b5d6064b6c: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DEFAULT group default 
+    link/ether 9a:3c:16:18:0e:1b brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    bridge forward_delay 1500 hello_time 200 max_age 2000 ageing_time 30000 stp_state 0 priority 32768 vlan_filtering 0 vlan_protocol 802.1Q bridge_id 8000.9a:3c:16:18:e:1b designated_root 8000.9a:3c:16:18:e:1b root_port 0 root_path_cost 0 topology_change 0 topology_change_detected 0 hello_timer    0.00 tcn_timer    0.00 topology_change_timer    0.00 gc_timer  152.26 vlan_default_pvid 1 vlan_stats_enabled 0 vlan_stats_per_port 0 group_fwd_mask 0 group_address 01:80:c2:00:00:00 mcast_snooping 1 no_linklocal_learn 0 mcast_vlan_snooping 0 mcast_router 1 mcast_query_use_ifaddr 0 mcast_querier 0 mcast_hash_elasticity 16 mcast_hash_max 4096 mcast_last_member_count 2 mcast_startup_query_count 2 mcast_last_member_interval 100 mcast_membership_interval 26000 mcast_querier_interval 25500 mcast_query_interval 12500 mcast_query_response_interval 1000 mcast_startup_query_interval 3125 mcast_stats_enabled 0 mcast_igmp_version 2 mcast_mld_version 1 nf_call_iptables 0 nf_call_ip6tables 0 nf_call_arptables 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 
+14: vethbdfaa76@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP mode DEFAULT group default 
+    link/ether b2:7d:d2:d5:bd:1a brd ff:ff:ff:ff:ff:ff link-netnsid 1 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8002 port_no 0x2 designated_port 32770 designated_cost 0 designated_bridge 8000.36:a1:d1:d6:d4:52 designated_root 8000.36:a1:d1:d6:d4:52 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+15: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN mode DEFAULT group default 
+    link/ether 8a:96:fd:bd:78:d1 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    vxlan id 1 fan-map 0.7.0.55/46335:32.100.64.57/63796 225.3.19.170/38911:248.3.0.170/64868 local 192.168.0.105 dev enP7s7 srcport 0 0 dstport 8472 nolearning ttl auto ageing 300 udpcsum noudp6zerocsumtx noudp6zerocsumrx addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 64000 gso_max_segs 64 tso_max_size 64000 tso_max_segs 64 gro_max_size 65536 
+27: veth7e3a0a0@if26: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP mode DEFAULT group default 
+    link/ether 6a:60:d3:91:44:4b brd ff:ff:ff:ff:ff:ff link-netnsid 6 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8002 port_no 0x2 designated_port 32770 designated_cost 0 designated_bridge 8000.ee:89:2e:4e:26:c1 designated_root 8000.ee:89:2e:4e:26:c1 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+28: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether e2:e0:73:0e:26:cb brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 
+    bridge forward_delay 1500 hello_time 200 max_age 2000 ageing_time 30000 stp_state 0 priority 32768 vlan_filtering 0 vlan_protocol 802.1Q bridge_id 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb root_port 0 root_path_cost 0 topology_change 0 topology_change_detected 0 hello_timer    0.00 tcn_timer    0.00 topology_change_timer    0.00 gc_timer  248.81 vlan_default_pvid 1 vlan_stats_enabled 0 vlan_stats_per_port 0 group_fwd_mask 0 group_address 01:80:c2:00:00:00 mcast_snooping 1 no_linklocal_learn 0 mcast_vlan_snooping 0 mcast_router 1 mcast_query_use_ifaddr 0 mcast_querier 0 mcast_hash_elasticity 16 mcast_hash_max 4096 mcast_last_member_count 2 mcast_startup_query_count 2 mcast_last_member_interval 100 mcast_membership_interval 26000 mcast_querier_interval 25500 mcast_query_interval 12500 mcast_query_response_interval 1000 mcast_startup_query_interval 3125 mcast_stats_enabled 0 mcast_igmp_version 2 mcast_mld_version 1 nf_call_iptables 0 nf_call_ip6tables 0 nf_call_arptables 0 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+29: veth09a515f3@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether 6a:7b:b8:dd:05:b8 brd ff:ff:ff:ff:ff:ff link-netns cni-ab8c3e5d-aeef-5067-51fa-22c2149d53ea promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin on guard off root_block off fastleave off learning on flood on port_id 0x8001 port_no 0x1 designated_port 32769 designated_cost 0 designated_bridge 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+30: veth308f115b@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether 32:e5:0e:ce:a4:c2 brd ff:ff:ff:ff:ff:ff link-netns cni-8c0417c2-5395-fe68-7590-2c959488ff99 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin on guard off root_block off fastleave off learning on flood on port_id 0x8002 port_no 0x2 designated_port 32770 designated_cost 0 designated_bridge 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+31: veth793e196b@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether a2:ef:05:53:0f:e2 brd ff:ff:ff:ff:ff:ff link-netns cni-efa5a668-623b-cf43-dd11-f8cdcfd4f0cc promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin on guard off root_block off fastleave off learning on flood on port_id 0x8003 port_no 0x3 designated_port 32771 designated_cost 0 designated_bridge 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+32: veth80ad0a05@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether 3a:a7:ee:ed:72:7e brd ff:ff:ff:ff:ff:ff link-netns cni-5d3c51bd-de7d-2e75-d553-50487ba38d67 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin on guard off root_block off fastleave off learning on flood on port_id 0x8004 port_no 0x4 designated_port 32772 designated_cost 0 designated_bridge 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+33: vethfed8f079@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether f6:73:5a:be:4c:dd brd ff:ff:ff:ff:ff:ff link-netns cni-121b467b-cec0-133d-eaf5-24850e3b26ee promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin on guard off root_block off fastleave off learning on flood on port_id 0x8005 port_no 0x5 designated_port 32773 designated_cost 0 designated_bridge 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+34: vetha7a82202@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether 22:0b:e4:be:50:35 brd ff:ff:ff:ff:ff:ff link-netns cni-2b416bd4-924c-e58d-ef17-badf13121250 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin on guard off root_block off fastleave off learning on flood on port_id 0x8006 port_no 0x6 designated_port 32774 designated_cost 0 designated_bridge 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+205: vethe41b0c2@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP mode DEFAULT group default 
+    link/ether c2:98:3e:c2:53:05 brd ff:ff:ff:ff:ff:ff link-netnsid 13 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin off guard off root_block off fastleave off learning on flood on port_id 0x8003 port_no 0x3 designated_port 32771 designated_cost 0 designated_bridge 8000.36:a1:d1:d6:d4:52 designated_root 8000.36:a1:d1:d6:d4:52 hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+350: veth2c7fa0b7@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether c2:9b:ad:bd:06:ac brd ff:ff:ff:ff:ff:ff link-netns cni-9bed2cdf-d890-f836-36f7-a72b9d0a0c39 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+    bridge_slave state forwarding priority 32 cost 2 hairpin on guard off root_block off fastleave off learning on flood on port_id 0x8007 port_no 0x7 designated_port 32775 designated_cost 0 designated_bridge 8000.e2:e0:73:e:26:cb designated_root 8000.e2:e0:73:e:26:cb hold_timer    0.00 message_age_timer    0.00 forward_delay_timer    0.00 topology_change_ack 0 config_pending 0 proxy_arp off proxy_arp_wifi off mcast_router 1 mcast_fast_leave off mcast_flood on bcast_flood on mcast_to_unicast off neigh_suppress off group_fwd_mask 0 group_fwd_mask_str 0x0 vlan_tunnel off isolated off locked off addrgenmode eui64 numtxqueues 20 numrxqueues 20 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 
+351: veth17fe4dab@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP mode DEFAULT group default 
+    link/ether 3e:4b:6a:ca:b3:49 brd ff:ff:ff:ff:ff:ff link-netns cni-992ce7eb-4b88-b664-0f25-39ec54225c90 promiscuity 1  allmulti 1 minmtu 68 maxmtu 65535 
+    veth 
+
+=== ConnectX hardware (lspci) ===
+0000:01:00.0 Ethernet controller [0200]: Mellanox Technologies MT2910 Family [ConnectX-7] [15b3:1021]
+0000:01:00.1 Ethernet controller [0200]: Mellanox Technologies MT2910 Family [ConnectX-7] [15b3:1021]
+0002:01:00.0 Ethernet controller [0200]: Mellanox Technologies MT2910 Family [ConnectX-7] [15b3:1021]
+0002:01:00.1 Ethernet controller [0200]: Mellanox Technologies MT2910 Family [ConnectX-7] [15b3:1021]
+
+=== mlx kernel modules ===
+mlx5_fwctl             16384  0
+mlx5_ib               520192  0
+mlx5_core            2756608  2 mlx5_fwctl,mlx5_ib
+mlxfw                  32768  1 mlx5_core
+
+=== mlx5_core modinfo ===
+filename:       /lib/modules/6.17.0-1014-nvidia/kernel/drivers/net/ethernet/mellanox/mlx5/core/mlx5_core.ko.zst
+srcversion:     89EEAF32656D79A2DACFFD3
+
+=== Firmware per ConnectX device ===
+--- enp1s0f0np0 ---
+driver: mlx5_core
+version: 6.17.0-1014-nvidia
+firmware-version: 28.45.4028 (NVD0000000087)
+expansion-rom-version: 
+--- enp1s0f1np1 ---
+driver: mlx5_core
+version: 6.17.0-1014-nvidia
+firmware-version: 28.45.4028 (NVD0000000087)
+expansion-rom-version: 
+--- enP2p1s0f0np0 ---
+driver: mlx5_core
+version: 6.17.0-1014-nvidia
+firmware-version: 28.45.4028 (NVD0000000087)
+expansion-rom-version: 
+--- enP2p1s0f1np1 ---
+driver: mlx5_core
+version: 6.17.0-1014-nvidia
+firmware-version: 28.45.4028 (NVD0000000087)
+expansion-rom-version: 
+
+=== ip route ===
+default via 192.168.0.1 dev enP7s7 proto static 
+10.10.10.0/24 dev enp1s0f0np0 proto kernel scope link src 10.10.10.3 
+10.10.11.0/24 dev enP2p1s0f1np1 proto kernel scope link src 10.10.11.3 
+10.42.0.0/24 via 10.42.0.0 dev flannel.1 onlink 
+10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink 
+10.42.2.0/24 dev cni0 proto kernel scope link src 10.42.2.1 
+10.42.3.0/24 via 10.42.3.0 dev flannel.1 onlink 
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 
+172.18.0.0/16 dev docker_gwbridge proto kernel scope link src 172.18.0.1 
+172.19.0.0/16 dev br-84b5d6064b6c proto kernel scope link src 172.19.0.1 linkdown 
+172.20.0.0/16 dev br-3b2b2d221c7e proto kernel scope link src 172.20.0.1 linkdown 
+192.168.0.0/24 dev enP7s7 proto kernel scope link src 192.168.0.105 
+
+=== sysctl network tuning ===
+net.core.rmem_max = 212992
+net.core.wmem_max = 212992
+net.ipv4.tcp_rmem = 4096	131072	33554432
+net.ipv4.tcp_wmem = 4096	16384	4194304
+net.core.netdev_max_backlog = 1000
+net.core.default_qdisc = fq_codel
+net.ipv4.tcp_congestion_control = cubic
+
+=== bonding (if any) ===
+(no bonding interfaces)
