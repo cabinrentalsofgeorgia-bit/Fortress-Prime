@@ -1,0 +1,473 @@
+{
+  "summary": {
+    "collection": "legal_privileged_communications",
+    "target": "legal_privileged_communications_v2",
+    "n_queries": 50,
+    "top1_id_match_rate": 0.6,
+    "wall_seconds": 6.402663936140016,
+    "mean_overlap@1": 0.6,
+    "median_overlap@1": 1.0,
+    "min_overlap@1": 0.0,
+    "mean_overlap@3": 0.22,
+    "median_overlap@3": 0.3333333333333333,
+    "min_overlap@3": 0.0,
+    "mean_overlap@5": 0.136,
+    "median_overlap@5": 0.2,
+    "min_overlap@5": 0.0,
+    "mean_overlap@10": 0.08600000000000001,
+    "median_overlap@10": 0.1,
+    "min_overlap@10": 0.0
+  },
+  "detail": [
+    {
+      "q_id": "00530a6b-c20c-5f5f-b229-8e11adb82545",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "00530a6b-c20c-5f5f-b229-8e11adb82545",
+      "top1_v2": "00530a6b-c20c-5f5f-b229-8e11adb82545"
+    },
+    {
+      "q_id": "0070716f-6123-565f-9d6e-c66639d9912d",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0070716f-6123-565f-9d6e-c66639d9912d",
+      "top1_v2": "0070716f-6123-565f-9d6e-c66639d9912d"
+    },
+    {
+      "q_id": "0054d60e-343f-5ec1-ae07-f8148c7937cc",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "7146c3d2-22cf-5425-8468-8d2b4fc4b6ff",
+      "top1_v2": "0054d60e-343f-5ec1-ae07-f8148c7937cc"
+    },
+    {
+      "q_id": "00342b19-a756-55a2-86d1-422b80166c0c",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "00342b19-a756-55a2-86d1-422b80166c0c",
+      "top1_v2": "00342b19-a756-55a2-86d1-422b80166c0c"
+    },
+    {
+      "q_id": "0018235e-5029-5fbf-bb4a-2b9b1b9c0b59",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "0018235e-5029-5fbf-bb4a-2b9b1b9c0b59",
+      "top1_v2": "6367fd29-6eac-576a-949b-a57c4e225fb7"
+    },
+    {
+      "q_id": "001826ef-9231-5d10-b541-fc917c7a07af",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "001826ef-9231-5d10-b541-fc917c7a07af",
+      "top1_v2": "001826ef-9231-5d10-b541-fc917c7a07af"
+    },
+    {
+      "q_id": "006d4e48-d734-5343-9741-540fa13169d6",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "006d4e48-d734-5343-9741-540fa13169d6",
+      "top1_v2": "9020d2bd-cf5e-5b46-b6a1-1246ca3f3eec"
+    },
+    {
+      "q_id": "0071cae5-2e80-57ac-a834-cd80be3746e1",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0071cae5-2e80-57ac-a834-cd80be3746e1",
+      "top1_v2": "0071cae5-2e80-57ac-a834-cd80be3746e1"
+    },
+    {
+      "q_id": "00101ab4-7779-5123-954e-17a3c13f5531",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "00101ab4-7779-5123-954e-17a3c13f5531",
+      "top1_v2": "8bbfa7e3-9234-5aaa-9969-65e1724a0ea1"
+    },
+    {
+      "q_id": "007e3357-f136-5d18-92bd-19fa19328290",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "007e3357-f136-5d18-92bd-19fa19328290",
+      "top1_v2": "bf048a6d-5a7c-54f0-b69c-b8113cfbb49b"
+    },
+    {
+      "q_id": "00661f5e-fb51-58d6-b0de-9d5b9b5a3c69",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "00661f5e-fb51-58d6-b0de-9d5b9b5a3c69",
+      "top1_v2": "00661f5e-fb51-58d6-b0de-9d5b9b5a3c69"
+    },
+    {
+      "q_id": "007f6bd0-c6b4-57ab-a1c5-8ecc04d0b499",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "007f6bd0-c6b4-57ab-a1c5-8ecc04d0b499",
+      "top1_v2": "007f6bd0-c6b4-57ab-a1c5-8ecc04d0b499"
+    },
+    {
+      "q_id": "002ee5e4-246a-54e5-bb4f-dca1ee809d9b",
+      "overlap@1": 1.0,
+      "overlap@3": 0.6666666666666666,
+      "overlap@5": 0.4,
+      "overlap@10": 0.5,
+      "top1_legacy": "002ee5e4-246a-54e5-bb4f-dca1ee809d9b",
+      "top1_v2": "002ee5e4-246a-54e5-bb4f-dca1ee809d9b"
+    },
+    {
+      "q_id": "002df3fa-3f59-54c4-98fd-d6e0818dc83d",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "002df3fa-3f59-54c4-98fd-d6e0818dc83d",
+      "top1_v2": "002df3fa-3f59-54c4-98fd-d6e0818dc83d"
+    },
+    {
+      "q_id": "00335939-4b96-505d-84ef-e07d782d4976",
+      "overlap@1": 0.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "db6c13f1-c2db-5408-b535-766be38dd07d",
+      "top1_v2": "00335939-4b96-505d-84ef-e07d782d4976"
+    },
+    {
+      "q_id": "002cfc76-4445-5c9d-9d29-4bf0e37dc4ff",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "002cfc76-4445-5c9d-9d29-4bf0e37dc4ff",
+      "top1_v2": "002cfc76-4445-5c9d-9d29-4bf0e37dc4ff"
+    },
+    {
+      "q_id": "001b8e40-00bd-5897-b523-c3b1b1c02ee4",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "001b8e40-00bd-5897-b523-c3b1b1c02ee4",
+      "top1_v2": "001b8e40-00bd-5897-b523-c3b1b1c02ee4"
+    },
+    {
+      "q_id": "0061ec2d-3186-5091-9522-b8412748902f",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "46c617e8-3cf3-5a09-a11a-026b03a123b1",
+      "top1_v2": "319b9e66-9433-5190-a180-9da467c400d3"
+    },
+    {
+      "q_id": "0075ee54-8540-55bf-b5fa-4b469a13bcf2",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0075ee54-8540-55bf-b5fa-4b469a13bcf2",
+      "top1_v2": "0075ee54-8540-55bf-b5fa-4b469a13bcf2"
+    },
+    {
+      "q_id": "0076877c-e8f3-5eb2-81f9-a307ecd6e6e3",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0076877c-e8f3-5eb2-81f9-a307ecd6e6e3",
+      "top1_v2": "0076877c-e8f3-5eb2-81f9-a307ecd6e6e3"
+    },
+    {
+      "q_id": "005a06be-7ed1-527c-9ca4-989c01d1b578",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "005a06be-7ed1-527c-9ca4-989c01d1b578",
+      "top1_v2": "0c7c7e2f-9210-5f27-b48b-502842cf1dff"
+    },
+    {
+      "q_id": "001b3205-1aaf-5812-98d7-1f6209b2837d",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "b36483c7-9af6-5ecf-b3a6-23f21afabe0d",
+      "top1_v2": "001b3205-1aaf-5812-98d7-1f6209b2837d"
+    },
+    {
+      "q_id": "00151a21-b120-5706-830f-c4c17c847fb4",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "00151a21-b120-5706-830f-c4c17c847fb4",
+      "top1_v2": "8cc99385-2042-50d6-b60c-257d48b99796"
+    },
+    {
+      "q_id": "007d31c1-fd28-5ecb-8722-94bb5357956f",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "17a28da2-c908-59a6-b61b-2a4301fb6eae",
+      "top1_v2": "007d31c1-fd28-5ecb-8722-94bb5357956f"
+    },
+    {
+      "q_id": "006ad8fb-cd28-5ec7-b400-d0aef66e3ce0",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "006ad8fb-cd28-5ec7-b400-d0aef66e3ce0",
+      "top1_v2": "d3c8484d-d60c-522f-842c-29d202bebfcb"
+    },
+    {
+      "q_id": "0009d961-4280-51be-830f-52d8b83f93d6",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "0009d961-4280-51be-830f-52d8b83f93d6",
+      "top1_v2": "197da0d0-aa93-5f7b-88e0-894eb458a200"
+    },
+    {
+      "q_id": "0072c1c9-4561-509e-9c62-4c1fda330ee5",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0072c1c9-4561-509e-9c62-4c1fda330ee5",
+      "top1_v2": "0072c1c9-4561-509e-9c62-4c1fda330ee5"
+    },
+    {
+      "q_id": "0073612f-5401-53e1-842b-0424746ed61e",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0073612f-5401-53e1-842b-0424746ed61e",
+      "top1_v2": "0073612f-5401-53e1-842b-0424746ed61e"
+    },
+    {
+      "q_id": "002b4dfc-7158-53fc-a096-3e947edc8dda",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "002b4dfc-7158-53fc-a096-3e947edc8dda",
+      "top1_v2": "b111a177-6492-5421-b868-1a3a75751c08"
+    },
+    {
+      "q_id": "00688726-4a24-56b2-836a-49de1d77fcde",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "00688726-4a24-56b2-836a-49de1d77fcde",
+      "top1_v2": "00688726-4a24-56b2-836a-49de1d77fcde"
+    },
+    {
+      "q_id": "0004f4b4-6e35-5ef0-8f93-b3f8d8ce189b",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0004f4b4-6e35-5ef0-8f93-b3f8d8ce189b",
+      "top1_v2": "0004f4b4-6e35-5ef0-8f93-b3f8d8ce189b"
+    },
+    {
+      "q_id": "00720072-0096-50aa-bfa1-336c04766cc8",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "00720072-0096-50aa-bfa1-336c04766cc8",
+      "top1_v2": "899f245b-6a17-564f-bba7-660ed84e1366"
+    },
+    {
+      "q_id": "0051778c-45ac-5ee1-8fc5-73a3ffab29fb",
+      "overlap@1": 1.0,
+      "overlap@3": 0.6666666666666666,
+      "overlap@5": 0.4,
+      "overlap@10": 0.3,
+      "top1_legacy": "0051778c-45ac-5ee1-8fc5-73a3ffab29fb",
+      "top1_v2": "0051778c-45ac-5ee1-8fc5-73a3ffab29fb"
+    },
+    {
+      "q_id": "0014b7b4-e599-578a-8ce1-2ea9487ffe3f",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0014b7b4-e599-578a-8ce1-2ea9487ffe3f",
+      "top1_v2": "0014b7b4-e599-578a-8ce1-2ea9487ffe3f"
+    },
+    {
+      "q_id": "00530f80-60b4-5a50-9d6c-2e348700e236",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "00530f80-60b4-5a50-9d6c-2e348700e236",
+      "top1_v2": "00530f80-60b4-5a50-9d6c-2e348700e236"
+    },
+    {
+      "q_id": "003e6fe4-03f3-562f-9ff9-45f1ea834f92",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "003e6fe4-03f3-562f-9ff9-45f1ea834f92",
+      "top1_v2": "003e6fe4-03f3-562f-9ff9-45f1ea834f92"
+    },
+    {
+      "q_id": "0002e269-ad3c-58f4-b7b8-c9af0aab1265",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.4,
+      "overlap@10": 0.7,
+      "top1_legacy": "0002e269-ad3c-58f4-b7b8-c9af0aab1265",
+      "top1_v2": "0002e269-ad3c-58f4-b7b8-c9af0aab1265"
+    },
+    {
+      "q_id": "002da525-2cb2-5d23-9c53-70c388201fe2",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "002da525-2cb2-5d23-9c53-70c388201fe2",
+      "top1_v2": "002da525-2cb2-5d23-9c53-70c388201fe2"
+    },
+    {
+      "q_id": "0038c911-2054-5347-bc58-49a76db0188f",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0038c911-2054-5347-bc58-49a76db0188f",
+      "top1_v2": "0038c911-2054-5347-bc58-49a76db0188f"
+    },
+    {
+      "q_id": "0068e3d1-11f0-519e-b84a-2154ddd51d64",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0068e3d1-11f0-519e-b84a-2154ddd51d64",
+      "top1_v2": "0068e3d1-11f0-519e-b84a-2154ddd51d64"
+    },
+    {
+      "q_id": "004ce785-fdfb-5bb0-aa72-2f246e102167",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "004ce785-fdfb-5bb0-aa72-2f246e102167",
+      "top1_v2": "004ce785-fdfb-5bb0-aa72-2f246e102167"
+    },
+    {
+      "q_id": "000dd471-e9e5-5877-b5be-3ab0ff27eb84",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "000dd471-e9e5-5877-b5be-3ab0ff27eb84",
+      "top1_v2": "000dd471-e9e5-5877-b5be-3ab0ff27eb84"
+    },
+    {
+      "q_id": "00404bb9-ea8e-59b0-b28f-97cb65ca4be8",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "00404bb9-ea8e-59b0-b28f-97cb65ca4be8",
+      "top1_v2": "bf437b46-3e20-5ac2-86b0-4c9dee1f4ddc"
+    },
+    {
+      "q_id": "00030d66-c9db-5f6b-9875-c82086d99a9c",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "00030d66-c9db-5f6b-9875-c82086d99a9c",
+      "top1_v2": "00030d66-c9db-5f6b-9875-c82086d99a9c"
+    },
+    {
+      "q_id": "006d7236-a9b1-5ef2-9edb-a638c9302203",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "006d7236-a9b1-5ef2-9edb-a638c9302203",
+      "top1_v2": "006d7236-a9b1-5ef2-9edb-a638c9302203"
+    },
+    {
+      "q_id": "0008a319-3b78-5352-9a85-12ff79740c2a",
+      "overlap@1": 1.0,
+      "overlap@3": 0.3333333333333333,
+      "overlap@5": 0.2,
+      "overlap@10": 0.1,
+      "top1_legacy": "0008a319-3b78-5352-9a85-12ff79740c2a",
+      "top1_v2": "0008a319-3b78-5352-9a85-12ff79740c2a"
+    },
+    {
+      "q_id": "00678735-99e1-5cdc-95e4-52d6c6960943",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "00678735-99e1-5cdc-95e4-52d6c6960943",
+      "top1_v2": "24a6238a-35e7-52a1-bc80-a27f014d06c4"
+    },
+    {
+      "q_id": "0075776b-b61b-50c8-9502-3ae14a39aee1",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "0075776b-b61b-50c8-9502-3ae14a39aee1",
+      "top1_v2": "3e01f309-2131-5bf3-9c2a-69281829b972"
+    },
+    {
+      "q_id": "005ef7bd-a943-5edd-9eea-d2588c8a08d5",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "005ef7bd-a943-5edd-9eea-d2588c8a08d5",
+      "top1_v2": "0d762310-91f4-5902-beed-dce9c748c410"
+    },
+    {
+      "q_id": "0058d3c7-0a64-5c6a-afca-0135ee8db36f",
+      "overlap@1": 0.0,
+      "overlap@3": 0.0,
+      "overlap@5": 0.0,
+      "overlap@10": 0.0,
+      "top1_legacy": "0058d3c7-0a64-5c6a-afca-0135ee8db36f",
+      "top1_v2": "6d5e5c52-59d3-5679-9485-a850e531258a"
+    }
+  ]
+}

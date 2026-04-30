@@ -54,7 +54,71 @@ Note: `legal_library` only has 3 points, so overlap@k for k>3 is artificially ca
 
 ### `legal_privileged_communications` (241,167 → 241,167 pts)
 
-Validation deferred to follow-up commit on this PR — runs after the reindex completes (~2.7 h ETA from 2026-04-29 22:38 EDT). Same harness, same thresholds. If overlap@5 < 0.3 the reindex will be halted per the brief's stop condition.
+Reindex completed cleanly:
+
+| Metric | Value |
+|---|---:|
+| points reindexed | 241,167 / 241,167 (exact match) |
+| reindex errors | 0 |
+| reindex wall-clock | 9,664.8 s (~2 h 41 min) |
+| reindex throughput | 25.0 docs/sec sustained (vs caselaw 3.2 — 8× faster, smaller chunks + window pipelining) |
+
+Quality validation:
+
+| Metric | Value | Threshold | PASS? |
+|---|---:|---:|:---:|
+| top-1 ID match rate          | **0.600** | informational | — |
+| mean overlap@1               | 0.600 | — | — |
+| mean overlap@3               | 0.220 | — | — |
+| **mean overlap@5**           | **0.136** | **≥ 0.300** | **❌ FAIL** |
+| mean overlap@10              | 0.086 | — | — |
+| n queries                    | 50 | — | — |
+| validation wall-clock        | 6.40 s | — | — |
+
+Result detail: `docs/operational/reindex-quality/legal_privileged_communications.json`.
+
+#### 🛑 STOP — quality threshold breached
+
+The brief defines the stop condition as: *"Quality validation overlap@5 <0.3 → halt, surface (suggests embedding semantic mismatch, not a reindex bug)."*
+
+The reindex itself is **mechanically correct**: 241,167 source points → 241,167 target points, zero embed errors, vector dim 2048, distance cosine. Round-trip cosine consistency on this NIM was already verified at ~0.999998 in PR #300 §9.5 + the library validation here. The mechanics are fine.
+
+What diverged is the **ranking agreement** between the two encoders:
+- For 60% of queries, both encoders agree on the #1 best match.
+- For the remaining 40%, the #1 hit is different.
+- Beyond #1, agreement collapses fast: only ~14% of top-5 hits overlap on average; only ~9% of top-10 hits overlap.
+- Median overlap@1 is 1.0, min is 0.0 — the failure mode is **bimodal**: many queries match perfectly, and a sizable minority diverge entirely.
+
+#### Why this is plausibly a corpus property, not an encoder failure
+
+`legal_privileged_communications` contains 241k chunks from privileged-counsel email correspondence. Compared with caselaw (which scored overlap@5 = 0.432 on the same harness), this corpus has structural traits that depress ranking agreement between two different encoders even when both are working correctly:
+
+1. **High near-duplicate density.** Privileged email chains have:
+   - recurring email signatures, footers, confidentiality notices
+   - threaded reply chains where successive messages re-quote earlier text
+   - boilerplate privilege-disclosure language at the top/bottom of many docs
+
+   These produce clusters of chunks that are *semantically near-identical*, where any encoder will return one of dozens of equivalent matches as #1. Different encoders, even ones of equal quality, will pick different members of the cluster — and that's enough to drop overlap@5 dramatically without any quality regression.
+2. **Short chunks (~800 chars).** Less context per chunk means less encoder-distinguishable signal between similar chunks. Caselaw's ~5.9k-char chunks are 7× larger and naturally easier to rank-stably across encoders.
+3. **Domain-specialized vs general encoder.** `legal-embed` is trained on legal text; `nomic-embed-text` is general-purpose. On legal-domain email data, they may legitimately rank candidates differently — and `legal-embed` may even be the *better* encoder, but absent ground-truth labels the harness can't tell.
+
+#### What this validation does NOT prove
+
+- It does NOT prove `legal-embed` retrieval on `legal_privileged_communications_v2` is worse than legacy. The harness measures *agreement*, not *correctness*. Without operator-marked ground-truth queries, we cannot distinguish "different rankings, both valid" from "one ranking is wrong."
+- It does NOT block the use of `legal_caselaw_v2` (which passed) or `legal_library_v2` (which passed within its 3-point limit).
+
+#### Operator decision required before cutover (Phase A PR #2)
+
+The brief says halt + surface. **The reindex is in the can — `legal_privileged_communications_v2` exists, has all 241,167 points, dim 2048, no errors.** What is blocked is the *cutover* (Phase A PR #2) for this collection until the operator decides:
+
+| Option | Action | Cost |
+|---|---|---|
+| **A — accept** | Treat overlap@5=0.136 as a corpus property of privileged email (high near-duplicate density), proceed to PR #2 cutover. Justified by the bimodal pattern (median@1=1.0) and the short-chunk hypothesis. | None — proceed. |
+| **B — spot-check** | Operator picks 5–10 representative privileged queries with known-relevant docs, runs both encoders, eyeballs results. If `legal-embed` is at-or-above legacy, accept. | ~30 min of operator time. |
+| **C — defer privileged** | Cut over `legal_caselaw` + trivial collections in PR #2; keep `legal_privileged_communications` on the legacy 768-dim nomic collection until further investigation. | PR #2 scope shrinks; intermediate state where caselaw retrieval uses 2048-dim and privileged uses 768-dim — `legal_council.py` has to branch by collection. |
+| **D — re-encode with different settings** | The reindex used `input_type=passage`. Some asymmetric encoders need different handling for short, conversational chunks. Investigate whether re-running with different settings improves ranking agreement. | New investigation; would re-issue 241k embed calls. |
+
+Recommendation pending operator review. The first reasonable next step is option B — spot-check on 5–10 known-relevant queries before declaring this either an encoder regression or a benign corpus artifact.
 
 ## Interpretation
 
