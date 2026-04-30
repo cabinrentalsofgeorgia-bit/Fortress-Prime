@@ -34,7 +34,7 @@ def test_concierge_persona_guard_rejects_legal_collection(tmp_path, monkeypatch:
     _write_persona(
         tmp_path / "01-invalid.json",
         slug="guest-experience-lead",
-        vector_collection="legal_library",
+        vector_collection="legal_library_v2",
         domain="hospitality",
     )
     monkeypatch.setattr(crog_concierge_engine, "CONCIERGE_PERSONAS_DIR", str(tmp_path))

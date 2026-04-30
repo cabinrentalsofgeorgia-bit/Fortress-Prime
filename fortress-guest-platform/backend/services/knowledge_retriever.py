@@ -279,7 +279,30 @@ async def _upsert_batch(
     await dual_upsert_points(points)
 
 
-LEGAL_COLLECTION = "legal_library"
+# Phase A PR #2 (2026-04-30): legal_library cut over to legal_library_v2 on the
+# 2048-dim sovereign legal-embed encoder. Other collections in this module
+# (fortress_knowledge / KB / etc) stay on nomic-embed-text.
+LEGAL_COLLECTION = "legal_library_v2"
+LEGAL_VECTOR_DIM = 2048
+
+
+async def _embed_legal_query(text: str) -> Optional[List[float]]:
+    """Embed a query for the sovereign legal-embed _v2 collections.
+
+    Routes via the LiteLLM gateway alias `legal-embed` with the mandatory
+    caller contract (input_type=query, encoding_format=float — see PR #300
+    §9.5). Returns None on any failure so callers can gracefully degrade.
+    """
+    from backend.core.vector_db import embed_legal_query as _embed_legal_vec
+
+    try:
+        vec = await _embed_legal_vec(text[:8000])
+        if len(vec) == LEGAL_VECTOR_DIM:
+            return vec
+        logger.warning("legal_query_embedding_dim_mismatch", expected=LEGAL_VECTOR_DIM, got=len(vec))
+    except Exception as e:
+        logger.warning("legal_query_embedding_failed", error=str(e)[:200])
+    return None
 
 
 async def _qdrant_legal_search(
@@ -353,7 +376,7 @@ async def legal_library_search(
     contract context rather than crashing).
     """
     try:
-        query_vector = await _embed_query(question)
+        query_vector = await _embed_legal_query(question)
         if query_vector is None:
             logger.warning("legal_library_embed_failed", query=question[:80])
             return []

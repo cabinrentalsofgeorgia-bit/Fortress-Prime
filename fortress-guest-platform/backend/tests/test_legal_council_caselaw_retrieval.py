@@ -1,6 +1,6 @@
 """
 Tests for Legal Council precedent retrieval — ensures the council now pulls
-controlling-authority chunks from the legal_caselaw Qdrant collection in
+controlling-authority chunks from the legal_caselaw_v2 Qdrant collection in
 addition to the existing legal_ediscovery evidence retrieval, keeps the
 merged context within the configured token budget, stamps seat prompts with
 citation discipline, and threads caselaw opinion ids into the vault payload.
@@ -97,12 +97,22 @@ def mock_qdrant(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.fixture
 def mock_embed(monkeypatch: pytest.MonkeyPatch):
-    """Return a non-None deterministic embedding so freeze paths don't early-exit."""
+    """Return a non-None deterministic embedding so freeze paths don't early-exit.
 
-    async def fake_embed(text: str):
+    Phase A PR #2: caselaw + library queries route through `_embed_legal_query`
+    (2048-dim sovereign legal-embed); ediscovery + privileged still ride
+    `_embed_text` (768-dim nomic). Mock both so either path is intercepted.
+    """
+    from backend.core.vector_db import LEGAL_EMBED_DIM
+
+    async def fake_embed_nomic(text: str):
         return [0.1] * lc._cfg.embed_dim
 
-    monkeypatch.setattr(lc, "_embed_text", fake_embed)
+    async def fake_embed_legal(text: str):
+        return [0.1] * LEGAL_EMBED_DIM
+
+    monkeypatch.setattr(lc, "_embed_text", fake_embed_nomic)
+    monkeypatch.setattr(lc, "_embed_legal_query", fake_embed_legal)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -114,7 +124,7 @@ async def test_council_context_includes_caselaw_block(
     mock_qdrant: Dict[str, List[Dict[str, Any]]],
     mock_embed,
 ) -> None:
-    mock_qdrant["legal_caselaw"] = [
+    mock_qdrant["legal_caselaw_v2"] = [
         _caselaw_point(
             111, 0,
             "The insurer owes a duty of good faith in settlement negotiations.",
@@ -150,7 +160,7 @@ async def test_council_caselaw_retrieval_respects_top_k(
     mock_embed,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mock_qdrant["legal_caselaw"] = [
+    mock_qdrant["legal_caselaw_v2"] = [
         _caselaw_point(i, 0, f"Authority chunk {i}.") for i in range(20)
     ]
 
@@ -158,12 +168,12 @@ async def test_council_caselaw_retrieval_respects_top_k(
     original_post = _FakeAsyncClient.post
 
     async def capture_post(self, url, json=None, headers=None):  # type: ignore[no-untyped-def]
-        if "legal_caselaw" in url and json:
+        if "legal_caselaw_v2" in url and json:
             captured_limits.append(int(json.get("limit", -1)))
         # Respect the limit so the returned payload size matches the request.
-        if "legal_caselaw" in url and json:
+        if "legal_caselaw_v2" in url and json:
             limit = int(json.get("limit", 0))
-            payload = {"result": mock_qdrant["legal_caselaw"][:limit]}
+            payload = {"result": mock_qdrant["legal_caselaw_v2"][:limit]}
             return _FakeResponse(payload)
         return await original_post(self, url, json=json, headers=headers)
 
@@ -225,7 +235,7 @@ async def test_council_seat_prompt_contains_citation_instruction(
         focus_areas=["Citations"],
         trigger_events=["test event"],
         godhead_prompt="You are The Test Seat.",
-        vector_collection="legal_library",
+        vector_collection="legal_library_v2",
     )
 
     captured: Dict[str, str] = {}
@@ -266,7 +276,7 @@ async def test_vaulted_deliberation_records_caselaw_opinion_ids(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ) -> None:
-    mock_qdrant["legal_caselaw"] = [
+    mock_qdrant["legal_caselaw_v2"] = [
         _caselaw_point(42, 0, "Authority chunk 42."),
         _caselaw_point(77, 1, "Authority chunk 77."),
     ]
@@ -310,7 +320,7 @@ async def test_vaulted_deliberation_records_caselaw_opinion_ids(
         focus_areas=["f"],
         trigger_events=["e"],
         godhead_prompt="prompt",
-        vector_collection="legal_library",
+        vector_collection="legal_library_v2",
     )
     monkeypatch.setattr(lc.LegalPersona, "load_all", staticmethod(lambda: [persona]))
 
@@ -370,7 +380,7 @@ async def test_ediscovery_retrieval_unchanged(
         _evidence_point("ev-A", "Alpha chunk", case_slug="matter-001"),
         _evidence_point("ev-B", "Beta chunk", case_slug="matter-001"),
     ]
-    mock_qdrant["legal_caselaw"] = [_caselaw_point(9, 0, "should not appear in this result")]
+    mock_qdrant["legal_caselaw_v2"] = [_caselaw_point(9, 0, "should not appear in this result")]
 
     captured_bodies: List[Dict[str, Any]] = []
     original_post = _FakeAsyncClient.post
@@ -388,7 +398,7 @@ async def test_ediscovery_retrieval_unchanged(
     # Only ediscovery was queried by freeze_context.
     hit_urls = [b["url"] for b in captured_bodies]
     assert any("legal_ediscovery" in u for u in hit_urls)
-    assert not any("legal_caselaw" in u for u in hit_urls)
+    assert not any("legal_caselaw_v2" in u for u in hit_urls)
 
     # case_slug filter applied.
     ediscovery_body = next(b for b in captured_bodies if "legal_ediscovery" in b["url"])
@@ -398,3 +408,81 @@ async def test_ediscovery_retrieval_unchanged(
     # Shape is still (ids, "[file] text" strings).
     assert vector_ids == ["ev-A", "ev-B"]
     assert chunks == ["[Exhibit-A.pdf] Alpha chunk", "[Exhibit-A.pdf] Beta chunk"]
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Phase A PR #2 — encoder-routing assertion
+# Caselaw retrieval must use `_embed_legal_query` (2048-dim legal-embed),
+# ediscovery retrieval must use `_embed_text` (768-dim nomic).
+# ═══════════════════════════════════════════════════════════════════════
+
+@pytest.mark.asyncio
+async def test_freeze_caselaw_uses_legal_embed_router(
+    mock_qdrant: Dict[str, List[Dict[str, Any]]],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Cutover guard: freeze_caselaw_context() must dispatch through
+    _embed_legal_query (2048-dim legal-embed via gateway), not the legacy
+    _embed_text path (768-dim nomic). Regressing this would silently
+    re-route caselaw search to the wrong encoder + collection dim."""
+    from backend.core.vector_db import LEGAL_EMBED_DIM
+
+    legal_calls: List[str] = []
+    nomic_calls: List[str] = []
+
+    async def spy_legal(text: str):
+        legal_calls.append(text[:32])
+        return [0.1] * LEGAL_EMBED_DIM
+
+    async def spy_nomic(text: str):
+        nomic_calls.append(text[:32])
+        return [0.1] * lc._cfg.embed_dim
+
+    monkeypatch.setattr(lc, "_embed_legal_query", spy_legal)
+    monkeypatch.setattr(lc, "_embed_text", spy_nomic)
+
+    mock_qdrant["legal_caselaw_v2"] = [_caselaw_point(7, 0, "Sovereign caselaw chunk")]
+
+    refs, chunks = await lc.freeze_caselaw_context("complaint alleges breach", top_k=5)
+
+    assert legal_calls == ["complaint alleges breach"], legal_calls
+    assert nomic_calls == [], nomic_calls
+    assert refs and chunks
+    assert refs[0].startswith("caselaw:")
+
+
+@pytest.mark.asyncio
+async def test_freeze_ediscovery_still_uses_legacy_nomic(
+    mock_qdrant: Dict[str, List[Dict[str, Any]]],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Cutover guard: freeze_context() (ediscovery) MUST stay on the legacy
+    _embed_text / 768-dim nomic encoder. Phase A PR #2 only cuts over
+    caselaw + library; ediscovery deferred to PR #4."""
+    legal_calls: List[str] = []
+    nomic_calls: List[str] = []
+
+    from backend.core.vector_db import LEGAL_EMBED_DIM
+
+    async def spy_legal(text: str):
+        legal_calls.append(text[:32])
+        return [0.1] * LEGAL_EMBED_DIM
+
+    async def spy_nomic(text: str):
+        nomic_calls.append(text[:32])
+        return [0.1] * lc._cfg.embed_dim
+
+    monkeypatch.setattr(lc, "_embed_legal_query", spy_legal)
+    monkeypatch.setattr(lc, "_embed_text", spy_nomic)
+
+    mock_qdrant["legal_ediscovery"] = [
+        _evidence_point("ev-1", "Email exhibit 1", case_slug="matter-007"),
+    ]
+
+    vector_ids, chunks = await lc.freeze_context(
+        "discovery query", top_k=5, case_slug="matter-007",
+    )
+
+    assert nomic_calls == ["discovery query"], nomic_calls
+    assert legal_calls == [], legal_calls
+    assert vector_ids and chunks

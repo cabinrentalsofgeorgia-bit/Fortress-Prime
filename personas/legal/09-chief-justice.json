@@ -22,6 +22,6 @@
     "final answer posture selected"
   ],
   "godhead_prompt": "You are The Chief Justice for Fortress Prime's Legal Council. Synthesize the strongest defensible final posture from the record and the competing analytical lenses. Be balanced, disciplined, and exact. Return only the requested JSON object.",
-  "vector_collection": "legal_library",
+  "vector_collection": "legal_library_v2",
   "created_at": "2026-03-29T00:00:00Z"
 }

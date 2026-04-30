@@ -11,7 +11,7 @@ Performs two layers of analysis on every damage report:
                        never exposed to the guest.
 
 NIM endpoint: Sparks 1&2 clustered (DGX_REASONER_URL, FP8 model)
-Statutory vectors: Qdrant legal_library (2,455+ vectors, 768-dim)
+Statutory vectors: Qdrant legal_library_v2 (2048-dim sovereign legal-embed; cut over 2026-04-30 in Phase A PR #2)
 Fallback: Anthropic Opus 4.6 -> Council cascade
 """
 
@@ -28,9 +28,12 @@ from backend.services.ai_engine import query_horseman, query_council
 
 logger = structlog.get_logger()
 
-EMBED_URL = "http://192.168.0.100/api/embeddings"
-EMBED_MODEL = "nomic-embed-text"
-STATUTORY_COLLECTION = "legal_library"
+# Phase A PR #2 (2026-04-30): legal_library cut over to legal_library_v2 on the
+# 2048-dim sovereign legal-embed encoder. Statutory queries now go through the
+# LiteLLM gateway (see _embed_statutory_query below) with the mandatory caller
+# contract from PR #300 §9.5 (input_type=query + encoding_format=float).
+STATUTORY_COLLECTION = "legal_library_v2"
+STATUTORY_EMBED_DIM = 2048
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -103,14 +106,14 @@ async def query_statutory_law(query: str, top_k: int = 5) -> str:
                 logger.debug("statutory_collection_not_found", collection=STATUTORY_COLLECTION)
                 return ""
 
-            embed_resp = await client.post(
-                EMBED_URL,
-                json={"model": EMBED_MODEL, "prompt": query[:4000]},
-                timeout=30,
-            )
-            embed_resp.raise_for_status()
-            vec = embed_resp.json().get("embedding", [])
-            if len(vec) != 768:
+            from backend.core.vector_db import embed_legal_query
+            try:
+                vec = await embed_legal_query(query[:4000])
+            except Exception as e:
+                logger.warning("statutory_embed_failed", error=str(e)[:200])
+                return ""
+            if len(vec) != STATUTORY_EMBED_DIM:
+                logger.warning("statutory_embed_dim_unexpected", got=len(vec))
                 return ""
 
             search_resp = await client.post(

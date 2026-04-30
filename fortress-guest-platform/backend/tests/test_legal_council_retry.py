@@ -22,7 +22,7 @@ def build_persona() -> LegalPersona:
         focus_areas=["Pleading tone", "Forum realism"],
         trigger_events=["pleading draft requested"],
         godhead_prompt="You are The Local Counsel.",
-        vector_collection="legal_library",
+        vector_collection="legal_library_v2",
     )
 
 

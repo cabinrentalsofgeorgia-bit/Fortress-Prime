@@ -587,18 +587,29 @@ async def _exec_get_case_deadlines(case_slug: str) -> Dict:
         ))
 
 
+# Phase A PR #2 (2026-04-30): legal_library cut over to legal_library_v2 on the
+# 2048-dim sovereign legal-embed encoder. The other two collections in this
+# federated search ride nomic-embed-text at 768-dim. Each collection's row
+# below carries its own encoder marker so the federated search embeds the
+# query once per encoder rather than once globally.
+_ENCODER_NOMIC = "nomic"
+_ENCODER_LEGAL = "legal-embed"
+
 _QDRANT_COLLECTIONS = {
     "fortress_knowledge": {
         "content_field": "text",
         "source_field": "source_file",
+        "encoder": _ENCODER_NOMIC,
     },
     "email_embeddings": {
         "content_field": "preview",
         "source_field": "subject",
+        "encoder": _ENCODER_NOMIC,
     },
-    "legal_library": {
-        "content_field": "text",
-        "source_field": "source_file",
+    "legal_library_v2": {
+        "content_field": "text_chunk",
+        "source_field": "file_name",
+        "encoder": _ENCODER_LEGAL,
     },
 }
 
@@ -645,31 +656,53 @@ async def _search_single_collection(
 
 
 async def _exec_search_knowledge_base(query: str) -> Dict:
-    """Federated search across fortress_knowledge, email_embeddings, and legal_library."""
+    """Federated search across fortress_knowledge, email_embeddings, and legal_library_v2.
+
+    Embeds the query separately per encoder family — nomic-embed-text for
+    fortress_knowledge + email_embeddings, sovereign legal-embed (2048-dim,
+    PR #300 §9.5 caller contract) for legal_library_v2 — then dispatches one
+    search per collection with the matching vector.
+    """
     try:
+        from backend.core.vector_db import embed_legal_query as _embed_legal
         from backend.core.vector_db import embed_text as _embed_text
 
-        embedding = await _embed_text(query[:8000])
-        if not embedding:
+        truncated = query[:8000]
+        nomic_vec = await _embed_text(truncated)
+        if not nomic_vec:
             return _model_dump(ToolError(
                 tool_error="Embedding generation failed",
-                details="Embedding endpoint returned no vector",
+                details="nomic-embed-text returned no vector",
             ))
+        try:
+            legal_vec = await _embed_legal(truncated)
+        except Exception as e:
+            logger.warning("federated_legal_embed_failed", error=str(e)[:200])
+            legal_vec = None
+
+        encoder_vec = {_ENCODER_NOMIC: nomic_vec, _ENCODER_LEGAL: legal_vec}
 
         async with httpx.AsyncClient(timeout=20.0) as client:
             per_collection = 5
-            search_tasks = [
-                _search_single_collection(client, coll, embedding, per_collection)
-                for coll in _QDRANT_COLLECTIONS
-            ]
+            search_tasks = []
+            scheduled_collections: List[str] = []
+            for coll, schema in _QDRANT_COLLECTIONS.items():
+                vec = encoder_vec.get(schema["encoder"])
+                if vec is None:
+                    logger.warning(
+                        "federated_search_skip_collection_no_encoder_vec",
+                        collection=coll, encoder=schema["encoder"],
+                    )
+                    continue
+                search_tasks.append(_search_single_collection(client, coll, vec, per_collection))
+                scheduled_collections.append(coll)
             collection_results = await asyncio.gather(
                 *search_tasks, return_exceptions=True,
             )
 
             merged: List[KnowledgeResult] = []
-            searched: List[str] = []
-            for coll_name, result in zip(_QDRANT_COLLECTIONS, collection_results):
-                searched.append(coll_name)
+            searched: List[str] = list(scheduled_collections)
+            for coll_name, result in zip(scheduled_collections, collection_results):
                 if isinstance(result, Exception):
                     logger.warning(
                         "federated_search_collection_error",

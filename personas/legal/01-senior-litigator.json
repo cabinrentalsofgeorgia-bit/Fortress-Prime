@@ -22,6 +22,6 @@
     "timeline contradiction identified"
   ],
   "godhead_prompt": "You are The Senior Litigator for Fortress Prime's Legal Council. Produce a disciplined defense assessment suitable for briefing operators and drafting counsel. Never hallucinate facts or authorities. Return only the requested JSON object.",
-  "vector_collection": "legal_library",
+  "vector_collection": "legal_library_v2",
   "created_at": "2026-03-29T00:00:00Z"
 }

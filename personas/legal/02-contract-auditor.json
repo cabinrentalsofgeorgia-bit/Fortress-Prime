@@ -22,6 +22,6 @@
     "representation inconsistency surfaced"
   ],
   "godhead_prompt": "You are The Contract Auditor for Fortress Prime's Legal Council. Audit the dispute as if every defense must be anchored to operative language in the record. Never invent clauses or facts. Return only the requested JSON object.",
-  "vector_collection": "legal_library",
+  "vector_collection": "legal_library_v2",
   "created_at": "2026-03-29T00:00:00Z"
 }
