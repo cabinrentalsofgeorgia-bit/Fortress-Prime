@@ -226,4 +226,144 @@ Ray dashboard API node list captured 2026-04-30T06:29Z: 9 entries total (4 ALIVE
 
 ---
 
-End of audit.
+## 9. Audit completion 2026-04-30 (post-SSH-resolution)
+
+After §1–§8 was committed, operator-side SSH auth was restored on spark-5 and spark-6 (fortress pubkey installed). This section captures the data §1–§8 could not.
+
+### 9.1 Spark-5 — `192.168.0.109` (now SSH-reachable)
+
+- Hostname: **`spark-5`** (lowercase, no `node-` prefix — matches spark-3/Spark-4 convention rather than spark-1/2)
+- SSH auth: ✅ admin
+- **Mgmt: TWO IPs on different interfaces** ⚠
+  - `192.168.0.109/24 enP7s7` — primary mgmt LAN
+  - `192.168.0.111/24 enP2p1s0f1np1` — **a 192.168.0.x address bound to a ConnectX port** (should be a `10.10.x.x` fabric IP, not a mgmt-LAN address — see Gap 6)
+- **Fabric A only:** `10.10.10.5/24 enp1s0f1np1`
+- **Fabric B: not configured** (no `10.10.11.x` IP)
+- **ConnectX state — 2 of 4 ports DOWN:** ⚠
+  ```
+  enp1s0f0np0      driver=mlx5_core  speed=-1Mbps     state=down
+  enp1s0f1np1      driver=mlx5_core  speed=100000Mbps state=up    ← 10.10.10.5 fabric A
+  enP2p1s0f0np0    driver=mlx5_core  speed=-1Mbps     state=down
+  enP2p1s0f1np1    driver=mlx5_core  speed=100000Mbps state=up    ← 192.168.0.111 (mis-bound)
+  ```
+- **Ray: NO PROCESSES** (`pgrep -af "ray::|raylet|gcs_server"` returned no matches) — confirms §5 STOP-condition finding from the dashboard side
+- Docker: `fortress-nim-brain` (`nvcr.io/nim/nvidia/llama-3.3-nemotron-super-49b-v1.5:latest`, up 26 hours)
+- Listening port: 8100 only (BRAIN)
+- systemd: `fortress-nim-brain.service` — **description text says `"on spark-1"`** but the service is actually running on spark-5 (stale unit description, see Gap 7)
+- LAN ping spark-2: 0.32 ms ✓
+- Fabric ping `10.10.10.2` (fabric A): 0.23 ms ✓
+- **Fabric ping `10.10.11.2` (fabric B): NO RESPONSE** — fabric B not wired or not configured on spark-5
+
+### 9.2 Spark-6 — `192.168.0.115` (now SSH-reachable)
+
+- Hostname: **`spark-6`**
+- SSH auth: ✅ admin
+- Mgmt: `192.168.0.115/24 enP7s7` only
+- **NO fabric IPs** (10.x ranges empty)
+- **NO ConnectX devices visible** — `for dev in /sys/class/net/*; case driver in mlx5_core|mlx4_core` returned nothing. Either ConnectX hardware isn't installed or driver isn't loaded.
+- No Ray, no Docker containers running, no NIM/Ollama/Qdrant ports listening, no fortress/nim/ray/qdrant/ollama systemd units
+- LAN ping spark-2: 0.54 ms ✓
+- **Fabric ping `10.10.10.2`: NO RESPONSE**
+- **Fabric ping `10.10.11.2`: NO RESPONSE**
+
+**Spark-6 is currently a bare host with mgmt-LAN connectivity only.** This confirms §5 Gap 4: ConnectX cable into the fabric is the gating physical blocker for ADR-003 Phase 3 — and additionally the ConnectX hardware is either uninstalled or its driver is not loaded.
+
+### 9.3 Updated cluster summary table
+
+| Spark | Mgmt IP | SSH (admin) | Hostname | Fabric A | Fabric B | ConnectX | NIMs | Ray | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| spark-1 | 192.168.0.104 | ✅ | spark-node-1 | 10.10.10.1 | 10.10.11.1 | 4× UP | nim-sovereign | WORKER | — |
+| spark-2 | 192.168.0.100 | ✅ (self) | spark-node-2 | 10.10.10.2 | 10.10.11.2 | 4× UP | (control plane) | HEAD | — |
+| spark-3 | 192.168.0.105 | ✅ | spark-3 | 10.10.10.3 | 10.10.11.3 | 4× UP | nim-vision, nim-embed | WORKER | — |
+| spark-4 | 192.168.0.106 | ✅ | Spark-4 | 10.10.10.4 | 10.10.11.4 | 4× UP | qdrant-vrs, sensevoice | WORKER | — |
+| **spark-5** | 192.168.0.109 | ✅ | **spark-5** | **10.10.10.5** | **MISSING** ⚠ | **2 UP / 2 DOWN** ⚠ | brain-nim :8100 | **NOT IN CLUSTER** 🛑 | also 192.168.0.111 mis-bound on fabric port |
+| **spark-6** | 192.168.0.115 | ✅ | **spark-6** | — | — | **NO DEVICES** ⚠ | none | none | mgmt-LAN only — no fabric, no ConnectX |
+
+### 9.4 New gaps surfaced
+
+#### Gap 6 (HIGH) — Spark-5 fabric is half-wired and one port is mis-bound
+
+- Two of four ConnectX ports `state=down` on spark-5 — physical cable check needed
+- The ConnectX port that IS up but lacks a fabric IP (`enP2p1s0f1np1`) is bound to `192.168.0.111/24` — a mgmt-LAN address. Either (a) DHCP from the ER8411 leased it a mgmt IP because no static fabric config existed, or (b) misconfiguration.
+- Fabric B (`10.10.11.0/24`) has no spark-5 endpoint, so any caller using fabric B for spark-5 communication will fail.
+
+**Recommended next-step:**
+1. Check `/etc/netplan/*.yaml` (or systemd-networkd config) on spark-5 to see what fabric IPs were intended.
+2. Run a physical cable inventory: which spark-5 ConnectX ports are cabled into the Mikrotik switch? Are spark-5 down-ports genuinely unconnected, or is the cable plugged but link negotiation failing?
+3. Decide whether spark-5 should have both fabric A + fabric B (matching sparks 1-4) or just fabric A (which is what's currently configured).
+4. Remove the spurious `192.168.0.111/24` binding from the ConnectX port — that IP collides with the mgmt-LAN subnet and could cause routing ambiguity.
+
+#### Gap 7 (LOW) — `fortress-nim-brain.service` description names wrong host
+
+- Service description on spark-5 reads: *"Fortress NIM Brain — nvidia/Llama-3.3-Nemotron-Super-49B-v1.5-FP8 **on spark-1** (Tier 2 sovereign reasoning)"*
+- The service actually runs on spark-5 (per master-plan v1.7 §5.2 update — BRAIN moved spark-1 → spark-5 on 2026-04-28)
+- Cosmetic but documentation-debt: anyone reading the unit will assume spark-1 host
+
+**Recommended next-step:** edit `Description=` field in `/etc/systemd/system/fortress-nim-brain.service` on spark-5 to say "on spark-5". Non-urgent.
+
+#### Gap 8 (LOW) — Spark-6 ConnectX hardware absent or driver not loaded
+
+- `ls /sys/class/net/` shows no mlx5/mlx4 devices on spark-6
+- Either: (a) ConnectX adapter not physically installed, or (b) `mlx5_core` kernel module not loaded for some reason
+
+**Recommended next-step:** operator checks physical chassis on spark-6. If adapter is present but driver missing, `lspci | grep Mellanox` will show the device — then `modprobe mlx5_core`. If adapter is absent, this is a hardware-procurement / install task.
+
+### 9.5 id_ed25519 regen blast radius (Part B)
+
+Operator regenerated `~/.ssh/id_ed25519` on spark-2 admin at **2026-04-30 06:49** (timestamp on key file). Per the brief, surface any orphaned references.
+
+#### Key inventory on spark-2
+
+```
+-rw-------  411 Apr 30 06:49  id_ed25519              ← REGENERATED (today)
+-rw-r--r--  100 Apr 30 06:49  id_ed25519.pub          ← REGENERATED (today)
+-rw-------  432 Mar  2 07:44  id_ed25519_fortress     ← original cluster-wide canonical key
+-rw-r--r--  116 Mar  2 07:44  id_ed25519_fortress.pub
+-rw------- 2602 Feb  5 15:43  id_rsa                  ← legacy
+-rw-r--r--  572 Feb  5 15:43  id_rsa.pub
+```
+
+#### `~/.ssh/config` IdentityFile mappings (spark-2 admin)
+
+```
+spark-1 / spark-1-mgmt              → id_ed25519_fortress
+spark-2 / spark-2-fabric / spark-2-mgmt  → id_rsa
+spark-3 / spark-3-mgmt              → id_ed25519_fortress
+spark-4 / spark-4-mgmt              → id_ed25519_fortress
+github.com                          → id_ed25519_fortress
+192.168.0.* 10.10.10.* 10.10.11.* 10.101.*  → id_ed25519_fortress (wildcard)
+192.168.0.104 (spark-1 IP literal)  → id_rsa  (stale; wildcard above wins for other IPs)
+```
+
+**No entry references plain `id_ed25519` (no suffix).**
+
+#### Filesystem search for `id_ed25519` (no `_fortress` suffix)
+
+- Searched: `~/.ssh/`, `~/Fortress-Prime/` (excluded `.bak`, `.backup`, `known_hosts`, `authorized_keys`, `.git/`, `node_modules`, `.uv-venv`, `.venv`, `__pycache__`)
+- **Result: 0 references found**
+
+#### Active-service health checks
+
+- **Tailscale:** `tailscale status` reports spark-2 online (`100.80.122.100 spark-2 cabin.rentals.of.georgia@ linux -`); other peer state intact (Mac mini, iMac online; ds1825-1 + fortress-linux offline as before this session). Tailscale does not use SSH keys — auth unaffected by `id_ed25519` regen.
+- **Git remote SSH (`origin git@github.com:cabinrentalsofgeorgia-bit/Fortress-Prime.git`):** `ls-remote origin HEAD` returns `cfea55b0b3a2cb9b6b47bff1e734a82d2cf81ed3` → **WORKS**. The wildcard `Host github.com → IdentityFile ~/.ssh/id_ed25519_fortress` keeps GitHub auth functional. Pushes / fetches via SSH are unaffected by `id_ed25519` regen.
+- **`~/.ssh/authorized_keys` on spark-2:** 11 lines, last 3 entries reference `admin@spark-node-1`, `knight@garys-mac-mini`, `admin@spark-6-fabric-20260426` — peer pubkeys, not affected by spark-2's own private-key regen.
+
+#### Conclusion
+
+**The regenerated `id_ed25519` is functionally orphaned.** No active service or config references the unsuffixed key — every cluster + GitHub auth path uses `id_ed25519_fortress` (or `id_rsa` for spark-2's self-loops). Tailscale doesn't use SSH keys. Git remote works.
+
+**Recommended action: SAFE — no fix needed.** Operator may delete the new `id_ed25519` and `id_ed25519.pub` if confident they were created in error, or leave them in place — neither breaks anything. If the regen was *intentional* and meant to replace `id_ed25519_fortress` going forward, that would be a separate operator decision (would require updating `~/.ssh/config` IdentityFile lines + redeploying the new pubkey to all spark `authorized_keys`).
+
+### 9.6 Updated operator decisions needed
+
+In addition to §6:
+
+5. Spark-5 fabric B wiring + 192.168.0.111 mis-bind cleanup (Gap 6) — physical cable + netplan inspection
+6. Spark-6 ConnectX presence (Gap 8) — physical chassis check, `lspci | grep Mellanox`
+7. id_ed25519 disposition — delete or repurpose (decision after §9.5 review)
+8. fortress-nim-brain.service description edit on spark-5 (Gap 7) — non-urgent
+
+---
+
+End of audit completion section.
+
