@@ -1,0 +1,26 @@
+=== Track A Case I dry-run — 20260430T174043Z ===
+Calling compose() with case_slug=7il-v-knight-ndga-i, output_dir=/tmp/track-a-case-i-v3-20260430T174043Z/compose-output
+compose() done in 421.92s. out_path=/tmp/track-a-case-i-v3-20260430T174043Z/compose-output/Attorney_Briefing_Package_7IL_Properties_LLC_v_Knight_Case_I_v1_20260430.md
+Section 9 augmentation via legal-reasoning…
+{
+  "case_slug": "7il-v-knight-ndga-i",
+  "stamp": "20260430T174043Z",
+  "overall_wall_seconds": 421.92,
+  "frontier_endpoint": "http://10.10.10.3:8000",
+  "frontier_served_model": "nemotron-3-super",
+  "compose_output_path": "/tmp/track-a-case-i-v3-20260430T174043Z/compose-output/Attorney_Briefing_Package_7IL_Properties_LLC_v_Knight_Case_I_v1_20260430.md",
+  "assembled_v3_local": "/tmp/track-a-case-i-v3-20260430T174043Z/Attorney_Briefing_Package_7IL_NDGA_I_v3_20260430T174043Z.md",
+  "assembled_v3_nas": "/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-i/filings/outgoing/Attorney_Briefing_Package_7IL_NDGA_I_v3_20260430T174043Z.md",
+  "ten_sections_modes": {
+    "section_01_case_summary": "mechanical (deterministic; no LLM)",
+    "section_02_critical_timeline": "synthesis (LLM)",
+    "section_03_parties_and_counsel": "mechanical (deterministic; no LLM)",
+    "section_04_claims_analysis": "synthesis (LLM)",
+    "section_05_key_defenses_identified": "synthesis (LLM)",
+    "section_06_evidence_inventory": "mechanical (deterministic; no LLM)",
+    "section_07_email_intelligence_report": "synthesis (LLM)",
+    "section_08_financial_exposure_analysis": "synthesis (LLM)",
+    "section_09_recommended_strategy": "operator_written placeholder (orchestrator) + post-run legal-reasoning augmentation (this runner)",
+    "section_10_filing_checklist": "mechanical (deterministic; no LLM)"
+  }
+}
