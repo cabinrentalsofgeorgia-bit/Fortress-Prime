@@ -8,19 +8,39 @@ mid-response on the underlying NIM/vLLM stack.
 This module is read-only: it does not retry, mutate any sovereign store, or
 call Council deliberation paths. Caller decides retry policy.
 
-# Phase B BrainClient TP=2 frontier compatibility (Path X, 2026-04-30)
-Following Track A (PR #323) the client now handles vLLM's nemotron_v3
-reasoning parser wire format:
-- Stream parses `delta.reasoning` chunks alongside `delta.content`.
-  Reasoning is accumulated to `self.last_reasoning` (and exposed via
-  `last_finish_reason`); content is yielded as before, so existing
-  consumers continue to work unchanged.
-- `default_max_tokens` constructor kwarg (default 8000) raises the
-  per-call max_tokens floor when callers don't specify, leaving room for
-  the reasoning trace to complete before content emission begins.
-- `reasoning_effort` and `thinking` kwargs (constructor + per-call) inject
-  into the request body's `extra_body` / `chat_template_kwargs`, mirroring
-  the per-alias profile config established by Phase 9 LiteLLM alias surgery.
+# Reasoning controls (post-PR #330 probe matrix, 2026-04-30)
+The vLLM nemotron_v3 reasoning parser exposes thinking depth via three knobs.
+PR #330's empirical probes settled the schema: all three must be placed at
+the TOP LEVEL of the request body. The OpenAI-style `extra_body` wrapper is
+silently dropped by vLLM's OpenAI-compat server (Probe E ran 2,554 reasoning
+tokens against a 2,048 budget when wrapped, vs 1,195 unwrapped — same body
+otherwise).
+
+Wired knobs (constructor + per-call):
+- ``enable_thinking: bool | None`` — when False, model emits content directly
+  with no reasoning trace (mechanical sections, §2/§7 fix).
+- ``low_effort: bool | None`` — meaningful only when enable_thinking=True;
+  cuts reasoning depth dramatically (§4 stress test: 21,656 → 1,337 chars
+  direct, 21,656 → 210 chars via LiteLLM).
+- ``thinking_token_budget: int | None`` — top-level field; defensive ceiling.
+  PR #330 + Phase 2 stress could not conclusively prove logits-processor
+  enforcement on this build (low_effort kept reasoning well under budget),
+  so the budget is wired as a defensive ceiling rather than load-bearing.
+
+Response-shape divergence between paths:
+- Direct vLLM: ``message.reasoning`` (and ``delta.reasoning`` in streaming).
+- Via LiteLLM: ``message.reasoning_content`` (and ``delta.reasoning_content``
+  in streaming).
+``last_reasoning`` accumulates whichever field is present.
+
+# Deprecated kwargs
+- ``reasoning_effort`` (added in PR #326 Defect 3) — OpenAI-class schema,
+  not honored by Nemotron's chat template. LiteLLM's ``drop_params: true``
+  silently drops it. Kept for backward compat; logs a one-shot deprecation
+  warning when set; NOT injected into the request body.
+- ``thinking`` (added in PR #326 Defect 3) — wrong key (chat template uses
+  ``enable_thinking``). Kept for backward compat; logs a one-shot deprecation
+  warning when set; NOT injected. Callers should switch to ``enable_thinking``.
 """
 
 from __future__ import annotations
@@ -51,10 +71,11 @@ class BrainClient:
 
     Defaults to streaming; non-streaming is allowed only for short outputs.
 
-    Reasoning-aware: handles vLLM nemotron_v3 reasoning parser wire format.
-    After a chat() call completes, `client.last_reasoning` exposes the
-    reasoning trace and `client.last_finish_reason` exposes the terminating
-    cause (`stop`, `length`, etc.) for both streaming and non-streaming paths.
+    Reasoning-aware: parses both ``message.reasoning`` (direct vLLM) and
+    ``message.reasoning_content`` (via LiteLLM). After a chat() call completes,
+    ``client.last_reasoning`` exposes the reasoning trace and
+    ``client.last_finish_reason`` exposes the terminating cause (``stop``,
+    ``length``, etc.).
     """
 
     def __init__(
@@ -65,16 +86,35 @@ class BrainClient:
         *,
         # Defect 2 — per-instance default for callers that don't specify max_tokens
         default_max_tokens: int = _DEFAULT_MAX_TOKENS,
-        # Defect 3 — reasoning controls for vLLM nemotron_v3 parser
-        reasoning_effort: Optional[str] = None,  # "low" | "medium" | "high"
-        thinking: Optional[bool] = None,          # → chat_template_kwargs.thinking
+        # Phase 2 reasoning controls (PR #330 probe matrix)
+        enable_thinking: Optional[bool] = None,
+        low_effort: Optional[bool] = None,
+        thinking_token_budget: Optional[int] = None,
+        # Deprecated — kept for backward compat (PR #326)
+        reasoning_effort: Optional[str] = None,
+        thinking: Optional[bool] = None,
     ) -> None:
         self.base_url = (base_url or _cfg.brain_base_url).rstrip("/")
         self.timeout = timeout
         self.model = model
         self.default_max_tokens = default_max_tokens
+        self.enable_thinking = enable_thinking
+        self.low_effort = low_effort
+        self.thinking_token_budget = thinking_token_budget
+        # Deprecated — stored for introspection but never injected into the request
         self.reasoning_effort = reasoning_effort
         self.thinking = thinking
+        if reasoning_effort is not None:
+            _warn_deprecated_once(
+                "BrainClient(reasoning_effort=...) — OpenAI-class schema not honored "
+                "by Nemotron; param will not be injected. Use low_effort=True or "
+                "thinking_token_budget=N instead."
+            )
+        if thinking is not None:
+            _warn_deprecated_once(
+                "BrainClient(thinking=...) — wrong chat-template key; not injected. "
+                "Use enable_thinking=... instead."
+            )
         # Reasoning accumulator + terminating cause exposed after each chat() call
         self.last_reasoning: str = ""
         self.last_finish_reason: Optional[str] = None
@@ -87,7 +127,11 @@ class BrainClient:
         stream: bool = True,
         transport: Optional[httpx.AsyncBaseTransport] = None,
         *,
-        # Per-call overrides for Defect 3 reasoning controls
+        # Phase 2 per-call overrides
+        enable_thinking: Optional[bool] = None,
+        low_effort: Optional[bool] = None,
+        thinking_token_budget: Optional[int] = None,
+        # Deprecated — kept for backward compat (PR #326)
         reasoning_effort: Optional[str] = None,
         thinking: Optional[bool] = None,
     ) -> Union[AsyncIterator[str], dict]:
@@ -96,10 +140,17 @@ class BrainClient:
         - stream=True (default): returns an async iterator yielding content chunks.
         - stream=False: returns the parsed response dict; rejects max_tokens > 1000.
 
-        ``max_tokens=None`` resolves to ``self.default_max_tokens`` (Defect 2).
-        ``reasoning_effort`` / ``thinking`` per-call args fall back to the
-        instance defaults set in ``__init__`` (Defect 3); both are injected into
-        the request body's ``extra_body`` / ``chat_template_kwargs`` if set.
+        ``max_tokens=None`` resolves to ``self.default_max_tokens``.
+
+        Reasoning-control kwargs (per-call value wins over instance default):
+        - ``enable_thinking`` → top-level ``chat_template_kwargs.enable_thinking``
+        - ``low_effort``      → top-level ``chat_template_kwargs.low_effort``
+        - ``thinking_token_budget`` → top-level ``thinking_token_budget`` field
+        All three are placed at the top level of the request body (NOT inside
+        ``extra_body`` — vLLM silently drops nested fields per PR #330 Probe E).
+
+        Deprecated kwargs (``reasoning_effort``, ``thinking``) emit a one-shot
+        warning and are NOT injected into the request body.
 
         ``transport`` is for tests only (httpx.MockTransport injection).
         """
@@ -109,10 +160,26 @@ class BrainClient:
                 "non-streaming long-output forbidden; use stream=True"
             )
 
-        effective_reasoning_effort = (
-            reasoning_effort if reasoning_effort is not None else self.reasoning_effort
+        # Resolve effective per-call values (per-call > instance default)
+        eff_enable_thinking = (
+            enable_thinking if enable_thinking is not None else self.enable_thinking
         )
-        effective_thinking = thinking if thinking is not None else self.thinking
+        eff_low_effort = low_effort if low_effort is not None else self.low_effort
+        eff_thinking_token_budget = (
+            thinking_token_budget
+            if thinking_token_budget is not None
+            else self.thinking_token_budget
+        )
+
+        # Deprecation warnings for per-call use
+        if reasoning_effort is not None:
+            _warn_deprecated_once(
+                "BrainClient.chat(reasoning_effort=...) deprecated — not injected."
+            )
+        if thinking is not None:
+            _warn_deprecated_once(
+                "BrainClient.chat(thinking=...) deprecated — use enable_thinking=..."
+            )
 
         payload: dict[str, Any] = {
             "model": self.model,
@@ -121,10 +188,19 @@ class BrainClient:
             "temperature": temperature,
             "stream": stream,
         }
-        if effective_reasoning_effort is not None:
-            payload["reasoning_effort"] = effective_reasoning_effort
-        if effective_thinking is not None:
-            payload["chat_template_kwargs"] = {"thinking": effective_thinking}
+
+        # Top-level chat_template_kwargs — only includes keys actually set
+        chat_template_kwargs: dict[str, Any] = {}
+        if eff_enable_thinking is not None:
+            chat_template_kwargs["enable_thinking"] = eff_enable_thinking
+        if eff_low_effort is not None:
+            chat_template_kwargs["low_effort"] = eff_low_effort
+        if chat_template_kwargs:
+            payload["chat_template_kwargs"] = chat_template_kwargs
+
+        # Top-level thinking_token_budget (NOT nested in extra_body or chat_template_kwargs)
+        if eff_thinking_token_budget is not None:
+            payload["thinking_token_budget"] = eff_thinking_token_budget
 
         # Reset per-call accumulators
         self.last_reasoning = ""
@@ -149,11 +225,16 @@ class BrainClient:
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
                 data = resp.json()
-                # Capture reasoning + finish_reason for caller introspection (Defect 1, oneshot path)
+                # Capture reasoning + finish_reason for caller introspection.
+                # Direct vLLM emits `message.reasoning`; via LiteLLM it's
+                # `message.reasoning_content`. Read both, prefer reasoning_content
+                # since that's what production callers go through (LiteLLM proxy).
                 try:
                     choice0 = data["choices"][0]
                     msg = choice0.get("message", {}) or {}
-                    self.last_reasoning = msg.get("reasoning") or ""
+                    self.last_reasoning = (
+                        msg.get("reasoning_content") or msg.get("reasoning") or ""
+                    )
                     self.last_finish_reason = choice0.get("finish_reason")
                 except (KeyError, IndexError, TypeError):
                     pass
@@ -176,11 +257,11 @@ class BrainClient:
         payload: dict,
         transport: Optional[httpx.AsyncBaseTransport],
     ) -> AsyncIterator[str]:
-        """Yield ``delta.content`` chunks. Accumulate ``delta.reasoning`` chunks
-        to ``self.last_reasoning`` (Defect 1). vLLM nemotron_v3 parser emits
-        reasoning chunks first (until the trace completes), then content;
-        without parsing both, the content stream may appear empty when the
-        reasoning fills the budget — see Track A (PR #323) for the failure mode.
+        """Yield ``delta.content`` chunks. Accumulate ``delta.reasoning`` and
+        ``delta.reasoning_content`` chunks to ``self.last_reasoning`` (the
+        former is direct vLLM's wire format; the latter is LiteLLM's). Without
+        parsing both, content can appear empty when reasoning fills the budget
+        — see Track A (PR #323) for the failure mode.
         """
         url = f"{self.base_url}/v1/chat/completions"
         started = time.monotonic()
@@ -213,8 +294,10 @@ class BrainClient:
                         if finish is not None:
                             self.last_finish_reason = finish
                         delta = choice.get("delta") or {}
-                        # Defect 1: accumulate reasoning; do NOT yield (consumers expect content only)
-                        reasoning_chunk = delta.get("reasoning")
+                        # Accumulate reasoning from either field; do NOT yield
+                        reasoning_chunk = (
+                            delta.get("reasoning_content") or delta.get("reasoning")
+                        )
                         if reasoning_chunk:
                             self.last_reasoning += reasoning_chunk
                         # Yield content as before (backward-compatible)
@@ -238,3 +321,14 @@ class BrainClient:
             raise
         except Exception as exc:
             raise BrainClientError(f"BRAIN stream failed: {exc!s}") from exc
+
+
+_deprecation_warned: set[str] = set()
+
+
+def _warn_deprecated_once(message: str) -> None:
+    """Log a deprecation warning once per process per message."""
+    if message in _deprecation_warned:
+        return
+    _deprecation_warned.add(message)
+    logger.warning("brain_client_deprecated  %s", message)

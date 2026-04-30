@@ -230,20 +230,22 @@ def test_default_max_tokens_is_8000():
     assert client.default_max_tokens == 8000
 
 
-def test_constructor_accepts_reasoning_kwargs():
-    """Defect 3 — constructor stores reasoning_effort + thinking kwargs."""
+def test_constructor_accepts_phase2_reasoning_kwargs():
+    """Phase 2 — constructor stores enable_thinking, low_effort, thinking_token_budget."""
     client = BrainClient(
         base_url="http://mock-brain",
-        reasoning_effort="high",
-        thinking=True,
+        enable_thinking=True,
+        low_effort=True,
+        thinking_token_budget=2048,
     )
-    assert client.reasoning_effort == "high"
-    assert client.thinking is True
+    assert client.enable_thinking is True
+    assert client.low_effort is True
+    assert client.thinking_token_budget == 2048
 
 
 @pytest.mark.asyncio
-async def test_extra_body_injection_when_reasoning_kwargs_set():
-    """Defect 3 — reasoning_effort + thinking land in payload."""
+async def test_chat_template_kwargs_at_top_level():
+    """Phase 2 — enable_thinking + low_effort serialize as top-level chat_template_kwargs."""
     captured_payloads: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -253,8 +255,8 @@ async def test_extra_body_injection_when_reasoning_kwargs_set():
     transport = httpx.MockTransport(handler)
     client = BrainClient(
         base_url="http://mock-brain",
-        reasoning_effort="high",
-        thinking=True,
+        enable_thinking=True,
+        low_effort=True,
     )
     await client.chat(
         messages=[{"role": "user", "content": "x"}],
@@ -262,15 +264,15 @@ async def test_extra_body_injection_when_reasoning_kwargs_set():
         stream=False,
         transport=transport,
     )
-    assert len(captured_payloads) == 1
     body = captured_payloads[0]
-    assert body.get("reasoning_effort") == "high"
-    assert body.get("chat_template_kwargs") == {"thinking": True}
+    # Must be at top level — extra_body wrapper is silently dropped per PR #330 Probe E
+    assert "extra_body" not in body
+    assert body.get("chat_template_kwargs") == {"enable_thinking": True, "low_effort": True}
 
 
 @pytest.mark.asyncio
-async def test_extra_body_omitted_when_reasoning_kwargs_unset():
-    """Defect 3 — when neither constructor nor per-call sets the flags, they are NOT in payload."""
+async def test_thinking_token_budget_at_top_level():
+    """Phase 2 — thinking_token_budget is a top-level field, not nested."""
     captured_payloads: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -278,7 +280,11 @@ async def test_extra_body_omitted_when_reasoning_kwargs_unset():
         return _ok_nonstream_response("x")
 
     transport = httpx.MockTransport(handler)
-    client = BrainClient(base_url="http://mock-brain")  # no reasoning kwargs
+    client = BrainClient(
+        base_url="http://mock-brain",
+        enable_thinking=True,
+        thinking_token_budget=2048,
+    )
     await client.chat(
         messages=[{"role": "user", "content": "x"}],
         max_tokens=500,
@@ -286,13 +292,39 @@ async def test_extra_body_omitted_when_reasoning_kwargs_unset():
         transport=transport,
     )
     body = captured_payloads[0]
-    assert "reasoning_effort" not in body
+    # Top-level placement — PR #330 Probe D vs E proved nesting in extra_body
+    # or chat_template_kwargs causes silent drop
+    assert body.get("thinking_token_budget") == 2048
+    assert "thinking_token_budget" not in body.get("chat_template_kwargs", {})
+    assert "extra_body" not in body
+
+
+@pytest.mark.asyncio
+async def test_reasoning_kwargs_omitted_when_unset():
+    """When no Phase 2 params set, neither chat_template_kwargs nor thinking_token_budget appears."""
+    captured_payloads: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_payloads.append(json.loads(request.content))
+        return _ok_nonstream_response("x")
+
+    transport = httpx.MockTransport(handler)
+    client = BrainClient(base_url="http://mock-brain")
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=500,
+        stream=False,
+        transport=transport,
+    )
+    body = captured_payloads[0]
     assert "chat_template_kwargs" not in body
+    assert "thinking_token_budget" not in body
+    assert "reasoning_effort" not in body
 
 
 @pytest.mark.asyncio
-async def test_per_call_reasoning_kwargs_override_constructor():
-    """Defect 3 — per-call kwargs win over constructor defaults."""
+async def test_per_call_phase2_kwargs_override_constructor():
+    """Per-call Phase 2 kwargs win over constructor defaults."""
     captured_payloads: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -302,20 +334,77 @@ async def test_per_call_reasoning_kwargs_override_constructor():
     transport = httpx.MockTransport(handler)
     client = BrainClient(
         base_url="http://mock-brain",
-        reasoning_effort="high",
-        thinking=True,
+        enable_thinking=True,
+        low_effort=True,
+        thinking_token_budget=4096,
     )
     await client.chat(
         messages=[{"role": "user", "content": "x"}],
         max_tokens=500,
         stream=False,
         transport=transport,
-        reasoning_effort="low",
-        thinking=False,
+        enable_thinking=False,
+        low_effort=False,
+        thinking_token_budget=2048,
     )
     body = captured_payloads[0]
-    assert body["reasoning_effort"] == "low"
-    assert body["chat_template_kwargs"]["thinking"] is False
+    assert body["chat_template_kwargs"] == {"enable_thinking": False, "low_effort": False}
+    assert body["thinking_token_budget"] == 2048
+
+
+@pytest.mark.asyncio
+async def test_reasoning_effort_deprecated_not_injected(caplog):
+    """Deprecated kwarg — reasoning_effort logs a warning and does NOT appear in payload."""
+    import logging
+    from backend.services import brain_client as _bc
+    _bc._deprecation_warned.clear()  # reset one-shot guard for this test
+
+    captured_payloads: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_payloads.append(json.loads(request.content))
+        return _ok_nonstream_response("x")
+
+    transport = httpx.MockTransport(handler)
+    with caplog.at_level(logging.WARNING, logger="backend.services.brain_client"):
+        client = BrainClient(base_url="http://mock-brain", reasoning_effort="high")
+        await client.chat(
+            messages=[{"role": "user", "content": "x"}],
+            max_tokens=500,
+            stream=False,
+            transport=transport,
+        )
+    assert "reasoning_effort" not in captured_payloads[0]
+    assert any("reasoning_effort" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_thinking_kwarg_deprecated_not_injected(caplog):
+    """Deprecated kwarg — thinking logs a warning and does NOT appear in payload."""
+    import logging
+    from backend.services import brain_client as _bc
+    _bc._deprecation_warned.clear()
+
+    captured_payloads: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_payloads.append(json.loads(request.content))
+        return _ok_nonstream_response("x")
+
+    transport = httpx.MockTransport(handler)
+    with caplog.at_level(logging.WARNING, logger="backend.services.brain_client"):
+        client = BrainClient(base_url="http://mock-brain", thinking=True)
+        await client.chat(
+            messages=[{"role": "user", "content": "x"}],
+            max_tokens=500,
+            stream=False,
+            transport=transport,
+        )
+    body = captured_payloads[0]
+    # `thinking` (the deprecated kwarg) must not land anywhere in the payload
+    assert "thinking" not in body
+    assert "thinking" not in body.get("chat_template_kwargs", {})
+    assert any("thinking" in r.getMessage() for r in caplog.records)
 
 
 @pytest.mark.asyncio
@@ -412,6 +501,85 @@ async def test_oneshot_captures_reasoning_and_finish_reason():
     assert isinstance(result, dict)
     assert result["choices"][0]["message"]["content"] == "## Defenses"
     assert client.last_reasoning == "Think through each defense theory under Georgia law."
+    assert client.last_finish_reason == "stop"
+
+
+@pytest.mark.asyncio
+async def test_oneshot_captures_reasoning_content_field():
+    """Phase 2 — via LiteLLM, reasoning lands at message.reasoning_content."""
+    body = {
+        "id": "cmpl-test",
+        "object": "chat.completion",
+        "model": "legal-reasoning",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "## Defenses",
+                    "reasoning_content": "Think through each defense theory.",
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13},
+    }
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=body)
+
+    transport = httpx.MockTransport(handler)
+    client = BrainClient(base_url="http://mock-brain")
+    result = await client.chat(
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=500,
+        stream=False,
+        transport=transport,
+    )
+    assert isinstance(result, dict)
+    assert client.last_reasoning == "Think through each defense theory."
+    assert client.last_finish_reason == "stop"
+
+
+@pytest.mark.asyncio
+async def test_stream_parses_delta_reasoning_content_field():
+    """Phase 2 — LiteLLM streaming emits delta.reasoning_content (not delta.reasoning)."""
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        lines: list[str] = []
+        role_event = {"choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]}
+        lines.append(f"data: {json.dumps(role_event)}")
+        lines.append("")
+        for r in ["We", " need", " to"]:
+            ev = {"choices": [{"index": 0, "delta": {"reasoning_content": r}, "finish_reason": None}]}
+            lines.append(f"data: {json.dumps(ev)}")
+            lines.append("")
+        for c in ["## Section", " 4"]:
+            ev = {"choices": [{"index": 0, "delta": {"content": c}, "finish_reason": None}]}
+            lines.append(f"data: {json.dumps(ev)}")
+            lines.append("")
+        finish = {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+        lines.append(f"data: {json.dumps(finish)}")
+        lines.append("")
+        lines.append("data: [DONE]")
+        lines.append("")
+        body = ("\n".join(lines) + "\n").encode("utf-8")
+        return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+    transport = httpx.MockTransport(handler)
+    client = BrainClient(base_url="http://mock-brain")
+    iterator: AsyncIterator[str] = await client.chat(  # type: ignore[assignment]
+        messages=[{"role": "user", "content": "x"}],
+        stream=True,
+        transport=transport,
+    )
+
+    received: list[str] = []
+    async for chunk in iterator:
+        received.append(chunk)
+
+    assert received == ["## Section", " 4"]
+    assert client.last_reasoning == "We need to"
     assert client.last_finish_reason == "stop"
 
 
