@@ -1,0 +1,60 @@
+# Target netplan for spark-5 — POST-CUTOVER 2026-04-30
+#
+# Intent: bring spark-5 to canonical fabric pattern matching sparks 1/2/3/4
+# Canonical reference: docs/operational/cluster-network-canonical-baseline-2026-04-30.md §2
+#
+# DO NOT APPLY UNTIL OPERATOR EXECUTES PHYSICAL CABLE CUTOVER AND CONFIRMS:
+#   - 2 cables plugged into spark-5 ConnectX ports + Mikrotik 200G aggregated port
+#   - Cable A → enp1s0f0np0  (fabric A canonical port)
+#   - Cable B → enP2p1s0f1np1 (fabric B canonical port)
+#
+# This file is a DRAFT, committed under docs/, NOT under /etc/netplan/.
+# Operator copies into /etc/netplan/ on spark-5 with appropriate mode (chmod 600,
+# chown root:root) when applying.
+#
+# Two-file split is recommended to match canonical:
+#   /etc/netplan/01-mgmt.yaml          — keep current spark-5 file (mgmt LAN)
+#   /etc/netplan/99-mellanox-roce.yaml — REPLACE current 60-connectx-fabric.yaml
+#                                         (rename for cluster filename consistency)
+
+# === 99-mellanox-roce.yaml content for spark-5 (target) ===
+network:
+  version: 2
+  ethernets:
+    enp1s0f0np0:
+      addresses: [10.10.10.5/24]
+      mtu: 9000
+    enp1s0f1np1:
+      dhcp4: false
+      optional: true
+    enP2p1s0f1np1:
+      addresses: [10.10.11.5/24]
+      mtu: 9000
+      dhcp4: false
+
+# === Notes ===
+#
+# 1. The current spark-5 state has a `192.168.0.111/24` mis-bound on
+#    enP2p1s0f1np1. The 99-mellanox-roce.yaml above will overwrite that
+#    binding with `10.10.11.5/24` — operator must verify no service depends
+#    on 192.168.0.111 before applying.
+#
+# 2. Search results for 192.168.0.111 across the cluster (operator should
+#    grep before apply):
+#      ssh admin@192.168.0.100 'sudo grep -rn "192\.168\.0\.111" /etc /home/admin/Fortress-Prime'
+#    If 0 hits, .111 is safely dropped. If hits exist, address them first.
+#
+# 3. Current spark-5 /etc/netplan/60-connectx-fabric.yaml content was not
+#    captured (admin lacks sudo NOPASSWD on spark-5). Operator should diff
+#    that file vs this target before replacing — there may be additional
+#    knobs (RoCE, DCB, PFC) in the existing file worth preserving.
+#
+# 4. Apply sequence:
+#      sudo cp 99-mellanox-roce.yaml /etc/netplan/99-mellanox-roce.yaml
+#      sudo chmod 600 /etc/netplan/99-mellanox-roce.yaml
+#      sudo chown root:root /etc/netplan/99-mellanox-roce.yaml
+#      sudo mv /etc/netplan/60-connectx-fabric.yaml /etc/netplan/60-connectx-fabric.yaml.bak.$(date +%Y%m%d_%H%M%S)
+#      sudo netplan generate
+#      sudo netplan apply
+#
+# 5. After apply, validate per docs/operational/spark-5-6-fabric-cutover-runbook-2026-04-30.md §4

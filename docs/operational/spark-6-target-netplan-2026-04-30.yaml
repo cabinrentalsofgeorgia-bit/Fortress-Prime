@@ -1,0 +1,80 @@
+# Target netplan for spark-6 — POST-CUTOVER 2026-04-30
+#
+# 🛑 PRECONDITION — DO NOT APPLY UNTIL ConnectX-7 HARDWARE IS PRESENT:
+#   `lspci -nn | grep -i mellanox` on spark-6 must return four lines like:
+#     0000:01:00.0 ...ConnectX-7...
+#     0000:01:00.1 ...ConnectX-7...
+#     0002:01:00.0 ...ConnectX-7...
+#     0002:01:00.1 ...ConnectX-7...
+#   per docs/operational/cluster-network-canonical-baseline-2026-04-30.md §1.
+#
+# As of audit 2026-04-30, spark-6 lspci returns NO Mellanox device. Cables
+# alone will not activate fabric — the adapter must be physically present
+# in the chassis and BIOS-recognized first.
+# See docs/operational/spark-5-6-parity-check-2026-04-30.md §2.1.
+#
+# Intent (after hardware blocker resolved): bring spark-6 to canonical
+# fabric pattern matching sparks 1/2/3/4.
+#
+# Canonical reference: docs/operational/cluster-network-canonical-baseline-2026-04-30.md §2
+#
+# This file is a DRAFT, committed under docs/, NOT under /etc/netplan/.
+# Operator copies into /etc/netplan/ on spark-6 with appropriate mode
+# (chmod 600, chown root:root) when applying.
+
+# === 01-mgmt.yaml content for spark-6 (target — mgmt-LAN, current spark-6 has equivalent) ===
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enP7s7:
+      dhcp4: false
+      addresses:
+        - 192.168.0.115/24
+      routes:
+        - to: default
+          via: 192.168.0.1
+      nameservers:
+        addresses: [8.8.8.8, 1.1.1.1]
+
+---
+# === 99-mellanox-roce.yaml content for spark-6 (target — fabric, NEW — depends on hardware) ===
+network:
+  version: 2
+  ethernets:
+    enp1s0f0np0:
+      addresses: [10.10.10.6/24]
+      mtu: 9000
+    enp1s0f1np1:
+      dhcp4: false
+      optional: true
+    enP2p1s0f1np1:
+      addresses: [10.10.11.6/24]
+      mtu: 9000
+      dhcp4: false
+
+# === Notes ===
+#
+# 1. Spark-6 currently has only `00-installer-config.yaml` (49 bytes) and a
+#    NetworkManager file under /etc/netplan/. Mgmt LAN works (192.168.0.115
+#    binds, default route via 192.168.0.1). The `01-mgmt.yaml` above is a
+#    canonical-aligned restatement of the mgmt LAN — operator may keep
+#    existing 00-installer-config.yaml if it's functionally equivalent.
+#
+# 2. The 99-mellanox-roce.yaml fabric file DOES NOT EXIST on spark-6 today.
+#    Adding it before adapter is present is harmless (netplan won't bind to
+#    nonexistent interfaces) but creates a bootstrap inconsistency. Better
+#    sequence: install adapter → confirm lspci → drop in netplan → apply.
+#
+# 3. Apply sequence (after hardware blocker resolved):
+#      # confirm hardware first:
+#      ssh admin@192.168.0.115 'lspci -nn | grep -i mellanox | wc -l'
+#      # expect: 4
+#      # then:
+#      sudo cp 99-mellanox-roce.yaml /etc/netplan/99-mellanox-roce.yaml
+#      sudo chmod 600 /etc/netplan/99-mellanox-roce.yaml
+#      sudo chown root:root /etc/netplan/99-mellanox-roce.yaml
+#      sudo netplan generate
+#      sudo netplan apply
+#
+# 4. After apply, validate per docs/operational/spark-5-6-fabric-cutover-runbook-2026-04-30.md §5
