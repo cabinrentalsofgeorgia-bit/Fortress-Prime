@@ -34,6 +34,60 @@ from backend.services.case_briefing_compose import (
 logger = logging.getLogger("case_briefing_synthesizers")
 
 
+# ── BRAIN reasoning-trace stripping ──────────────────────────────────────────
+# Nemotron-Super-49B-v1.5 (the BRAIN model) emits <think>...</think> chain-of-
+# thought blocks by design (CLAUDE.md DEFCON 3 note). Phase B v0.1 dry-run on
+# Case I (PR #302) surfaced 9 surviving <think> tag pairs in the assembled
+# brief. v0.2 strips them before SectionResult finalize so the assembled
+# brief reads as analyst output, not model reasoning.
+#
+# Pass 1 only: tag-stripping + whitespace cleanup. First-person planning
+# prose ("Let me structure this...") that survives outside <think> tags is
+# deferred to a follow-up (see PR description) — the strategy will likely
+# target synthesizer system prompts upstream rather than post-hoc filtering.
+
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", flags=re.DOTALL)
+_UNCLOSED_THINK_RE = re.compile(r"<think>.*?(?:\n\n|\Z)", flags=re.DOTALL)
+_EXCESS_NEWLINES_RE = re.compile(r"\n{3,}")
+
+
+def strip_reasoning_trace(text: str) -> str:
+    """Remove BRAIN ``<think>...</think>`` blocks from synthesizer output.
+
+    Single-pass tag-stripping plus whitespace cleanup. Used before any
+    synthesizer text is committed to a `SectionResult`. Designed to be
+    idempotent: running the function on already-clean input is a no-op.
+
+    Strips:
+      * Every closed ``<think>...</think>`` block (multi-line, non-greedy
+        — anchors on the nearest ``</think>``, never document end).
+      * Unclosed ``<think>`` tags (model truncated mid-trace) — strip from
+        ``<think>`` to the next blank line OR end of text.
+
+    Cleans up:
+      * Collapses 3+ consecutive newlines to 2.
+      * Strips leading/trailing whitespace.
+
+    Does NOT strip first-person planning prose, planning patterns, or any
+    other content. That is deferred — Pass 1 is tag-only.
+    """
+    if not text:
+        return text
+
+    # Strip closed <think>...</think> blocks (non-greedy, multiline).
+    out = _THINK_BLOCK_RE.sub("", text)
+    # Handle unclosed <think> (truncated trace from streaming abort) by
+    # stripping to the next blank line or document end.
+    if "<think>" in out:
+        out = _UNCLOSED_THINK_RE.sub("", out)
+
+    # Cleanup whitespace.
+    out = _EXCESS_NEWLINES_RE.sub("\n\n", out)
+    out = out.strip()
+
+    return out
+
+
 _SYSTEM_PROMPT = (
     "detailed thinking on\n\n"
     "You are a meticulous legal analyst supporting Fortress Prime's defense team. "
@@ -246,6 +300,8 @@ async def synthesize_synthesis_section(
     )
     async for chunk in iterator:
         response += chunk
+
+    response = strip_reasoning_trace(response)
 
     grounded_citations, matched_sources = _detect_grounding_citations(
         response,
