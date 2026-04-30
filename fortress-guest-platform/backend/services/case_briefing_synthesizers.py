@@ -34,8 +34,18 @@ from backend.services.case_briefing_compose import (
 logger = logging.getLogger("case_briefing_synthesizers")
 
 
+# Phase B v0.3.5 (2026-04-30): the previous prompt began with `"detailed
+# thinking on\n\n"`, which activates Nemotron-Super-49B-v1.5-fp8's visible
+# chain-of-thought mode and emits <think>...</think> blocks. PR #313 v0.2
+# stripped the blocks but lost answer content because the model used <think>
+# as a primary output container; PR #316 v0.3 added an OUTPUT CONTRACT
+# instruction to relocate the answer outside the tags but Nemotron read that
+# as a "be brief" directive and dropped citations. Removing the directive
+# entirely is option (a) per the v0.3 close-out — the model streams the
+# answer directly without a reasoning trace, which was being discarded
+# anyway. The Pass 1 stripper below stays in place as a defensive no-op:
+# if the model still occasionally emits a stray <think> block it gets caught.
 _SYSTEM_PROMPT = (
-    "detailed thinking on\n\n"
     "You are a meticulous legal analyst supporting Fortress Prime's defense team. "
     "Answer ONLY from the CASE EVIDENCE blocks provided. Cite the bracketed source "
     "filename in each chunk header for every factual claim. Privileged chunks are "
