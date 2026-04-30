@@ -1,0 +1,15 @@
+{
+  "probe": "C",
+  "http_status": 200,
+  "wall_seconds": 70.75,
+  "content_chars": 7038,
+  "content_is_null": false,
+  "reasoning_chars": 93,
+  "reasoning_is_null": false,
+  "finish_reason": "stop",
+  "prompt_tokens": 743,
+  "completion_tokens": 1689,
+  "total_tokens": 2432,
+  "first_50_content": "\n\n**Cause of Action #1 \u2013 Breach of Contract (Purch",
+  "first_50_reasoning": "Need to produce tables for each claim. Use evidenc"
+}

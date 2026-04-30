@@ -1,0 +1,15 @@
+{
+  "probe": "B",
+  "http_status": 200,
+  "wall_seconds": 68.45,
+  "content_chars": 7122,
+  "content_is_null": false,
+  "reasoning_chars": 0,
+  "reasoning_is_null": true,
+  "finish_reason": "stop",
+  "prompt_tokens": 736,
+  "completion_tokens": 1634,
+  "total_tokens": 2370,
+  "first_50_content": "| Claim Element | Evidence Chunk Reference | Gap A",
+  "first_50_reasoning": ""
+}

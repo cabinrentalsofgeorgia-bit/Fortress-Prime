@@ -1,0 +1,16 @@
+{
+  "probe": "A",
+  "http_status": 200,
+  "wall_seconds": 114.6,
+  "content_chars": 4427,
+  "content_is_null": false,
+  "reasoning_chars": 7755,
+  "reasoning_is_null": false,
+  "finish_reason": "stop",
+  "prompt_tokens": 736,
+  "completion_tokens": 2736,
+  "total_tokens": 3472,
+  "first_50_content": "\n\n**Breach of Contract**\n\n| Claim element | Eviden",
+  "first_50_reasoning": "",
+  "reasoning_field_name": "reasoning"
+}
