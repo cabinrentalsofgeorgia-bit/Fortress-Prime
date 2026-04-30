@@ -33,7 +33,7 @@ def _build_persona(seat: int, name: str = "Test Persona") -> legal_council.Legal
         focus_areas=["Test focus."],
         trigger_events=["test trigger"],
         godhead_prompt=f"You are persona at seat {seat}.",
-        vector_collection="legal_library",
+        vector_collection="legal_library_v2",
     )
 
 

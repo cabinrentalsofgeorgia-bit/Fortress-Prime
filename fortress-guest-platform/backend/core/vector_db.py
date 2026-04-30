@@ -106,3 +106,43 @@ def embed_text_sync(text: str) -> List[float]:
         resp.raise_for_status()
         data = resp.json()
         return data["data"][0]["embedding"]
+
+
+LEGAL_EMBED_MODEL = "legal-embed"
+LEGAL_EMBED_DIM = 2048
+
+
+async def embed_legal_query(text: str) -> List[float]:
+    """
+    Embed a query for retrieval against the sovereign legal-embed _v2 collections.
+
+    Uses the LiteLLM gateway alias `legal-embed` (llama-nemotron-embed-1b-v2 on
+    spark-3:8102 — see PR #300 §9). Returns a 2048-dim vector for cosine search
+    against `legal_caselaw_v2` / `legal_library_v2`.
+
+    Caller contract (verified PR #300 §9.5, enforced here):
+      - input_type="query" — asymmetric encoder; passages are indexed with
+        "passage", queries must use "query"
+      - encoding_format="float" — NIM strictly validates; the OpenAI client's
+        implicit None default is rejected with HTTP 400
+
+    Authenticates with `settings.litellm_master_key` (Bearer). Raises on
+    transport / auth / validation errors so callers can decide how to degrade.
+    """
+    base = settings.litellm_base_url.rstrip("/")
+    url = f"{base}/embeddings"
+    payload = {
+        "input": text,
+        "model": LEGAL_EMBED_MODEL,
+        "input_type": "query",
+        "encoding_format": "float",
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.litellm_master_key}",
+        "Content-Type": "application/json",
+    }
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(url, json=payload, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["data"][0]["embedding"]

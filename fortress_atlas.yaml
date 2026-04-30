@@ -280,7 +280,7 @@ fortress_prime:
         - "public.legal_matter_notes"
 
       qdrant_collections:
-        - "legal_library"           # 2,455 vectors of legal documents
+        - "legal_library_v2"        # 2,455 vectors of legal documents (cut over to 2048-dim legal-embed in Phase A PR #2, 2026-04-30)
         - "email_embeddings"        # Filtered by division = 'LEGAL_ADMIN'
 
       email_divisions:

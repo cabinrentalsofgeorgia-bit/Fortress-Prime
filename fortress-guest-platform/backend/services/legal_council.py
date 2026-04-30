@@ -71,12 +71,18 @@ PERSONAS_DIR = os.getenv(
     "LEGAL_PERSONAS_DIR",
     "/home/admin/Fortress-Prime/personas/legal",
 )
-LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset({"legal_library", "legal_ediscovery", "legal_caselaw"})
+# Phase A PR #2 (2026-04-30): caselaw + library cut over to 2048-dim legal-embed
+# _v2 collections; ediscovery stays on legacy 768-dim nomic-embed-text per Option B.
+# Legacy `legal_library` and `legal_caselaw` removed from the allowlist so the
+# council strictly uses the cut-over targets.
+LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset(
+    {"legal_library_v2", "legal_ediscovery", "legal_caselaw_v2"}
+)
 
-# Precedent retrieval knobs — legal_caselaw holds the controlling-authority corpus
+# Precedent retrieval knobs — legal_caselaw_v2 holds the controlling-authority corpus
 # (CourtListener opinions). Defaults picked to fit comfortably inside frontier-model
 # context budgets after case brief + evidence chunks.
-CASELAW_COLLECTION = "legal_caselaw"
+CASELAW_COLLECTION = "legal_caselaw_v2"
 CASELAW_TOP_K = int(os.getenv("LEGAL_COUNCIL_CASELAW_TOP_K", "10"))
 CONTEXT_BUDGET_TOKENS = int(os.getenv("LEGAL_COUNCIL_CONTEXT_BUDGET_TOKENS", "12000"))
 # Approximate char-per-token ratio used for budget enforcement on pre-prompt
@@ -464,7 +470,7 @@ class LegalPersona:
     def load(cls, filepath: str) -> "LegalPersona":
         with open(filepath, "r") as f:
             data = json.load(f)
-        vector_collection = data.get("vector_collection", "legal_library")
+        vector_collection = data.get("vector_collection", "legal_library_v2")
         _validate_legal_persona_boundary(
             slug=data.get("slug", os.path.basename(filepath)),
             vector_collection=vector_collection,
@@ -1209,7 +1215,12 @@ def _council_retrieval_flags() -> tuple[bool, bool]:
 
 
 async def _embed_text(text: str) -> Optional[List[float]]:
-    """Embed via Ollama OpenAI-compatible /v1/embeddings (backend.core.vector_db)."""
+    """Embed via Ollama OpenAI-compatible /v1/embeddings (backend.core.vector_db).
+
+    Used for legacy 768-dim collections that still ride nomic-embed-text:
+    `legal_ediscovery`, `legal_privileged_communications`. Caselaw + library
+    queries go through `_embed_legal_query` instead (see Phase A PR #2).
+    """
     from backend.core.vector_db import embed_text as _embed_vec
 
     try:
@@ -1219,6 +1230,29 @@ async def _embed_text(text: str) -> Optional[List[float]]:
         logger.warning("embed_dim_unexpected  got=%d", len(vec))
     except Exception as e:
         logger.warning("embed_failed  error=%s", str(e)[:200])
+    return None
+
+
+async def _embed_legal_query(text: str) -> Optional[List[float]]:
+    """Embed a query for the sovereign legal-embed _v2 collections (caselaw + library).
+
+    Sends `input_type=query` and `encoding_format=float` per the NIM caller
+    contract verified in PR #300 §9.5; both are mandatory and the gateway
+    will reject HTTP 400 if either is missing/None.
+
+    Returns None on transport / dim-mismatch / auth failure so callers can
+    degrade to "no RAG context" rather than crash — matching the failure
+    semantics of `_embed_text` above.
+    """
+    from backend.core.vector_db import LEGAL_EMBED_DIM, embed_legal_query
+
+    try:
+        vec = await embed_legal_query(text[:8000])
+        if len(vec) == LEGAL_EMBED_DIM:
+            return vec
+        logger.warning("legal_embed_dim_unexpected  got=%d", len(vec))
+    except Exception as e:
+        logger.warning("legal_embed_failed  error=%s", str(e)[:200])
     return None
 
 
@@ -1425,7 +1459,7 @@ async def freeze_caselaw_context(
     """
     logger.info("freeze_caselaw_context_start  collection=%s  top_k=%d", CASELAW_COLLECTION, top_k)
 
-    query_vec = await _embed_text(case_brief)
+    query_vec = await _embed_legal_query(case_brief)
     if query_vec is None:
         logger.warning("freeze_caselaw_context_no_embedding — proceeding without precedent")
         return [], []
