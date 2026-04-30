@@ -1,0 +1,50 @@
+{
+  "summary": {
+    "collection": "legal_library",
+    "target": "legal_library_v2",
+    "n_queries": 3,
+    "top1_id_match_rate": 1.0,
+    "wall_seconds": 0.16079763788729906,
+    "mean_overlap@1": 1.0,
+    "median_overlap@1": 1.0,
+    "min_overlap@1": 1.0,
+    "mean_overlap@3": 1.0,
+    "median_overlap@3": 1.0,
+    "min_overlap@3": 1.0,
+    "mean_overlap@5": 0.6,
+    "median_overlap@5": 0.6,
+    "min_overlap@5": 0.6,
+    "mean_overlap@10": 0.3,
+    "median_overlap@10": 0.3,
+    "min_overlap@10": 0.3
+  },
+  "detail": [
+    {
+      "q_id": "d67d4b79-2dbf-5ae4-9314-58a05b584f36",
+      "overlap@1": 1.0,
+      "overlap@3": 1.0,
+      "overlap@5": 0.6,
+      "overlap@10": 0.3,
+      "top1_legacy": "d67d4b79-2dbf-5ae4-9314-58a05b584f36",
+      "top1_v2": "d67d4b79-2dbf-5ae4-9314-58a05b584f36"
+    },
+    {
+      "q_id": "23ba33df-4c0e-5f45-8f9d-1090469955d2",
+      "overlap@1": 1.0,
+      "overlap@3": 1.0,
+      "overlap@5": 0.6,
+      "overlap@10": 0.3,
+      "top1_legacy": "23ba33df-4c0e-5f45-8f9d-1090469955d2",
+      "top1_v2": "23ba33df-4c0e-5f45-8f9d-1090469955d2"
+    },
+    {
+      "q_id": "01a19f41-7c76-5d4a-927c-e91a0fc7a2a9",
+      "overlap@1": 1.0,
+      "overlap@3": 1.0,
+      "overlap@5": 0.6,
+      "overlap@10": 0.3,
+      "top1_legacy": "01a19f41-7c76-5d4a-927c-e91a0fc7a2a9",
+      "top1_v2": "01a19f41-7c76-5d4a-927c-e91a0fc7a2a9"
+    }
+  ]
+}
