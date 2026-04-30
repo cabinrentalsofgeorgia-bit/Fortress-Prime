@@ -1,8 +1,8 @@
 -- CI schema snapshot for fortress-guest-platform
--- Generated: 2026-04-27T20:20:40Z
--- Source:    fortress_snapshot_1_1
--- Commit:    921a96e609d085f5125722a42bcca89c29444763
--- Alembic:   d8e3c1f5b9a6,m8f9a1b2c3d4,r3c4d5e6f7g8
+-- Generated: 2026-04-30T03:26:59Z
+-- Source:    fortress_shadow
+-- Commit:    9b12c17b50ae4cb1a7f15b565700d26d0d61c371
+-- Alembic:   d8e3c1f5b9a6,m8f9a1b2c3d4,t6e7f8g9h0a1
 -- NOTE: geometry/vector types replaced with text for CI compatibility.
 --       postgis/vector extensions omitted (postgres:16 has pgcrypto/uuid-ossp).
 
@@ -18,7 +18,7 @@ SET ROLE TO fortress_admin;
 -- PostgreSQL database dump
 --
 
-\restrict 6glhhmNFUUBlRcfYZYc3EwpCGkUjw3QDUKC0Vgk9Hmty4plx7PpxkVVyG8cZj9y
+\restrict 8Tbewx8mDsZ50zdgMMItGSuVglQb8T5SWHYQWi2tAYPJ332mjAX4cQYTRn4qRpX
 
 -- Dumped from database version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
@@ -84,10 +84,22 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
 
 --
+-- Name: postgis; Type: EXTENSION; Schema: -; Owner: -
+--
+
+
+
+--
 -- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+
+
+--
+-- Name: vector; Type: EXTENSION; Schema: -; Owner: -
+--
+
 
 
 --
@@ -293,7 +305,7 @@ CREATE TABLE crog_acquisition.due_diligence (
     completed_by character varying(255),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT chk_dd_status CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('passed'::character varying)::text, ('failed'::character varying)::text, ('waived'::character varying)::text])))
+    CONSTRAINT chk_dd_status CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'passed'::character varying, 'failed'::character varying, 'waived'::character varying])::text[])))
 );
 
 
@@ -324,7 +336,7 @@ CREATE TABLE crog_acquisition.owner_contacts (
     confidence_score numeric(3,2),
     is_dnc boolean DEFAULT false NOT NULL,
     CONSTRAINT ck_acquisition_owner_contacts_confidence_score CHECK (((confidence_score >= 0.00) AND (confidence_score <= 1.00))),
-    CONSTRAINT ck_acquisition_owner_contacts_contact_type CHECK (((contact_type)::text = ANY (ARRAY[('CELL'::character varying)::text, ('LANDLINE'::character varying)::text, ('EMAIL'::character varying)::text])))
+    CONSTRAINT ck_acquisition_owner_contacts_contact_type CHECK (((contact_type)::text = ANY ((ARRAY['CELL'::character varying, 'LANDLINE'::character varying, 'EMAIL'::character varying])::text[])))
 );
 
 
@@ -540,36 +552,6 @@ CREATE TABLE legal.case_graph_nodes_v2 (
 
 
 --
--- Name: case_posture; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.case_posture (
-    case_slug text NOT NULL,
-    procedural_phase text DEFAULT 'pre-suit'::text NOT NULL,
-    next_deadline_date date,
-    next_deadline_action text,
-    theory_of_defense_state text DEFAULT 'drafting'::text NOT NULL,
-    top_defense_arguments jsonb DEFAULT '[]'::jsonb NOT NULL,
-    top_risk_factors jsonb DEFAULT '{}'::jsonb NOT NULL,
-    exposure_low numeric(12,2),
-    exposure_mid numeric(12,2),
-    exposure_high numeric(12,2),
-    leverage_score numeric(4,2),
-    opposing_counsel_profile jsonb,
-    last_council_consensus jsonb,
-    last_council_at timestamp with time zone,
-    posture_hash text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    created_by_event bigint,
-    updated_by_event bigint,
-    CONSTRAINT chk_case_posture_leverage_score CHECK (((leverage_score IS NULL) OR ((leverage_score >= '-1.00'::numeric) AND (leverage_score <= 1.00)))),
-    CONSTRAINT chk_case_posture_procedural_phase CHECK ((procedural_phase = ANY (ARRAY['pre-suit'::text, 'answer-due'::text, 'discovery'::text, 'motion'::text, 'trial-prep'::text, 'settlement'::text, 'post-trial'::text, 'closed'::text]))),
-    CONSTRAINT chk_case_posture_theory_of_defense_state CHECK ((theory_of_defense_state = ANY (ARRAY['drafting'::text, 'validated'::text, 'locked'::text])))
-);
-
-
---
 -- Name: case_statements; Type: TABLE; Schema: legal; Owner: -
 --
 
@@ -708,107 +690,6 @@ CREATE TABLE legal.discovery_draft_packs_v2 (
 
 
 --
--- Name: dispatcher_dead_letter; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.dispatcher_dead_letter (
-    id bigint NOT NULL,
-    original_event_id bigint NOT NULL,
-    event_type text NOT NULL,
-    case_slug text,
-    final_error text NOT NULL,
-    attempts integer NOT NULL,
-    dead_lettered_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT chk_dispatcher_dead_letter_attempts_positive CHECK ((attempts >= 1))
-);
-
-
---
--- Name: dispatcher_dead_letter_id_seq; Type: SEQUENCE; Schema: legal; Owner: -
---
-
-CREATE SEQUENCE legal.dispatcher_dead_letter_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: dispatcher_dead_letter_id_seq; Type: SEQUENCE OWNED BY; Schema: legal; Owner: -
---
-
-ALTER SEQUENCE legal.dispatcher_dead_letter_id_seq OWNED BY legal.dispatcher_dead_letter.id;
-
-
---
--- Name: dispatcher_event_attempts; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.dispatcher_event_attempts (
-    id bigint NOT NULL,
-    event_id bigint NOT NULL,
-    attempt_number integer NOT NULL,
-    outcome text NOT NULL,
-    error_message text,
-    duration_ms integer,
-    attempted_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT chk_dispatcher_event_attempts_attempt_positive CHECK ((attempt_number >= 1)),
-    CONSTRAINT chk_dispatcher_event_attempts_outcome CHECK ((outcome = ANY (ARRAY['success'::text, 'error'::text, 'dead_letter'::text])))
-);
-
-
---
--- Name: dispatcher_event_attempts_id_seq; Type: SEQUENCE; Schema: legal; Owner: -
---
-
-CREATE SEQUENCE legal.dispatcher_event_attempts_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: dispatcher_event_attempts_id_seq; Type: SEQUENCE OWNED BY; Schema: legal; Owner: -
---
-
-ALTER SEQUENCE legal.dispatcher_event_attempts_id_seq OWNED BY legal.dispatcher_event_attempts.id;
-
-
---
--- Name: dispatcher_pause; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.dispatcher_pause (
-    singleton_id integer DEFAULT 1 NOT NULL,
-    paused_at timestamp with time zone DEFAULT now() NOT NULL,
-    paused_by text NOT NULL,
-    reason text,
-    CONSTRAINT chk_dispatcher_pause_singleton CHECK ((singleton_id = 1))
-);
-
-
---
--- Name: dispatcher_routes; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.dispatcher_routes (
-    event_type text NOT NULL,
-    handler_module text NOT NULL,
-    handler_function text NOT NULL,
-    enabled boolean DEFAULT true NOT NULL,
-    max_retries integer DEFAULT 5 NOT NULL,
-    description text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT chk_dispatcher_routes_max_retries_nonnegative CHECK ((max_retries >= 0))
-);
-
-
---
 -- Name: distillation_memory; Type: TABLE; Schema: legal; Owner: -
 --
 
@@ -831,43 +712,6 @@ CREATE TABLE legal.entities (
     type character varying(100) NOT NULL,
     role character varying(100)
 );
-
-
---
--- Name: event_log; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.event_log (
-    id bigint NOT NULL,
-    event_type text NOT NULL,
-    case_slug text,
-    event_payload jsonb NOT NULL,
-    emitted_at timestamp with time zone DEFAULT now() NOT NULL,
-    emitted_by text NOT NULL,
-    processed_at timestamp with time zone,
-    processed_by text,
-    result jsonb,
-    CONSTRAINT chk_event_log_emitted_by_format CHECK ((emitted_by ~ '^[a-z_]+:[a-z0-9_.-]+$'::text))
-);
-
-
---
--- Name: event_log_id_seq; Type: SEQUENCE; Schema: legal; Owner: -
---
-
-CREATE SEQUENCE legal.event_log_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: event_log_id_seq; Type: SEQUENCE OWNED BY; Schema: legal; Owner: -
---
-
-ALTER SEQUENCE legal.event_log_id_seq OWNED BY legal.event_log.id;
 
 
 --
@@ -896,104 +740,6 @@ CREATE TABLE legal.legal_exemplars (
     source_model character varying(128) NOT NULL,
     created_at timestamp with time zone NOT NULL
 );
-
-
---
--- Name: mail_ingester_metrics; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.mail_ingester_metrics (
-    id bigint NOT NULL,
-    metric_name text NOT NULL,
-    mailbox_alias text,
-    label_key text,
-    label_value text,
-    counter_value bigint DEFAULT 0 NOT NULL,
-    recorded_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: mail_ingester_metrics_id_seq; Type: SEQUENCE; Schema: legal; Owner: -
---
-
-CREATE SEQUENCE legal.mail_ingester_metrics_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: mail_ingester_metrics_id_seq; Type: SEQUENCE OWNED BY; Schema: legal; Owner: -
---
-
-ALTER SEQUENCE legal.mail_ingester_metrics_id_seq OWNED BY legal.mail_ingester_metrics.id;
-
-
---
--- Name: mail_ingester_pause; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.mail_ingester_pause (
-    mailbox_alias text NOT NULL,
-    paused_at timestamp with time zone DEFAULT now() NOT NULL,
-    paused_by text NOT NULL,
-    reason text
-);
-
-
---
--- Name: mail_ingester_state; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.mail_ingester_state (
-    mailbox_alias text NOT NULL,
-    last_patrol_at timestamp with time zone,
-    last_success_at timestamp with time zone,
-    last_error_at timestamp with time zone,
-    last_error text,
-    messages_ingested_total bigint DEFAULT 0 NOT NULL,
-    messages_deduped_total bigint DEFAULT 0 NOT NULL,
-    messages_errored_total bigint DEFAULT 0 NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: priority_sender_rules; Type: TABLE; Schema: legal; Owner: -
---
-
-CREATE TABLE legal.priority_sender_rules (
-    id bigint NOT NULL,
-    sender_pattern text NOT NULL,
-    priority text NOT NULL,
-    case_slug text,
-    rationale text,
-    is_active boolean DEFAULT true NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT chk_priority_sender_priority CHECK ((priority = ANY (ARRAY['P1'::text, 'P2'::text, 'P3'::text])))
-);
-
-
---
--- Name: priority_sender_rules_id_seq; Type: SEQUENCE; Schema: legal; Owner: -
---
-
-CREATE SEQUENCE legal.priority_sender_rules_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: priority_sender_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: legal; Owner: -
---
-
-ALTER SEQUENCE legal.priority_sender_rules_id_seq OWNED BY legal.priority_sender_rules.id;
 
 
 --
@@ -1163,7 +909,7 @@ CREATE TABLE public.agent_queue (
     error_log text,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT ck_agent_queue_status CHECK (((status)::text = ANY (ARRAY[('pending_review'::character varying)::text, ('approved'::character varying)::text, ('edited'::character varying)::text, ('rejected'::character varying)::text, ('sending'::character varying)::text, ('delivered'::character varying)::text, ('failed'::character varying)::text])))
+    CONSTRAINT ck_agent_queue_status CHECK (((status)::text = ANY ((ARRAY['pending_review'::character varying, 'approved'::character varying, 'edited'::character varying, 'rejected'::character varying, 'sending'::character varying, 'delivered'::character varying, 'failed'::character varying])::text[])))
 );
 
 
@@ -1221,7 +967,7 @@ CREATE TABLE public.agent_runs (
     status character varying(9) DEFAULT 'queued'::character varying NOT NULL,
     started_at timestamp with time zone DEFAULT now() NOT NULL,
     completed_at timestamp with time zone,
-    CONSTRAINT agent_run_status CHECK (((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text, ('escalated'::character varying)::text, ('blocked'::character varying)::text])))
+    CONSTRAINT agent_run_status CHECK (((status)::text = ANY ((ARRAY['queued'::character varying, 'running'::character varying, 'completed'::character varying, 'failed'::character varying, 'escalated'::character varying, 'blocked'::character varying])::text[])))
 );
 
 
@@ -1295,7 +1041,7 @@ CREATE TABLE public.async_job_runs (
     started_at timestamp with time zone,
     finished_at timestamp with time zone,
     updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT ck_async_job_runs_status CHECK (((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text, ('succeeded'::character varying)::text, ('failed'::character varying)::text, ('cancelled'::character varying)::text])))
+    CONSTRAINT ck_async_job_runs_status CHECK (((status)::text = ANY ((ARRAY['queued'::character varying, 'running'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'cancelled'::character varying])::text[])))
 );
 
 
@@ -1474,7 +1220,7 @@ CREATE TABLE public.competitor_listings (
     last_observed timestamp with time zone DEFAULT now() NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT ota_provider CHECK (((platform)::text = ANY (ARRAY[('airbnb'::character varying)::text, ('vrbo'::character varying)::text, ('booking_com'::character varying)::text])))
+    CONSTRAINT ota_provider CHECK (((platform)::text = ANY ((ARRAY['airbnb'::character varying, 'vrbo'::character varying, 'booking_com'::character varying])::text[])))
 );
 
 
@@ -1496,7 +1242,7 @@ CREATE TABLE public.concierge_queue (
     status character varying(30) NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    CONSTRAINT ck_concierge_queue_status CHECK (((status)::text = ANY (ARRAY[('pending_review'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text, ('sent'::character varying)::text, ('failed'::character varying)::text])))
+    CONSTRAINT ck_concierge_queue_status CHECK (((status)::text = ANY ((ARRAY['pending_review'::character varying, 'approved'::character varying, 'rejected'::character varying, 'sent'::character varying, 'failed'::character varying])::text[])))
 );
 
 
@@ -1673,8 +1419,8 @@ CREATE TABLE public.email_messages (
     extra_data jsonb,
     has_attachments boolean DEFAULT false NOT NULL,
     image_descriptions jsonb,
-    CONSTRAINT ck_email_messages_approval_status CHECK (((approval_status)::text = ANY (ARRAY[('pending_approval'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text, ('sent'::character varying)::text, ('send_failed'::character varying)::text, ('no_draft_needed'::character varying)::text]))),
-    CONSTRAINT ck_email_messages_direction CHECK (((direction)::text = ANY (ARRAY[('inbound'::character varying)::text, ('outbound'::character varying)::text])))
+    CONSTRAINT ck_email_messages_approval_status CHECK (((approval_status)::text = ANY ((ARRAY['pending_approval'::character varying, 'approved'::character varying, 'rejected'::character varying, 'sent'::character varying, 'send_failed'::character varying, 'no_draft_needed'::character varying])::text[]))),
+    CONSTRAINT ck_email_messages_direction CHECK (((direction)::text = ANY ((ARRAY['inbound'::character varying, 'outbound'::character varying])::text[])))
 );
 
 
@@ -2149,7 +1895,7 @@ CREATE TABLE public.hunter_queue (
     last_error text,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    CONSTRAINT ck_hunter_queue_status CHECK (((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('processing'::character varying)::text, ('sent'::character varying)::text, ('failed'::character varying)::text, ('cancelled'::character varying)::text])))
+    CONSTRAINT ck_hunter_queue_status CHECK (((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying, 'sent'::character varying, 'failed'::character varying, 'cancelled'::character varying])::text[])))
 );
 
 
@@ -2621,7 +2367,7 @@ CREATE TABLE public.operator_overrides (
     override_action character varying(7) NOT NULL,
     final_payload jsonb NOT NULL,
     "timestamp" timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT operator_override_action CHECK (((override_action)::text = ANY (ARRAY[('approve'::character varying)::text, ('reject'::character varying)::text, ('modify'::character varying)::text])))
+    CONSTRAINT operator_override_action CHECK (((override_action)::text = ANY ((ARRAY['approve'::character varying, 'reject'::character varying, 'modify'::character varying])::text[])))
 );
 
 
@@ -2956,8 +2702,8 @@ CREATE TABLE public.owner_statement_sends (
     error_message text,
     is_test boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT owner_statement_sends_comparison_status_check CHECK (((comparison_status)::text = ANY (ARRAY[('match'::character varying)::text, ('mismatch'::character varying)::text, ('streamline_unavailable'::character varying)::text, ('not_compared'::character varying)::text]))),
-    CONSTRAINT owner_statement_sends_source_used_check CHECK (((source_used)::text = ANY (ARRAY[('crog'::character varying)::text, ('streamline'::character varying)::text, ('failed'::character varying)::text])))
+    CONSTRAINT owner_statement_sends_comparison_status_check CHECK (((comparison_status)::text = ANY ((ARRAY['match'::character varying, 'mismatch'::character varying, 'streamline_unavailable'::character varying, 'not_compared'::character varying])::text[]))),
+    CONSTRAINT owner_statement_sends_source_used_check CHECK (((source_used)::text = ANY ((ARRAY['crog'::character varying, 'streamline'::character varying, 'failed'::character varying])::text[])))
 );
 
 
@@ -3151,7 +2897,7 @@ CREATE TABLE public.property_images (
     alt_text character varying(512) DEFAULT ''::character varying NOT NULL,
     is_hero boolean DEFAULT false NOT NULL,
     status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
-    CONSTRAINT ck_property_images_status CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('ingested'::character varying)::text, ('failed'::character varying)::text])))
+    CONSTRAINT ck_property_images_status CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'ingested'::character varying, 'failed'::character varying])::text[])))
 );
 
 
@@ -3360,7 +3106,7 @@ CREATE TABLE public.reservation_holds (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     CONSTRAINT ck_reservation_holds_date_order CHECK ((check_out_date > check_in_date)),
-    CONSTRAINT ck_reservation_holds_status CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('expired'::character varying)::text, ('converted'::character varying)::text])))
+    CONSTRAINT ck_reservation_holds_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'expired'::character varying, 'converted'::character varying])::text[])))
 );
 
 
@@ -3522,8 +3268,8 @@ CREATE TABLE public.seo_patch_queue (
     deployed_at timestamp without time zone,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    CONSTRAINT ck_seo_patch_queue_status CHECK (((status)::text = ANY (ARRAY[('proposed'::character varying)::text, ('needs_revision'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text, ('deployed'::character varying)::text, ('superseded'::character varying)::text]))),
-    CONSTRAINT ck_seo_patch_queue_target_type CHECK (((target_type)::text = ANY (ARRAY[('property'::character varying)::text, ('archive_review'::character varying)::text])))
+    CONSTRAINT ck_seo_patch_queue_status CHECK (((status)::text = ANY ((ARRAY['proposed'::character varying, 'needs_revision'::character varying, 'approved'::character varying, 'rejected'::character varying, 'deployed'::character varying, 'superseded'::character varying])::text[]))),
+    CONSTRAINT ck_seo_patch_queue_target_type CHECK (((target_type)::text = ANY ((ARRAY['property'::character varying, 'archive_review'::character varying])::text[])))
 );
 
 
@@ -3613,7 +3359,7 @@ CREATE TABLE public.seo_redirect_remap_queue (
     approved_at timestamp without time zone,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    CONSTRAINT ck_seo_redirect_remap_queue_status CHECK (((status)::text = ANY (ARRAY[('proposed'::character varying)::text, ('promoted'::character varying)::text, ('rejected'::character varying)::text, ('applied'::character varying)::text, ('superseded'::character varying)::text])))
+    CONSTRAINT ck_seo_redirect_remap_queue_status CHECK (((status)::text = ANY ((ARRAY['proposed'::character varying, 'promoted'::character varying, 'rejected'::character varying, 'applied'::character varying, 'superseded'::character varying])::text[])))
 );
 
 
@@ -3708,7 +3454,7 @@ CREATE TABLE public.staff_users (
     notify_workorders boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    CONSTRAINT staff_role CHECK (((role)::text = ANY (ARRAY[('super_admin'::character varying)::text, ('admin'::character varying)::text, ('manager'::character varying)::text, ('reviewer'::character varying)::text, ('operator'::character varying)::text, ('staff'::character varying)::text, ('maintenance'::character varying)::text])))
+    CONSTRAINT staff_role CHECK (((role)::text = ANY ((ARRAY['super_admin'::character varying, 'admin'::character varying, 'manager'::character varying, 'reviewer'::character varying, 'operator'::character varying, 'staff'::character varying, 'maintenance'::character varying])::text[])))
 );
 
 
@@ -3823,7 +3569,7 @@ CREATE TABLE public.swarm_escalations (
     decision_id uuid NOT NULL,
     reason_code character varying(100) NOT NULL,
     status character varying(8) DEFAULT 'pending'::character varying NOT NULL,
-    CONSTRAINT swarm_escalation_status CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('resolved'::character varying)::text])))
+    CONSTRAINT swarm_escalation_status CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'resolved'::character varying])::text[])))
 );
 
 
@@ -3887,7 +3633,7 @@ CREATE TABLE public.trust_accounts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,
     type character varying(9) NOT NULL,
-    CONSTRAINT trust_account_type CHECK (((type)::text = ANY (ARRAY[('asset'::character varying)::text, ('liability'::character varying)::text])))
+    CONSTRAINT trust_account_type CHECK (((type)::text = ANY ((ARRAY['asset'::character varying, 'liability'::character varying])::text[])))
 );
 
 
@@ -3937,7 +3683,7 @@ CREATE TABLE public.trust_decisions (
     policy_evaluation jsonb NOT NULL,
     status character varying(13) NOT NULL,
     CONSTRAINT ck_trust_decisions_deterministic_score_nonnegative CHECK ((deterministic_score >= (0)::double precision)),
-    CONSTRAINT trust_decision_status CHECK (((status)::text = ANY (ARRAY[('auto_approved'::character varying)::text, ('escalated'::character varying)::text, ('blocked'::character varying)::text])))
+    CONSTRAINT trust_decision_status CHECK (((status)::text = ANY ((ARRAY['auto_approved'::character varying, 'escalated'::character varying, 'blocked'::character varying])::text[])))
 );
 
 
@@ -3952,7 +3698,7 @@ CREATE TABLE public.trust_ledger_entries (
     amount_cents integer NOT NULL,
     entry_type character varying(6) NOT NULL,
     CONSTRAINT ck_trust_ledger_entries_amount_positive CHECK ((amount_cents > 0)),
-    CONSTRAINT trust_ledger_entry_type CHECK (((entry_type)::text = ANY (ARRAY[('debit'::character varying)::text, ('credit'::character varying)::text])))
+    CONSTRAINT trust_ledger_entry_type CHECK (((entry_type)::text = ANY ((ARRAY['debit'::character varying, 'credit'::character varying])::text[])))
 );
 
 
@@ -4094,8 +3840,8 @@ CREATE TABLE public.vrs_add_ons (
     updated_at timestamp without time zone NOT NULL,
     CONSTRAINT ck_vrs_add_ons_price_nonnegative CHECK ((price >= (0)::numeric)),
     CONSTRAINT ck_vrs_add_ons_scope_property_consistency CHECK (((((scope)::text = 'global'::text) AND (property_id IS NULL)) OR (((scope)::text = 'property_specific'::text) AND (property_id IS NOT NULL)))),
-    CONSTRAINT vrs_add_on_pricing_model CHECK (((pricing_model)::text = ANY (ARRAY[('flat_fee'::character varying)::text, ('per_night'::character varying)::text, ('per_guest'::character varying)::text]))),
-    CONSTRAINT vrs_add_on_scope CHECK (((scope)::text = ANY (ARRAY[('global'::character varying)::text, ('property_specific'::character varying)::text])))
+    CONSTRAINT vrs_add_on_pricing_model CHECK (((pricing_model)::text = ANY ((ARRAY['flat_fee'::character varying, 'per_night'::character varying, 'per_guest'::character varying])::text[]))),
+    CONSTRAINT vrs_add_on_scope CHECK (((scope)::text = ANY ((ARRAY['global'::character varying, 'property_specific'::character varying])::text[])))
 );
 
 
@@ -4231,41 +3977,6 @@ ALTER TABLE ONLY legal.case_statements ALTER COLUMN id SET DEFAULT nextval('lega
 --
 
 ALTER TABLE ONLY legal.cases ALTER COLUMN id SET DEFAULT nextval('legal.cases_id_seq'::regclass);
-
-
---
--- Name: dispatcher_dead_letter id; Type: DEFAULT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_dead_letter ALTER COLUMN id SET DEFAULT nextval('legal.dispatcher_dead_letter_id_seq'::regclass);
-
-
---
--- Name: dispatcher_event_attempts id; Type: DEFAULT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_event_attempts ALTER COLUMN id SET DEFAULT nextval('legal.dispatcher_event_attempts_id_seq'::regclass);
-
-
---
--- Name: event_log id; Type: DEFAULT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.event_log ALTER COLUMN id SET DEFAULT nextval('legal.event_log_id_seq'::regclass);
-
-
---
--- Name: mail_ingester_metrics id; Type: DEFAULT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.mail_ingester_metrics ALTER COLUMN id SET DEFAULT nextval('legal.mail_ingester_metrics_id_seq'::regclass);
-
-
---
--- Name: priority_sender_rules id; Type: DEFAULT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.priority_sender_rules ALTER COLUMN id SET DEFAULT nextval('legal.priority_sender_rules_id_seq'::regclass);
 
 
 --
@@ -4626,14 +4337,6 @@ ALTER TABLE ONLY legal.case_graph_nodes_v2
 
 
 --
--- Name: case_posture case_posture_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.case_posture
-    ADD CONSTRAINT case_posture_pkey PRIMARY KEY (case_slug);
-
-
---
 -- Name: case_statements case_statements_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
 --
 
@@ -4690,38 +4393,6 @@ ALTER TABLE ONLY legal.discovery_draft_packs_v2
 
 
 --
--- Name: dispatcher_dead_letter dispatcher_dead_letter_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_dead_letter
-    ADD CONSTRAINT dispatcher_dead_letter_pkey PRIMARY KEY (id);
-
-
---
--- Name: dispatcher_event_attempts dispatcher_event_attempts_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_event_attempts
-    ADD CONSTRAINT dispatcher_event_attempts_pkey PRIMARY KEY (id);
-
-
---
--- Name: dispatcher_pause dispatcher_pause_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_pause
-    ADD CONSTRAINT dispatcher_pause_pkey PRIMARY KEY (singleton_id);
-
-
---
--- Name: dispatcher_routes dispatcher_routes_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_routes
-    ADD CONSTRAINT dispatcher_routes_pkey PRIMARY KEY (event_type);
-
-
---
 -- Name: distillation_memory distillation_memory_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
 --
 
@@ -4735,14 +4406,6 @@ ALTER TABLE ONLY legal.distillation_memory
 
 ALTER TABLE ONLY legal.entities
     ADD CONSTRAINT entities_pkey PRIMARY KEY (id);
-
-
---
--- Name: event_log event_log_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.event_log
-    ADD CONSTRAINT event_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -4767,38 +4430,6 @@ ALTER TABLE ONLY legal.legal_cases
 
 ALTER TABLE ONLY legal.legal_exemplars
     ADD CONSTRAINT legal_exemplars_pkey PRIMARY KEY (id);
-
-
---
--- Name: mail_ingester_metrics mail_ingester_metrics_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.mail_ingester_metrics
-    ADD CONSTRAINT mail_ingester_metrics_pkey PRIMARY KEY (id);
-
-
---
--- Name: mail_ingester_pause mail_ingester_pause_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.mail_ingester_pause
-    ADD CONSTRAINT mail_ingester_pause_pkey PRIMARY KEY (mailbox_alias);
-
-
---
--- Name: mail_ingester_state mail_ingester_state_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.mail_ingester_state
-    ADD CONSTRAINT mail_ingester_state_pkey PRIMARY KEY (mailbox_alias);
-
-
---
--- Name: priority_sender_rules priority_sender_rules_pkey; Type: CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.priority_sender_rules
-    ADD CONSTRAINT priority_sender_rules_pkey PRIMARY KEY (id);
 
 
 --
@@ -6214,6 +5845,12 @@ CREATE INDEX idx_acquisition_parcels_assessed ON crog_acquisition.parcels USING 
 
 
 --
+-- Name: idx_acquisition_parcels_geom; Type: INDEX; Schema: crog_acquisition; Owner: -
+--
+
+
+
+--
 -- Name: idx_acquisition_pipeline_next_action_date; Type: INDEX; Schema: crog_acquisition; Owner: -
 --
 
@@ -6323,90 +5960,6 @@ CREATE UNIQUE INDEX ix_iot_schema_digital_twins_device_id ON iot_schema.digital_
 --
 
 CREATE INDEX ix_iot_schema_digital_twins_property_id ON iot_schema.digital_twins USING btree (property_id);
-
-
---
--- Name: idx_case_posture_next_deadline; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_case_posture_next_deadline ON legal.case_posture USING btree (next_deadline_date) WHERE (next_deadline_date IS NOT NULL);
-
-
---
--- Name: idx_dispatcher_dead_letter_dead_lettered_at; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_dispatcher_dead_letter_dead_lettered_at ON legal.dispatcher_dead_letter USING btree (dead_lettered_at DESC);
-
-
---
--- Name: idx_dispatcher_dead_letter_event_type; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_dispatcher_dead_letter_event_type ON legal.dispatcher_dead_letter USING btree (event_type, dead_lettered_at DESC);
-
-
---
--- Name: idx_dispatcher_event_attempts_attempted_at; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_dispatcher_event_attempts_attempted_at ON legal.dispatcher_event_attempts USING btree (attempted_at DESC);
-
-
---
--- Name: idx_dispatcher_event_attempts_event_id; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_dispatcher_event_attempts_event_id ON legal.dispatcher_event_attempts USING btree (event_id);
-
-
---
--- Name: idx_dispatcher_event_attempts_outcome_recent; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_dispatcher_event_attempts_outcome_recent ON legal.dispatcher_event_attempts USING btree (attempted_at DESC) WHERE (outcome = ANY (ARRAY['error'::text, 'dead_letter'::text]));
-
-
---
--- Name: idx_event_log_case_slug; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_event_log_case_slug ON legal.event_log USING btree (case_slug, emitted_at DESC) WHERE (case_slug IS NOT NULL);
-
-
---
--- Name: idx_event_log_event_type; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_event_log_event_type ON legal.event_log USING btree (event_type, emitted_at DESC);
-
-
---
--- Name: idx_event_log_unprocessed; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_event_log_unprocessed ON legal.event_log USING btree (emitted_at) WHERE (processed_at IS NULL);
-
-
---
--- Name: idx_mail_ingester_metrics_name_recorded; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_mail_ingester_metrics_name_recorded ON legal.mail_ingester_metrics USING btree (metric_name, recorded_at DESC);
-
-
---
--- Name: idx_priority_sender_rules_active; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_priority_sender_rules_active ON legal.priority_sender_rules USING btree (is_active, priority) WHERE (is_active = true);
-
-
---
--- Name: idx_priority_sender_rules_case_slug; Type: INDEX; Schema: legal; Owner: -
---
-
-CREATE INDEX idx_priority_sender_rules_case_slug ON legal.priority_sender_rules USING btree (case_slug) WHERE (case_slug IS NOT NULL);
 
 
 --
@@ -9645,43 +9198,11 @@ ALTER TABLE ONLY legal.case_graph_nodes
 
 
 --
--- Name: case_posture case_posture_created_by_event_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.case_posture
-    ADD CONSTRAINT case_posture_created_by_event_fkey FOREIGN KEY (created_by_event) REFERENCES legal.event_log(id);
-
-
---
--- Name: case_posture case_posture_updated_by_event_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.case_posture
-    ADD CONSTRAINT case_posture_updated_by_event_fkey FOREIGN KEY (updated_by_event) REFERENCES legal.event_log(id);
-
-
---
 -- Name: discovery_draft_items_v2 discovery_draft_items_v2_pack_id_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
 --
 
 ALTER TABLE ONLY legal.discovery_draft_items_v2
     ADD CONSTRAINT discovery_draft_items_v2_pack_id_fkey FOREIGN KEY (pack_id) REFERENCES legal.discovery_draft_packs_v2(id) ON DELETE CASCADE;
-
-
---
--- Name: dispatcher_dead_letter dispatcher_dead_letter_original_event_id_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_dead_letter
-    ADD CONSTRAINT dispatcher_dead_letter_original_event_id_fkey FOREIGN KEY (original_event_id) REFERENCES legal.event_log(id);
-
-
---
--- Name: dispatcher_event_attempts dispatcher_event_attempts_event_id_fkey; Type: FK CONSTRAINT; Schema: legal; Owner: -
---
-
-ALTER TABLE ONLY legal.dispatcher_event_attempts
-    ADD CONSTRAINT dispatcher_event_attempts_event_id_fkey FOREIGN KEY (event_id) REFERENCES legal.event_log(id);
 
 
 --
@@ -10600,4 +10121,4 @@ ALTER TABLE ONLY public.yield_simulations
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 6glhhmNFUUBlRcfYZYc3EwpCGkUjw3QDUKC0Vgk9Hmty4plx7PpxkVVyG8cZj9y
+\unrestrict 8Tbewx8mDsZ50zdgMMItGSuVglQb8T5SWHYQWi2tAYPJ332mjAX4cQYTRn4qRpX
