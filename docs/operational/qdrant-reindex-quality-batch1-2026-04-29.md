@@ -140,3 +140,64 @@ ssh admin@192.168.0.100 'python3 /home/admin/Fortress-Prime/src/validate_reindex
     --collection legal_caselaw --n-queries 50 \
     --out /home/admin/Fortress-Prime/docs/operational/reindex-quality/legal_caselaw.json'
 ```
+
+---
+
+## Operator decision (2026-04-30): Option B
+
+**Outcome:** **ACCEPT** `legal_caselaw_v2` and `legal_library_v2` for caller cutover (Phase A PR #2). **DEFER** `legal_privileged_communications_v2` cutover indefinitely.
+
+| Collection | _v2 status | Cutover decision |
+|---|---|---|
+| `legal_caselaw_v2`                  | overlap@5 0.432 (clears 0.300 threshold) | ✅ **ACCEPT** for PR #2 cutover |
+| `legal_library_v2`                  | overlap@5 0.600 (3-pt cap; both encoders return all 3) | ✅ **ACCEPT** for PR #2 cutover |
+| `legal_privileged_communications_v2`| overlap@5 0.136 (below 0.300 threshold)  | 🟡 **DEFER** — _v2 retained on Qdrant, callers stay on legacy |
+| `legal_caselaw_federal_v2`          | empty (schema-only, awaiting federal ingestion) | N/A — no callers yet |
+| `legal_headhunter_memory_v2`        | empty (parity with legacy 0-pt collection) | N/A — no callers |
+
+### Rationale
+
+`legal_privileged_communications_v2` registered overlap@5 = 0.136 vs the 0.300 stop-condition threshold. Encoder disagreement of this magnitude between `nomic-embed-text` (general-purpose, 768-dim) and `legal-embed` (legal-specialized, 2048-dim) is plausible on conversational privileged content — emails, memos, internal communications — without indicating either encoder is wrong. The same harness on legal *case-law* (longer, more structured chunks) cleared the threshold comfortably (0.432); the result on privileged is consistent with the corpus-property hypothesis (high near-duplicate density, ~800-char chunks, domain-specialized vs general encoder geometry) rather than encoder regression.
+
+Operator-side spot-check (Option B in the original menu — manual eyeball of 5–10 known-relevant queries) is **deferred** until one of:
+
+- Case II work specifically demands sovereign-embed privileged retrieval, OR
+- Retrieval-quality evidence emerges that legacy `nomic-embed-text` is hurting privileged-collection work in production.
+
+Until then, **legacy `legal_privileged_communications` (768-dim, nomic-embed-text) stays live** and continues to back caller retrieval.
+
+### Disposition of artifacts
+
+- `legal_privileged_communications_v2` is **retained** on Qdrant. Spending the 2h41m reindex again later is wasteful — the collection is in the can, just unused. If operator returns to this in a future brief, the spot-check can run immediately against the existing _v2 without a re-encode.
+- Legacy `legal_privileged_communications` (768-dim) is **untouched** and remains the production retrieval target.
+- `legal_council.py` and Phase B retrieval primitives are **untouched** by this PR — caller cutover is the scope of Phase A PR #2 (separate brief, will be drafted to cover only `legal_caselaw_v2` + `legal_library_v2`).
+
+### What Phase A PR #2 will and will not include
+
+In scope for PR #2:
+- Cut over caller code paths that hit `legal_caselaw` to read from `legal_caselaw_v2` instead, with `legal-embed input_type=query` at the retrieval site.
+- Same for `legal_library` (~negligible — 3 points).
+
+Out of scope for PR #2:
+- `legal_privileged_communications` cutover (deferred per this decision).
+- `legal_ediscovery` reindex AND cutover (still queued for the separate Phase A reindex PR #2-ediscovery; Phase B v0.1 dry-run is the gate there).
+- `legal_hive_mind_memory` (separate encoder decision — outcome labels not chunks).
+- `legal_caselaw_federal` (no content yet; ingestion brief is upstream).
+
+### Read-only verification at decision time (2026-04-30)
+
+All `_v2` collections present and correctly sized; all legacy collections untouched (point counts match PR #301 audit):
+
+| Collection | Dim | Points | Notes |
+|---|---:|---:|---|
+| `legal_caselaw_v2`                  | 2048 | 2,711   | reindex complete, accepted |
+| `legal_library_v2`                  | 2048 | 3       | reindex complete, accepted |
+| `legal_privileged_communications_v2`| 2048 | 241,167 | reindex complete, deferred (retained) |
+| `legal_caselaw_federal_v2`          | 2048 | 0       | schema-only |
+| `legal_headhunter_memory_v2`        | 2048 | 0       | schema-only |
+| `legal_caselaw`                     | 768  | 2,711   | legacy, unchanged |
+| `legal_library`                     | 768  | 3       | legacy, unchanged |
+| `legal_privileged_communications`   | 768  | 241,167 | legacy, unchanged, **stays in production** |
+| `legal_ediscovery`                  | 768  | 738,918 | legacy, unchanged (Phase A reindex never touched it) |
+| `legal_headhunter_memory`           | 768  | 0       | legacy, unchanged |
+| `legal_hive_mind_memory`            | 768  | 4       | legacy, unchanged |
