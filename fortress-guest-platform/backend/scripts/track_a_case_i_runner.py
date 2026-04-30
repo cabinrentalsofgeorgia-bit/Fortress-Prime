@@ -76,10 +76,16 @@ class MetricCapturingBrainClient(BrainClient):
     async def chat(
         self,
         messages: list[dict],
-        max_tokens: int = 4000,
+        max_tokens: Optional[int] = None,
         temperature: float = 0.0,
         stream: bool = True,
         transport: Optional[httpx.AsyncBaseTransport] = None,
+        *,
+        enable_thinking: Optional[bool] = None,
+        low_effort: Optional[bool] = None,
+        thinking_token_budget: Optional[int] = None,
+        reasoning_effort: Optional[str] = None,
+        thinking: Optional[bool] = None,
     ) -> Union[AsyncIterator[str], dict]:
         # Identify section from the user prompt's INSTRUCTION block content match (best-effort)
         user_prompt_full = ""
@@ -96,29 +102,45 @@ class MetricCapturingBrainClient(BrainClient):
         prompt_chars = sum(len(m.get("content", "")) for m in messages)
         started = time.monotonic()
         wall_iso_start = datetime.now(timezone.utc).isoformat()
+        effective_max = max_tokens if max_tokens is not None else self.default_max_tokens
 
         result = await super().chat(
-            messages=messages, max_tokens=max_tokens, temperature=temperature, stream=stream, transport=transport
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=stream,
+            transport=transport,
+            enable_thinking=enable_thinking,
+            low_effort=low_effort,
+            thinking_token_budget=thinking_token_budget,
+            reasoning_effort=reasoning_effort,
+            thinking=thinking,
         )
 
         if stream and hasattr(result, "__aiter__"):
             collected_chunks: list[str] = []
+            client_ref = self
             async def _wrapped() -> AsyncIterator[str]:
                 async for chunk in result:  # type: ignore
                     collected_chunks.append(chunk)
                     yield chunk
                 ended = time.monotonic()
                 content_text = "".join(collected_chunks)
-                self.metrics_log.append({
+                client_ref.metrics_log.append({
                     "section_id": inferred_section,
                     "wall_seconds": round(ended - started, 2),
                     "wall_started_utc": wall_iso_start,
                     "wall_ended_utc": datetime.now(timezone.utc).isoformat(),
                     "prompt_chars": prompt_chars,
-                    "max_tokens": max_tokens,
+                    "max_tokens": effective_max,
                     "temperature": temperature,
                     "content_chars": len(content_text),
                     "content_token_estimate": len(content_text) // 4,
+                    "reasoning_chars": len(client_ref.last_reasoning or ""),
+                    "finish_reason": client_ref.last_finish_reason,
+                    "enable_thinking": enable_thinking,
+                    "low_effort": low_effort,
+                    "thinking_token_budget": thinking_token_budget,
                     "stream": True,
                 })
             return _wrapped()
@@ -135,10 +157,15 @@ class MetricCapturingBrainClient(BrainClient):
                 "wall_started_utc": wall_iso_start,
                 "wall_ended_utc": datetime.now(timezone.utc).isoformat(),
                 "prompt_chars": prompt_chars,
-                "max_tokens": max_tokens,
+                "max_tokens": effective_max,
                 "temperature": temperature,
                 "content_chars": len(content_text),
                 "content_token_estimate": len(content_text) // 4,
+                "reasoning_chars": len(self.last_reasoning or ""),
+                "finish_reason": self.last_finish_reason,
+                "enable_thinking": enable_thinking,
+                "low_effort": low_effort,
+                "thinking_token_budget": thinking_token_budget,
                 "stream": False,
                 "usage": result.get("usage") if isinstance(result, dict) else None,
             })
@@ -191,14 +218,17 @@ def post_run_section_9_augmentation(
         out_log.append({"section_id": "section_09_recommended_strategy", "error": "no LITELLM_MASTER_KEY"})
         return "**[Section 9 augmentation skipped — LITELLM_MASTER_KEY not in env]**"
 
+    # Phase 3 per-section policy for §9 (doctrinal): top-level chat_template_kwargs
+    # via LiteLLM passthrough (PR #330 Probe DL confirmed reasoning_content survives).
     payload = {
         "model": "legal-reasoning",
         "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": section_9_user_prompt},
         ],
-        "max_tokens": 5000,
+        "max_tokens": 8000,
         "stream": False,
+        "chat_template_kwargs": {"enable_thinking": True, "low_effort": True},
     }
     started = time.monotonic()
     try:
@@ -223,7 +253,8 @@ def post_run_section_9_augmentation(
 
     msg = data["choices"][0]["message"]
     content = msg.get("content", "") or ""
-    reasoning = msg.get("reasoning", "") or ""
+    # LiteLLM exposes reasoning under reasoning_content; vLLM-direct under reasoning.
+    reasoning = msg.get("reasoning_content") or msg.get("reasoning") or ""
     out_log.append({
         "section_id": "section_09_recommended_strategy",
         "wall_seconds": round(time.monotonic() - started, 2),
