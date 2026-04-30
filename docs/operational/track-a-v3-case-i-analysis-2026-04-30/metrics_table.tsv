@@ -1,0 +1,12 @@
+section_id	mode	content_chars	reasoning_chars	wall_s	finish	cit_total	cit_unique	grounding_orch	fmt_ok	first_person	think	tok_per_s	rsn_ratio	cit_density_per_kchar
+section_01_case_summary	mechanical	511	0	0.0	n/a	0	0	0	True	0	0	0.0	0.0	0.0
+section_02_critical_timeline	synthesis	0	71294	840.3	length	0	0	0	True	0	0	0.0	inf	0.0
+section_03_parties_and_counsel	mechanical	509	0	0.0	n/a	0	0	0	True	0	0	0.0	0.0	0.0
+section_04_claims_analysis	synthesis	7818	21656	306.09	stop	0	0	4	True	0	0	6.38	2.77	0.0
+section_05_key_defenses_identified	synthesis	6271	19090	268.93	stop	12	4	5	True	0	0	5.83	3.04	1.91
+section_06_evidence_inventory	mechanical	1376	0	0.0	n/a	0	0	0	True	1	0	0.0	0.0	0.0
+section_07_email_intelligence_report	synthesis	0	73407	835.48	length	0	0	0	True	0	0	0.0	inf	0.0
+section_08_financial_exposure_analysis	synthesis	3565	7488	125.75	stop	8	4	4	True	0	0	7.09	2.1	2.24
+section_09_recommended_strategy	operator_written	383	0	107.75	stop	0	0	0	True	0	0	0.88	0.0	0.0
+section_10_filing_checklist	mechanical	611	0	0.0	n/a	0	0	0	True	0	0	0.0	0.0	0.0
+section_09_recommended_strategy_augmented	synthesis_augmented	5312	0	0.0	n/a	10	5	0	True	0	0	0.0	0.0	1.88

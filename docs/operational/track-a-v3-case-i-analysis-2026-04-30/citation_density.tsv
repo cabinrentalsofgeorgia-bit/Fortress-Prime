@@ -1,0 +1,5 @@
+mode	n_sections	n_with_content	total_content_chars	total_citations	total_unique	total_grounding_orch	avg_density_per_kchar
+mechanical	4	4	3007	0	0	0	0.0
+operator_written	1	1	383	0	0	0	0.0
+synthesis	5	3	17654	20	8	13	1.13
+synthesis_augmented	1	1	5312	10	5	0	1.88

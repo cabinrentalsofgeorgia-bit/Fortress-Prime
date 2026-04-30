@@ -1,0 +1,12 @@
+section_id	mode	grounding_orch	cit_total_in_md	cit_unique_in_md	delta_orch_minus_unique	note
+section_01_case_summary	mechanical	0	0	0	0	match
+section_02_critical_timeline	synthesis	0	0	0	0	empty section
+section_03_parties_and_counsel	mechanical	0	0	0	0	match
+section_04_claims_analysis	synthesis	4	0	0	4	orch grounded but no md filename citations
+section_05_key_defenses_identified	synthesis	5	12	4	1	delta=1
+section_06_evidence_inventory	mechanical	0	0	0	0	match
+section_07_email_intelligence_report	synthesis	0	0	0	0	empty section
+section_08_financial_exposure_analysis	synthesis	4	8	4	0	match
+section_09_recommended_strategy	operator_written	0	0	0	0	match
+section_10_filing_checklist	mechanical	0	0	0	0	match
+section_09_recommended_strategy_augmented	synthesis_augmented	0	10	5	-5	md cites but orch not tracking
