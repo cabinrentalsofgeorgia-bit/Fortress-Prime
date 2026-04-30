@@ -220,6 +220,7 @@ Maintained tracks. Each updates as items land or shift.
 | NIM ASR ARM64 monitor (SenseVoice replacement trigger) | OPEN issue (P3) |
 | VRS Qdrant migration trigger (fortress-qdrant-vrs on spark-4) | OPEN issue (P5 — monitoring) |
 | Ollama consolidation migration | OPEN issue (P4 — gated on caller migration per `spark-3-4-retained-state-2026-04-29.md`) |
+| F5 cluster egress sustained-transfer failure to xfiles.ngc.nvidia.com | OPEN issue #303 (P3) — multi-CDN comparison (Cloudflare / Canonical / Hugging Face / GitHub-Fastly all PASS at 90–110 MB/s through same egress) narrows failure to NGC-only; fix surface is the **TP-Link ER8411 web UI** at `http://192.168.0.1` (Mikrotik switch is fast-fabric only, not in egress path). Until F5 lands, **W3 (operator-Mac NIM pulls scp'd to NAS) is the canonical NIM weight-pull procedure** per `docs/operational/runbooks/w3-nim-pull-workaround-runbook.md`. Investigation surface: `docs/operational/briefs/f5-root-cause-investigation-2026-04-29.md`. Implication: TIER 1 batch-pull becomes operator-paced rather than agent-paced. |
 
 ---
 
