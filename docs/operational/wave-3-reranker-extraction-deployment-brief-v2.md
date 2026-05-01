@@ -59,7 +59,7 @@ Halt + surface ONLY for:
 
 1. **NGC API auth fails persistently.** Two retries with cluster-canonical key + 30s sleep. Both fail → operator-side credential issue.
 2. **ARM64 verification fails on any pulled NIM.** Per PR #128 tooling: manifest layers must be arm64 AND must actually contain arm64 binaries (not amd64 binaries under arm64 manifest — the Nemotron-Nano-9B incident).
-3. **Frontier endpoint dies during deployment.** `curl http://10.10.10.3:8000/v1/health/ready` non-200 sustained >60s → halt and protect frontier. **This is non-negotiable: nothing about Wave 3 is worth breaking the TP=2 soak.**
+3. **Frontier endpoint dies during deployment.** `curl http://10.10.10.3:8000/health` non-200 sustained >60s → halt and protect frontier. **This is non-negotiable: nothing about Wave 3 is worth breaking the TP=2 soak.**
 4. **Soak halt event fires.** Phase 9 collector emits halt — cluster telling you to stop.
 5. **Disk full** anywhere in the write path. <5GB free.
 6. **OOM kill / nvidia-smi unresponsive / fabric link down on spark-3 or spark-5.**
@@ -114,7 +114,7 @@ git log origin/main..HEAD --oneline
 ```bash
 ssh admin@192.168.0.100 '
   tail -50 /mnt/fortress_nas/audits/phase-9-soak/$(date +%Y-%m-%d).log 2>/dev/null
-  curl -fsS --max-time 10 http://10.10.10.3:8000/v1/health/ready
+  curl -fsS --max-time 10 http://10.10.10.3:8000/health
   curl -fsS http://10.10.10.3:8000/v1/models | jq ".data[].id"
 '
 ```
@@ -488,7 +488,7 @@ Same restart pattern as v1 brief §7. Vision uses `nemotron-nano-12b-v2-vl` per 
 
 ```bash
 ssh admin@192.168.0.100 '
-  curl -fsS --max-time 10 http://10.10.10.3:8000/v1/health/ready
+  curl -fsS --max-time 10 http://10.10.10.3:8000/health
   curl -fsS http://10.10.10.3:8000/v1/models | jq ".data[].id"
 '
 ```
@@ -732,7 +732,7 @@ EOF
 - spark-3:8101 fortress-nim-vision.service
 
 ## Critical health invariants
-1. spark-3+4 frontier endpoint health (http://10.10.10.3:8000/v1/health/ready) MUST stay 200
+1. spark-3+4 frontier endpoint health (http://10.10.10.3:8000/health) MUST stay 200
 2. Reranker only deployed via :1.8.0 — newer rerank-1b-v2 lacks Blackwell support
 3. EMBED only deployed via Path EMBED-A (llama-nemotron-embed-1b-v2) or EMBED-B (Qwen3-Embedding-4B llama.cpp); v1.10.0 of llama-3.2-nv-embedqa is BROKEN on Spark
 
