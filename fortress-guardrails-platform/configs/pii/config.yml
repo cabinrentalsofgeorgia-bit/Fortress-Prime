@@ -1,0 +1,38 @@
+models:
+  - type: main
+    engine: openai
+    model: legal-moderation
+    parameters:
+      base_url: http://127.0.0.1:8002/v1
+
+streaming: false
+
+rails:
+  input:
+    flows:
+      - mask sensitive data on input
+  output:
+    flows:
+      - mask sensitive data on output
+
+  config:
+    sensitive_data_detection:
+      input:
+        score_threshold: 0.4
+        entities:
+          - PERSON
+          - EMAIL_ADDRESS
+          - PHONE_NUMBER
+          - US_SSN
+          - US_BANK_NUMBER
+          - LOCATION
+          - DATE_TIME
+          - IBAN_CODE
+      output:
+        score_threshold: 0.4
+        entities:
+          - US_SSN
+          - US_BANK_NUMBER
+          - CREDIT_CARD
+          - EMAIL_ADDRESS
+          - PHONE_NUMBER

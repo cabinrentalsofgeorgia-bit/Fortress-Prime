@@ -1,0 +1,18 @@
+models:
+  - type: main
+    engine: openai
+    model: legal-moderation
+    parameters:
+      base_url: http://127.0.0.1:8002/v1
+
+streaming: false
+
+# Notes:
+# - api_key is NOT set in YAML; the openai engine picks it up from
+#   OPENAI_API_KEY in the environment. Set via /etc/fortress/guardrails.env
+#   for the systemd unit, or `export` in shells running smoke scripts.
+# - LiteLLM gateway runs on 127.0.0.1:8002; legal-reasoning aliases to
+#   nemotron-3-super on the spark-3+4 frontier (http://10.10.10.3:8000/v1).
+# - Each rail's config.yml inlines a copy of the models: block above to
+#   avoid relying on cross-file includes (nemoguardrails 0.21 has no
+#   include_files directive).

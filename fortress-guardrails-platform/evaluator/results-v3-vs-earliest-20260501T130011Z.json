@@ -1,0 +1,24 @@
+{
+  "baseline": "/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-i/filings/outgoing/Attorney_Briefing_Package_7IL_NDGA_I_v3_20260430T174043Z.md",
+  "candidate": "/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-i/filings/outgoing/Attorney_Briefing_Package_7IL_NDGA_I_v3_20260430T224403Z.md",
+  "judge_model": "legal-reasoning",
+  "elapsed_s": 127.79,
+  "scores": {
+    "citation_density": 9,
+    "citation_precision": 8,
+    "structural_completeness": 9,
+    "doctrinal_soundness": 8,
+    "internal_consistency": 9
+  },
+  "overall": 9.0,
+  "rationale": "The candidate brief provides extensive grounding citations throughout the Critical Timeline, Claims Analysis, Key Defenses, Email Intelligence Report, and Financial Exposure Analysis, whereas the baseline brief contained no citations in those synthesis sections. This yields far higher citation density and precision. The candidate also supplies a thorough, legally supported analysis of each cause of action and corresponding defenses, aligning with relevant case law and contract provisions, while the baseline left those sections empty. Structural completeness is comparable, as both briefs include all required sections, but the candidate\u2019s internal consistency is stronger because its factual assertions are consistently supported by the cited evidence.",
+  "rubric": {
+    "pass_threshold": 7.0,
+    "per_dimension_minimum": 6.0
+  },
+  "result": {
+    "pass_overall": true,
+    "pass_per_dim": true,
+    "candidate_passes_baseline": true
+  }
+}

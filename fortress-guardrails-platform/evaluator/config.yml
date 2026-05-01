@@ -1,0 +1,46 @@
+# Wave 5 — NeMo Evaluator (judge harness) configuration
+#
+# Per brief §9.2. The judge LLM is legal-reasoning (not legal-moderation):
+# scoring counsel-grade briefs along five dimensions takes substantive
+# reasoning, not yes/no classification. Output is structured JSON; pass
+# threshold and per-dimension minimum gate the v3-vs-v2 decision per
+# MASTER-PLAN §6.1.
+
+judge:
+  model: legal-reasoning
+  endpoint: http://127.0.0.1:8002/v1
+  api_key_env: OPENAI_API_KEY
+  max_tokens: 4096
+  temperature: 0.2
+  timeout_s: 300
+
+  prompt_template: |
+    You are an expert legal-brief evaluator scoring a candidate brief
+    against a baseline brief on five dimensions.
+
+    For each dimension, return an integer 0-10:
+
+    1. citation_density — sentences per citation; higher = more grounded
+    2. citation_precision — cited authority actually supports the claim
+    3. structural_completeness — required sections + subsections all present
+    4. doctrinal_soundness — claims/defenses analysis aligned with relevant law
+    5. internal_consistency — no contradictions across sections
+
+    Then compute overall as the rounded mean of the five dimensions, and
+    write a one-paragraph rationale describing the most important
+    differences.
+
+    Return EXACTLY one JSON object on a single line, no prose around it:
+    {"citation_density": X, "citation_precision": X, "structural_completeness": X, "doctrinal_soundness": X, "internal_consistency": X, "overall": X, "rationale": "..."}
+
+    --- BASELINE START ---
+    {baseline_text}
+    --- BASELINE END ---
+
+    --- CANDIDATE START ---
+    {candidate_text}
+    --- CANDIDATE END ---
+
+rubric:
+  pass_threshold: 7.0          # Overall score required for candidate to pass baseline
+  per_dimension_minimum: 6.0   # No dimension can score below this
