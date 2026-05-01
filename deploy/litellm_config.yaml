@@ -1,71 +1,190 @@
 model_list:
   # ──────────────────────────────────────────────────────────────────────────
-  # SOVEREIGN LEGAL ROUTES (ADR-003 Phase 1 — 2026-04-29)
-  # All legal-tier inference terminates on spark-5 NIM. Closes audit finding A-02
-  # (cloud legal inference). The aliases below all resolve to the same backend.
-  # See docs/operational/litellm-legal-cutover-2026-04-29.md for cutover record.
+  # SOVEREIGN LEGAL ROUTES — Phase 9 Wave 2 alias surgery (2026-04-30)
+  # All legal-tier inference terminates on the spark-3+spark-4 TP=2 endpoint
+  # serving Nemotron-3-Super-120B-A12B-NVFP4 via vLLM. ADR-007 (PROPOSED in
+  # PR #321) records the deployment; this PR (Phase 9) wires the consumers.
+  #
+  # Three differentiated profiles + two transitional aliases. Same endpoint;
+  # the differentiation is in the invocation profile (max_tokens, temperature,
+  # reasoning_effort), not the model.
+  #
+  # Profiles:
+  #   legal-reasoning      reasoning_effort=high, max_tokens=6000, temp=0.3
+  #                        (Council reasoning seats; Section 4/5/9)
+  #   legal-drafting       reasoning_effort=medium, max_tokens=4000, temp=0.5
+  #                        (Section 1/3/6/10; general drafting)
+  #   legal-summarization  reasoning_effort=low, max_tokens=2000, temp=0.4
+  #                        (Section 7/8; short-form synthesis; mechanical)
+  #
+  # Transitional aliases (preserved for caller backward-compat; will be
+  # cleaned up in a follow-up code PR):
+  #   legal-brain          → maps to legal-reasoning profile (BRAIN-49B era;
+  #                           Council/synthesis-tier work)
+  #   legal-classification → maps to legal-summarization profile (short-form
+  #                           structured-output classification)
+  #
+  # Per Phase 9 brief §11: BRAIN-49B (spark-5:8100) retired in this PR; image
+  # + unit preserved per docs/operational/runbooks/brain-49b-retirement.md.
   # ──────────────────────────────────────────────────────────────────────────
   - model_name: legal-reasoning
     litellm_params:
-      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
-      api_base: http://spark-5:8100/v1
-      api_key: dummy   # NIM does not require auth on the internal Tailscale/LAN
-      timeout: 600     # streaming long-context legal RAG calls
-
-  - model_name: legal-classification
-    litellm_params:
-      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
-      api_base: http://spark-5:8100/v1
-      api_key: dummy
+      model: openai/nemotron-3-super
+      api_base: http://10.10.10.3:8000/v1
+      api_key: EMPTY
+      max_tokens: 6000
+      temperature: 0.3
+      top_p: 0.95
       timeout: 600
+      chat_template_kwargs:
+        enable_thinking: true
+        low_effort: false
+        force_nonempty_content: true
+    model_info:
+      mode: chat
+      base_model: nemotron-3-super-120b-a12b-nvfp4
+
+  - model_name: legal-drafting
+    litellm_params:
+      model: openai/nemotron-3-super
+      api_base: http://10.10.10.3:8000/v1
+      api_key: EMPTY
+      max_tokens: 4000
+      temperature: 0.5
+      top_p: 0.95
+      timeout: 600
+      # Note: medium-effort middle-ground intent not engageable on this
+      # frontier (no --reasoning-config). legal-drafting defaults to full
+      # reasoning (same as legal-reasoning) per brief §0.2 deferral.
+      chat_template_kwargs:
+        enable_thinking: true
+        low_effort: false
+        force_nonempty_content: true
+    model_info:
+      mode: chat
+      base_model: nemotron-3-super-120b-a12b-nvfp4
 
   - model_name: legal-summarization
     litellm_params:
-      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
-      api_base: http://spark-5:8100/v1
-      api_key: dummy
+      model: openai/nemotron-3-super
+      api_base: http://10.10.10.3:8000/v1
+      api_key: EMPTY
+      max_tokens: 2000
+      temperature: 0.4
+      top_p: 0.95
       timeout: 600
+      # enable_thinking=false suppresses reasoning entirely per chat
+      # template; low_effort omitted (not applicable when thinking off).
+      chat_template_kwargs:
+        enable_thinking: false
+        force_nonempty_content: true
+    model_info:
+      mode: chat
+      base_model: nemotron-3-super-120b-a12b-nvfp4
 
+  # Transitional — same shape as legal-reasoning (high-effort).
   - model_name: legal-brain
     litellm_params:
-      model: openai/nvidia/llama-3.3-nemotron-super-49b-v1.5-fp8
-      api_base: http://spark-5:8100/v1
-      api_key: dummy
+      model: openai/nemotron-3-super
+      api_base: http://10.10.10.3:8000/v1
+      api_key: EMPTY
+      max_tokens: 6000
+      temperature: 0.3
+      top_p: 0.95
       timeout: 600
+      chat_template_kwargs:
+        enable_thinking: true
+        low_effort: false
+        force_nonempty_content: true
+    model_info:
+      mode: chat
+      base_model: nemotron-3-super-120b-a12b-nvfp4
+
+  # Transitional — same shape as legal-summarization (low-effort, short-form).
+  - model_name: legal-classification
+    litellm_params:
+      model: openai/nemotron-3-super
+      api_base: http://10.10.10.3:8000/v1
+      api_key: EMPTY
+      max_tokens: 2000
+      temperature: 0.4
+      top_p: 0.95
+      timeout: 600
+      chat_template_kwargs:
+        enable_thinking: false
+        force_nonempty_content: true
+    model_info:
+      mode: chat
+      base_model: nemotron-3-super-120b-a12b-nvfp4
 
   # ──────────────────────────────────────────────────────────────────────────
-  # CLOUD ROUTES — non-legal use only after ADR-003 Phase 1.
-  # Kept active for non-legal callers AND as emergency rollback path for legal
-  # traffic if the sovereign route fails. Operator can flip
-  # COUNCIL_FRONTIER_PROVIDERS_ENABLED in legal_council.py to re-enable cloud
-  # routing for legal seats.
+  # SOVEREIGN LEGAL EMBEDDING (2026-04-29)
+  # llama-nemotron-embed-1b-v2 (NIM, ONNX/fp16) on spark-3:8102, vec_dim=2048.
+  # ASYMMETRIC MODEL: callers MUST send input_type=query for retrieval queries
+  # and input_type=passage for documents being indexed. Mismatched input_type
+  # measurably degrades retrieval quality (this is not a symmetric encoder).
+  # drop_params=true must NOT strip input_type — verified during 2026-04-29
+  # gateway cutover. If drop_params ever strips it again, override per-route
+  # with drop_params: false in litellm_params.
   # ──────────────────────────────────────────────────────────────────────────
-  - model_name: nemotron-3-super-120b
+  - model_name: legal-embed
     litellm_params:
-      model: nvidia_nim/nvidia/nemotron-3-super-120b-a12b
-      api_key: os.environ/NVIDIA_NIM_API_KEY
+      model: openai/nvidia/llama-nemotron-embed-1b-v2
+      api_base: http://spark-3:8102/v1
+      api_key: dummy
+      timeout: 60
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # CLOUD ROUTES — available for NON-LEGAL use only after ADR-003 Phase 1.
+  # Legal traffic terminates on the sovereign legal-* routes above.
+  # These routes remain active because non-legal callers (storefront, command
+  # center planning, etc.) still use them legitimately. Per ADR-003 Phase 1's
+  # rollback contract, these MUST stay reachable as emergency fallback for
+  # legal traffic if the sovereign route ever goes down — operator flips
+  # COUNCIL_FRONTIER_PROVIDERS_ENABLED in legal_council.py to re-enable cloud.
+  # ──────────────────────────────────────────────────────────────────────────
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: anthropic/claude-opus-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
   - model_name: gpt-4o
     litellm_params:
       model: openai/gpt-4o
       api_key: os.environ/OPENAI_API_KEY
-  - model_name: claude-sonnet-4-20250514
+
+  - model_name: grok-4
     litellm_params:
-      model: anthropic/claude-sonnet-4-20250514
-      api_key: os.environ/ANTHROPIC_API_KEY
+      model: xai/grok-4.20-reasoning
+      api_key: os.environ/XAI_API_KEY
+
   - model_name: gemini-2.5-pro
     litellm_params:
       model: gemini/gemini-2.5-pro
       api_key: os.environ/GEMINI_API_KEY
-  - model_name: grok-3
+
+  - model_name: deepseek-chat
     litellm_params:
-      model: xai/grok-3
-      api_key: os.environ/XAI_API_KEY
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  - model_name: deepseek-reasoner
+    litellm_params:
+      model: deepseek/deepseek-reasoner
+      api_key: os.environ/DEEPSEEK_API_KEY
 
 # Cloud emergency-fallback aliases (DISABLED 2026-04-29 per ADR-003 Phase 1 — uncomment to re-enable):
 # - model_name: legal-reasoning-cloud-fallback
 #   litellm_params:
-#     model: anthropic/claude-sonnet-4-20250514
+#     model: anthropic/claude-sonnet-4-6
 #     api_key: os.environ/ANTHROPIC_API_KEY
 
-litellm_settings:
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
   drop_params: true
+  request_timeout: 180
