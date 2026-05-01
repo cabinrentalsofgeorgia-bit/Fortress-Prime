@@ -271,6 +271,49 @@ async def test_chat_template_kwargs_at_top_level():
 
 
 @pytest.mark.asyncio
+async def test_top_p_at_top_level_when_set():
+    """Wave 4 — top_p sent at top level of payload, NOT inside extra_body or chat_template_kwargs."""
+    captured_payloads: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_payloads.append(json.loads(request.content))
+        return _ok_nonstream_response("x")
+
+    transport = httpx.MockTransport(handler)
+    client = BrainClient(base_url="http://mock-brain", top_p=0.95)
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=500,
+        stream=False,
+        transport=transport,
+    )
+    body = captured_payloads[0]
+    assert body.get("top_p") == 0.95
+    assert "top_p" not in body.get("chat_template_kwargs", {})
+    assert "extra_body" not in body
+
+
+@pytest.mark.asyncio
+async def test_top_p_absent_when_unset():
+    """Default behavior preserved — top_p not in payload when not set."""
+    captured_payloads: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_payloads.append(json.loads(request.content))
+        return _ok_nonstream_response("x")
+
+    transport = httpx.MockTransport(handler)
+    client = BrainClient(base_url="http://mock-brain")
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}],
+        max_tokens=500,
+        stream=False,
+        transport=transport,
+    )
+    assert "top_p" not in captured_payloads[0]
+
+
+@pytest.mark.asyncio
 async def test_thinking_token_budget_at_top_level():
     """Phase 2 — thinking_token_budget is a top-level field, not nested."""
     captured_payloads: list[dict] = []

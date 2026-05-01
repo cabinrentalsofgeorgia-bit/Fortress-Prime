@@ -360,6 +360,11 @@ async def stage_2_synthesize(
             )
         elif mode == SECTION_MODE_SYNTHESIS:
             try:
+                # thinking_token_budget removed Wave 4 — vLLM mainline requires
+                # --reasoning-config on the frontier (not currently set). NIM's
+                # reasoning_budget is a separate path. Re-engagement requires
+                # frontier redeploy; keep BrainClient kwarg for that path.
+                # See docs/research/nemotron-3-super-deep-research-2026-04-30.md §2.
                 policy = syn.SECTION_REASONING_POLICY.get(section_id, {})
                 policy_kwargs = {
                     k: v for k, v in policy.items() if v is not None

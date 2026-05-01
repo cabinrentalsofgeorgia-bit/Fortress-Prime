@@ -221,16 +221,32 @@ SECTION_REASONING_POLICY: dict[str, dict] = {
         "max_tokens": 8000,
     },
     "section_05_key_defenses_identified": {
-        # §5 needs full reasoning depth — Phase 3 probe (2026-04-30) showed
-        # low_effort=True compresses overlapping defenses and DROPS the
-        # non-affirmative denial subsection (4 explicit denials missing).
-        # With low_effort=False, §5 reproduces the 19:45Z baseline:
-        # 6,271 chars / 19,090 reasoning / 270s wall / 4 denial entries.
-        # Defense lawyers enumerate denials on the record; quietly dropping
-        # them is bad operational hygiene for a brief intended to inform
-        # counsel pitches.
+        # Phase 3 probe (2026-04-30) showed legacy §5 prompt + low_effort=True
+        # compressed overlapping defenses and DROPPED the non-affirmative denial
+        # subsection (4 explicit denials missing). Wave 4 tightened the §5
+        # prompt with explicit Block A/B/C/D structural requirements + per-row
+        # bracketed-citation requirement in Block C. Three-run isolation under
+        # NVIDIA-spec sampling (temperature=1.0, top_p=0.95) confirmed:
+        # - tightened prompt + low_effort=True: 6 denials, all 4 blocks,
+        #   orchestrator-grounding=5, 7,240 chars, ~78s wall
+        # - tightened prompt + low_effort=False: same denials/blocks/content,
+        #   2x slower wall (167s)
+        # - legacy prompt + low_effort=True: 0/4 blocks (structural collapse
+        #   signature reproduces, confirming attribution to prompt change)
+        # See docs/operational/wave-4-section-5-prompt-tightening-2026-04-30.md.
+        # force_nonempty_content: parser safety valve — if reasoning hits
+        # max_tokens without emitting </think>, output lands in `content`
+        # rather than stranded in `reasoning_content`.
+        # temperature=1.0, top_p=0.95 align §5 with NVIDIA-recommended sampling
+        # for Nemotron-3-Super (model card + cookbook + advanced guide specify
+        # these for ALL modes). Other 9 sections stay on the synthesizer
+        # default temperature=0.0 — Path A scoped to §5 only per Wave 4
+        # amendment Action 3.
         "enable_thinking": True,
-        "low_effort": False,
+        "low_effort": True,
+        "force_nonempty_content": True,
+        "temperature": 1.0,
+        "top_p": 0.95,
         "max_tokens": 8000,
     },
     "section_07_email_intelligence_report": {
@@ -255,6 +271,9 @@ async def synthesize_synthesis_section(
     max_tokens: int = 8000,  # PR #327 cap (kept as fallback when no per-section policy applies).
     enable_thinking: Optional[bool] = None,
     low_effort: Optional[bool] = None,
+    force_nonempty_content: Optional[bool] = None,
+    temperature: Optional[float] = None,
+    top_p: Optional[float] = None,
 ) -> SectionResult:
     """Run a BRAIN call against the packet and produce a SectionResult."""
     title_map = {
@@ -292,10 +311,15 @@ async def synthesize_synthesis_section(
                 {"role": "user", "content": user_prompt},
             ],
             max_tokens=max_tokens,
-            temperature=0.0,
+            # Sampling: synthesizer-default temperature=0.0 preserved for sections
+            # that do not declare an override; per-section policy may override
+            # (Wave 4: §5 uses NVIDIA-recommended temperature=1.0, top_p=0.95).
+            temperature=temperature if temperature is not None else 0.0,
+            top_p=top_p,
             stream=True,
             enable_thinking=enable_thinking,
             low_effort=low_effort,
+            force_nonempty_content=force_nonempty_content,
         ),
     )
     async for chunk in iterator:
@@ -339,6 +363,34 @@ _SYNTHESIS_PROMPTS: dict[str, str] = {
         "List the affirmative defenses + non-affirmative defense theories supported by the "
         "evidence. For each: cite the supporting chunks by bracketed filename. Flag any defense "
         "where the evidence is thin or contradicted."
+        "\n\n"
+        "STRUCTURAL REQUIREMENTS — output MUST include all four blocks below in order:\n\n"
+        "### Block A — Per-claim defense analysis\n"
+        "For each cause of action plead by the plaintiff, identify defense theories "
+        "that apply. Use a markdown table with columns: Cause of Action | Defense "
+        "Theory | Strength (Strong/Moderate/Weak/Thin) | Factual/Legal Basis.\n\n"
+        "### Block B — Affirmative Defenses\n"
+        "Enumerate named affirmative defenses in pleading-style format. Minimum 5 "
+        "entries, target 7-9. Include both substantive defenses (e.g., failure of "
+        "consideration, impossibility, lack of authority) AND procedural defenses "
+        "(e.g., statute of limitations, laches, waiver, estoppel, failure to state "
+        "a claim). Format each defense as:\n\n"
+        "#### NTH DEFENSE — [Name]\n"
+        "[2-5 sentence explanation grounded in the case record]\n"
+        "[Strength: Strong | Moderate | Weak | Thin]\n\n"
+        "### Block C — Non-Affirmative Denials\n"
+        "For each cause of action plead by the plaintiff, provide an explicit "
+        "denial framing. Minimum one entry per cause of action. Include a separate "
+        "entry for denial of damages. Use a markdown table with columns: Cause of "
+        "Action | Denial Framing | Factual or Legal Basis. "
+        "Each row's Factual or Legal Basis column MUST contain at least one "
+        "bracketed-filename citation in the form [filename.pdf] drawn from the "
+        "supplied evidence chunks.\n\n"
+        "### Block D — Reservation\n"
+        "Single sentence asserting that defenses are reserved subject to discovery.\n\n"
+        "All four blocks are required regardless of reasoning depth. Do not "
+        "consolidate Block B into Block A or omit Block C. Each block must be "
+        "present even if shorter than the targets above."
     ),
     "section_07_email_intelligence_report": (
         "Adversary correspondence + third-party-actor correspondence ONLY. "
