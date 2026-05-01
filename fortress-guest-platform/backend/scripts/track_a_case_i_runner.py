@@ -84,6 +84,8 @@ class MetricCapturingBrainClient(BrainClient):
         enable_thinking: Optional[bool] = None,
         low_effort: Optional[bool] = None,
         thinking_token_budget: Optional[int] = None,
+        force_nonempty_content: Optional[bool] = None,
+        top_p: Optional[float] = None,
         reasoning_effort: Optional[str] = None,
         thinking: Optional[bool] = None,
     ) -> Union[AsyncIterator[str], dict]:
@@ -113,6 +115,8 @@ class MetricCapturingBrainClient(BrainClient):
             enable_thinking=enable_thinking,
             low_effort=low_effort,
             thinking_token_budget=thinking_token_budget,
+            force_nonempty_content=force_nonempty_content,
+            top_p=top_p,
             reasoning_effort=reasoning_effort,
             thinking=thinking,
         )
@@ -141,6 +145,8 @@ class MetricCapturingBrainClient(BrainClient):
                     "enable_thinking": enable_thinking,
                     "low_effort": low_effort,
                     "thinking_token_budget": thinking_token_budget,
+                    "force_nonempty_content": force_nonempty_content,
+                    "top_p": top_p,
                     "stream": True,
                 })
             return _wrapped()
@@ -166,6 +172,8 @@ class MetricCapturingBrainClient(BrainClient):
                 "enable_thinking": enable_thinking,
                 "low_effort": low_effort,
                 "thinking_token_budget": thinking_token_budget,
+                "force_nonempty_content": force_nonempty_content,
+                "top_p": top_p,
                 "stream": False,
                 "usage": result.get("usage") if isinstance(result, dict) else None,
             })

@@ -26,6 +26,11 @@ Wired knobs (constructor + per-call):
   PR #330 + Phase 2 stress could not conclusively prove logits-processor
   enforcement on this build (low_effort kept reasoning well under budget),
   so the budget is wired as a defensive ceiling rather than load-bearing.
+- ``force_nonempty_content: bool | None`` — Wave 4 parser safety valve.
+  When reasoning hits max_tokens without emitting ``</think>``, the
+  super_v3_reasoning_parser routes accumulated output to ``content`` rather
+  than stranding it in ``reasoning_content``. Cheap insurance, no behavioral
+  cost on the success path. Passed via top-level ``chat_template_kwargs``.
 
 Response-shape divergence between paths:
 - Direct vLLM: ``message.reasoning`` (and ``delta.reasoning`` in streaming).
@@ -90,6 +95,15 @@ class BrainClient:
         enable_thinking: Optional[bool] = None,
         low_effort: Optional[bool] = None,
         thinking_token_budget: Optional[int] = None,
+        # Wave 4 parser safety valve — when reasoning hits max_tokens without
+        # emitting </think>, force the parser to land output in `content` rather
+        # than stranding it in `reasoning_content`. See super_v3_reasoning_parser.py.
+        force_nonempty_content: Optional[bool] = None,
+        # Wave 4 sampling override — NVIDIA Nemotron-3-Super calibrates against
+        # temperature=1.0, top_p=0.95 across all modes. Per-section policy can
+        # override these via SECTION_REASONING_POLICY; default behavior unchanged
+        # when not set.
+        top_p: Optional[float] = None,
         # Deprecated — kept for backward compat (PR #326)
         reasoning_effort: Optional[str] = None,
         thinking: Optional[bool] = None,
@@ -101,6 +115,8 @@ class BrainClient:
         self.enable_thinking = enable_thinking
         self.low_effort = low_effort
         self.thinking_token_budget = thinking_token_budget
+        self.force_nonempty_content = force_nonempty_content
+        self.top_p = top_p
         # Deprecated — stored for introspection but never injected into the request
         self.reasoning_effort = reasoning_effort
         self.thinking = thinking
@@ -131,6 +147,10 @@ class BrainClient:
         enable_thinking: Optional[bool] = None,
         low_effort: Optional[bool] = None,
         thinking_token_budget: Optional[int] = None,
+        # Wave 4 parser safety valve
+        force_nonempty_content: Optional[bool] = None,
+        # Wave 4 sampling override — top_p sent at top level; per-call wins over instance default
+        top_p: Optional[float] = None,
         # Deprecated — kept for backward compat (PR #326)
         reasoning_effort: Optional[str] = None,
         thinking: Optional[bool] = None,
@@ -143,10 +163,14 @@ class BrainClient:
         ``max_tokens=None`` resolves to ``self.default_max_tokens``.
 
         Reasoning-control kwargs (per-call value wins over instance default):
-        - ``enable_thinking`` → top-level ``chat_template_kwargs.enable_thinking``
-        - ``low_effort``      → top-level ``chat_template_kwargs.low_effort``
+        - ``enable_thinking``       → top-level ``chat_template_kwargs.enable_thinking``
+        - ``low_effort``            → top-level ``chat_template_kwargs.low_effort``
+        - ``force_nonempty_content`` → top-level ``chat_template_kwargs.force_nonempty_content``
+          (Wave 4 parser safety valve — when reasoning hits max_tokens without emitting
+          ``</think>``, super_v3_reasoning_parser routes output to ``content`` rather
+          than stranding it in ``reasoning_content``)
         - ``thinking_token_budget`` → top-level ``thinking_token_budget`` field
-        All three are placed at the top level of the request body (NOT inside
+        All four are placed at the top level of the request body (NOT inside
         ``extra_body`` — vLLM silently drops nested fields per PR #330 Probe E).
 
         Deprecated kwargs (``reasoning_effort``, ``thinking``) emit a one-shot
@@ -170,6 +194,12 @@ class BrainClient:
             if thinking_token_budget is not None
             else self.thinking_token_budget
         )
+        eff_force_nonempty_content = (
+            force_nonempty_content
+            if force_nonempty_content is not None
+            else self.force_nonempty_content
+        )
+        eff_top_p = top_p if top_p is not None else self.top_p
 
         # Deprecation warnings for per-call use
         if reasoning_effort is not None:
@@ -195,12 +225,18 @@ class BrainClient:
             chat_template_kwargs["enable_thinking"] = eff_enable_thinking
         if eff_low_effort is not None:
             chat_template_kwargs["low_effort"] = eff_low_effort
+        if eff_force_nonempty_content is not None:
+            chat_template_kwargs["force_nonempty_content"] = eff_force_nonempty_content
         if chat_template_kwargs:
             payload["chat_template_kwargs"] = chat_template_kwargs
 
         # Top-level thinking_token_budget (NOT nested in extra_body or chat_template_kwargs)
         if eff_thinking_token_budget is not None:
             payload["thinking_token_budget"] = eff_thinking_token_budget
+
+        # Top-level top_p (NVIDIA-recommended sampling for Nemotron-3-Super = top_p=0.95)
+        if eff_top_p is not None:
+            payload["top_p"] = eff_top_p
 
         # Reset per-call accumulators
         self.last_reasoning = ""
