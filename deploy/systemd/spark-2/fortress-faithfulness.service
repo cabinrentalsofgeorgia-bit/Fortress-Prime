@@ -1,0 +1,25 @@
+[Unit]
+Description=Fortress Faithfulness Judge (Wave 5.6 — RAG faithfulness rail)
+After=network.target litellm-gateway.service
+Requires=litellm-gateway.service
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guest-platform
+EnvironmentFile=/etc/fortress/litellm.env
+# /etc/fortress/litellm.env supplies LITELLM_MASTER_KEY (required) and
+# optional overrides: LITELLM_BASE, FAITHFULNESS_ALIAS,
+# FAITHFULNESS_TIMEOUT_S, FAITHFULNESS_MAX_TOKENS.
+Environment="LITELLM_BASE=http://127.0.0.1:8002"
+ExecStart=/home/admin/Fortress-Prime/fortress-guest-platform/.uv-venv/bin/uvicorn \
+  backend.services.faithfulness_service.main:app \
+  --host 127.0.0.1 \
+  --port 8201 \
+  --workers 1
+Restart=on-failure
+RestartSec=10s
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

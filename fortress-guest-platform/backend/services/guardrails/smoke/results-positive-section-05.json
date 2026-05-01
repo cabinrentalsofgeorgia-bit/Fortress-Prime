@@ -1,0 +1,59 @@
+{
+  "section_id": "section_05_key_defenses_identified",
+  "grounded_claims_count": 12,
+  "unsupported_claims": [
+    {
+      "claim": "The plaintiff\u2019s initial disclosures allege breach of warranty of title, but the underlying deed is a quitclaim deed (implied from context of \u201cQuitclaim Deed\u201d in Plaintiff\u2019s disclosures) \u2013 no warranty exists.",
+      "reason": "The retrieval packet does not contain the plaintiff's initial disclosures or any mention of a quitclaim deed in that context."
+    },
+    {
+      "claim": "Defendant\u2019s income from the properties is shown ($305,281.87) suggesting plaintiff suffered no loss.",
+      "reason": "The retrieval packet does not contain the specific income figure of $305,281.87 or a direct statement linking it to no loss suffered by plaintiff."
+    },
+    {
+      "claim": "By continuing to investigate damages and not demanding specific performance after the closing date passed, plaintiff implicitly waived any right to enforce the contracts for specific performance.",
+      "reason": "The retrieval packet does not contain evidence that plaintiff continued to investigate damages or that this conduct constituted waiver."
+    },
+    {
+      "claim": "Plaintiff\u2019s conduct\u2014accepting the quitclaim deed, proceeding with inspections, and not objecting to the lack of marketable title until after the closing date\u2014estops it from now asserting that defendant misrepresented title.",
+      "reason": "The retrieval packet does not contain evidence that plaintiff accepted the quitclaim deed, proceeded with inspections, or failed to object prior to closing."
+    },
+    {
+      "claim": "Any claim for breach of the purchase\u2011and\u2011sale agreements accrued, at the latest, on June\u202f1,\u202f2021, when the contracts expired; filing the complaint in February\u202f2022 is within the Georgia 6\u2011year limitation, but if any claim were based on alleged misrepresentations occurring earlier, the 4\u2011year limitation for fraud may bar relief.",
+      "reason": "The retrieval packet does not contain any discussion of accrual dates, limitation periods, or the timing of misrepresentations."
+    }
+  ],
+  "partial_support_claims": [
+    {
+      "claim": "Evidence shows an encroachment was discovered prior to closing, the closing attorney refused to close, and the contract expired without meeting the June\u202f1,\u202f2021 deadline.",
+      "supported_part": "Evidence shows an encroachment was discovered prior to closing, the closing attorney refused to close, and the contract expired without meeting the June\u202f1,\u202f2021 deadline.",
+      "unsupported_part": ""
+    },
+    {
+      "claim": "The Joint Preliminary Statement notes the amendment required Access Easements be written by a licensed Georgia attorney prior to or at closing; no evidence shows this was done.",
+      "supported_part": "The Joint Preliminary Statement notes the amendment required Access Easements be written by a licensed Georgia attorney prior to or at closing",
+      "unsupported_part": "no evidence shows this was done"
+    },
+    {
+      "claim": "The Joint Preliminary Statement states the 92 Fish Trap Road Agreement lapsed without closing.",
+      "supported_part": "The Joint Preliminary Statement states the 92 Fish Trap Road Agreement lapsed without closing",
+      "unsupported_part": ""
+    },
+    {
+      "claim": "The encroachment was discovered prior to closing and plaintiff refused to accept the property.",
+      "supported_part": "The encroachment was discovered prior to closing and plaintiff refused to accept the property",
+      "unsupported_part": ""
+    },
+    {
+      "claim": "Joint Preliminary Statement and exhibit show closing date was June\u202f1,\u202f2021 and the transaction expired without meeting that deadline.",
+      "supported_part": "Joint Preliminary Statement and exhibit show closing date was June\u202f1,\u202f2021 and the transaction expired without meeting that deadline",
+      "unsupported_part": ""
+    },
+    {
+      "claim": "Defendant denies that plaintiff suffered any compensable damages; defendant retained possession and earned income from the properties, showing no loss to plaintiff.",
+      "supported_part": "Defendant denies that plaintiff suffered any compensable damages",
+      "unsupported_part": "defendant retained possession and earned income from the properties, showing no loss to plaintiff"
+    }
+  ],
+  "summary": "Most claims are supported by the retrieval packet, but several key assertions about deed type, income figures, waiver, estoppel, and limitation periods lack direct grounding in the provided chunks."
+}

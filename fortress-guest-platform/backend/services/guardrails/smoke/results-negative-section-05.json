@@ -1,0 +1,48 @@
+{
+  "section_id": "section_05_smoke_negative",
+  "grounded_claims_count": 0,
+  "unsupported_claims": [
+    {
+      "claim": "Evidence shows an encroachment was discovered prior to closing, the closing attorney refused to close, and the contract expired without meeting the June\u202f1,\u202f2021 deadline",
+      "reason": "No evidence in retrieval packet supports encroachment, attorney refusal, or contract expiration details."
+    },
+    {
+      "claim": "The Joint Preliminary Statement notes the amendment required Access Easements be written by a licensed Georgia attorney prior to or at closing; no evidence shows this was done",
+      "reason": "Retrieval packet contains no Joint Preliminary Statement or details about Access Easements or Georgia attorney requirement."
+    },
+    {
+      "claim": "The plaintiff\u2019s initial disclosures allege breach of warranty of title, but the underlying deed is a quitclaim deed (implied from context of \u201cQuitclaim Deed\u201d in Plaintiff\u2019s disclosures) \u2013 no warranty exists",
+      "reason": "Retrieval packet does not contain Plaintiff\u2019s Initial Disclosures or any deed details supporting quitclaim deed or warranty absence."
+    },
+    {
+      "claim": "The Joint Preliminary Statement states the 92 Fish Trap Road Agreement lapsed without closing",
+      "reason": "Retrieval packet does not contain Joint Preliminary Statement or any details about the 92 Fish Trap Road Agreement lapsing."
+    },
+    {
+      "claim": "The encroachment was discovered prior to closing and plaintiff refused to accept the property",
+      "reason": "Retrieval packet contains no evidence of encroachment discovery or plaintiff\u2019s refusal to accept property."
+    },
+    {
+      "claim": "The deed conveyed was a quitclaim deed; no affirmative warranty or representation of marketable title was made",
+      "reason": "Retrieval packet does not contain any deed information or disclosures indicating a quitclaim deed or lack of warranty."
+    },
+    {
+      "claim": "Joint Preliminary Statement and exhibit show closing date was June\u202f1,\u202f2021 and the transaction expired without meeting that deadline",
+      "reason": "Retrieval packet does not contain Joint Preliminary Statement, exhibit, or any details about closing date or transaction expiration."
+    },
+    {
+      "claim": "No direct evidence shows plaintiff waived the right; only that plaintiff continues to investigate damages",
+      "reason": "Retrieval packet does not contain Plaintiff\u2019s Initial Disclosures or evidence about waiver or investigation of damages."
+    },
+    {
+      "claim": "Defendant\u2019s income from the properties is shown ($305,281.87) suggesting plaintiff suffered no loss",
+      "reason": "Retrieval packet does not contain any financial data or evidence of defendant\u2019s income from properties."
+    },
+    {
+      "claim": "By continuing to investigate damages and not demanding specific performance after the closing date passed, plaintiff implicitly waived any right to enforce the contracts for specific performance",
+      "reason": "Retrieval packet contains no evidence of plaintiff\u2019s conduct regarding investigation, demand, or waiver of rights."
+    }
+  ],
+  "partial_support_claims": [],
+  "summary": "No substantive factual or doctrinal claims in the generated section are supported by the retrieval packet, which contains unrelated case materials."
+}
