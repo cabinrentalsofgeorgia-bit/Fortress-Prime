@@ -29,6 +29,7 @@ Usage (run on spark-2 in fortress-guest-platform venv):
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import os
@@ -53,6 +54,7 @@ load_dotenv(ROOT / ".env")
 from backend.services.brain_client import BrainClient
 from backend.services.case_briefing_compose import compose
 from backend.services.case_briefing_synthesizers import _SYNTHESIS_PROMPTS, _SYSTEM_PROMPT, _build_synthesis_user_prompt
+from backend.services.guardrails.faithfulness_judge import score as faithfulness_score
 
 
 CASE_SLUG = "7il-v-knight-ndga-i"
@@ -275,12 +277,41 @@ def post_run_section_9_augmentation(
     return content
 
 
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Track A Case I dry-run runner. Wraps Phase B v0.1 compose() "
+        "with metric-capturing BrainClient + post-run §9 augmentation.",
+    )
+    parser.add_argument(
+        "--faithfulness-check",
+        action="store_true",
+        default=False,
+        help="Wave 5.6: after compose(), score each synthesis section's "
+        "faithfulness against its retrieval packet via Super-120B-as-judge. "
+        "Output to ${RUN_DIR}/faithfulness/section_*.json. Informational only; "
+        "does NOT block generation. Mechanical sections (timeline, parties, "
+        "evidence inventory, filing checklist) are skipped.",
+    )
+    return parser.parse_args(argv)
+
+
+# Sections excluded from faithfulness scoring per Wave 5.6 brief §11:
+# §1/§3/§6/§10 are deterministic mechanical, §2 is deterministic timeline.
+# Only synthesis sections (§4/§5/§7/§8/§9) are scored.
+_FAITHFULNESS_SCORED_MODES = {"synthesis", "synthesis_augmented"}
+
+
 async def main() -> int:
+    args = _parse_args()
     print(f"=== Track A Case I dry-run — {STAMP} ===", file=sys.stderr)
+    if args.faithfulness_check:
+        print("  faithfulness-check: ON (Wave 5.6 rail)", file=sys.stderr)
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     (RUN_DIR / "sections").mkdir(exist_ok=True)
     (RUN_DIR / "raw").mkdir(exist_ok=True)
     (RUN_DIR / "metrics").mkdir(exist_ok=True)
+    if args.faithfulness_check:
+        (RUN_DIR / "faithfulness").mkdir(exist_ok=True)
     NAS_OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     metrics_log: list[dict[str, Any]] = []
@@ -302,6 +333,22 @@ async def main() -> int:
 
     # Write each section content + score
     section_scores: list[dict[str, Any]] = []
+    faithfulness_results: dict[str, dict[str, Any]] = {}
+    # In Phase B v0.1, every synthesis section grounds against the same
+    # global packet (case_briefing_synthesizers.py line 344). The same packet
+    # is therefore the right input to faithfulness scoring for every
+    # synthesis section.
+    if args.faithfulness_check:
+        retrieval_packet_for_faithfulness = [
+            {"source_id": cid, "text": ctext}
+            for cid, ctext in zip(packet.work_product_chunk_ids, packet.work_product_chunk_texts)
+        ] + [
+            {"source_id": cid, "text": ctext}
+            for cid, ctext in zip(packet.privileged_chunk_ids, packet.privileged_chunk_texts)
+        ]
+    else:
+        retrieval_packet_for_faithfulness = []
+
     for sid, result in section_results.items():
         section_path = RUN_DIR / "sections" / f"{sid}.md"
         section_path.write_text(result.content, encoding="utf-8")
@@ -310,6 +357,27 @@ async def main() -> int:
         score["operator_status"] = result.operator_status
         score["grounding_citations_count_from_orchestrator"] = len(result.grounding_citations)
         section_scores.append(score)
+
+        if args.faithfulness_check and result.mode in _FAITHFULNESS_SCORED_MODES:
+            judge_t0 = time.monotonic()
+            judge_result = faithfulness_score(
+                section_id=sid,
+                generated_section=result.content,
+                retrieval_packet=retrieval_packet_for_faithfulness,
+            )
+            judge_result["_faithfulness_wall_seconds"] = round(time.monotonic() - judge_t0, 2)
+            (RUN_DIR / "faithfulness" / f"{sid}.json").write_text(
+                json.dumps(judge_result, indent=2), encoding="utf-8"
+            )
+            faithfulness_results[sid] = judge_result
+            print(
+                f"  faithfulness {sid}: "
+                f"grounded={judge_result.get('grounded_claims_count', '?')}, "
+                f"unsupported={len(judge_result.get('unsupported_claims', []) or [])}, "
+                f"partial={len(judge_result.get('partial_support_claims', []) or [])}, "
+                f"wall={judge_result['_faithfulness_wall_seconds']}s",
+                file=sys.stderr,
+            )
 
     # Section 9 augmentation
     print("Section 9 augmentation via legal-reasoning…", file=sys.stderr)
@@ -331,6 +399,28 @@ async def main() -> int:
     s9_score["operator_status"] = "draft"
     s9_score["grounding_citations_count_from_orchestrator"] = 0
     section_scores.append(s9_score)
+
+    if args.faithfulness_check:
+        sid_aug = "section_09_recommended_strategy_augmented"
+        judge_t0 = time.monotonic()
+        s9_judge = faithfulness_score(
+            section_id=sid_aug,
+            generated_section=section_9_content,
+            retrieval_packet=retrieval_packet_for_faithfulness,
+        )
+        s9_judge["_faithfulness_wall_seconds"] = round(time.monotonic() - judge_t0, 2)
+        (RUN_DIR / "faithfulness" / f"{sid_aug}.json").write_text(
+            json.dumps(s9_judge, indent=2), encoding="utf-8"
+        )
+        faithfulness_results[sid_aug] = s9_judge
+        print(
+            f"  faithfulness {sid_aug}: "
+            f"grounded={s9_judge.get('grounded_claims_count', '?')}, "
+            f"unsupported={len(s9_judge.get('unsupported_claims', []) or [])}, "
+            f"partial={len(s9_judge.get('partial_support_claims', []) or [])}, "
+            f"wall={s9_judge['_faithfulness_wall_seconds']}s",
+            file=sys.stderr,
+        )
 
     # Assembled v3 brief — reuse orchestrator's assembled output, replace Section 9 placeholder
     assembled_orig = out_path.read_text(encoding="utf-8")
@@ -363,6 +453,8 @@ async def main() -> int:
         "assembled_v3_nas": str(nas_path),
         "section_scores": section_scores,
         "brain_client_call_metrics": metrics_log,
+        "faithfulness_check_enabled": args.faithfulness_check,
+        "faithfulness_results": faithfulness_results if args.faithfulness_check else None,
         "ten_sections_modes": {
             "section_01_case_summary": "mechanical (deterministic; no LLM)",
             "section_02_critical_timeline": "synthesis (LLM)",
@@ -377,8 +469,75 @@ async def main() -> int:
         },
     }
     (RUN_DIR / "metrics" / "run-summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
-    print(json.dumps({k: v for k, v in summary.items() if k not in ("section_scores", "brain_client_call_metrics")}, indent=2))
+
+    if args.faithfulness_check:
+        _write_faithfulness_run_report(RUN_DIR, faithfulness_results, overall_seconds)
+
+    print(json.dumps({k: v for k, v in summary.items() if k not in ("section_scores", "brain_client_call_metrics", "faithfulness_results")}, indent=2))
     return 0
+
+
+def _write_faithfulness_run_report(
+    run_dir: Path,
+    results: dict[str, dict[str, Any]],
+    overall_wall_seconds: float,
+) -> None:
+    """Append a faithfulness summary table to ${RUN_DIR}/run-report.md per
+    Wave 5.6 brief §6.6. Threshold for "flagged for v2 regen" is informational
+    only; operator makes final triage call at v1 review (master plan §3.3)."""
+    lines: list[str] = [
+        "# Track A Case I — Run report",
+        "",
+        f"Run dir: `{run_dir}`",
+        f"Overall compose wall: {overall_wall_seconds}s",
+        "",
+        "## Faithfulness Summary (Wave 5.6)",
+        "",
+        "| § | Mode | Grounded claims | Unsupported | Partial | Wall (s) | Summary |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    flagged: list[str] = []
+    top_unsupported: list[tuple[str, str, str]] = []
+    total_wall = 0.0
+    for sid, r in sorted(results.items()):
+        wall = r.get("_faithfulness_wall_seconds", 0.0) or 0.0
+        total_wall += float(wall)
+        if r.get("error"):
+            lines.append(f"| {sid} | n/a | (error) | (error) | (error) | {wall} | {r.get('error')} |")
+            continue
+        grounded = r.get("grounded_claims_count", 0) or 0
+        unsup = r.get("unsupported_claims", []) or []
+        part = r.get("partial_support_claims", []) or []
+        summ = (r.get("summary") or "").replace("|", "\\|")[:120]
+        lines.append(f"| {sid} | synth | {grounded} | {len(unsup)} | {len(part)} | {wall} | {summ} |")
+        if len(unsup) > 3 or len(part) > 5:
+            flagged.append(f"- {sid} — {len(unsup)} unsupported, {len(part)} partial")
+        for c in unsup:
+            top_unsupported.append((sid, (c.get("claim", "") or "")[:160], c.get("reason", "") or ""))
+
+    lines += [
+        "",
+        f"Total faithfulness wall across scored sections: {round(total_wall, 2)}s",
+        "",
+        "### Sections flagged for v2 regen (unsupported > 3 OR partial > 5):",
+        "",
+    ]
+    if flagged:
+        lines += flagged
+    else:
+        lines += ["- (none)"]
+
+    if top_unsupported:
+        lines += ["", "### Top unsupported claims (operator triage):", ""]
+        for i, (sid, claim, reason) in enumerate(top_unsupported[:10], start=1):
+            lines.append(f"{i}. [{sid}] \"{claim}\" — {reason}")
+
+    lines += [
+        "",
+        "Threshold for \"flagged for v2 regen\" is informational only. Operator "
+        "makes final triage call at v1 review per master plan §3.3.",
+    ]
+    (run_dir / "run-report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
