@@ -34,6 +34,7 @@ from sqlalchemy import text as sa_text
 
 from backend.api.legal_cases import _resolve_case_slug
 from backend.services.brain_client import BrainClient, BrainClientError
+from backend.services.case_briefing_augmentation import load_section_9_augmentation
 from backend.services.ediscovery_agent import LegacySession
 from backend.services.legal_council import (
     freeze_context,
@@ -351,11 +352,15 @@ async def stage_2_synthesize(
                 contains_privileged=False,
             )
         elif mode == SECTION_MODE_OPERATOR_WRITTEN:
+            if section_id == "section_09_recommended_strategy":
+                content = load_section_9_augmentation(case_slug=packet.case_slug_canonical)
+            else:
+                content = syn.operator_written_placeholder(title)
             results[section_id] = SectionResult(
                 section_id=section_id,
                 title=title,
                 mode=mode,
-                content=syn.operator_written_placeholder(title),
+                content=content,
                 contains_privileged=False,
             )
         elif mode == SECTION_MODE_SYNTHESIS:

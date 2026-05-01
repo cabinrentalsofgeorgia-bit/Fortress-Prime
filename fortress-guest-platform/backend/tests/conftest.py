@@ -9,9 +9,10 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-project_root_str = str(PROJECT_ROOT)
-if project_root_str not in sys.path:
-    sys.path.insert(0, project_root_str)
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+for _p in (str(PROJECT_ROOT), str(BACKEND_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from backend.core.database import close_db
 from backend.core.config import settings
