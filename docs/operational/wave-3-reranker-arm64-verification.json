@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-05-01T04:01:25.626799+00:00",
+  "model": "llama-3.2-nv-rerankqa-1b-v2",
+  "tag": "1.8.0",
+  "manifest_digest": "sha256:f382372ac3065ac179f80cf57e6be70754fcfcf27eab785a731d3d9fa802b99f",
+  "stage1_manifest_arm64": true,
+  "stage2_probe_elf": "ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=fec30f5745c2582aaf143e7079d3bb46ca7a010f, for GNU/Linux 3.7.0, stripped",
+  "stage2_elf_aarch64": true,
+  "verdict": "PASS",
+  "skip_verification": false
+}

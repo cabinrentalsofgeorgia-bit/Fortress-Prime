@@ -1,0 +1,74 @@
+[Unit]
+Description=Fortress NIM Rerank — llama-3.2-nv-rerankqa-1b-v2:1.8.0 on spark-5 (Tier 4 retrieval)
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/spark-5/fortress-nim-rerank.service
+After=docker.service network-online.target
+Requires=docker.service
+
+# Wave 3 deployment 2026-05-01 per wave-3-reranker-extraction-deployment-brief-v2.md.
+#
+# STATUS AS OF 2026-05-01: STAGED-BUT-DISABLED.
+# Image pulls and ARM64-verifies cleanly (manifest digest sha256:f382372a...,
+# verification.json verdict PASS at docs/operational/wave-3-reranker-arm64-verification.json).
+# Service starts, /v1/health/ready returns 200, /v1/models lists
+# nvidia/llama-3.2-nv-rerankqa-1b-v2.
+# But INFERENCE fails at the ReduceSum ONNX kernel:
+#   CUDA error cudaErrorSymbolNotFound: named symbol not found
+# Same failure family as embed v1.10.0 documented at
+# https://forums.developer.nvidia.com/t/.../354998
+# Service stopped + disabled 2026-05-01 04:09 UTC; deferred to Wave 3.5
+# pending NIM rebuild against Spark-compatible CUDA/ONNX runtime.
+# Unit retained here for forensics + zero-touch re-enable when fixed.
+#
+# Three corrections to brief defaults (mirror embed unit pattern; see
+# docs/operational/cluster-nim-deployment-conventions.md):
+# 1. NIM_MODEL_PROFILE pinned to the only GB10-compatible profile
+#    (backend:onnx|model_type:onnx|precision:fp16). Brief default `auto`
+#    is known broken on Spark per fortress-nim-embed.service comment.
+#    Profile discovered via `docker run --rm --gpus all <image>
+#    list-model-profiles` 2026-05-01.
+# 2. Cache path uses cluster convention nim-weights-cache (NOT brief's
+#    hf-cache name). Image tar lives at
+#    /mnt/fortress_nas/nim-cache/nim/llama-3.2-nv-rerankqa-1b-v2/1.8.0/image.tar
+#    pulled via scripts/nim_pull_to_nas.py with ARM64 verify gates PASS.
+# 3. --ulimit memlock/stack per NIM container's `list-model-profiles` warning.
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+TimeoutStartSec=300
+
+EnvironmentFile=/etc/fortress/nim.env
+
+ExecStartPre=-/usr/bin/docker stop fortress-nim-rerank
+ExecStartPre=-/usr/bin/docker rm fortress-nim-rerank
+
+ExecStartPre=/bin/bash -c '\
+  if ! docker image inspect nvcr.io/nim/nvidia/llama-3.2-nv-rerankqa-1b-v2:1.8.0 >/dev/null 2>&1; then \
+    echo "Loading reranker NIM from NAS cache..."; \
+    docker load < /mnt/fortress_nas/nim-cache/nim/llama-3.2-nv-rerankqa-1b-v2/1.8.0/image.tar; \
+  fi'
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-nim-rerank \
+  --rm \
+  --gpus all \
+  --shm-size=8g \
+  --ulimit memlock=-1 \
+  --ulimit stack=67108864 \
+  -p 8103:8000 \
+  -v /mnt/fortress_nas/nim-cache/nim/llama-3.2-nv-rerankqa-1b-v2/nim-weights-cache:/opt/nim/.cache \
+  --env-file /etc/fortress/nim.env \
+  -e NIM_MODEL_PROFILE=f7391ddbcb95b2406853526b8e489fedf20083a2420563ca3e65358ff417b10f \
+  nvcr.io/nim/nvidia/llama-3.2-nv-rerankqa-1b-v2:1.8.0
+
+ExecStop=/usr/bin/docker stop fortress-nim-rerank
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-nim-rerank
+
+[Install]
+WantedBy=multi-user.target
