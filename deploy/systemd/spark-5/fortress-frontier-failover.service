@@ -1,0 +1,113 @@
+[Unit]
+Description=Fortress Frontier Failover — Nemotron-3-Super-120B-A12B-NVFP4 single-Spark on spark-5 (DRAFTED, NOT ENABLED)
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/spark-5/fortress-frontier-failover.service
+Documentation=file:///home/admin/Fortress-Prime/docs/operational/runbooks/frontier-failover-spark-5.md
+After=docker.service network-online.target
+Requires=docker.service
+
+# ============================================================================
+# DRAFTED-NOT-ENABLED — Wave 3.5 tail-risk mitigation, 2026-05-01
+# ============================================================================
+#
+# PURPOSE:
+#   Single-Spark vLLM serving Nemotron-3-Super-120B-A12B-NVFP4 on spark-5
+#   as a manual failover for the dual-Spark TP=2 frontier on spark-3+spark-4.
+#   Activate ONLY when the TP=2 frontier hits the NCCL all-reduce deadlock
+#   reported at https://forums.developer.nvidia.com/t/.../366127 (sustained,
+#   not transient).
+#
+# WHY NOT ENABLED BY DEFAULT:
+#   1. Single-Spark serving the 120B model at 1M context consumes ~85% of
+#      spark-5 GPU memory, which co-locates with the BGE reranker on the
+#      same node. Always-on dual-loaded would risk OOM on either side.
+#   2. Throughput target on single Spark is ~24 tok/s (per Leon Gibat's
+#      forums 364862 dual-Spark TP=2 baseline), well below the TP=2
+#      frontier's production throughput. Use only as failover, not primary.
+#   3. Activation requires explicit operator decision: degraded throughput
+#      is acceptable IF and only IF the TP=2 frontier is non-recoverable.
+#
+# ACTIVATION (OPERATOR PROCEDURE):
+#   Full procedure at runbooks/frontier-failover-spark-5.md.
+#   Summary:
+#     sudo cp deploy/systemd/spark-5/fortress-frontier-failover.service \
+#             /etc/systemd/system/
+#     sudo systemctl daemon-reload
+#     sudo systemctl start fortress-frontier-failover.service
+#     # (do NOT enable — single-shot failover, not auto-restart on boot)
+#   Verify:
+#     curl -fsS http://192.168.0.109:8000/v1/models | jq .
+#     curl -fsS http://192.168.0.109:8000/health
+#   Then update LiteLLM aliases or DNS to point legal-reasoning/drafting/
+#   summarization at http://192.168.0.109:8000/v1 instead of the failed
+#   TP=2 frontier endpoint.
+#
+# DEACTIVATION (FAIL BACK):
+#   Once spark-3+spark-4 TP=2 frontier is healthy again:
+#     sudo systemctl stop fortress-frontier-failover.service
+#     sudo rm /etc/systemd/system/fortress-frontier-failover.service
+#     sudo systemctl daemon-reload
+#   Restore LiteLLM alias api_base to TP=2 frontier endpoint.
+#
+# WEIGHTS:
+#   Pre-staged at /mnt/fortress_nas/models/nemotron-3-super-120b-nvfp4/
+#   17/17 safetensors files present, 75 GB total, MANIFEST.sha256 included.
+#   Last cached 2026-04-30. Re-verify integrity with:
+#     cd /mnt/fortress_nas/models/nemotron-3-super-120b-nvfp4/
+#     sha256sum -c MANIFEST.sha256 | grep -v ': OK$' | head
+#
+# CONFIG SOURCE:
+#   vLLM args follow the HF model card "DGX Spark" deployment instructions
+#   for nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4. Tuned vs HF defaults:
+#     - --gpu-memory-utilization 0.85 (NOT default 0.9) — leaves headroom
+#       for co-tenant BGE reranker (fortress-rerank-llamacpp.service) on
+#       this same spark-5 GPU. Reranker is ~600 MB so 0.85 leaves
+#       comfortable margin.
+#     - VLLM_NVFP4_GEMM_BACKEND=marlin — Marlin kernel for NVFP4 GEMM is
+#       the GB10-tested path per HF card.
+#     - VLLM_FLASHINFER_ALLREDUCE_BACKEND=trtllm — TRT-LLM allreduce is
+#       a no-op on TP=1 but the env var is set in case operator later
+#       extends to TP=2 for this failover (hypothetical).
+#     - VLLM_USE_FLASHINFER_MOE_FP4=0 — disabled; HF card recommends OFF
+#       for stability on initial DGX Spark deployments.
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Restart=always
+RestartSec=30
+TimeoutStartSec=600
+
+ExecStartPre=-/usr/bin/docker stop fortress-frontier-failover
+ExecStartPre=-/usr/bin/docker rm fortress-frontier-failover
+
+ExecStart=/usr/bin/docker run \
+  --name fortress-frontier-failover \
+  --rm \
+  --gpus all \
+  --shm-size=16g \
+  -p 8000:8000 \
+  -v /mnt/fortress_nas/models/nemotron-3-super-120b-nvfp4:/models/nemotron-3-super-nvfp4:ro \
+  -e VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 \
+  -e VLLM_NVFP4_GEMM_BACKEND=marlin \
+  -e VLLM_FLASHINFER_ALLREDUCE_BACKEND=trtllm \
+  -e VLLM_USE_FLASHINFER_MOE_FP4=0 \
+  vllm/vllm-openai:v0.20.0 \
+  --model /models/nemotron-3-super-nvfp4 \
+  --served-model-name nemotron-3-super \
+  --tensor-parallel-size 1 \
+  --max-model-len 1048576 \
+  --gpu-memory-utilization 0.85 \
+  --kv-cache-dtype fp8 \
+  --trust-remote-code \
+  --host 0.0.0.0 \
+  --port 8000
+
+ExecStop=/usr/bin/docker stop fortress-frontier-failover
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-frontier-failover
+
+[Install]
+WantedBy=multi-user.target
