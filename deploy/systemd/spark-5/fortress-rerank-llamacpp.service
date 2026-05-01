@@ -1,0 +1,53 @@
+[Unit]
+Description=Fortress Reranker — BGE-reranker-v2-m3 Q8 via llama.cpp on spark-5 (Tier 4 retrieval)
+Documentation=file:///home/admin/Fortress-Prime/deploy/systemd/spark-5/fortress-rerank-llamacpp.service
+Documentation=file:///home/admin/Fortress-Prime/docs/operational/runbooks/wave-3.5-bge-reranker.md
+After=network-online.target
+Wants=network-online.target
+
+# Wave 3.5 deployment 2026-05-01.
+# Replaces failed `fortress-nim-rerank.service` (NemoGuard reranker NIM
+# llama-3.2-nv-rerankqa-1b-v2:1.8.0 — cudaErrorSymbolNotFound at ReduceSum
+# ONNX kernel on GB10; deferred to Wave 3.5 watchlist via PR #343).
+#
+# llama.cpp build: /home/admin/llama.cpp/build/bin/llama-server
+#   - version 8994 (aab68217b)
+#   - cmake -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=121 -DLLAMA_CURL=ON
+#   - GB10 detected with compute capability 12.1, 124,610 MiB VRAM
+# GGUF model: /mnt/fortress_nas/models/bge-reranker-v2-m3/bge-reranker-v2-m3-Q8_0.gguf
+#   - 607 MB (Q8_0)
+#   - public, gpustack/bge-reranker-v2-m3-GGUF on Hugging Face
+#
+# Conventions per docs/operational/cluster-nim-deployment-conventions.md:
+#   - Port 8103 (reservation kept from Wave 3 v2 reranker slot)
+#   - Restart=always, RestartSec=30, TimeoutStartSec=300
+#   - StandardOutput=journal, StandardError=journal, SyslogIdentifier set
+#
+# Why llama.cpp instead of NIM:
+#   - Only ONNX|fp16 NIM profile compatible with GB10 hits cudaErrorSymbolNotFound.
+#   - llama.cpp with GGML_CUDA + arch 121 builds clean against GB10 sm_121.
+#   - GGUF Q8 fits in <1 GB; lots of GPU headroom on spark-5 (BRAIN retired).
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+ExecStart=/home/admin/llama.cpp/build/bin/llama-server \
+  -m /mnt/fortress_nas/models/bge-reranker-v2-m3/bge-reranker-v2-m3-Q8_0.gguf \
+  --port 8103 \
+  --host 0.0.0.0 \
+  --rerank \
+  -ngl 99 \
+  -c 4096 \
+  -ub 4096 \
+  -b 4096 \
+  --threads-http -1
+Restart=always
+RestartSec=30
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fortress-rerank-llamacpp
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+--- /home/admin/Fortress-Prime/litellm_config.yaml.bak.wave-3.5-20260501T080337Z	2026-05-01 08:03:38.229640084 -0400
++++ /home/admin/Fortress-Prime/litellm_config.yaml	2026-05-01 08:07:24.178998284 -0400
+@@ -135,6 +135,20 @@
+       timeout: 60
+ 
+   # ──────────────────────────────────────────────────────────────────────────
++  # legal-rerank — Wave 3.5 (2026-05-01)
++  # BGE-reranker-v2-m3 Q8 served via llama.cpp --rerank on spark-5:8103.
++  # Replaces the failed NemoGuard NIM (llama-3.2-nv-rerankqa-1b-v2:1.8.0,
++  # cudaErrorSymbolNotFound on GB10; deferred to Wave 3.5 watchlist via
++  # PR #343). Endpoint speaks /v1/rerank with the same `documents`+`query`
++  # schema as the NIM, so downstream callers see no API surface change.
++  # ──────────────────────────────────────────────────────────────────────────
++  - model_name: legal-rerank
++    litellm_params:
++      model: infinity/bge-reranker-v2-m3
++      api_base: http://192.168.0.109:8103
++      api_key: empty
++
++  # ──────────────────────────────────────────────────────────────────────────
+   # CLOUD ROUTES — available for NON-LEGAL use only after ADR-003 Phase 1.
+   # Legal traffic terminates on the sovereign legal-* routes above.
+   # These routes remain active because non-legal callers (storefront, command
