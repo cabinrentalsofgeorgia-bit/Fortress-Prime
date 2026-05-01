@@ -1,0 +1,24 @@
+# Test fixture — judge schema (mirror of production with resolver fields)
+schema_version: 1
+required_fields:
+  - schema_version
+  - slug
+  - display_name
+  - court
+  - status
+  - authoring_mode
+  - sources
+
+default_resolution_sections:
+  - operator_relevance
+  - strategic_implications
+
+# Judge body H2s use prose like "Operator-relevant context"; the resolver
+# slugifies that to operator_relevant_context. The alias keeps the friendly
+# token name used in §9 augmentation files stable.
+section_aliases:
+  operator_relevance: operator_relevant_context
+
+body_sections:
+  - title: "Operator-relevant context"
+  - title: "Strategic implications"

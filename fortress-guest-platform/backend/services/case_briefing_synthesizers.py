@@ -74,6 +74,10 @@ def synthesize_mechanical(section_id: str, packet: GroundingPacket) -> str:
 
 
 def operator_written_placeholder(title: str) -> str:
+    # When §9 is ready to switch from placeholder to live augmentation, route
+    # SectionResult.content through
+    #   backend.services.case_briefing_augmentation.load_section_9_augmentation
+    # which loads the §9 augmentation markdown and resolves intel-layer tokens.
     return (
         f"> **[TO BE WRITTEN BY OPERATOR]** — {title} is reserved for "
         "counsel-operator deliberation, not automated synthesis. The facts "

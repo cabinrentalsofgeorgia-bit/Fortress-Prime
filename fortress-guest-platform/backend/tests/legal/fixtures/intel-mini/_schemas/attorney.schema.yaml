@@ -1,0 +1,14 @@
+# Test fixture — attorney schema
+schema_version: 1
+required_fields:
+  - schema_version
+  - slug
+  - display_name
+  - authoring_mode
+  - sources
+
+default_resolution_sections:
+  - operator_relevance
+
+body_sections:
+  - title: "Operator-relevance"
