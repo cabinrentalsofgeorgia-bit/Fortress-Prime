@@ -375,13 +375,59 @@ Phase 2 TP=2 BRAIN partnership is reassigned from spark-5 + spark-6 to **spark-5
 
 ---
 
+## ADR-007 (2026-05-01) — Nemotron-3-Super-120B-A12B-NVFP4 TP=2 frontier as Fortress Legal synthesizer
+
+**Date:** 2026-04-30 (filed PROPOSED in PR #321), 2026-05-01 (LOCKED with deployment evidence)
+**Status:** **LOCKED** — operator decision 2026-04-30; deployment evidence committed via PR #337 / PR #338 / PR #339; this entry ratifies via the Wave 2 ratification PR
+**Relates to:** ADR-003 (LOCKED 2026-04-29 — dedicated inference cluster), ADR-004 (LOCKED 2026-04-29 — app vs inference boundary, expanded to 3/4/5/6), ADR-006 (LOCKED 2026-04-30 — Phase 2 partner reassignment to spark-5 + spark-4)
+
+**Canonical document:** `docs/operational/phase-9-wave-2-alias-surgery-brief.md` (committed via PR #337). Wire-level verification record: `docs/operational/wave-2-schema-fix-verification-2026-05-01.md` (committed via PR #338).
+
+**Decision:**
+
+Fortress Legal's reasoning-tier inference is served by a single Nemotron-3-Super-120B-A12B-NVFP4 endpoint deployed via vLLM 0.20.1rc1 with TP=2 over spark-3 (rank-0) + spark-4 (rank-1) on the ConnectX 100Gbps fabric. All five legal-* LiteLLM aliases (`legal-reasoning`, `legal-drafting`, `legal-summarization`, `legal-brain` transitional, `legal-classification` transitional) terminate on this endpoint with differentiated `chat_template_kwargs` (`enable_thinking`, `low_effort`, `force_nonempty_content`) per alias. BRAIN-49B (Llama-3.3-Nemotron-Super-49B-v1.5-FP8 NIM on spark-5:8100) is retired; image + unit preserved per `docs/operational/runbooks/brain-49b-retirement.md`.
+
+**Rationale:**
+
+1. **Empirical proof of differentiation pattern.** Wave 4 PR #335 demonstrated that one TP=2 frontier serves differentiated workload profiles via per-section policy. Per-alias differentiation is the same pattern at a different scope — wire-level verified in PR #338 (legal-summarization `reasoning_content` 105 → 0 chars post-fix; legal-reasoning unchanged at full reasoning depth).
+2. **Sovereignty preservation.** All legal-tier inference terminates on Fortress-controlled hardware. No outbound data to NVIDIA hosted endpoints. The standalone `nemotron-3-super-120b` cloud route was dropped from the LiteLLM template in PR #339.
+3. **Spark-5 freed.** A second Super-120B copy on spark-5 would be duplicative — the existing TP=2 frontier already serves the model. Spark-5 is now available for Wave 3 retrieval host repurpose, addressing the spark-3 co-residency pressure surfaced in `docs/research/llama-nemotron-embed-1b-v2-deep-research-2026-04-30.md`.
+4. **BRAIN-49B retired** (image + unit preserved per `docs/operational/runbooks/brain-49b-retirement.md`).
+
+**Implications:**
+
+- **Single point of failure.** The TP=2 frontier serves all reasoning-tier legal workload. Hot-replica strategy deferred to a future ADR if frontier saturation surfaces under sustained Wave 7 (Phase B Case II) load.
+- **Sampling deviation.** Per-alias sampling defaults (temperature 0.3 / 0.5 / 0.4, top_p 0.95) deviate from NVIDIA spec (temperature 1.0, top_p 0.95). Documented in `docs/operational/phase-9-wave-2-alias-surgery-brief.md` §0.3 as a separate decision; NOT part of this ADR.
+- **`thinking_token_budget` not engageable.** The frontier serves without `--reasoning-config` flag, making `thinking_token_budget` parameter inert (per `docs/research/nemotron-3-super-deep-research-2026-04-30.md` §3). Medium-effort middle-ground for `legal-drafting` cannot be implemented until frontier serve config changes — separate ticket.
+- **Schema discipline.** All `chat_template_kwargs` (`enable_thinking`, `low_effort`, `force_nonempty_content`) MUST be at top level of `litellm_params`, NOT wrapped in `extra_body`. PR #330 Probe E and PR #338 §1.5 probes empirically established that wrapped fields are silently dropped. Future LiteLLM config edits must respect this constraint.
+
+**Soak window:** 14-day soak active to 2026-05-14 (started post-PR #322). PR #338 wire-level verification provides empirical evidence the wiring is correct beyond the soak's mechanical liveness check. If the frontier surfaces stability concerns during the remaining soak window, this ADR's status reverts to AMENDED with documented evidence.
+
+**Note on numbering:** `nemotron-super-stack-architecture-brief.md` §7 reserved "ADR-005 PROPOSED" for a single-node Super-120B-on-spark-5 deployment direction. That brief never landed an ADR-005 entry in this log; the canonical ADR-005 reservation (per-service postgres role pattern) belongs to MASTER-PLAN §8 Q1 and is preserved for that future decision. The TITAN deployment work resolved to ADR-007 directly. The architectural-brief direction (single-node spark-5) was operationally retired before this ADR was filed; that history is preserved in the brief itself.
+
+**References:**
+
+- PR #321 — initial ADR-007 PROPOSED filing (superseded by this ratification; closed with reference comment)
+- PR #322 — Phase 9 alias surgery + BRAIN retirement + soak instrumentation
+- PR #335 — Wave 4 §5 prompt tightening (empirical proof of differentiated invocation pattern)
+- PR #337 — Wave 2 alias-surgery brief (canonical direction record)
+- PR #338 — Wave 2 schema fix wire-level verification
+- PR #339 — Wave 2 deploy template sync
+- `docs/operational/phase-9-wave-2-alias-surgery-brief.md` (§0 reconciliation block)
+- `docs/operational/wave-2-schema-fix-verification-2026-05-01.md`
+- `docs/operational/runbooks/brain-49b-retirement.md`
+- `docs/research/nemotron-3-super-deep-research-2026-04-30.md`
+- `docs/research/llama-nemotron-embed-1b-v2-deep-research-2026-04-30.md`
+
+---
+
 ## How to add an ADR
 
-1. Increment the number (next is ADR-007)
+1. Increment the number (next is ADR-008)
 2. Date it (UTC)
 3. Set status: LOCKED, OPEN, PROPOSED, AMENDED, or SUPERSEDED-BY-ADR-N
 4. State the decision in 1-2 sentences
 5. Rationale: why this over alternatives
 6. Implications: what changes downstream
 
-Last updated: 2026-04-30 (ADR-006 LOCKED — Phase 2 partner reassignment from spark-6 to spark-4, operator concurrence Gary Knight; ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)
+Last updated: 2026-05-01 (ADR-007 LOCKED — Nemotron-3-Super-120B-A12B-NVFP4 TP=2 frontier as Fortress Legal synthesizer; BRAIN-49B retired per `runbooks/brain-49b-retirement.md`; ADR-006 LOCKED 2026-04-30 — Phase 2 partner reassignment from spark-6 to spark-4, operator concurrence Gary Knight; ADR-004 LOCKED + amended v2 retain-and-document; ADR-001 partially superseded for non-Legal divisions; ADR-003 expanded from 4/5/6 to 3/4/5/6)

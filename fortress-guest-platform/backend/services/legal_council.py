@@ -132,13 +132,18 @@ HYDRA_120B_URL  = os.getenv("HYDRA_120B_URL",     _LOCAL_OLLAMA).rstrip("/")
 VLLM_120B_URL   = os.getenv("VLLM_120B_URL",      _LOCAL_OLLAMA).rstrip("/")
 
 # ── Model name constants ─────────────────────────────────────────────────────
-# ── Council consumer cutover (ADR-003 Phase 1 follow-up, 2026-04-29) ────────
-# Defaults are now the sovereign aliases established by PR #285's LiteLLM
-# config: every "frontier" provider routes through the spark-2 LiteLLM gateway
-# → sovereign Nemotron-49B-FP8 NIM on spark-5. The env-var override path is
-# preserved as the rollback contract: set ANTHROPIC_MODEL=claude-sonnet-4-6
-# (etc.) to revert any seat to the cloud provider.
+# ── Council consumer cutover (ADR-003 Phase 1 / ADR-007 Wave 2, 2026-05-01) ─
+# Defaults are the sovereign legal-* aliases established by PR #285's LiteLLM
+# config and rerouted by Wave 2 (PR #337 / #338 / #339): every "frontier"
+# provider routes through the spark-2 LiteLLM gateway → Nemotron-3-Super-120B-
+# A12B-NVFP4 TP=2 frontier on spark-3 + spark-4 per ADR-007. The env-var
+# override path is preserved as the rollback contract: set
+# ANTHROPIC_MODEL=claude-sonnet-4-6 (etc.) to revert any seat to the cloud
+# provider.
 # Mapping: reasoning seats → legal-reasoning; counselor (Gemini-style) → legal-summarization.
+# BRAIN-49B (Llama-3.3-Nemotron-Super-49B-v1.5-FP8 NIM on spark-5:8100) was
+# retired 2026-04-30; image + unit preserved per
+# docs/operational/runbooks/brain-49b-retirement.md.
 ANTHROPIC_MODEL        = os.getenv("ANTHROPIC_MODEL",        "legal-reasoning")
 ANTHROPIC_OPUS_MODEL   = os.getenv("ANTHROPIC_OPUS_MODEL",   "legal-reasoning")
 OPENAI_MODEL           = os.getenv("OPENAI_MODEL",           "legal-reasoning")
@@ -576,8 +581,11 @@ async def _call_llm(
                     effective_user = f"/no_think\n{user_prompt}"
 
                 # Stream by default for sovereign legal-* aliases — matches the
-                # BrainClient discipline (PR #280 / Phase A5 §7.2). At spark-5's
-                # ~3.7 tok/s for 4096 max_tokens, non-streaming would blow past
+                # BrainClient discipline (PR #280 / Phase A5 §7.2). The Wave 2
+                # frontier (Nemotron-3-Super-120B-A12B-NVFP4 TP=2 on spark-3 +
+                # spark-4 per ADR-007) carries a longer reasoning prefix on
+                # hard prompts than the retired BRAIN-49B (~3.7 tok/s on
+                # spark-5 single-node); non-streaming would blow past
                 # LiteLLM's request_timeout. Local Ollama / vLLM fallbacks stay
                 # non-streaming because the existing fallback path already
                 # caps max_tokens for them and doesn't need TTFT discipline.

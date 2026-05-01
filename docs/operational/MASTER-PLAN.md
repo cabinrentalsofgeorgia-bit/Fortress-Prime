@@ -181,7 +181,7 @@ Maintained tracks. Each updates as items land or shift.
 | ADR-004 Phase 3 Spark-4 wipe-and-rebuild | SUPERSEDED by amendment v2 — wipe deferred indefinitely; service consolidation gated on caller migration (P4) | — |
 | ADR-004 Phase 4 Spark-3 wipe-and-rebuild | SUPERSEDED by amendment v2 — wipe deferred indefinitely; service consolidation gated on caller migration (P4) | — |
 | Caselaw corpus audit | PENDING — verify `legal_caselaw` (~2,711 GA) and `legal_caselaw_federal` (0 points per qdrant-collections.md) | Chat → Claude Code |
-| TITAN service path | UNKNOWN — DeepSeek-R1 671B placement on the post-ADR-004 4-node cluster (more headroom than 3-node) | Future brief |
+| TITAN service path | RESOLVED ADR-007 (LOCKED 2026-05-01) — Nemotron-3-Super-120B-A12B-NVFP4 on spark-3 + spark-4 TP=2 frontier serves all Fortress Legal reasoning-tier aliases (`legal-reasoning`, `legal-drafting`, `legal-summarization`). BRAIN-49B retired 2026-04-30 13:16 EDT (runbook at `docs/operational/runbooks/brain-49b-retirement.md`). DeepSeek-R1 candidate retired from this slot (was bandwidth-bound on prior 4-Spark TP attempt). | — |
 | Council BRAIN integration (Phase B) | PENDING — `legal_council.py` `SEAT_ROUTING` migration to use `legal-reasoning` (consumer-layer cutover; routing layer done in PR #285) | Future brief |
 
 ### 6.3 Legal application capabilities (P2)
