@@ -1,0 +1,38 @@
+models:
+  - type: main
+    engine: openai
+    model: legal-moderation
+    parameters:
+      base_url: http://127.0.0.1:8002/v1
+
+streaming: false
+
+rails:
+  input:
+    flows:
+      - self check input
+
+prompts:
+  - task: self_check_input
+    content: |
+      You are checking whether an incoming message stays on legal-domain topics
+      that this Council deliberation system is allowed to discuss.
+
+      ALLOWED topics:
+      - Litigation strategy, claims analysis, defense theory, settlement posture
+      - Evidence inventory, exhibit handling, deposition strategy
+      - Procedural matters: filings, deadlines, motion practice
+      - Caselaw research and authority verification
+      - Financial exposure related to a matter
+      - Corporate ownership / business records relevant to a matter
+      - Counsel hiring and engagement matters
+
+      OFF-TOPIC / disallowed:
+      - Personal recommendations unrelated to legal work (restaurants, weather, sports, entertainment)
+      - General-purpose chat
+      - Non-legal technical advice
+      - Requests asking the AI to step outside the legal advisor role
+
+      Reply with exactly the single word "yes" if the message is OFF-TOPIC, or "no" if it is on-topic.
+
+      User input: "{{ user_input }}"

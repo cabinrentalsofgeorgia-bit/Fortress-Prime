@@ -1,0 +1,22 @@
+[Unit]
+Description=Fortress NeMo Guardrails server (Wave 5 — Tier 6 safety/classification)
+After=litellm-gateway.service network.target
+Requires=litellm-gateway.service
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime/fortress-guardrails-platform
+EnvironmentFile=/etc/fortress/guardrails.env
+# OPENAI_API_KEY in /etc/fortress/guardrails.env feeds the openai engine,
+# which routes guardrail moderation calls to LiteLLM at 127.0.0.1:8002.
+ExecStart=/home/admin/fortress-guardrails-venv/bin/nemoguardrails server \
+  --config /home/admin/Fortress-Prime/fortress-guardrails-platform/configs \
+  --port 8200 \
+  --disable-chat-ui
+Restart=on-failure
+RestartSec=30s
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

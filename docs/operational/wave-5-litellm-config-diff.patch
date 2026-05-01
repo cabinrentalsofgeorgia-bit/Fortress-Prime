@@ -1,0 +1,31 @@
+--- /home/admin/Fortress-Prime/litellm_config.yaml.bak.wave-5-20260501T084109Z	2026-05-01 08:41:09.615695169 -0400
++++ /home/admin/Fortress-Prime/litellm_config.yaml	2026-05-01 08:41:29.223655630 -0400
+@@ -149,6 +149,28 @@
+       api_key: empty
+ 
+   # ──────────────────────────────────────────────────────────────────────────
++  # legal-moderation — Wave 5 (2026-05-01)
++  # Same upstream model as legal-reasoning (nemotron-3-super on the spark-3+4
++  # frontier), but tuned for deterministic short-form classifier-style output:
++  # temperature 0.0, max_tokens 64, thinking disabled. Used by the NeMo
++  # Guardrails OSS toolkit for Content Safety / Topic Control / Jailbreak /
++  # PII rails — all of which expect "yes"/"no" or "on-topic"/"off-topic"
++  # answers, not extended reasoning. Separating the alias means moderation
++  # traffic can be load-balanced or rerouted to a smaller model on a
++  # different host without touching legal-reasoning.
++  # ──────────────────────────────────────────────────────────────────────────
++  - model_name: legal-moderation
++    litellm_params:
++      model: openai/nemotron-3-super
++      api_base: http://10.10.10.3:8000/v1
++      api_key: EMPTY
++      temperature: 0.0
++      max_tokens: 64
++      timeout: 60
++      chat_template_kwargs:
++        enable_thinking: false
++
++  # ──────────────────────────────────────────────────────────────────────────
+   # CLOUD ROUTES — available for NON-LEGAL use only after ADR-003 Phase 1.
+   # Legal traffic terminates on the sovereign legal-* routes above.
+   # These routes remain active because non-legal callers (storefront, command
