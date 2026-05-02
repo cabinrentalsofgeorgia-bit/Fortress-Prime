@@ -53,6 +53,7 @@ Current Financial / Hedge Fund endpoints:
 | `GET /api/financial/signals/latest` | scanner-ready latest signal rows |
 | `GET /api/financial/signals/transitions` | recent signal-change alert feed |
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
+| `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
 Systemd service on spark-node-2:
@@ -79,6 +80,16 @@ TO crog_ai_app;"
 ```
 
 The same SQL is tracked at `deploy/sql/marketclub_legacy_read_grants.sql`.
+
+Daily calibration is read-only:
+
+```bash
+uv run python scripts/calibrate_daily_signals.py --top-tickers 20
+```
+
+Baseline from 2026-05-02: 24,204 historical daily observations, 91.44%
+coverage, 62.05% daily color accuracy on covered observations, and 43.94
+score MAE for `dochia_v0_estimated`.
 
 ## Relationship to Fortress-Prime
 

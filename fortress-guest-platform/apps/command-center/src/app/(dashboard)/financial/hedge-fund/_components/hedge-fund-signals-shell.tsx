@@ -7,6 +7,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   BriefcaseBusiness,
+  Gauge,
   Info,
   RefreshCw,
   Search,
@@ -27,11 +28,13 @@ import {
 } from "@/components/ui/table";
 import {
   useFinancialLatestSignals,
+  useFinancialDailyCalibration,
   useFinancialSignalDetail,
   useFinancialSignalTransitions,
   useFinancialWatchlistCandidates,
 } from "@/lib/hooks";
 import type {
+  FinancialDailyCalibrationResponse,
   FinancialLatestSignal,
   FinancialSignalTransition,
   FinancialTransitionType,
@@ -77,6 +80,16 @@ function formatPrice(value: string | number | null | undefined): string {
   const numeric = Number(value);
   if (Number.isNaN(numeric)) return String(value);
   return numeric.toFixed(numeric >= 100 ? 2 : 4);
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function formatMetricNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return value.toFixed(1);
 }
 
 function scoreTone(score: number): "green" | "red" | "amber" | "neutral" {
@@ -411,6 +424,114 @@ function WatchlistLanes({
   );
 }
 
+function CalibrationPanel({
+  calibration,
+  loading,
+  error,
+}: {
+  calibration: FinancialDailyCalibrationResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Calibration baseline unavailable.
+      </div>
+    );
+  }
+
+  if (loading && !calibration) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading calibration baseline…</div>;
+  }
+
+  if (!calibration) {
+    return (
+      <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+        No calibration baseline.
+      </div>
+    );
+  }
+
+  const confusion = calibration.confusion;
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Daily Color Accuracy</p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {formatPercent(calibration.accuracy)}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Coverage</p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {formatPercent(calibration.coverage_rate)}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Score MAE</p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {formatMetricNumber(calibration.score_mae)}
+          </p>
+        </div>
+      </div>
+      <div className="border border-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Daily Confusion</h2>
+          <span className="text-xs text-muted-foreground">
+            {calibration.covered_observations.toLocaleString()} covered
+          </span>
+        </div>
+        <div className="mt-4 grid grid-cols-[72px_repeat(4,minmax(0,1fr))] gap-2 text-xs">
+          <span />
+          {["green", "red", "neutral", "missing"].map((label) => (
+            <span key={label} className="text-center text-muted-foreground">
+              {label}
+            </span>
+          ))}
+          {(["green", "red"] as const).map((actual) => (
+            <div key={actual} className="contents">
+              <span className="font-medium capitalize">{actual}</span>
+              {(["green", "red", "neutral", "missing"] as const).map((generated) => (
+                <span key={generated} className="bg-muted/50 py-2 text-center font-mono">
+                  {confusion[actual][generated].toLocaleString()}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="border border-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Largest Samples</h2>
+          <span className="text-xs text-muted-foreground">{calibration.parameter_set_name}</span>
+        </div>
+        <div className="mt-3 space-y-2">
+          {calibration.top_tickers.slice(0, 5).map((item) => (
+            <div
+              key={item.ticker}
+              className="grid grid-cols-[64px_minmax(0,1fr)_64px] items-center gap-3 text-xs"
+            >
+              <span className="font-mono font-semibold">{item.ticker}</span>
+              <div className="h-2 overflow-hidden bg-muted">
+                <div
+                  className="h-full bg-primary"
+                  style={{ width: `${Math.max(0, Math.min(100, (item.accuracy ?? 0) * 100))}%` }}
+                />
+              </div>
+              <span className="text-right font-mono text-muted-foreground">
+                {formatPercent(item.accuracy)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SymbolPanel({
   signal,
   transitions,
@@ -509,6 +630,7 @@ export function HedgeFundSignalsShell() {
   const latest = useFinancialLatestSignals(latestParams);
   const transitions = useFinancialSignalTransitions({ limit: 120, lookback_days: 30 });
   const watchlistCandidates = useFinancialWatchlistCandidates({ limit: 8 });
+  const dailyCalibration = useFinancialDailyCalibration({ top_tickers: 8 });
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
   const watchlistLanes = watchlistCandidates.data?.lanes ?? EMPTY_LANES;
@@ -533,7 +655,11 @@ export function HedgeFundSignalsShell() {
   }, [alertRows, signals]);
 
   const isRefreshing =
-    latest.isFetching || transitions.isFetching || detail.isFetching || watchlistCandidates.isFetching;
+    latest.isFetching ||
+    transitions.isFetching ||
+    detail.isFetching ||
+    watchlistCandidates.isFetching ||
+    dailyCalibration.isFetching;
 
   return (
     <div className="space-y-6">
@@ -558,6 +684,7 @@ export function HedgeFundSignalsShell() {
               void transitions.refetch();
               void detail.refetch();
               void watchlistCandidates.refetch();
+              void dailyCalibration.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -613,6 +740,25 @@ export function HedgeFundSignalsShell() {
             loading={watchlistCandidates.isLoading}
             error={watchlistCandidates.isError}
             onSelect={setSelectedTicker}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Gauge className="h-5 w-5 text-primary" />
+            <CardTitle>Calibration Baseline</CardTitle>
+          </div>
+          <Badge variant="outline">
+            {dailyCalibration.data ? formatDate(dailyCalibration.data.generated_at) : "—"}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <CalibrationPanel
+            calibration={dailyCalibration.data ?? null}
+            loading={dailyCalibration.isLoading}
+            error={dailyCalibration.isError}
           />
         </CardContent>
       </Card>

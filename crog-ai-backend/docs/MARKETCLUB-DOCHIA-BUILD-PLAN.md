@@ -87,6 +87,7 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/latest` | scanner-ready latest signal rows |
 | `GET /api/financial/signals/transitions` | recent signal-change alert feed |
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
+| `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
 Useful query params:
@@ -94,6 +95,7 @@ Useful query params:
 - `latest`: `limit`, `ticker`, `min_score`, `max_score`
 - `transitions`: `limit`, `ticker`, `transition_type`, `since`, `lookback_days`
 - `watchlist-candidates`: `limit`
+- `calibration/daily`: `since`, `until`, `ticker`, `parameter_set`, `top_tickers`
 - `{ticker}`: `transition_limit`, `lookback_days`
 
 ## Operations
@@ -135,12 +137,16 @@ Useful query params:
   bullish alignment, risk alignment, re-entry, and mixed timeframes. These lanes
   use fresh 2026-04-24 scores with February legacy watchlist/market-signal
   context where available.
+- Added a read-only daily calibration harness and endpoint. Baseline against
+  24,204 MarketClub daily observations: 91.44% coverage, 62.05% daily color
+  accuracy on covered observations, score MAE 43.94.
+- Surfaced the calibration baseline in the Hedge Fund UI.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
   `https://crog-ai.com/financial/hedge-fund`.
-- Verification passed: 16 backend tests, focused UI test, eslint, TypeScript,
+- Verification passed: 19 backend tests, focused UI test, eslint, TypeScript,
   production build, and live BFF reads are clean on spark-2.
 
-Next clean build step: add chart overlays and the daily-signal calibration
-harness.
+Next clean build step: add chart overlays and begin calibration refinement
+against the daily truth corpus.

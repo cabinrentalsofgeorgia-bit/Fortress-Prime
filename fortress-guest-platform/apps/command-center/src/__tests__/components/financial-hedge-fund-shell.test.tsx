@@ -120,6 +120,43 @@ const watchlistCandidates = {
   ],
 };
 
+const dailyCalibration = {
+  parameter_set_name: "dochia_v0_estimated",
+  generated_at: "2026-05-02T21:30:00Z",
+  since: null,
+  until: null,
+  total_observations: 24204,
+  covered_observations: 22131,
+  exact_bar_observations: 22127,
+  missing_observations: 2073,
+  neutral_generated_observations: 290,
+  matches: 13733,
+  accuracy: 0.6205,
+  coverage_rate: 0.9144,
+  exact_coverage_rate: 0.9142,
+  green_precision: 0.6303,
+  green_recall: 0.6351,
+  red_precision: 0.6272,
+  red_recall: 0.6059,
+  score_mae: 43.94,
+  score_rmse: 55.74,
+  confusion: {
+    green: { green: 7060, red: 3967, neutral: 90, missing: 1135 },
+    red: { green: 4141, red: 6673, neutral: 200, missing: 938 },
+  },
+  top_tickers: [
+    {
+      ticker: "HUT",
+      observations: 143,
+      covered_observations: 139,
+      exact_bar_observations: 139,
+      matches: 85,
+      accuracy: 0.6115,
+      score_mae: 41.4,
+    },
+  ],
+};
+
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
     data: latestSignals,
@@ -152,6 +189,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialDailyCalibration: () => ({
+    data: dailyCalibration,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 describe("HedgeFundSignalsShell", () => {
@@ -166,5 +210,7 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Score Distribution")).toBeInTheDocument();
     expect(screen.getByText("Portfolio Lens")).toBeInTheDocument();
     expect(screen.getByText("BUY")).toBeInTheDocument();
+    expect(screen.getByText("Calibration Baseline")).toBeInTheDocument();
+    expect(screen.getByText("62.1%")).toBeInTheDocument();
   });
 });

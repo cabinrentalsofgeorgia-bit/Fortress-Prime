@@ -228,6 +228,40 @@ export interface FinancialWatchlistCandidatesResponse {
   lanes: FinancialWatchlistCandidateLane[];
 }
 
+export interface FinancialDailyCalibrationTicker {
+  ticker: string;
+  observations: number;
+  covered_observations: number;
+  exact_bar_observations: number;
+  matches: number;
+  accuracy: number | null;
+  score_mae: number | null;
+}
+
+export interface FinancialDailyCalibrationResponse {
+  parameter_set_name: string;
+  generated_at: string;
+  since: string | null;
+  until: string | null;
+  total_observations: number;
+  covered_observations: number;
+  exact_bar_observations: number;
+  missing_observations: number;
+  neutral_generated_observations: number;
+  matches: number;
+  accuracy: number | null;
+  coverage_rate: number | null;
+  exact_coverage_rate: number | null;
+  green_precision: number | null;
+  green_recall: number | null;
+  red_precision: number | null;
+  red_recall: number | null;
+  score_mae: number | null;
+  score_rmse: number | null;
+  confusion: Record<"green" | "red", Record<"green" | "red" | "neutral" | "missing", number>>;
+  top_tickers: FinancialDailyCalibrationTicker[];
+}
+
 export type ServiceHealthState = "up" | "down";
 
 export interface ServiceHealthResponse {

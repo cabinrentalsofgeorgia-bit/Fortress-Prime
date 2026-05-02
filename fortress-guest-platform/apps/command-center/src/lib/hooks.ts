@@ -12,6 +12,7 @@ import type {
   WorkOrder,
   DashboardStats,
   FinancialLatestSignal,
+  FinancialDailyCalibrationResponse,
   FinancialSignalTransition,
   FinancialSymbolSignalDetail,
   FinancialTransitionType,
@@ -129,6 +130,20 @@ export function useFinancialWatchlistCandidates(params?: { limit?: number }) {
     queryFn: () => api.get("/api/financial/signals/watchlist-candidates", params),
     refetchInterval: 60_000,
     staleTime: 15_000,
+  });
+}
+
+export function useFinancialDailyCalibration(params?: {
+  since?: string;
+  until?: string;
+  ticker?: string;
+  parameter_set?: string;
+  top_tickers?: number;
+}) {
+  return useQuery<FinancialDailyCalibrationResponse>({
+    queryKey: ["financial", "signals", "calibration", "daily", params],
+    queryFn: () => api.get("/api/financial/signals/calibration/daily", params),
+    staleTime: 10 * 60_000,
   });
 }
 
