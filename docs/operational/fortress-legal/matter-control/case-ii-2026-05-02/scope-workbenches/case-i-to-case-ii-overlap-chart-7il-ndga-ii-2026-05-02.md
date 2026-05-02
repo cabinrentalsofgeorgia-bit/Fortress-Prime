@@ -69,7 +69,7 @@ Do not argue "overlap" as a conclusion. For each Case II theory, identify:
 1. Add the full Case I verdict form, jury instructions, and pretrial order to this overlap chart.
 2. Manually review or OCR Doc. 90 because the extracted text is incomplete while Doc. 134 relies on it.
 3. Tie the overlap chart to the closing-package inventory once Wilson Pruitt/raw closing materials land.
-4. Build the easement validity source map next: recorded instrument, drafting authority, railroad/right-of-way basis, title exceptions, and closing conduct.
+4. Use the easement validity source map v1 and expand it with the GNRR crossing agreement, DOT/railroad right-of-way records, title exceptions, and closing conduct.
 5. Build the Fish Trap survey/driveway physical-evidence map after the easement source map.
 
 ## Counsel Package Warning

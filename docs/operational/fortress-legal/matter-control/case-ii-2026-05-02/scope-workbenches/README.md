@@ -10,7 +10,8 @@ Use order:
 4. Closing-package reservation/waiver inventory
 5. Case I judgment-scope matrix
 6. Case I-to-Case II overlap chart
-7. Closing-delay chronology workbench
+7. Easement validity source map
+8. Closing-delay chronology workbench
 
 Repo safety:
 
@@ -22,5 +23,6 @@ Repo safety:
 - The Fish Trap line-item matrix uses Amendment #3 and maps possible 2025 overlap without treating same-topic items as proof.
 - The closing-package inventory is repo-safe; privileged closing/counsel email source details remain NAS-only.
 - The Case I-to-Case II overlap chart is repo-safe and source-anchored to public/court-record materials; counterclaim theories remain counsel-review only.
+- The easement validity source map is repo-safe; counsel advice/drafts, opposing-side threat posture, and legal strategy remain NAS-only privileged work product.
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
