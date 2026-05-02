@@ -20,6 +20,7 @@ This is not a filing and not legal advice. It is a control matrix for testing 7I
 | Inspection-comments comparison spreadsheet | NAS-only privileged staging; repo-safe addendum in `evidence-traceability/inspection-comments-spreadsheet-curation-addendum-7il-ndga-ii-2026-05-02.md` | Triage/control artifact; not the source report and not standalone repair proof |
 | 2025 Fish Trap inspection | `curated/documents/02_complaint_exhibits/Exhibit_H_2025_Inspection_Fish_Trap.pdf`; source PDF also found in privileged email staging | Updated inspection alleged by plaintiff; Fish Trap source control strengthened |
 | Fish Trap line-item matrix | `scope-workbenches/fish-trap-repair-obligation-line-item-matrix-7il-ndga-ii-2026-05-02.md` | Amendment #3 written-obligation filter with possible 2025 overlap mapped; completion/survival proof remains open |
+| Closing-package reservation/waiver inventory | `scope-workbenches/closing-package-reservation-waiver-inventory-7il-ndga-ii-2026-05-02.md` | Tracks public closing sources, missing final ALTA/settlement/escrow package, and NAS-only privileged email handling before repair-survival conclusions |
 | Specific-performance order | `curated/documents/02_complaint_exhibits/Exhibit_A_Case-I_Doc134_Specific_Performance_Order.pdf` | Plaintiff says order did not extinguish repair obligations |
 | Final judgment | `curated/documents/02_complaint_exhibits/Exhibit_B_Case-I_Doc135_Final_Judgment.pdf` | Judgment closed sale obligation in Case I |
 
@@ -57,7 +58,7 @@ Do not accept "inspection item = repair obligation." Every alleged repair item m
 | Expressly agreed repairs | Complaint paragraph 15 says Knight expressly agreed to specific repairs. | PSA amendments, repair addenda, written correspondence | Identify exact written agreement for each alleged repair. If none, flag as unsupported. | Amendments; emails; closing communications; counsel review | Open |
 | River Heights inspection characterization | Complaint cites Exhibit G / 2025 updated inspection, but operator corrected that the controlling report originated in Case I / 2021. | 2021 River Heights report in GAND/Dee McBee production; Terry Wilson Certificate pages 23-26; related privileged spreadsheet lead | Force the distinction between a distinct 2025 report and a 2021-origin report plus Amendment #2 seller-fix filter used in a continuing-repair theory. | Demand/source-verify any distinct 2025 River Heights report; map only Amendment #2 written repair obligations | P1 gap - 2021 source and Wilson repair pin located, characterization unresolved |
 | 2025 Fish Trap report | Complaint cites Exhibit H. | Ex. H | Compare only like-for-like items against 2021 and written obligations. | 2021/2025 item comparison | Open |
-| Survival after closing | Complaint paragraph 37 says repair obligations survived closing and were not extinguished. | PSAs, amendments, closing docs, judgment/order | What language creates survival? Was there waiver/reservation/merger? | Closing file; deed; settlement/escrow docs; attorney review | Open |
+| Survival after closing | Complaint paragraph 37 says repair obligations survived closing and were not extinguished. | PSAs, amendments, closing docs, judgment/order | What language creates survival? Was there waiver/reservation/merger? | Closing file; deed; settlement/escrow docs; attorney review | Inventory v1 built; final closing package still missing |
 | Judgment effect | Complaint paragraph 13 says specific-performance order enforced PSAs as written and did not waive repairs. | Doc. 134 and Doc. 135 | Doc. 134/135 expressly order closing and damages/fees; test whether they mention repair survival or post-judgment inspections. | Judgment-scope matrix | Open |
 | Damages | Complaint paragraph 38 claims remediation, repair expense, loss of use, diminution. | Damages records; inspection reports; invoices | Require causation and item-by-item proof. | Plaintiff proof/discovery; expert evaluation | Future discovery |
 
@@ -73,7 +74,7 @@ Do not accept "inspection item = repair obligation." Every alleged repair item m
 1. Treat the River Heights source report as Case I / 2021-origin and use Terry Wilson Certificate pages 23-26 as the written Amendment #2 repair-reference pin.
 2. Manually/OCR review the base PSA pages that pdftotext did not extract cleanly.
 3. Use the extracted inspection-comments spreadsheet only as a privileged triage lead, not as standalone proof.
-4. Locate closing-package reservation/waiver records and independent completion proof for River Heights.
+4. Use the closing-package inventory to pull final ALTA/settlement/escrow records and independent completion proof for River Heights.
 5. Separate "repair listed in report" from "repair contractually promised."
-6. Locate Fish Trap completion evidence and closing-package reservation/waiver records.
+6. Use the closing-package inventory to pull Fish Trap completion evidence and final closing package reservation/waiver records.
 7. Keep Alicia Argo and other counsel/closing communications privileged unless sanitized by counsel/operator.
