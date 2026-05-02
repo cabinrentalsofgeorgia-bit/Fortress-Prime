@@ -14,6 +14,7 @@ Use order:
 8. Terry Wilson River Heights repair reference pin
 9. Evidence gap action list
 10. DOT / GNRR response intake tracker
+11. DOT / GNRR outbound send log
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
 

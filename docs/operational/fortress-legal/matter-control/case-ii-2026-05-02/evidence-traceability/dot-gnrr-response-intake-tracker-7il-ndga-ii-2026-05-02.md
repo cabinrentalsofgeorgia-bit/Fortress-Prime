@@ -22,6 +22,7 @@ The DOT / GNRR records-request packet creates request text. This tracker control
 | GDOT open-records responses | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/gdot-open-records/` | Public agency responses, production files, fee estimates, no-records replies, and correspondence. |
 | GNRR / Blue Ridge responses | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/gnrr-blue-ridge/` | Private railroad/operator responses if counsel/operator chooses to send the inquiry or receives informal records. |
 | County / title follow-up | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/county-title-follow-up/` | Deeds, plats, title exceptions, maps, survey materials, and county/title follow-up results. |
+| Sent request control | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/dot-gnrr-records-request-20260502/` | Outbound drafts and final sent-copy controls before responses are received. |
 | Privileged response analysis | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/work-product/privileged/easement-validity-20260502/dot-gnrr-response-analysis/` | Operator/counsel analysis, send decisions, legal theory notes, and strategy. Do not mirror to repo without sanitization. |
 
 ## Pending Response Rows

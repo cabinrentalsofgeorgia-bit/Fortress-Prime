@@ -121,6 +121,10 @@ Respectfully,
 5. Update the DOT / railroad right-of-way source index first, then the easement validity map, GNRR comparison, issue matrix, and evidence-gap action list.
 6. Do not convert any response into a legal conclusion without counsel verification.
 
+## Outbound Draft Control
+
+The DOT / GNRR outbound send log now points to NAS-ready outbound drafts for the GDOT open-records request and the GNRR / Blue Ridge counsel-review inquiry. These drafts remain unsent until operator/counsel supplies requester details, approves send posture, and stores the sent copy in NAS intake.
+
 ## Immediate Send Checklist
 
 1. Fill requester name, mailing address, phone, and email.
