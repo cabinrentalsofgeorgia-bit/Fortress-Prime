@@ -37,6 +37,49 @@ hedge_fund.market_signals             ← downstream contract surface
 Master Accounting reads from `market_signals`. Our staging tables are
 implementation detail not visible to consumers.
 
+### App-facing API
+
+FastAPI entrypoint:
+
+```bash
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8026
+```
+
+Current Financial / Hedge Fund endpoints:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /healthz` | backend health check |
+| `GET /api/financial/signals/latest` | scanner-ready latest signal rows |
+| `GET /api/financial/signals/transitions` | recent signal-change alert feed |
+| `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
+| `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
+
+Systemd service on spark-node-2:
+
+```bash
+sudo systemctl status crog-ai-backend.service
+sudo systemctl restart crog-ai-backend.service
+journalctl -u crog-ai-backend.service -f
+```
+
+The unit file is tracked at `deploy/systemd/crog-ai-backend.service` and
+installed to `/etc/systemd/system/crog-ai-backend.service`.
+
+Legacy Hedge Fund watchlist context is exposed read-only to the app role with:
+
+```bash
+sudo -u postgres psql -d fortress_db -c "
+GRANT USAGE ON SCHEMA hedge_fund TO crog_ai_app;
+GRANT SELECT ON TABLE
+    hedge_fund.watchlist,
+    hedge_fund.market_signals,
+    hedge_fund.active_strategies
+TO crog_ai_app;"
+```
+
+The same SQL is tracked at `deploy/sql/marketclub_legacy_read_grants.sql`.
+
 ## Relationship to Fortress-Prime
 
 This project lives at `~/Fortress-Prime/crog-ai-backend/` but maintains
