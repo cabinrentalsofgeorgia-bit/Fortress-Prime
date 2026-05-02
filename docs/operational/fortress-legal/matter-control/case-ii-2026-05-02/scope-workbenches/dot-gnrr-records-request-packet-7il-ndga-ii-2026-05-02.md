@@ -115,8 +115,8 @@ Respectfully,
 ## Intake Rules For Responses
 
 1. Store incoming records under the Case II incoming evidence lane before analysis.
-2. Hash every produced record before extracting or summarizing it.
-3. Record sender, request date, response date, production format, file path, and SHA256 in the evidence custody registry.
+2. Use the DOT / GNRR response intake tracker before extracting or summarizing any response.
+3. Hash every produced record and record sender, request date, response date, production format, file path, and SHA256 before evidence promotion.
 4. Separate public/source records from privileged operator analysis.
 5. Update the DOT / railroad right-of-way source index first, then the easement validity map, GNRR comparison, issue matrix, and evidence-gap action list.
 6. Do not convert any response into a legal conclusion without counsel verification.
@@ -127,4 +127,4 @@ Respectfully,
 2. Attach or reference the clean GNRR crossing agreement extract only if counsel/operator wants to provide a source anchor.
 3. Send Request A to GDOT Office of Legal Services / open records.
 4. Decide with counsel whether Request B should be informal, preserved for subpoena, or sent as a business-record inquiry.
-5. Open a response-tracking row in the evidence custody registry.
+5. Save sent requests and all responses in the intake paths named by the DOT / GNRR response intake tracker.
