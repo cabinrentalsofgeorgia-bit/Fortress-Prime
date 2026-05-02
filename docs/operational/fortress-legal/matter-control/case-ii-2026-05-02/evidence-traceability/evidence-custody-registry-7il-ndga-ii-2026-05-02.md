@@ -40,3 +40,4 @@ These items are not repo-committed exhibits. They are source-control leads retai
 | Inspection Comments spreadsheet | Repair-comparison triage lead only; not a source inspection report | 15677 | `90c78d0fcb23020e542e49d99d4f9f0657ea745bd6e211c4c2ce228eda3a2e8a` |
 | Inspection of 92 Fish Trap.pdf | May 14, 2025 Fish Trap source report; supports Exhibit H source control | 18513810 | `d055e93d072329279a046ca2a239ea25dbcddd23aa7d59391bf2ee20fdbb1c5e` |
 | 92 inspection.pdf | 2021-era Fish Trap source report; supports Fish Trap baseline comparison | 11301693 | `f5a1637488870d6c402cf0a59837ddab03cfbd73dc6d3540baa32fd684ff965a` |
+| Terry Wilson Certificate of Authentication pages 23-26 | Wilson-production Amendment #2 page pin referencing 3/22/2021 Titus Pugh inspection summary and seller-fix comment list | 169900299 | `2070a460bb9d359e4ec07df15ade1e93144704caed085bea86b6dfd633cd02cd` |

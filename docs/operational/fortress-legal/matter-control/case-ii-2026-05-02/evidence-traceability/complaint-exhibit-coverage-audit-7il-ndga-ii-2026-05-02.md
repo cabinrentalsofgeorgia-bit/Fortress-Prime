@@ -10,7 +10,7 @@ This audit checks the complaint-referenced exhibit set against the curated Case 
 
 - Exhibits A-F and H-K are present in the curated complaint-exhibits folder.
 - Exhibit G is pled/framed as the 2025 River Heights inspection, but the operator has clarified that the controlling River Heights inspection report originated in Case I / 2021.
-- Source copies of the March 22, 2021 River Heights home inspection were located in the Case I/GAND received-from-Gary lane and Dee McBee production. Operator states Terry Wilson files also contain copies, but the exact page range still needs to be pinned.
+- Source copies of the March 22, 2021 River Heights home inspection were located in the Case I/GAND received-from-Gary lane and Dee McBee production. Terry Wilson production pins Amendment #2 pages that reference the March 22, 2021 Titus Pugh inspection summary and list seller-fix comments.
 - If plaintiff claims a distinct 2025 River Heights inspection, that separate source report remains unverified. If plaintiff is repackaging the 2021 report, the answer/counsel package should force that characterization issue.
 
 ## Exhibit Table
