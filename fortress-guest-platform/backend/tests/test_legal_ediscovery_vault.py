@@ -91,6 +91,8 @@ async def test_process_vault_upload_dedups_by_case_hash(
         sql_text = str(stmt)
         if "SELECT id FROM legal.vault_documents" in sql_text:
             return _FakeResult(fetch_value=_FakeRow("existing-id"))
+        if "SELECT processing_status FROM legal.vault_documents" in sql_text:
+            return _FakeResult(fetch_value=_FakeRow("completed"))
         if "INSERT INTO legal.vault_documents" in sql_text:
             seen_inserts.append(sql_text)
         return _FakeResult()
@@ -140,7 +142,7 @@ async def test_process_vault_upload_different_cases_same_hash(
     )
     monkeypatch.setattr(
         legal_ediscovery, "_upsert_to_qdrant",
-        AsyncMock(return_value=2),
+        AsyncMock(return_value=(["00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-000000000002"], None)),
     )
     monkeypatch.setattr(
         legal_ediscovery, "_emit_docket_updated_event",
@@ -178,16 +180,10 @@ async def test_process_vault_upload_different_cases_same_hash(
 
 
 @pytest.mark.asyncio
-async def test_process_vault_upload_qdrant_failure_marks_completed_with_zero_indexed(
+async def test_process_vault_upload_qdrant_failure_marks_qdrant_upsert_failed(
     monkeypatch: pytest.MonkeyPatch, tmp_path,
 ) -> None:
-    """Vector store failure must not orphan the row.
-
-    Spec wording was 'leaves pending' but the live code's design is to mark
-    it completed with vectors_indexed=0 — operators get an actionable signal
-    via vectors_indexed rather than chasing pending rows. We assert the
-    actual contract.
-    """
+    """Vector store failure must not orphan the row in pending."""
     monkeypatch.setattr(
         legal_ediscovery, "_resolve_vault_dir", lambda _slug: tmp_path,
     )
@@ -211,7 +207,7 @@ async def test_process_vault_upload_qdrant_failure_marks_completed_with_zero_ind
     )
     monkeypatch.setattr(
         legal_ediscovery, "_upsert_to_qdrant",
-        AsyncMock(return_value=0),  # qdrant down / failed
+        AsyncMock(return_value=([], {"batch_index": 0, "error": "qdrant down"})),
     )
     monkeypatch.setattr(
         legal_ediscovery, "_emit_docket_updated_event",
@@ -236,8 +232,8 @@ async def test_process_vault_upload_qdrant_failure_marks_completed_with_zero_ind
         mime_type="application/pdf",
     )
 
-    assert result["status"] == "completed"
-    assert result["vectors_indexed"] == 0
+    assert result["status"] == "qdrant_upsert_failed"
+    assert result["partial_indexed"] == 0
 
 
 # ── 4. image-only PDF → ocr_failed early exit ───────────────────────
@@ -293,6 +289,174 @@ async def test_process_vault_upload_image_only_pdf_marks_ocr_failed(
     privilege_mock.assert_not_awaited()
     embed_mock.assert_not_awaited()
     qdrant_mock.assert_not_awaited()
+
+
+
+
+@pytest.mark.asyncio
+async def test_process_vault_upload_retries_non_terminal_same_hash(
+    monkeypatch: pytest.MonkeyPatch, tmp_path,
+) -> None:
+    """A failed/pending row with the same hash should not mask a retry."""
+    monkeypatch.setattr(
+        legal_ediscovery, "_resolve_vault_dir", lambda _slug: tmp_path,
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_extract_text",
+        lambda _b, _m, _n: "retry body text",
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_classify_privilege",
+        AsyncMock(return_value=(MagicMock(
+            is_privileged=False, confidence=0.0,
+            privilege_type=None, reasoning=None,
+        ), 1)),
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_chunk_document", lambda _t: ["chunk1"],
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_embed_chunks",
+        AsyncMock(return_value=[[0.1] * 8]),
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_upsert_to_qdrant",
+        AsyncMock(return_value=(["00000000-0000-0000-0000-000000000001"], None)),
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_emit_docket_updated_event",
+        AsyncMock(return_value=False),
+    )
+
+    deletes_seen = 0
+    inserts_seen = 0
+
+    def _exec_side_effect(stmt, *args, **kwargs):
+        nonlocal deletes_seen, inserts_seen
+        sql_text = str(stmt)
+        if "SELECT id FROM legal.vault_documents" in sql_text:
+            return _FakeResult(fetch_value=_FakeRow("stale-id"))
+        if "SELECT processing_status FROM legal.vault_documents" in sql_text:
+            return _FakeResult(fetch_value=_FakeRow("failed"))
+        if "DELETE FROM legal.vault_documents" in sql_text:
+            deletes_seen += 1
+            return _FakeResult()
+        if "INSERT INTO legal.vault_documents" in sql_text:
+            inserts_seen += 1
+            return _FakeResult(fetch_value=_FakeRow("new-id"))
+        return _FakeResult()
+
+    db = _make_db_session(_exec_side_effect)
+
+    result = await legal_ediscovery.process_vault_upload(
+        db=db,
+        case_slug="retry-case",
+        file_bytes=b"same bytes",
+        file_name="retry.ptx",
+        mime_type="application/octet-stream",
+    )
+
+    assert result["status"] == "completed"
+    assert deletes_seen == 1
+    assert inserts_seen == 1
+
+
+@pytest.mark.asyncio
+async def test_process_vault_upload_strips_postgres_nuls(
+    monkeypatch: pytest.MonkeyPatch, tmp_path,
+) -> None:
+    monkeypatch.setattr(
+        legal_ediscovery, "_resolve_vault_dir", lambda _slug: tmp_path,
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_extract_text",
+        lambda _b, _m, _n: "hello\x00world",
+    )
+    classifier = AsyncMock(return_value=(MagicMock(
+        is_privileged=False, confidence=0.0,
+        privilege_type=None, reasoning=None,
+    ), 1))
+    monkeypatch.setattr(legal_ediscovery, "_classify_privilege", classifier)
+    monkeypatch.setattr(
+        legal_ediscovery, "_chunk_document", lambda text: [text],
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_embed_chunks", AsyncMock(return_value=[[0.1] * 8]),
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_upsert_to_qdrant",
+        AsyncMock(return_value=(["00000000-0000-0000-0000-000000000001"], None)),
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_emit_docket_updated_event",
+        AsyncMock(return_value=False),
+    )
+
+    def _exec_side_effect(stmt, *args, **kwargs):
+        sql_text = str(stmt)
+        if "SELECT id FROM legal.vault_documents" in sql_text:
+            return _FakeResult(fetch_value=None)
+        if "INSERT INTO legal.vault_documents" in sql_text:
+            return _FakeResult(fetch_value=_FakeRow("new-id"))
+        return _FakeResult()
+
+    db = _make_db_session(_exec_side_effect)
+
+    result = await legal_ediscovery.process_vault_upload(
+        db=db,
+        case_slug="nul-case",
+        file_bytes=b"nul bytes",
+        file_name="nul.ptx",
+        mime_type="application/octet-stream",
+    )
+
+    assert result["status"] == "completed"
+    assert "\x00" not in classifier.await_args.args[0]
+
+
+@pytest.mark.asyncio
+async def test_process_vault_upload_rolls_back_before_marking_failed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path,
+) -> None:
+    """An aborted transaction must not leave the row stuck in pending."""
+    monkeypatch.setattr(
+        legal_ediscovery, "_resolve_vault_dir", lambda _slug: tmp_path,
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_extract_text", MagicMock(side_effect=RuntimeError("bad transcript")),
+    )
+    monkeypatch.setattr(
+        legal_ediscovery, "_emit_docket_updated_event",
+        AsyncMock(return_value=False),
+    )
+
+    failure_update_seen = False
+
+    def _exec_side_effect(stmt, *args, **kwargs):
+        nonlocal failure_update_seen
+        sql_text = str(stmt)
+        if "SELECT id FROM legal.vault_documents" in sql_text:
+            return _FakeResult(fetch_value=None)
+        if "INSERT INTO legal.vault_documents" in sql_text:
+            return _FakeResult(fetch_value=_FakeRow("new-id"))
+        if "SET processing_status = 'failed'" in sql_text:
+            failure_update_seen = True
+        return _FakeResult()
+
+    db = _make_db_session(_exec_side_effect)
+    db.rollback = AsyncMock()
+
+    result = await legal_ediscovery.process_vault_upload(
+        db=db,
+        case_slug="bad-transcript-case",
+        file_bytes=b"bad transcript bytes",
+        file_name="bad.ptx",
+        mime_type="application/octet-stream",
+    )
+
+    assert result["status"] == "failed"
+    db.rollback.assert_awaited()
+    assert failure_update_seen, "expected failed status update after rollback"
 
 
 # ── 5. CHECK constraint integration is asserted in the DB-level test

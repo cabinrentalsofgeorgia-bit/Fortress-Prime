@@ -544,6 +544,13 @@ async def _upsert_to_qdrant_privileged(
 
 # ── Main Ingestion Pipeline ──────────────────────────────────────
 
+_DUPLICATE_TERMINAL_STATUSES = {"completed", "ocr_failed", "locked_privileged"}
+
+
+def _strip_postgres_nuls(text_value: str) -> str:
+    return text_value.replace("\x00", "")
+
+
 async def process_vault_upload(
     db: AsyncSession,
     case_slug: str,
@@ -557,8 +564,29 @@ async def process_vault_upload(
         text("SELECT id FROM legal.vault_documents WHERE case_slug = :slug AND file_hash = :hash"),
         {"slug": case_slug, "hash": fhash},
     )
-    if fast_dup.fetchone():
-        return {"status": "duplicate", "file_name": file_name, "file_hash": fhash}
+    duplicate_row = fast_dup.fetchone()
+    if duplicate_row:
+        existing_id = duplicate_row[0]
+        status_result = await db.execute(
+            text(
+                "SELECT processing_status FROM legal.vault_documents "
+                "WHERE id = :id AND case_slug = :slug"
+            ),
+            {"id": existing_id, "slug": case_slug},
+        )
+        status_row = status_result.fetchone()
+        existing_status = status_row[0] if status_row else None
+        if existing_status not in _DUPLICATE_TERMINAL_STATUSES:
+            await db.execute(
+                text(
+                    "DELETE FROM legal.vault_documents "
+                    "WHERE id = :id AND case_slug = :slug"
+                ),
+                {"id": existing_id, "slug": case_slug},
+            )
+            await db.commit()
+        else:
+            return {"status": "duplicate", "file_name": file_name, "file_hash": fhash}
 
     doc_id = str(uuid4())
     vault_dir = _resolve_vault_dir(case_slug)
@@ -600,7 +628,9 @@ async def process_vault_upload(
     )
 
     try:
-        raw_text = _extract_text(file_bytes, mime_type, file_name)
+        raw_text = _strip_postgres_nuls(
+            _extract_text(file_bytes, mime_type, file_name)
+        )
 
         # ── Image-only PDF guard ──────────────────────────────
         # If text extraction yields nothing on a PDF, there is no signal
@@ -911,11 +941,43 @@ async def process_vault_upload(
         }
 
     except Exception as exc:
-        await db.execute(
-            text("UPDATE legal.vault_documents SET processing_status = 'failed', error_detail = :err WHERE id = :id"),
-            {"id": doc_id, "err": str(exc)[:1000]},
-        )
-        await db.commit()
+        try:
+            await db.rollback()
+        except Exception as rollback_exc:
+            logger.warning(
+                "vault_upload_failure_rollback_failed",
+                doc_id=doc_id,
+                error=str(rollback_exc)[:300],
+            )
+
+        try:
+            await db.execute(
+                text(
+                    "UPDATE legal.vault_documents "
+                    "SET processing_status = 'failed', error_detail = :err "
+                    "WHERE id = :id"
+                ),
+                {"id": doc_id, "err": str(exc)[:1000]},
+            )
+            await db.commit()
+        except Exception as mark_exc:
+            try:
+                await db.rollback()
+            except Exception:
+                pass
+            logger.error(
+                "vault_upload_failed_mark_failed_failed",
+                doc_id=doc_id,
+                original_error=str(exc)[:300],
+                mark_error=str(mark_exc)[:300],
+            )
+            return {
+                "status": "failed",
+                "document_id": doc_id,
+                "error": str(exc)[:200],
+                "mark_failed_error": str(mark_exc)[:200],
+            }
+
         logger.error("vault_upload_failed", doc_id=doc_id, error=str(exc)[:300])
         return {"status": "failed", "document_id": doc_id, "error": str(exc)[:200]}
 
