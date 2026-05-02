@@ -19,8 +19,13 @@ The evidence status is therefore refined:
 A privileged Argo-related email attachment named `Inspection Comments(89340812.1).xlsx` has now been extracted to NAS work-product staging.
 It contains Fish Trap and River Heights comparison/control tabs and appears to map earlier inspection comments against selected 2025 inspection references.
 
-This does not close Exhibit G.
-It creates a stronger curation lead: the team now has a comparison artifact, but still needs the actual 2025 River Heights inspection report before relying on any River Heights item-level comparison.
+This does not close the Exhibit G characterization issue.
+It creates a stronger curation lead: the team now has the comparison artifact and the Case I / 2021 River Heights source report, but still must determine whether plaintiff claims a separate 2025 River Heights report or is repackaging the 2021 report under a continuing-repair theory.
+
+## Fish Trap Source-Control Update
+
+A follow-on Case II email-attachment scan located Fish Trap inspection source PDFs in privileged staging, including a May 14, 2025 Fish Trap report and a 2021-era Fish Trap inspection PDF.
+Those materials support Fish Trap/Exhibit H source control. They do not change the corrected River Heights posture: the located River Heights source report is Case I / 2021-origin, and any separate 2025 River Heights report remains unverified.
 
 ## Why This Matters
 

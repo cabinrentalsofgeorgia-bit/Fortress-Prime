@@ -10,8 +10,9 @@ Use order:
 4. Paragraph evidence trace matrix
 5. Inspection reports and closing-scope addendum
 6. Inspection comments spreadsheet curation addendum
-7. Evidence gap action list
+7. River Heights inspection source status
+8. Evidence gap action list
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
 
-Critical current evidence finding: the complaint references Exhibit G as the 2025 River Heights inspection, but no Exhibit G file was found in the curated Case II complaint-exhibits folder or obvious curated-path search. A related inspection-comments comparison spreadsheet has now been extracted into privileged NAS staging, but it is not the underlying source report. Treat Exhibit G as a P1 evidence gap before any filing or full counsel package.
+Critical current evidence finding: the River Heights inspection source has been corrected to a Case I / 2021-origin report, with source copies located in Case I/GAND and Dee McBee production lanes. The Case II complaint's 2025-inspection / Exhibit G framing remains a P1 characterization gap: either plaintiff has a distinct 2025 River Heights report that must be source-verified, or plaintiff is repackaging the 2021 report into a continuing-repair theory that must be tested against the PSAs, judgment, closing, waiver, and survival record.
