@@ -20,6 +20,7 @@ What is actually sourced today about the railroad crossing/right-of-way, and wha
 | Georgia Highway-Rail Grade Crossing Action Plan | `https://railroads.dot.gov/sites/fra.dot.gov/files/2020-12/SAP%20-%20Georgia.pdf` | Official GDOT/FRA-hosted source stating the Blue Ridge Scenic Railway operates on a 13-mile portion of GNRR between Blue Ridge and McCaysville, and that the listed excursion services operate on GDOT-owned railroad lines. | 2011 planning/safety source; useful corroboration of segment control, not a substitute for the specific lease/right-of-way file. |
 | 2021 Thor James easement | `curated/documents/case-i-context/04_deposition_exhibits_7il/Exh._B___2021.03.07_Thor_James_Easement.pdf`; SHA256 `d0f1932aec2b26f8a36b389e18420aa0496b5d5d8b2ced848c6fd1c3d7a0d371` | Prior easement instrument that references crossing use being subject to the private road grade crossing agreement. | Legal effect and user-class authority remain counsel-review issues. |
 | 2025 recorded easement | `curated/documents/02_complaint_exhibits/Exhibit_I_Unauthorized_Easement_2025-03-17.pdf`; SHA256 `43cccf435c5128dac2cf5139b308e01c057ed23c39433e6746626e7ebc306b64` | Operative challenged instrument with railroad-crossing conditions tied to the crossing agreement. | Validity, enforceability, title impact, and recording authority remain open legal/source gates. |
+| DOT / GNRR records-request packet | `dot-gnrr-records-request-packet-7il-ndga-ii-2026-05-02.md` | Operator-ready request text and intake rules for the GDOT/GNRR records pull. | Does not prove the records exist or that the requests have been sent. |
 
 ## Current Findings
 
@@ -51,4 +52,4 @@ What is actually sourced today about the railroad crossing/right-of-way, and wha
 
 ## Next Work Order
 
-Prepare the DOT/GNRR records-request packet and tie the response targets back to the easement validity source map, River Heights title package, and the Case II issue matrix.
+Use the DOT / GNRR records-request packet to send or counsel-review the GDOT open-records request, decide whether to send the GNRR / Blue Ridge business-record inquiry, and convert any response into hashed source entries before updating the easement and title workbenches.
