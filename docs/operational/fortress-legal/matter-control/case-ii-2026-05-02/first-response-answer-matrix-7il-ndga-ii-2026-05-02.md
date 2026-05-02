@@ -11,13 +11,13 @@ This is a workbench, not a filing. It should be reviewed against the live docket
 
 | Count | Claim | Against | Paragraphs |
 |---|---|---|---|
-| I | Breach of Contract - Repair Obligations | Knight | 34-41 |
-| II | Declaratory Judgment - Unauthorized Easement | All Defendants | 42-48 |
-| III | Quiet Title | All Defendants | 49-54 |
-| IV | Injunctive Relief | All Defendants | 55-59 |
-| V | Slander of Title | All Defendants | 60-64 |
-| VI | Ejectment / Encroachment | Knight | 65-68 |
-| VII | Breach of Warranty of Title | Knight | 69-73 |
+| I | Breach of Contract - Post-Judgment Repairs | Gary Knight | 34-38 |
+| II | Slander of Title | All Defendants | 39-43 |
+| III | Declaratory Relief | All Defendants | 44-46 |
+| IV | Quiet Title / Quia Timet | All Defendants | 47-55 |
+| V | Injunctive Relief | All Defendants | 56-59 |
+| VI | Ejectment | Gary Knight | 60-66 |
+| VII | Breach of Warranty of Title | Gary Knight | 67-73 |
 | VIII | Attorney Fees - O.C.G.A. 13-6-11 | All Defendants | 74-76 |
 
 ## Paragraph Matrix
