@@ -30,6 +30,7 @@ and routing_tag are written into the capture_metadata JSONB column.
 from __future__ import annotations
 
 import asyncio
+import codecs
 import email as email_lib
 import imaplib
 import json
@@ -51,6 +52,30 @@ from backend.services.privilege_filter import (
 )
 
 logger = structlog.get_logger(service="captain_multi_mailbox")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Codec shim — Issue #259
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# RFC 1428 / RFC 1652 'unknown-8bit' is a legitimate MIME encoding declaration
+# meaning '8-bit content of unknown character set'. Python's stdlib codecs
+# registry has no entry for it, so a raw .decode('unknown-8bit') raises
+# LookupError before errors='replace' has any chance to take effect. Captain's
+# IMAP fetch path was silently dropping ~10 messages per patrol on gary-crog
+# because of this.
+#
+# Map 'unknown-8bit' (and case/underscore variants) to the latin-1 codec.
+# latin-1 is the safe permissive fallback because every byte 0x00-0xff
+# round-trips without error.
+
+def _unknown_8bit_codec_search(name: str) -> Optional[codecs.CodecInfo]:
+    if name.lower().replace("_", "-") == "unknown-8bit":
+        return codecs.lookup("latin-1")
+    return None
+
+
+codecs.register(_unknown_8bit_codec_search)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
