@@ -150,6 +150,63 @@ class FakeSignalStore:
             ][:top_tickers],
         }
 
+    def symbol_chart(
+        self,
+        *,
+        ticker: str,
+        sessions: int,
+        as_of: dt.date | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "ticker": ticker,
+            "sessions": 2,
+            "bars": [
+                {
+                    "ticker": ticker,
+                    "bar_date": dt.date(2026, 4, 23),
+                    "open": Decimal("66.00"),
+                    "high": Decimal("69.00"),
+                    "low": Decimal("65.00"),
+                    "close": Decimal("68.00"),
+                    "volume": 1000,
+                    "daily_channel_high": Decimal("67.00"),
+                    "daily_channel_low": Decimal("64.00"),
+                    "weekly_channel_high": Decimal("70.00"),
+                    "weekly_channel_low": Decimal("60.00"),
+                    "monthly_channel_high": Decimal("75.00"),
+                    "monthly_channel_low": Decimal("55.00"),
+                },
+                {
+                    "ticker": ticker,
+                    "bar_date": as_of or dt.date(2026, 4, 24),
+                    "open": Decimal("68.00"),
+                    "high": Decimal("70.00"),
+                    "low": Decimal("66.00"),
+                    "close": Decimal("69.00"),
+                    "volume": 1200,
+                    "daily_channel_high": Decimal("69.00"),
+                    "daily_channel_low": Decimal("65.00"),
+                    "weekly_channel_high": Decimal("70.00"),
+                    "weekly_channel_low": Decimal("61.00"),
+                    "monthly_channel_high": Decimal("75.00"),
+                    "monthly_channel_low": Decimal("55.00"),
+                },
+            ],
+            "events": [
+                {
+                    "ticker": ticker,
+                    "timeframe": "daily",
+                    "state": "green",
+                    "bar_date": dt.date(2026, 4, 24),
+                    "trigger_price": Decimal("69.00"),
+                    "channel_high": Decimal("68.50"),
+                    "channel_low": Decimal("65.00"),
+                    "lookback_sessions": 3,
+                    "reason": "close 69.00 broke above prior 3-session high 68.50",
+                }
+            ],
+        }
+
 
 def test_latest_scores_endpoint_returns_scanner_rows() -> None:
     app = create_app()
@@ -223,6 +280,20 @@ def test_daily_calibration_endpoint_returns_model_health_metrics() -> None:
     assert payload["accuracy"] == 0.5
     assert payload["confusion"]["green"]["missing"] == 1
     assert payload["top_tickers"][0]["ticker"] == "aa"
+
+
+def test_symbol_chart_endpoint_returns_overlay_data() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get("/api/financial/signals/aa/chart?sessions=30")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ticker"] == "AA"
+    assert payload["bars"][0]["daily_channel_high"] == "67.00"
+    assert payload["events"][0]["timeframe"] == "daily"
 
 
 def test_symbol_signal_detail_404_when_no_latest_score() -> None:

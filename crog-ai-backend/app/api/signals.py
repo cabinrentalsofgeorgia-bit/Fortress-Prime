@@ -159,6 +159,41 @@ class DailyCalibrationResponse(BaseModel):
     top_tickers: list[TickerCalibrationStats]
 
 
+class SymbolChartBar(BaseModel):
+    ticker: str
+    bar_date: dt.date
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    volume: int | None
+    daily_channel_high: Decimal | None
+    daily_channel_low: Decimal | None
+    weekly_channel_high: Decimal | None
+    weekly_channel_low: Decimal | None
+    monthly_channel_high: Decimal | None
+    monthly_channel_low: Decimal | None
+
+
+class SymbolChartEvent(BaseModel):
+    ticker: str
+    timeframe: str
+    state: str
+    bar_date: dt.date
+    trigger_price: Decimal
+    channel_high: Decimal
+    channel_low: Decimal
+    lookback_sessions: int
+    reason: str
+
+
+class SymbolSignalChart(BaseModel):
+    ticker: str
+    sessions: int
+    bars: list[SymbolChartBar]
+    events: list[SymbolChartEvent]
+
+
 def _state_label(value: int) -> str:
     if value > 0:
         return "green"
@@ -261,6 +296,19 @@ def daily_calibration(
         parameter_set=parameter_set,
         top_tickers=top_tickers,
     )
+
+
+@router.get("/{ticker}/chart", response_model=SymbolSignalChart)
+def symbol_signal_chart(
+    ticker: Annotated[str, Path(min_length=1, max_length=20)],
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    sessions: Annotated[int, Query(ge=30, le=500)] = 180,
+    as_of: dt.date | None = None,
+) -> dict[str, object]:
+    chart = store.symbol_chart(ticker=ticker.upper(), sessions=sessions, as_of=as_of)
+    if not chart["bars"]:
+        raise HTTPException(status_code=404, detail=f"chart data not found for {ticker.upper()}")
+    return chart
 
 
 @router.get("/{ticker}", response_model=SymbolSignalDetail)

@@ -193,6 +193,41 @@ export interface FinancialSymbolSignalDetail {
   recent_transitions: FinancialSignalTransition[];
 }
 
+export interface FinancialSignalChartBar {
+  ticker: string;
+  bar_date: string;
+  open: string | number;
+  high: string | number;
+  low: string | number;
+  close: string | number;
+  volume: number | null;
+  daily_channel_high: string | number | null;
+  daily_channel_low: string | number | null;
+  weekly_channel_high: string | number | null;
+  weekly_channel_low: string | number | null;
+  monthly_channel_high: string | number | null;
+  monthly_channel_low: string | number | null;
+}
+
+export interface FinancialSignalChartEvent {
+  ticker: string;
+  timeframe: "daily" | "weekly" | "monthly";
+  state: "green" | "red" | "neutral";
+  bar_date: string;
+  trigger_price: string | number;
+  channel_high: string | number;
+  channel_low: string | number;
+  lookback_sessions: number;
+  reason: string;
+}
+
+export interface FinancialSignalChartResponse {
+  ticker: string;
+  sessions: number;
+  bars: FinancialSignalChartBar[];
+  events: FinancialSignalChartEvent[];
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

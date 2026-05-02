@@ -10,6 +10,7 @@ from psycopg.rows import dict_row
 
 from app.database import connect
 from app.signals.calibration_repository import fetch_daily_calibration
+from app.signals.chart_repository import fetch_symbol_chart
 
 
 class SignalDataStore(Protocol):
@@ -42,6 +43,14 @@ class SignalDataStore(Protocol):
         ticker: str | None = None,
         parameter_set: str | None = None,
         top_tickers: int = 20,
+    ) -> dict[str, Any]: ...
+
+    def symbol_chart(
+        self,
+        *,
+        ticker: str,
+        sessions: int,
+        as_of: dt.date | None = None,
     ) -> dict[str, Any]: ...
 
 
@@ -379,3 +388,14 @@ class PostgresSignalDataStore:
                 parameter_set=parameter_set,
                 top_tickers=top_tickers,
             ).as_json_dict()
+
+    def symbol_chart(
+        self,
+        *,
+        ticker: str,
+        sessions: int,
+        as_of: dt.date | None = None,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_symbol_chart(conn, ticker=ticker, sessions=sessions, as_of=as_of)

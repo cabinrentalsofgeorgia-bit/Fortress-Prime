@@ -13,6 +13,16 @@ import {
   Search,
   ShieldAlert,
 } from "lucide-react";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceDot,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,12 +40,14 @@ import {
   useFinancialLatestSignals,
   useFinancialDailyCalibration,
   useFinancialSignalDetail,
+  useFinancialSignalChart,
   useFinancialSignalTransitions,
   useFinancialWatchlistCandidates,
 } from "@/lib/hooks";
 import type {
   FinancialDailyCalibrationResponse,
   FinancialLatestSignal,
+  FinancialSignalChartResponse,
   FinancialSignalTransition,
   FinancialTransitionType,
   FinancialWatchlistCandidate,
@@ -532,14 +544,179 @@ function CalibrationPanel({
   );
 }
 
+function numericValue(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function triangleDotColor(state: string): string {
+  if (state === "green") return "hsl(142, 71%, 45%)";
+  if (state === "red") return "hsl(0, 84%, 60%)";
+  return "hsl(var(--muted-foreground))";
+}
+
+function triangleDotRadius(timeframe: string): number {
+  if (timeframe === "monthly") return 6;
+  if (timeframe === "weekly") return 5;
+  return 4;
+}
+
+function SignalChart({
+  chart,
+  loading,
+  error,
+}: {
+  chart: FinancialSignalChartResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  const chartRows = useMemo(
+    () =>
+      chart?.bars.map((bar) => ({
+        date: bar.bar_date,
+        close: numericValue(bar.close),
+        dailyHigh: numericValue(bar.daily_channel_high),
+        dailyLow: numericValue(bar.daily_channel_low),
+        weeklyHigh: numericValue(bar.weekly_channel_high),
+        weeklyLow: numericValue(bar.weekly_channel_low),
+      })) ?? [],
+    [chart],
+  );
+
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Chart overlay unavailable.
+      </div>
+    );
+  }
+
+  if (loading && !chart) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading chart overlay…</div>;
+  }
+
+  if (!chart || chartRows.length === 0) {
+    return (
+      <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+        No chart data.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="h-72 min-h-72 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartRows} margin={{ top: 12, right: 14, bottom: 8, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis
+              dataKey="date"
+              minTickGap={28}
+              tickFormatter={(value) => String(value).slice(5)}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={(value) => formatPrice(value)}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              width={48}
+            />
+            <Tooltip
+              formatter={(value, name) => [formatPrice(value as number), String(name)]}
+              labelFormatter={(label) => formatDate(String(label))}
+            />
+            <Line
+              type="monotone"
+              dataKey="close"
+              name="Close"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="dailyHigh"
+              name="Daily High"
+              stroke="hsl(142, 71%, 45%)"
+              strokeDasharray="4 4"
+              strokeWidth={1}
+              dot={false}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="dailyLow"
+              name="Daily Low"
+              stroke="hsl(0, 84%, 60%)"
+              strokeDasharray="4 4"
+              strokeWidth={1}
+              dot={false}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="weeklyHigh"
+              name="Weekly High"
+              stroke="hsl(217, 91%, 60%)"
+              strokeDasharray="2 5"
+              strokeWidth={1}
+              dot={false}
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="weeklyLow"
+              name="Weekly Low"
+              stroke="hsl(280, 67%, 55%)"
+              strokeDasharray="2 5"
+              strokeWidth={1}
+              dot={false}
+              isAnimationActive={false}
+            />
+            {chart.events.slice(-40).map((event) => (
+              <ReferenceDot
+                key={`${event.timeframe}-${event.state}-${event.bar_date}-${event.trigger_price}`}
+                x={event.bar_date}
+                y={numericValue(event.trigger_price) ?? 0}
+                r={triangleDotRadius(event.timeframe)}
+                fill={triangleDotColor(event.state)}
+                stroke="hsl(var(--background))"
+                strokeWidth={2}
+                ifOverflow="extendDomain"
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <span>{chart.sessions} sessions</span>
+        <span>{chart.events.length} triangle events</span>
+      </div>
+    </div>
+  );
+}
+
 function SymbolPanel({
   signal,
   transitions,
   loading,
+  chart,
+  chartLoading,
+  chartError,
 }: {
   signal: FinancialLatestSignal | null;
   transitions: FinancialSignalTransition[];
   loading: boolean;
+  chart: FinancialSignalChartResponse | null;
+  chartLoading: boolean;
+  chartError: boolean;
 }) {
   if (loading && !signal) {
     return (
@@ -577,6 +754,14 @@ function SymbolPanel({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Chart Overlay</h2>
+            <span className="text-xs text-muted-foreground">{chart?.sessions ?? 0} sessions</span>
+          </div>
+          <SignalChart chart={chart} loading={chartLoading} error={chartError} />
+        </div>
+
         <div className="grid gap-3 text-sm sm:grid-cols-3">
           <div className="border border-border p-3">
             <p className="text-xs text-muted-foreground">Monthly Channel</p>
@@ -639,6 +824,7 @@ export function HedgeFundSignalsShell() {
     transition_limit: 12,
     lookback_days: 30,
   });
+  const chart = useFinancialSignalChart(activeTicker, { sessions: 180 });
 
   const selectedSignal =
     detail.data?.latest ?? signals.find((signal) => signal.ticker === activeTicker) ?? null;
@@ -658,6 +844,7 @@ export function HedgeFundSignalsShell() {
     latest.isFetching ||
     transitions.isFetching ||
     detail.isFetching ||
+    chart.isFetching ||
     watchlistCandidates.isFetching ||
     dailyCalibration.isFetching;
 
@@ -683,6 +870,7 @@ export function HedgeFundSignalsShell() {
               void latest.refetch();
               void transitions.refetch();
               void detail.refetch();
+              void chart.refetch();
               void watchlistCandidates.refetch();
               void dailyCalibration.refetch();
             }}
@@ -839,6 +1027,9 @@ export function HedgeFundSignalsShell() {
             signal={selectedSignal}
             transitions={selectedTransitions}
             loading={detail.isLoading}
+            chart={chart.data ?? null}
+            chartLoading={chart.isLoading}
+            chartError={chart.isError}
           />
 
           <Card>

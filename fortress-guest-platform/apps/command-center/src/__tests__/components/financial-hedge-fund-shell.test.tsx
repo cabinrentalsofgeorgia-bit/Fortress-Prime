@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { HedgeFundSignalsShell } from "@/app/(dashboard)/financial/hedge-fund/_components/hedge-fund-signals-shell";
@@ -74,6 +75,67 @@ const transitions = [
     notes: "daily triangle green",
   },
 ];
+
+const chartData = {
+  ticker: "AA",
+  sessions: 2,
+  bars: [
+    {
+      ticker: "AA",
+      bar_date: "2026-04-23",
+      open: "66.00",
+      high: "69.00",
+      low: "65.00",
+      close: "68.00",
+      volume: 1000,
+      daily_channel_high: "67.00",
+      daily_channel_low: "64.00",
+      weekly_channel_high: "70.00",
+      weekly_channel_low: "60.00",
+      monthly_channel_high: "75.00",
+      monthly_channel_low: "55.00",
+    },
+    {
+      ticker: "AA",
+      bar_date: "2026-04-24",
+      open: "68.00",
+      high: "70.00",
+      low: "66.00",
+      close: "69.00",
+      volume: 1200,
+      daily_channel_high: "69.00",
+      daily_channel_low: "65.00",
+      weekly_channel_high: "70.00",
+      weekly_channel_low: "61.00",
+      monthly_channel_high: "75.00",
+      monthly_channel_low: "55.00",
+    },
+  ],
+  events: [
+    {
+      ticker: "AA",
+      timeframe: "daily",
+      state: "green",
+      bar_date: "2026-04-24",
+      trigger_price: "69.00",
+      channel_high: "68.50",
+      channel_low: "65.00",
+      lookback_sessions: 3,
+      reason: "close broke above channel",
+    },
+  ],
+};
+
+vi.mock("recharts", () => ({
+  CartesianGrid: () => null,
+  Line: () => null,
+  LineChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  ReferenceDot: () => null,
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Tooltip: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+}));
 
 const watchlistCandidates = {
   generated_at: "2026-05-02T18:00:00Z",
@@ -182,6 +244,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialSignalChart: () => ({
+    data: chartData,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useFinancialWatchlistCandidates: () => ({
     data: watchlistCandidates,
     isError: false,
@@ -212,5 +281,7 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("BUY")).toBeInTheDocument();
     expect(screen.getByText("Calibration Baseline")).toBeInTheDocument();
     expect(screen.getByText("62.1%")).toBeInTheDocument();
+    expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
+    expect(screen.getByText("1 triangle events")).toBeInTheDocument();
   });
 });

@@ -14,6 +14,7 @@ import type {
   FinancialLatestSignal,
   FinancialDailyCalibrationResponse,
   FinancialSignalTransition,
+  FinancialSignalChartResponse,
   FinancialSymbolSignalDetail,
   FinancialTransitionType,
   FinancialWatchlistCandidatesResponse,
@@ -118,6 +119,23 @@ export function useFinancialSignalDetail(
   return useQuery<FinancialSymbolSignalDetail>({
     queryKey: ["financial", "signals", "detail", normalized, params],
     queryFn: () => api.get(`/api/financial/signals/${encodeURIComponent(normalized)}`, params),
+    enabled: Boolean(normalized),
+    refetchInterval: 60_000,
+    staleTime: 15_000,
+  });
+}
+
+export function useFinancialSignalChart(
+  ticker: string | null,
+  params?: {
+    sessions?: number;
+    as_of?: string;
+  },
+) {
+  const normalized = ticker?.trim().toUpperCase() ?? "";
+  return useQuery<FinancialSignalChartResponse>({
+    queryKey: ["financial", "signals", "chart", normalized, params],
+    queryFn: () => api.get(`/api/financial/signals/${encodeURIComponent(normalized)}/chart`, params),
     enabled: Boolean(normalized),
     refetchInterval: 60_000,
     staleTime: 15_000,
