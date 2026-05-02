@@ -91,6 +91,23 @@ Implications:
 2. Retrieval against the v2 collection is returning the same evidence as v1 for these queries — i.e. the v2 reindex did not perturb the retrieval ranking for §2, §4, §7, §8 inputs on this case.
 3. The Constitution §12.3 regression contract is highly diagnostic on this stack: any meaningful change shows up as a content change, not noise. Greedy decoding makes per-section md5 a load-bearing comparator.
 
+### Correction (added 2026-05-02 post-PR-#360 smoke)
+
+The byte-identity claim above is over-strong. A same-day, same-code, same-corpus, same v2 alias smoke run (during PR #360 parameterization) produced 9/11 sections byte-identical to this morning's `20260502T125938Z` regression run, but **§5 and §9-aug diverged**:
+
+- §5: 9,813 chars (this run) vs 9,270 chars (smoke run) — −5.5%, 105 diff lines, format-compliant in both
+- §9-aug: 5,918 chars (this run) vs 6,072 chars (smoke run) — +2.6%, 22 diff lines, format-compliant in both
+
+Therefore the accurate determinism statement is:
+
+- Orchestrator §1–§4, §6–§9-raw, §10 are deterministic.
+- Orchestrator §5 is **non-deterministic** (likely chunk-ranking ties in retrieval or longer-output token-stream divergence amplifying floating-point noise).
+- Runner's post-compose §9 LiteLLM call is **non-deterministic** (`legal-reasoning` alias does not pin temperature=0 / fixed seeds the way the direct vLLM call to Nemotron-3-Super does).
+
+Both divergent sections still pass Constitution §12.3 (within ±5%, format-compliant, finish=stop where applicable). The regression contract isn't broken; it just isn't a clean byte-identity gate for §5 and §9-aug. Operator must read content deltas there to call noise-vs-shift.
+
+Filed for read-only investigation as **GH #361** (Track A v3 / Phase B v0.1: §5 + §9-aug pre-existing orchestrator non-determinism, P3). The original regression-vs-baseline conclusion in this report (v2 alias swap canonical, §5 +56.5% is strategic improvement) is unchanged — the +56.5% delta cleanly exceeds the run-to-run noise floor.
+
 ## 7. Pass-criteria scorecard
 
 | Gate | Criterion | Result |
