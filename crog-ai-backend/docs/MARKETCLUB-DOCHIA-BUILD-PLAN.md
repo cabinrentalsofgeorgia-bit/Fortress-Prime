@@ -70,12 +70,13 @@ Dochia-derived until independent truth data exists.
 - Scanner: recent daily/weekly/monthly triangles. Backend API and first
   Command Center UI route complete.
 - Symbol page: chart with triangle overlays and explanation drawer. Backend
-  detail endpoint complete; chart overlay UI remains.
+  detail endpoint and first chart overlay UI complete.
 - Portfolio board: first signal-lane/watchlist context complete; true holdings
   exposure remains.
 - Alert inbox: new signals, reversals, whipsaw warnings.
 - Backtest lab: setup history and return distribution.
-- Model health: data freshness, failed tickers, drift, calibration metrics.
+- Model health: daily calibration baseline complete; freshness, failed-ticker,
+  and drift views remain.
 
 ## API Contract
 
@@ -88,6 +89,7 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/transitions` | recent signal-change alert feed |
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
+| `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
 Useful query params:
@@ -96,6 +98,7 @@ Useful query params:
 - `transitions`: `limit`, `ticker`, `transition_type`, `since`, `lookback_days`
 - `watchlist-candidates`: `limit`
 - `calibration/daily`: `since`, `until`, `ticker`, `parameter_set`, `top_tickers`
+- `{ticker}/chart`: `sessions`, `as_of`
 - `{ticker}`: `transition_limit`, `lookback_days`
 
 ## Operations
@@ -141,12 +144,14 @@ Useful query params:
   24,204 MarketClub daily observations: 91.44% coverage, 62.05% daily color
   accuracy on covered observations, score MAE 43.94.
 - Surfaced the calibration baseline in the Hedge Fund UI.
+- Added chart-data endpoint and UI chart overlay with close, daily/weekly
+  channel bands, and generated triangle event markers.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
   `https://crog-ai.com/financial/hedge-fund`.
-- Verification passed: 19 backend tests, focused UI test, eslint, TypeScript,
+- Verification passed: 21 backend tests, focused UI test, eslint, TypeScript,
   production build, and live BFF reads are clean on spark-2.
 
-Next clean build step: add chart overlays and begin calibration refinement
-against the daily truth corpus.
+Next clean build step: begin calibration refinement against the daily truth
+corpus.
