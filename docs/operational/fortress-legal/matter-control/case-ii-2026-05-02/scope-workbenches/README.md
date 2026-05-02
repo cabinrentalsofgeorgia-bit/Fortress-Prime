@@ -6,8 +6,9 @@ Use order:
 
 1. PSA repair-obligation matrix
 2. River Heights repair-obligation line-item matrix
-3. Case I judgment-scope matrix
-4. Closing-delay chronology workbench
+3. Fish Trap repair-obligation line-item matrix
+4. Case I judgment-scope matrix
+5. Closing-delay chronology workbench
 
 Repo safety:
 
@@ -16,5 +17,6 @@ Repo safety:
 - The detailed closing chronology using Argo/counsel email source details is NAS-only privileged work product.
 - The row-level inspection-comments spreadsheet summary is NAS-only privileged work product; repo docs only record the curation posture.
 - The River Heights line-item matrix now includes completion-evidence and survival/waiver gates; privileged spreadsheet row analysis remains NAS-only.
+- The Fish Trap line-item matrix uses Amendment #3 and maps possible 2025 overlap without treating same-topic items as proof.
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.

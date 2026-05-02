@@ -19,6 +19,7 @@ This is not a filing and not legal advice. It is a control matrix for testing 7I
 | River Heights line-item matrix | `scope-workbenches/river-heights-repair-obligation-line-item-matrix-7il-ndga-ii-2026-05-02.md` | 31-item Amendment #2 written-obligation filter with completion-evidence and survival/waiver gates added |
 | Inspection-comments comparison spreadsheet | NAS-only privileged staging; repo-safe addendum in `evidence-traceability/inspection-comments-spreadsheet-curation-addendum-7il-ndga-ii-2026-05-02.md` | Triage/control artifact; not the source report and not standalone repair proof |
 | 2025 Fish Trap inspection | `curated/documents/02_complaint_exhibits/Exhibit_H_2025_Inspection_Fish_Trap.pdf`; source PDF also found in privileged email staging | Updated inspection alleged by plaintiff; Fish Trap source control strengthened |
+| Fish Trap line-item matrix | `scope-workbenches/fish-trap-repair-obligation-line-item-matrix-7il-ndga-ii-2026-05-02.md` | Amendment #3 written-obligation filter with possible 2025 overlap mapped; completion/survival proof remains open |
 | Specific-performance order | `curated/documents/02_complaint_exhibits/Exhibit_A_Case-I_Doc134_Specific_Performance_Order.pdf` | Plaintiff says order did not extinguish repair obligations |
 | Final judgment | `curated/documents/02_complaint_exhibits/Exhibit_B_Case-I_Doc135_Final_Judgment.pdf` | Judgment closed sale obligation in Case I |
 
@@ -52,7 +53,7 @@ Do not accept "inspection item = repair obligation." Every alleged repair item m
 | Issue | Plaintiff Theory | Source To Verify | Fortress Response Test | Evidence Needed | Current Status |
 |---|---|---|---|---|---|
 | Maintain substantially same condition | Complaint paragraph 12 says PSAs required preservation/maintenance through closing. | Ex. C/D; exact Section C(3) language; closing documents | Was this a through-closing covenant only, or a post-closing survival obligation? | OCR/manual review of PSA base text; closing package; deed/settlement statements | Open |
-| Repairs identified during inspection | Complaint paragraphs 14-16 tie 2021 and 2025 inspections to repair obligations. | Ex. E/F/G/H and any repair addenda | Which inspection items were merely observed versus expressly accepted as seller obligations? | River Heights line-item matrix and Fish Trap comparison | River Heights v2 completion/survival gates added; Fish Trap open |
+| Repairs identified during inspection | Complaint paragraphs 14-16 tie 2021 and 2025 inspections to repair obligations. | Ex. E/F/G/H and any repair addenda | Which inspection items were merely observed versus expressly accepted as seller obligations? | River Heights line-item matrix and Fish Trap comparison | River Heights v2 complete; Fish Trap v1 overlap matrix built |
 | Expressly agreed repairs | Complaint paragraph 15 says Knight expressly agreed to specific repairs. | PSA amendments, repair addenda, written correspondence | Identify exact written agreement for each alleged repair. If none, flag as unsupported. | Amendments; emails; closing communications; counsel review | Open |
 | River Heights inspection characterization | Complaint cites Exhibit G / 2025 updated inspection, but operator corrected that the controlling report originated in Case I / 2021. | 2021 River Heights report in GAND/Dee McBee production; Terry Wilson Certificate pages 23-26; related privileged spreadsheet lead | Force the distinction between a distinct 2025 report and a 2021-origin report plus Amendment #2 seller-fix filter used in a continuing-repair theory. | Demand/source-verify any distinct 2025 River Heights report; map only Amendment #2 written repair obligations | P1 gap - 2021 source and Wilson repair pin located, characterization unresolved |
 | 2025 Fish Trap report | Complaint cites Exhibit H. | Ex. H | Compare only like-for-like items against 2021 and written obligations. | 2021/2025 item comparison | Open |
@@ -74,5 +75,5 @@ Do not accept "inspection item = repair obligation." Every alleged repair item m
 3. Use the extracted inspection-comments spreadsheet only as a privileged triage lead, not as standalone proof.
 4. Locate closing-package reservation/waiver records and independent completion proof for River Heights.
 5. Separate "repair listed in report" from "repair contractually promised."
-6. Build the Fish Trap line-item comparison using the same written-obligation discipline.
+6. Locate Fish Trap completion evidence and closing-package reservation/waiver records.
 7. Keep Alicia Argo and other counsel/closing communications privileged unless sanitized by counsel/operator.
