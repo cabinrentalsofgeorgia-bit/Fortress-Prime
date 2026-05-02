@@ -12,7 +12,8 @@ Use order:
 6. Case I-to-Case II overlap chart
 7. Easement validity source map
 8. GNRR crossing and easement instrument comparison
-9. Closing-delay chronology workbench
+9. DOT / railroad right-of-way source index
+10. Closing-delay chronology workbench
 
 Repo safety:
 
@@ -25,6 +26,6 @@ Repo safety:
 - The closing-package inventory is repo-safe; privileged closing/counsel email source details remain NAS-only.
 - The Case I-to-Case II overlap chart is repo-safe and source-anchored to public/court-record materials; counterclaim theories remain counsel-review only.
 - The easement validity source map is repo-safe; counsel advice/drafts, opposing-side threat posture, and legal strategy remain NAS-only privileged work product.
-- The GNRR crossing comparison is repo-safe and source-pinned to Case I Exhibit L; DOT/right-of-way title records remain a source gate.
+- The GNRR crossing comparison is repo-safe and source-pinned to Case I Exhibit L; the DOT / railroad source index adds official public corroboration while leaving exact lease/title records as a source gate.
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.

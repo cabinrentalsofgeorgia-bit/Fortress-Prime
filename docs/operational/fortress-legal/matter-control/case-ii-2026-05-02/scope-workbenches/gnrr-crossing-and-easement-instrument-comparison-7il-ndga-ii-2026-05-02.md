@@ -15,6 +15,7 @@ This is not a filing and not legal advice. It is a source-control comparison for
 | 2021 Thor James easement | `curated/documents/case-i-context/04_deposition_exhibits_7il/Exh._B___2021.03.07_Thor_James_Easement.pdf` | `d0f1932aec2b26f8a36b389e18420aa0496b5d5d8b2ced848c6fd1c3d7a0d371` | Prior access/path easement between Knight and James. |
 | 2025 recorded easement | `curated/documents/02_complaint_exhibits/Exhibit_I_Unauthorized_Easement_2025-03-17.pdf` | `43cccf435c5128dac2cf5139b308e01c057ed23c39433e6746626e7ebc306b64` | Operative recorded instrument challenged by 7IL. |
 | Case I Doc. 78 MSJ order | `curated/documents/case-i-context/03_judgment_and_orders/78_Order_on_MSJs.pdf` | Curated Case I context | Court summary of easement amendment disputes and Wilson drafting responsibility. |
+| DOT / railroad right-of-way source index | `dot-railroad-right-of-way-source-index-7il-ndga-ii-2026-05-02.md` | Repo-safe companion index | Adds official public GDOT/FRA corroboration and records-pull controls; exact lease/title records remain open. |
 
 ## GNRR Crossing Agreement Source Findings
 
@@ -39,7 +40,7 @@ This is not a filing and not legal advice. It is a source-control comparison for
 
 ## DOT / Right-of-Way Status
 
-No standalone Georgia DOT/right-of-way title record was located by filename search in this pass. The GNRR crossing agreement itself is the current source for the statement that the railroad leases the relevant railroad-purpose property from Georgia DOT. That is enough to create the source gate, not enough to close it.
+The DOT / railroad right-of-way source index now adds official public corroboration that the Blue Ridge to McCaysville GNRR excursion-service segment is described in a GDOT/FRA-hosted crossing action plan as operating on a GDOT-owned railroad line. The GNRR crossing agreement remains the current exact source for MP 386.3 and for the July 17, 1998 GDOT lease reference. No standalone Georgia DOT lease, right-of-way title record, parcel map, assignment, or current crossing-status file is pinned yet. That is enough to strengthen the source gate, not enough to close it.
 
 ## Count Mapping
 
@@ -51,7 +52,7 @@ No standalone Georgia DOT/right-of-way title record was located by filename sear
 
 ## Immediate Work Orders
 
-1. Pull the underlying Georgia DOT / railroad lease and right-of-way records referenced by the GNRR crossing agreement.
+1. Use the DOT / railroad source index to prepare a targeted GDOT/GNRR records request for the July 17, 1998 lease, right-of-way map/title records, MP 386.3 crossing file, and any 2025 operator/control documents.
 2. Confirm whether Georgia Northeastern Railroad Company LLC or any successor controlled the crossing in 2025.
 3. Build a page-pinned side-by-side table of user classes, paths, maintenance, insurance, revocation, and assignment language across the 2021 easement, 2025 recorded easement, and GNRR agreement.
 4. Tie this comparison to the River Heights title/closing package once Wilson Pruitt/raw closing materials land.
