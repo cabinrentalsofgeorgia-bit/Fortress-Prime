@@ -38,6 +38,7 @@ import os
 import re
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from email.header import decode_header
 from email.message import Message
 from typing import Any, Optional
@@ -481,11 +482,39 @@ class ImapTransport:
             )
         return []
 
-    def _fetch_with(self, conn: imaplib.IMAP4_SSL) -> list[FetchedEmail]:
-        _, msg_nums = conn.search(None, "UNSEEN")
-        if not msg_nums or not msg_nums[0]:
+    # Issue #260 — banded SEARCH defends against >1MB UID list overflow on
+    # long-history mailboxes (gary-gk). Mirrors legal_mail_ingester FLOS
+    # Phase 0a v1.1 §3.2 banded SEARCH pattern. Captain has no persistent
+    # last_patrol_at state today, so the floor is a hardcoded 30-day window.
+    # TODO: per-mailbox last_patrol_at tracking would tighten this to
+    # last_patrol_at - 1d; tracked separately.
+    _COLD_START_FLOOR_DAYS = 30
+
+    def _search_unseen_banded(
+        self, conn: imaplib.IMAP4_SSL
+    ) -> list[bytes]:
+        since_dt = datetime.now(timezone.utc) - timedelta(
+            days=self._COLD_START_FLOOR_DAYS
+        )
+        since_str = since_dt.strftime("%d-%b-%Y")
+        typ, data = conn.search(None, "UNSEEN", "SINCE", since_str)
+        if typ != "OK":
+            logger.warning(
+                "captain_imap_search_failed",
+                mailbox=self.mailbox.name,
+                since=since_str,
+                response_type=typ,
+            )
             return []
-        ids = msg_nums[0].split()[: self.max_messages]
+        if not data or not data[0]:
+            return []
+        return data[0].split()
+
+    def _fetch_with(self, conn: imaplib.IMAP4_SSL) -> list[FetchedEmail]:
+        ids_all = self._search_unseen_banded(conn)
+        if not ids_all:
+            return []
+        ids = ids_all[: self.max_messages]
         out: list[FetchedEmail] = []
         for mid in ids:
             try:
