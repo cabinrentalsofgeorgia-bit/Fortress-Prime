@@ -63,6 +63,7 @@ Token auto-renewal is handled transparently.
 
 import asyncio
 import re
+from collections import Counter
 from datetime import datetime, date, timedelta, timezone
 from typing import Dict, List, Optional, Any
 from decimal import Decimal
@@ -127,6 +128,27 @@ def is_streamline_circuit_placeholder(payload: Any) -> bool:
         and payload.get("_circuit_open") is True
         and payload.get("_stale") is True
     )
+
+
+def _sync_error_category(error: Any) -> str:
+    text = str(error)
+    for prefix in (
+        "Reservation ",
+        "Availability ",
+        "WorkOrder ",
+        "Agreement ",
+        "Financial enrichment",
+        "Revenue reconciliation",
+        "Owner sync",
+        "Housekeeping sync",
+        "Feedback sync",
+        "Notes sync",
+        "Authentication failed",
+        "Sync failed",
+    ):
+        if text.startswith(prefix):
+            return prefix.strip().split()[0]
+    return (text.split(":", 1)[0] or "Unknown")[:40]
 
 
 class StreamlineVRS:
@@ -337,6 +359,20 @@ class StreamlineVRS:
 
                 elif code == "E0014":
                     raise StreamlineMethodNotAllowed(f"{method}: {desc}")
+                elif method == "GetReservationNotes" and code == "E0013":
+                    self.log.warning(
+                        "reservation_notes_rate_limited",
+                        method=method,
+                        message=desc,
+                    )
+                    return {"notes": [], "_rate_limited": True}
+                elif method == "GetReservationNotes" and code == "E0021":
+                    self.log.debug(
+                        "reservation_notes_invalid_confirmation",
+                        method=method,
+                        message=desc,
+                    )
+                    return {"notes": []}
                 elif code.startswith("E"):
                     raise StreamlineVRSError(f"{method} error {code}: {desc}")
 
@@ -1808,11 +1844,13 @@ class StreamlineVRS:
 
                             guest = None
                             guest_phone = self._sanitize_phone(rr.get("guest_phone", ""))
-                            guest_email = rr.get("guest_email", "").strip()
+                            fallback_phone = f"sl-{sl_res_id}"[:20]
+                            guest_lookup_phone = guest_phone or fallback_phone
+                            guest_email = (rr.get("guest_email") or "").strip()
 
-                            if guest_phone:
+                            if guest_lookup_phone:
                                 gq = await db.execute(
-                                    select(Guest).where(Guest.phone_number == guest_phone)
+                                    select(Guest).where(Guest.phone_number == guest_lookup_phone)
                                 )
                                 guest = gq.scalar_one_or_none()
 
@@ -1826,7 +1864,7 @@ class StreamlineVRS:
                                 guest = Guest(
                                     first_name=rr.get("guest_first_name") or "Unknown",
                                     last_name=rr.get("guest_last_name") or sl_res_id,
-                                    phone_number=guest_phone,
+                                    phone_number=guest_lookup_phone,
                                     email=guest_email or None,
                                     guest_source="streamline_vrs",
                                 )
@@ -1981,7 +2019,7 @@ class StreamlineVRS:
                     ))
                     .where(Reservation.confirmation_code.isnot(None))
                     .order_by(desc(Reservation.check_in_date))
-                    .limit(200)
+                    .limit(25)
                 )
                 res_needing_notes = all_res_q.scalars().all()
                 batch = 0
@@ -2068,7 +2106,7 @@ class StreamlineVRS:
 
                         result = await db.execute(
                             select(WorkOrder).where(
-                                WorkOrder.title == f"SL-{sl_wo_id}"
+                                WorkOrder.ticket_number == f"SL-{sl_wo_id}"
                             )
                         )
                         existing_wo = result.scalar_one_or_none()
@@ -2091,14 +2129,24 @@ class StreamlineVRS:
                                 )
                             )
                             prop = prop_result.scalar_one_or_none()
+                            if not prop:
+                                summary["work_orders"]["errors"] += 1
+                                summary["errors"].append(f"WorkOrder SL-{sl_wo_id}: property_not_found")
+                                continue
 
                             wo = WorkOrder(
+                                ticket_number=f"SL-{sl_wo_id}",
                                 title=f"SL-{sl_wo_id}",
-                                description=rwo.get("description") or rwo.get("subject", ""),
-                                category=rwo.get("category", "maintenance"),
-                                priority=rwo.get("priority", "medium"),
+                                description=(
+                                    rwo.get("description")
+                                    or rwo.get("subject")
+                                    or "Imported from Streamline work order."
+                                ),
+                                category=rwo.get("category") or "maintenance",
+                                priority=rwo.get("priority") or "medium",
                                 status="open",
-                                property_id=prop.id if prop else None,
+                                property_id=prop.id,
+                                created_by="streamline_vrs",
                             )
                             db.add(wo)
                             await db.flush()
@@ -2278,6 +2326,8 @@ class StreamlineVRS:
             # (closes the Phase 2/6 ordering gap)
             self.log.info("sync_phase_6_5_revenue_reconciliation")
             try:
+                from sqlalchemy import text
+
                 await db.commit()
                 recon_query = await db.execute(
                     text("""
@@ -2638,6 +2688,7 @@ class StreamlineVRS:
                 for k in ("properties", "reservation_notes", "work_orders")
             ),
             errors=len(summary["errors"]),
+            error_categories=dict(Counter(_sync_error_category(error) for error in summary["errors"])),
         )
 
         return summary

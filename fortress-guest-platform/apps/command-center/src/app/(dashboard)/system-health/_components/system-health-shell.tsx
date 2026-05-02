@@ -11,6 +11,7 @@ import { ServicesGrid } from "./services-grid";
 import { DatabaseStats } from "./database-stats";
 import { EmailSensorGrid } from "./email-sensor-grid";
 import { StreamlineSyncButton } from "./streamline-sync-button";
+import { OperationsHealthGrid } from "./operations-health-grid";
 import { InfrastructureRadar } from "./infrastructure-radar";
 import {
   Activity,
@@ -174,7 +175,7 @@ export function SystemHealthShell() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <StreamlineSyncButton />
+          <StreamlineSyncButton health={data.integrations?.streamline_sync} />
           <span
             className={`text-xs text-muted-foreground flex items-center gap-1 ${
               wsStatus === "connected" ? "" : "text-amber-600 dark:text-amber-400"
@@ -235,6 +236,8 @@ export function SystemHealthShell() {
 
       {/* Services */}
       {data.services && <ServicesGrid services={data.services} />}
+
+      <OperationsHealthGrid health={data.integrations?.operations} />
 
       {/* Databases */}
       {data.databases && <DatabaseStats databases={data.databases} />}

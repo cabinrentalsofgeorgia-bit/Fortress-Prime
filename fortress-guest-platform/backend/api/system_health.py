@@ -9,10 +9,14 @@ systemd units instead of Docker-only service matrix.
 from __future__ import annotations
 
 import asyncio
+import ast
 import os
 import platform
+import re
 import socket
+import subprocess
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Any
 
@@ -53,8 +57,6 @@ def _proc_uptime_seconds() -> float:
 
 def _systemd_is_active(unit: str) -> bool:
     try:
-        import subprocess
-
         r = subprocess.run(
             ["systemctl", "is-active", unit],
             capture_output=True,
@@ -65,6 +67,121 @@ def _systemd_is_active(unit: str) -> bool:
         return r.stdout.strip() == "active"
     except Exception:
         return False
+
+
+def _recent_unit_lines(unit: str, *, lines: int = 120) -> list[str]:
+    try:
+        r = subprocess.run(
+            ["journalctl", "-u", unit, "-n", str(lines), "--no-pager", "-o", "cat"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except Exception as exc:
+        logger.warning("journalctl_probe_failed", unit=unit, error=str(exc)[:200])
+        return []
+    if r.returncode != 0:
+        logger.warning("journalctl_probe_unavailable", unit=unit, error=r.stderr[:200])
+        return []
+    return [line.strip() for line in r.stdout.splitlines() if line.strip()]
+
+
+def _streamline_method_from_log(line: str) -> str | None:
+    match = re.search(r"\bmethod=([A-Za-z0-9_]+)", line)
+    return match.group(1) if match else None
+
+
+def _streamline_sync_health() -> dict[str, Any]:
+    unit = "fortress-sync-worker.service"
+    active = _systemd_is_active(unit)
+    lines = _recent_unit_lines(unit)
+    recent_circuit_lines = [
+        line for line in lines if "streamline_circuit_open" in line
+    ]
+    last_sync_line = next((line for line in reversed(lines) if "sync_complete" in line), None)
+    last_cycle_line = next((line for line in reversed(lines) if "sync_cycle_complete" in line), None)
+    method_counts = Counter(
+        method
+        for line in recent_circuit_lines
+        if (method := _streamline_method_from_log(line))
+    )
+    recent_circuit_methods = [
+        {"method": method, "count": count}
+        for method, count in method_counts.most_common(6)
+    ]
+    primary_circuit_method = recent_circuit_methods[0]["method"] if recent_circuit_methods else None
+
+    error_count: int | None = None
+    reservation_errors: int | None = None
+    properties_updated: int | None = None
+    reservations_updated: int | None = None
+    elapsed_seconds: float | None = None
+    error_categories: dict[str, int] = {}
+
+    if last_sync_line:
+        match = re.search(r"errors=(\d+)", last_sync_line)
+        if match:
+            error_count = int(match.group(1))
+        match = re.search(r"properties_updated=(\d+)", last_sync_line)
+        if match:
+            properties_updated = int(match.group(1))
+        match = re.search(r"error_categories=(\{.*?\})(?:\s+\w+=|$)", last_sync_line)
+        if match:
+            try:
+                parsed = ast.literal_eval(match.group(1))
+                if isinstance(parsed, dict):
+                    error_categories = {
+                        str(key): int(value)
+                        for key, value in parsed.items()
+                        if isinstance(value, int)
+                    }
+            except (SyntaxError, ValueError):
+                error_categories = {}
+
+    if last_cycle_line:
+        match = re.search(r"reservations=\{[^}]*'updated':\s*(\d+)", last_cycle_line)
+        if match:
+            reservations_updated = int(match.group(1))
+        match = re.search(r"reservations=\{[^}]*'errors':\s*(\d+)", last_cycle_line)
+        if match:
+            reservation_errors = int(match.group(1))
+        match = re.search(r"elapsed_seconds=([0-9.]+)", last_cycle_line)
+        if match:
+            elapsed_seconds = float(match.group(1))
+
+    degraded = bool(recent_circuit_lines or (error_count is not None and error_count > 0))
+    if not active:
+        status = "offline"
+    elif degraded:
+        status = "degraded"
+    else:
+        status = "online"
+
+    latest_circuit_line = recent_circuit_lines[-1] if recent_circuit_lines else None
+    return {
+        "service": "streamline",
+        "unit": unit,
+        "status": status,
+        "worker_active": active,
+        "circuit_open_recent": bool(recent_circuit_lines),
+        "stale_data_fallback": bool(
+            latest_circuit_line and "Serving stale data from local DB" in latest_circuit_line
+        ),
+        "recent_circuit_events": len(recent_circuit_lines),
+        "recent_circuit_methods": recent_circuit_methods,
+        "primary_circuit_method": primary_circuit_method,
+        "last_error_count": error_count,
+        "last_error_categories": error_categories,
+        "last_reservation_errors": reservation_errors,
+        "last_properties_updated": properties_updated,
+        "last_reservations_updated": reservations_updated,
+        "last_elapsed_seconds": elapsed_seconds,
+        "last_sync_summary": last_sync_line,
+        "last_cycle_summary": last_cycle_line,
+        "latest_circuit_summary": latest_circuit_line,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 async def _postgres_table_rows(db: AsyncSession) -> dict[str, int]:
@@ -111,6 +228,340 @@ async def _qdrant_collections() -> dict[str, dict[str, Any]]:
     except Exception as exc:
         logger.warning("qdrant_health_skipped", error=str(exc))
         return {}
+
+
+async def _table_exists(db: AsyncSession, table_name: str) -> bool:
+    result = await db.execute(text("SELECT to_regclass(:table_name)"), {"table_name": table_name})
+    return result.scalar_one_or_none() is not None
+
+
+async def _fetch_count(db: AsyncSession, sql: str, params: dict[str, Any] | None = None) -> int:
+    result = await db.execute(text(sql), params or {})
+    value = result.scalar_one_or_none()
+    return int(value or 0)
+
+
+async def _fetch_iso(db: AsyncSession, sql: str, params: dict[str, Any] | None = None) -> str | None:
+    result = await db.execute(text(sql), params or {})
+    value = result.scalar_one_or_none()
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+async def _operational_health(db: AsyncSession) -> dict[str, Any]:
+    checked_at = datetime.now(timezone.utc).isoformat()
+    channex = {
+        "status": "unknown",
+        "pending": 0,
+        "failed": 0,
+        "processed_24h": 0,
+        "last_event_at": None,
+    }
+    checkout_holds = {
+        "status": "unknown",
+        "active": 0,
+        "expired": 0,
+        "converted_24h": 0,
+        "stale_active": 0,
+    }
+    twilio = {
+        "status": "unknown",
+        "outbound_24h": 0,
+        "inbound_24h": 0,
+        "failed_24h": 0,
+        "needs_review": 0,
+    }
+    queues = {
+        "status": "unknown",
+        "queued": 0,
+        "running": 0,
+        "failed_24h": 0,
+        "vrs_queued": 0,
+        "vrs_failed_24h": 0,
+    }
+    quote_checkout = {
+        "status": "unknown",
+        "guest_pending": 0,
+        "guest_accepted_24h": 0,
+        "guest_created_24h": 0,
+        "stale_pending": 0,
+        "taylor_pending_approval": 0,
+        "parity_checks_24h": 0,
+        "parity_drifts_24h": 0,
+        "empty_streamline_prices_24h": 0,
+        "holds_missing_payment_intent": 0,
+        "last_quote_at": None,
+    }
+
+    if await _table_exists(db, "channex_webhook_events"):
+        channex["pending"] = await _fetch_count(
+            db,
+            "SELECT COUNT(*) FROM channex_webhook_events WHERE processing_status = 'pending'",
+        )
+        channex["failed"] = await _fetch_count(
+            db,
+            "SELECT COUNT(*) FROM channex_webhook_events WHERE processing_status = 'failed'",
+        )
+        channex["processed_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM channex_webhook_events
+            WHERE processing_status IN ('processed', 'succeeded')
+              AND created_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        channex["last_event_at"] = await _fetch_iso(
+            db,
+            "SELECT MAX(created_at) FROM channex_webhook_events",
+        )
+        channex["status"] = "degraded" if channex["failed"] or channex["pending"] > 25 else "online"
+
+    if await _table_exists(db, "reservation_holds"):
+        checkout_holds["active"] = await _fetch_count(
+            db,
+            "SELECT COUNT(*) FROM reservation_holds WHERE status = 'active'",
+        )
+        checkout_holds["expired"] = await _fetch_count(
+            db,
+            "SELECT COUNT(*) FROM reservation_holds WHERE status = 'expired'",
+        )
+        checkout_holds["converted_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM reservation_holds
+            WHERE status IN ('converted', 'confirmed')
+              AND updated_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        checkout_holds["stale_active"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM reservation_holds
+            WHERE status = 'active'
+              AND expires_at < NOW()
+            """,
+        )
+        quote_checkout["holds_missing_payment_intent"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM reservation_holds
+            WHERE status = 'active'
+              AND payment_intent_id IS NULL
+            """,
+        )
+        checkout_holds["status"] = "degraded" if checkout_holds["stale_active"] else "online"
+
+    quote_tables_seen = False
+    if await _table_exists(db, "guest_quotes"):
+        quote_tables_seen = True
+        quote_checkout["guest_pending"] = await _fetch_count(
+            db,
+            "SELECT COUNT(*) FROM guest_quotes WHERE status = 'pending'",
+        )
+        quote_checkout["guest_accepted_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM guest_quotes
+            WHERE status = 'accepted'
+              AND accepted_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        quote_checkout["guest_created_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM guest_quotes
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        quote_checkout["stale_pending"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM guest_quotes
+            WHERE status = 'pending'
+              AND expires_at < NOW()
+            """,
+        )
+        quote_checkout["last_quote_at"] = await _fetch_iso(
+            db,
+            "SELECT MAX(created_at) FROM guest_quotes",
+        )
+
+    if await _table_exists(db, "taylor_quote_requests"):
+        quote_tables_seen = True
+        quote_checkout["taylor_pending_approval"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM taylor_quote_requests
+            WHERE status = 'pending_approval'
+            """,
+        )
+        if not quote_checkout["last_quote_at"]:
+            quote_checkout["last_quote_at"] = await _fetch_iso(
+                db,
+                "SELECT MAX(created_at) FROM taylor_quote_requests",
+            )
+
+    if await _table_exists(db, "parity_audits"):
+        quote_tables_seen = True
+        quote_checkout["parity_checks_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM parity_audits
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        quote_checkout["parity_drifts_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM parity_audits
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+              AND LOWER(status) != 'skipped_empty_streamline_price'
+              AND NOT (
+                LOWER(status) = 'discrepancy'
+                AND streamline_total = 0
+                AND local_total > 0
+              )
+              AND (
+                COALESCE(ABS(delta), 0) > 0.01
+                OR LOWER(status) NOT IN ('pass', 'passed', 'ok', 'matched', 'in_parity', 'confirmed')
+              )
+            """,
+        )
+        quote_checkout["empty_streamline_prices_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM parity_audits
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+              AND LOWER(status) IN ('discrepancy', 'skipped_empty_streamline_price')
+              AND streamline_total = 0
+              AND local_total > 0
+            """,
+        )
+
+    if quote_tables_seen:
+        quote_checkout["status"] = (
+            "degraded"
+            if (
+                quote_checkout["stale_pending"]
+                or quote_checkout["taylor_pending_approval"] > 20
+                or quote_checkout["parity_drifts_24h"]
+                or quote_checkout["empty_streamline_prices_24h"]
+                or quote_checkout["holds_missing_payment_intent"]
+            )
+            else "online"
+        )
+
+    if await _table_exists(db, "messages"):
+        twilio["outbound_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM messages
+            WHERE provider = 'twilio'
+              AND direction = 'outbound'
+              AND created_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        twilio["inbound_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM messages
+            WHERE provider = 'twilio'
+              AND direction = 'inbound'
+              AND created_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        twilio["failed_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM messages
+            WHERE provider = 'twilio'
+              AND status = 'failed'
+              AND created_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        twilio["needs_review"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM messages
+            WHERE requires_human_review IS TRUE
+              AND human_reviewed_at IS NULL
+            """,
+        )
+        twilio["status"] = "degraded" if twilio["failed_24h"] else "online"
+
+    if await _table_exists(db, "async_job_runs"):
+        queues["queued"] = await _fetch_count(
+            db,
+            "SELECT COUNT(*) FROM async_job_runs WHERE status = 'queued'",
+        )
+        queues["running"] = await _fetch_count(
+            db,
+            "SELECT COUNT(*) FROM async_job_runs WHERE status = 'running'",
+        )
+        queues["failed_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM async_job_runs
+            WHERE status = 'failed'
+              AND updated_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        queues["vrs_queued"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM async_job_runs
+            WHERE status = 'queued'
+              AND job_name = 'process_streamline_event'
+            """,
+        )
+        queues["vrs_failed_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM async_job_runs
+            WHERE status = 'failed'
+              AND job_name = 'process_streamline_event'
+              AND updated_at >= NOW() - INTERVAL '24 hours'
+            """,
+        )
+        queues["status"] = "degraded" if queues["failed_24h"] or queues["queued"] > 100 else "online"
+
+    overall = "online"
+    health_items = (channex, checkout_holds, quote_checkout, twilio, queues)
+    if any(item["status"] == "degraded" for item in health_items):
+        overall = "degraded"
+    if all(item["status"] == "unknown" for item in health_items):
+        overall = "unknown"
+
+    return {
+        "status": overall,
+        "checked_at": checked_at,
+        "channex": channex,
+        "checkout_holds": checkout_holds,
+        "quote_checkout": quote_checkout,
+        "twilio": twilio,
+        "queues": queues,
+    }
 
 
 def _hostname() -> str:
@@ -210,6 +661,10 @@ async def build_system_health_payload(db: AsyncSession) -> dict[str, Any]:
             }
         )
 
+    integrations = {
+        "streamline_sync": _streamline_sync_health(),
+        "operations": await _operational_health(db),
+    }
     node = _build_node_payload(postgres_ok=postgres_ok, gpu=gpu)
     nodes = {node["name"]: node}
 
@@ -233,6 +688,7 @@ async def build_system_health_payload(db: AsyncSession) -> dict[str, Any]:
         "collected_in_ms": collected_ms,
         "nodes": nodes,
         "services": services_out,
+        "integrations": integrations,
         "databases": {
             "postgres": pg_rows if pg_rows else ({"connected": 1} if postgres_ok else {}),
             "qdrant": qdrant,

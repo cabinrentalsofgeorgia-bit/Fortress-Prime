@@ -60,6 +60,18 @@ class TestParityDetection:
         assert delta > Decimal("0.01")
         assert delta == Decimal("150.00")
 
+    def test_empty_streamline_price_is_not_financial_data(self):
+        from backend.workers.hermes_daily_auditor import _streamline_quote_has_financial_data
+
+        result = _make_live_quote("0.00", fees=[], taxes="0.00", rent="0.00")
+        assert _streamline_quote_has_financial_data(result) is False
+
+    def test_streamline_price_with_rent_is_financial_data(self):
+        from backend.workers.hermes_daily_auditor import _streamline_quote_has_financial_data
+
+        result = _make_live_quote("1200.00", fees=[], taxes="0.00", rent="1200.00")
+        assert _streamline_quote_has_financial_data(result) is True
+
 
 class TestDisplayFeeClassification:
     """Verify that DisplayFee objects get correct bucket classification."""

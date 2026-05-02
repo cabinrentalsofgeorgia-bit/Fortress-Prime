@@ -11,6 +11,11 @@ import type {
   Message,
   WorkOrder,
   DashboardStats,
+  FinancialLatestSignal,
+  FinancialSignalTransition,
+  FinancialSymbolSignalDetail,
+  FinancialTransitionType,
+  FinancialWatchlistCandidatesResponse,
   ReviewQueueItem,
   ConversationThread,
   MessageTemplate,
@@ -66,6 +71,64 @@ export function useDashboardStats() {
     queryKey: ["dashboard-stats"],
     queryFn: () => api.get("/api/analytics/dashboard"),
     refetchInterval: 30_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Financial / Hedge Fund
+// ---------------------------------------------------------------------------
+export function useFinancialLatestSignals(params?: {
+  limit?: number;
+  ticker?: string;
+  min_score?: number;
+  max_score?: number;
+}) {
+  return useQuery<FinancialLatestSignal[]>({
+    queryKey: ["financial", "signals", "latest", params],
+    queryFn: () => api.get("/api/financial/signals/latest", params),
+    refetchInterval: 60_000,
+    staleTime: 15_000,
+  });
+}
+
+export function useFinancialSignalTransitions(params?: {
+  limit?: number;
+  ticker?: string;
+  transition_type?: FinancialTransitionType;
+  since?: string;
+  lookback_days?: number;
+}) {
+  return useQuery<FinancialSignalTransition[]>({
+    queryKey: ["financial", "signals", "transitions", params],
+    queryFn: () => api.get("/api/financial/signals/transitions", params),
+    refetchInterval: 60_000,
+    staleTime: 15_000,
+  });
+}
+
+export function useFinancialSignalDetail(
+  ticker: string | null,
+  params?: {
+    transition_limit?: number;
+    lookback_days?: number;
+  },
+) {
+  const normalized = ticker?.trim().toUpperCase() ?? "";
+  return useQuery<FinancialSymbolSignalDetail>({
+    queryKey: ["financial", "signals", "detail", normalized, params],
+    queryFn: () => api.get(`/api/financial/signals/${encodeURIComponent(normalized)}`, params),
+    enabled: Boolean(normalized),
+    refetchInterval: 60_000,
+    staleTime: 15_000,
+  });
+}
+
+export function useFinancialWatchlistCandidates(params?: { limit?: number }) {
+  return useQuery<FinancialWatchlistCandidatesResponse>({
+    queryKey: ["financial", "signals", "watchlist-candidates", params],
+    queryFn: () => api.get("/api/financial/signals/watchlist-candidates", params),
+    refetchInterval: 60_000,
+    staleTime: 15_000,
   });
 }
 

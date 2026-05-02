@@ -55,6 +55,18 @@ def _decimal_to_cents(value: Decimal) -> int:
     return int((value * 100).to_integral_value(rounding=ROUND_HALF_UP))
 
 
+def _streamline_quote_has_financial_data(result: object) -> bool:
+    """Return true when Streamline returned an actual non-zero price payload."""
+    monetary_values = (
+        getattr(result, "streamline_total", Decimal("0.00")),
+        getattr(result, "streamline_taxes", Decimal("0.00")),
+        getattr(result, "streamline_rent", Decimal("0.00")),
+    )
+    if any(_decimal_to_cents(Decimal(str(value or 0))) != 0 for value in monetary_values):
+        return True
+    return bool(getattr(result, "fees", None))
+
+
 async def _run_parity_audit(
     db: AsyncSession,
     reservation_id: str,
@@ -87,6 +99,15 @@ async def _run_parity_audit(
             return
 
         local_cents = _decimal_to_cents(local_total)
+        if local_cents > 0 and not _streamline_quote_has_financial_data(result):
+            logger.warning(
+                "parity_audit_skipped_empty_streamline_price",
+                reservation_id=reservation_id,
+                confirmation_id=confirmation_code,
+                local_cents=local_cents,
+            )
+            return
+
         streamline_cents = _decimal_to_cents(result.streamline_total)
         delta_cents = abs(streamline_cents - local_cents)
 
