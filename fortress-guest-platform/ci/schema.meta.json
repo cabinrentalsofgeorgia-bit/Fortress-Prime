@@ -1,9 +1,9 @@
 {
   "alembic_revisions": [
-    "824b70503495"
+    "u7a8b9c0d1e2"
   ],
-  "alembic_versions_tree": "dfb8154fe59cc72a5e6688ce85f543bfa632d5c0",
-  "generated_at": "2026-05-02T00:58:30Z",
-  "source_db": "fortress_shadow",
-  "source_commit": "ebc19f9329a468b493dbc63c8f1f23b909c65f81"
+  "alembic_versions_tree": "0e3e3a0668fde0e76e076e7fc65ab7ceb44cfb58",
+  "generated_at": "2026-05-02T15:46:45Z",
+  "source_db": "fortress_pr366_schema_tmp",
+  "source_commit": "f9f0b20d7fb6df1ac67b02c616e28a3341b64ab7"
 }

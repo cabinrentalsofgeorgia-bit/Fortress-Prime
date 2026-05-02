@@ -324,17 +324,31 @@ def _normalize_layout(raw: Any) -> dict[str, Any]:
             raw = None
     if not raw:
         raise PreflightError("nas_layout is empty after normalize")
-    root = Path(str(raw.get("root") or "")).expanduser()
-    subs = raw.get("subdirs") or {}
-    if not isinstance(subs, dict):
-        subs = {}
-    subdirs = {
-        str(k): str(v) for k, v in subs.items() if v not in (None, "")
-    }
+    if raw.get("primary_root") or raw.get("include_subdirs"):
+        root = Path(str(raw.get("primary_root") or raw.get("root") or "")).expanduser()
+        includes = raw.get("include_subdirs") or []
+        if isinstance(includes, str):
+            includes = [includes]
+        subdirs = {str(v): str(v) for v in includes if v not in (None, "")}
+        recursive_raw = raw.get("recursive")
+        recursive = True if recursive_raw is None else bool(recursive_raw)
+    else:
+        root = Path(str(raw.get("root") or "")).expanduser()
+        subs = raw.get("subdirs") or {}
+        if not isinstance(subs, dict):
+            subs = {}
+        subdirs = {
+            str(k): str(v) for k, v in subs.items() if v not in (None, "")
+        }
+        recursive = bool(raw.get("recursive"))
+    excludes = raw.get("exclude_subdirs") or []
+    if isinstance(excludes, str):
+        excludes = [excludes]
     return {
         "root": root,
         "subdirs": subdirs,
-        "recursive": bool(raw.get("recursive")),
+        "recursive": recursive,
+        "exclude_subdirs": {str(v).strip("/") for v in excludes if v not in (None, "")},
     }
 
 
@@ -346,6 +360,7 @@ def walk_unique_physical_files(layout: dict[str, Any]):
     referenced from any logical subdir. Skips Synology @eaDir + dotfiles."""
     root: Path = layout["root"]
     recursive: bool = layout["recursive"]
+    exclude_subdirs: set[str] = set(layout.get("exclude_subdirs") or set())
     seen: set[Path] = set()
     for logical, rel in layout["subdirs"].items():
         walk_root = root / rel
@@ -360,6 +375,14 @@ def walk_unique_physical_files(layout: dict[str, Any]):
                 continue
             if any(part == "@eaDir" or part.startswith(".") for part in p.parts):
                 continue
+            if exclude_subdirs:
+                try:
+                    rel_name = str(p.relative_to(root)).strip("/")
+                except ValueError:
+                    rel_name = ""
+                if any(rel_name == ex or rel_name.startswith(f"{ex}/")
+                       for ex in exclude_subdirs):
+                    continue
             try:
                 canonical = p.resolve()
             except OSError:
