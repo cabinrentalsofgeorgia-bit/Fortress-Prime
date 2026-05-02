@@ -29,6 +29,17 @@ This registry records source paths, file sizes, and SHA256 hashes for key files.
 | Knight_Gary_Deposition_Transcript.pdf | `curated/documents/case-i-context/09_depositions/knight/Knight_Gary_Deposition_Transcript.pdf` | 3017685 | `8c8b94626654ab9832a02c512ae189740a3c91c326987f75ee17c27229163543` |
 | Thatcher_John_2023-07-31.ptx | `curated/documents/case-i-context/09_depositions/thatcher/Thatcher_John_2023-07-31.ptx` | 92236 | `d540a2960780ee7f8729907653887cf0f0ef38279412f91b08dcb0e338942f67` |
 
+
+## Pending DOT / GNRR Response Intake Controls
+
+These rows are tracking controls only. They are not evidence entries until a produced record is saved, hashed, and promoted into the registry.
+
+| Intake Lane | Placeholder Path | Source-Control Use | Status |
+|---|---|---|---|
+| GDOT open-records response | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/gdot-open-records/` | Lease/right-of-way, MP386.3 crossing file, maps, operator-control, consent/no-objection responses. | Pending request send / response. |
+| GNRR / Blue Ridge response | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/gnrr-blue-ridge/` | Crossing agreement file, assignments, fee/insurance/maintenance records, current operator/control records. | Counsel/operator send decision pending. |
+| County / title follow-up | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/county-title-follow-up/` | Deeds, plats, railroad exceptions, title commitments, exception schedules, surveys, maps. | Pull target open. |
+
 ## NAS-Only Privileged Staging Controls
 
 These items are not repo-committed exhibits. They are source-control leads retained in privileged NAS staging.
