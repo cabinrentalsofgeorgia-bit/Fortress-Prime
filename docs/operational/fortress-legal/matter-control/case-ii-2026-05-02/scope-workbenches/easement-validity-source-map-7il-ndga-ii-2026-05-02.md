@@ -26,6 +26,7 @@ Do not treat the March 17, 2025 recorded easement as either valid or invalid by 
 | 2021 Thor James easement | `curated/documents/case-i-context/04_deposition_exhibits_7il/Exh._B___2021.03.07_Thor_James_Easement.pdf` | `d0f1932aec2b26f8a36b389e18420aa0496b5d5d8b2ced848c6fd1c3d7a0d371` | Prior access/path easement between Knight and James; includes railroad-crossing language. |
 | 2021 Thor James water easement | `curated/documents/case-i-context/04_deposition_exhibits_7il/Exh._C___2021.03.07_Thor_James_Water_Easement.pdf` | `0677afed54ddd35effac9b6ecd004541b6581bb457cc24d5fb649992f6b46a33` | Separate water easement / maintenance agreement. |
 | 2021 easement email exhibit | `curated/documents/case-i-context/04_deposition_exhibits_7il/Exh._L___2021.05.31_Easement_Emails.pdf` | `d93b90bcd3a2864305b3755770e9e58d7eb094a69b1eec980cbef36fc97dd610` | Case I easement-email context and attachment references, including RR crossing agreement. |
+| GNRR crossing agreement extract | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/source-extracts/CASE-I-Exh-L_pages-11-25_GNRR-0184_Knight_Crossing_MP386.3.pdf` | `63713a2c28599440fa53064e68535dd198aa1d46f094d1f5cee1eaa03bb2d0a9` | Pages 11-25 extracted from Exhibit L; source for Georgia Northeastern Railroad / Georgia DOT lease and MP 386.3 crossing-license terms. |
 | Case I Doc. 64-10 proposed easement | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/# Pleadings - GAND/#64-10 Proposed Easement.pdf` | `c545462e58ae1e28178455ef59c1f9cd9a5b8ac0809170cab771c284e2be3914` | Case I proposed easement source. |
 | Case I Doc. 64-13 proposed easement | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/# Pleadings - GAND/#64-13 Proposed Easement.pdf` | `9e26e54c947859c9970cffebbbd0c3baf8bce8b1328d3296b868d6de01fcbf8b` | Case I proposed easement source; extraction sparse, manual PDF review needed. |
 | Case I Doc. 78 MSJ order | `curated/documents/case-i-context/03_judgment_and_orders/78_Order_on_MSJs.pdf` | Curated Case I context | Finds River Heights amendment sufficiently definite and identifies Wilson drafting responsibility/factual disputes. |
@@ -36,7 +37,7 @@ Do not treat the March 17, 2025 recorded easement as either valid or invalid by 
 | Issue | Source Finding | Classification |
 |---|---|---|
 | March 17 instrument | Exhibit I is the challenged recorded easement between Gary Knight and Thor A. James. Extracted text identifies Lots 14, 15, and 16 and includes a railroad-crossing-conditions section. | Source pinned; legal effect open. |
-| Railroad crossing | Exhibit I states crossing use is subject to a Private Road Grade Crossing Agreement dated September 1, 2016 with Georgia Northeastern Railroad Company LLC. | Strong source lead; underlying crossing agreement must be pulled and title/authority verified. |
+| Railroad crossing | Exhibit I and the extracted GNRR agreement tie crossing use to a September 1, 2016 Private Road Grade Crossing Agreement with Georgia Northeastern Railroad Company LLC. The GNRR agreement states the railroad leases relevant railroad-purpose property from Georgia DOT. | Crossing agreement now pinned; underlying DOT/right-of-way lease and current railroad-control records still need to be pulled. |
 | Prior 2021 easement | The 2021 Thor James easement includes path/crossing language and states crossing use is subject to the Private Road Grade Crossing Agreement. | Source pinned; compare to 2025 replacement/modified terms. |
 | DOT / railroad ownership theory | Operator theory is that prior easement drafting attempted to grant or burden a railroad crossing/right-of-way Knight did not own, while Knight had crossing-use rights by license/agreement. | Needs source proof: DOT/railroad title/right-of-way records, GNRR crossing agreement, and counsel review. |
 | Mutual modification theory | Operator theory is that Knight and James, as parties to the easement relationship, could agree to changed terms and record a replacement or modified easement. | Legal theory only; Georgia-law verification required before filing use. |
@@ -68,7 +69,7 @@ Do not treat the March 17, 2025 recorded easement as either valid or invalid by 
 
 ## Immediate Work Orders
 
-1. Pull and hash the September 1, 2016 crossing agreement and any DOT/railroad right-of-way records.
+1. Use the pinned GNRR crossing-agreement extract; pull the underlying DOT/railroad right-of-way lease and current railroad-control records.
 2. Build an instrument comparison: 2021 Thor James easement, 2025 recorded easement, and any later draft replacement terms.
 3. Pull River Heights final title/closing package to test whether 7IL objected, accepted, excepted, waived, or reserved rights.
 4. Ask counsel to verify Georgia mutual-modification/recording authority before using that theory in a filing.
