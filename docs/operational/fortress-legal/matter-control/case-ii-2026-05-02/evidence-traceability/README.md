@@ -8,8 +8,10 @@ Use order:
 2. Evidence custody registry
 3. Count-to-evidence trace map
 4. Paragraph evidence trace matrix
-5. Evidence gap action list
+5. Inspection reports and closing-scope addendum
+6. Inspection comments spreadsheet curation addendum
+7. Evidence gap action list
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
 
-Critical current evidence finding: the complaint references Exhibit G as the 2025 River Heights inspection, but no Exhibit G file was found in the curated Case II complaint-exhibits folder or obvious curated-path search. Treat this as a P1 evidence gap before any filing or full counsel package.
+Critical current evidence finding: the complaint references Exhibit G as the 2025 River Heights inspection, but no Exhibit G file was found in the curated Case II complaint-exhibits folder or obvious curated-path search. A related inspection-comments comparison spreadsheet has now been extracted into privileged NAS staging, but it is not the underlying source report. Treat Exhibit G as a P1 evidence gap before any filing or full counsel package.

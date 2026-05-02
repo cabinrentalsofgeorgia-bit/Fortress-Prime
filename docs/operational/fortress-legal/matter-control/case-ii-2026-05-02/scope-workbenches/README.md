@@ -13,5 +13,6 @@ Repo safety:
 - The PSA and judgment workbenches are repo-safe and source anchored to complaint/court materials.
 - The closing-delay chronology in this folder is sanitized.
 - The detailed closing chronology using Argo/counsel email source details is NAS-only privileged work product.
+- The row-level inspection-comments spreadsheet summary is NAS-only privileged work product; repo docs only record the curation posture.
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
