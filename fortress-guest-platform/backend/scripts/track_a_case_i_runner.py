@@ -1,30 +1,40 @@
-"""Track A Case I dry-run runner.
+"""Phase B v0.1 case briefing runner (case-agnostic).
 
-Per Phase 9 follow-up brief
-(`docs/operational/track-a-phase-b-v01-case-i-dryrun-brief.md`):
+Originally landed as the Track A Case I dry-run runner; parameterized
+for Wave 7 Case II reuse per Constitution §11.4 (case-specific
+scaffolding is a forbidden pattern). Module rename to phase_b_runner.py
+deferred as separate housekeeping (post-counsel-hire).
 
-- Wraps Phase B v0.1 orchestrator (case_briefing_compose.compose)
-  with a metric-capturing BrainClient subclass.
-- Injects the custom BrainClient pointing at the spark-3+spark-4
-  TP=2 frontier endpoint with served-model-name "nemotron-3-super"
-  (D2 option (b) — constructor injection; no orchestrator
-  modification per brief §11).
-- Captures per-section wall time, content + reasoning byte counts
-  (proxy for token counts since stream=True), grounding citations,
-  format compliance (first-person prose / <think> leakage).
-- After compose() finishes, fires ONE post-run LiteLLM call
-  (legal-reasoning, reasoning_effort=high, max_tokens=5000) to
-  generate Section 9 ("Recommended Strategy") — the orchestrator
-  emits a placeholder for that section.
-- Assembles full v3 brief, replaces Section 9 placeholder with the
-  augmentation output, writes assembled brief to NAS.
+Behavior:
 
-Output: run dir populated under /tmp/track-a-case-i-v3-<STAMP>/
-        with sections/, raw/, metrics/.
+- Wraps Phase B v0.1 orchestrator (case_briefing_compose.compose) with
+  a metric-capturing BrainClient subclass.
+- Injects the custom BrainClient pointing at the frontier endpoint with
+  served-model-name "nemotron-3-super".
+- Captures per-section wall time, content + reasoning byte counts,
+  grounding citations, format compliance.
+- By default, fires ONE post-run LiteLLM call (legal-reasoning) to
+  produce a §9 "Recommended Strategy" rewrite that overrides the
+  orchestrator's intel-resolved §9 in the assembled brief. Pass
+  `--skip-section-9-augmentation` to suppress this and emit the
+  orchestrator's intel-rich §9 verbatim (required for Wave 7 Case II
+  v1 where judge intel is doctrinally load-bearing — see GH issue
+  for the architectural Path B fix).
 
-Usage (run on spark-2 in fortress-guest-platform venv):
+Output: run dir populated under /tmp/phase-b-<case-slug>-<version>-<STAMP>/
+        (or `--output-dir`) with sections/, raw/, metrics/, and the
+        assembled brief. Brief is also copied to NAS at
+        /mnt/fortress_nas/Corporate_Legal/Business_Legal/<case-slug>/filings/outgoing/.
+
+Usage:
     cd /home/admin/Fortress-Prime/fortress-guest-platform
-    .uv-venv/bin/python -m backend.scripts.track_a_case_i_runner
+    .uv-venv/bin/python -m backend.scripts.track_a_case_i_runner \\
+        --case-slug 7il-v-knight-ndga-i
+
+    # Wave 7 Case II v1 (intel-rich §9 verbatim):
+    .uv-venv/bin/python -m backend.scripts.track_a_case_i_runner \\
+        --case-slug 7il-v-knight-ndga-ii \\
+        --skip-section-9-augmentation
 """
 
 from __future__ import annotations
@@ -57,15 +67,34 @@ from backend.services.case_briefing_synthesizers import _SYNTHESIS_PROMPTS, _SYS
 from backend.services.guardrails.faithfulness_judge import score as faithfulness_score
 
 
-CASE_SLUG = "7il-v-knight-ndga-i"
 FRONTIER_BASE = "http://10.10.10.3:8000"
 FRONTIER_MODEL = "nemotron-3-super"
 LITELLM_BASE = "http://127.0.0.1:8002"
 LITELLM_MASTER_KEY = os.environ.get("LITELLM_MASTER_KEY", "")
 
 STAMP = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-RUN_DIR = Path(f"/tmp/track-a-case-i-v3-{STAMP}")
-NAS_OUT_DIR = Path("/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-i/filings/outgoing")
+
+# Slug → (display_prefix, version_tag) for the assembled brief filename. Keep the
+# Case I baseline filename pattern stable so existing regression manifests still
+# match. Heuristic fallback for unmapped slugs: uppercase, hyphens→underscores, v1.
+_CASE_DISPLAY_MAP: dict[str, tuple[str, str]] = {
+    "7il-v-knight-ndga-i": ("7IL_NDGA_I", "v3"),
+    "7il-v-knight-ndga-ii": ("7IL_NDGA_II", "v1"),
+}
+
+
+def _slug_to_display(slug: str) -> tuple[str, str]:
+    if slug in _CASE_DISPLAY_MAP:
+        return _CASE_DISPLAY_MAP[slug]
+    return (slug.upper().replace("-", "_"), "v1")
+
+
+# Populated in main() from CLI args. Module-level for backward compatibility with
+# the prior Track A Case I runner shape; future refactor should pass these through
+# explicitly (separate housekeeping).
+CASE_SLUG: str = ""
+RUN_DIR: Path = Path("/tmp/phase-b-runner-uninitialized")
+NAS_OUT_DIR: Path = Path("/mnt/fortress_nas/Corporate_Legal/Business_Legal/_uninitialized/filings/outgoing")
 
 
 class MetricCapturingBrainClient(BrainClient):
@@ -279,8 +308,43 @@ def post_run_section_9_augmentation(
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Track A Case I dry-run runner. Wraps Phase B v0.1 compose() "
-        "with metric-capturing BrainClient + post-run §9 augmentation.",
+        description="Phase B v0.1 case briefing runner. Wraps compose() with a "
+        "metric-capturing BrainClient and (optionally) a post-run §9 augmentation pass.",
+    )
+    parser.add_argument(
+        "--case-slug",
+        required=True,
+        help="Case slug (e.g. 7il-v-knight-ndga-i, 7il-v-knight-ndga-ii). "
+        "Drives compose(case_slug), NAS output dir, and assembled-brief filename.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Run output directory. Defaults to /tmp/phase-b-<case-slug>-<version>-<STAMP>/.",
+    )
+    parser.add_argument(
+        "--skip-section-9-augmentation",
+        action="store_true",
+        default=False,
+        help="Suppress the post-compose §9 LiteLLM rewrite. Emit the orchestrator's "
+        "intel-resolved §9 verbatim in the assembled brief. Required for Wave 7 Case II "
+        "v1 where judge intel (Story bidirectional findings, Goldberg same-attorney "
+        "signal, standing-order procedural posture) is doctrinally load-bearing. The "
+        "post-compose pass currently replaces (rather than layers on) the intel-rich "
+        "§9 — see GH issue for the architectural fix (Path B).",
+    )
+    parser.add_argument(
+        "--sections",
+        default="1,2,3,4,5,6,7,8,9,10",
+        help="Sections to emit (compatibility flag; orchestrator currently runs all "
+        "ten regardless of this value). Reserved for future per-section invocation.",
+    )
+    parser.add_argument(
+        "--capture-reasoning",
+        action="store_true",
+        default=True,
+        help="Capture per-section reasoning byte counts (always on; flag retained for "
+        "compatibility with operator runbooks).",
     )
     parser.add_argument(
         "--faithfulness-check",
@@ -303,7 +367,23 @@ _FAITHFULNESS_SCORED_MODES = {"synthesis", "synthesis_augmented"}
 
 async def main() -> int:
     args = _parse_args()
-    print(f"=== Track A Case I dry-run — {STAMP} ===", file=sys.stderr)
+    global CASE_SLUG, RUN_DIR, NAS_OUT_DIR
+    CASE_SLUG = args.case_slug
+    display_prefix, version_tag = _slug_to_display(CASE_SLUG)
+    if args.output_dir:
+        RUN_DIR = Path(args.output_dir)
+    else:
+        RUN_DIR = Path(f"/tmp/phase-b-{CASE_SLUG}-{version_tag}-{STAMP}")
+    NAS_OUT_DIR = Path(
+        f"/mnt/fortress_nas/Corporate_Legal/Business_Legal/{CASE_SLUG}/filings/outgoing"
+    )
+    assembled_filename = f"Attorney_Briefing_Package_{display_prefix}_{version_tag}_{STAMP}.md"
+
+    print(f"=== Phase B runner — {CASE_SLUG} {version_tag} {STAMP} ===", file=sys.stderr)
+    print(f"  run_dir: {RUN_DIR}", file=sys.stderr)
+    print(f"  nas_out: {NAS_OUT_DIR}", file=sys.stderr)
+    if args.skip_section_9_augmentation:
+        print("  §9 post-compose augmentation: SKIPPED (orchestrator §9 emitted verbatim)", file=sys.stderr)
     if args.faithfulness_check:
         print("  faithfulness-check: ON (Wave 5.6 rail)", file=sys.stderr)
     RUN_DIR.mkdir(parents=True, exist_ok=True)
@@ -379,68 +459,77 @@ async def main() -> int:
                 file=sys.stderr,
             )
 
-    # Section 9 augmentation
-    print("Section 9 augmentation via legal-reasoning…", file=sys.stderr)
-    section_9_user_prompt = _build_synthesis_user_prompt(
-        prompt_template=(
-            "Identify the recommended litigation strategy for this case. Order recommendations "
-            "by urgency. For each: (a) what action, (b) why now, (c) supporting evidence with "
-            "bracketed-filename citations, (d) blocking dependencies. If a recommendation is "
-            "speculative or thin on evidence, flag it as such."
-        ),
-        case_metadata=packet.case_metadata,
-        work_product_chunks=packet.work_product_chunk_texts,
-        privileged_chunks=packet.privileged_chunk_texts,
-    )
-    section_9_content = post_run_section_9_augmentation(section_9_user_prompt, metrics_log)
-    (RUN_DIR / "sections" / "section_09_recommended_strategy_augmented.md").write_text(section_9_content, encoding="utf-8")
-    s9_score = score_section("section_09_recommended_strategy_augmented", "9. Recommended Strategy (augmented)", section_9_content)
-    s9_score["mode"] = "synthesis_augmented"
-    s9_score["operator_status"] = "draft"
-    s9_score["grounding_citations_count_from_orchestrator"] = 0
-    section_scores.append(s9_score)
+    # Section 9 augmentation (post-compose). Suppressed by --skip-section-9-augmentation;
+    # in that case the orchestrator's intel-resolved §9 flows through to the assembled brief.
+    section_9_content: Optional[str] = None
+    if not args.skip_section_9_augmentation:
+        print("Section 9 augmentation via legal-reasoning…", file=sys.stderr)
+        section_9_user_prompt = _build_synthesis_user_prompt(
+            prompt_template=(
+                "Identify the recommended litigation strategy for this case. Order recommendations "
+                "by urgency. For each: (a) what action, (b) why now, (c) supporting evidence with "
+                "bracketed-filename citations, (d) blocking dependencies. If a recommendation is "
+                "speculative or thin on evidence, flag it as such."
+            ),
+            case_metadata=packet.case_metadata,
+            work_product_chunks=packet.work_product_chunk_texts,
+            privileged_chunks=packet.privileged_chunk_texts,
+        )
+        section_9_content = post_run_section_9_augmentation(section_9_user_prompt, metrics_log)
+        (RUN_DIR / "sections" / "section_09_recommended_strategy_augmented.md").write_text(section_9_content, encoding="utf-8")
+        s9_score = score_section("section_09_recommended_strategy_augmented", "9. Recommended Strategy (augmented)", section_9_content)
+        s9_score["mode"] = "synthesis_augmented"
+        s9_score["operator_status"] = "draft"
+        s9_score["grounding_citations_count_from_orchestrator"] = 0
+        section_scores.append(s9_score)
 
-    if args.faithfulness_check:
-        sid_aug = "section_09_recommended_strategy_augmented"
-        judge_t0 = time.monotonic()
-        s9_judge = faithfulness_score(
-            section_id=sid_aug,
-            generated_section=section_9_content,
-            retrieval_packet=retrieval_packet_for_faithfulness,
-        )
-        s9_judge["_faithfulness_wall_seconds"] = round(time.monotonic() - judge_t0, 2)
-        (RUN_DIR / "faithfulness" / f"{sid_aug}.json").write_text(
-            json.dumps(s9_judge, indent=2), encoding="utf-8"
-        )
-        faithfulness_results[sid_aug] = s9_judge
-        print(
-            f"  faithfulness {sid_aug}: "
-            f"grounded={s9_judge.get('grounded_claims_count', '?')}, "
-            f"unsupported={len(s9_judge.get('unsupported_claims', []) or [])}, "
-            f"partial={len(s9_judge.get('partial_support_claims', []) or [])}, "
-            f"wall={s9_judge['_faithfulness_wall_seconds']}s",
-            file=sys.stderr,
-        )
+        if args.faithfulness_check:
+            sid_aug = "section_09_recommended_strategy_augmented"
+            judge_t0 = time.monotonic()
+            s9_judge = faithfulness_score(
+                section_id=sid_aug,
+                generated_section=section_9_content,
+                retrieval_packet=retrieval_packet_for_faithfulness,
+            )
+            s9_judge["_faithfulness_wall_seconds"] = round(time.monotonic() - judge_t0, 2)
+            (RUN_DIR / "faithfulness" / f"{sid_aug}.json").write_text(
+                json.dumps(s9_judge, indent=2), encoding="utf-8"
+            )
+            faithfulness_results[sid_aug] = s9_judge
+            print(
+                f"  faithfulness {sid_aug}: "
+                f"grounded={s9_judge.get('grounded_claims_count', '?')}, "
+                f"unsupported={len(s9_judge.get('unsupported_claims', []) or [])}, "
+                f"partial={len(s9_judge.get('partial_support_claims', []) or [])}, "
+                f"wall={s9_judge['_faithfulness_wall_seconds']}s",
+                file=sys.stderr,
+            )
 
-    # Assembled v3 brief — reuse orchestrator's assembled output, replace Section 9 placeholder
+    # Assembled brief.
+    # When §9 augmentation ran: replace the orchestrator's §9 with the post-compose rewrite.
+    # When suppressed: pass the orchestrator's assembled output through unchanged so the
+    # intel-resolved §9 reaches the assembled brief.
     assembled_orig = out_path.read_text(encoding="utf-8")
-    section_9_marker_re = re.compile(
-        r"(##\s*9\..*?Recommended Strategy.*?\n)(.*?)(?=\n##\s*\d+\.|\Z)",
-        re.DOTALL | re.IGNORECASE,
-    )
-    if section_9_marker_re.search(assembled_orig):
-        assembled_v3 = section_9_marker_re.sub(
-            lambda m: m.group(1) + "\n" + section_9_content + "\n",
-            assembled_orig,
-            count=1,
+    if section_9_content is not None:
+        section_9_marker_re = re.compile(
+            r"(##\s*9\..*?Recommended Strategy.*?\n)(.*?)(?=\n##\s*\d+\.|\Z)",
+            re.DOTALL | re.IGNORECASE,
         )
+        if section_9_marker_re.search(assembled_orig):
+            assembled_brief = section_9_marker_re.sub(
+                lambda m: m.group(1) + "\n" + section_9_content + "\n",
+                assembled_orig,
+                count=1,
+            )
+        else:
+            assembled_brief = assembled_orig + "\n\n## 9. Recommended Strategy (post-run augmentation)\n\n" + section_9_content + "\n"
     else:
-        assembled_v3 = assembled_orig + "\n\n## 9. Recommended Strategy (post-run augmentation)\n\n" + section_9_content + "\n"
+        assembled_brief = assembled_orig
 
-    assembled_path = RUN_DIR / f"Attorney_Briefing_Package_7IL_NDGA_I_v3_{STAMP}.md"
-    assembled_path.write_text(assembled_v3, encoding="utf-8")
-    nas_path = NAS_OUT_DIR / f"Attorney_Briefing_Package_7IL_NDGA_I_v3_{STAMP}.md"
-    nas_path.write_text(assembled_v3, encoding="utf-8")
+    assembled_path = RUN_DIR / assembled_filename
+    assembled_path.write_text(assembled_brief, encoding="utf-8")
+    nas_path = NAS_OUT_DIR / assembled_filename
+    nas_path.write_text(assembled_brief, encoding="utf-8")
 
     summary = {
         "case_slug": CASE_SLUG,
