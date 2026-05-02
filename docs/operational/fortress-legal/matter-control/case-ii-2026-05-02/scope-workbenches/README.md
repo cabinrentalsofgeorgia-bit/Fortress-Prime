@@ -15,6 +15,6 @@ Repo safety:
 - The closing-delay chronology in this folder is sanitized.
 - The detailed closing chronology using Argo/counsel email source details is NAS-only privileged work product.
 - The row-level inspection-comments spreadsheet summary is NAS-only privileged work product; repo docs only record the curation posture.
-- The River Heights line-item matrix uses Terry Wilson Amendment #2 pages 23-26 as the written repair-obligation filter.
+- The River Heights line-item matrix now includes completion-evidence and survival/waiver gates; privileged spreadsheet row analysis remains NAS-only.
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
