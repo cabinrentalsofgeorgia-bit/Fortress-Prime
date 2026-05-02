@@ -7,7 +7,7 @@ This is the action list for closing evidence gaps before filing or transmitting 
 
 | Priority | Gap | Why It Matters | Action | Owner | Status |
 |---:|---|---|---|---|---|
-| P1 | Exhibit G - 2025 River Heights Inspection missing from curated complaint exhibits | Complaint uses Exhibit G to support repair/breach allegations; answer/Rule 12/counsel package needs the exact document. | Locate original Exhibit G, re-copy into curated complaint exhibits, or document that plaintiff omitted it. | Operator / Codex | Open |
+| P1 | Exhibit G - 2025 River Heights Inspection not curated into complaint exhibits | Operator clarified the underlying inspection reports, notes, and Argo-related communications exist on NAS/operator copies; answer/Rule 12/counsel package needs the exact source-verified report. | Locate/copy the actual 2025 River Heights inspection into privileged staging first, then curate as Exhibit G only after source and privilege review. | Operator / Codex | Open |
 | P1 | Closing file / waiver-reservation record not mapped | May control repair survival, merger, waiver, title, and Wilson theory. | Build closing-file inventory and privilege classification. | Operator / Codex | Open |
 | P1 | Case I contempt / post-judgment overlap map incomplete | Central to preclusion and abuse-of-process posture. | Create Case I-to-Case II overlap chart. | Codex | Open |
 | P1 | Easement validity source map incomplete | Counts II-V and VII depend on easement enforceability/recording theory. | Build easement instrument + right-of-way + drafting record memo. | Codex / counsel | Open |
