@@ -9,6 +9,7 @@ __pycache__/
 .Python
 venv/
 env/
+venv_finetune/
 ENV/
 
 # IDE

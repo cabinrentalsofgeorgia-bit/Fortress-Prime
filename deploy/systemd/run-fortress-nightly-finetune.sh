@@ -7,8 +7,12 @@ set -euo pipefail
 ROOT_DIR="/home/admin/Fortress-Prime"
 APP_DIR="${ROOT_DIR}/fortress-guest-platform"
 
-# Use the project's managed Python (uv-venv if available, else venv)
-if [[ -x "${APP_DIR}/.uv-venv/bin/python" ]]; then
+# Use the dedicated CUDA-capable training env when present. The app envs are
+# intentionally CPU-only on DGX Spark, which is fine for web/backend work but
+# cannot run the nightly LoRA trainer.
+if [[ -x "${ROOT_DIR}/venv_finetune/bin/python" ]]; then
+  PYTHON="${ROOT_DIR}/venv_finetune/bin/python"
+elif [[ -x "${APP_DIR}/.uv-venv/bin/python" ]]; then
   PYTHON="${APP_DIR}/.uv-venv/bin/python"
 else
   PYTHON="${APP_DIR}/venv/bin/python"

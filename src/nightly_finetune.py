@@ -148,6 +148,42 @@ def _ensure_training_deps() -> None:
     log.info("Training deps installed.")
 
 
+def _preflight_training_device() -> None:
+    """Fail fast when the active Python cannot execute CUDA training kernels."""
+    try:
+        import torch
+    except Exception as exc:
+        raise RuntimeError(f"PyTorch import failed: {exc}") from exc
+
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            f"CUDA is not available in {sys.executable}. "
+            "Use /home/admin/Fortress-Prime/venv_finetune/bin/python or install a CUDA PyTorch build."
+        )
+
+    try:
+        probe = torch.ones((1,), device="cuda")
+        _ = float(probe.sum().item())
+    except Exception as exc:
+        raise RuntimeError(
+            "CUDA is visible but cannot execute a PyTorch kernel on this GPU. "
+            f"python={sys.executable} torch={getattr(torch, '__version__', 'unknown')} "
+            f"cuda={getattr(torch.version, 'cuda', None)} error={exc}"
+        ) from exc
+
+    if not torch.cuda.is_bf16_supported():
+        raise RuntimeError("CUDA is available, but bf16 is not supported by this PyTorch/GPU stack.")
+
+    log.info(
+        "Training device ready: python=%s torch=%s cuda=%s device=%s bf16=%s",
+        sys.executable,
+        torch.__version__,
+        torch.version.cuda,
+        torch.cuda.get_device_name(0),
+        torch.cuda.is_bf16_supported(),
+    )
+
+
 # ---------------------------------------------------------------------------
 # NIM / vLLM k8s pod management
 # vLLM runs as NVIDIA NIM (nim-sovereign deployment) inside k3s, NOT as a
@@ -774,6 +810,7 @@ def main(dry_run: bool = False, skip_export: bool = False) -> int:
 
     # --- Step 3: Install deps ---
     _ensure_training_deps()
+    _preflight_training_device()
 
     # --- Step 4: Optionally stop NIM ---
     # For qwen2.5:7b QLoRA (~15 GB peak), NIM (~60 GB) fits alongside on the
