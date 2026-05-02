@@ -4,12 +4,13 @@ This folder-level pack advances the matter from command-center status into first
 
 Use order:
 
-1. Rule 12 / first-response screen
-2. Affirmative defenses workbench
-3. Counterclaim viability workbench
-4. Evidence gap and exhibit request list
-5. Answer draft skeleton
-6. Pre-filing red-team review
+1. First-response readiness gate
+2. Rule 12 / first-response screen
+3. Affirmative defenses workbench
+4. Counterclaim viability workbench
+5. Evidence gap and exhibit request list
+6. Answer draft skeleton
+7. Pre-filing red-team review
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
 

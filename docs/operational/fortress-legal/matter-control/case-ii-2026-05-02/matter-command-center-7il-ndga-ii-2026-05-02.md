@@ -17,7 +17,7 @@ This command center is a live operating artifact. It is not a court filing and n
 
 ## Today's Highest-Value Move
 
-Begin conflict checks while building first-response readiness. Do not transmit the attorney briefing package or evidence before conflict clearance.
+Use the first-response readiness gate while beginning conflict checks. Do not transmit the attorney briefing package or evidence before conflict clearance.
 
 ## P0 Watch Items
 
@@ -38,6 +38,7 @@ Begin conflict checks while building first-response readiness. Do not transmit t
 | Conflict-check email | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Counsel_Conflict_Check_Email_7IL_NDGA_II_20260502.md` | First counsel contact |
 | Pro se playbook | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/ProSe_First_Response_Playbook_7IL_NDGA_II_20260502.md` | Response readiness |
 | Answer matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/First_Response_Answer_Matrix_7IL_NDGA_II_20260502.md` | Paragraph-by-paragraph workbench |
+| First-response readiness gate | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/filing-readiness/first-response-readiness-gate-7il-ndga-ii-2026-05-02.md` | Release gate before answer, Rule 12, extension, or counterclaim filing path |
 | Issue matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Issue_Matrix_7IL_NDGA_II_20260502.md` | Claims/defenses/counterclaims control |
 
 ## Open Operator Decisions
