@@ -94,6 +94,7 @@ _EXCLUDE_PATHS: frozenset[str] = frozenset({
     "litellm_config.yaml",           # gitignored, has live LiteLLM master key
     "fortress-guest-platform/.env",  # gitignored app env — has API keys
     "crog-gateway/.env",             # gitignored gateway env
+    "crog-ai-backend/.env",          # gitignored backend env — has IMAP creds
 })
 
 # Lines that contain placeholder text — not real secrets.
@@ -102,6 +103,7 @@ _FALSE_POSITIVE_PATTERNS: tuple[re.Pattern, ...] = (
     re.compile(r"REPLACE_WITH_ROTATED_SECRET"),        # SQL placeholder
     re.compile(r"REPLACE_ME"),                         # generic placeholder
     re.compile(r"<see MINER_BOT_DB_PASSWORD"),         # doc reference
+    re.compile(r"password_email"),                     # classifier label, not a secret
 )
 
 

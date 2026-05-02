@@ -103,3 +103,4 @@ nohup.out
 
 # Backup files
 *.bak
+scratch/
