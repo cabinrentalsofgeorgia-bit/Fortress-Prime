@@ -168,3 +168,156 @@ Status values: OPEN | IN-PROGRESS | DEFERRED | RESOLVED | DUPLICATE
 - Status transitions: OPEN → IN-PROGRESS (when work begins) → RESOLVED (verified fixed) OR DEFERRED (decision to not fix now)
 - Ticket field references GH issue number once filed
 - Note field captures context that doesn't fit other fields (e.g., links to design doc revisions needed)
+
+---
+
+## 2026-04-28 — Fortress Legal migration to spark-1 (issues surfaced during M1/M2 prep)
+
+### M-001 — fortress-brain.service had hardcoded venv path
+
+**Severity:** medium  
+**Surfaced:** M1-1 (rename of `~/Fortress-Prime` → `~/Fortress-Prime.legacy`)  
+**Effect:** systemd unit ExecStart pointed at `/home/admin/Fortress-Prime/venv/bin/streamlit`; rename broke the path; unit failed 5x and went into permanent failed state.  
+**Root cause:** Python venv shebangs hardcode the venv's parent path at venv creation time. Renaming any directory above a venv breaks every wrapper script in `venv/bin/`.  
+**Fix applied:** Recovery R1-R10. Symlink restore (`~/Fortress-Prime` → `~/Fortress-Prime.legacy`) + drop-in override at `/etc/systemd/system/fortress-brain.service.d/10-legacy-path.conf`.  
+**Long-term:** Recreate venvs after migration completes (M5 followup). Audit all systemd units for hardcoded repo paths before any future rename.  
+**Open work:** drop-in cleanup post-M5.
+
+### M-002 — needrestart triggered cascade restart attempts during apt install
+
+**Severity:** low  
+**Surfaced:** M1-2 (apt install postgresql-16 + redis + deps)  
+**Effect:** needrestart's auto-restart hook surfaced fortress-brain in its restart list while the unit was already failed from M-001, creating ambiguous interaction.  
+**Fix applied:** `/etc/needrestart/conf.d/99-fortress-quiet.conf` set `$nrconf{restart} = 'l';` for migration window.  
+**Open work:** remove post-M5.
+
+### M-003 — GitHub deploy key required for spark-1 git access
+
+**Severity:** low (process, not technical)  
+**Surfaced:** M1-4 (clone Fortress-Prime fresh)  
+**Effect:** SSH auth failed at clone — spark-1's ed25519 pubkey was not in repo's Deploy Keys.  
+**Fix applied:** Operator added pubkey via GitHub UI with write access. Fingerprint `SHA256:P532moZ/del210PNnn5RTZ0B4qNXrWKj4H46W0sl7WY` recorded in spark-1-legal-migration-runbook.md.  
+**Long-term:** Document deploy-key provisioning as standard step in any future cross-spark migration runbook.
+
+### M-004 — fortress-guest-platform missing pyproject.toml + alembic in deps
+
+**Severity:** high (blocking M2-5)  
+**Surfaced:** M2-5-FIX (alembic upgrade head on spark-1)  
+**Effect:** `uv pip install -e .` fails — no `pyproject.toml`, no `setup.py`, no `setup.cfg` in `~/Fortress-Prime/fortress-guest-platform/`. `alembic` is not in `backend/requirements.txt`. Production schema migrations have shipped via this repo (#245-#256) so an install path exists; it's undocumented.  
+**Status:** M2-INVESTIGATE phase running to surface canonical install ritual (Docker? install script? venv on spark-2?).  
+**Fix path TBD:** depends on investigation outcome. Likely needs a separate PR adding `pyproject.toml` + alembic to deps, or a documented install script.  
+**Blocks:** M2-5 → M3 → M4 → M5 → Phase 1-6 soak.
+
+### M-005 — Hardcoded postgres credential in labeling_pipeline.py
+
+**Severity:** medium (security)  
+**Surfaced:** M2-INVESTIGATE  
+**Effect:** `backend/services/labeling_pipeline.py` contains literal `postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow`. The password is the placeholder string `fortress`, suggesting either dev-mode legacy or a never-rotated default.  
+**Status:** logged, not touched during migration.  
+**Fix path:** separate PR — replace with env-var read, rotate any production deployment that uses this string.  
+**Risk if ignored:** if production fortress_admin's password ever became `fortress`, this would be a credential leak in source. If not, low immediate risk but will fail at M3 dual-write.
+
+### M-006 — Query A name-collision noise (86% noise, surnames matching non-counsel)
+
+**Severity:** medium (operator-time waste, not data integrity)  
+**Surfaced:** Track B Case II privilege review  
+**Effect:** SQL substring match on counsel surnames against `email_archive.sender` returned 30/37 rows that are HR/employee correspondence (River Underwood at gmail, etc.) rather than legal counsel.  
+**Root cause:** No counsel registry table; queries use surname substring instead of authorized counsel email/domain.  
+**Fix applied (today):** Pivoted to LLM-based bulk classification (qwen2.5:7b on Ollama) — produced section-7-source-manifest.md with 42 entries from union of (Query A v2, vanderburge-misroute folder, additional ILIKE matches).  
+**Long-term:** Build `legal.counsel_registry` table seeded from operative pleadings + LOAs. Captain classifier consults registry during Stage 1 triage. Filed as B-track work; not started.
+
+### M-007 — 147 vanderburge-misroute emails contain Case I + Case II counsel correspondence
+
+**Severity:** medium (data quality)  
+**Surfaced:** vanderburge-misroute LLM probe (2026-04-28)  
+**Effect:** Captain classifier originally tagged 147 emails as `case_slug='vanderburge-v-knight-fannin'`. LLM probe surfaced these include the missing MHT Legal correspondence (Ethan Underwood 2021-06-09, Stanton Kincaid 2022-03-10) — the defense counsel mail that v2/v3 SQL queries against email_archive could not locate.  
+**Status:** misroute folder treated as logical re-route via section-7-source-manifest.md; .eml files NOT physically moved.  
+**Fix path:** maps to B2 (cross-case email link table) in case-briefing-build-plan.md. Captain classifier needs to emit multiple links per email, not single classification.  
+**Blocks:** comprehensive privilege review for any future case will hit the same pattern.
+
+### M-008 — alembic missing from backend/requirements.txt despite being a runtime dependency
+
+**Severity:** medium (process, blocks migration to new hosts)
+**Surfaced:** M2-INVESTIGATE on spark-1 (2026-04-28)
+**Effect:** Production deployments use alembic for schema migrations (PRs #245-#256 all required it). Spark-2's venv has alembic installed but it's not in `backend/requirements.txt`. Any new host installation has to discover this gap by failing first, then mirror the installed version off spark-2 manually.
+**Root cause:** alembic was installed ad-hoc on spark-2 at some point and never added to `requirements.txt`. The next host repeats the discovery.
+**Fix path:** Separate PR — `pip freeze | grep alembic` on spark-2 to get the canonical version, add to `backend/requirements.txt`, merge.
+**Workaround applied:** spark-1 M2-INSTALL pins alembic to spark-2's installed version.
+**Open work:** upstream `requirements.txt` fix.
+
+### M-009 — backend/requirements.txt has Python 3.12-incompatible inference pins
+
+**Severity:** medium (blocks fresh installs, requires hermes-style filter)
+**Surfaced:** M2-INSTALL on spark-1 (2026-04-28)
+**Effect:** `ray[default]==2.10.0`, `ray[serve]==2.10.0`, `vllm==0.4.0` are pinned to versions that don't publish cp312 wheels. Spark-2 has them installed because the original install was on Python 3.11 (or sourced ray from elsewhere). On Ubuntu 24.04 (Python 3.12 only), uv hard-fails dependency resolution.
+**Root cause:** Pins predate Python 3.12 wheel availability for those packages. Inference deps are co-mingled in `backend/requirements.txt` with Alembic/SQLAlchemy/asyncpg, even though they're only needed by the AI inference path — not by migrations or the guest-platform backend itself.
+**Existing precedent:** `deploy/hermes/Dockerfile` already filters these three pins out before `pip install` for the same reason.
+**Fix applied (today):** spark-1 M2-INSTALL filters `ray[default]==`, `ray[serve]==`, `vllm==` from requirements.txt before install (matching hermes pattern).
+**Long-term:** split `backend/requirements.txt` into `requirements-base.txt` (universal) + `requirements-inference.txt` (ray/vllm path only). Install-time selects which to apply.
+**Open work:** upstream split + documentation.
+
+### M-010 — backend/requirements.txt missing at least 4 additional runtime deps
+
+**Severity:** medium (extends M-008 scope)
+**Surfaced:** M2-5-FIX-RETRY on spark-1 (2026-04-28)
+**Effect:** After alembic was pinned (M-008 workaround), running `alembic upgrade head` failed with `ModuleNotFoundError: No module named 'structlog'` from `backend/alembic/env.py:11` import chain (env.py → backend.core.config → backend.core.database → structlog).
+**Hermes precedent:** `deploy/hermes/Dockerfile` already installs 4 packages outside `requirements.txt`: `psycopg2-binary python-docx structlog tenacity`. Same pattern as alembic — runtime deps required to import the codebase, never added to the manifest.
+**Root cause:** Same as M-008 — historical ad-hoc installs on spark-2 that drifted from `requirements.txt`. Hermes Dockerfile worked around it; the alembic CLI path doesn't.
+**Fix applied (today):** spark-1 M2-INSTALL-EXTRA pins the 4 hermes deps to spark-2's installed versions (structlog, tenacity, python-docx, psycopg2-binary).
+**Long-term:** combined with M-008, the requirements.txt fix needs to add: alembic + structlog + tenacity + python-docx + psycopg2-binary at minimum. May need fuller audit since strict env.py import only validates one code path.
+**Open work:** upstream PR adding all 5 packages to `requirements.txt`.
+
+### M-011 — openssl rand -base64 generates non-URL-safe characters that break Postgres URIs
+
+**Severity:** low (process, easy fix once known)
+**Surfaced:** M2-5-FIX-RETRY-3 on spark-1 (2026-04-28)
+**Effect:** `openssl rand -base64 32` produces standard base64 charset including `/` and `+`. When interpolated into a Postgres connection URI as the password, `/` is treated as the path separator, and `urlsplit` fails to parse the URI cleanly. pydantic-settings raises ValidationError on the POSTGRES_API_URI value before alembic even attempts to connect.
+**Root cause:** Standard base64 charset is not URL-safe by spec. URL-safe base64 (RFC 4648 §5) uses `-` and `_` instead, but `openssl rand -base64` does not emit URL-safe variant.
+**Fix applied (today):** Regenerate with `openssl rand -hex 32` — produces only `[0-9a-f]`, 256 bits of entropy, URL-safe by construction.
+**Prevention:** Any future credential bootstrap that interpolates passwords into URIs should use `openssl rand -hex N` (or `openssl rand -base64 N | tr '/+' '-_'` for URL-safe base64). Document in any future credential-generation runbook.
+**Open work:** add to spark-1-legal-migration-runbook.md as a credential-generation note.
+
+### M-012 — spark-1-legal-migration-runbook.md present in PR #264 but absent from repo HEAD at investigation time
+
+**Severity:** low (process)
+**Surfaced:** Path 2 investigation on spark-1 (2026-04-28)
+**Effect:** Senior-engineer prompt referenced the runbook as authoritative; runbook was committed on a feature branch that hadn't merged at the moment Claude Code on spark-1 went looking for it.
+**Root cause:** Runbook was authored as part of M1 sprint, committed to docs/spark-1-legal-migration-runbook branch, then the M1 status update PR #264 hadn't merged yet when M2 work began.
+**Fix applied:** PR #264 merged. Runbook now on main.
+**Open work:** none — historical artifact.
+
+### M-013 — Migration DAG not divisionally clean
+
+**Severity:** medium (architectural)
+**Surfaced:** M2-5-FIX-RETRY-5 multi-head investigation (2026-04-28)
+**Effect:** Applying any legal head's ancestry chain pulls in guest-platform migrations (seo_patches, hunter_recovery, channex_webhooks, intelligence_pricing, etc.). The migration tree is interleaved across divisions.
+**Root cause:** Migrations were authored before ADR-001 (one-spark-per-division) was locked. No branch isolation between legal and guest-platform domains in the alembic chain.
+**Implication:** ADR-001's "one-spark-per-division" cannot be fully enforced at the schema level without restructuring migrations. Each spark's database will carry tables it doesn't strictly own.
+**Workaround applied (today):** Path 2 schema-clone from spark-2 — copies whatever's there, alembic_version stamped, no DAG walk required.
+**Long-term:** Either (a) split alembic chain into per-division trees + a shared base, or (b) accept divisionally-impure schemas on each spark and document the rationale. Decision for separate ADR.
+
+### M-014 — Baseline migration 0eecc0b42908 is brownfield-only
+
+**Severity:** medium (blocks fresh-DB installs)
+**Surfaced:** M2-5-FIX-RETRY-5 (2026-04-28)
+**Effect:** 0eecc0b42908 is a no-op stamp recording that pre-alembic tables (e.g., `properties`) exist. On spark-2 those tables exist from before alembic was introduced. On a fresh DB they don't, and subsequent migrations FK against them.
+**Root cause:** Original alembic adoption stamped existing schema rather than reverse-engineering CREATE TABLE statements into a true baseline migration.
+**Workaround applied:** Path 2 — pg_dump --schema-only from spark-2 to bypass DAG walk entirely.
+**Long-term:** Author a proper baseline migration that creates pre-alembic tables (properties + others identified from the dump). New 0_baseline_*.py replaces 0eecc0b42908. Existing brownfield deployments stamp through it as a no-op via alembic env.py logic.
+
+### M-015 — 26118e0ba71f_create_seo_patch_tables FKs to properties without declaring depends_on
+
+**Severity:** medium (DAG correctness)
+**Surfaced:** M2-5-FIX-RETRY-5 (2026-04-28)
+**Effect:** seo_patches migration FKs to `properties` table that's created in a different branch (4757badd7918_emergency_schema_fix). Alembic's DAG walker doesn't know about the cross-branch dependency, so it tries to apply seo_patches before properties exists on a fresh DB.
+**Root cause:** Migration author didn't add `depends_on = ('4757badd7918',)` to the migration's metadata.
+**Fix path:** Add `depends_on` to seo_patches migration. Audit all migrations for similar undeclared cross-branch FKs.
+**Open work:** separate PR — schema migration audit.
+
+### M-016 — 4757badd7918_emergency_schema_fix is undocumented + possibly orphaned
+
+**Severity:** medium (process + DAG)
+**Surfaced:** M2-5-FIX-RETRY-5 (2026-04-28)
+**Effect:** 4757badd7918 creates `properties` and likely other baseline tables. It exists as the de-facto fresh-DB workaround but is undocumented and not declared as a dependency by any migration that needs it. Whether it's reachable from any current head is unclear.
+**Fix path:** (a) Verify whether 4757badd7918 is on the ancestry of any current head. (b) If not, fold its CREATE TABLE statements into a proper baseline migration (per M-014) and delete 4757badd7918. (c) If yes, document its purpose in the migration's docstring.
+**Open work:** combined with M-014 + M-015 in a schema-migration audit PR.
