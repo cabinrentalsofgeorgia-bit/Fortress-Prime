@@ -27,11 +27,11 @@ This list turns the complaint into a document-control assignment. It should be u
 
 | Count | Claim | Minimum Evidence To Review Before Responding |
 |---|---|---|
-| I | Breach of Contract - Repair Obligations | PSAs, amendments, 2021 inspections, 2025 inspections, closing docs, repair communications |
-| II | Declaratory Judgment - Easement | Easement, Case I order/judgment, title records, closing file, right-of-way facts |
-| III | Quiet Title | Deed/title records, easement recording, ownership chain, equitable facts |
-| IV | Injunctive Relief | Easement facts, alleged harm, remedy scope, public records |
-| V | Slander of Title | Recorded easement, publication/recording facts, malice/good-faith evidence, special damages |
+| I | Breach of Contract - Post-Judgment Repairs | PSAs, amendments, 2021 inspections, 2025 inspections, closing docs, repair communications |
+| II | Slander of Title | Recorded easement, publication/recording facts, malice/good-faith evidence, special damages |
+| III | Declaratory Relief | Easement, Case I order/judgment, title records, closing file, right-of-way facts |
+| IV | Quiet Title / Quia Timet | Deed/title records, easement recording, ownership chain, equitable facts |
+| V | Injunctive Relief | Easement facts, alleged harm, remedy scope, public records |
 | VI | Ejectment / Encroachment | Survey, driveway location, property boundaries, photos, possession/control facts |
 | VII | Breach of Warranty of Title | Warranty deed, title commitment, easement timing, title objections, damages |
 | VIII | Attorney Fees | Conduct record, bad-faith allegations, fee basis, good-faith support |
