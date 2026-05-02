@@ -167,9 +167,26 @@ class TestIncCountersAtomic:
         # Inspect the last UPDATE for each counter — should reflect the
         # cumulative running total, not the delta.
         all_calls = [c for conn in state["connections"] for c in conn.calls]
-        proc_updates = [c for c in all_calls if "processed = %s" in c[0]]
+        proc_updates = [c for c in all_calls if "SET processed = %s" in c[0]]
         # Last processed-update should carry the total (6).
         assert proc_updates and proc_updates[-1][1][0] == 6
+
+        locked_counter_updates = [
+            c for c in all_calls
+            if "files_processed = %s" in c[0]
+            and "files_succeeded = %s" in c[0]
+            and "files_failed = %s" in c[0]
+        ]
+        assert locked_counter_updates
+        last_locked_sql, last_locked_params = locked_counter_updates[-1]
+        locked_fields = [
+            part.strip().split(" = ")[0]
+            for part in last_locked_sql.split("SET", 1)[1].split("WHERE", 1)[0].split(",")
+        ]
+        locked_values = dict(zip(locked_fields, last_locked_params))
+        assert locked_values["files_processed"] == 10
+        assert locked_values["files_succeeded"] == 6
+        assert locked_values["files_failed"] == 1
 
 
 class TestSetManifestPath:
@@ -342,3 +359,4 @@ class TestInvalidCaseSlugFailsFast:
             pass
 
         assert seen and seen[0][0] == "ghost-case"
+        assert seen[0][2] == seen[0][3]

@@ -126,17 +126,18 @@ class IngestRunTracker:
         self._started_monotonic = time.monotonic()
         host = socket.gethostname()
         pid = os.getpid()
+        args_json = json.dumps(self.args, default=str)
         ok = self._exec_with_retry(
             """
             INSERT INTO legal.ingest_runs (
-                case_slug, script_name, args, host, pid, status,
+                case_slug, script_name, args, invocation_args, host, pid, status,
                 started_at
-            ) VALUES (%s, %s, %s::jsonb, %s, %s, 'running', NOW())
+            ) VALUES (%s, %s, %s::jsonb, %s::jsonb, %s, %s, 'running', NOW())
             RETURNING id
             """,
             (
                 self.case_slug, self.script_name,
-                json.dumps(self.args, default=str),
+                args_json, args_json,
                 host, pid,
             ),
             fetch_one=True,
@@ -174,21 +175,32 @@ class IngestRunTracker:
 
     def inc_processed(self, n: int = 1) -> None:
         self._counters.processed += n
-        self._update_counters(processed=self._counters.processed)
+        self._update_counters(
+            processed=self._counters.processed,
+            **self._locked_counter_fields(),
+        )
 
     def inc_errored(self, n: int = 1) -> None:
         self._counters.errored += n
-        self._update_counters(errored=self._counters.errored)
+        self._update_counters(
+            errored=self._counters.errored,
+            **self._locked_counter_fields(),
+        )
 
     def inc_skipped(self, n: int = 1) -> None:
         self._counters.skipped += n
-        self._update_counters(skipped=self._counters.skipped)
+        self._update_counters(
+            skipped=self._counters.skipped,
+            **self._locked_counter_fields(),
+        )
 
     def update(self, **fields: Any) -> None:
         """Bulk update. Keys must be column names of legal.ingest_runs."""
         if "processed" in fields: self._counters.processed = int(fields["processed"])
         if "errored"   in fields: self._counters.errored   = int(fields["errored"])
         if "skipped"   in fields: self._counters.skipped   = int(fields["skipped"])
+        if {"processed", "errored", "skipped"} & fields.keys():
+            fields = {**fields, **self._locked_counter_fields()}
         self._update_counters(**fields)
 
     # ─── private: writes ───────────────────────────────────────────────────
@@ -199,7 +211,12 @@ class IngestRunTracker:
     ) -> None:
         if self.run_id is None:
             return                          # tracker degraded at __enter__
-        sets = ["status = %s", "ended_at = NOW()", "updated_at = NOW()"]
+        sets = [
+            "status = %s",
+            "ended_at = NOW()",
+            "completed_at = NOW()",
+            "updated_at = NOW()",
+        ]
         params: list[Any] = [status]
         if runtime is not None:
             sets.append("runtime_seconds = %s")
@@ -212,6 +229,18 @@ class IngestRunTracker:
             f"UPDATE legal.ingest_runs SET {', '.join(sets)} WHERE id = %s",
             tuple(params),
         )
+
+    def _locked_counter_fields(self) -> dict[str, int]:
+        files_seen = (
+            self._counters.processed
+            + self._counters.skipped
+            + self._counters.errored
+        )
+        return {
+            "files_processed": files_seen,
+            "files_succeeded": self._counters.processed,
+            "files_failed": self._counters.errored,
+        }
 
     def _update_counters(self, **fields: Any) -> None:
         if self.run_id is None or not fields:
