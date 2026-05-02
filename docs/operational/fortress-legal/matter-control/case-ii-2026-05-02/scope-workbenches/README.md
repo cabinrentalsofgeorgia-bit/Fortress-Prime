@@ -9,7 +9,8 @@ Use order:
 3. Fish Trap repair-obligation line-item matrix
 4. Closing-package reservation/waiver inventory
 5. Case I judgment-scope matrix
-6. Closing-delay chronology workbench
+6. Case I-to-Case II overlap chart
+7. Closing-delay chronology workbench
 
 Repo safety:
 
@@ -20,5 +21,6 @@ Repo safety:
 - The River Heights line-item matrix now includes completion-evidence and survival/waiver gates; privileged spreadsheet row analysis remains NAS-only.
 - The Fish Trap line-item matrix uses Amendment #3 and maps possible 2025 overlap without treating same-topic items as proof.
 - The closing-package inventory is repo-safe; privileged closing/counsel email source details remain NAS-only.
+- The Case I-to-Case II overlap chart is repo-safe and source-anchored to public/court-record materials; counterclaim theories remain counsel-review only.
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-02.
