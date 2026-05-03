@@ -107,6 +107,44 @@ class TickerClusterReview:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class RollingWhipsawCandidate:
+    risk_lookback_sessions: int
+    min_whipsaws: int
+    cooldown_sessions: int
+    whipsaw_window_sessions: int = 5
+
+    @property
+    def name(self) -> str:
+        return (
+            f"rolling_{self.risk_lookback_sessions}_"
+            f"{self.min_whipsaws}_cooldown_{self.cooldown_sessions}"
+        )
+
+    def as_json_dict(self) -> dict[str, object]:
+        return asdict(self) | {"name": self.name}
+
+
+@dataclass(frozen=True, slots=True)
+class RollingWhipsawReview:
+    candidate: RollingWhipsawCandidate
+    alert_match: AlertMatchSummary
+    generated_event_reduction: float | None
+    outcome_5_session: ReturnOutcomeSummary
+    top_whipsaw_count: int
+    top_whipsaw_tickers: list[str]
+
+    def as_json_dict(self) -> dict[str, object]:
+        return {
+            "candidate": self.candidate.as_json_dict(),
+            "alert_match": self.alert_match.as_json_dict(),
+            "generated_event_reduction": self.generated_event_reduction,
+            "outcome_5_session": self.outcome_5_session.as_json_dict(),
+            "top_whipsaw_count": self.top_whipsaw_count,
+            "top_whipsaw_tickers": self.top_whipsaw_tickers,
+        }
+
+
 def _ordered_bars(bars: list[EodBar]) -> list[EodBar]:
     return sorted(bars, key=lambda bar: (bar.ticker, bar.bar_date))
 
@@ -228,6 +266,69 @@ def apply_ticker_cluster_candidate(
                 continue
             kept_events[event_date] = event_state
             last_kept_index = event_index
+        adjusted[ticker] = _rebuild_history_from_events(history, kept_events=kept_events)
+    return adjusted
+
+
+def apply_rolling_whipsaw_candidate(
+    histories: dict[str, DailyEventHistory],
+    bars_by_ticker: dict[str, list[EodBar]],
+    *,
+    candidate: RollingWhipsawCandidate,
+) -> dict[str, DailyEventHistory]:
+    if candidate.risk_lookback_sessions < 1:
+        raise ValueError("risk_lookback_sessions must be at least 1")
+    if candidate.min_whipsaws < 1:
+        raise ValueError("min_whipsaws must be at least 1")
+    if candidate.cooldown_sessions < 1:
+        raise ValueError("cooldown_sessions must be at least 1")
+    if candidate.whipsaw_window_sessions < 1:
+        raise ValueError("whipsaw_window_sessions must be at least 1")
+
+    adjusted: dict[str, DailyEventHistory] = {}
+    for ticker, history in histories.items():
+        bars = _ordered_bars(bars_by_ticker.get(ticker, []))
+        index_by_date = {bar.bar_date: index for index, bar in enumerate(bars)}
+        raw_events = [
+            SignalEvent(
+                ticker=ticker,
+                event_date=event_date,
+                index=index_by_date[event_date],
+                state=event_state,
+            )
+            for event_date, event_state in sorted(history.event_by_date.items())
+            if event_date in index_by_date
+        ]
+
+        kept_events: dict[dt.date, int] = {}
+        whipsaw_indices: list[int] = []
+        cooldown_until_index: int | None = None
+        previous_raw_event: SignalEvent | None = None
+        for event in raw_events:
+            recent_whipsaws = [
+                whipsaw_index
+                for whipsaw_index in whipsaw_indices
+                if event.index - whipsaw_index <= candidate.risk_lookback_sessions
+            ]
+            whipsaw_indices = recent_whipsaws
+            in_cooldown = cooldown_until_index is not None and event.index <= cooldown_until_index
+            risk_active = len(recent_whipsaws) >= candidate.min_whipsaws or in_cooldown
+            if risk_active:
+                cooldown_until_index = max(
+                    cooldown_until_index or event.index,
+                    event.index + candidate.cooldown_sessions,
+                )
+            else:
+                kept_events[event.event_date] = event.state
+
+            if (
+                previous_raw_event is not None
+                and event.state != previous_raw_event.state
+                and event.index - previous_raw_event.index <= candidate.whipsaw_window_sessions
+            ):
+                whipsaw_indices.append(event.index)
+            previous_raw_event = event
+
         adjusted[ticker] = _rebuild_history_from_events(history, kept_events=kept_events)
     return adjusted
 
@@ -479,6 +580,54 @@ def review_ticker_cluster_candidate(
     return TickerClusterReview(
         candidate=candidate,
         cluster_tickers=cluster_tickers[: candidate.cluster_size],
+        alert_match=alert_match,
+        generated_event_reduction=_safe_rate(
+            raw_generated_events - alert_match.generated_events,
+            raw_generated_events,
+        ),
+        outcome_5_session=_first_outcome(
+            events,
+            bars_by_ticker,
+            horizon_sessions=outcome_horizon_sessions,
+        ),
+        top_whipsaw_count=sum(row.whipsaw_count for row in whipsaws),
+        top_whipsaw_tickers=[row.ticker for row in whipsaws],
+    )
+
+
+def review_rolling_whipsaw_candidate(
+    observations: list[CalibrationObservation],
+    raw_histories: dict[str, DailyEventHistory],
+    bars_by_ticker: dict[str, list[EodBar]],
+    *,
+    candidate: RollingWhipsawCandidate,
+    raw_generated_events: int,
+    event_window_days: int,
+    outcome_horizon_sessions: int,
+    top_whipsaws: int,
+    since: dt.date | None = None,
+    until: dt.date | None = None,
+) -> RollingWhipsawReview:
+    adjusted_histories = apply_rolling_whipsaw_candidate(
+        raw_histories,
+        bars_by_ticker,
+        candidate=candidate,
+    )
+    alert_match = evaluate_event_histories(
+        observations,
+        adjusted_histories,
+        event_window_days=event_window_days,
+    )
+    events = events_from_histories(adjusted_histories, bars_by_ticker, since=since, until=until)
+    whipsaws = build_ticker_whipsaw_outcomes(
+        events,
+        bars_by_ticker,
+        whipsaw_window_sessions=candidate.whipsaw_window_sessions,
+        outcome_horizon_sessions=outcome_horizon_sessions,
+        top=top_whipsaws,
+    )
+    return RollingWhipsawReview(
+        candidate=candidate,
         alert_match=alert_match,
         generated_event_reduction=_safe_rate(
             raw_generated_events - alert_match.generated_events,
