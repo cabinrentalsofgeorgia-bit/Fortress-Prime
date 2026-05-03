@@ -1070,6 +1070,35 @@ export function useAgentOperators() {
   });
 }
 
+export interface AgentExceptionItem {
+  id: string;
+  source: string;
+  source_label: string;
+  status: string;
+  severity: string;
+  title: string;
+  detail: string | null;
+  age_hours: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+  href: string;
+}
+
+export interface AgentExceptionsResponse {
+  items: AgentExceptionItem[];
+  total: number;
+  summary: Record<string, number>;
+  generated_at: string;
+}
+
+export function useAgentExceptions(limit = 80) {
+  return useQuery<AgentExceptionsResponse>({
+    queryKey: ["agent-exceptions", limit],
+    queryFn: () => api.get("/api/agent/exceptions", { limit }),
+    refetchInterval: 60_000,
+  });
+}
+
 export interface AgentWorkItem {
   id: string;
   source: string;

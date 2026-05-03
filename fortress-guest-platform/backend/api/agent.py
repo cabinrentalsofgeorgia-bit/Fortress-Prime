@@ -165,6 +165,27 @@ class AgentOperatorsResponse(BaseModel):
     generated_at: str
 
 
+class AgentExceptionItem(BaseModel):
+    id: str
+    source: str
+    source_label: str
+    status: str
+    severity: str
+    title: str
+    detail: str | None = None
+    age_hours: float | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+    href: str
+
+
+class AgentExceptionsResponse(BaseModel):
+    items: list[AgentExceptionItem]
+    total: int
+    summary: dict[str, int]
+    generated_at: str
+
+
 SOURCE_LABELS = {
     "guest_concierge": "Guest Concierge",
     "hunter_reactivation": "Hunter Reactivation",
@@ -492,6 +513,24 @@ def _operator_summary(operators: list[AgentOperator]) -> dict[str, int]:
         "planned": sum(1 for operator in operators if operator.status == "planned"),
         "human_approval_required": sum(1 for operator in operators if operator.human_approval_required),
     }
+
+
+def _exception_summary(items: list[AgentExceptionItem]) -> dict[str, int]:
+    summary: dict[str, int] = {
+        "critical": 0,
+        "high": 0,
+        "warning": 0,
+        "stale": 0,
+        "failed": 0,
+    }
+    for item in items:
+        summary[item.source] = summary.get(item.source, 0) + 1
+        summary[item.severity] = summary.get(item.severity, 0) + 1
+        if item.status in {"failed", "send_failed"} or "failed" in item.status:
+            summary["failed"] += 1
+        else:
+            summary["stale"] += 1
+    return summary
 
 
 def _operator_from_source(
@@ -1017,6 +1056,276 @@ async def agent_queue_health(db: AsyncSession = Depends(get_db)):
     return AgentQueueHealthResponse(
         sources=sources,
         summary=_queue_health_summary(sources),
+        generated_at=_utc_now().isoformat(),
+    )
+
+
+@router.get("/exceptions", response_model=AgentExceptionsResponse)
+async def agent_exceptions(
+    limit: int = 80,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return failed or stale agent queue items for internal triage."""
+    capped_limit = max(1, min(limit, 200))
+    items: list[AgentExceptionItem] = []
+    now = _utc_now()
+    naive_now = _utc_now_naive()
+
+    stale_guest_cutoff = naive_now - timedelta(hours=4)
+    stale_review_cutoff = now - timedelta(hours=24)
+    stale_quote_cutoff = now - timedelta(hours=12)
+
+    guest_stale = (
+        await db.execute(
+            select(AgentResponseQueue)
+            .where(
+                AgentResponseQueue.status == "pending",
+                AgentResponseQueue.created_at <= stale_guest_cutoff,
+            )
+            .order_by(AgentResponseQueue.created_at.asc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in guest_stale:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="guest_concierge",
+                source_label=SOURCE_LABELS["guest_concierge"],
+                status="stale_pending",
+                severity="warning",
+                title=row.intent or "Guest response draft",
+                detail=row.escalation_reason or "Guest-facing draft has been pending more than 4 hours",
+                age_hours=_age_hours(row.created_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/ai-engine",
+            )
+        )
+
+    hunter_failed = (
+        await db.execute(
+            select(AgentQueue)
+            .where(AgentQueue.status == "failed")
+            .order_by(AgentQueue.updated_at.desc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in hunter_failed:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="hunter_reactivation",
+                source_label=SOURCE_LABELS["hunter_reactivation"],
+                status=row.status,
+                severity="high",
+                title="Hunter delivery failed",
+                detail=row.error_log or row.delivery_channel or "Outbound recovery message failed",
+                age_hours=_age_hours(row.updated_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/vrs/hunter",
+            )
+        )
+
+    hunter_stale = (
+        await db.execute(
+            select(AgentQueue)
+            .where(
+                AgentQueue.status == "pending_review",
+                AgentQueue.created_at <= stale_review_cutoff,
+            )
+            .order_by(AgentQueue.created_at.asc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in hunter_stale:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="hunter_reactivation",
+                source_label=SOURCE_LABELS["hunter_reactivation"],
+                status="stale_pending_review",
+                severity="warning",
+                title="Hunter draft pending review",
+                detail=row.delivery_channel or "Recovery draft has been pending more than 24 hours",
+                age_hours=_age_hours(row.created_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/vrs/hunter",
+            )
+        )
+
+    seo_failed = (
+        await db.execute(
+            select(SEOPatch)
+            .where(SEOPatch.deploy_status == "failed")
+            .order_by(SEOPatch.updated_at.desc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in seo_failed:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="seo_content",
+                source_label=SOURCE_LABELS["seo_content"],
+                status="deploy_failed",
+                severity="high",
+                title=row.page_path,
+                detail=row.deploy_last_error or "SEO deploy failed",
+                age_hours=_age_hours(row.updated_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href=f"/seo-review/{row.id}",
+            )
+        )
+
+    seo_stale = (
+        await db.execute(
+            select(SEOPatch)
+            .where(
+                SEOPatch.status.in_(["pending_human", "needs_rewrite"]),
+                SEOPatch.updated_at <= stale_review_cutoff,
+            )
+            .order_by(SEOPatch.updated_at.asc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in seo_stale:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="seo_content",
+                source_label=SOURCE_LABELS["seo_content"],
+                status=f"stale_{row.status}",
+                severity="warning",
+                title=row.page_path,
+                detail=f"SEO patch has been {row.status.replace('_', ' ')} more than 24 hours",
+                age_hours=_age_hours(row.updated_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href=f"/seo-review/{row.id}",
+            )
+        )
+
+    taylor_stale = (
+        await db.execute(
+            select(TaylorQuoteRequest)
+            .where(
+                TaylorQuoteRequest.status == "pending_approval",
+                TaylorQuoteRequest.created_at <= stale_quote_cutoff,
+            )
+            .order_by(TaylorQuoteRequest.created_at.asc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in taylor_stale:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="taylor_quotes",
+                source_label=SOURCE_LABELS["taylor_quotes"],
+                status="stale_pending_approval",
+                severity="warning",
+                title=row.guest_email,
+                detail=f"{row.check_in} to {row.check_out} quote pending more than 12 hours",
+                age_hours=_age_hours(row.created_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/vrs/quotes",
+            )
+        )
+
+    financial_stale = (
+        await db.execute(
+            select(FinancialApproval)
+            .where(
+                FinancialApproval.status == "pending",
+                FinancialApproval.created_at <= stale_review_cutoff,
+            )
+            .order_by(FinancialApproval.created_at.asc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in financial_stale:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="financial_variance",
+                source_label=SOURCE_LABELS["financial_variance"],
+                status="stale_pending",
+                severity="high",
+                title=row.reservation_id,
+                detail=f"{row.discrepancy_type} delta {row.delta_cents} cents pending more than 24 hours",
+                age_hours=_age_hours(row.created_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.resolved_at),
+                href="/command/triage",
+            )
+        )
+
+    email_failed = (
+        await db.execute(
+            select(EmailMessage)
+            .where(EmailMessage.approval_status == "send_failed")
+            .order_by(EmailMessage.created_at.desc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in email_failed:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="email_intake",
+                source_label=SOURCE_LABELS["email_intake"],
+                status=row.approval_status,
+                severity="high",
+                title=row.subject or row.email_from,
+                detail=row.error_message or row.body_excerpt or "Email send failed",
+                age_hours=_age_hours(row.human_reviewed_at or row.created_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.human_reviewed_at),
+                href="/email-intake",
+            )
+        )
+
+    email_stale = (
+        await db.execute(
+            select(EmailMessage)
+            .where(
+                EmailMessage.approval_status == "pending_approval",
+                EmailMessage.created_at <= stale_review_cutoff,
+            )
+            .order_by(EmailMessage.created_at.asc())
+            .limit(capped_limit)
+        )
+    ).scalars().all()
+    for row in email_stale:
+        items.append(
+            AgentExceptionItem(
+                id=str(row.id),
+                source="email_intake",
+                source_label=SOURCE_LABELS["email_intake"],
+                status="stale_pending_approval",
+                severity="warning",
+                title=row.subject or row.email_from,
+                detail=row.body_excerpt or "Email draft has been pending more than 24 hours",
+                age_hours=_age_hours(row.created_at),
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.human_reviewed_at),
+                href="/email-intake",
+            )
+        )
+
+    severity_rank = {"critical": 0, "high": 1, "warning": 2}
+    items.sort(key=lambda item: (severity_rank.get(item.severity, 9), -(item.age_hours or 0)))
+    items = items[:capped_limit]
+
+    return AgentExceptionsResponse(
+        items=items,
+        total=len(items),
+        summary=_exception_summary(items),
         generated_at=_utc_now().isoformat(),
     )
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   type AgentWorkItemAction,
   useAgentAutonomyGates,
+  useAgentExceptions,
   useAgentOperators,
   useAgentQueueHealth,
   useAgentWorkItemAudit,
@@ -49,6 +50,7 @@ export default function AIEnginePage() {
   const { data: stats } = useDashboardStats();
   const { data: templates } = useMessageTemplates();
   const { data: autonomyGates, isLoading: autonomyGatesLoading, error: autonomyGatesError } = useAgentAutonomyGates();
+  const { data: exceptions, isLoading: exceptionsLoading, error: exceptionsError } = useAgentExceptions();
   const { data: operators, isLoading: operatorsLoading, error: operatorsError } = useAgentOperators();
   const { data: queueHealth, isLoading: queueHealthLoading, error: queueHealthError } = useAgentQueueHealth();
   const { data: workItems, isLoading: workItemsLoading, error: workItemsError } = useAgentWorkItems();
@@ -59,6 +61,7 @@ export default function AIEnginePage() {
   const safeQueue = Array.isArray(queue) ? queue : [];
   const safeTemplates = Array.isArray(templates) ? templates : [];
   const safeAutonomyGates = autonomyGates?.gates ?? [];
+  const safeExceptions = exceptions?.items ?? [];
   const safeOperators = operators?.operators ?? [];
   const safeQueueHealth = queueHealth?.sources ?? [];
   const safeWorkItems = workItems?.items ?? [];
@@ -97,7 +100,7 @@ export default function AIEnginePage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -190,6 +193,18 @@ export default function AIEnginePage() {
             <p className="text-xs text-muted-foreground">Autonomy controls</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Exceptions
+            </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{exceptions?.total ?? "–"}</div>
+            <p className="text-xs text-muted-foreground">Failed or stale items</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="work-items">
@@ -199,6 +214,14 @@ export default function AIEnginePage() {
             {(workItems?.summary.human_required ?? 0) > 0 && (
               <Badge variant="destructive" className="ml-2 text-[10px]">
                 {workItems?.summary.human_required}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="exceptions">
+            Exceptions
+            {(exceptions?.total ?? 0) > 0 && (
+              <Badge variant="destructive" className="ml-2 text-[10px]">
+                {exceptions?.total}
               </Badge>
             )}
           </TabsTrigger>
@@ -360,6 +383,65 @@ export default function AIEnginePage() {
                         </Link>
                       </Button>
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="exceptions" className="mt-4 space-y-4">
+          {exceptionsLoading ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">Loading agent exceptions...</p>
+              </CardContent>
+            </Card>
+          ) : exceptionsError ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Shield className="h-12 w-12 mx-auto mb-4 text-destructive/70" />
+                <p className="text-muted-foreground">Agent exception queue is unavailable.</p>
+              </CardContent>
+            </Card>
+          ) : safeExceptions.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Check className="h-12 w-12 mx-auto mb-4 text-emerald-500/70" />
+                <p className="text-muted-foreground">No failed or stale agent items.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {safeExceptions.map((item) => (
+                <Card key={`${item.source}-${item.id}-${item.status}`}>
+                  <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{item.source_label}</Badge>
+                        <Badge variant={item.severity === "high" || item.severity === "critical" ? "destructive" : "secondary"}>
+                          {item.severity}
+                        </Badge>
+                        <Badge variant="outline">{item.status.replaceAll("_", " ")}</Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{item.title}</p>
+                        {item.detail ? (
+                          <p className="mt-1 max-w-4xl text-xs text-muted-foreground">{item.detail}</p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                        <span>{item.age_hours != null ? `${item.age_hours}h old` : "No age"}</span>
+                        <span>{item.created_at ? new Date(item.created_at).toLocaleString() : "No timestamp"}</span>
+                      </div>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={item.href}>
+                        Open
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
