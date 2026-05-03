@@ -116,6 +116,31 @@ type QuoteBookingPaymentApprovalResponse = {
   message: string;
 };
 
+type QuoteBookingConfirmationSendResponse = {
+  ok: boolean;
+  reservation_id: string;
+  confirmation_code: string;
+  activation_state: string;
+  draft_status: string;
+  sent_at: string | null;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+};
+
+type QuoteBookingOpsCloseResponse = {
+  ok: boolean;
+  reservation_id: string;
+  confirmation_code: string;
+  activation_state: string;
+  ops_handoff_status: string;
+  closed_at: string | null;
+  completed_work_order_ids: string[];
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+};
+
 type QuoteBookingCleanupResponse = {
   ok: boolean;
   kind: "hold" | "reservation";
@@ -252,6 +277,25 @@ function canApprovePayment(record: QuoteBookingRecord): boolean {
   );
 }
 
+function canSendGuestConfirmation(record: QuoteBookingRecord): boolean {
+  const activationState = metadataString(record, "activation_state");
+  const draftStatus = metadataString(record, "guest_confirmation_draft_status");
+  return (
+    record.kind === "reservation" &&
+    ["activated_pending_staff_confirmation_review", "ops_closed_pending_confirmation"].includes(activationState || "") &&
+    ["pending_staff_review", "send_failed"].includes(draftStatus || "")
+  );
+}
+
+function canCloseOpsHandoff(record: QuoteBookingRecord): boolean {
+  const activationState = metadataString(record, "activation_state");
+  return (
+    record.kind === "reservation" &&
+    ["activated_pending_staff_confirmation_review", "confirmation_sent_ops_open"].includes(activationState || "") &&
+    metadataString(record, "ops_handoff_status") === "open"
+  );
+}
+
 function canExpireLocalHold(record: QuoteBookingRecord): boolean {
   return record.kind === "hold" && record.metadata?.cleanup_eligible === true;
 }
@@ -291,7 +335,13 @@ function reconciliationLabel(state: string | null): string | null {
 function activationLabel(state: string | null): string | null {
   switch (state) {
     case "activated_pending_staff_confirmation_review":
-      return "Activation Ready";
+      return "Draft Review";
+    case "confirmation_sent_ops_open":
+      return "Confirm Sent";
+    case "ops_closed_pending_confirmation":
+      return "Ops Closed";
+    case "completed":
+      return "Activated";
     default:
       return state ? state.replace(/_/g, " ") : null;
   }
@@ -323,6 +373,12 @@ function activationTone(state: string | null): string {
   switch (state) {
     case "activated_pending_staff_confirmation_review":
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+    case "confirmation_sent_ops_open":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+    case "ops_closed_pending_confirmation":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+    case "completed":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
     default:
       return "border-zinc-700 bg-zinc-950 text-zinc-300";
   }
@@ -448,6 +504,8 @@ function RecordRow({
   onConvertHold,
   onSendPayment,
   onApprovePayment,
+  onSendConfirmation,
+  onCloseOps,
   onCleanup,
   isActionPending,
   isSendPending,
@@ -455,6 +513,8 @@ function RecordRow({
   isConvertPending,
   isPaymentPending,
   isApprovePaymentPending,
+  isSendConfirmationPending,
+  isCloseOpsPending,
   isCleanupPending,
 }: {
   record: QuoteBookingRecord;
@@ -464,6 +524,8 @@ function RecordRow({
   onConvertHold: (record: QuoteBookingRecord) => void;
   onSendPayment: (record: QuoteBookingRecord) => void;
   onApprovePayment: (record: QuoteBookingRecord) => void;
+  onSendConfirmation: (record: QuoteBookingRecord) => void;
+  onCloseOps: (record: QuoteBookingRecord) => void;
   onCleanup: (record: QuoteBookingRecord, action: CleanupAction) => void;
   isActionPending: boolean;
   isSendPending: boolean;
@@ -471,6 +533,8 @@ function RecordRow({
   isConvertPending: boolean;
   isPaymentPending: boolean;
   isApprovePaymentPending: boolean;
+  isSendConfirmationPending: boolean;
+  isCloseOpsPending: boolean;
   isCleanupPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
@@ -488,7 +552,9 @@ function RecordRow({
   const draftSubject = record.kind === "reservation" ? metadataString(record, "guest_confirmation_draft_subject") : null;
   const draftBody = record.kind === "reservation" ? metadataString(record, "guest_confirmation_draft_body") : null;
   const sendPolicy = record.kind === "reservation" ? metadataString(record, "guest_confirmation_send_policy") : null;
+  const sentAt = record.kind === "reservation" ? metadataString(record, "guest_confirmation_sent_at") : null;
   const opsStatus = record.kind === "reservation" ? metadataString(record, "ops_handoff_status") : null;
+  const opsClosedAt = record.kind === "reservation" ? metadataString(record, "ops_handoff_closed_at") : null;
   const opsWorkOrderIds = record.kind === "reservation" ? metadataStrings(record, "ops_work_order_ids") : [];
   const housekeepingTaskId = record.kind === "reservation" ? metadataString(record, "housekeeping_task_id") : null;
   const cleanupReason = metadataString(record, "cleanup_reason");
@@ -499,6 +565,8 @@ function RecordRow({
   const canConvert = canConvertLocalReservation(record);
   const canPayment = canSendPaymentLink(record);
   const canApprove = canApprovePayment(record);
+  const canSendConfirmation = canSendGuestConfirmation(record);
+  const canCloseOps = canCloseOpsHandoff(record);
   const canCleanupHold = canExpireLocalHold(record);
   const canCleanupReservation = canCancelProofReservation(record);
 
@@ -636,7 +704,9 @@ function RecordRow({
               ) : null}
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-cyan-100/80">
                 {sendPolicy ? <span>Send: {sendPolicy}</span> : null}
+                {sentAt ? <span>Sent: {formatTimestamp(sentAt)}</span> : null}
                 {opsWorkOrderIds.length > 0 ? <span>Work orders: {opsWorkOrderIds.length}</span> : null}
+                {opsClosedAt ? <span>Ops closed: {formatTimestamp(opsClosedAt)}</span> : null}
                 {housekeepingTaskId ? <span>Housekeeping task: ready</span> : null}
               </div>
             </div>
@@ -722,6 +792,36 @@ function RecordRow({
                 <ShieldCheck className="mr-2 h-4 w-4" />
               )}
               Approve Pay
+            </Button>
+          ) : null}
+          {canSendConfirmation ? (
+            <Button
+              onClick={() => onSendConfirmation(record)}
+              disabled={isSendConfirmationPending}
+              size="sm"
+              className="bg-cyan-700 text-white hover:bg-cyan-600"
+            >
+              {isSendConfirmationPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send Confirm
+            </Button>
+          ) : null}
+          {canCloseOps ? (
+            <Button
+              onClick={() => onCloseOps(record)}
+              disabled={isCloseOpsPending}
+              size="sm"
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isCloseOpsPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
+              Close Ops
             </Button>
           ) : null}
           {canCleanupHold ? (
@@ -843,6 +943,12 @@ export default function QuoteControlPage() {
   const [paymentApprovalTarget, setPaymentApprovalTarget] = useState<QuoteBookingRecord | null>(null);
   const [paymentApprovalNote, setPaymentApprovalNote] = useState("");
   const [isApprovingPayment, setIsApprovingPayment] = useState(false);
+  const [confirmationTarget, setConfirmationTarget] = useState<QuoteBookingRecord | null>(null);
+  const [confirmationNote, setConfirmationNote] = useState("");
+  const [isSendingConfirmation, setIsSendingConfirmation] = useState(false);
+  const [opsCloseTarget, setOpsCloseTarget] = useState<QuoteBookingRecord | null>(null);
+  const [opsCloseNote, setOpsCloseNote] = useState("");
+  const [isClosingOps, setIsClosingOps] = useState(false);
   const [cleanupTarget, setCleanupTarget] = useState<CleanupTarget | null>(null);
   const [cleanupNote, setCleanupNote] = useState("");
   const [isCleaningUp, setIsCleaningUp] = useState(false);
@@ -946,6 +1052,14 @@ export default function QuoteControlPage() {
   const openApprovePayment = (record: QuoteBookingRecord) => {
     setPaymentApprovalTarget(record);
     setPaymentApprovalNote("");
+  };
+  const openSendConfirmation = (record: QuoteBookingRecord) => {
+    setConfirmationTarget(record);
+    setConfirmationNote("");
+  };
+  const openCloseOps = (record: QuoteBookingRecord) => {
+    setOpsCloseTarget(record);
+    setOpsCloseNote("");
   };
   const openCleanup = (record: QuoteBookingRecord, action: CleanupAction) => {
     setCleanupTarget({ record, action });
@@ -1092,6 +1206,48 @@ export default function QuoteControlPage() {
       toast.error(message);
     } finally {
       setIsApprovingPayment(false);
+    }
+  };
+  const submitSendConfirmation = async () => {
+    if (!confirmationTarget) return;
+    setIsSendingConfirmation(true);
+    try {
+      const response = await api.post<QuoteBookingConfirmationSendResponse>(
+        `/api/vrs/quote-booking/control-tower/reservation/${confirmationTarget.id}/send-confirmation`,
+        {
+          ...(confirmationNote.trim() ? { note: confirmationNote.trim() } : {}),
+        },
+      );
+      toast.success(response.message || `Confirmation sent for ${response.confirmation_code}`);
+      setConfirmationTarget(null);
+      setConfirmationNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Confirmation send failed";
+      toast.error(message);
+    } finally {
+      setIsSendingConfirmation(false);
+    }
+  };
+  const submitCloseOps = async () => {
+    if (!opsCloseTarget) return;
+    setIsClosingOps(true);
+    try {
+      const response = await api.post<QuoteBookingOpsCloseResponse>(
+        `/api/vrs/quote-booking/control-tower/reservation/${opsCloseTarget.id}/close-ops`,
+        {
+          ...(opsCloseNote.trim() ? { note: opsCloseNote.trim() } : {}),
+        },
+      );
+      toast.success(response.message || `Ops handoff closed for ${response.confirmation_code}`);
+      setOpsCloseTarget(null);
+      setOpsCloseNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Ops handoff close failed";
+      toast.error(message);
+    } finally {
+      setIsClosingOps(false);
     }
   };
   const submitCleanup = async () => {
@@ -1357,6 +1513,8 @@ export default function QuoteControlPage() {
                   onConvertHold={openConvertHold}
                   onSendPayment={openSendPayment}
                   onApprovePayment={openApprovePayment}
+                  onSendConfirmation={openSendConfirmation}
+                  onCloseOps={openCloseOps}
                   onCleanup={openCleanup}
                   isActionPending={actionMutation.isPending}
                   isSendPending={isSendingQuote}
@@ -1364,6 +1522,8 @@ export default function QuoteControlPage() {
                   isConvertPending={isConvertingReservation}
                   isPaymentPending={isSendingPaymentLink}
                   isApprovePaymentPending={isApprovingPayment}
+                  isSendConfirmationPending={isSendingConfirmation}
+                  isCloseOpsPending={isClosingOps}
                   isCleanupPending={isCleaningUp}
                 />
               ))}
@@ -1725,6 +1885,148 @@ export default function QuoteControlPage() {
                 <>
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   Post Local Payment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(confirmationTarget)} onOpenChange={(open) => !open && setConfirmationTarget(null)}>
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Approve And Send Confirmation</DialogTitle>
+            <DialogDescription>{confirmationTarget?.title || "Activated reservation"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-3 py-3 text-sm text-cyan-100">
+              This sends the staff-reviewed confirmation draft to the guest. It does not charge a card, write to
+              Streamline, touch the public website, or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Guest</p>
+                <p className="truncate">{confirmationTarget?.guest_label || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Draft</p>
+                <p className="truncate">
+                  {metadataString(confirmationTarget || ({} as QuoteBookingRecord), "guest_confirmation_draft_status") ||
+                    "--"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Ops</p>
+                <p className="truncate">
+                  {metadataString(confirmationTarget || ({} as QuoteBookingRecord), "ops_handoff_status") || "--"}
+                </p>
+              </div>
+            </div>
+            {metadataString(confirmationTarget || ({} as QuoteBookingRecord), "guest_confirmation_draft_subject") ? (
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-3 text-sm text-zinc-300">
+                <span className="text-xs uppercase text-zinc-500">Draft</span>
+                <p className="mt-1 font-medium text-zinc-50">
+                  {metadataString(confirmationTarget || ({} as QuoteBookingRecord), "guest_confirmation_draft_subject")}
+                </p>
+                <p className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap break-words text-xs leading-5">
+                  {metadataString(confirmationTarget || ({} as QuoteBookingRecord), "guest_confirmation_draft_body")}
+                </p>
+              </div>
+            ) : null}
+            <Textarea
+              value={confirmationNote}
+              onChange={(event) => setConfirmationNote(event.target.value)}
+              placeholder="Internal send approval note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setConfirmationTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitSendConfirmation}
+              disabled={isSendingConfirmation || !confirmationTarget || !canSendGuestConfirmation(confirmationTarget)}
+              className="bg-cyan-700 text-white hover:bg-cyan-600"
+            >
+              {isSendingConfirmation ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Confirmation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(opsCloseTarget)} onOpenChange={(open) => !open && setOpsCloseTarget(null)}>
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Close Ops Handoff</DialogTitle>
+            <DialogDescription>{opsCloseTarget?.title || "Activated reservation"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-3 text-sm text-emerald-100">
+              This completes the internal activation work orders and closes the handoff. Housekeeping remains scheduled;
+              this does not write to Streamline, touch the public website, or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Guest</p>
+                <p className="truncate">{opsCloseTarget?.guest_label || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Work Orders</p>
+                <p>{metadataStrings(opsCloseTarget || ({} as QuoteBookingRecord), "ops_work_order_ids").length}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Housekeeping</p>
+                <p>
+                  {metadataString(opsCloseTarget || ({} as QuoteBookingRecord), "housekeeping_task_id")
+                    ? "scheduled"
+                    : "--"}
+                </p>
+              </div>
+            </div>
+            <Textarea
+              value={opsCloseNote}
+              onChange={(event) => setOpsCloseNote(event.target.value)}
+              placeholder="Internal ops closure note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setOpsCloseTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitCloseOps}
+              disabled={isClosingOps || !opsCloseTarget || !canCloseOpsHandoff(opsCloseTarget)}
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isClosingOps ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Closing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Close Handoff
                 </>
               )}
             </Button>

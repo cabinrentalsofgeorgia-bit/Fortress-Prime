@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from backend.core.config import settings
 from backend.core.database import get_db
@@ -188,6 +189,39 @@ class QuoteBookingPaymentApprovalResponse(BaseModel):
     guest_confirmation_draft_id: str | None = None
     work_order_ids: list[str] = Field(default_factory=list)
     housekeeping_task_id: str | None = None
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
+class QuoteBookingConfirmationSendRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingConfirmationSendResponse(BaseModel):
+    ok: bool
+    reservation_id: str
+    confirmation_code: str
+    activation_state: str
+    draft_status: str
+    sent_at: str | None = None
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
+class QuoteBookingOpsCloseRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingOpsCloseResponse(BaseModel):
+    ok: bool
+    reservation_id: str
+    confirmation_code: str
+    activation_state: str
+    ops_handoff_status: str
+    closed_at: str | None = None
+    completed_work_order_ids: list[str] = Field(default_factory=list)
     audit_id: str | None = None
     audit_hash: str | None = None
     message: str
@@ -717,6 +751,12 @@ def _reservation_stop_level(reservation: Reservation) -> tuple[Literal["clear", 
         )
     if activation_state == "activated_pending_staff_confirmation_review":
         return "inspect", "Paid reservation is activated locally; guest confirmation draft and ops handoff await staff review."
+    if activation_state == "confirmation_sent_ops_open":
+        return "inspect", "Guest confirmation was sent; internal ops handoff still needs closure."
+    if activation_state == "ops_closed_pending_confirmation":
+        return "inspect", "Ops handoff is closed; guest confirmation draft still needs staff send approval."
+    if activation_state == "completed" and not reservation.streamline_reservation_id:
+        return "inspect", "Paid reservation activation is complete locally; Streamline write remains blocked until parity approval."
     if payment_reconciliation_state == "staff_approved_local_payment_posted" and not reservation.streamline_reservation_id:
         return "inspect", "Local payment is posted; Streamline write remains blocked until parity approval."
     if not reservation.streamline_reservation_id:
@@ -866,6 +906,28 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
                 record.metadata["ops_work_order_ids"] = metadata.get("work_order_ids")
             if metadata.get("housekeeping_task_id"):
                 record.metadata["housekeeping_task_id"] = str(metadata.get("housekeeping_task_id"))
+        elif action == "send_guest_confirmation":
+            record.metadata["guest_confirmation_sent"] = audit.outcome == "success"
+            if metadata.get("activation_state"):
+                record.metadata["activation_state"] = str(metadata.get("activation_state"))
+            if metadata.get("guest_confirmation_draft_status"):
+                record.metadata["guest_confirmation_draft_status"] = str(
+                    metadata.get("guest_confirmation_draft_status")
+                )
+            if metadata.get("guest_confirmation_sent_at"):
+                record.metadata["guest_confirmation_sent_at"] = str(metadata.get("guest_confirmation_sent_at"))
+            if metadata.get("guest_confirmation_send_policy"):
+                record.metadata["guest_confirmation_send_policy"] = str(
+                    metadata.get("guest_confirmation_send_policy")
+                )
+        elif action == "close_ops_handoff":
+            record.metadata["ops_handoff_closed"] = audit.outcome == "success"
+            if metadata.get("activation_state"):
+                record.metadata["activation_state"] = str(metadata.get("activation_state"))
+            if metadata.get("ops_handoff_status"):
+                record.metadata["ops_handoff_status"] = str(metadata.get("ops_handoff_status"))
+            if metadata.get("ops_handoff_closed_at"):
+                record.metadata["ops_handoff_closed_at"] = str(metadata.get("ops_handoff_closed_at"))
         elif action == "expire_local_hold":
             record.metadata["cleanup_completed"] = audit.outcome == "success"
         elif action == "cancel_proof_reservation":
@@ -1107,6 +1169,43 @@ def _build_guest_confirmation_draft(reservation: Reservation, property_name: str
     return subject, body
 
 
+def _plain_text_email_html(body_text: str) -> str:
+    paragraphs = []
+    for block in body_text.split("\n\n"):
+        lines = [escape(line) for line in block.splitlines()]
+        paragraphs.append("<br>".join(lines))
+    paragraph_html = "\n".join(
+        f'<p style="margin:0 0 16px;color:#27272a;font-size:15px;line-height:1.6;">{paragraph}</p>'
+        for paragraph in paragraphs
+        if paragraph.strip()
+    )
+    return f"""
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#18181b;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;background:#ffffff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="background:#18181b;padding:24px 28px;">
+                <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Cabin Rentals of Georgia</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px;">
+                {paragraph_html}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+
+
 def _activation_package_value(reservation: Reservation) -> dict[str, Any] | None:
     breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
     package = breakdown.get("control_tower_activation_package")
@@ -1264,6 +1363,7 @@ async def _ensure_paid_reservation_activation_package(
     }
     breakdown["control_tower_activation_package"] = package
     reservation.price_breakdown = breakdown
+    flag_modified(reservation, "price_breakdown")
     return package
 
 
@@ -1588,6 +1688,114 @@ async def _record_paid_reservation_activation_audit(
     )
 
 
+async def _record_guest_confirmation_send_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    reservation: Reservation,
+    activation_package: dict[str, Any] | None,
+    outcome: str,
+    note: str | None,
+    detail: str,
+) -> OpenShellAuditLog | None:
+    draft = (
+        activation_package.get("guest_confirmation_draft")
+        if isinstance(activation_package, dict)
+        and isinstance(activation_package.get("guest_confirmation_draft"), dict)
+        else {}
+    )
+    ops_handoff = (
+        activation_package.get("ops_handoff")
+        if isinstance(activation_package, dict) and isinstance(activation_package.get("ops_handoff"), dict)
+        else {}
+    )
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.send_guest_confirmation",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("reservation", str(reservation.id)),
+        purpose="Staff-approved send of the activated reservation guest confirmation draft.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "activation_id": activation_package.get("activation_id") if activation_package else None,
+            "activation_state": activation_package.get("activation_state") if activation_package else None,
+            "guest_confirmation_draft_id": draft.get("id"),
+            "guest_confirmation_draft_status": draft.get("status"),
+            "guest_confirmation_sent_at": draft.get("sent_at"),
+            "guest_confirmation_send_policy": draft.get("send_policy"),
+            "ops_handoff_status": ops_handoff.get("status"),
+            "note": note,
+            "detail": detail,
+            "guest_facing_send": outcome,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
+async def _record_ops_handoff_close_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    reservation: Reservation,
+    activation_package: dict[str, Any] | None,
+    outcome: str,
+    note: str | None,
+    detail: str,
+    completed_work_order_ids: list[str] | None = None,
+) -> OpenShellAuditLog | None:
+    draft = (
+        activation_package.get("guest_confirmation_draft")
+        if isinstance(activation_package, dict)
+        and isinstance(activation_package.get("guest_confirmation_draft"), dict)
+        else {}
+    )
+    ops_handoff = (
+        activation_package.get("ops_handoff")
+        if isinstance(activation_package, dict) and isinstance(activation_package.get("ops_handoff"), dict)
+        else {}
+    )
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.close_ops_handoff",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("reservation", str(reservation.id)),
+        purpose="Staff closure of the activated reservation internal operations handoff.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "activation_id": activation_package.get("activation_id") if activation_package else None,
+            "activation_state": activation_package.get("activation_state") if activation_package else None,
+            "guest_confirmation_draft_status": draft.get("status"),
+            "ops_handoff_status": ops_handoff.get("status"),
+            "ops_handoff_closed_at": ops_handoff.get("closed_at"),
+            "work_order_ids": ops_handoff.get("work_order_ids"),
+            "completed_work_order_ids": completed_work_order_ids or [],
+            "housekeeping_task_id": ops_handoff.get("housekeeping_task_id"),
+            "note": note,
+            "detail": detail,
+            "housekeeping_schedule": "left_pending",
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
 async def _record_hold_cleanup_audit(
     *,
     db: AsyncSession,
@@ -1883,9 +2091,13 @@ async def quote_booking_control_tower(
         elif reconciliation_state.endswith("_needs_staff_review"):
             payment_reconciliations_blocked += 1
             payment_state = "payment_reconciliation_review"
-        elif activation_state == "activated_pending_staff_confirmation_review":
+        elif activation_state in {
+            "activated_pending_staff_confirmation_review",
+            "confirmation_sent_ops_open",
+            "ops_closed_pending_confirmation",
+        }:
             activation_packages_pending += 1
-            payment_state = "activated_pending_confirmation"
+            payment_state = activation_state
         elif reconciliation_state == "staff_approved_local_payment_posted":
             payment_state = "local_payment_posted"
         elif payment_link_id:
@@ -1952,8 +2164,12 @@ async def quote_booking_control_tower(
                     "guest_confirmation_draft_status": draft.get("status"),
                     "guest_confirmation_draft_subject": draft.get("subject"),
                     "guest_confirmation_draft_body": draft.get("body_text"),
+                    "guest_confirmation_sent_at": draft.get("sent_at"),
+                    "guest_confirmation_sent_by": draft.get("sent_by"),
                     "guest_confirmation_send_policy": draft.get("send_policy"),
                     "ops_handoff_status": ops_handoff.get("status"),
+                    "ops_handoff_closed_at": ops_handoff.get("closed_at"),
+                    "ops_handoff_closed_by": ops_handoff.get("closed_by"),
                     "ops_work_order_ids": ops_handoff.get("work_order_ids"),
                     "housekeeping_task_id": ops_handoff.get("housekeeping_task_id"),
                     "proof_lane": _is_proof_reservation(reservation),
@@ -2113,7 +2329,7 @@ async def quote_booking_control_tower(
             detail=(
                 f"{summary.get('activation_packages_pending', 0)} activated paid reservation"
                 f"{'' if summary.get('activation_packages_pending', 0) == 1 else 's'} "
-                "have confirmation drafts and ops handoffs pending staff review."
+                "need confirmation send approval, ops handoff closure, or both."
             ),
             href="/command/quote-control",
         ),
@@ -3128,6 +3344,306 @@ async def quote_booking_control_approve_payment(
         audit_id=str(activation_audit.id if activation_audit else audit.id) if (activation_audit or audit) else None,
         audit_hash=(activation_audit.entry_hash if activation_audit else audit.entry_hash) if (activation_audit or audit) else None,
         message="Payment activated. CROG-VRS posted local payment state, created a staff-review guest confirmation draft, opened the ops handoff, and left Streamline, the legacy website, DNS, and tunnels untouched.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/reservation/{reservation_id}/send-confirmation",
+    response_model=QuoteBookingConfirmationSendResponse,
+)
+async def quote_booking_control_send_confirmation(
+    reservation_id: UUID,
+    body: QuoteBookingConfirmationSendRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingConfirmationSendResponse:
+    """Approve and send the staff-reviewed guest confirmation draft."""
+    reservation = await db.get(Reservation, reservation_id)
+    if reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    note = (body.note or "").strip() or None
+    breakdown = dict(reservation.price_breakdown or {})
+    activation_package = _activation_package_value(reservation)
+    if not activation_package:
+        await _record_guest_confirmation_send_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=None,
+            outcome="blocked",
+            note=note,
+            detail="Reservation has no activation package.",
+        )
+        raise HTTPException(status_code=409, detail="Reservation has no activation package")
+
+    draft = activation_package.get("guest_confirmation_draft")
+    if not isinstance(draft, dict):
+        await _record_guest_confirmation_send_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=activation_package,
+            outcome="blocked",
+            note=note,
+            detail="Activation package has no guest confirmation draft.",
+        )
+        raise HTTPException(status_code=409, detail="Activation package has no guest confirmation draft")
+
+    draft_status = str(draft.get("status") or "")
+    if draft_status == "sent":
+        raise HTTPException(status_code=409, detail="Guest confirmation has already been sent")
+    if draft_status not in {"pending_staff_review", "send_failed"}:
+        await _record_guest_confirmation_send_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=activation_package,
+            outcome="blocked",
+            note=note,
+            detail=f"Guest confirmation draft status is {draft_status or 'missing'}.",
+        )
+        raise HTTPException(status_code=409, detail="Guest confirmation draft is not ready to send")
+
+    guest_email = str(draft.get("to") or reservation.guest_email or "").strip()
+    subject = str(draft.get("subject") or "").strip()
+    body_text = str(draft.get("body_text") or "").strip()
+    if not guest_email or "@" not in guest_email or not subject or not body_text:
+        await _record_guest_confirmation_send_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=activation_package,
+            outcome="blocked",
+            note=note,
+            detail="Guest confirmation draft is missing recipient, subject, or body.",
+        )
+        raise HTTPException(status_code=422, detail="Guest confirmation draft is incomplete")
+
+    if not is_email_configured():
+        await _record_guest_confirmation_send_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=activation_package,
+            outcome="failure",
+            note=note,
+            detail="SMTP email delivery is not configured.",
+        )
+        raise HTTPException(status_code=503, detail="Email delivery is not configured")
+
+    sent = await asyncio.to_thread(
+        send_email,
+        to=guest_email,
+        subject=subject,
+        html_body=_plain_text_email_html(body_text),
+        text_body=body_text,
+    )
+    if not sent:
+        draft["status"] = "send_failed"
+        draft["last_error"] = "SMTP send returned false"
+        activation_package["guest_confirmation_draft"] = draft
+        breakdown["control_tower_activation_package"] = activation_package
+        reservation.price_breakdown = breakdown
+        flag_modified(reservation, "price_breakdown")
+        reservation.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await _record_guest_confirmation_send_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=activation_package,
+            outcome="failure",
+            note=note,
+            detail="SMTP send failed for the guest confirmation draft.",
+        )
+        raise HTTPException(status_code=502, detail="Guest confirmation email failed to send")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    draft.update(
+        {
+            "status": "sent",
+            "sent_at": now_iso,
+            "sent_by": current_user.email,
+            "reviewed_at": now_iso,
+            "reviewed_by": current_user.email,
+            "review_note": note,
+            "send_policy": "sent_by_staff_approval",
+        }
+    )
+    activation_package["guest_confirmation_draft"] = draft
+    ops_handoff = activation_package.get("ops_handoff")
+    ops_status = str(ops_handoff.get("status") or "") if isinstance(ops_handoff, dict) else ""
+    activation_package["activation_state"] = "completed" if ops_status == "closed" else "confirmation_sent_ops_open"
+    activation_package["updated_at"] = now_iso
+    activation_package["updated_by"] = current_user.email
+    breakdown["control_tower_activation_package"] = activation_package
+    reservation.price_breakdown = breakdown
+    flag_modified(reservation, "price_breakdown")
+    reservation.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(reservation)
+
+    audit = await _record_guest_confirmation_send_audit(
+        db=db,
+        current_user=current_user,
+        reservation=reservation,
+        activation_package=activation_package,
+        outcome="success",
+        note=note,
+        detail="Staff approved and sent the guest confirmation draft.",
+    )
+    return QuoteBookingConfirmationSendResponse(
+        ok=True,
+        reservation_id=str(reservation.id),
+        confirmation_code=reservation.confirmation_code,
+        activation_state=str(activation_package.get("activation_state") or ""),
+        draft_status=str(draft.get("status") or ""),
+        sent_at=str(draft.get("sent_at")) if draft.get("sent_at") else None,
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Guest confirmation sent by staff approval. Streamline writes, the legacy website, DNS, and tunnels remained untouched.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/reservation/{reservation_id}/close-ops",
+    response_model=QuoteBookingOpsCloseResponse,
+)
+async def quote_booking_control_close_ops(
+    reservation_id: UUID,
+    body: QuoteBookingOpsCloseRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingOpsCloseResponse:
+    """Close the activation ops handoff without changing public or Streamline state."""
+    reservation = await db.get(Reservation, reservation_id)
+    if reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    note = (body.note or "").strip() or None
+    breakdown = dict(reservation.price_breakdown or {})
+    activation_package = _activation_package_value(reservation)
+    if not activation_package:
+        await _record_ops_handoff_close_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=None,
+            outcome="blocked",
+            note=note,
+            detail="Reservation has no activation package.",
+        )
+        raise HTTPException(status_code=409, detail="Reservation has no activation package")
+
+    ops_handoff = activation_package.get("ops_handoff")
+    if not isinstance(ops_handoff, dict):
+        await _record_ops_handoff_close_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            activation_package=activation_package,
+            outcome="blocked",
+            note=note,
+            detail="Activation package has no ops handoff.",
+        )
+        raise HTTPException(status_code=409, detail="Activation package has no ops handoff")
+
+    if str(ops_handoff.get("status") or "") == "closed":
+        raise HTTPException(status_code=409, detail="Ops handoff is already closed")
+
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    completed_work_order_ids: list[str] = []
+    raw_work_order_ids = ops_handoff.get("work_order_ids") if isinstance(ops_handoff.get("work_order_ids"), list) else []
+    parsed_work_order_ids: list[UUID] = []
+    for raw_id in raw_work_order_ids:
+        try:
+            parsed_work_order_ids.append(UUID(str(raw_id)))
+        except (TypeError, ValueError):
+            continue
+
+    if parsed_work_order_ids:
+        work_order_rows = await db.execute(
+            select(WorkOrder).where(
+                WorkOrder.id.in_(parsed_work_order_ids),
+                WorkOrder.reservation_id == reservation.id,
+                WorkOrder.created_by == "crog_vrs_activation_lane",
+            )
+        )
+        for work_order in work_order_rows.scalars().all():
+            if str(work_order.status or "") not in {"completed", "cancelled"}:
+                work_order.status = "completed"
+                work_order.resolved_at = datetime.utcnow()
+                work_order.resolution_notes = (
+                    f"CROG-VRS activation ops handoff closed by {current_user.email}. "
+                    f"{note or 'No staff note.'}"
+                )
+                work_order.updated_at = datetime.utcnow()
+                completed_work_order_ids.append(str(work_order.id))
+
+    housekeeping_task_id = ops_handoff.get("housekeeping_task_id")
+    if housekeeping_task_id:
+        try:
+            housekeeping_task = await db.get(HousekeepingTask, UUID(str(housekeeping_task_id)))
+        except (TypeError, ValueError):
+            housekeeping_task = None
+        if housekeeping_task is not None:
+            dispatch_payload = dict(housekeeping_task.dispatch_payload or {})
+            dispatch_payload.update(
+                {
+                    "ops_handoff_closed": True,
+                    "ops_handoff_closed_at": now_iso,
+                    "ops_handoff_closed_by": current_user.email,
+                    "housekeeping_schedule": "left_pending",
+                }
+            )
+            housekeeping_task.dispatch_payload = dispatch_payload
+
+    ops_handoff.update(
+        {
+            "status": "closed",
+            "closed_at": now_iso,
+            "closed_by": current_user.email,
+            "close_note": note,
+            "completed_work_order_ids": completed_work_order_ids,
+            "housekeeping_schedule": "left_pending",
+        }
+    )
+    activation_package["ops_handoff"] = ops_handoff
+    draft = activation_package.get("guest_confirmation_draft")
+    draft_status = str(draft.get("status") or "") if isinstance(draft, dict) else ""
+    activation_package["activation_state"] = "completed" if draft_status == "sent" else "ops_closed_pending_confirmation"
+    activation_package["updated_at"] = now_iso
+    activation_package["updated_by"] = current_user.email
+    breakdown["control_tower_activation_package"] = activation_package
+    reservation.price_breakdown = breakdown
+    flag_modified(reservation, "price_breakdown")
+    reservation.updated_at = now
+    await db.commit()
+    await db.refresh(reservation)
+
+    audit = await _record_ops_handoff_close_audit(
+        db=db,
+        current_user=current_user,
+        reservation=reservation,
+        activation_package=activation_package,
+        outcome="success",
+        note=note,
+        detail="Staff closed the activated reservation ops handoff. Housekeeping schedule remains pending.",
+        completed_work_order_ids=completed_work_order_ids,
+    )
+    return QuoteBookingOpsCloseResponse(
+        ok=True,
+        reservation_id=str(reservation.id),
+        confirmation_code=reservation.confirmation_code,
+        activation_state=str(activation_package.get("activation_state") or ""),
+        ops_handoff_status=str(ops_handoff.get("status") or ""),
+        closed_at=str(ops_handoff.get("closed_at")) if ops_handoff.get("closed_at") else None,
+        completed_work_order_ids=completed_work_order_ids,
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Ops handoff closed. Internal activation work orders were completed; housekeeping remains scheduled, and Streamline, the legacy website, DNS, and tunnels remained untouched.",
     )
 
 
