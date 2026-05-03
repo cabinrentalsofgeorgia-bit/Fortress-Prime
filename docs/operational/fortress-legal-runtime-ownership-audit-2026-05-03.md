@@ -157,4 +157,4 @@ For Fortress Legal planning and feature-free foundation hardening, the current l
 2. Add an explicit Spark-1 cutover gate before any doc claims Spark-1 is the active Legal host.
 3. Verify live LiteLLM alias ownership and reconcile Spark-5 vs Spark-3+4 vs Spark-1 inference docs.
 4. Verify Qdrant alias/read/write contract for `legal_ediscovery_active` and v2.
-5. Reconcile `nas_layout` shape across migration, batch ingest, and legal case API.
+5. COMPLETED after this audit in PR #410: reconcile `nas_layout` shape across migration, batch ingest, and legal case API. Remaining follow-up is stable download addressing for recursive layouts.

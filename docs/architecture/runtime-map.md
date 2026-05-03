@@ -135,7 +135,7 @@ Case source-drop authority for Wave 7 / Case I and II:
 
 Authoritative scoping rule: Case I and Case II ingest should walk the curated `Corporate_Legal/Business_Legal/<slug>` paths only. The legacy mixed dump `/mnt/fortress_nas/legal_vault/7il-v-knight-ndga/` must not be used as a source for rebuilding Case II.
 
-CONFLICT: `backend/api/legal_cases.py` still has fallback/older layout logic rooted at `/mnt/fortress_nas/sectors/legal/<slug>` and expects `nas_layout` shaped as `{root, subdirs, recursive}`. `vault_ingest_legal_case.py` supports both the old shape and the newer `{primary_root, include_subdirs, exclude_subdirs}` shape. The 2026-05-03 NAS layout audit confirmed live Case I/II DB rows use the newer shape, Case II `curated/` exists, Case I declared include folders are missing, and the legacy `/sectors/legal/<slug>` fallback is absent for both 7IL slugs.
+RESOLVED AFTER AUDIT: PR #410 added `backend/services/legal/nas_layout.py` and wired both `backend/api/legal_cases.py` and `backend/scripts/vault_ingest_legal_case.py` to the same normalizer. Both callers now support the legacy `{root, subdirs, recursive}` shape and the Wave 7 `{primary_root, include_subdirs, exclude_subdirs}` shape. The 2026-05-03 NAS layout audit still stands on live data: Case I/II DB rows use the newer shape, Case II `curated/` exists, Case I declared include folders are missing, and the legacy `/sectors/legal/<slug>` fallback is absent for both 7IL slugs.
 
 CONFLICT: `legal_ediscovery.py` stores uploaded vault copies under `/mnt/fortress_nas/legal_vault`, while `LEGAL_VAULT_ROOT` in config defaults to `/mnt/fortress_nas/sectors/legal`. Treat `/mnt/fortress_nas/legal_vault` as the active process-vault-upload storage path, and treat `sectors/legal` as legacy/API fallback unless resolved.
 
@@ -338,7 +338,7 @@ Do not store real secrets in repo files. The names below are runtime contract na
 2. Which live LiteLLM alias map is authoritative now: Spark-5 BRAIN-era or Spark-3+4 TP=2 Phase 9?
 3. Should legal ingest write directly to `legal_ediscovery_v2` / `legal_ediscovery_active`, or is legacy `legal_ediscovery` intentionally retained as ingest source with separate reindex?
 4. Are Qdrant aliases managed in code/config, or only by operator/manual Qdrant API calls?
-5. Should `legal_cases.py` support the new `nas_layout` shape (`primary_root`, `include_subdirs`, `exclude_subdirs`) used by the migration and batch ingest script?
+5. Should recursive Legal Command Center downloads include a nested relative path or stable document id instead of filename-only lookup?
 6. Should `/mnt/fortress_nas/sectors/legal` remain an active legal file root or be marked legacy-only?
 7. Which DB is the legal case metadata source of truth after Spark-1 migration: `fortress_prod`, `fortress_db`, or Spark-1 `fortress_prod` mirror?
 8. What is the exact production Qdrant storage path and snapshot/backup policy for privileged collections?
@@ -360,6 +360,7 @@ Do not store real secrets in repo files. The names below are runtime contract na
 - `legal.ingest_runs` for ingest lifecycle tracking.
 - `process_vault_upload()` as the canonical single-file vault ingestion function.
 - `vault_ingest_legal_case.py` as the case-scoped batch ingest wrapper.
+- `backend/services/legal/nas_layout.py` as the shared NAS layout normalizer for Legal API file browsing and case-scoped ingest.
 - Curated Case I/II source drops under `/mnt/fortress_nas/Corporate_Legal/Business_Legal/<slug>/`.
 - Privileged communications must stay physically separated from ordinary e-discovery search.
 - Spark-2 is the current practical operator/control-plane host until Spark-1 cutover is proven.
@@ -387,5 +388,5 @@ Before new Fortress Legal features, resolve foundation ambiguity in this order:
 1. Prove live host ownership: Spark-2 current vs Spark-1 cutover state.
 2. Prove DB source-of-truth contract for Legal after PR #366/#405 era changes.
 3. Prove Qdrant alias/read/write contract for `legal_ediscovery_active` and v2.
-4. Reconcile `nas_layout` shape across migration, batch ingest, and legal case API; the next implementation PR should add a shared layout normalizer and teach the Legal case API the new `{primary_root, include_subdirs, exclude_subdirs}` shape without changing DB/NAS data.
+4. Reconcile download addressing for recursive Legal Command Center file browsing so duplicate filenames cannot resolve ambiguously.
 5. Re-audit frontend zone separation so privileged Legal never leaks into public storefront surfaces.
