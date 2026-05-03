@@ -109,6 +109,11 @@ An email may be promoted into an evidence matrix only if:
 | Dee McBee surrendered emails from Case I | Source-proven Case I overlap and 2021 inspection/report transmission lane. | Source locate / link pending. |
 | Terry Wilson production emails or authentication materials | Amendment #2, repair reference, report origin, closing scope. | Existing source pins need email intake linkage. |
 
+
+## Batch 001 Control
+
+Use `wilson-pruitt-email-batch-001-intake-kit-7il-ndga-ii-2026-05-03.md` for the first executable email intake batch. Batch 001 adds source drop folders, source manifest, attachment manifest, privilege-screen queue, and issue-tagging queue templates on NAS.
+
 ## Output Expectations
 
 The first pass should produce:

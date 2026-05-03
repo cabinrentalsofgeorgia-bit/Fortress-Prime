@@ -26,4 +26,4 @@ This is the action list for closing evidence gaps before filing or transmitting 
 
 ## Immediate Next Move
 
-Close P1 gaps in this order: freeze and register Wilson Pruitt email exports, pull the final closing package and completion-proof folders, finish Exhibit G source verification, extend the Case I overlap chart with verdict/pretrial/Doc. 90 sources, use the DOT / GNRR outbound send log to send or counsel-review the drafted requests, route every reply through the response intake tracker, then map Fish Trap survey/driveway evidence.
+Close P1 gaps in this order: use the Wilson Pruitt Batch 001 intake kit to freeze and register Wilson Pruitt email exports, pull the final closing package and completion-proof folders, finish Exhibit G source verification, extend the Case I overlap chart with verdict/pretrial/Doc. 90 sources, use the DOT / GNRR outbound send log to send or counsel-review the drafted requests, route every reply through the response intake tracker, then map Fish Trap survey/driveway evidence.
