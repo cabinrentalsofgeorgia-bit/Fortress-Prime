@@ -408,6 +408,41 @@ export interface FinancialShadowReviewResponse {
   decision_record_template: FinancialShadowReviewDecisionRecordTemplate;
 }
 
+export type FinancialShadowReviewDecision =
+  | "defer"
+  | "continue_shadow"
+  | "promote_to_market_signals";
+
+export interface FinancialShadowReviewDecisionRecordCreate {
+  candidate_parameter_set: string;
+  decision: FinancialShadowReviewDecision;
+  reviewer: string;
+  rationale: string;
+  rollback_criteria: string;
+  reviewed_tickers?: string[];
+  notes?: string | null;
+  lookback_days?: number;
+  review_limit?: number;
+  whipsaw_window_sessions?: number;
+  outcome_horizon_sessions?: number;
+}
+
+export interface FinancialShadowReviewDecisionRecord {
+  id: string;
+  candidate_parameter_set: string;
+  baseline_parameter_set: string;
+  decision: FinancialShadowReviewDecision;
+  reviewer: string;
+  rationale: string;
+  rollback_criteria: string;
+  reviewed_tickers: string[];
+  notes: string | null;
+  shadow_review_generated_at: string;
+  promotion_gate_status: FinancialPromotionGateRecommendationStatus;
+  recommendation_status: FinancialShadowReviewRecommendationStatus;
+  created_at: string;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

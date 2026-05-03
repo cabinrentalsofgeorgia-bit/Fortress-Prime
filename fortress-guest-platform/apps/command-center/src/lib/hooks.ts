@@ -13,6 +13,8 @@ import type {
   DashboardStats,
   FinancialLatestSignal,
   FinancialDailyCalibrationResponse,
+  FinancialShadowReviewDecisionRecord,
+  FinancialShadowReviewDecisionRecordCreate,
   FinancialPromotionGateResponse,
   FinancialShadowReviewResponse,
   FinancialSignalTransition,
@@ -219,6 +221,36 @@ export function useFinancialShadowReview(params?: {
     queryKey: ["financial", "signals", "shadow-review", "daily", params],
     queryFn: () => api.get("/api/financial/signals/shadow-review/daily", params),
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useFinancialShadowDecisionRecords(params?: {
+  candidate_parameter_set?: string;
+  limit?: number;
+}) {
+  return useQuery<FinancialShadowReviewDecisionRecord[]>({
+    queryKey: ["financial", "signals", "shadow-review", "decision-records", params],
+    queryFn: () => api.get("/api/financial/signals/shadow-review/decision-records", params),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateFinancialShadowDecisionRecord() {
+  const qc = useQueryClient();
+  return useMutation<
+    FinancialShadowReviewDecisionRecord,
+    ApiError,
+    FinancialShadowReviewDecisionRecordCreate
+  >({
+    mutationFn: (payload) =>
+      api.post("/api/financial/signals/shadow-review/decision-records", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["financial", "signals", "shadow-review", "decision-records"],
+      });
+      toast.success("Decision record saved");
+    },
+    onError: (error) => toast.error(error.message || "Failed to save decision record"),
   });
 }
 

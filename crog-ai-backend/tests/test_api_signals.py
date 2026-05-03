@@ -10,6 +10,7 @@ from app.main import create_app
 
 PARAMETER_SET_ID = UUID("11111111-1111-1111-1111-111111111111")
 TRANSITION_ID = UUID("22222222-2222-2222-2222-222222222222")
+DECISION_ID = UUID("33333333-3333-3333-3333-333333333333")
 
 
 class FakeSignalStore:
@@ -364,6 +365,61 @@ class FakeSignalStore:
             },
         }
 
+    def shadow_review_decision_records(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": DECISION_ID,
+                "candidate_parameter_set": candidate_parameter_set or "dochia_v0_2_range_daily",
+                "baseline_parameter_set": "dochia_v0_estimated",
+                "decision": "continue_shadow",
+                "reviewer": "Gary Knight",
+                "rationale": "Keep watching lane churn and whipsaw pressure.",
+                "rollback_criteria": "Rollback if the promotion gate moves to hold.",
+                "reviewed_tickers": ["AA", "BTU"],
+                "notes": "Operator reviewed the chart overlays.",
+                "shadow_review_generated_at": dt.datetime(2026, 5, 3, 18, 30, tzinfo=dt.UTC),
+                "promotion_gate_status": "ready_for_shadow",
+                "recommendation_status": "needs_review",
+                "created_at": dt.datetime(2026, 5, 3, 19, 0, tzinfo=dt.UTC),
+            }
+        ][:limit]
+
+    def create_shadow_review_decision_record(
+        self,
+        *,
+        candidate_parameter_set: str,
+        decision: str,
+        reviewer: str,
+        rationale: str,
+        rollback_criteria: str,
+        reviewed_tickers: list[str],
+        notes: str | None = None,
+        lookback_days: int = 30,
+        review_limit: int = 8,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]:
+        return {
+            "id": DECISION_ID,
+            "candidate_parameter_set": candidate_parameter_set,
+            "baseline_parameter_set": "dochia_v0_estimated",
+            "decision": decision,
+            "reviewer": reviewer,
+            "rationale": rationale,
+            "rollback_criteria": rollback_criteria,
+            "reviewed_tickers": reviewed_tickers,
+            "notes": notes,
+            "shadow_review_generated_at": dt.datetime(2026, 5, 3, 18, 30, tzinfo=dt.UTC),
+            "promotion_gate_status": "ready_for_shadow",
+            "recommendation_status": "needs_review",
+            "created_at": dt.datetime(2026, 5, 3, 19, 1, tzinfo=dt.UTC),
+        }
+
     def symbol_chart(
         self,
         *,
@@ -640,6 +696,52 @@ def test_shadow_review_endpoint_returns_decision_packet() -> None:
     assert payload["transition_pressure"][0]["latest_candidate_transition_type"] == "exit_to_reentry"
     assert payload["whipsaw_reviews"][0]["risk_level"] == "high"
     assert payload["decision_record_template"]["allowed_decisions"][-1] == "promote_to_market_signals"
+
+
+def test_shadow_review_decision_records_endpoint_returns_audit_rows() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/shadow-review/decision-records"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&limit=3"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["id"] == str(DECISION_ID)
+    assert payload[0]["decision"] == "continue_shadow"
+    assert payload[0]["reviewed_tickers"] == ["AA", "BTU"]
+    assert payload[0]["recommendation_status"] == "needs_review"
+
+
+def test_shadow_review_decision_records_endpoint_creates_audit_row() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/shadow-review/decision-records",
+        json={
+            "candidate_parameter_set": "dochia_v0_2_range_daily",
+            "decision": "promote_to_market_signals",
+            "reviewer": "Gary Knight",
+            "rationale": "Promotion gate cleared and reviewed tickers are acceptable.",
+            "rollback_criteria": "Rollback if whipsaw pressure rises or the gate moves to hold.",
+            "reviewed_tickers": ["aa", "BTU", "AA"],
+            "notes": "Proceed to dry-run only.",
+            "review_limit": 3,
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["candidate_parameter_set"] == "dochia_v0_2_range_daily"
+    assert payload["decision"] == "promote_to_market_signals"
+    assert payload["reviewer"] == "Gary Knight"
+    assert payload["reviewed_tickers"] == ["AA", "BTU"]
+    assert payload["promotion_gate_status"] == "ready_for_shadow"
 
 
 def test_symbol_chart_endpoint_returns_overlay_data() -> None:

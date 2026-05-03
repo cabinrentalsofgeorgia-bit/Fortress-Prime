@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.signals.repository import PostgresSignalDataStore, SignalDataStore
 
@@ -297,6 +297,43 @@ class ShadowReviewResponse(BaseModel):
     decision_record_template: ShadowReviewDecisionRecordTemplate
 
 
+ShadowReviewDecision = Literal["defer", "continue_shadow", "promote_to_market_signals"]
+
+
+class ShadowReviewDecisionRecordCreate(BaseModel):
+    candidate_parameter_set: str = Field(
+        default="dochia_v0_2_range_daily",
+        min_length=1,
+        max_length=100,
+    )
+    decision: ShadowReviewDecision
+    reviewer: str = Field(min_length=2, max_length=120)
+    rationale: str = Field(min_length=12, max_length=2000)
+    rollback_criteria: str = Field(min_length=12, max_length=2000)
+    reviewed_tickers: list[str] = Field(default_factory=list, max_length=40)
+    notes: str | None = Field(default=None, max_length=2000)
+    lookback_days: int = Field(default=30, ge=1, le=365)
+    review_limit: int = Field(default=8, ge=1, le=20)
+    whipsaw_window_sessions: int = Field(default=5, ge=1, le=30)
+    outcome_horizon_sessions: int = Field(default=5, ge=1, le=60)
+
+
+class ShadowReviewDecisionRecord(BaseModel):
+    id: UUID
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    decision: ShadowReviewDecision
+    reviewer: str
+    rationale: str
+    rollback_criteria: str
+    reviewed_tickers: list[str]
+    notes: str | None
+    shadow_review_generated_at: dt.datetime
+    promotion_gate_status: Literal["hold", "review", "ready_for_shadow"]
+    recommendation_status: Literal["ready_for_shadow_review", "needs_review", "hold"]
+    created_at: dt.datetime
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -522,6 +559,53 @@ def shadow_review_daily(
         whipsaw_window_sessions=whipsaw_window_sessions,
         outcome_horizon_sessions=outcome_horizon_sessions,
     )
+
+
+@router.get(
+    "/shadow-review/decision-records",
+    response_model=list[ShadowReviewDecisionRecord],
+)
+def shadow_review_decision_records(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+) -> list[dict[str, object]]:
+    return store.shadow_review_decision_records(
+        candidate_parameter_set=candidate_parameter_set,
+        limit=limit,
+    )
+
+
+@router.post(
+    "/shadow-review/decision-records",
+    response_model=ShadowReviewDecisionRecord,
+    status_code=201,
+)
+def create_shadow_review_decision_record_endpoint(
+    payload: ShadowReviewDecisionRecordCreate,
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+) -> dict[str, object]:
+    reviewed_tickers = [
+        ticker.strip().upper()
+        for ticker in payload.reviewed_tickers
+        if ticker.strip()
+    ]
+    try:
+        return store.create_shadow_review_decision_record(
+            candidate_parameter_set=payload.candidate_parameter_set,
+            decision=payload.decision,
+            reviewer=payload.reviewer.strip(),
+            rationale=payload.rationale.strip(),
+            rollback_criteria=payload.rollback_criteria.strip(),
+            reviewed_tickers=list(dict.fromkeys(reviewed_tickers)),
+            notes=payload.notes.strip() if payload.notes else None,
+            lookback_days=payload.lookback_days,
+            review_limit=payload.review_limit,
+            whipsaw_window_sessions=payload.whipsaw_window_sessions,
+            outcome_horizon_sessions=payload.outcome_horizon_sessions,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/{ticker}/chart", response_model=SymbolSignalChart)

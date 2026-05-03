@@ -38,9 +38,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  useCreateFinancialShadowDecisionRecord,
   useFinancialLatestSignals,
   useFinancialDailyCalibration,
   useFinancialPromotionGate,
+  useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
   useFinancialSignalDetail,
   useFinancialSignalChart,
@@ -55,6 +57,9 @@ import type {
   FinancialPromotionGateRecommendationStatus,
   FinancialPromotionGateResponse,
   FinancialShadowReviewChecklistStatus,
+  FinancialShadowReviewDecision,
+  FinancialShadowReviewDecisionRecord,
+  FinancialShadowReviewDecisionRecordCreate,
   FinancialShadowReviewRecommendationStatus,
   FinancialShadowReviewResponse,
   FinancialSignalChartResponse,
@@ -209,6 +214,20 @@ function shadowReviewChecklistClasses(status: FinancialShadowReviewChecklistStat
   }
   if (status === "review") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
   return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+}
+
+function shadowDecisionClasses(decision: FinancialShadowReviewDecision): string {
+  if (decision === "promote_to_market_signals") {
+    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  }
+  if (decision === "continue_shadow") return "border-sky-500/40 bg-sky-500/10 text-sky-600";
+  return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+}
+
+function shadowDecisionLabel(decision: FinancialShadowReviewDecision): string {
+  if (decision === "promote_to_market_signals") return "Promote to dry-run";
+  if (decision === "continue_shadow") return "Continue shadow";
+  return "Defer";
 }
 
 function formatSignedNumber(value: number | null | undefined, digits = 0): string {
@@ -1083,11 +1102,26 @@ function ShadowReviewPanel({
   review,
   loading,
   error,
+  decisionRecords,
+  decisionRecordsLoading,
+  onSubmitDecision,
+  submittingDecision,
 }: {
   review: FinancialShadowReviewResponse | null;
   loading: boolean;
   error: boolean;
+  decisionRecords: FinancialShadowReviewDecisionRecord[];
+  decisionRecordsLoading: boolean;
+  onSubmitDecision: (payload: FinancialShadowReviewDecisionRecordCreate) => Promise<void>;
+  submittingDecision: boolean;
 }) {
+  const [decision, setDecision] = useState<FinancialShadowReviewDecision>("continue_shadow");
+  const [reviewer, setReviewer] = useState("Gary Knight");
+  const [rationale, setRationale] = useState("");
+  const [rollbackCriteria, setRollbackCriteria] = useState("");
+  const [reviewedTickers, setReviewedTickers] = useState("");
+  const [notes, setNotes] = useState("");
+
   if (error) {
     return (
       <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
@@ -1110,8 +1144,42 @@ function ShadowReviewPanel({
   }
 
   const highestChurn = [...review.lane_reviews].sort((a, b) => b.churn_rate - a.churn_rate)[0];
+  const activeReview = review;
   const topPressure = review.transition_pressure.slice(0, 5);
   const topWhipsaws = review.whipsaw_reviews.slice(0, 5);
+  const canSubmitDecision =
+    reviewer.trim().length >= 2 &&
+    rationale.trim().length >= 12 &&
+    rollbackCriteria.trim().length >= 12;
+
+  async function handleDecisionSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmitDecision) return;
+    const tickers = reviewedTickers
+      .split(/[\s,]+/)
+      .map((ticker) => ticker.trim().toUpperCase())
+      .filter(Boolean);
+    try {
+      await onSubmitDecision({
+        candidate_parameter_set: activeReview.candidate_parameter_set,
+        decision,
+        reviewer,
+        rationale,
+        rollback_criteria: rollbackCriteria,
+        reviewed_tickers: Array.from(new Set(tickers)),
+        notes: notes.trim() || null,
+        lookback_days: activeReview.lookback_days,
+        review_limit: activeReview.review_limit,
+        whipsaw_window_sessions: 5,
+        outcome_horizon_sessions: 5,
+      });
+      setRationale("");
+      setRollbackCriteria("");
+      setNotes("");
+    } catch {
+      // The mutation hook owns the operator-facing error toast.
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -1220,6 +1288,122 @@ function ShadowReviewPanel({
       </div>
 
       <p className="text-xs text-muted-foreground">{review.recommendation.rationale}</p>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <form className="border border-border p-3" onSubmit={(event) => void handleDecisionSubmit(event)}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Decision Record</h2>
+            <Badge variant="outline" className={cn("font-medium", shadowDecisionClasses(decision))}>
+              {shadowDecisionLabel(decision)}
+            </Badge>
+          </div>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            {(["defer", "continue_shadow", "promote_to_market_signals"] as const).map((option) => (
+              <Button
+                key={option}
+                type="button"
+                variant={decision === option ? "default" : "outline"}
+                size="sm"
+                className="justify-center"
+                onClick={() => setDecision(option)}
+                aria-pressed={decision === option}
+              >
+                {shadowDecisionLabel(option)}
+              </Button>
+            ))}
+          </div>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <label className="space-y-1 text-xs font-medium">
+              Reviewer
+              <Input
+                value={reviewer}
+                onChange={(event) => setReviewer(event.target.value)}
+                className="h-9"
+              />
+            </label>
+            <label className="space-y-1 text-xs font-medium">
+              Reviewed Tickers
+              <Input
+                value={reviewedTickers}
+                onChange={(event) => setReviewedTickers(event.target.value)}
+                placeholder="AA, BTU"
+                className="h-9 font-mono"
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <label className="space-y-1 text-xs font-medium">
+              Rationale
+              <textarea
+                value={rationale}
+                onChange={(event) => setRationale(event.target.value)}
+                className="min-h-24 w-full resize-y border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+            </label>
+            <label className="space-y-1 text-xs font-medium">
+              Rollback Criteria
+              <textarea
+                value={rollbackCriteria}
+                onChange={(event) => setRollbackCriteria(event.target.value)}
+                className="min-h-24 w-full resize-y border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+            </label>
+          </div>
+
+          <label className="mt-3 block space-y-1 text-xs font-medium">
+            Notes
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              className="min-h-16 w-full resize-y border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+          </label>
+
+          <div className="mt-3 flex justify-end">
+            <Button type="submit" disabled={!canSubmitDecision || submittingDecision}>
+              {submittingDecision ? "Saving…" : "Record Decision"}
+            </Button>
+          </div>
+        </form>
+
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Decision Records</h2>
+            <span className="text-xs text-muted-foreground">
+              {decisionRecordsLoading ? "Loading" : `${decisionRecords.length} shown`}
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {decisionRecords.length ? (
+              decisionRecords.map((record) => (
+                <div key={record.id} className="border border-border/70 p-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge
+                      variant="outline"
+                      className={cn("font-medium", shadowDecisionClasses(record.decision))}
+                    >
+                      {shadowDecisionLabel(record.decision)}
+                    </Badge>
+                    <span className="text-muted-foreground">{formatDate(record.created_at)}</span>
+                  </div>
+                  <p className="mt-2 font-medium">{record.reviewer}</p>
+                  <p className="mt-1 line-clamp-2 text-muted-foreground">{record.rationale}</p>
+                  {record.reviewed_tickers.length ? (
+                    <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                      {record.reviewed_tickers.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No decision records yet.</p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1383,6 +1567,11 @@ export function HedgeFundSignalsShell() {
     whipsaw_window_sessions: 5,
     outcome_horizon_sessions: 5,
   });
+  const shadowDecisionRecords = useFinancialShadowDecisionRecords({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    limit: 5,
+  });
+  const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
   const watchlistLanes = watchlistCandidates.data?.lanes ?? EMPTY_LANES;
@@ -1426,7 +1615,13 @@ export function HedgeFundSignalsShell() {
     watchlistCandidates.isFetching ||
     dailyCalibration.isFetching ||
     promotionGate.isFetching ||
-    shadowReview.isFetching;
+    shadowReview.isFetching ||
+    shadowDecisionRecords.isFetching;
+
+  async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
+    await createShadowDecisionRecord.mutateAsync(payload);
+    void shadowDecisionRecords.refetch();
+  }
 
   return (
     <div className="space-y-6">
@@ -1477,6 +1672,7 @@ export function HedgeFundSignalsShell() {
               void dailyCalibration.refetch();
               void promotionGate.refetch();
               void shadowReview.refetch();
+              void shadowDecisionRecords.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -1589,6 +1785,10 @@ export function HedgeFundSignalsShell() {
             review={shadowReview.data ?? null}
             loading={shadowReview.isLoading}
             error={shadowReview.isError}
+            decisionRecords={shadowDecisionRecords.data ?? []}
+            decisionRecordsLoading={shadowDecisionRecords.isLoading}
+            onSubmitDecision={handleShadowDecisionSubmit}
+            submittingDecision={createShadowDecisionRecord.isPending}
           />
         </CardContent>
       </Card>

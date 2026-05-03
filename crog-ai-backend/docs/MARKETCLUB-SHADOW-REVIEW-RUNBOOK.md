@@ -16,6 +16,9 @@ approval mechanism.
 - Live app panel: Command Center -> Financial -> Hedge Fund -> Shadow Review
 - API packet:
   `GET /api/financial/signals/shadow-review/daily?candidate_parameter_set=dochia_v0_2_range_daily`
+- Decision records:
+  `GET /api/financial/signals/shadow-review/decision-records?candidate_parameter_set=dochia_v0_2_range_daily`
+  and `POST /api/financial/signals/shadow-review/decision-records`
 
 ## Review Gates
 
@@ -35,7 +38,7 @@ approval mechanism.
 
 ## Required Decision Record
 
-Capture:
+Capture in the Shadow Review panel or decision-record API:
 
 - Reviewer and timestamp.
 - Candidate parameter set.
@@ -45,6 +48,10 @@ Capture:
 - Whipsaw/backtest tickers reviewed.
 - Decision: `defer`, `continue_shadow`, or `promote_to_market_signals`.
 - Rollback or depromotion criteria.
+
+The API recomputes and stores the current Shadow Review evidence packet with
+the record. A `promote_to_market_signals` decision is still only permission to
+build the next dry-run promotion step; it is not a production write.
 
 ## Hard Stops
 
