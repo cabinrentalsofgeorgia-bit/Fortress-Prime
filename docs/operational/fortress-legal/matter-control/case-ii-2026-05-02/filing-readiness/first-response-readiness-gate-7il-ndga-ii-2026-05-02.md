@@ -13,6 +13,7 @@ This is not a filing and not legal advice. It is a release gate for deciding whe
 | Federal Rules of Civil Procedure - U.S. Courts | `https://www.uscourts.gov/forms-rules/current-rules-practice-procedure/federal-rules-civil-procedure` | Official federal rules source page; use live rule text before filing. |
 | Federal Rules PDF - U.S. Courts | `https://www.uscourts.gov/file/document/rules-civil-procedure` | Current rules pamphlet source for Rule 4, Rule 8, Rule 12, and Rule 13 checks. |
 | N.D. Ga. Local Rules page | `https://www.gand.uscourts.gov/court-info/local-rules-and-orders/local-rules` | Local rule and form/filing practice source; confirm current version before filing. |
+| Counsel Phase 1 fit-call scorecard | `../counsel-phase1-fit-call-scorecard-7il-ndga-ii-2026-05-02.md` | Post-conflict fit, budget, scope, and package-release decision gate. |
 | Counsel conflict-check outreach control | `../counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md` | Phase 0/1/2 release rule for counsel outreach before package transmission. |
 | Service and deadline log | `../service-deadline-log-7il-ndga-ii-2026-05-02.md` | Service event capture and response-deadline control. |
 | Rule 12 / first-response screen | `rule12-first-response-screen-7il-ndga-ii-2026-05-02.md` | Threshold defense and response-path evaluation. |
@@ -43,7 +44,7 @@ This is not a filing and not legal advice. It is a release gate for deciding whe
 | Rule 12 motion | Threshold issue is materially stronger than answer-only path and supported by source/case-law memo. | Motion is being used only to buy time, would waive better issues, or lacks record support. |
 | Answer only | Every paragraph response is source-reviewed, defenses are selected, and Rule 12 waiver risk is accepted. | Jurisdiction/service/venue/failure-to-state/preclusion issues have not been reviewed. |
 | Answer plus counterclaims | Compulsory counterclaim risk and element proof are mapped, and offensive pleading risk is accepted. | Counterclaim theories rely on privileged, incomplete, or weakly sourced facts. |
-| Counsel-filed response | Counsel conflict clears and phase-one scope/budget are acceptable. | Counsel demands unbounded restart, misses clock urgency, or conflict is unresolved. |
+| Counsel-filed response | Counsel conflict clears, Phase 1 fit score passes, and scope/budget are acceptable. | Counsel demands unbounded restart, misses clock urgency, fails the fit scorecard, or conflict is unresolved. |
 | Pro se emergency response | Service deadline is live and counsel is unavailable in time. | Filing is not reviewed for service, deadline, local rules, defenses, and signature/service requirements. |
 
 ## Must-Have Checks Before Any Filing

@@ -15,7 +15,7 @@ No attorney package, evidence index, draft answer, counterclaim theory, inspecti
 | Phase | Name | What May Be Sent | What Stays Withheld | Exit Condition |
 |---:|---|---|---|---|
 | 0 | Conflict screen | Names, case caption, court, case number, service status, request for conflict check. | Facts, evidence, strategy, draft pleadings, privileged communications, attorney package. | Firm says conflicts are clear or asks for limited additional conflict names. |
-| 1 | Fit screen | Public posture, deadline/service status, narrow scope ask, budget/fee questions. | Detailed evidence, privileged analysis, draft answer, counterclaim merits. | Firm confirms fit and asks for curated materials. |
+| 1 | Fit screen | Public posture, deadline/service status, narrow scope ask, budget/fee questions, and scorecard review. | Detailed evidence, privileged analysis, draft answer, counterclaim merits. | Firm passes `counsel-phase1-fit-call-scorecard-7il-ndga-ii-2026-05-02.md` and asks for curated materials. |
 | 2 | Confidential package review | Attorney briefing package, selected public filings, curated evidence index, draft workbenches, subject to counsel instructions. | Internal decision logs and privileged counsel communications unless counsel specifically requests them and operator approves. | Phase 1 scope, budget, and confidentiality expectations are acceptable. |
 | 3 | Engagement / filing work | Working drafts, filing posture, response calendar, evidence map, and tactical decisions. | Anything outside agreed scope. | Engagement letter or explicit limited-scope agreement is in place. |
 
@@ -87,6 +87,9 @@ I am looking for conflict clearance before sending materials. This is a new N.D.
 If intake asks for facts before clearing conflicts, say: I can provide a curated package after conflicts clear. For now I am only trying to determine whether your firm can consider the matter.
 
 ## Phase 1 Fit Questions After Conflict Clearance
+
+Use `counsel-phase1-fit-call-scorecard-7il-ndga-ii-2026-05-02.md` before any Phase 2 package release.
+
 
 - Do you handle N.D. Ga. federal real-estate / business litigation?
 - Can you review a curated package rather than starting from a cold intake?
