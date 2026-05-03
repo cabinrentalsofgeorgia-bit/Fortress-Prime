@@ -59,6 +59,7 @@ class SignalDataStore(Protocol):
         ticker: str,
         sessions: int,
         as_of: dt.date | None = None,
+        parameter_set: str | None = None,
     ) -> dict[str, Any]: ...
 
 
@@ -436,7 +437,14 @@ class PostgresSignalDataStore:
         ticker: str,
         sessions: int,
         as_of: dt.date | None = None,
+        parameter_set: str | None = None,
     ) -> dict[str, Any]:
         with connect() as conn:
             conn.execute("SET default_transaction_read_only = on")
-            return fetch_symbol_chart(conn, ticker=ticker, sessions=sessions, as_of=as_of)
+            return fetch_symbol_chart(
+                conn,
+                ticker=ticker,
+                sessions=sessions,
+                as_of=as_of,
+                parameter_set=parameter_set,
+            )

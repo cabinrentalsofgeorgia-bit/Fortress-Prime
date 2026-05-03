@@ -133,6 +133,7 @@ export function useFinancialSignalChart(
   params?: {
     sessions?: number;
     as_of?: string;
+    parameter_set?: string;
   },
 ) {
   const normalized = ticker?.trim().toUpperCase() ?? "";

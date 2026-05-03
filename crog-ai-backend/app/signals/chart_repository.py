@@ -15,10 +15,19 @@ from app.signals.trade_triangles import (
     EodBar,
     TriangleEvent,
     TriangleTimeframe,
+    TriangleTriggerMode,
     detect_triangle_events,
 )
 
 CHART_LOOKBACK_BUFFER = max(LOOKBACK_SESSIONS.values())
+PRODUCTION_PARAMETER_SET = "dochia_v0_estimated"
+RANGE_DAILY_PARAMETER_SET = "dochia_v0_2_range_daily"
+
+
+def daily_trigger_mode_for_parameter_set(parameter_set: str | None) -> TriangleTriggerMode:
+    if parameter_set == RANGE_DAILY_PARAMETER_SET:
+        return TriangleTriggerMode.RANGE
+    return TriangleTriggerMode.CLOSE
 
 
 def _channel_for(
@@ -55,11 +64,21 @@ def build_symbol_chart(
     ticker: str,
     bars: list[EodBar],
     sessions: int,
+    parameter_set: str | None = None,
 ) -> dict[str, Any]:
+    parameter_set_name = parameter_set or PRODUCTION_PARAMETER_SET
+    daily_trigger_mode = daily_trigger_mode_for_parameter_set(parameter_set)
     ordered = sorted(bars, key=lambda bar: bar.bar_date)
     visible_bars = ordered[-sessions:]
     if not visible_bars:
-        return {"ticker": ticker.upper(), "sessions": sessions, "bars": [], "events": []}
+        return {
+            "ticker": ticker.upper(),
+            "parameter_set_name": parameter_set_name,
+            "daily_trigger_mode": daily_trigger_mode.value,
+            "sessions": sessions,
+            "bars": [],
+            "events": [],
+        }
 
     first_visible_date = visible_bars[0].bar_date
     index_by_date = {bar.bar_date: index for index, bar in enumerate(ordered)}
@@ -90,12 +109,22 @@ def build_symbol_chart(
     events = [
         _event_to_dict(event)
         for timeframe in TriangleTimeframe
-        for event in detect_triangle_events(ordered, timeframe)
+        for event in detect_triangle_events(
+            ordered,
+            timeframe,
+            trigger_mode=(
+                daily_trigger_mode
+                if timeframe is TriangleTimeframe.DAILY
+                else TriangleTriggerMode.CLOSE
+            ),
+        )
         if event.bar_date >= first_visible_date
     ]
     events.sort(key=lambda item: (item["bar_date"], item["timeframe"]))
     return {
         "ticker": ticker.upper(),
+        "parameter_set_name": parameter_set_name,
+        "daily_trigger_mode": daily_trigger_mode.value,
         "sessions": len(visible_bars),
         "bars": chart_bars,
         "events": events,
@@ -108,6 +137,7 @@ def fetch_symbol_chart(
     ticker: str,
     sessions: int,
     as_of: dt.date | None = None,
+    parameter_set: str | None = None,
 ) -> dict[str, Any]:
     normalized = ticker.upper()
     fetch_limit = sessions + CHART_LOOKBACK_BUFFER
@@ -128,4 +158,9 @@ def fetch_symbol_chart(
             {"ticker": normalized, "as_of": as_of, "limit": fetch_limit},
         )
         bars = [eod_row_to_bar(dict(row)) for row in cur.fetchall()]
-    return build_symbol_chart(ticker=normalized, bars=bars, sessions=sessions)
+    return build_symbol_chart(
+        ticker=normalized,
+        bars=bars,
+        sessions=sessions,
+        parameter_set=parameter_set,
+    )
