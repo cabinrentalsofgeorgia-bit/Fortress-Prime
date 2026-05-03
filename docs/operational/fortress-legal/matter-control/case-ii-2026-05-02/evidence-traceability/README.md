@@ -10,16 +10,17 @@ Use order:
 4. Wilson Pruitt email Batch 001 intake kit
 5. Wilson Pruitt email Batch 001 manifest generator
 6. Wilson Pruitt email evidence register
-7. Wilson Pruitt adverse-alignment proof matrix
-8. Count-to-evidence trace map
-9. Paragraph evidence trace matrix
-10. Inspection reports and closing-scope addendum
-11. Inspection comments spreadsheet curation addendum
-12. River Heights inspection source status
-13. Terry Wilson River Heights repair reference pin
-14. Evidence gap action list
-15. DOT / GNRR response intake tracker
-16. DOT / GNRR outbound send log
+7. Wilson Pruitt actor dossier and public-record check workbench
+8. Wilson Pruitt adverse-alignment proof matrix
+9. Count-to-evidence trace map
+10. Paragraph evidence trace matrix
+11. Inspection reports and closing-scope addendum
+12. Inspection comments spreadsheet curation addendum
+13. River Heights inspection source status
+14. Terry Wilson River Heights repair reference pin
+15. Evidence gap action list
+16. DOT / GNRR response intake tracker
+17. DOT / GNRR outbound send log
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-03.
 
@@ -33,3 +34,5 @@ Wilson Pruitt claim-evaluation lane: Wilson Pruitt / Terry Wilson concerns are t
 Wilson Pruitt Batch 001 lane: use the Batch 001 intake kit before opening, normalizing, or analyzing newly copied Wilson Pruitt email exports.
 
 Wilson Pruitt manifest-generator lane: after source exports land in Batch 001, run `tools/wpe_batch_manifest.py` to produce timestamped source, privilege-screen, and issue-tagging TSVs on NAS.
+
+Wilson Pruitt actor-dossier lane: use `../actor-dossiers/wilson-pruitt-actor-dossier-7il-ndga-ii-2026-05-03.md` to track identity, role, source packets, public-record checks, and claim-readiness status without promoting raw accusations.

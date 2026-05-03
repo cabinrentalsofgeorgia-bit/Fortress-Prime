@@ -8,6 +8,10 @@ Classification: Repo-safe counsel-review workbench. Not a pleading, not legal ad
 
 This workbench converts the operator's Wilson Pruitt concerns into proof gates for counsel review. The working hypothesis is that Wilson Pruitt / Terry Wilson conduct may be relevant to professional negligence, fiduciary-duty, fraud/misrepresentation, civil conspiracy, adverse-alignment, discovery, or impeachment issues. No claim is treated as pleading-ready until the gates below pass.
 
+## Actor Dossier Link
+
+Use `../actor-dossiers/wilson-pruitt-actor-dossier-7il-ndga-ii-2026-05-03.md` as the status dashboard for identity, role, source packets, public-record checks, and claim-readiness. This workbench remains the proof-gate layer; the dossier should not promote any theory beyond the gates below.
+
 ## Terminology Discipline
 
 Use controlled language:
