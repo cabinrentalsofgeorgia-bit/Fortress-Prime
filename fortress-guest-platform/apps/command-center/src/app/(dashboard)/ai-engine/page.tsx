@@ -7,6 +7,7 @@ import {
   useAgentAutonomyGates,
   useAgentExceptions,
   useAgentOperators,
+  useAgentPlaybooks,
   useAgentQueueHealth,
   useAgentWorkItemAudit,
   useAgentWorkItems,
@@ -29,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   AlertTriangle,
   Activity,
+  BookOpen,
   Bot,
   Brain,
   Check,
@@ -52,6 +54,7 @@ export default function AIEnginePage() {
   const { data: autonomyGates, isLoading: autonomyGatesLoading, error: autonomyGatesError } = useAgentAutonomyGates();
   const { data: exceptions, isLoading: exceptionsLoading, error: exceptionsError } = useAgentExceptions();
   const { data: operators, isLoading: operatorsLoading, error: operatorsError } = useAgentOperators();
+  const { data: playbooks, isLoading: playbooksLoading, error: playbooksError } = useAgentPlaybooks();
   const { data: queueHealth, isLoading: queueHealthLoading, error: queueHealthError } = useAgentQueueHealth();
   const { data: workItems, isLoading: workItemsLoading, error: workItemsError } = useAgentWorkItems();
   const { data: workItemAudit, isLoading: workItemAuditLoading, error: workItemAuditError } = useAgentWorkItemAudit();
@@ -63,6 +66,7 @@ export default function AIEnginePage() {
   const safeAutonomyGates = autonomyGates?.gates ?? [];
   const safeExceptions = exceptions?.items ?? [];
   const safeOperators = operators?.operators ?? [];
+  const safePlaybooks = playbooks?.playbooks ?? [];
   const safeQueueHealth = queueHealth?.sources ?? [];
   const safeWorkItems = workItems?.items ?? [];
   const safeWorkItemAudit = workItemAudit?.items ?? [];
@@ -222,6 +226,14 @@ export default function AIEnginePage() {
             {(exceptions?.total ?? 0) > 0 && (
               <Badge variant="destructive" className="ml-2 text-[10px]">
                 {exceptions?.total}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="playbooks">
+            Playbooks
+            {(playbooks?.summary.active ?? 0) > 0 && (
+              <Badge variant="secondary" className="ml-2 text-[10px]">
+                {playbooks?.summary.active}
               </Badge>
             )}
           </TabsTrigger>
@@ -438,6 +450,93 @@ export default function AIEnginePage() {
                     </div>
                     <Button asChild size="sm" variant="outline">
                       <Link href={item.href}>
+                        Open
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="playbooks" className="mt-4 space-y-4">
+          {playbooksLoading ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">Loading agent playbooks...</p>
+              </CardContent>
+            </Card>
+          ) : playbooksError ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Shield className="h-12 w-12 mx-auto mb-4 text-destructive/70" />
+                <p className="text-muted-foreground">Agent playbooks are unavailable.</p>
+              </CardContent>
+            </Card>
+          ) : safePlaybooks.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">No agent playbooks found.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {safePlaybooks.map((playbook) => (
+                <Card key={playbook.id}>
+                  <CardContent className="flex flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{playbook.label}</Badge>
+                        <Badge variant={playbook.risk_level === "financial" ? "destructive" : "secondary"}>
+                          {playbook.risk_level.replaceAll("_", " ")}
+                        </Badge>
+                        <Badge variant="outline">{playbook.owner_role}</Badge>
+                        {playbook.related_count > 0 ? (
+                          <Badge variant="destructive">{playbook.related_count} active</Badge>
+                        ) : null}
+                        {playbook.human_approval_required ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <ShieldCheck className="h-3 w-3" />
+                            Human approval
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium">{playbook.trigger}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          First response target: {playbook.first_response_minutes} minutes · Gate:{" "}
+                          {playbook.gate_id.replaceAll("_", " ")}
+                        </p>
+                      </div>
+
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Steps</p>
+                          {playbook.steps.map((step, index) => (
+                            <p key={`${playbook.id}-step-${step}`} className="text-xs text-muted-foreground">
+                              {index + 1}. {step}
+                            </p>
+                          ))}
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Escalation</p>
+                          <div className="flex flex-wrap gap-2">
+                            {playbook.escalation_path.map((role) => (
+                              <Badge key={`${playbook.id}-role-${role}`} variant="outline" className="text-[10px]">
+                                {role}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={playbook.href}>
                         Open
                         <ExternalLink className="ml-2 h-4 w-4" />
                       </Link>

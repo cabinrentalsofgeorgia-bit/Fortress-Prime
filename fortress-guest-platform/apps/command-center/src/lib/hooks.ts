@@ -1099,6 +1099,127 @@ export function useAgentExceptions(limit = 80) {
   });
 }
 
+export interface AgentPlaybook {
+  id: string;
+  label: string;
+  trigger: string;
+  risk_level: string;
+  owner_role: string;
+  gate_id: string;
+  human_approval_required: boolean;
+  first_response_minutes: number;
+  related_count: number;
+  steps: string[];
+  escalation_path: string[];
+  href: string;
+}
+
+export interface AgentPlaybooksResponse {
+  playbooks: AgentPlaybook[];
+  summary: Record<string, number>;
+  generated_at: string;
+}
+
+export function useAgentPlaybooks() {
+  return useQuery<AgentPlaybooksResponse>({
+    queryKey: ["agent-playbooks"],
+    queryFn: () => api.get("/api/agent/playbooks"),
+    refetchInterval: 60_000,
+  });
+}
+
+export interface QuoteBookingRecord {
+  id: string;
+  kind: "quote" | "hold" | "reservation" | "parity";
+  title: string;
+  status: string;
+  property_id: string | null;
+  property_name: string | null;
+  guest_label: string | null;
+  check_in: string | null;
+  check_out: string | null;
+  total_amount: number | null;
+  payment_state: string | null;
+  parity_status: string | null;
+  stop_level: "clear" | "inspect" | "stop";
+  stop_reason: string;
+  href: string;
+  created_at: string | null;
+  updated_at: string | null;
+  assigned_to: string | null;
+  escalated: boolean;
+  reviewed: boolean;
+  dismissed: boolean;
+  last_action: string | null;
+  last_action_by: string | null;
+  last_action_at: string | null;
+  last_note: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface QuoteBookingSafeguard {
+  id: string;
+  label: string;
+  status: "locked" | "clear" | "attention";
+  detail: string;
+  href: string | null;
+}
+
+export interface QuoteBookingControlTowerResponse {
+  summary: Record<string, number>;
+  safeguards: QuoteBookingSafeguard[];
+  quotes: QuoteBookingRecord[];
+  holds: QuoteBookingRecord[];
+  reservations: QuoteBookingRecord[];
+  parity_audits: QuoteBookingRecord[];
+  generated_at: string;
+}
+
+export function useQuoteBookingControlTower(limit = 20) {
+  return useQuery<QuoteBookingControlTowerResponse>({
+    queryKey: ["quote-booking-control-tower", limit],
+    queryFn: () => api.get("/api/vrs/quote-booking/control-tower", { limit }),
+    refetchInterval: 60_000,
+  });
+}
+
+export interface QuoteBookingActionResponse {
+  ok: boolean;
+  kind: string;
+  id: string;
+  action: string;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+}
+
+export function useQuoteBookingControlAction() {
+  const qc = useQueryClient();
+  return useMutation<
+    QuoteBookingActionResponse,
+    Error,
+    {
+      kind: QuoteBookingRecord["kind"];
+      id: string;
+      action: "claim" | "mark_reviewed" | "escalate" | "dismiss" | "note";
+      note?: string;
+      assignee?: string;
+    }
+  >({
+    mutationFn: ({ kind, id, action, note, assignee }) =>
+      api.post(`/api/vrs/quote-booking/control-tower/${kind}/${id}/action`, {
+        action,
+        note,
+        assignee,
+      }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["quote-booking-control-tower"] });
+      toast.success(result.message);
+    },
+    onError: (err) => toast.error(err.message || "Control Tower action failed"),
+  });
+}
+
 export interface AgentWorkItem {
   id: string;
   source: string;

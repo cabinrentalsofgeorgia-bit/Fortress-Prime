@@ -195,9 +195,9 @@ export default function CommandCenterPage() {
   const queues = operations?.queues;
   const operatingWorkflows = [
     {
-      label: "Quote Checkout",
+      label: "Quote Control",
       status: quoteCheckout?.status ?? "unknown",
-      href: "/vrs/quotes",
+      href: "/command/quote-control",
       detail: `Pending ${formatMetricValue(quoteCheckout?.guest_pending)} · drift ${formatMetricValue(
         quoteCheckout?.parity_drifts_24h,
       )} · unresolved empty ${formatMetricValue(quoteCheckout?.unresolved_empty_streamline_prices_24h)}`,
@@ -306,6 +306,12 @@ export default function CommandCenterPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button asChild className="bg-cyan-700 text-white hover:bg-cyan-600">
+              <Link href="/command/quote-control">
+                Quote Control
+                <Timer className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
             <Button asChild className="bg-emerald-700 text-white hover:bg-emerald-600">
               <Link href="/command/checkout-parity">
                 Checkout Parity

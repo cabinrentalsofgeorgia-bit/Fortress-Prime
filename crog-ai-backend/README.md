@@ -106,6 +106,10 @@ uv run python scripts/sweep_daily_signal_parameters.py --lookback-min 2 --lookba
 uv run python scripts/validate_daily_signal_candidate.py --top-tickers 15 --min-slice-observations 50
 uv run python scripts/compare_signal_candidate_lanes.py --limit-tickers 500 --top 12
 uv run python scripts/review_signal_candidate_promotion.py --lane-limit 50 --chart-ticker-limit 24
+uv run python scripts/research_range_trigger_guardrails.py --output docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md
+uv run python scripts/review_signal_outcomes.py --output docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md
+uv run python scripts/review_ticker_cluster_candidates.py --include-exclude --output docs/reports/dochia-v0-3-ticker-cluster-review-2026-05-03.md
+uv run python scripts/review_ticker_cluster_candidates.py --include-exclude --cluster-until 2025-09-24 --since 2025-09-25 --output docs/reports/dochia-v0-3-ticker-cluster-holdout-2026-05-03.md
 ```
 
 Best 2026-05-02 research candidate: 3-session intraday range trigger. It
@@ -134,6 +138,40 @@ to production.
 
 First report: `docs/reports/dochia-v0-2-promotion-review-2026-05-03.md`.
 Decision: do not promote v0.2 yet; add guardrail research first.
+
+v0.3 guardrail research is read-only and sweeps range-trigger buffers,
+same-direction close confirmation, and post-event debounce windows against the
+same MarketClub daily alert corpus. First report:
+`docs/reports/dochia-v0-3-guardrail-research-2026-05-03.md`. Decision: no
+simple guardrail cleared the default quality bar of at least 85% of raw-range
+F1 while cutting generated events by at least 15%. Next research moves to
+ATR-normalized buffers and ticker-specific cooldowns before creating another
+non-production parameter set.
+
+Second report:
+`docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md`. Decision: do
+not parameterize this grid either. A light 14-session ATR buffer at 0.025 keeps
+F1 close to raw range at 74.40% but cuts only 2.23% of events. The best
+adaptive cooldown row cuts 21.48% of events but drops F1 to 56.22%. Next
+research moves to return-conditioned outcomes and per-ticker whipsaw clusters.
+
+Return-outcome report:
+`docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md`. Directional
+forward returns are flat for both production close and v0.2 raw range: v0.2
+5-session win rate is 50.33% with +0.01% average directional return. The worst
+v0.2 whipsaw clusters are ticker-specific, led by MOD, ISRG, MRVL, DLR, and HD.
+Future candidates must preserve alert quality, reduce whipsaw clusters, and
+avoid degrading forward directional returns.
+
+Ticker-cluster reports:
+`docs/reports/dochia-v0-3-ticker-cluster-review-2026-05-03.md` and
+`docs/reports/dochia-v0-3-ticker-cluster-holdout-2026-05-03.md`. Full-period
+top-15 exclusion cuts 5.11% of events while keeping F1 at 74.98% and improving
+5-session average directional return to +0.05%. Chronological holdout, with
+clusters learned before 2025-09-25 and evaluated after, does not clear the
+default gate: top-15 exclusion cuts 4.74% of events, keeps F1 at 78.16%, and
+leaves 5-session average directional return flat at -0.04%. Keep v0.2
+candidate-only; do not persist the cluster candidate yet.
 
 ## Relationship to Fortress-Prime
 

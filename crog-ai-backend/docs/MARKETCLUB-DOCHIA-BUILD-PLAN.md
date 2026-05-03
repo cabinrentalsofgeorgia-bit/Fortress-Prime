@@ -188,6 +188,37 @@ Useful query params:
   52.9%, top whipsaw tickers show 8-9 candidate transitions in the 30-day
   window, and reviewed chart overlays add up to 29 candidate-only daily events
   on some symbols.
+- Added a read-only v0.3 guardrail research harness for the range trigger. It
+  sweeps minimum intraday break buffers, same-direction close confirmation, and
+  post-event debounce windows against the MarketClub daily alert corpus before
+  creating another non-production parameter set.
+- First v0.3 guardrail report is tracked at
+  `docs/reports/dochia-v0-3-guardrail-research-2026-05-03.md`. Decision: do
+  not promote or parameterize these simple filters yet. Raw v0.2 range remains
+  the strongest F1 candidate at 76.64%. The best simple reductions cut events
+  by 15-27%, but exact F1 falls to roughly 56-60%, below the default quality
+  bar.
+- Added ATR-normalized buffers and trailing per-symbol adaptive cooldowns to
+  the same read-only research harness. Second report is tracked at
+  `docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md`. Decision:
+  do not persist this grid as a parameter set. A 14-session ATR buffer at
+  0.025 keeps F1 at 74.40% but cuts only 2.23% of events. The best adaptive
+  cooldown row cuts 21.48% of events but drops F1 to 56.22%.
+- Added a return-outcome and ticker whipsaw-cluster review layer. Report is
+  tracked at `docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md`.
+  Directional forward returns are flat for both production close and v0.2 raw
+  range: v0.2 5-session win rate is 50.33% with +0.01% average directional
+  return. The worst v0.2 whipsaw clusters are concentrated in MOD, ISRG, MRVL,
+  DLR, and HD.
+- Added ticker-cluster cooldown/exclusion research with a chronological
+  holdout. Reports are tracked at
+  `docs/reports/dochia-v0-3-ticker-cluster-review-2026-05-03.md` and
+  `docs/reports/dochia-v0-3-ticker-cluster-holdout-2026-05-03.md`. Full-period
+  top-15 exclusion is promising: 5.11% fewer events, 74.98% F1, and +0.05%
+  average 5-session directional return. The holdout learns clusters before
+  2025-09-25 and evaluates after; it does not clear the default gate, with
+  4.74% event reduction, 78.16% F1, and -0.04% average 5-session directional
+  return. Do not persist this candidate yet.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -197,6 +228,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: add v0.3 guardrail research for the range trigger:
-reduce whipsaw pressure with debounce, close-confirmation, or volatility
-filters before any production promotion.
+Next clean build step: build a rolling, date-safe whipsaw-risk score that can
+cool down names as they become noisy without relying on a fixed historical
+blocklist.

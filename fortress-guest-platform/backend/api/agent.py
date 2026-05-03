@@ -186,6 +186,27 @@ class AgentExceptionsResponse(BaseModel):
     generated_at: str
 
 
+class AgentPlaybook(BaseModel):
+    id: str
+    label: str
+    trigger: str
+    risk_level: str
+    owner_role: str
+    gate_id: str
+    human_approval_required: bool
+    first_response_minutes: int
+    related_count: int
+    steps: list[str] = Field(default_factory=list)
+    escalation_path: list[str] = Field(default_factory=list)
+    href: str
+
+
+class AgentPlaybooksResponse(BaseModel):
+    playbooks: list[AgentPlaybook]
+    summary: dict[str, int]
+    generated_at: str
+
+
 SOURCE_LABELS = {
     "guest_concierge": "Guest Concierge",
     "hunter_reactivation": "Hunter Reactivation",
@@ -531,6 +552,17 @@ def _exception_summary(items: list[AgentExceptionItem]) -> dict[str, int]:
         else:
             summary["stale"] += 1
     return summary
+
+
+def _playbook_summary(playbooks: list[AgentPlaybook]) -> dict[str, int]:
+    return {
+        "total": len(playbooks),
+        "active": sum(1 for playbook in playbooks if playbook.related_count > 0),
+        "guest_facing": sum(1 for playbook in playbooks if playbook.risk_level == "guest_facing"),
+        "public_content": sum(1 for playbook in playbooks if playbook.risk_level == "public_content"),
+        "financial": sum(1 for playbook in playbooks if playbook.risk_level == "financial"),
+        "human_approval_required": sum(1 for playbook in playbooks if playbook.human_approval_required),
+    }
 
 
 def _operator_from_source(
@@ -1056,6 +1088,165 @@ async def agent_queue_health(db: AsyncSession = Depends(get_db)):
     return AgentQueueHealthResponse(
         sources=sources,
         summary=_queue_health_summary(sources),
+        generated_at=_utc_now().isoformat(),
+    )
+
+
+@router.get("/playbooks", response_model=AgentPlaybooksResponse)
+async def agent_playbooks(db: AsyncSession = Depends(get_db)):
+    """Return staff playbooks for agent exceptions, gates, and queue pressure."""
+    sources = await _build_agent_queue_health_sources(db)
+    by_source = _source_map(sources)
+    queue_summary = _queue_health_summary(sources)
+
+    guest_related = (
+        by_source["guest_concierge"].pending_count
+        + by_source["hunter_reactivation"].pending_count
+        + by_source["hunter_reactivation"].failed_count
+        + by_source["taylor_quotes"].pending_count
+        + by_source["email_intake"].pending_count
+        + by_source["email_intake"].failed_count
+    )
+
+    playbooks = [
+        AgentPlaybook(
+            id="guest_response_review",
+            label="Guest Response Review",
+            trigger="Guest-facing drafts, stale guest responses, or guest delivery failures.",
+            risk_level="guest_facing",
+            owner_role="Guest Services Manager",
+            gate_id="guest_facing",
+            human_approval_required=True,
+            first_response_minutes=30,
+            related_count=guest_related,
+            steps=[
+                "Open the relevant guest-facing queue item.",
+                "Review the source message, reservation context, and draft.",
+                "Approve, edit, or reject from the source workflow.",
+                "Record escalation when staff cannot safely answer.",
+            ],
+            escalation_path=["Guest Services Manager", "Operations Manager", "Owner"],
+            href="/ai-engine",
+        ),
+        AgentPlaybook(
+            id="email_delivery_failure",
+            label="Email Delivery Failure",
+            trigger="Email Intake has a send_failed item or stale outbound draft.",
+            risk_level="guest_facing",
+            owner_role="Guest Services Manager",
+            gate_id="guest_facing",
+            human_approval_required=True,
+            first_response_minutes=30,
+            related_count=by_source["email_intake"].failed_count + by_source["email_intake"].pending_count,
+            steps=[
+                "Open Email Intake and inspect the affected message.",
+                "Confirm the guest email address and SMTP error.",
+                "Resend or contact by alternate channel from the source workflow.",
+                "Escalate repeated delivery failures to operations.",
+            ],
+            escalation_path=["Guest Services Manager", "Operations Manager"],
+            href="/email-intake",
+        ),
+        AgentPlaybook(
+            id="seo_public_content_review",
+            label="Public Content Review",
+            trigger="SEO/content item is pending, needs rewrite, or has deploy failure.",
+            risk_level="public_content",
+            owner_role="Growth Manager",
+            gate_id="public_content",
+            human_approval_required=True,
+            first_response_minutes=240,
+            related_count=by_source["seo_content"].pending_count + by_source["seo_content"].failed_count,
+            steps=[
+                "Open the SEO review item.",
+                "Check page intent, proposed metadata, and God Head feedback.",
+                "Approve, reject, or request rewrite from the source workflow.",
+                "Do not change legacy redirects unless migration policy explicitly approves it.",
+            ],
+            escalation_path=["Growth Manager", "Operations Manager"],
+            href="/seo-review?status=pending_human",
+        ),
+        AgentPlaybook(
+            id="quote_approval",
+            label="Quote Approval",
+            trigger="Taylor quote remains pending approval or quote workload is growing.",
+            risk_level="guest_facing",
+            owner_role="Reservations Manager",
+            gate_id="guest_facing",
+            human_approval_required=True,
+            first_response_minutes=120,
+            related_count=by_source["taylor_quotes"].pending_count,
+            steps=[
+                "Open the quote request.",
+                "Confirm dates, guest count, pet count, and available cabin options.",
+                "Approve only after price, tax, fee, and expiration look correct.",
+                "Escalate unusual discounts or edge cases before sending.",
+            ],
+            escalation_path=["Reservations Manager", "Operations Manager"],
+            href="/vrs/quotes",
+        ),
+        AgentPlaybook(
+            id="financial_variance_triage",
+            label="Financial Variance Triage",
+            trigger="Financial variance item remains pending or blocks autonomy gates.",
+            risk_level="financial",
+            owner_role="Finance Manager",
+            gate_id="financial",
+            human_approval_required=True,
+            first_response_minutes=240,
+            related_count=by_source["financial_variance"].pending_count,
+            steps=[
+                "Open the financial triage queue.",
+                "Compare local total, upstream total, and discrepancy reason.",
+                "Choose absorb or invoice only from the dedicated triage workflow.",
+                "Record investigation notes before resolving large variances.",
+            ],
+            escalation_path=["Finance Manager", "Owner"],
+            href="/command/triage",
+        ),
+        AgentPlaybook(
+            id="queue_reliability",
+            label="Queue Reliability",
+            trigger="Any source reports failed items, high pending pressure, or stale age.",
+            risk_level="operational",
+            owner_role="Operations Manager",
+            gate_id="queue_reliability",
+            human_approval_required=False,
+            first_response_minutes=60,
+            related_count=queue_summary["failed_total"] + queue_summary["attention_sources"],
+            steps=[
+                "Open Agent Health and identify degraded sources.",
+                "Open Exceptions to inspect the individual failed or stale items.",
+                "Resolve source workflow failures before raising autonomy.",
+                "Escalate repeated failures to engineering with timestamps and source names.",
+            ],
+            escalation_path=["Operations Manager", "Engineering"],
+            href="/ai-engine",
+        ),
+        AgentPlaybook(
+            id="audit_coverage",
+            label="Audit Coverage",
+            trigger="Pending work exists with no recent staff action trail.",
+            risk_level="compliance",
+            owner_role="Operations Manager",
+            gate_id="audit_coverage",
+            human_approval_required=False,
+            first_response_minutes=240,
+            related_count=queue_summary["pending_total"] if not queue_summary["action_count_24h"] else 0,
+            steps=[
+                "Open Action Log and verify recent staff decisions.",
+                "Claim or escalate pending items from Work Items when appropriate.",
+                "Do not approve public, financial, or guest-facing changes outside source workflows.",
+                "Confirm audit rows exist before changing autonomy posture.",
+            ],
+            escalation_path=["Operations Manager", "Engineering"],
+            href="/ai-engine",
+        ),
+    ]
+
+    return AgentPlaybooksResponse(
+        playbooks=playbooks,
+        summary=_playbook_summary(playbooks),
         generated_at=_utc_now().isoformat(),
     )
 
