@@ -52,6 +52,11 @@ type ActionTarget = {
   record: QuoteBookingRecord;
   action: SafeAction;
 };
+type CleanupAction = "expire_hold" | "cancel_proof";
+type CleanupTarget = {
+  record: QuoteBookingRecord;
+  action: CleanupAction;
+};
 
 type QuoteBookingSendResponse = {
   ok: boolean;
@@ -102,6 +107,16 @@ type QuoteBookingPaymentApprovalResponse = {
   status: string;
   paid_amount: number | null;
   balance_due: number | null;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+};
+
+type QuoteBookingCleanupResponse = {
+  ok: boolean;
+  kind: "hold" | "reservation";
+  id: string;
+  status: string;
   audit_id: string | null;
   audit_hash: string | null;
   message: string;
@@ -231,6 +246,23 @@ function canApprovePayment(record: QuoteBookingRecord): boolean {
     metadataString(record, "payment_reconciliation_state") === "stripe_paid_pending_staff_approval" &&
     record.metadata?.local_payment_posted !== true
   );
+}
+
+function canExpireLocalHold(record: QuoteBookingRecord): boolean {
+  return record.kind === "hold" && record.metadata?.cleanup_eligible === true;
+}
+
+function canCancelProofReservation(record: QuoteBookingRecord): boolean {
+  return record.kind === "reservation" && record.metadata?.cleanup_eligible === true;
+}
+
+function cleanupLabel(action: CleanupAction): string {
+  switch (action) {
+    case "expire_hold":
+      return "Expire Local Hold";
+    case "cancel_proof":
+      return "Cancel Proof Reservation";
+  }
 }
 
 function reconciliationLabel(state: string | null): string | null {
@@ -394,12 +426,14 @@ function RecordRow({
   onConvertHold,
   onSendPayment,
   onApprovePayment,
+  onCleanup,
   isActionPending,
   isSendPending,
   isHoldPending,
   isConvertPending,
   isPaymentPending,
   isApprovePaymentPending,
+  isCleanupPending,
 }: {
   record: QuoteBookingRecord;
   onAction: (record: QuoteBookingRecord, action: SafeAction) => void;
@@ -408,12 +442,14 @@ function RecordRow({
   onConvertHold: (record: QuoteBookingRecord) => void;
   onSendPayment: (record: QuoteBookingRecord) => void;
   onApprovePayment: (record: QuoteBookingRecord) => void;
+  onCleanup: (record: QuoteBookingRecord, action: CleanupAction) => void;
   isActionPending: boolean;
   isSendPending: boolean;
   isHoldPending: boolean;
   isConvertPending: boolean;
   isPaymentPending: boolean;
   isApprovePaymentPending: boolean;
+  isCleanupPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
   const readinessState = record.kind === "quote" ? metadataString(record, "readiness_state") : null;
@@ -424,6 +460,7 @@ function RecordRow({
   const paymentReconciliationLabel = reconciliationLabel(paymentReconciliationState);
   const paymentReconciliationDetail =
     record.kind === "reservation" ? metadataString(record, "payment_reconciliation_detail") : null;
+  const cleanupReason = metadataString(record, "cleanup_reason");
   const paymentReceivedCents =
     record.kind === "reservation" ? metadataNumber(record, "payment_reconciliation_amount_received_cents") : null;
   const canSend = canSendGuestQuote(record);
@@ -431,6 +468,8 @@ function RecordRow({
   const canConvert = canConvertLocalReservation(record);
   const canPayment = canSendPaymentLink(record);
   const canApprove = canApprovePayment(record);
+  const canCleanupHold = canExpireLocalHold(record);
+  const canCleanupReservation = canCancelProofReservation(record);
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
@@ -544,6 +583,12 @@ function RecordRow({
               <p className="mt-1">{paymentReconciliationDetail}</p>
             </div>
           ) : null}
+          {cleanupReason && (canCleanupHold || canCleanupReservation) ? (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
+              <span className="text-xs uppercase text-zinc-500">Cleanup lane</span>
+              <p className="mt-1">{cleanupReason}</p>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
           {canSend ? (
@@ -619,6 +664,36 @@ function RecordRow({
                 <ShieldCheck className="mr-2 h-4 w-4" />
               )}
               Approve Pay
+            </Button>
+          ) : null}
+          {canCleanupHold ? (
+            <Button
+              onClick={() => onCleanup(record, "expire_hold")}
+              disabled={isCleanupPending}
+              size="sm"
+              className="bg-zinc-700 text-white hover:bg-zinc-600"
+            >
+              {isCleanupPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Timer className="mr-2 h-4 w-4" />
+              )}
+              Expire Hold
+            </Button>
+          ) : null}
+          {canCleanupReservation ? (
+            <Button
+              onClick={() => onCleanup(record, "cancel_proof")}
+              disabled={isCleanupPending}
+              size="sm"
+              className="bg-rose-700 text-white hover:bg-rose-600"
+            >
+              {isCleanupPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="mr-2 h-4 w-4" />
+              )}
+              Cancel Proof
             </Button>
           ) : null}
           <Button
@@ -710,6 +785,9 @@ export default function QuoteControlPage() {
   const [paymentApprovalTarget, setPaymentApprovalTarget] = useState<QuoteBookingRecord | null>(null);
   const [paymentApprovalNote, setPaymentApprovalNote] = useState("");
   const [isApprovingPayment, setIsApprovingPayment] = useState(false);
+  const [cleanupTarget, setCleanupTarget] = useState<CleanupTarget | null>(null);
+  const [cleanupNote, setCleanupNote] = useState("");
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
@@ -810,6 +888,10 @@ export default function QuoteControlPage() {
   const openApprovePayment = (record: QuoteBookingRecord) => {
     setPaymentApprovalTarget(record);
     setPaymentApprovalNote("");
+  };
+  const openCleanup = (record: QuoteBookingRecord, action: CleanupAction) => {
+    setCleanupTarget({ record, action });
+    setCleanupNote("");
   };
   const submitAction = () => {
     if (!actionTarget) return;
@@ -951,6 +1033,28 @@ export default function QuoteControlPage() {
       setIsApprovingPayment(false);
     }
   };
+  const submitCleanup = async () => {
+    if (!cleanupTarget) return;
+    setIsCleaningUp(true);
+    try {
+      const path =
+        cleanupTarget.action === "expire_hold"
+          ? `/api/vrs/quote-booking/control-tower/hold/${cleanupTarget.record.id}/expire`
+          : `/api/vrs/quote-booking/control-tower/reservation/${cleanupTarget.record.id}/cancel-proof`;
+      const response = await api.post<QuoteBookingCleanupResponse>(path, {
+        ...(cleanupNote.trim() ? { note: cleanupNote.trim() } : {}),
+      });
+      toast.success(response.message || "Cleanup recorded");
+      setCleanupTarget(null);
+      setCleanupNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Cleanup failed";
+      toast.error(message);
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -1012,7 +1116,7 @@ export default function QuoteControlPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-7">
         <SummaryMetric
           label="Pending Quotes"
           value={metric(summary, "pending_quotes")}
@@ -1053,6 +1157,16 @@ export default function QuoteControlPage() {
               : metric(summary, "payment_reconciliations_pending") > 0
                 ? "warning"
                 : "success"
+          }
+        />
+        <SummaryMetric
+          label="Cleanup"
+          value={metric(summary, "expired_local_holds_pending") + metric(summary, "proof_reservations_cleanup_pending")}
+          detail={`${metric(summary, "proof_reservations_cleanup_pending").toLocaleString()} proof reservations`}
+          tone={
+            metric(summary, "expired_local_holds_pending") + metric(summary, "proof_reservations_cleanup_pending") > 0
+              ? "warning"
+              : "success"
           }
         />
       </div>
@@ -1176,12 +1290,14 @@ export default function QuoteControlPage() {
                   onConvertHold={openConvertHold}
                   onSendPayment={openSendPayment}
                   onApprovePayment={openApprovePayment}
+                  onCleanup={openCleanup}
                   isActionPending={actionMutation.isPending}
                   isSendPending={isSendingQuote}
                   isHoldPending={isCreatingHold}
                   isConvertPending={isConvertingReservation}
                   isPaymentPending={isSendingPaymentLink}
                   isApprovePaymentPending={isApprovingPayment}
+                  isCleanupPending={isCleaningUp}
                 />
               ))}
             </div>
@@ -1541,6 +1657,77 @@ export default function QuoteControlPage() {
                 <>
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   Post Local Payment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(cleanupTarget)} onOpenChange={(open) => !open && setCleanupTarget(null)}>
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>{cleanupTarget ? cleanupLabel(cleanupTarget.action) : "Cleanup"}</DialogTitle>
+            <DialogDescription>{cleanupTarget?.record.title || "Quote-control artifact"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-rose-500/20 bg-rose-950/20 px-3 py-3 text-sm text-rose-100">
+              This cleanup lane only touches local CROG-VRS proof artifacts. It does not refund or charge a card,
+              write to Streamline, touch the public website, or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Kind</p>
+                <p className="truncate">{cleanupTarget ? kindLabel(cleanupTarget.record.kind) : "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Status</p>
+                <p className="truncate">{cleanupTarget?.record.status || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Stay</p>
+                <p>
+                  {formatDate(cleanupTarget?.record.check_in)} to {formatDate(cleanupTarget?.record.check_out)}
+                </p>
+              </div>
+            </div>
+            {metadataString(cleanupTarget?.record || ({} as QuoteBookingRecord), "cleanup_reason") ? (
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
+                <span className="text-xs uppercase text-zinc-500">Gate</span>
+                <p className="mt-1">
+                  {metadataString(cleanupTarget?.record || ({} as QuoteBookingRecord), "cleanup_reason")}
+                </p>
+              </div>
+            ) : null}
+            <Textarea
+              value={cleanupNote}
+              onChange={(event) => setCleanupNote(event.target.value)}
+              placeholder="Internal cleanup note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setCleanupTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitCleanup}
+              disabled={isCleaningUp || !cleanupTarget}
+              className="bg-rose-700 text-white hover:bg-rose-600"
+            >
+              {isCleaningUp ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cleaning...
+                </>
+              ) : (
+                <>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Confirm Cleanup
                 </>
               )}
             </Button>

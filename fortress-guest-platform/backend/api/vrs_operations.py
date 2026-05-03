@@ -187,6 +187,20 @@ class QuoteBookingPaymentApprovalResponse(BaseModel):
     message: str
 
 
+class QuoteBookingCleanupRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingCleanupResponse(BaseModel):
+    ok: bool
+    kind: Literal["hold", "reservation"]
+    id: str
+    status: str
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
 class QuoteBookingProofLaneRequest(BaseModel):
     guest_email: str | None = Field(default=None, max_length=320)
     property_id: UUID | None = None
@@ -248,6 +262,12 @@ def _display_date(value: Any) -> str:
     if hasattr(value, "strftime"):
         return value.strftime("%b %-d, %Y")
     return str(value)
+
+
+def _aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _quote_guest_names(quote: GuestQuote) -> tuple[str, str]:
@@ -714,6 +734,52 @@ def _control_resource_id(kind: str, item_id: str) -> str:
     return f"{kind}:{item_id}"
 
 
+def _is_quote_control_hold(hold: ReservationHold) -> bool:
+    snapshot = hold.quote_snapshot if isinstance(hold.quote_snapshot, dict) else {}
+    return (
+        str(snapshot.get("source") or "") == "quote_booking_control_tower"
+        or str(hold.session_id or "").startswith("quote-control-")
+    )
+
+
+def _hold_cleanup_eligible(hold: ReservationHold, now: datetime) -> tuple[bool, str]:
+    if not _is_quote_control_hold(hold):
+        return False, "Hold was not created by the CROG-VRS quote-control lane."
+    if str(hold.status or "").lower() != "active":
+        return False, f"Hold status is {hold.status}; only active expired holds can be cleaned up."
+    if not hold.expires_at or _aware_utc(hold.expires_at) >= _aware_utc(now):
+        return False, "Hold has not reached its expiration timestamp."
+    return True, "Expired local quote-control hold can be marked expired."
+
+
+def _is_proof_reservation(reservation: Reservation) -> bool:
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    source_snapshot = breakdown.get("source_snapshot") if isinstance(breakdown.get("source_snapshot"), dict) else {}
+    return bool(
+        str(reservation.booking_source or "") == "crog_vrs_quote_control"
+        and str(breakdown.get("source") or "") == "quote_booking_control_tower"
+        and (
+            source_snapshot.get("proof_lane") is True
+            or source_snapshot.get("safe_internal_only") is True
+            or str(reservation.guest_name or "").lower().startswith("crog-vrs proof lane")
+        )
+    )
+
+
+def _proof_reservation_cleanup_eligible(reservation: Reservation) -> tuple[bool, str]:
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    paid_amount = Decimal(str(reservation.paid_amount or "0.00"))
+    if not _is_proof_reservation(reservation):
+        return False, "Reservation is not tagged as a CROG-VRS proof-lane reservation."
+    if str(reservation.status or "").lower() in {"cancelled", "canceled"}:
+        return False, "Proof reservation is already cancelled."
+    if reservation.streamline_reservation_id:
+        return False, "Reservation is linked to Streamline and cannot be cleaned up from this lane."
+    if paid_amount > Decimal("0.00") or bool(breakdown.get("control_tower_payment_local_posted")):
+        return False, "Reservation has posted local payment and requires the normal cancellation/refund workflow."
+    return True, "Proof-lane local reservation can be cancelled to release availability."
+
+
 async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingRecord]) -> None:
     if not records:
         return
@@ -766,6 +832,10 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
         elif action == "approve_reservation_payment_reconciliation":
             record.metadata["payment_reconciliation_approved"] = audit.outcome == "success"
             record.metadata["local_payment_posted"] = audit.outcome == "success"
+        elif action == "expire_local_hold":
+            record.metadata["cleanup_completed"] = audit.outcome == "success"
+        elif action == "cancel_proof_reservation":
+            record.metadata["cleanup_completed"] = audit.outcome == "success"
 
         note = metadata.get("note")
         if isinstance(note, str) and note.strip():
@@ -1225,6 +1295,91 @@ async def _record_reservation_payment_approval_audit(
     )
 
 
+async def _record_hold_cleanup_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    hold: ReservationHold,
+    outcome: str,
+    note: str | None,
+    detail: str,
+) -> OpenShellAuditLog | None:
+    snapshot = hold.quote_snapshot if isinstance(hold.quote_snapshot, dict) else {}
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.expire_local_hold",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("hold", str(hold.id)),
+        purpose="Staff cleanup of an expired local quote-control hold.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "hold_id": str(hold.id),
+            "quote_id": snapshot.get("quote_ref"),
+            "property_id": str(hold.property_id),
+            "check_in": _iso(hold.check_in_date),
+            "check_out": _iso(hold.check_out_date),
+            "expires_at": _iso(hold.expires_at),
+            "status_after": hold.status,
+            "note": note,
+            "detail": detail,
+            "local_hold_only": True,
+            "payment_intent_created": bool(hold.payment_intent_id),
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
+async def _record_proof_reservation_cleanup_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    reservation: Reservation,
+    outcome: str,
+    note: str | None,
+    detail: str,
+) -> OpenShellAuditLog | None:
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.cancel_proof_reservation",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("reservation", str(reservation.id)),
+        purpose="Staff cleanup cancellation of a CROG-VRS proof-lane local reservation.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "quote_id": breakdown.get("quote_ref"),
+            "hold_id": breakdown.get("hold_ref"),
+            "property_id": str(reservation.property_id),
+            "check_in": _iso(reservation.check_in_date),
+            "check_out": _iso(reservation.check_out_date),
+            "status_after": reservation.status,
+            "paid_amount_after": _money(reservation.paid_amount),
+            "balance_due_after": _money(reservation.balance_due),
+            "note": note,
+            "detail": detail,
+            "proof_lane_cleanup": True,
+            "local_payment_posted": bool(breakdown.get("control_tower_payment_local_posted")),
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
 async def _find_active_quote_hold(db: AsyncSession, quote: GuestQuote) -> ReservationHold | None:
     if not quote.property_id or not quote.check_in or not quote.check_out:
         return None
@@ -1360,8 +1515,12 @@ async def quote_booking_control_tower(
         .limit(limit)
     )
     holds: list[QuoteBookingRecord] = []
+    expired_local_holds_pending = 0
     for hold, property_name, guest_email, first_name, last_name in hold_rows.all():
         stop_level, stop_reason = _hold_stop_level(hold, now)
+        hold_cleanup_eligible, hold_cleanup_reason = _hold_cleanup_eligible(hold, now)
+        if hold_cleanup_eligible:
+            expired_local_holds_pending += 1
         holds.append(
             QuoteBookingRecord(
                 id=str(hold.id),
@@ -1386,6 +1545,9 @@ async def quote_booking_control_tower(
                     "payment_intent_id": hold.payment_intent_id,
                     "converted_reservation_id": _uuid(hold.converted_reservation_id),
                     "expires_at": _iso(hold.expires_at),
+                    "is_quote_control_hold": _is_quote_control_hold(hold),
+                    "cleanup_eligible": hold_cleanup_eligible,
+                    "cleanup_reason": hold_cleanup_reason,
                 },
             )
         )
@@ -1399,9 +1561,13 @@ async def quote_booking_control_tower(
     reservations: list[QuoteBookingRecord] = []
     payment_reconciliations_pending = 0
     payment_reconciliations_blocked = 0
+    proof_reservations_cleanup_pending = 0
     for reservation, property_name in reservation_rows.all():
         stop_level, stop_reason = _reservation_stop_level(reservation)
         price_breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+        proof_cleanup_eligible, proof_cleanup_reason = _proof_reservation_cleanup_eligible(reservation)
+        if proof_cleanup_eligible:
+            proof_reservations_cleanup_pending += 1
         payment_link_id = price_breakdown.get("control_tower_payment_link_id")
         reconciliation_state = str(price_breakdown.get("control_tower_payment_reconciliation_state") or "")
         if reconciliation_state == "stripe_paid_pending_staff_approval":
@@ -1469,6 +1635,9 @@ async def quote_booking_control_tower(
                         "control_tower_payment_reconciliation_approved_at"
                     ),
                     "local_payment_posted": bool(price_breakdown.get("control_tower_payment_local_posted")),
+                    "proof_lane": _is_proof_reservation(reservation),
+                    "cleanup_eligible": proof_cleanup_eligible,
+                    "cleanup_reason": proof_cleanup_reason,
                     "streamline_write": price_breakdown.get("streamline_write"),
                     "legacy_storefront": price_breakdown.get("legacy_storefront"),
                 },
@@ -1519,6 +1688,8 @@ async def quote_booking_control_tower(
         "parity_drifts_24h": parity_drifts_24h,
         "payment_reconciliations_pending": payment_reconciliations_pending,
         "payment_reconciliations_blocked": payment_reconciliations_blocked,
+        "expired_local_holds_pending": expired_local_holds_pending,
+        "proof_reservations_cleanup_pending": proof_reservations_cleanup_pending,
     }
 
     all_records = [*quotes, *holds, *reservations, *parity_audits]
@@ -1580,6 +1751,23 @@ async def quote_booking_control_tower(
             href=None,
         ),
         QuoteBookingSafeguard(
+            id="cleanup_lane",
+            label="Proof cleanup lane",
+            status=(
+                "attention"
+                if summary.get("expired_local_holds_pending", 0)
+                or summary.get("proof_reservations_cleanup_pending", 0)
+                else "clear"
+            ),
+            detail=(
+                f"{summary.get('expired_local_holds_pending', 0)} expired local hold"
+                f"{'' if summary.get('expired_local_holds_pending', 0) == 1 else 's'} and "
+                f"{summary.get('proof_reservations_cleanup_pending', 0)} proof reservation"
+                f"{'' if summary.get('proof_reservations_cleanup_pending', 0) == 1 else 's'} can be cleaned up."
+            ),
+            href="/command/quote-control",
+        ),
+        QuoteBookingSafeguard(
             id="payment_reconciliation",
             label="Payment reconciliation gate",
             status=(
@@ -1626,6 +1814,141 @@ async def quote_booking_control_tower(
         reservations=reservations,
         parity_audits=parity_audits,
         generated_at=now.isoformat(),
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/hold/{hold_id}/expire",
+    response_model=QuoteBookingCleanupResponse,
+)
+async def quote_booking_control_expire_hold(
+    hold_id: UUID,
+    body: QuoteBookingCleanupRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingCleanupResponse:
+    """Mark an expired quote-control hold as expired so it stops cluttering the control lane."""
+    hold = await db.get(ReservationHold, hold_id)
+    if hold is None:
+        raise HTTPException(status_code=404, detail="Hold not found")
+
+    note = (body.note or "").strip() or None
+    cleanup_eligible, cleanup_reason = _hold_cleanup_eligible(hold, datetime.now(timezone.utc))
+    if not cleanup_eligible:
+        await _record_hold_cleanup_audit(
+            db=db,
+            current_user=current_user,
+            hold=hold,
+            outcome="blocked",
+            note=note,
+            detail=cleanup_reason,
+        )
+        raise HTTPException(status_code=409, detail=cleanup_reason)
+
+    snapshot = dict(hold.quote_snapshot or {})
+    snapshot["cleanup_status"] = "expired_by_staff"
+    snapshot["cleanup_at"] = datetime.now(timezone.utc).isoformat()
+    snapshot["cleanup_by"] = current_user.email
+    snapshot["streamline_write"] = "blocked"
+    snapshot["legacy_storefront"] = "untouched"
+    hold.quote_snapshot = snapshot
+    hold.status = "expired"
+    hold.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(hold)
+
+    audit = await _record_hold_cleanup_audit(
+        db=db,
+        current_user=current_user,
+        hold=hold,
+        outcome="success",
+        note=note,
+        detail="Expired local quote-control hold marked expired. No payment, Streamline, legacy, DNS, or tunnel action occurred.",
+    )
+    return QuoteBookingCleanupResponse(
+        ok=True,
+        kind="hold",
+        id=str(hold.id),
+        status=str(hold.status),
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Expired local hold cleaned up. Availability remains unblocked; Streamline, the legacy site, DNS, and tunnels were untouched.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/reservation/{reservation_id}/cancel-proof",
+    response_model=QuoteBookingCleanupResponse,
+)
+async def quote_booking_control_cancel_proof_reservation(
+    reservation_id: UUID,
+    body: QuoteBookingCleanupRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingCleanupResponse:
+    """Cancel a zero-paid CROG-VRS proof-lane local reservation to release availability."""
+    reservation = await db.get(Reservation, reservation_id)
+    if reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    note = (body.note or "").strip() or None
+    cleanup_eligible, cleanup_reason = _proof_reservation_cleanup_eligible(reservation)
+    if not cleanup_eligible:
+        await _record_proof_reservation_cleanup_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail=cleanup_reason,
+        )
+        raise HTTPException(status_code=409, detail=cleanup_reason)
+
+    breakdown = dict(reservation.price_breakdown or {})
+    cleanup_at = datetime.now(timezone.utc).isoformat()
+    breakdown.update(
+        {
+            "cleanup_status": "proof_reservation_cancelled_by_staff",
+            "cleanup_at": cleanup_at,
+            "cleanup_by": current_user.email,
+            "cleanup_note": note,
+            "cleanup_releases_availability": True,
+            "balance_due_before_cleanup": str(reservation.balance_due or "0.00"),
+            "payment_captured": False,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+        }
+    )
+    cancel_note = (
+        f"CROG-VRS proof-lane cleanup cancellation {cleanup_at}. "
+        "No refund, no Streamline write, no legacy/public-site change."
+    )
+    if note:
+        cancel_note = f"{cancel_note} Staff note: {note}"
+    reservation.status = "cancelled"
+    reservation.balance_due = Decimal("0.00")
+    reservation.price_breakdown = breakdown
+    reservation.internal_notes = f"{reservation.internal_notes or ''}\n{cancel_note}".strip()
+    reservation.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(reservation)
+
+    audit = await _record_proof_reservation_cleanup_audit(
+        db=db,
+        current_user=current_user,
+        reservation=reservation,
+        outcome="success",
+        note=note,
+        detail="Proof-lane local reservation cancelled to release availability. No payment, Streamline, legacy, DNS, or tunnel action occurred.",
+    )
+    return QuoteBookingCleanupResponse(
+        ok=True,
+        kind="reservation",
+        id=str(reservation.id),
+        status=str(reservation.status),
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Proof reservation cancelled and availability released. Streamline, the legacy site, DNS, and tunnels were untouched.",
     )
 
 
