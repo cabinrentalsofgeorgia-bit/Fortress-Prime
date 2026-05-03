@@ -10,7 +10,11 @@ from psycopg.rows import dict_row
 
 from app.database import connect
 from app.signals.calibration_repository import fetch_daily_calibration
-from app.signals.chart_repository import fetch_symbol_chart
+from app.signals.chart_repository import (
+    PRODUCTION_PARAMETER_SET,
+    daily_trigger_mode_for_parameter_set,
+    fetch_symbol_chart,
+)
 from app.signals.whipsaw_risk import fetch_symbol_whipsaw_risk
 
 
@@ -50,6 +54,16 @@ class SignalDataStore(Protocol):
         until: dt.date | None = None,
         ticker: str | None = None,
         parameter_set: str | None = None,
+        top_tickers: int = 20,
+        event_window_days: int = 3,
+    ) -> dict[str, Any]: ...
+
+    def promotion_gate(
+        self,
+        *,
+        candidate_parameter_set: str,
+        since: dt.date | None = None,
+        until: dt.date | None = None,
         top_tickers: int = 20,
         event_window_days: int = 3,
     ) -> dict[str, Any]: ...
@@ -229,6 +243,271 @@ def fetch_recent_transitions(
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(sql, params)
         return [dict(row) for row in cur.fetchall()]
+
+
+def _safe_average_score(rows: list[dict[str, Any]]) -> float | None:
+    if not rows:
+        return None
+    return sum(int(row["composite_score"]) for row in rows) / len(rows)
+
+
+def _calibration_metric(calibration: dict[str, Any], key: str) -> float | None:
+    value = calibration.get(key)
+    if value is None:
+        return None
+    return float(value)
+
+
+def _metric_delta(
+    *,
+    candidate: dict[str, Any],
+    production: dict[str, Any],
+    key: str,
+) -> float | None:
+    candidate_value = _calibration_metric(candidate, key)
+    production_value = _calibration_metric(production, key)
+    if candidate_value is None or production_value is None:
+        return None
+    return candidate_value - production_value
+
+
+def _promotion_model_summary(
+    *,
+    id: str,
+    label: str,
+    parameter_set: str | None,
+    latest_rows: list[dict[str, Any]],
+    transition_rows: list[dict[str, Any]],
+    calibration: dict[str, Any],
+) -> dict[str, Any]:
+    latest_dates = [row["bar_date"] for row in latest_rows if row.get("bar_date") is not None]
+    signal_count = len(latest_rows)
+    bullish_count = sum(1 for row in latest_rows if int(row["composite_score"]) >= 50)
+    risk_count = sum(1 for row in latest_rows if int(row["composite_score"]) <= -50)
+    neutral_count = sum(1 for row in latest_rows if -30 <= int(row["composite_score"]) <= 30)
+    reentry_count = sum(
+        1 for row in transition_rows if str(row["transition_type"]) == "exit_to_reentry"
+    )
+    return {
+        "id": id,
+        "label": label,
+        "parameter_set_name": str(calibration["parameter_set_name"]),
+        "daily_trigger_mode": daily_trigger_mode_for_parameter_set(parameter_set).value,
+        "latest_bar_date": max(latest_dates) if latest_dates else None,
+        "signal_count": signal_count,
+        "bullish_count": bullish_count,
+        "risk_count": risk_count,
+        "neutral_count": neutral_count,
+        "reentry_count": reentry_count,
+        "average_score": _safe_average_score(latest_rows),
+        "calibration": {
+            "total_observations": int(calibration["total_observations"]),
+            "covered_observations": int(calibration["covered_observations"]),
+            "accuracy": calibration["accuracy"],
+            "exact_event_accuracy": calibration["exact_event_accuracy"],
+            "window_event_accuracy": calibration["window_event_accuracy"],
+            "coverage_rate": calibration["coverage_rate"],
+            "exact_coverage_rate": calibration["exact_coverage_rate"],
+            "score_mae": calibration["score_mae"],
+            "score_rmse": calibration["score_rmse"],
+        },
+    }
+
+
+def _promotion_guardrails(
+    *,
+    production: dict[str, Any],
+    candidate: dict[str, Any],
+) -> list[dict[str, str]]:
+    production_calibration = production["calibration"]
+    candidate_calibration = candidate["calibration"]
+    window_delta = _metric_delta(
+        candidate=candidate_calibration,
+        production=production_calibration,
+        key="window_event_accuracy",
+    )
+    coverage_delta = _metric_delta(
+        candidate=candidate_calibration,
+        production=production_calibration,
+        key="coverage_rate",
+    )
+    score_mae_delta = _metric_delta(
+        candidate=candidate_calibration,
+        production=production_calibration,
+        key="score_mae",
+    )
+    production_signal_count = max(int(production["signal_count"]), 1)
+    signal_count_delta_rate = (
+        int(candidate["signal_count"]) - int(production["signal_count"])
+    ) / production_signal_count
+
+    window_status = "pass"
+    if window_delta is None or window_delta < -0.03:
+        window_status = "fail"
+    elif window_delta < 0:
+        window_status = "watch"
+
+    coverage_status = "pass"
+    candidate_coverage = _calibration_metric(candidate_calibration, "coverage_rate")
+    if candidate_coverage is None or (
+        candidate_coverage < 0.75 or (coverage_delta is not None and coverage_delta < -0.05)
+    ):
+        coverage_status = "fail"
+    elif coverage_delta is not None and coverage_delta < -0.02:
+        coverage_status = "watch"
+
+    score_mae_status = "pass"
+    if score_mae_delta is None or score_mae_delta > 8:
+        score_mae_status = "fail"
+    elif score_mae_delta > 3:
+        score_mae_status = "watch"
+
+    scanner_status = "pass"
+    if candidate["signal_count"] == 0:
+        scanner_status = "fail"
+    elif abs(signal_count_delta_rate) > 0.35:
+        scanner_status = "watch"
+
+    return [
+        {
+            "id": "window_event_accuracy",
+            "label": "Window alert match",
+            "status": window_status,
+            "detail": "Candidate should not materially trail production on ± window alert matches.",
+        },
+        {
+            "id": "coverage_rate",
+            "label": "Observation coverage",
+            "status": coverage_status,
+            "detail": "Candidate needs broad MarketClub observation coverage before promotion.",
+        },
+        {
+            "id": "score_mae",
+            "label": "Score error",
+            "status": score_mae_status,
+            "detail": "Candidate score error should stay close to production.",
+        },
+        {
+            "id": "scanner_count",
+            "label": "Scanner posture",
+            "status": scanner_status,
+            "detail": "Candidate should not radically collapse or inflate the visible signal book.",
+        },
+    ]
+
+
+def _promotion_recommendation(guardrails: list[dict[str, str]]) -> dict[str, str]:
+    statuses = {guardrail["status"] for guardrail in guardrails}
+    if "fail" in statuses:
+        return {
+            "status": "hold",
+            "label": "Hold promotion",
+            "rationale": "One or more guardrails are below the promotion threshold.",
+        }
+    if "watch" in statuses:
+        return {
+            "status": "review",
+            "label": "Review before promotion",
+            "rationale": "No hard failure, but at least one metric needs human review.",
+        }
+    return {
+        "status": "ready_for_shadow",
+        "label": "Ready for shadow",
+        "rationale": "Candidate clears the compact promotion gate for supervised shadow review.",
+    }
+
+
+def fetch_promotion_gate(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    since: dt.date | None = None,
+    until: dt.date | None = None,
+    top_tickers: int = 20,
+    event_window_days: int = 3,
+) -> dict[str, Any]:
+    production_latest = fetch_latest_scores(conn, limit=500)
+    candidate_latest = fetch_latest_scores(
+        conn,
+        limit=500,
+        parameter_set=candidate_parameter_set,
+    )
+    production_transitions = fetch_recent_transitions(conn, limit=500, lookback_days=30)
+    candidate_transitions = fetch_recent_transitions(
+        conn,
+        limit=500,
+        lookback_days=30,
+        parameter_set=candidate_parameter_set,
+    )
+    production_calibration = fetch_daily_calibration(
+        conn,
+        since=since,
+        until=until,
+        top_tickers=top_tickers,
+        event_window_days=event_window_days,
+    ).as_json_dict()
+    candidate_calibration = fetch_daily_calibration(
+        conn,
+        since=since,
+        until=until,
+        parameter_set=candidate_parameter_set,
+        top_tickers=top_tickers,
+        event_window_days=event_window_days,
+    ).as_json_dict()
+    production = _promotion_model_summary(
+        id="production",
+        label="Production",
+        parameter_set=None,
+        latest_rows=production_latest,
+        transition_rows=production_transitions,
+        calibration=production_calibration,
+    )
+    candidate = _promotion_model_summary(
+        id="candidate",
+        label="v0.2 Range",
+        parameter_set=candidate_parameter_set,
+        latest_rows=candidate_latest,
+        transition_rows=candidate_transitions,
+        calibration=candidate_calibration,
+    )
+    deltas = {
+        "window_event_accuracy": _metric_delta(
+            candidate=candidate["calibration"],
+            production=production["calibration"],
+            key="window_event_accuracy",
+        ),
+        "exact_event_accuracy": _metric_delta(
+            candidate=candidate["calibration"],
+            production=production["calibration"],
+            key="exact_event_accuracy",
+        ),
+        "coverage_rate": _metric_delta(
+            candidate=candidate["calibration"],
+            production=production["calibration"],
+            key="coverage_rate",
+        ),
+        "score_mae": _metric_delta(
+            candidate=candidate["calibration"],
+            production=production["calibration"],
+            key="score_mae",
+        ),
+        "signal_count": int(candidate["signal_count"]) - int(production["signal_count"]),
+        "reentry_count": int(candidate["reentry_count"]) - int(production["reentry_count"]),
+    }
+    guardrails = _promotion_guardrails(production=production, candidate=candidate)
+    return {
+        "generated_at": dt.datetime.now(dt.UTC),
+        "candidate_parameter_set": candidate_parameter_set,
+        "baseline_parameter_set": PRODUCTION_PARAMETER_SET,
+        "since": since,
+        "until": until,
+        "event_window_days": event_window_days,
+        "production": production,
+        "candidate": candidate,
+        "deltas": deltas,
+        "guardrails": guardrails,
+        "recommendation": _promotion_recommendation(guardrails),
+    }
 
 
 WATCHLIST_CANDIDATE_BASE_SQL = """
@@ -442,6 +721,26 @@ class PostgresSignalDataStore:
                 top_tickers=top_tickers,
                 event_window_days=event_window_days,
             ).as_json_dict()
+
+    def promotion_gate(
+        self,
+        *,
+        candidate_parameter_set: str,
+        since: dt.date | None = None,
+        until: dt.date | None = None,
+        top_tickers: int = 20,
+        event_window_days: int = 3,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_gate(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                since=since,
+                until=until,
+                top_tickers=top_tickers,
+                event_window_days=event_window_days,
+            )
 
     def symbol_chart(
         self,

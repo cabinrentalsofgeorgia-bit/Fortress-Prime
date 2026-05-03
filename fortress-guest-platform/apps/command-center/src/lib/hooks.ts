@@ -13,6 +13,7 @@ import type {
   DashboardStats,
   FinancialLatestSignal,
   FinancialDailyCalibrationResponse,
+  FinancialPromotionGateResponse,
   FinancialSignalTransition,
   FinancialSignalChartResponse,
   FinancialSymbolSignalDetail,
@@ -189,6 +190,20 @@ export function useFinancialDailyCalibration(params?: {
     queryKey: ["financial", "signals", "calibration", "daily", params],
     queryFn: () => api.get("/api/financial/signals/calibration/daily", params),
     staleTime: 10 * 60_000,
+  });
+}
+
+export function useFinancialPromotionGate(params?: {
+  candidate_parameter_set?: string;
+  since?: string;
+  until?: string;
+  top_tickers?: number;
+  event_window_days?: number;
+}) {
+  return useQuery<FinancialPromotionGateResponse>({
+    queryKey: ["financial", "signals", "promotion-gate", "daily", params],
+    queryFn: () => api.get("/api/financial/signals/promotion-gate/daily", params),
+    staleTime: 5 * 60_000,
   });
 }
 

@@ -265,6 +265,90 @@ const dailyCalibration = {
   ],
 };
 
+const promotionGate = {
+  generated_at: "2026-05-02T22:00:00Z",
+  candidate_parameter_set: "dochia_v0_2_range_daily",
+  baseline_parameter_set: "dochia_v0_estimated",
+  since: null,
+  until: null,
+  event_window_days: 3,
+  production: {
+    id: "production",
+    label: "Production",
+    parameter_set_name: "dochia_v0_estimated",
+    daily_trigger_mode: "close",
+    latest_bar_date: "2026-04-24",
+    signal_count: 120,
+    bullish_count: 40,
+    risk_count: 20,
+    neutral_count: 18,
+    reentry_count: 7,
+    average_score: 12.5,
+    calibration: {
+      total_observations: 24204,
+      covered_observations: 22131,
+      accuracy: 0.6205,
+      exact_event_accuracy: 0.2771,
+      window_event_accuracy: 0.4281,
+      coverage_rate: 0.9144,
+      exact_coverage_rate: 0.9142,
+      score_mae: 43.94,
+      score_rmse: 55.74,
+    },
+  },
+  candidate: {
+    id: "candidate",
+    label: "v0.2 Range",
+    parameter_set_name: "dochia_v0_2_range_daily",
+    daily_trigger_mode: "range",
+    latest_bar_date: "2026-04-24",
+    signal_count: 118,
+    bullish_count: 43,
+    risk_count: 21,
+    neutral_count: 15,
+    reentry_count: 9,
+    average_score: 14,
+    calibration: {
+      total_observations: 24204,
+      covered_observations: 22131,
+      accuracy: 0.6205,
+      exact_event_accuracy: 0.3,
+      window_event_accuracy: 0.46,
+      coverage_rate: 0.9144,
+      exact_coverage_rate: 0.9142,
+      score_mae: 42,
+      score_rmse: 54,
+    },
+  },
+  deltas: {
+    window_event_accuracy: 0.0319,
+    exact_event_accuracy: 0.0229,
+    coverage_rate: 0,
+    score_mae: -1.94,
+    signal_count: -2,
+    reentry_count: 2,
+  },
+  guardrails: [
+    {
+      id: "window_event_accuracy",
+      label: "Window alert match",
+      status: "pass",
+      detail: "Candidate should not materially trail production.",
+    },
+    {
+      id: "score_mae",
+      label: "Score error",
+      status: "pass",
+      detail: "Candidate score error should stay close to production.",
+    },
+  ],
+  recommendation: {
+    status: "ready_for_shadow",
+    label: "Ready for shadow",
+    rationale: "Candidate clears the compact promotion gate.",
+  },
+};
+
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
     data: latestSignals,
@@ -318,6 +402,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionGate: () => ({
+    data: promotionGate,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 describe("HedgeFundSignalsShell", () => {
@@ -334,6 +425,9 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("BUY")).toBeInTheDocument();
     expect(screen.getByText("Calibration Baseline")).toBeInTheDocument();
     expect(screen.getByText("62.1%")).toBeInTheDocument();
+    expect(screen.getByText("Promotion Gate")).toBeInTheDocument();
+    expect(screen.getByText("Ready for shadow")).toBeInTheDocument();
+    expect(screen.getByText("Production vs v0.2 Range")).toBeInTheDocument();
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
     expect(screen.getByText("Whipsaw Risk / Backtest")).toBeInTheDocument();
