@@ -171,6 +171,22 @@ class QuoteBookingPaymentLinkResponse(BaseModel):
     message: str
 
 
+class QuoteBookingPaymentApprovalRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingPaymentApprovalResponse(BaseModel):
+    ok: bool
+    reservation_id: str
+    confirmation_code: str
+    status: str
+    paid_amount: float | None = None
+    balance_due: float | None = None
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
 class QuoteBookingProofLaneRequest(BaseModel):
     guest_email: str | None = Field(default=None, max_length=320)
     property_id: UUID | None = None
@@ -662,6 +678,17 @@ def _finalize_quote_readiness(quotes: list[QuoteBookingRecord]) -> dict[str, int
 
 
 def _reservation_stop_level(reservation: Reservation) -> tuple[Literal["clear", "inspect", "stop"], str]:
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    payment_reconciliation_state = str(breakdown.get("control_tower_payment_reconciliation_state") or "")
+    if payment_reconciliation_state == "stripe_paid_pending_staff_approval":
+        return "inspect", "Stripe reports payment received; staff must approve before local payment posting."
+    if payment_reconciliation_state.endswith("_needs_staff_review"):
+        return "stop", str(
+            breakdown.get("control_tower_payment_reconciliation_detail")
+            or "Stripe payment reconciliation needs staff review."
+        )
+    if payment_reconciliation_state == "staff_approved_local_payment_posted" and not reservation.streamline_reservation_id:
+        return "inspect", "Local payment is posted; Streamline write remains blocked until parity approval."
     if not reservation.streamline_reservation_id:
         return "inspect", "Local reservation has not been linked to a Streamline reservation id."
     if reservation.balance_due and _money(reservation.balance_due) not in (None, 0.0):
@@ -736,6 +763,9 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
                 record.metadata["payment_link_id"] = str(metadata.get("payment_link_id"))
             if metadata.get("stripe_mode"):
                 record.metadata["stripe_mode"] = str(metadata.get("stripe_mode"))
+        elif action == "approve_reservation_payment_reconciliation":
+            record.metadata["payment_reconciliation_approved"] = audit.outcome == "success"
+            record.metadata["local_payment_posted"] = audit.outcome == "success"
 
         note = metadata.get("note")
         if isinstance(note, str) and note.strip():
@@ -1148,6 +1178,53 @@ async def _record_reservation_payment_audit(
     )
 
 
+async def _record_reservation_payment_approval_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    reservation: Reservation,
+    outcome: str,
+    note: str | None,
+    detail: str,
+    amount_cents: int | None = None,
+) -> OpenShellAuditLog | None:
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.approve_reservation_payment_reconciliation",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("reservation", str(reservation.id)),
+        purpose="Staff-approved local payment posting after Stripe webhook reconciliation.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "quote_id": breakdown.get("quote_ref"),
+            "hold_id": breakdown.get("hold_ref"),
+            "payment_link_id": breakdown.get("control_tower_payment_link_id"),
+            "checkout_session_id": breakdown.get("control_tower_payment_reconciliation_session_id"),
+            "payment_intent_id": breakdown.get("control_tower_payment_reconciliation_payment_intent_id"),
+            "reconciliation_state": breakdown.get("control_tower_payment_reconciliation_state"),
+            "amount_cents": amount_cents,
+            "paid_amount_after": _money(reservation.paid_amount),
+            "balance_due_after": _money(reservation.balance_due),
+            "reservation_status_after": reservation.status,
+            "note": note,
+            "detail": detail,
+            "staff_approved": outcome == "success",
+            "local_payment_posted": outcome == "success",
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
 async def _find_active_quote_hold(db: AsyncSession, quote: GuestQuote) -> ReservationHold | None:
     if not quote.property_id or not quote.check_in or not quote.check_out:
         return None
@@ -1320,10 +1397,25 @@ async def quote_booking_control_tower(
         .limit(limit)
     )
     reservations: list[QuoteBookingRecord] = []
+    payment_reconciliations_pending = 0
+    payment_reconciliations_blocked = 0
     for reservation, property_name in reservation_rows.all():
         stop_level, stop_reason = _reservation_stop_level(reservation)
         price_breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
         payment_link_id = price_breakdown.get("control_tower_payment_link_id")
+        reconciliation_state = str(price_breakdown.get("control_tower_payment_reconciliation_state") or "")
+        if reconciliation_state == "stripe_paid_pending_staff_approval":
+            payment_reconciliations_pending += 1
+            payment_state = "stripe_paid_pending_approval"
+        elif reconciliation_state.endswith("_needs_staff_review"):
+            payment_reconciliations_blocked += 1
+            payment_state = "payment_reconciliation_review"
+        elif reconciliation_state == "staff_approved_local_payment_posted":
+            payment_state = "local_payment_posted"
+        elif payment_link_id:
+            payment_state = "payment_link_sent"
+        else:
+            payment_state = "paid" if _money(reservation.balance_due) in (None, 0.0) else "balance_due"
         reservations.append(
             QuoteBookingRecord(
                 id=str(reservation.id),
@@ -1336,7 +1428,7 @@ async def quote_booking_control_tower(
                 check_in=_iso(reservation.check_in_date),
                 check_out=_iso(reservation.check_out_date),
                 total_amount=_money(reservation.total_amount),
-                payment_state="paid" if _money(reservation.balance_due) in (None, 0.0) else "balance_due",
+                payment_state=payment_state,
                 parity_status="streamline_linked" if reservation.streamline_reservation_id else "streamline_pending",
                 stop_level=stop_level,
                 stop_reason=stop_reason,
@@ -1353,6 +1445,32 @@ async def quote_booking_control_tower(
                     "payment_link_id": payment_link_id,
                     "payment_link_sent": bool(payment_link_id),
                     "stripe_mode": price_breakdown.get("control_tower_payment_stripe_mode"),
+                    "payment_reconciliation_state": reconciliation_state or None,
+                    "payment_reconciliation_detail": price_breakdown.get(
+                        "control_tower_payment_reconciliation_detail"
+                    ),
+                    "payment_reconciliation_requires_staff_approval": price_breakdown.get(
+                        "control_tower_payment_reconciliation_requires_staff_approval"
+                    ),
+                    "payment_reconciliation_session_id": price_breakdown.get(
+                        "control_tower_payment_reconciliation_session_id"
+                    ),
+                    "payment_intent_id": price_breakdown.get(
+                        "control_tower_payment_reconciliation_payment_intent_id"
+                    ),
+                    "payment_reconciliation_amount_received_cents": price_breakdown.get(
+                        "control_tower_payment_reconciliation_amount_received_cents"
+                    ),
+                    "payment_reconciliation_expected_amount_cents": price_breakdown.get(
+                        "control_tower_payment_reconciliation_expected_amount_cents"
+                    ),
+                    "payment_reconciled_at": price_breakdown.get("control_tower_payment_reconciled_at"),
+                    "payment_reconciliation_approved_at": price_breakdown.get(
+                        "control_tower_payment_reconciliation_approved_at"
+                    ),
+                    "local_payment_posted": bool(price_breakdown.get("control_tower_payment_local_posted")),
+                    "streamline_write": price_breakdown.get("streamline_write"),
+                    "legacy_storefront": price_breakdown.get("legacy_storefront"),
                 },
             )
         )
@@ -1399,6 +1517,8 @@ async def quote_booking_control_tower(
         "converted_holds_24h": converted_holds_24h,
         "direct_reservations_24h": direct_reservations_24h,
         "parity_drifts_24h": parity_drifts_24h,
+        "payment_reconciliations_pending": payment_reconciliations_pending,
+        "payment_reconciliations_blocked": payment_reconciliations_blocked,
     }
 
     all_records = [*quotes, *holds, *reservations, *parity_audits]
@@ -1458,6 +1578,23 @@ async def quote_booking_control_tower(
             status="locked",
             detail="No DNS, Cloudflare tunnel, AWS, Drupal, or public-domain controls are wired to this endpoint.",
             href=None,
+        ),
+        QuoteBookingSafeguard(
+            id="payment_reconciliation",
+            label="Payment reconciliation gate",
+            status=(
+                "attention"
+                if summary.get("payment_reconciliations_pending", 0)
+                or summary.get("payment_reconciliations_blocked", 0)
+                else "clear"
+            ),
+            detail=(
+                f"{summary.get('payment_reconciliations_pending', 0)} Stripe payment signal"
+                f"{'' if summary.get('payment_reconciliations_pending', 0) == 1 else 's'} "
+                "await staff approval; "
+                f"{summary.get('payment_reconciliations_blocked', 0)} need review."
+            ),
+            href="/command/quote-control",
         ),
         QuoteBookingSafeguard(
             id="parity_gate",
@@ -2162,6 +2299,144 @@ async def quote_booking_control_send_payment_link(
         audit_hash=audit.entry_hash if audit else None,
         stripe_mode=link_result["stripe_mode"],
         message="Payment link sent. Reservation remains pending payment; no card was charged inside CROG-VRS, no Streamline write occurred, and the legacy site was untouched.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/reservation/{reservation_id}/approve-payment",
+    response_model=QuoteBookingPaymentApprovalResponse,
+)
+async def quote_booking_control_approve_payment(
+    reservation_id: UUID,
+    body: QuoteBookingPaymentApprovalRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingPaymentApprovalResponse:
+    """Post local payment state only after staff approves a reconciled Stripe payment signal."""
+    reservation = await db.get(Reservation, reservation_id)
+    if reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    note = (body.note or "").strip() or None
+    breakdown = dict(reservation.price_breakdown or {})
+    reconciliation_state = str(breakdown.get("control_tower_payment_reconciliation_state") or "")
+    if reconciliation_state != "stripe_paid_pending_staff_approval":
+        await _record_reservation_payment_approval_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail=f"Reconciliation state is {reconciliation_state or 'missing'}; expected stripe_paid_pending_staff_approval.",
+        )
+        raise HTTPException(status_code=409, detail="Reservation payment is not ready for approval")
+
+    if bool(breakdown.get("control_tower_payment_local_posted")):
+        await _record_reservation_payment_approval_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail="Local payment has already been posted for this reconciliation.",
+        )
+        raise HTTPException(status_code=409, detail="Local payment has already been posted")
+
+    if str(breakdown.get("control_tower_payment_reconciliation_payment_status") or "") != "paid":
+        await _record_reservation_payment_approval_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail="Stripe payment status is not paid.",
+        )
+        raise HTTPException(status_code=409, detail="Stripe payment status is not paid")
+
+    expected_amount_cents = int(breakdown.get("control_tower_payment_reconciliation_expected_amount_cents") or 0)
+    received_amount_cents = int(breakdown.get("control_tower_payment_reconciliation_amount_received_cents") or 0)
+    if expected_amount_cents <= 0 or received_amount_cents <= 0 or expected_amount_cents != received_amount_cents:
+        await _record_reservation_payment_approval_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail="Stripe paid amount does not match the expected reservation payment amount.",
+            amount_cents=received_amount_cents,
+        )
+        raise HTTPException(status_code=409, detail="Stripe payment amount does not match")
+
+    current_balance = Decimal(str(reservation.balance_due or "0.00"))
+    received_amount = _money_decimal_from_cents(received_amount_cents)
+    if current_balance <= Decimal("0.00"):
+        await _record_reservation_payment_approval_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail="Reservation has no balance due to post.",
+            amount_cents=received_amount_cents,
+        )
+        raise HTTPException(status_code=409, detail="Reservation has no balance due")
+
+    if current_balance != received_amount:
+        await _record_reservation_payment_approval_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail="Current reservation balance differs from the reconciled Stripe payment.",
+            amount_cents=received_amount_cents,
+        )
+        raise HTTPException(status_code=409, detail="Current balance differs from reconciled payment")
+
+    paid_amount = Decimal(str(reservation.paid_amount or "0.00")) + received_amount
+    reservation.paid_amount = paid_amount.quantize(Decimal("0.01"))
+    reservation.balance_due = Decimal("0.00")
+    reservation.status = "confirmed"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    breakdown.update(
+        {
+            "control_tower_payment_reconciliation_state": "staff_approved_local_payment_posted",
+            "control_tower_payment_reconciliation_approved_at": now_iso,
+            "control_tower_payment_reconciliation_approved_by": current_user.email,
+            "control_tower_payment_reconciliation_approval_note": note,
+            "control_tower_payment_local_posted": True,
+            "control_tower_payment_local_posted_amount_cents": received_amount_cents,
+            "control_tower_payment_local_posted_at": now_iso,
+            "payment_captured": True,
+            "payment_capture_source": "stripe_hosted_payment_link_staff_approved",
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+        }
+    )
+    reservation.price_breakdown = breakdown
+    reservation.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(reservation)
+
+    audit = await _record_reservation_payment_approval_audit(
+        db=db,
+        current_user=current_user,
+        reservation=reservation,
+        outcome="success",
+        note=note,
+        detail="Staff approved the reconciled Stripe payment and posted local reservation payment state.",
+        amount_cents=received_amount_cents,
+    )
+    return QuoteBookingPaymentApprovalResponse(
+        ok=True,
+        reservation_id=str(reservation.id),
+        confirmation_code=reservation.confirmation_code,
+        status=reservation.status,
+        paid_amount=_money(reservation.paid_amount),
+        balance_due=_money(reservation.balance_due),
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Payment reconciliation approved. CROG-VRS posted the local payment state; Streamline writes, the legacy website, DNS, and tunnels remained untouched.",
     )
 
 

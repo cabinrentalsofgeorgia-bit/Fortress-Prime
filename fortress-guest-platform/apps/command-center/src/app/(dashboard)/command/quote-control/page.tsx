@@ -95,6 +95,18 @@ type QuoteBookingPaymentLinkResponse = {
   message: string;
 };
 
+type QuoteBookingPaymentApprovalResponse = {
+  ok: boolean;
+  reservation_id: string;
+  confirmation_code: string;
+  status: string;
+  paid_amount: number | null;
+  balance_due: number | null;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+};
+
 type QuoteBookingProofLaneResponse = {
   ok: boolean;
   quote: QuoteBookingRecord;
@@ -167,6 +179,16 @@ function metadataString(record: QuoteBookingRecord, key: string): string | null 
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
+function metadataNumber(record: QuoteBookingRecord, key: string): number | null {
+  const value = record.metadata?.[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function metadataStrings(record: QuoteBookingRecord, key: string): string[] {
   const value = record.metadata?.[key];
   if (!Array.isArray(value)) return [];
@@ -203,6 +225,33 @@ function canSendPaymentLink(record: QuoteBookingRecord): boolean {
   );
 }
 
+function canApprovePayment(record: QuoteBookingRecord): boolean {
+  return (
+    record.kind === "reservation" &&
+    metadataString(record, "payment_reconciliation_state") === "stripe_paid_pending_staff_approval" &&
+    record.metadata?.local_payment_posted !== true
+  );
+}
+
+function reconciliationLabel(state: string | null): string | null {
+  switch (state) {
+    case "stripe_paid_pending_staff_approval":
+      return "Stripe Paid";
+    case "staff_approved_local_payment_posted":
+      return "Payment Posted";
+    case "amount_mismatch_needs_staff_review":
+      return "Amount Review";
+    case "payment_link_mismatch_needs_staff_review":
+      return "Link Review";
+    case "stripe_unpaid_needs_staff_review":
+      return "Unpaid Review";
+    case "unsafe_metadata_needs_staff_review":
+      return "Metadata Review";
+    default:
+      return null;
+  }
+}
+
 function readinessTone(state: string | null): string {
   switch (state) {
     case "ready":
@@ -219,6 +268,22 @@ function readinessTone(state: string | null): string {
     case "parity_missing":
     case "missing_payment_handoff":
     case "hold_conflict":
+      return "border-rose-500/30 bg-rose-500/10 text-rose-200";
+    default:
+      return "border-zinc-700 bg-zinc-950 text-zinc-300";
+  }
+}
+
+function reconciliationTone(state: string | null): string {
+  switch (state) {
+    case "stripe_paid_pending_staff_approval":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+    case "staff_approved_local_payment_posted":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+    case "amount_mismatch_needs_staff_review":
+    case "payment_link_mismatch_needs_staff_review":
+    case "stripe_unpaid_needs_staff_review":
+    case "unsafe_metadata_needs_staff_review":
       return "border-rose-500/30 bg-rose-500/10 text-rose-200";
     default:
       return "border-zinc-700 bg-zinc-950 text-zinc-300";
@@ -328,11 +393,13 @@ function RecordRow({
   onCreateHold,
   onConvertHold,
   onSendPayment,
+  onApprovePayment,
   isActionPending,
   isSendPending,
   isHoldPending,
   isConvertPending,
   isPaymentPending,
+  isApprovePaymentPending,
 }: {
   record: QuoteBookingRecord;
   onAction: (record: QuoteBookingRecord, action: SafeAction) => void;
@@ -340,20 +407,30 @@ function RecordRow({
   onCreateHold: (record: QuoteBookingRecord) => void;
   onConvertHold: (record: QuoteBookingRecord) => void;
   onSendPayment: (record: QuoteBookingRecord) => void;
+  onApprovePayment: (record: QuoteBookingRecord) => void;
   isActionPending: boolean;
   isSendPending: boolean;
   isHoldPending: boolean;
   isConvertPending: boolean;
   isPaymentPending: boolean;
+  isApprovePaymentPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
   const readinessState = record.kind === "quote" ? metadataString(record, "readiness_state") : null;
   const readinessLabel = record.kind === "quote" ? metadataString(record, "readiness_label") : null;
   const readinessReasons = record.kind === "quote" ? metadataStrings(record, "readiness_reasons") : [];
+  const paymentReconciliationState =
+    record.kind === "reservation" ? metadataString(record, "payment_reconciliation_state") : null;
+  const paymentReconciliationLabel = reconciliationLabel(paymentReconciliationState);
+  const paymentReconciliationDetail =
+    record.kind === "reservation" ? metadataString(record, "payment_reconciliation_detail") : null;
+  const paymentReceivedCents =
+    record.kind === "reservation" ? metadataNumber(record, "payment_reconciliation_amount_received_cents") : null;
   const canSend = canSendGuestQuote(record);
   const canHold = canCreateLocalHold(record);
   const canConvert = canConvertLocalReservation(record);
   const canPayment = canSendPaymentLink(record);
+  const canApprove = canApprovePayment(record);
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
@@ -366,6 +443,9 @@ function RecordRow({
             <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">{record.status}</Badge>
             {readinessLabel ? (
               <Badge className={readinessTone(readinessState)}>{readinessLabel}</Badge>
+            ) : null}
+            {paymentReconciliationLabel ? (
+              <Badge className={reconciliationTone(paymentReconciliationState)}>{paymentReconciliationLabel}</Badge>
             ) : null}
             {record.assigned_to ? (
               <Badge className="border-cyan-500/30 bg-cyan-500/10 text-cyan-100">
@@ -439,6 +519,12 @@ function RecordRow({
                 {record.last_action} by {record.last_action_by || "staff"}
               </span>
             ) : null}
+            {paymentReceivedCents != null ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-2 py-1">
+                <CreditCard className="h-3.5 w-3.5" />
+                Stripe {formatMoney(paymentReceivedCents / 100)}
+              </span>
+            ) : null}
           </div>
           {record.last_note ? (
             <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
@@ -450,6 +536,12 @@ function RecordRow({
             <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
               <span className="text-xs uppercase text-zinc-500">Readiness gate</span>
               <p className="mt-1">{readinessReasons.slice(0, 3).join(" ")}</p>
+            </div>
+          ) : null}
+          {paymentReconciliationDetail ? (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
+              <span className="text-xs uppercase text-zinc-500">Payment reconciliation</span>
+              <p className="mt-1">{paymentReconciliationDetail}</p>
             </div>
           ) : null}
         </div>
@@ -512,6 +604,21 @@ function RecordRow({
                 <CreditCard className="mr-2 h-4 w-4" />
               )}
               Pay Link
+            </Button>
+          ) : null}
+          {canApprove ? (
+            <Button
+              onClick={() => onApprovePayment(record)}
+              disabled={isApprovePaymentPending}
+              size="sm"
+              className="bg-amber-700 text-white hover:bg-amber-600"
+            >
+              {isApprovePaymentPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="mr-2 h-4 w-4" />
+              )}
+              Approve Pay
             </Button>
           ) : null}
           <Button
@@ -600,6 +707,9 @@ export default function QuoteControlPage() {
   const [paymentTarget, setPaymentTarget] = useState<QuoteBookingRecord | null>(null);
   const [paymentNote, setPaymentNote] = useState("");
   const [isSendingPaymentLink, setIsSendingPaymentLink] = useState(false);
+  const [paymentApprovalTarget, setPaymentApprovalTarget] = useState<QuoteBookingRecord | null>(null);
+  const [paymentApprovalNote, setPaymentApprovalNote] = useState("");
+  const [isApprovingPayment, setIsApprovingPayment] = useState(false);
   const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
@@ -696,6 +806,10 @@ export default function QuoteControlPage() {
   const openSendPayment = (record: QuoteBookingRecord) => {
     setPaymentTarget(record);
     setPaymentNote("");
+  };
+  const openApprovePayment = (record: QuoteBookingRecord) => {
+    setPaymentApprovalTarget(record);
+    setPaymentApprovalNote("");
   };
   const submitAction = () => {
     if (!actionTarget) return;
@@ -816,6 +930,27 @@ export default function QuoteControlPage() {
       setIsSendingPaymentLink(false);
     }
   };
+  const submitApprovePayment = async () => {
+    if (!paymentApprovalTarget) return;
+    setIsApprovingPayment(true);
+    try {
+      const response = await api.post<QuoteBookingPaymentApprovalResponse>(
+        `/api/vrs/quote-booking/control-tower/reservation/${paymentApprovalTarget.id}/approve-payment`,
+        {
+          ...(paymentApprovalNote.trim() ? { note: paymentApprovalNote.trim() } : {}),
+        },
+      );
+      toast.success(response.message || `Payment posted for ${response.confirmation_code}`);
+      setPaymentApprovalTarget(null);
+      setPaymentApprovalNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Payment approval failed";
+      toast.error(message);
+    } finally {
+      setIsApprovingPayment(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -877,7 +1012,7 @@ export default function QuoteControlPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-6">
         <SummaryMetric
           label="Pending Quotes"
           value={metric(summary, "pending_quotes")}
@@ -907,6 +1042,18 @@ export default function QuoteControlPage() {
           value={metric(summary, "hard_stops")}
           detail={`${metric(summary, "inspection_items").toLocaleString()} more need inspection`}
           tone={metric(summary, "hard_stops") > 0 ? "danger" : "success"}
+        />
+        <SummaryMetric
+          label="Payment Review"
+          value={metric(summary, "payment_reconciliations_pending")}
+          detail={`${metric(summary, "payment_reconciliations_blocked").toLocaleString()} blocked signals`}
+          tone={
+            metric(summary, "payment_reconciliations_blocked") > 0
+              ? "danger"
+              : metric(summary, "payment_reconciliations_pending") > 0
+                ? "warning"
+                : "success"
+          }
         />
       </div>
 
@@ -1028,11 +1175,13 @@ export default function QuoteControlPage() {
                   onCreateHold={openCreateHold}
                   onConvertHold={openConvertHold}
                   onSendPayment={openSendPayment}
+                  onApprovePayment={openApprovePayment}
                   isActionPending={actionMutation.isPending}
                   isSendPending={isSendingQuote}
                   isHoldPending={isCreatingHold}
                   isConvertPending={isConvertingReservation}
                   isPaymentPending={isSendingPaymentLink}
+                  isApprovePaymentPending={isApprovingPayment}
                 />
               ))}
             </div>
@@ -1318,6 +1467,80 @@ export default function QuoteControlPage() {
                 <>
                   <CreditCard className="mr-2 h-4 w-4" />
                   Send Payment Link
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(paymentApprovalTarget)}
+        onOpenChange={(open) => !open && setPaymentApprovalTarget(null)}
+      >
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Approve Payment Posting</DialogTitle>
+            <DialogDescription>
+              {paymentApprovalTarget?.title || "Stripe reconciled reservation"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-950/20 px-3 py-3 text-sm text-amber-100">
+              This posts local CROG-VRS payment state after a Stripe webhook signal. It does not charge a card,
+              write to Streamline, touch the public website, or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Guest</p>
+                <p className="truncate">{paymentApprovalTarget?.guest_label || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Stripe Amount</p>
+                <p>
+                  {formatMoney(
+                    Number(paymentApprovalTarget?.metadata?.payment_reconciliation_amount_received_cents ?? 0) / 100,
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Balance Due</p>
+                <p>
+                  {formatMoney(
+                    Number(paymentApprovalTarget?.metadata?.balance_due ?? paymentApprovalTarget?.total_amount ?? 0),
+                  )}
+                </p>
+              </div>
+            </div>
+            <Textarea
+              value={paymentApprovalNote}
+              onChange={(event) => setPaymentApprovalNote(event.target.value)}
+              placeholder="Internal approval note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setPaymentApprovalTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitApprovePayment}
+              disabled={isApprovingPayment || !paymentApprovalTarget || !canApprovePayment(paymentApprovalTarget)}
+              className="bg-amber-700 text-white hover:bg-amber-600"
+            >
+              {isApprovingPayment ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Posting...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Post Local Payment
                 </>
               )}
             </Button>

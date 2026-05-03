@@ -31,6 +31,8 @@ Dual-journal commit (capex path):
 """
 import stripe
 import structlog
+from datetime import datetime, timezone
+from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,8 +40,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.integrations.stripe_payments import StripePayments
+from backend.models.reservation import Reservation
 from backend.models.reservation_hold import ReservationHold
 from backend.services.booking_hold_service import BookingHoldError, convert_hold_to_reservation
+from backend.services.openshell_audit import record_audit_event
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -195,6 +199,9 @@ async def stripe_webhook(
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
 
+        if await _process_crog_vrs_reservation_payment_link(session, db):
+            return {"status": "ok", "event_type": event_type, "handler": "crog_vrs_reservation_payment"}
+
         guest_quote_id = (session.get("metadata") or {}).get("guest_quote_id")
         if guest_quote_id:
             await _process_guest_quote_payment(guest_quote_id, session, db)
@@ -204,6 +211,208 @@ async def stripe_webhook(
                 await _process_capital_call_funding(staging_id, session, db)
 
     return {"status": "ok"}
+
+
+def _stringish(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _stripe_id(value: object) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        return _stringish(value.get("id"))
+    return _stringish(getattr(value, "id", ""))
+
+
+async def _crog_vrs_payment_link_metadata(session: dict) -> dict[str, str]:
+    """Return Payment Link metadata when this session belongs to CROG-VRS reservation payment."""
+    session_metadata = dict(session.get("metadata") or {})
+    payment_link_id = _stripe_id(session.get("payment_link"))
+    link_metadata: dict[str, str] = {}
+    if payment_link_id:
+        try:
+            payment_link = stripe.PaymentLink.retrieve(payment_link_id)
+            link_metadata = dict(payment_link.get("metadata") or {})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "crog_vrs_payment_link_metadata_fetch_failed",
+                payment_link_id=payment_link_id,
+                error=str(exc)[:300],
+            )
+
+    merged = {**link_metadata, **session_metadata}
+    if payment_link_id:
+        merged.setdefault("payment_link_id", payment_link_id)
+    return {str(key): str(value) for key, value in merged.items() if value is not None}
+
+
+async def _record_crog_vrs_payment_reconciliation_audit(
+    *,
+    db: AsyncSession,
+    reservation: Reservation | None,
+    metadata: dict[str, str],
+    session: dict,
+    outcome: str,
+    detail: str,
+    expected_amount_cents: int | None,
+    received_amount_cents: int,
+) -> None:
+    reservation_id = str(reservation.id) if reservation else metadata.get("reservation_id")
+    breakdown = reservation.price_breakdown if reservation and isinstance(reservation.price_breakdown, dict) else {}
+    await record_audit_event(
+        db=db,
+        actor_id="stripe_webhook",
+        actor_email="stripe-webhook@crog-ai.com",
+        action="quote_booking.stage_reservation_payment_reconciliation",
+        resource_type="quote_booking_control_item",
+        resource_id=f"reservation:{reservation_id}" if reservation_id else "reservation:unknown",
+        purpose="Stripe-hosted payment signal staged for staff approval before local reservation payment posting.",
+        tool_name="stripe_webhook",
+        redaction_status="metadata_only",
+        model_route="stripe_webhook",
+        outcome=outcome,
+        metadata_json={
+            "reservation_id": reservation_id,
+            "confirmation_code": metadata.get("confirmation_code") or (reservation.confirmation_code if reservation else None),
+            "quote_id": metadata.get("quote_id") or breakdown.get("quote_ref"),
+            "hold_id": metadata.get("hold_id") or breakdown.get("hold_ref"),
+            "payment_link_id": metadata.get("payment_link_id") or _stripe_id(session.get("payment_link")),
+            "checkout_session_id": session.get("id"),
+            "payment_intent_id": _stripe_id(session.get("payment_intent")),
+            "payment_status": session.get("payment_status"),
+            "expected_amount_cents": expected_amount_cents,
+            "received_amount_cents": received_amount_cents,
+            "detail": detail,
+            "requires_staff_approval": True,
+            "local_payment_posted": False,
+            "reservation_status_after": reservation.status if reservation else None,
+            "paid_amount_after": str(reservation.paid_amount) if reservation else None,
+            "balance_due_after": str(reservation.balance_due) if reservation else None,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+        },
+    )
+
+
+async def _process_crog_vrs_reservation_payment_link(session: dict, db: AsyncSession) -> bool:
+    """Stage CROG-VRS reservation payment signals without posting local payment automatically."""
+    metadata = await _crog_vrs_payment_link_metadata(session)
+    if metadata.get("type") != "crog_vrs_reservation_payment":
+        return False
+
+    received_amount_cents = int(session.get("amount_total") or session.get("amount_subtotal") or 0)
+    payment_status = _stringish(session.get("payment_status"))
+    payment_link_id = metadata.get("payment_link_id") or _stripe_id(session.get("payment_link"))
+    session_id = _stringish(session.get("id"))
+    payment_intent_id = _stripe_id(session.get("payment_intent"))
+    reservation_id_raw = metadata.get("reservation_id")
+    reservation: Reservation | None = None
+
+    if reservation_id_raw:
+        try:
+            reservation = await db.get(Reservation, UUID(reservation_id_raw))
+        except Exception:  # noqa: BLE001
+            reservation = None
+
+    if reservation is None:
+        logger.warning(
+            "crog_vrs_reservation_payment_orphan",
+            reservation_id=reservation_id_raw,
+            payment_link_id=payment_link_id,
+            checkout_session_id=session_id,
+        )
+        await _record_crog_vrs_payment_reconciliation_audit(
+            db=db,
+            reservation=None,
+            metadata=metadata,
+            session=session,
+            outcome="blocked",
+            detail="Stripe payment session referenced a CROG-VRS reservation that was not found.",
+            expected_amount_cents=None,
+            received_amount_cents=received_amount_cents,
+        )
+        return True
+
+    breakdown = dict(reservation.price_breakdown or {})
+    existing_session_id = _stringish(breakdown.get("control_tower_payment_reconciliation_session_id"))
+    existing_state = _stringish(breakdown.get("control_tower_payment_reconciliation_state"))
+    if existing_session_id and existing_session_id == session_id and existing_state:
+        logger.info(
+            "crog_vrs_reservation_payment_already_staged",
+            reservation_id=str(reservation.id),
+            checkout_session_id=session_id,
+            state=existing_state,
+        )
+        return True
+
+    expected_payment_link_id = _stringish(breakdown.get("control_tower_payment_link_id"))
+    expected_amount_raw = breakdown.get("control_tower_payment_amount_cents")
+    expected_amount_cents = int(expected_amount_raw) if expected_amount_raw is not None else None
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    detail = "Stripe payment observed and staged for staff approval."
+    outcome = "success"
+    reconciliation_state = "stripe_paid_pending_staff_approval"
+
+    if metadata.get("safe_staff_approved") != "true":
+        outcome = "blocked"
+        reconciliation_state = "unsafe_metadata_needs_staff_review"
+        detail = "Payment Link metadata did not include the staff-approved safety flag."
+    elif expected_payment_link_id and payment_link_id and expected_payment_link_id != payment_link_id:
+        outcome = "blocked"
+        reconciliation_state = "payment_link_mismatch_needs_staff_review"
+        detail = "Stripe payment link id does not match the reservation payment handoff link."
+    elif payment_status != "paid":
+        outcome = "blocked"
+        reconciliation_state = "stripe_unpaid_needs_staff_review"
+        detail = f"Stripe checkout session completed with payment_status={payment_status or 'unknown'}."
+    elif expected_amount_cents is not None and received_amount_cents != expected_amount_cents:
+        outcome = "blocked"
+        reconciliation_state = "amount_mismatch_needs_staff_review"
+        detail = "Stripe paid amount does not match the reservation balance handoff amount."
+
+    breakdown.update(
+        {
+            "control_tower_payment_reconciliation_state": reconciliation_state,
+            "control_tower_payment_reconciliation_detail": detail,
+            "control_tower_payment_reconciled_at": now_iso,
+            "control_tower_payment_reconciliation_session_id": session_id,
+            "control_tower_payment_reconciliation_payment_intent_id": payment_intent_id,
+            "control_tower_payment_reconciliation_payment_status": payment_status,
+            "control_tower_payment_reconciliation_amount_received_cents": received_amount_cents,
+            "control_tower_payment_reconciliation_expected_amount_cents": expected_amount_cents,
+            "control_tower_payment_reconciliation_requires_staff_approval": True,
+            "control_tower_payment_local_posted": False,
+            "stripe_payment_received": outcome == "success",
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+        }
+    )
+    reservation.price_breakdown = breakdown
+    reservation.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(reservation)
+
+    await _record_crog_vrs_payment_reconciliation_audit(
+        db=db,
+        reservation=reservation,
+        metadata=metadata,
+        session=session,
+        outcome=outcome,
+        detail=detail,
+        expected_amount_cents=expected_amount_cents,
+        received_amount_cents=received_amount_cents,
+    )
+    logger.info(
+        "crog_vrs_reservation_payment_staged",
+        reservation_id=str(reservation.id),
+        checkout_session_id=session_id,
+        payment_intent_id=payment_intent_id,
+        outcome=outcome,
+        state=reconciliation_state,
+    )
+    return True
 
 
 async def _process_guest_quote_payment(
