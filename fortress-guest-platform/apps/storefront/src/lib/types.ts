@@ -139,7 +139,6 @@ export interface DashboardStats {
 export type ServiceHealthState = "up" | "down";
 
 export interface ServiceHealthResponse {
-  legal?: ServiceHealthState;
   cluster?: ServiceHealthState;
   classifier?: ServiceHealthState;
   mission?: ServiceHealthState;
@@ -160,13 +159,6 @@ export interface BridgeStatusResponse {
   bridge_total: number;
   latest_email: string | null;
 }
-
-export interface LegalOverviewResponse {
-  total_cases?: number;
-  pending_actions?: Array<Record<string, unknown>>;
-  deadlines?: Array<{ effective_date?: string } & Record<string, unknown>>;
-}
-
 // ---------------------------------------------------------------------------
 // VRS Hub
 // ---------------------------------------------------------------------------

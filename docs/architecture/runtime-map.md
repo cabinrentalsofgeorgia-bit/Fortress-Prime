@@ -208,7 +208,7 @@ Current Legal command-center surfaces found in `apps/command-center` include:
 - `/legal/deposition/[targetId]/print`
 - Legal components such as e-discovery dropzone, document viewer, counsel matrix, deposition war-room, discovery draft panel, graph snapshot, sanctions tripwire, hive-mind editor, inference radar, jurisprudence radar, and agent terminal.
 
-CONFLICT / risk: `apps/storefront` contains shared legal hooks/types/tests in some places, and older `frontend-next` / legacy dashboard files contain legal discovery/damage-claim UI remnants. Treat command-center as authoritative for privileged Legal UI; audit any storefront legal imports before exposing or deploying.
+RESOLVED FOR ACTIVE STOREFRONT: the 2026-05-03 frontend zone audit removed orphaned privileged Legal hooks/types/council-stream clients and Legal E2E specs from `apps/storefront`, and added a storefront boundary test blocking `/api/legal`, `/legal/cases`, `case_slug`, `LegalCase`, sanctions/Hive Mind/deposition markers, and copied Legal client filenames. Older `frontend-next` / legacy dashboard files may still contain legal discovery/damage-claim remnants; treat them as non-authoritative until a separate legacy retirement pass.
 
 ## 7. Legal Ingest Flow
 
@@ -342,8 +342,7 @@ Do not store real secrets in repo files. The names below are runtime contract na
 6. Should `/mnt/fortress_nas/sectors/legal` remain an active legal file root or be marked legacy-only?
 7. Which DB is the legal case metadata source of truth after Spark-1 migration: `fortress_prod`, `fortress_db`, or Spark-1 `fortress_prod` mirror?
 8. What is the exact production Qdrant storage path and snapshot/backup policy for privileged collections?
-9. Should storefront legal hooks/types be removed, isolated, or explicitly documented as shared nonprivileged client code?
-10. Are `legal_caselaw_v2` and `legal_library_v2` already cut over in all caller code, or only accepted for future caller cutover?
+9. Are `legal_caselaw_v2` and `legal_library_v2` already cut over in all caller code, or only accepted for future caller cutover?
 11. What is the retention and access-control policy for `legal_privileged_communications_v2`, given cutover was deferred but the collection exists?
 12. Does `vault_ingest_legal_case.py` pass current syntax/tests after the schema reconciliation work, and are its docstring examples updated to Case I/II slugs?
 13. Should `deploy/fortress-prime-compose.yaml` be updated to the current Postgres contract or explicitly moved to legacy/dev docs?
@@ -354,6 +353,7 @@ Do not store real secrets in repo files. The names below are runtime contract na
 
 - Fortress Legal Constitution: `docs/architecture/FORTRESS-LEGAL-CONSTITUTION.md`.
 - Internal legal UI belongs to `apps/command-center`, not public storefront.
+- Active storefront boundary guard: `apps/storefront/src/__tests__/frontend-zone-boundary.test.ts` blocks privileged Legal client code from `apps/storefront`.
 - Current DB config contract: `POSTGRES_API_URI`, `POSTGRES_ADMIN_URI`, `TEST_DATABASE_URL`, roles `fortress_api` / `fortress_admin`.
 - Allowed DB names from config: `fortress_prod`, `fortress_shadow`, `fortress_db`, `fortress_shadow_test`.
 - `legal.cases` keyed by `case_slug` with `related_matters`, `privileged_counsel_domains`, and `nas_layout`.
@@ -388,4 +388,4 @@ Before new Fortress Legal features, resolve foundation ambiguity in this order:
 1. Prove live host ownership: Spark-2 current vs Spark-1 cutover state.
 2. Prove DB source-of-truth contract for Legal after PR #366/#405 era changes.
 3. Prove Qdrant alias/read/write contract for `legal_ediscovery_active` and v2.
-4. Re-audit frontend zone separation so privileged Legal never leaks into public storefront surfaces.
+4. Retire or quarantine legacy frontend Legal remnants outside `apps/command-center`.
