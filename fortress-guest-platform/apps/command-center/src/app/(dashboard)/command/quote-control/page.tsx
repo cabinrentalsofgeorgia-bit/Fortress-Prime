@@ -72,6 +72,17 @@ type QuoteBookingHoldResponse = {
   message: string;
 };
 
+type QuoteBookingReservationResponse = {
+  ok: boolean;
+  quote_id: string;
+  hold_id: string;
+  reservation_id: string;
+  confirmation_code: string;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+};
+
 type QuoteBookingProofLaneResponse = {
   ok: boolean;
   quote: QuoteBookingRecord;
@@ -166,6 +177,10 @@ function canCreateLocalHold(record: QuoteBookingRecord): boolean {
   );
 }
 
+function canConvertLocalReservation(record: QuoteBookingRecord): boolean {
+  return record.kind === "quote" && metadataString(record, "readiness_state") === "local_hold_created";
+}
+
 function readinessTone(state: string | null): string {
   switch (state) {
     case "ready":
@@ -174,6 +189,8 @@ function readinessTone(state: string | null): string {
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
     case "local_hold_created":
       return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+    case "local_reservation_created":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
     case "expired":
     case "blocked":
     case "parity_drift":
@@ -287,17 +304,21 @@ function RecordRow({
   onAction,
   onSend,
   onCreateHold,
+  onConvertHold,
   isActionPending,
   isSendPending,
   isHoldPending,
+  isConvertPending,
 }: {
   record: QuoteBookingRecord;
   onAction: (record: QuoteBookingRecord, action: SafeAction) => void;
   onSend: (record: QuoteBookingRecord) => void;
   onCreateHold: (record: QuoteBookingRecord) => void;
+  onConvertHold: (record: QuoteBookingRecord) => void;
   isActionPending: boolean;
   isSendPending: boolean;
   isHoldPending: boolean;
+  isConvertPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
   const readinessState = record.kind === "quote" ? metadataString(record, "readiness_state") : null;
@@ -305,6 +326,7 @@ function RecordRow({
   const readinessReasons = record.kind === "quote" ? metadataStrings(record, "readiness_reasons") : [];
   const canSend = canSendGuestQuote(record);
   const canHold = canCreateLocalHold(record);
+  const canConvert = canConvertLocalReservation(record);
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
@@ -435,6 +457,21 @@ function RecordRow({
               Hold
             </Button>
           ) : null}
+          {canConvert ? (
+            <Button
+              onClick={() => onConvertHold(record)}
+              disabled={isConvertPending}
+              size="sm"
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isConvertPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+              )}
+              Reserve
+            </Button>
+          ) : null}
           <Button
             onClick={() => onAction(record, "claim")}
             disabled={isActionPending}
@@ -515,6 +552,9 @@ export default function QuoteControlPage() {
   const [holdTarget, setHoldTarget] = useState<QuoteBookingRecord | null>(null);
   const [holdNote, setHoldNote] = useState("");
   const [isCreatingHold, setIsCreatingHold] = useState(false);
+  const [reservationTarget, setReservationTarget] = useState<QuoteBookingRecord | null>(null);
+  const [reservationNote, setReservationNote] = useState("");
+  const [isConvertingReservation, setIsConvertingReservation] = useState(false);
   const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
@@ -604,6 +644,10 @@ export default function QuoteControlPage() {
     setHoldTarget(record);
     setHoldNote("");
   };
+  const openConvertHold = (record: QuoteBookingRecord) => {
+    setReservationTarget(record);
+    setReservationNote("");
+  };
   const submitAction = () => {
     if (!actionTarget) return;
     actionMutation.mutate(
@@ -679,6 +723,27 @@ export default function QuoteControlPage() {
       toast.error(message);
     } finally {
       setIsCreatingHold(false);
+    }
+  };
+  const submitConvertHold = async () => {
+    if (!reservationTarget) return;
+    setIsConvertingReservation(true);
+    try {
+      const response = await api.post<QuoteBookingReservationResponse>(
+        `/api/vrs/quote-booking/control-tower/quote/${reservationTarget.id}/convert-hold`,
+        {
+          ...(reservationNote.trim() ? { note: reservationNote.trim() } : {}),
+        },
+      );
+      toast.success(response.message || `Reservation ${response.confirmation_code} created`);
+      setReservationTarget(null);
+      setReservationNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Local reservation conversion failed";
+      toast.error(message);
+    } finally {
+      setIsConvertingReservation(false);
     }
   };
 
@@ -891,9 +956,11 @@ export default function QuoteControlPage() {
                   onAction={openAction}
                   onSend={openSend}
                   onCreateHold={openCreateHold}
+                  onConvertHold={openConvertHold}
                   isActionPending={actionMutation.isPending}
                   isSendPending={isSendingQuote}
                   isHoldPending={isCreatingHold}
+                  isConvertPending={isConvertingReservation}
                 />
               ))}
             </div>
@@ -1054,6 +1121,70 @@ export default function QuoteControlPage() {
                 <>
                   <CalendarCheck className="mr-2 h-4 w-4" />
                   Create Hold
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(reservationTarget)} onOpenChange={(open) => !open && setReservationTarget(null)}>
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Create Local Reservation</DialogTitle>
+            <DialogDescription>{reservationTarget?.title || "Held quote"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-3 text-sm text-emerald-100">
+              This converts the local hold into a pending-payment local reservation. It does not charge a card,
+              create a PaymentIntent, mark the reservation paid, write to Streamline, touch the public website,
+              or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Guest</p>
+                <p className="truncate">{reservationTarget?.guest_label || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Stay</p>
+                <p>
+                  {formatDate(reservationTarget?.check_in)} to {formatDate(reservationTarget?.check_out)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Balance Due</p>
+                <p>{formatMoney(reservationTarget?.total_amount)}</p>
+              </div>
+            </div>
+            <Textarea
+              value={reservationNote}
+              onChange={(event) => setReservationNote(event.target.value)}
+              placeholder="Internal reservation note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setReservationTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitConvertHold}
+              disabled={isConvertingReservation || !reservationTarget || !canConvertLocalReservation(reservationTarget)}
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isConvertingReservation ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <ClipboardCheck className="mr-2 h-4 w-4" />
+                  Create Reservation
                 </>
               )}
             </Button>

@@ -21,10 +21,12 @@ from backend.models.openshell_audit import OpenShellAuditLog
 from backend.models.parity_audit import ParityAudit
 from backend.services.email_service import is_email_configured, send_email
 from backend.services.hold_service import create_inventory_hold
+from backend.services.reservation_engine import ReservationEngine
 from backend.models.staff import StaffUser
 from backend.services.openshell_audit import record_audit_event
 
 router = APIRouter()
+reservation_engine = ReservationEngine()
 
 CONTROL_TOWER_BLOCKED_CAPABILITIES = [
     "create_hold_without_staff_approval",
@@ -133,6 +135,21 @@ class QuoteBookingHoldResponse(BaseModel):
     quote_id: str
     hold_id: str
     expires_at: str
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
+class QuoteBookingReservationRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingReservationResponse(BaseModel):
+    ok: bool
+    quote_id: str
+    hold_id: str
+    reservation_id: str
+    confirmation_code: str
     audit_id: str | None = None
     audit_hash: str | None = None
     message: str
@@ -342,9 +359,9 @@ async def _quote_overlap_counts(
     db: AsyncSession,
     quote: GuestQuote,
     now: datetime,
-) -> tuple[int, int, int]:
+) -> tuple[int, int, int, int]:
     if not quote.property_id or not quote.check_in or not quote.check_out:
-        return 0, 0, 0
+        return 0, 0, 0, 0
 
     hold_rows = await db.execute(
         select(ReservationHold.id, ReservationHold.quote_snapshot)
@@ -365,10 +382,8 @@ async def _quote_overlap_counts(
         else:
             other_hold_count += 1
 
-    reservation_count = await _count(
-        db,
-        select(func.count())
-        .select_from(Reservation)
+    reservation_rows = await db.execute(
+        select(Reservation.id, Reservation.price_breakdown)
         .where(
             Reservation.property_id == quote.property_id,
             Reservation.status.notin_(["cancelled", "canceled", "no_show"]),
@@ -376,7 +391,16 @@ async def _quote_overlap_counts(
             Reservation.check_out_date > quote.check_in,
         ),
     )
-    return other_hold_count, reservation_count, own_hold_count
+    own_reservation_count = 0
+    other_reservation_count = 0
+    for _reservation_id, price_breakdown in reservation_rows.all():
+        breakdown = price_breakdown if isinstance(price_breakdown, dict) else {}
+        if str(breakdown.get("quote_ref") or "") == str(quote.id):
+            own_reservation_count += 1
+        else:
+            other_reservation_count += 1
+
+    return other_hold_count, other_reservation_count, own_hold_count, own_reservation_count
 
 
 async def _quote_readiness_machine_state(
@@ -391,7 +415,12 @@ async def _quote_readiness_machine_state(
         or (status == GuestQuoteStatus.PENDING and quote.expires_at and quote.expires_at < now_naive)
     )
     has_stay = bool(quote.property_id and quote.check_in and quote.check_out)
-    hold_conflicts, reservation_conflicts, own_hold_count = await _quote_overlap_counts(db, quote, now)
+    (
+        hold_conflicts,
+        reservation_conflicts,
+        own_hold_count,
+        own_reservation_count,
+    ) = await _quote_overlap_counts(db, quote, now)
     payment_ready = bool((quote.stripe_payment_link_url or "").strip())
     parity_status = _quote_parity_status(quote)
     parity_upper = parity_status.upper()
@@ -399,12 +428,18 @@ async def _quote_readiness_machine_state(
     parity_missing = parity_upper in {"", "NONE", "NULL", "NOT_CHECKED", "UNKNOWN"}
     parity_drift = not parity_passed and not parity_missing
     availability_check_status = (
-        "fail" if (not has_stay or hold_conflicts or reservation_conflicts) else "watch" if own_hold_count else "pass"
+        "fail"
+        if (not has_stay or hold_conflicts or reservation_conflicts)
+        else "watch"
+        if own_hold_count or own_reservation_count
+        else "pass"
     )
     if not has_stay:
         availability_detail = "Property and stay dates are required."
     elif hold_conflicts or reservation_conflicts:
         availability_detail = f"{hold_conflicts} active hold conflict(s), {reservation_conflicts} reservation conflict(s)."
+    elif own_reservation_count:
+        availability_detail = f"{own_reservation_count} local reservation already exists for this quote."
     elif own_hold_count:
         availability_detail = f"{own_hold_count} active local hold already exists for this quote."
     else:
@@ -442,6 +477,9 @@ async def _quote_readiness_machine_state(
     elif not has_stay or hold_conflicts or reservation_conflicts:
         state = "hold_conflict"
         reasons = ["Availability is blocked by missing stay data or an overlapping hold/reservation."]
+    elif own_reservation_count:
+        state = "local_reservation_created"
+        reasons = ["A staff-approved local reservation already exists for this quote."]
     elif own_hold_count:
         state = "local_hold_created"
         reasons = ["A staff-approved local checkout hold already exists for this quote."]
@@ -465,6 +503,7 @@ async def _quote_readiness_machine_state(
         "hold_conflicts": hold_conflicts,
         "reservation_conflicts": reservation_conflicts,
         "local_hold_count": own_hold_count,
+        "local_reservation_count": own_reservation_count,
         "parity_status": parity_status,
     }
 
@@ -479,6 +518,7 @@ def _finalize_quote_readiness(quotes: list[QuoteBookingRecord]) -> dict[str, int
         "missing_payment_handoff_quotes": 0,
         "hold_conflict_quotes": 0,
         "local_hold_created_quotes": 0,
+        "local_reservation_created_quotes": 0,
         "quotes_needing_staff_approval": 0,
     }
     stop_states = {
@@ -532,6 +572,8 @@ def _finalize_quote_readiness(quotes: list[QuoteBookingRecord]) -> dict[str, int
             counts["hold_conflict_quotes"] += 1
         if state == "local_hold_created":
             counts["local_hold_created_quotes"] += 1
+        if state == "local_reservation_created":
+            counts["local_reservation_created_quotes"] += 1
         if state == "needs_staff_approval":
             counts["quotes_needing_staff_approval"] += 1
 
@@ -601,6 +643,12 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
             record.metadata["local_hold_created"] = True
             if metadata.get("hold_id"):
                 record.metadata["local_hold_id"] = str(metadata.get("hold_id"))
+        elif action == "convert_local_reservation":
+            record.metadata["local_reservation_created"] = True
+            if metadata.get("reservation_id"):
+                record.metadata["local_reservation_id"] = str(metadata.get("reservation_id"))
+            if metadata.get("confirmation_code"):
+                record.metadata["confirmation_code"] = str(metadata.get("confirmation_code"))
 
         note = metadata.get("note")
         if isinstance(note, str) and note.strip():
@@ -844,6 +892,86 @@ async def _record_quote_hold_audit(
             "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
         },
     )
+
+
+async def _record_quote_reservation_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    quote: GuestQuote,
+    record: QuoteBookingRecord | None,
+    outcome: str,
+    note: str | None,
+    detail: str,
+    hold_id: str | None = None,
+    reservation_id: str | None = None,
+    confirmation_code: str | None = None,
+) -> OpenShellAuditLog | None:
+    readiness_state = None
+    readiness_reasons: list[str] = []
+    if record is not None:
+        readiness_state = str(record.metadata.get("readiness_state") or "")
+        readiness_reasons = [
+            str(item)
+            for item in (record.metadata.get("readiness_reasons") or [])
+            if isinstance(item, str)
+        ]
+
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.convert_local_reservation",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("quote", str(quote.id)),
+        purpose="Staff-approved local reservation conversion from a local quote hold.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "quote_id": str(quote.id),
+            "hold_id": hold_id,
+            "reservation_id": reservation_id,
+            "confirmation_code": confirmation_code,
+            "guest_email": quote.guest_email,
+            "property_id": str(quote.property_id) if quote.property_id else None,
+            "total_amount": _money(quote.total_amount),
+            "readiness_state": readiness_state,
+            "readiness_reasons": readiness_reasons,
+            "note": note,
+            "detail": detail,
+            "local_reservation_only": True,
+            "reservation_status": "pending_payment",
+            "payment_intent_created": False,
+            "payment_captured": False,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
+async def _find_active_quote_hold(db: AsyncSession, quote: GuestQuote) -> ReservationHold | None:
+    if not quote.property_id or not quote.check_in or not quote.check_out:
+        return None
+    result = await db.execute(
+        select(ReservationHold)
+        .where(
+            ReservationHold.property_id == quote.property_id,
+            ReservationHold.status == "active",
+            ReservationHold.check_in_date == quote.check_in,
+            ReservationHold.check_out_date == quote.check_out,
+            ReservationHold.expires_at >= datetime.now(timezone.utc),
+        )
+        .order_by(desc(ReservationHold.created_at))
+        .limit(20)
+    )
+    for hold in result.scalars().all():
+        snapshot = hold.quote_snapshot if isinstance(hold.quote_snapshot, dict) else {}
+        if str(snapshot.get("quote_ref") or "") == str(quote.id):
+            return hold
+    return None
 
 
 @router.get(
@@ -1476,6 +1604,183 @@ async def quote_booking_control_create_hold(
         audit_id=str(audit.id) if audit else None,
         audit_hash=audit.entry_hash if audit else None,
         message="Local checkout hold created. No card was charged, no PaymentIntent was created, no Streamline write occurred, and the legacy site was untouched.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/quote/{quote_id}/convert-hold",
+    response_model=QuoteBookingReservationResponse,
+)
+async def quote_booking_control_convert_hold(
+    quote_id: UUID,
+    body: QuoteBookingReservationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingReservationResponse:
+    """Convert a staff-created local hold into a local pending-payment reservation."""
+    quote = await db.get(GuestQuote, quote_id)
+    if quote is None:
+        raise HTTPException(status_code=404, detail="Guest quote not found")
+
+    note = (body.note or "").strip() or None
+    record = await _quote_control_record(db, quote, datetime.now(timezone.utc), datetime.utcnow())
+    readiness_state = str(record.metadata.get("readiness_state") or "blocked")
+    if readiness_state != "local_hold_created":
+        await _record_quote_reservation_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail=f"Conversion requires a staff-created local hold; current state is {readiness_state}.",
+        )
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Quote does not have an active local hold to convert.",
+                "readiness_state": readiness_state,
+                "readiness_reasons": record.metadata.get("readiness_reasons") or [],
+            },
+        )
+
+    hold = await _find_active_quote_hold(db, quote)
+    if hold is None:
+        await _record_quote_reservation_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail="No active local hold exists for this quote.",
+        )
+        raise HTTPException(status_code=409, detail="No active local hold exists for this quote")
+
+    guest = await db.get(Guest, hold.guest_id) if hold.guest_id else None
+    if guest is None:
+        await _record_quote_reservation_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            hold_id=str(hold.id),
+            detail="Local hold has no guest ledger row.",
+        )
+        raise HTTPException(status_code=422, detail="Local hold has no guest ledger row")
+
+    total_amount = Decimal(str(quote.total_amount or hold.amount_total or "0.00"))
+    nights = max(1, (hold.check_out_date - hold.check_in_date).days)
+    guest_name = _guest_name(guest.first_name, guest.last_name, quote.guest_name) or "Guest Quote"
+    conversion_note = (
+        f"CROG-VRS quote-control conversion from quote {quote.id} and hold {hold.id}. "
+        "Pending payment; no Stripe capture and no Streamline write."
+    )
+    if note:
+        conversion_note = f"{conversion_note} Staff note: {note}"
+
+    try:
+        reservation = await reservation_engine.create_reservation(
+            db,
+            {
+                "guest_id": guest.id,
+                "property_id": hold.property_id,
+                "check_in_date": hold.check_in_date,
+                "check_out_date": hold.check_out_date,
+                "num_guests": hold.num_guests,
+                "num_adults": quote.adults,
+                "num_children": quote.children,
+                "booking_source": "crog_vrs_quote_control",
+                "total_amount": total_amount,
+                "internal_notes": conversion_note,
+                "exclude_hold_id": hold.id,
+            },
+        )
+        reservation.status = "pending_payment"
+        reservation.guest_email = guest.email or quote.guest_email or ""
+        reservation.guest_name = guest_name
+        reservation.guest_phone = guest.phone or quote.guest_phone
+        reservation.num_pets = quote.pets or 0
+        reservation.nights_count = nights
+        reservation.nightly_rate = (Decimal(str(quote.base_rent or "0.00")) / Decimal(nights)).quantize(Decimal("0.01"))
+        reservation.cleaning_fee = Decimal("0.00")
+        reservation.service_fee = Decimal(str(quote.fees or "0.00"))
+        reservation.tax_amount = Decimal(str(quote.taxes or "0.00"))
+        reservation.price_breakdown = {
+            "quote_ref": str(quote.id),
+            "hold_ref": str(hold.id),
+            "source": "quote_booking_control_tower",
+            "quote_breakdown": quote.quote_breakdown or {},
+            "source_snapshot": quote.source_snapshot or {},
+            "base_rent": str(quote.base_rent or "0.00"),
+            "fees": str(quote.fees or "0.00"),
+            "taxes": str(quote.taxes or "0.00"),
+            "total": str(total_amount),
+            "payment_intent_created": False,
+            "payment_captured": False,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+        }
+        reservation.paid_amount = Decimal("0.00")
+        reservation.balance_due = total_amount
+        reservation.streamline_reservation_id = None
+
+        hold.status = "converted"
+        hold.converted_reservation_id = reservation.id
+        hold.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(reservation)
+        await db.refresh(hold)
+    except ValueError as exc:
+        await db.rollback()
+        await _record_quote_reservation_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            hold_id=str(hold.id),
+            detail=str(exc),
+        )
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        await db.rollback()
+        await _record_quote_reservation_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="failure",
+            note=note,
+            hold_id=str(hold.id),
+            detail=f"Local reservation conversion failed: {str(exc)[:160]}",
+        )
+        raise HTTPException(status_code=500, detail="Local reservation conversion failed") from exc
+
+    audit = await _record_quote_reservation_audit(
+        db=db,
+        current_user=current_user,
+        quote=quote,
+        record=record,
+        outcome="success",
+        note=note,
+        detail="Local pending-payment reservation created without payment capture or Streamline write.",
+        hold_id=str(hold.id),
+        reservation_id=str(reservation.id),
+        confirmation_code=reservation.confirmation_code,
+    )
+    return QuoteBookingReservationResponse(
+        ok=True,
+        quote_id=str(quote.id),
+        hold_id=str(hold.id),
+        reservation_id=str(reservation.id),
+        confirmation_code=reservation.confirmation_code,
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Local pending-payment reservation created. No card was charged, no PaymentIntent was created, no Streamline write occurred, and the legacy site was untouched.",
     )
 
 
