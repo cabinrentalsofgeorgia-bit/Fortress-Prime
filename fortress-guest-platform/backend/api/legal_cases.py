@@ -40,6 +40,11 @@ from backend.core.queue import get_arq_pool
 from backend.core.security import require_manager_or_admin
 from backend.services.ediscovery_agent import LegacySession
 from backend.services.legal_extractor import extract_entities
+from backend.services.legal.nas_layout import (
+    DEFAULT_CASE_SUBDIR_MAP,
+    NormalizedCaseLayout,
+    normalize_case_layout,
+)
 from backend.services.legal_case_graph import HiveMindFeedback, get_case_graph_snapshot
 from backend.services.legal_discovery_engine import validate_discovery_pack
 from backend.services.legal_deposition_engine import (
@@ -519,50 +524,51 @@ async def get_correspondence_content(corr_id: int):
 # pre-existing behaviour so canonical cases (Generali, Prime Trust, MVP)
 # keep working unchanged. Logical names (returned to the UI) match the
 # physical paths under /mnt/fortress_nas/sectors/legal/{slug}/.
-_CASE_SUBDIRS = ("certified_mail", "correspondence", "evidence", "receipts",
-                 "filings/incoming", "filings/outgoing")
-_DEFAULT_SUBDIR_MAP: dict[str, str] = {
-    "certified_mail":   "certified_mail",
-    "correspondence":   "correspondence",
-    "evidence":         "evidence",
-    "receipts":         "receipts",
-    "filings_incoming": "filings/incoming",
-    "filings_outgoing": "filings/outgoing",
-}
+_DEFAULT_SUBDIR_MAP: dict[str, str] = dict(DEFAULT_CASE_SUBDIR_MAP)
+
+
+def _resolve_case_layout_details(
+    slug: str, nas_layout: dict | str | None,
+) -> NormalizedCaseLayout:
+    return normalize_case_layout(
+        slug,
+        nas_layout,
+        default_root=NAS_LEGAL_ROOT,
+        require_layout=False,
+    )
 
 
 def _resolve_case_layout(
-    slug: str, nas_layout: dict | None,
+    slug: str, nas_layout: dict | str | None,
 ) -> tuple[Path, dict[str, str], bool]:
-    """
-    Return (case_root, logical→physical subdir map, recursive_flag).
-
-    NULL nas_layout → canonical {NAS_LEGAL_ROOT}/{slug} + _DEFAULT_SUBDIR_MAP,
-    recursive=False. Populated nas_layout → use the configured `root`
-    + `subdirs` map; missing keys are skipped silently. `recursive`
-    defaults to False when omitted.
-    """
-    if not nas_layout:
-        return Path(NAS_LEGAL_ROOT) / slug, dict(_DEFAULT_SUBDIR_MAP), False
-
-    root = Path(str(nas_layout.get("root") or "")).expanduser()
-    raw_subdirs = nas_layout.get("subdirs") or {}
-    if not isinstance(raw_subdirs, dict):
-        raw_subdirs = {}
-    subdir_map = {
-        str(k): str(v) for k, v in raw_subdirs.items()
-        if v is not None and v != ""
-    }
-    recursive = bool(nas_layout.get("recursive"))
-    return root, subdir_map, recursive
+    """Return (case_root, logical→physical subdir map, recursive_flag)."""
+    layout = _resolve_case_layout_details(slug, nas_layout)
+    return layout.root, dict(layout.subdirs), layout.recursive
 
 
-def _walk_case_subdir(base: Path, recursive: bool) -> list[Path]:
+def _layout_excludes(path: Path, case_root: Path, exclude_subdirs: set[str] | frozenset[str]) -> bool:
+    if not exclude_subdirs:
+        return False
+    try:
+        rel_name = str(path.relative_to(case_root)).strip("/")
+    except ValueError:
+        return False
+    return any(rel_name == ex or rel_name.startswith(f"{ex}/") for ex in exclude_subdirs)
+
+
+def _walk_case_subdir(
+    base: Path,
+    recursive: bool,
+    *,
+    case_root: Path | None = None,
+    exclude_subdirs: set[str] | frozenset[str] | None = None,
+) -> list[Path]:
     """
     Yield files under `base`, sorted. Skips:
       - dotfiles (anywhere in the path)
       - Synology @eaDir metadata folders
       - directories themselves
+      - paths excluded by nas_layout.exclude_subdirs when provided
     """
     if not base.is_dir():
         return []
@@ -572,6 +578,8 @@ def _walk_case_subdir(base: Path, recursive: bool) -> list[Path]:
         if not p.is_file():
             continue
         if any(part.startswith(".") or part == "@eaDir" for part in p.parts):
+            continue
+        if case_root is not None and _layout_excludes(p, case_root, exclude_subdirs or set()):
             continue
         out.append(p)
     out.sort()
@@ -603,7 +611,8 @@ async def download_case_file(slug: str, filename: str):
             raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
 
     nas_layout = getattr(row, "nas_layout", None)
-    case_root, subdir_map, recursive = _resolve_case_layout(slug, nas_layout)
+    layout = _resolve_case_layout_details(slug, nas_layout)
+    case_root, subdir_map, recursive = layout.root, layout.subdirs, layout.recursive
 
     for logical_name, relative_path in subdir_map.items():
         d = case_root / relative_path
@@ -617,6 +626,8 @@ async def download_case_file(slug: str, filename: str):
         for candidate in iterator:
             if not _is_under(candidate, case_root):
                 # Path-traversal guard: a symlink could escape case_root.
+                continue
+            if _layout_excludes(candidate, case_root, layout.exclude_subdirs):
                 continue
             ext = candidate.suffix.lower()
             media_type = MIME_MAP.get(ext, "application/octet-stream")
@@ -647,12 +658,18 @@ async def list_case_files(slug: str):
             raise HTTPException(status_code=404, detail=f"Case '{slug}' not found")
 
     nas_layout = getattr(row, "nas_layout", None)
-    case_root, subdir_map, recursive = _resolve_case_layout(slug, nas_layout)
+    layout = _resolve_case_layout_details(slug, nas_layout)
+    case_root, subdir_map, recursive = layout.root, layout.subdirs, layout.recursive
 
     files: list[dict[str, Any]] = []
     for logical_name, relative_path in subdir_map.items():
         d = case_root / relative_path
-        for f in _walk_case_subdir(d, recursive):
+        for f in _walk_case_subdir(
+            d,
+            recursive,
+            case_root=case_root,
+            exclude_subdirs=layout.exclude_subdirs,
+        ):
             if not _is_under(f, case_root):
                 continue
             files.append({

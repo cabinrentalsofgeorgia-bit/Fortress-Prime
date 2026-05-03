@@ -109,6 +109,41 @@ def _layout_with_subdirs(root: Path, subdirs: dict[str, str], recursive: bool = 
     return {"root": root, "subdirs": subdirs, "recursive": recursive}
 
 
+
+
+# ─── nas_layout normalization ────────────────────────────────────────────
+
+
+def test_normalize_layout_accepts_wave7_shape(tmp_path):
+    raw = {
+        "primary_root": str(tmp_path),
+        "include_subdirs": ["curated", "case-i-context"],
+        "exclude_subdirs": ["curated/private"],
+    }
+
+    layout = vil._normalize_layout(raw)
+
+    assert layout["root"] == tmp_path
+    assert layout["subdirs"] == {"curated": "curated", "case-i-context": "case-i-context"}
+    assert layout["recursive"] is True
+    assert layout["exclude_subdirs"] == {"curated/private"}
+
+
+def test_normalize_layout_preserves_legacy_shape(tmp_path):
+    raw = {"root": str(tmp_path), "subdirs": {"evidence": "ev"}, "recursive": False}
+
+    layout = vil._normalize_layout(raw)
+
+    assert layout["root"] == tmp_path
+    assert layout["subdirs"] == {"evidence": "ev"}
+    assert layout["recursive"] is False
+    assert layout["exclude_subdirs"] == set()
+
+
+def test_normalize_layout_rejects_empty_layout():
+    with pytest.raises(vil.PreflightError, match="nas_layout is empty"):
+        vil._normalize_layout({})
+
 def _registry_full_preflight_pass(case_slug: str, layout: dict):
     """Builds a registry that lets every preflight gate pass and lets
     _check_existing_row return None (= no existing row)."""
