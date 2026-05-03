@@ -27,8 +27,15 @@ Rule 13 makes compulsory-counterclaim analysis important. The operator should id
 | Individual-capacity liability | John Thatcher | Direct participation/control may support personal exposure or alter-ego alternative. | Thatcher communications, entity control records, decision records, 7IL operating facts | High leverage if supported | High if facts are thin | Evidence-first; counsel review. |
 | Declaratory relief / easement validity | 7IL and/or related parties | Operator may seek declaration preserving or clarifying easement rights/validity. | Easement instrument, right-of-way facts, title record, closing attorney files | Medium/high | Must avoid duplicating weak theory | Build easement memo. |
 | Punitive damages | Appropriate counterclaim defendants | Willful misconduct theory tied to knowing conduct and easement/closing facts. | Wilson/closing file, River Heights vs Fish Trap easement comparison, knowledge evidence | High leverage | High pleading and proof burden | Reserve pending evidence and counsel review. |
-| Wilson-related claim | Terry Wilson or related entity | Potential professional negligence/fraud/conspiracy evaluation tied to drafting/closing role. | Duty/standing analysis, closing file, drafting communications | Unknown | Very high sensitivity | Reserve/evaluate; do not lead without counsel. |
+| Wilson Pruitt professional-liability / coordinated-conduct evaluation | Wilson Pruitt / Terry Wilson, only if procedural and evidence gates pass | Potential professional negligence, fiduciary, fraud/misrepresentation, civil-conspiracy, or discovery-target lane tied to closing/drafting/report/easement conduct. | Duty/scope proof, source-controlled emails, closing file, expert/affidavit gate, causation/damages proof, procedural-route memo | Unknown | Very high sensitivity | Use Wilson Pruitt claim evaluation workbench; default discovery-target/counsel-memo, do not plead yet. |
 | Fees / expenses | Plaintiff/counter-defendants | Recover fees if authorized by statute, contract, or bad-faith doctrine. | Fee basis, conduct record, contract provisions | Medium | Depends on legal basis | Research and preserve. |
+
+
+## Wilson Pruitt Nonparty Gate
+
+Wilson Pruitt / Terry Wilson should not be treated as ordinary counterclaim targets unless counsel confirms a valid route. The current default is discovery-target plus counsel-memo. Before naming any nonparty professional, the operator/counsel file must answer: Rule 13(h)/19/20 joinder, Rule 14 derivative-liability fit, separate-action suitability, duty/scope, professional-malpractice affidavit/expert requirements, privilege waiver, causation, and damages.
+
+Use: `wilson-pruitt-claim-evaluation-workbench-7il-ndga-ii-2026-05-03.md`.
 
 ## Compulsory Counterclaim Screen
 

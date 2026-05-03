@@ -8,10 +8,11 @@ Use order:
 2. Rule 12 / first-response screen
 3. Affirmative defenses workbench
 4. Counterclaim viability workbench
-5. Evidence gap and exhibit request list
-6. Answer draft skeleton
-7. Pre-filing red-team review
+5. Wilson Pruitt claim evaluation workbench
+6. Evidence gap and exhibit request list
+7. Answer draft skeleton
+8. Pre-filing red-team review
 
-Current controlling fact: Gary Knight has not been served as of 2026-05-02.
+Current controlling fact: Gary Knight has not been served as of 2026-05-03.
 
 Do not file anything from this pack without checking service, live docket, local rules, exhibits, and counsel input if available.
