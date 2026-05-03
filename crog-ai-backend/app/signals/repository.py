@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections import Counter
 from typing import Any, Protocol
 
 import psycopg
@@ -66,6 +67,16 @@ class SignalDataStore(Protocol):
         until: dt.date | None = None,
         top_tickers: int = 20,
         event_window_days: int = 3,
+    ) -> dict[str, Any]: ...
+
+    def shadow_review(
+        self,
+        *,
+        candidate_parameter_set: str,
+        lookback_days: int = 30,
+        review_limit: int = 8,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
     ) -> dict[str, Any]: ...
 
     def symbol_chart(
@@ -510,6 +521,274 @@ def fetch_promotion_gate(
     }
 
 
+LANE_LABELS = {
+    "bullish_alignment": "Bullish Alignment",
+    "risk_alignment": "Risk Alignment",
+    "reentry": "Re-entry",
+    "mixed_timeframes": "Mixed Timeframes",
+}
+
+
+def _lane_change_review(
+    *,
+    production_lanes: dict[str, list[dict[str, Any]]],
+    candidate_lanes: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    reviews: list[dict[str, Any]] = []
+    for lane_id, label in LANE_LABELS.items():
+        production_tickers = [str(row["ticker"]) for row in production_lanes.get(lane_id, [])]
+        candidate_tickers = [str(row["ticker"]) for row in candidate_lanes.get(lane_id, [])]
+        production_set = set(production_tickers)
+        candidate_set = set(candidate_tickers)
+        added = sorted(candidate_set - production_set)
+        removed = sorted(production_set - candidate_set)
+        unchanged = sorted(candidate_set & production_set)
+        universe = max(len(candidate_set | production_set), 1)
+        reviews.append(
+            {
+                "lane_id": lane_id,
+                "label": label,
+                "production_tickers": production_tickers,
+                "candidate_tickers": candidate_tickers,
+                "added_tickers": added,
+                "removed_tickers": removed,
+                "unchanged_tickers": unchanged,
+                "churn_rate": (len(added) + len(removed)) / universe,
+            }
+        )
+    return reviews
+
+
+def _transition_pressure_review(
+    *,
+    production_transitions: list[dict[str, Any]],
+    candidate_transitions: list[dict[str, Any]],
+    limit: int,
+) -> list[dict[str, Any]]:
+    production_counts = Counter(str(row["ticker"]) for row in production_transitions)
+    candidate_counts = Counter(str(row["ticker"]) for row in candidate_transitions)
+    latest_candidate: dict[str, dict[str, Any]] = {}
+    for row in candidate_transitions:
+        ticker = str(row["ticker"])
+        latest_candidate.setdefault(ticker, row)
+
+    ranked_tickers = sorted(
+        candidate_counts,
+        key=lambda ticker: (
+            candidate_counts[ticker],
+            candidate_counts[ticker] - production_counts.get(ticker, 0),
+            ticker,
+        ),
+        reverse=True,
+    )[:limit]
+    reviews: list[dict[str, Any]] = []
+    for ticker in ranked_tickers:
+        latest = latest_candidate.get(ticker, {})
+        reviews.append(
+            {
+                "ticker": ticker,
+                "production_transition_count": production_counts.get(ticker, 0),
+                "candidate_transition_count": candidate_counts[ticker],
+                "delta": candidate_counts[ticker] - production_counts.get(ticker, 0),
+                "latest_candidate_transition_type": latest.get("transition_type"),
+                "latest_candidate_transition_date": latest.get("to_bar_date"),
+            }
+        )
+    return reviews
+
+
+def _shadow_whipsaw_review(
+    conn: psycopg.Connection,
+    *,
+    tickers: list[str],
+    candidate_parameter_set: str,
+    whipsaw_window_sessions: int,
+    outcome_horizon_sessions: int,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for ticker in tickers:
+        risk = fetch_symbol_whipsaw_risk(
+            conn,
+            ticker=ticker,
+            sessions=260,
+            parameter_set=candidate_parameter_set,
+            whipsaw_window_sessions=whipsaw_window_sessions,
+            outcome_horizon_sessions=outcome_horizon_sessions,
+        )
+        rows.append(
+            {
+                "ticker": ticker,
+                "risk_level": risk["risk_level"],
+                "risk_score": risk["risk_score"],
+                "event_count": risk["event_count"],
+                "whipsaw_count": risk["whipsaw_count"],
+                "whipsaw_rate": risk["whipsaw_rate"],
+                "win_rate": risk["outcome"]["win_rate"],
+                "average_directional_return": risk["outcome"]["average_directional_return"],
+                "latest_whipsaw_date": risk["latest_whipsaw_date"],
+            }
+        )
+    return sorted(rows, key=lambda row: (row["risk_score"], row["whipsaw_count"]), reverse=True)
+
+
+def _shadow_review_checklist(
+    *,
+    gate: dict[str, Any],
+    lane_reviews: list[dict[str, Any]],
+    whipsaw_reviews: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    gate_status = gate["recommendation"]["status"]
+    lane_churn = max((float(row["churn_rate"]) for row in lane_reviews), default=0.0)
+    high_whipsaw_count = sum(1 for row in whipsaw_reviews if row["risk_level"] == "high")
+    gate_check_status = {"ready_for_shadow": "pass", "hold": "hold"}.get(
+        gate_status,
+        "review",
+    )
+
+    return [
+        {
+            "id": "promotion_gate",
+            "label": "Promotion Gate",
+            "status": gate_check_status,
+            "detail": gate["recommendation"]["rationale"],
+        },
+        {
+            "id": "lane_churn",
+            "label": "Lane Churn Review",
+            "status": "review" if lane_churn >= 0.35 else "pass",
+            "detail": f"Highest lane churn is {lane_churn:.0%}; review added and removed tickers before approval.",
+        },
+        {
+            "id": "whipsaw_review",
+            "label": "Whipsaw Review",
+            "status": "review" if high_whipsaw_count else "pass",
+            "detail": f"{high_whipsaw_count} reviewed ticker{'s' if high_whipsaw_count != 1 else ''} show high whipsaw risk.",
+        },
+        {
+            "id": "decision_record",
+            "label": "Human Decision Record",
+            "status": "blocked",
+            "detail": "A human promote/defer record is required before any market_signals write.",
+        },
+        {
+            "id": "market_signals_write",
+            "label": "market_signals Write",
+            "status": "blocked",
+            "detail": "This review is read-only; production signal promotion is intentionally disabled.",
+        },
+    ]
+
+
+def _shadow_recommendation(
+    *,
+    gate: dict[str, Any],
+    checklist: list[dict[str, str]],
+) -> dict[str, str]:
+    if gate["recommendation"]["status"] == "hold":
+        return {
+            "status": "hold",
+            "label": "Hold promotion",
+            "rationale": "Promotion Gate has a hard hold. Do not advance to market_signals.",
+        }
+    if any(item["status"] == "review" for item in checklist):
+        return {
+            "status": "needs_review",
+            "label": "Needs human review",
+            "rationale": "Evidence is ready, but lane churn or whipsaw pressure needs an explicit human decision.",
+        }
+    return {
+        "status": "ready_for_shadow_review",
+        "label": "Ready for shadow review",
+        "rationale": "Evidence packet is ready for a supervised promote/defer decision.",
+    }
+
+
+def fetch_shadow_review(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    lookback_days: int = 30,
+    review_limit: int = 8,
+    whipsaw_window_sessions: int = 5,
+    outcome_horizon_sessions: int = 5,
+) -> dict[str, Any]:
+    gate = fetch_promotion_gate(
+        conn,
+        candidate_parameter_set=candidate_parameter_set,
+        top_tickers=review_limit,
+    )
+    production_lanes = fetch_watchlist_candidates(conn, limit=review_limit)
+    candidate_lanes = fetch_watchlist_candidates(
+        conn,
+        limit=review_limit,
+        parameter_set=candidate_parameter_set,
+    )
+    lane_reviews = _lane_change_review(
+        production_lanes=production_lanes,
+        candidate_lanes=candidate_lanes,
+    )
+    production_transitions = fetch_recent_transitions(
+        conn,
+        limit=500,
+        lookback_days=lookback_days,
+    )
+    candidate_transitions = fetch_recent_transitions(
+        conn,
+        limit=500,
+        lookback_days=lookback_days,
+        parameter_set=candidate_parameter_set,
+    )
+    transition_pressure = _transition_pressure_review(
+        production_transitions=production_transitions,
+        candidate_transitions=candidate_transitions,
+        limit=review_limit,
+    )
+    pressure_tickers = [row["ticker"] for row in transition_pressure]
+    lane_tickers = [
+        ticker
+        for row in lane_reviews
+        for ticker in [*row["added_tickers"], *row["removed_tickers"]]
+    ]
+    review_tickers = list(dict.fromkeys([*pressure_tickers, *lane_tickers]))[:review_limit]
+    whipsaw_reviews = _shadow_whipsaw_review(
+        conn,
+        tickers=review_tickers,
+        candidate_parameter_set=candidate_parameter_set,
+        whipsaw_window_sessions=whipsaw_window_sessions,
+        outcome_horizon_sessions=outcome_horizon_sessions,
+    )
+    checklist = _shadow_review_checklist(
+        gate=gate,
+        lane_reviews=lane_reviews,
+        whipsaw_reviews=whipsaw_reviews,
+    )
+    return {
+        "generated_at": dt.datetime.now(dt.UTC),
+        "candidate_parameter_set": candidate_parameter_set,
+        "baseline_parameter_set": PRODUCTION_PARAMETER_SET,
+        "lookback_days": lookback_days,
+        "review_limit": review_limit,
+        "promotion_gate": gate,
+        "lane_reviews": lane_reviews,
+        "transition_pressure": transition_pressure,
+        "whipsaw_reviews": whipsaw_reviews,
+        "checklist": checklist,
+        "recommendation": _shadow_recommendation(gate=gate, checklist=checklist),
+        "decision_record_template": {
+            "candidate_parameter_set": candidate_parameter_set,
+            "allowed_decisions": ["defer", "continue_shadow", "promote_to_market_signals"],
+            "required_approver": "Financial operator",
+            "required_evidence": [
+                "Promotion Gate status",
+                "Lane churn review",
+                "Transition pressure review",
+                "Whipsaw/backtest review",
+                "Rollback criteria",
+            ],
+        },
+    }
+
+
 WATCHLIST_CANDIDATE_BASE_SQL = """
     WITH latest_scores AS (
         SELECT
@@ -740,6 +1019,26 @@ class PostgresSignalDataStore:
                 until=until,
                 top_tickers=top_tickers,
                 event_window_days=event_window_days,
+            )
+
+    def shadow_review(
+        self,
+        *,
+        candidate_parameter_set: str,
+        lookback_days: int = 30,
+        review_limit: int = 8,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_shadow_review(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                lookback_days=lookback_days,
+                review_limit=review_limit,
+                whipsaw_window_sessions=whipsaw_window_sessions,
+                outcome_horizon_sessions=outcome_horizon_sessions,
             )
 
     def symbol_chart(

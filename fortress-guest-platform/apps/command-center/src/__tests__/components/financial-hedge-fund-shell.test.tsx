@@ -349,6 +349,81 @@ const promotionGate = {
   },
 };
 
+const shadowReview = {
+  generated_at: "2026-05-03T18:30:00Z",
+  candidate_parameter_set: "dochia_v0_2_range_daily",
+  baseline_parameter_set: "dochia_v0_estimated",
+  lookback_days: 30,
+  review_limit: 8,
+  promotion_gate: promotionGate,
+  lane_reviews: [
+    {
+      lane_id: "reentry",
+      label: "Re-entry",
+      production_tickers: ["AA", "HUT"],
+      candidate_tickers: ["AA", "BTU"],
+      added_tickers: ["BTU"],
+      removed_tickers: ["HUT"],
+      unchanged_tickers: ["AA"],
+      churn_rate: 2 / 3,
+    },
+  ],
+  transition_pressure: [
+    {
+      ticker: "AA",
+      production_transition_count: 3,
+      candidate_transition_count: 5,
+      delta: 2,
+      latest_candidate_transition_type: "exit_to_reentry",
+      latest_candidate_transition_date: "2026-04-22",
+    },
+  ],
+  whipsaw_reviews: [
+    {
+      ticker: "AA",
+      risk_level: "high",
+      risk_score: 82,
+      event_count: 9,
+      whipsaw_count: 5,
+      whipsaw_rate: 0.625,
+      win_rate: 0.55,
+      average_directional_return: 0.01,
+      latest_whipsaw_date: "2026-04-23",
+    },
+  ],
+  checklist: [
+    {
+      id: "promotion_gate",
+      label: "Promotion Gate",
+      status: "pass",
+      detail: "Candidate clears the compact promotion gate.",
+    },
+    {
+      id: "decision_record",
+      label: "Human Decision Record",
+      status: "blocked",
+      detail: "A human promote/defer record is required.",
+    },
+  ],
+  recommendation: {
+    status: "needs_review",
+    label: "Needs human review",
+    rationale: "Evidence is ready, but review pressure remains.",
+  },
+  decision_record_template: {
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    allowed_decisions: ["defer", "continue_shadow", "promote_to_market_signals"],
+    required_approver: "Financial operator",
+    required_evidence: [
+      "Promotion Gate status",
+      "Lane churn review",
+      "Transition pressure review",
+      "Whipsaw/backtest review",
+      "Rollback criteria",
+    ],
+  },
+};
+
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
     data: latestSignals,
@@ -409,6 +484,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialShadowReview: () => ({
+    data: shadowReview,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 describe("HedgeFundSignalsShell", () => {
@@ -425,9 +507,13 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("BUY")).toBeInTheDocument();
     expect(screen.getByText("Calibration Baseline")).toBeInTheDocument();
     expect(screen.getByText("62.1%")).toBeInTheDocument();
-    expect(screen.getByText("Promotion Gate")).toBeInTheDocument();
+    expect(screen.getAllByText("Promotion Gate").length).toBeGreaterThan(0);
     expect(screen.getByText("Ready for shadow")).toBeInTheDocument();
     expect(screen.getByText("Production vs v0.2 Range")).toBeInTheDocument();
+    expect(screen.getByText("Shadow Review")).toBeInTheDocument();
+    expect(screen.getByText("Needs human review")).toBeInTheDocument();
+    expect(screen.getByText("Lane Churn")).toBeInTheDocument();
+    expect(screen.getByText("Human Decision Record")).toBeInTheDocument();
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
     expect(screen.getByText("Whipsaw Risk / Backtest")).toBeInTheDocument();

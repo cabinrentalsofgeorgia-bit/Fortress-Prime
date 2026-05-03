@@ -2,7 +2,7 @@
 
 **Operator:** Gary Knight
 **Established:** 2026-04-29
-**Updated:** 2026-05-03 (v2.0 — Dochia promotion gate live)
+**Updated:** 2026-05-03 (v2.1 — Dochia shadow review ready)
 **Cadence:** Updated on change
 
 ---
@@ -262,8 +262,8 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 | v0.3 guardrail research | Closed as research-only: simple guardrails, ATR/cooldowns, ticker clusters, and rolling whipsaw suppressors all miss the promotion gate. Rolling date-safe holdout confirms suppression destroys recall: no candidate keeps at least 95% of raw v0.2 F1; strongest reducers cut 95%+ of events but stay below 7.41% F1 |
 | Candidate persisted state | v0.2 candidate has 328 `signal_scores` rows and 1,624 `signal_transitions` rows under non-production parameter set; internal API/BFF selector live for scanner, transitions, symbol detail, Portfolio Lens, and chart overlays |
 | Candidate lane comparison | v0.2 bullish lane unchanged at 129, risk unchanged at 47, re-entry 164→145, mixed 202→203, 61 daily states/scores change |
-| Promotion contract | Fresh Dochia scores still staged; legacy `market_signals` remains contextual until supervised promotion review |
-| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, synced chart overlays, Whipsaw Risk / Backtest evidence, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, and internal Production/v0.2 Range toggle |
+| Promotion contract | Fresh Dochia scores still staged; legacy `market_signals` remains contextual until supervised Shadow Review and a named human promote/defer decision record |
+| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, synced chart overlays, Whipsaw Risk / Backtest evidence, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, Promotion Gate, Shadow Review, and internal Production/v0.2 Range toggle |
 
 **Signal doctrine:**
 
@@ -280,8 +280,8 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 2. Database scorer: populate `hedge_fund.signal_scores` and `signal_transitions` idempotently. Complete initial fresh batch.
 3. Calibration harness: compare generated daily state/score against 24,204 MarketClub observations. Baseline complete; refinement remains.
 4. Production contract: promote approved signals to `hedge_fund.market_signals`.
-5. API surface: scanner, symbol detail, portfolio board, alert inbox, backtest lab, model health. Scanner, symbol detail, chart data, whipsaw/backtest evidence, alert feed, watchlist-candidate lanes, daily calibration, and promotion-gate comparison complete.
-6. Command Center UI: Financial / Hedge Fund route with sober cockpit UX, not gamified retail nudges. First route, chart overlays, Whipsaw Risk / Backtest, Portfolio Lens, and Calibration Baseline complete at `/financial/hedge-fund`.
+5. API surface: scanner, symbol detail, portfolio board, alert inbox, backtest lab, model health. Scanner, symbol detail, chart data, whipsaw/backtest evidence, alert feed, watchlist-candidate lanes, daily calibration, promotion-gate comparison, and Shadow Review packet complete.
+6. Command Center UI: Financial / Hedge Fund route with sober cockpit UX, not gamified retail nudges. First route, chart overlays, Whipsaw Risk / Backtest, Portfolio Lens, Calibration Baseline, Promotion Gate, and Shadow Review complete at `/financial/hedge-fund`.
 
 **Product principles:**
 
@@ -292,7 +292,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Do not call generated weekly/monthly states "MarketClub truth"; they are Dochia-derived.
 - Avoid gamified trading prompts; build an evidence cockpit.
 
-**Immediate next step:** Run supervised shadow review from the live Promotion Gate, then draft the explicit `market_signals` promotion/defer runbook. No production promotion happens without that human decision record.
+**Immediate next step:** Capture the supervised Shadow Review human decision record. If the decision is `promote_to_market_signals`, build the promotion path as dry-run first; no production promotion happens without that named approval and rollback criteria.
 
 ### 6.6 Architectural follow-ups
 
@@ -355,6 +355,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Added and ran read-only v0.3 range-trigger guardrail research for break buffers, same-direction close confirmation, ATR-normalized buffers, trailing per-symbol adaptive cooldowns, return-conditioned outcomes, ticker whipsaw clusters, chronological ticker-cluster holdout, and rolling date-safe whipsaw suppressors. Decision: do not persist any v0.3 suppression filter; expose whipsaw risk and backtest evidence in the app instead.
 - Added the Whipsaw Risk / Backtest backend endpoint and cockpit panel. Selected tickers now show daily whipsaw count/rate, risk level, 5-session forward-return outcome, and recent daily event context for both production and v0.2 Range modes.
 - Added the compact Promotion Gate backend endpoint and cockpit panel. Production and v0.2 Range now compare side by side on signal count, re-entry pressure, calibration match, coverage, score error, and guardrail status before any `market_signals` promotion.
+- Added the supervised Shadow Review backend endpoint, cockpit panel, and runbook. The read-only packet combines Promotion Gate status, lane churn, transition pressure, whipsaw/backtest tickers, a checklist, and an explicit human decision template. Live database smoke returned `needs_review`, 4 lane reviews, 8 transition-pressure tickers, and 8 whipsaw-review tickers. Production `market_signals` writes remain blocked.
 - Added internal Production/v0.2 Range toggle to the Command Center Hedge Fund page and promoted the production frontend build.
 - Added chart-data endpoint and chart overlay with close, daily/weekly channel bands, and generated triangle event markers.
 - Refined calibration metrics to separate carried-state agreement from exact new-alert agreement: 40.67% same-day alert match and 52.54% ±3-day alert match.
@@ -362,7 +363,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Applied read-only Hedge Fund legacy-table grants for the app role; grant SQL tracked in `deploy/sql/marketclub_legacy_read_grants.sql`.
 - Added and enabled `crog-ai-backend.service` on spark-node-2 for the Dochia signal API.
 - Promoted the Command Center production build and restarted `crog-ai-frontend.service`; `https://crog-ai.com/financial/hedge-fund` returns 200.
-- Verification passed: 41 backend signal tests, ruff, backend health, focused UI tests, focused UI lint, TypeScript, production Command Center build, service status, and live backend/BFF reads for production, v0.2 candidate, whipsaw, and Promotion Gate selectors.
+- Verification passed: 49 backend tests, ruff, backend health, focused UI tests, focused UI lint, TypeScript, production Command Center build, service status, and live backend/BFF reads for production, v0.2 candidate, whipsaw, Promotion Gate, and Shadow Review selectors.
 
 ### 7.1 Prior snapshot (2026-04-29 — embed deployment closing)
 

@@ -7,6 +7,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   BriefcaseBusiness,
+  ClipboardCheck,
   Gauge,
   Info,
   RefreshCw,
@@ -40,6 +41,7 @@ import {
   useFinancialLatestSignals,
   useFinancialDailyCalibration,
   useFinancialPromotionGate,
+  useFinancialShadowReview,
   useFinancialSignalDetail,
   useFinancialSignalChart,
   useFinancialSignalTransitions,
@@ -52,6 +54,9 @@ import type {
   FinancialPromotionGateGuardrailStatus,
   FinancialPromotionGateRecommendationStatus,
   FinancialPromotionGateResponse,
+  FinancialShadowReviewChecklistStatus,
+  FinancialShadowReviewRecommendationStatus,
+  FinancialShadowReviewResponse,
   FinancialSignalChartResponse,
   FinancialSignalTransition,
   FinancialTransitionType,
@@ -189,6 +194,20 @@ function promotionRecommendationClasses(status: FinancialPromotionGateRecommenda
 function promotionGuardrailClasses(status: FinancialPromotionGateGuardrailStatus): string {
   if (status === "fail") return "border-red-500/40 bg-red-500/10 text-red-600";
   if (status === "watch") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+}
+
+function shadowReviewRecommendationClasses(status: FinancialShadowReviewRecommendationStatus): string {
+  if (status === "hold") return "border-red-500/40 bg-red-500/10 text-red-600";
+  if (status === "needs_review") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+}
+
+function shadowReviewChecklistClasses(status: FinancialShadowReviewChecklistStatus): string {
+  if (status === "hold" || status === "blocked") {
+    return "border-red-500/40 bg-red-500/10 text-red-600";
+  }
+  if (status === "review") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
   return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
 }
 
@@ -1060,6 +1079,151 @@ function PromotionGatePanel({
   );
 }
 
+function ShadowReviewPanel({
+  review,
+  loading,
+  error,
+}: {
+  review: FinancialShadowReviewResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Shadow review unavailable.
+      </div>
+    );
+  }
+
+  if (loading && !review) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading shadow review…</div>;
+  }
+
+  if (!review) {
+    return (
+      <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+        No shadow-review data.
+      </div>
+    );
+  }
+
+  const highestChurn = [...review.lane_reviews].sort((a, b) => b.churn_rate - a.churn_rate)[0];
+  const topPressure = review.transition_pressure.slice(0, 5);
+  const topWhipsaws = review.whipsaw_reviews.slice(0, 5);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Supervised Shadow Review</p>
+          <p className="text-xs text-muted-foreground">
+            {review.baseline_parameter_set} → {review.candidate_parameter_set}
+          </p>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn("font-medium", shadowReviewRecommendationClasses(review.recommendation.status))}
+        >
+          {review.recommendation.label}
+        </Badge>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-5">
+        {review.checklist.map((item) => (
+          <div key={item.id} className="border border-border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-xs font-medium">{item.label}</p>
+              <Badge
+                variant="outline"
+                className={cn("shrink-0 text-[10px]", shadowReviewChecklistClasses(item.status))}
+              >
+                {item.status}
+              </Badge>
+            </div>
+            <p className="mt-2 line-clamp-2 text-[11px] text-muted-foreground">{item.detail}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Lane Churn</h2>
+            <span className="font-mono text-xs text-muted-foreground">
+              {highestChurn ? formatPercent(highestChurn.churn_rate) : "—"}
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {review.lane_reviews.map((lane) => (
+              <div key={lane.lane_id} className="grid grid-cols-[minmax(0,1fr)_56px_56px] gap-2 text-xs">
+                <span className="truncate font-medium">{lane.label}</span>
+                <span className="text-right font-mono text-emerald-600">+{lane.added_tickers.length}</span>
+                <span className="text-right font-mono text-red-600">-{lane.removed_tickers.length}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Transition Pressure</h2>
+            <span className="text-xs text-muted-foreground">{review.lookback_days}d</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {topPressure.length ? (
+              topPressure.map((item) => (
+                <div key={item.ticker} className="grid grid-cols-[56px_minmax(0,1fr)_52px] items-center gap-2 text-xs">
+                  <span className="font-mono font-semibold">{item.ticker}</span>
+                  <span className="truncate text-muted-foreground">
+                    {item.latest_candidate_transition_type
+                      ? TRANSITION_LABELS[item.latest_candidate_transition_type]
+                      : "—"}
+                  </span>
+                  <span className="text-right font-mono">
+                    {item.candidate_transition_count}
+                    <span className="text-muted-foreground">({formatSignedNumber(item.delta)})</span>
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No transition pressure.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Whipsaw Review</h2>
+            <span className="text-xs text-muted-foreground">{topWhipsaws.length} tickers</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {topWhipsaws.length ? (
+              topWhipsaws.map((item) => (
+                <div key={item.ticker} className="grid grid-cols-[56px_minmax(0,1fr)_52px] items-center gap-2 text-xs">
+                  <span className="font-mono font-semibold">{item.ticker}</span>
+                  <Badge
+                    variant="outline"
+                    className={cn("justify-center", whipsawRiskClasses(item.risk_level))}
+                  >
+                    {whipsawRiskLabel(item.risk_level)}
+                  </Badge>
+                  <span className="text-right font-mono">{item.risk_score}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No whipsaw pressure.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">{review.recommendation.rationale}</p>
+    </div>
+  );
+}
+
 function SymbolPanel({
   signal,
   transitions,
@@ -1212,6 +1376,13 @@ export function HedgeFundSignalsShell() {
     candidate_parameter_set: "dochia_v0_2_range_daily",
     top_tickers: 8,
   });
+  const shadowReview = useFinancialShadowReview({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    lookback_days: 30,
+    review_limit: 8,
+    whipsaw_window_sessions: 5,
+    outcome_horizon_sessions: 5,
+  });
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
   const watchlistLanes = watchlistCandidates.data?.lanes ?? EMPTY_LANES;
@@ -1254,7 +1425,8 @@ export function HedgeFundSignalsShell() {
     whipsawRisk.isFetching ||
     watchlistCandidates.isFetching ||
     dailyCalibration.isFetching ||
-    promotionGate.isFetching;
+    promotionGate.isFetching ||
+    shadowReview.isFetching;
 
   return (
     <div className="space-y-6">
@@ -1304,6 +1476,7 @@ export function HedgeFundSignalsShell() {
               void watchlistCandidates.refetch();
               void dailyCalibration.refetch();
               void promotionGate.refetch();
+              void shadowReview.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -1397,6 +1570,25 @@ export function HedgeFundSignalsShell() {
             gate={promotionGate.data ?? null}
             loading={promotionGate.isLoading}
             error={promotionGate.isError}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
+            <CardTitle>Shadow Review</CardTitle>
+          </div>
+          <Badge variant="outline">
+            {shadowReview.data ? formatDate(shadowReview.data.generated_at) : "—"}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <ShadowReviewPanel
+            review={shadowReview.data ?? null}
+            loading={shadowReview.isLoading}
+            error={shadowReview.isError}
           />
         </CardContent>
       </Card>

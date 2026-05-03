@@ -277,6 +277,93 @@ class FakeSignalStore:
             },
         }
 
+    def shadow_review(
+        self,
+        *,
+        candidate_parameter_set: str,
+        lookback_days: int = 30,
+        review_limit: int = 8,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]:
+        return {
+            "generated_at": dt.datetime(2026, 5, 3, 18, 30, tzinfo=dt.UTC),
+            "candidate_parameter_set": candidate_parameter_set,
+            "baseline_parameter_set": "dochia_v0_estimated",
+            "lookback_days": lookback_days,
+            "review_limit": review_limit,
+            "promotion_gate": self.promotion_gate(
+                candidate_parameter_set=candidate_parameter_set,
+                top_tickers=review_limit,
+            ),
+            "lane_reviews": [
+                {
+                    "lane_id": "reentry",
+                    "label": "Re-entry",
+                    "production_tickers": ["AA", "HUT"],
+                    "candidate_tickers": ["AA", "BTU"],
+                    "added_tickers": ["BTU"],
+                    "removed_tickers": ["HUT"],
+                    "unchanged_tickers": ["AA"],
+                    "churn_rate": 2 / 3,
+                }
+            ],
+            "transition_pressure": [
+                {
+                    "ticker": "AA",
+                    "production_transition_count": 3,
+                    "candidate_transition_count": 5,
+                    "delta": 2,
+                    "latest_candidate_transition_type": "exit_to_reentry",
+                    "latest_candidate_transition_date": dt.date(2026, 4, 22),
+                }
+            ],
+            "whipsaw_reviews": [
+                {
+                    "ticker": "AA",
+                    "risk_level": "high",
+                    "risk_score": 82,
+                    "event_count": 9,
+                    "whipsaw_count": 5,
+                    "whipsaw_rate": 0.625,
+                    "win_rate": 0.55,
+                    "average_directional_return": 0.01,
+                    "latest_whipsaw_date": dt.date(2026, 4, 23),
+                }
+            ],
+            "checklist": [
+                {
+                    "id": "promotion_gate",
+                    "label": "Promotion Gate",
+                    "status": "pass",
+                    "detail": "Candidate clears the compact promotion gate.",
+                },
+                {
+                    "id": "decision_record",
+                    "label": "Human Decision Record",
+                    "status": "blocked",
+                    "detail": "A human promote/defer record is required.",
+                },
+            ],
+            "recommendation": {
+                "status": "needs_review",
+                "label": "Needs human review",
+                "rationale": "Evidence is ready, but review pressure remains.",
+            },
+            "decision_record_template": {
+                "candidate_parameter_set": candidate_parameter_set,
+                "allowed_decisions": ["defer", "continue_shadow", "promote_to_market_signals"],
+                "required_approver": "Financial operator",
+                "required_evidence": [
+                    "Promotion Gate status",
+                    "Lane churn review",
+                    "Transition pressure review",
+                    "Whipsaw/backtest review",
+                    "Rollback criteria",
+                ],
+            },
+        }
+
     def symbol_chart(
         self,
         *,
@@ -533,6 +620,26 @@ def test_promotion_gate_endpoint_compares_candidate_to_production() -> None:
     assert payload["deltas"]["signal_count"] == -2
     assert payload["guardrails"][0]["status"] == "pass"
     assert payload["recommendation"]["status"] == "ready_for_shadow"
+
+
+def test_shadow_review_endpoint_returns_decision_packet() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/shadow-review/daily"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&review_limit=3"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["candidate_parameter_set"] == "dochia_v0_2_range_daily"
+    assert payload["recommendation"]["status"] == "needs_review"
+    assert payload["lane_reviews"][0]["added_tickers"] == ["BTU"]
+    assert payload["transition_pressure"][0]["latest_candidate_transition_type"] == "exit_to_reentry"
+    assert payload["whipsaw_reviews"][0]["risk_level"] == "high"
+    assert payload["decision_record_template"]["allowed_decisions"][-1] == "promote_to_market_signals"
 
 
 def test_symbol_chart_endpoint_returns_overlay_data() -> None:

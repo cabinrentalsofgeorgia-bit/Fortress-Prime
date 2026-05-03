@@ -335,6 +335,79 @@ export interface FinancialPromotionGateResponse {
   recommendation: FinancialPromotionGateRecommendation;
 }
 
+export interface FinancialShadowReviewLaneChange {
+  lane_id: string;
+  label: string;
+  production_tickers: string[];
+  candidate_tickers: string[];
+  added_tickers: string[];
+  removed_tickers: string[];
+  unchanged_tickers: string[];
+  churn_rate: number;
+}
+
+export interface FinancialShadowReviewTransitionPressure {
+  ticker: string;
+  production_transition_count: number;
+  candidate_transition_count: number;
+  delta: number;
+  latest_candidate_transition_type: FinancialTransitionType | null;
+  latest_candidate_transition_date: string | null;
+}
+
+export interface FinancialShadowReviewWhipsawTicker {
+  ticker: string;
+  risk_level: FinancialWhipsawRiskLevel;
+  risk_score: number;
+  event_count: number;
+  whipsaw_count: number;
+  whipsaw_rate: number | null;
+  win_rate: number | null;
+  average_directional_return: number | null;
+  latest_whipsaw_date: string | null;
+}
+
+export type FinancialShadowReviewChecklistStatus = "pass" | "review" | "hold" | "blocked";
+export type FinancialShadowReviewRecommendationStatus =
+  | "ready_for_shadow_review"
+  | "needs_review"
+  | "hold";
+
+export interface FinancialShadowReviewChecklistItem {
+  id: string;
+  label: string;
+  status: FinancialShadowReviewChecklistStatus;
+  detail: string;
+}
+
+export interface FinancialShadowReviewRecommendation {
+  status: FinancialShadowReviewRecommendationStatus;
+  label: string;
+  rationale: string;
+}
+
+export interface FinancialShadowReviewDecisionRecordTemplate {
+  candidate_parameter_set: string;
+  allowed_decisions: string[];
+  required_approver: string;
+  required_evidence: string[];
+}
+
+export interface FinancialShadowReviewResponse {
+  generated_at: string;
+  candidate_parameter_set: string;
+  baseline_parameter_set: string;
+  lookback_days: number;
+  review_limit: number;
+  promotion_gate: FinancialPromotionGateResponse;
+  lane_reviews: FinancialShadowReviewLaneChange[];
+  transition_pressure: FinancialShadowReviewTransitionPressure[];
+  whipsaw_reviews: FinancialShadowReviewWhipsawTicker[];
+  checklist: FinancialShadowReviewChecklistItem[];
+  recommendation: FinancialShadowReviewRecommendation;
+  decision_record_template: FinancialShadowReviewDecisionRecordTemplate;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;
