@@ -14,12 +14,15 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.command_c2 import CONTROL_ACCESS
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.security import require_manager_or_admin
+from backend.models import AgentResponseQueue, EmailMessage, FinancialApproval, SEOPatch, TaylorQuoteRequest
+from backend.models.agent_queue import AgentQueue
 from backend.services.agentic_orchestrator import AgenticOrchestrator
 
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
@@ -32,6 +35,26 @@ class ManualAgentDispatchRequest(BaseModel):
     context_payload: dict[str, object] = Field(default_factory=dict)
     target_node: str = Field(default="auto", max_length=64)
     task_id: str | None = Field(default=None, max_length=120)
+
+
+class AgentWorkItem(BaseModel):
+    id: str
+    source: str
+    source_label: str
+    status: str
+    title: str
+    detail: str | None = None
+    risk_level: str
+    requires_human_approval: bool = True
+    created_at: str | None = None
+    updated_at: str | None = None
+    href: str
+
+
+class AgentWorkItemsResponse(BaseModel):
+    items: list[AgentWorkItem]
+    total: int
+    summary: dict[str, int]
 
 
 def _nemoclaw_execute_url() -> str:
@@ -91,10 +114,197 @@ def _sse_frame(payload: dict[str, object]) -> bytes:
     return f"data: {json.dumps(payload, default=str)}\n\n".encode("utf-8")
 
 
+def _iso(value) -> str | None:
+    return value.isoformat() if value else None
+
+
+def _summarize(items: list[AgentWorkItem]) -> dict[str, int]:
+    summary: dict[str, int] = {
+        "human_required": 0,
+        "public_content": 0,
+        "financial": 0,
+        "guest_facing": 0,
+        "failed": 0,
+    }
+    for item in items:
+        summary[item.source] = summary.get(item.source, 0) + 1
+        if item.requires_human_approval:
+            summary["human_required"] += 1
+        if item.risk_level == "public_content":
+            summary["public_content"] += 1
+        if item.risk_level == "financial":
+            summary["financial"] += 1
+        if item.risk_level == "guest_facing":
+            summary["guest_facing"] += 1
+        if item.status in {"failed", "send_failed"}:
+            summary["failed"] += 1
+    return summary
+
+
 @router.get("/stats")
 async def agent_stats(db: AsyncSession = Depends(get_db)):
     """Get AI agent performance statistics."""
     return await orchestrator.get_agent_stats(db)
+
+
+@router.get("/work-items", response_model=AgentWorkItemsResponse)
+async def agent_work_items(
+    limit: int = 80,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a read-only unified view of existing agentic/HITL work queues."""
+    per_queue_limit = max(5, min(limit, 200))
+    items: list[AgentWorkItem] = []
+
+    guest_responses = (
+        await db.execute(
+            select(AgentResponseQueue)
+            .where(AgentResponseQueue.status == "pending")
+            .order_by(AgentResponseQueue.created_at.desc())
+            .limit(per_queue_limit)
+        )
+    ).scalars().all()
+    for row in guest_responses:
+        items.append(
+            AgentWorkItem(
+                id=str(row.id),
+                source="guest_concierge",
+                source_label="Guest Concierge",
+                status=row.status,
+                title=row.intent or "Guest response draft",
+                detail=row.escalation_reason or row.action or "AI response awaiting staff review",
+                risk_level="guest_facing",
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/ai-engine",
+            )
+        )
+
+    hunter_queue = (
+        await db.execute(
+            select(AgentQueue)
+            .where(AgentQueue.status.in_(["pending_review", "failed"]))
+            .order_by(AgentQueue.created_at.desc())
+            .limit(per_queue_limit)
+        )
+    ).scalars().all()
+    for row in hunter_queue:
+        detail = row.error_log if row.status == "failed" else row.delivery_channel
+        items.append(
+            AgentWorkItem(
+                id=str(row.id),
+                source="hunter_reactivation",
+                source_label="Hunter Reactivation",
+                status=row.status,
+                title="Outbound recovery draft",
+                detail=detail or "Reactivation message awaiting approval",
+                risk_level="guest_facing",
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/vrs/hunter",
+            )
+        )
+
+    seo_patches = (
+        await db.execute(
+            select(SEOPatch)
+            .where(SEOPatch.status.in_(["pending_human", "needs_rewrite"]))
+            .order_by(SEOPatch.updated_at.desc())
+            .limit(per_queue_limit)
+        )
+    ).scalars().all()
+    for row in seo_patches:
+        items.append(
+            AgentWorkItem(
+                id=str(row.id),
+                source="seo_content",
+                source_label="SEO Content",
+                status=row.status,
+                title=row.page_path,
+                detail=f"score={row.godhead_score}" if row.godhead_score is not None else "SEO proposal awaiting review",
+                risk_level="public_content",
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/seo-review?status=pending_human",
+            )
+        )
+
+    taylor_quotes = (
+        await db.execute(
+            select(TaylorQuoteRequest)
+            .where(TaylorQuoteRequest.status == "pending_approval")
+            .order_by(TaylorQuoteRequest.created_at.desc())
+            .limit(per_queue_limit)
+        )
+    ).scalars().all()
+    for row in taylor_quotes:
+        items.append(
+            AgentWorkItem(
+                id=str(row.id),
+                source="taylor_quotes",
+                source_label="Taylor Quotes",
+                status=row.status,
+                title=row.guest_email,
+                detail=f"{row.check_in} to {row.check_out} · {row.nights} nights",
+                risk_level="guest_facing",
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.updated_at),
+                href="/vrs/quotes",
+            )
+        )
+
+    financial_approvals = (
+        await db.execute(
+            select(FinancialApproval)
+            .where(FinancialApproval.status == "pending")
+            .order_by(FinancialApproval.created_at.desc())
+            .limit(per_queue_limit)
+        )
+    ).scalars().all()
+    for row in financial_approvals:
+        items.append(
+            AgentWorkItem(
+                id=str(row.id),
+                source="financial_variance",
+                source_label="Financial Variance",
+                status=row.status,
+                title=row.reservation_id,
+                detail=f"{row.discrepancy_type} · delta {row.delta_cents} cents",
+                risk_level="financial",
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.resolved_at),
+                href="/command/triage",
+            )
+        )
+
+    email_messages = (
+        await db.execute(
+            select(EmailMessage)
+            .where(EmailMessage.approval_status.in_(["pending_approval", "send_failed"]))
+            .order_by(EmailMessage.created_at.desc())
+            .limit(per_queue_limit)
+        )
+    ).scalars().all()
+    for row in email_messages:
+        items.append(
+            AgentWorkItem(
+                id=str(row.id),
+                source="email_intake",
+                source_label="Email Intake",
+                status=row.approval_status,
+                title=row.subject or row.email_from,
+                detail=row.error_message or row.body_excerpt or row.email_from,
+                risk_level="guest_facing",
+                created_at=_iso(row.created_at),
+                updated_at=_iso(row.human_reviewed_at),
+                href="/email-intake",
+            )
+        )
+
+    items.sort(key=lambda item: item.created_at or "", reverse=True)
+    items = items[: max(1, min(limit, 200))]
+
+    return AgentWorkItemsResponse(items=items, total=len(items), summary=_summarize(items))
 
 
 @router.post("/run-daily")

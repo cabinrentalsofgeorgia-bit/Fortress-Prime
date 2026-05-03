@@ -1,7 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { useReviewQueue, useReviewAction, useDashboardStats, useMessageTemplates } from "@/lib/hooks";
+import {
+  useAgentWorkItems,
+  useReviewQueue,
+  useReviewAction,
+  useDashboardStats,
+  useMessageTemplates,
+} from "@/lib/hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,10 +25,12 @@ export default function AIEnginePage() {
   const { data: queue } = useReviewQueue();
   const { data: stats } = useDashboardStats();
   const { data: templates } = useMessageTemplates();
+  const { data: workItems, isLoading: workItemsLoading, error: workItemsError } = useAgentWorkItems();
   const reviewAction = useReviewAction();
 
   const safeQueue = Array.isArray(queue) ? queue : [];
   const safeTemplates = Array.isArray(templates) ? templates : [];
+  const safeWorkItems = workItems?.items ?? [];
 
   const pending = safeQueue.filter((i) => i.status === "pending");
   const processed = safeQueue.filter((i) => i.status !== "pending");
@@ -91,10 +100,30 @@ export default function AIEnginePage() {
             <p className="text-xs text-muted-foreground">Message templates</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Work Items
+            </CardTitle>
+            <Shield className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{workItems?.total ?? "–"}</div>
+            <p className="text-xs text-muted-foreground">Unified HITL queue</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Tabs defaultValue="queue">
+      <Tabs defaultValue="work-items">
         <TabsList>
+          <TabsTrigger value="work-items">
+            Work Items
+            {(workItems?.summary.human_required ?? 0) > 0 && (
+              <Badge variant="destructive" className="ml-2 text-[10px]">
+                {workItems?.summary.human_required}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="queue">
             Review Queue
             {pending.length > 0 && (
@@ -106,6 +135,64 @@ export default function AIEnginePage() {
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="work-items" className="mt-4 space-y-4">
+          {workItemsLoading ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">Loading agent work items...</p>
+              </CardContent>
+            </Card>
+          ) : workItemsError ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Shield className="h-12 w-12 mx-auto mb-4 text-destructive/70" />
+                <p className="text-muted-foreground">Agent work-item feed is unavailable.</p>
+              </CardContent>
+            </Card>
+          ) : safeWorkItems.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Check className="h-12 w-12 mx-auto mb-4 text-emerald-500/70" />
+                <p className="text-muted-foreground">No pending agent work items.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {safeWorkItems.map((item) => (
+                <Card key={`${item.source}-${item.id}`}>
+                  <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{item.source_label}</Badge>
+                        <Badge variant="secondary">{item.status.replaceAll("_", " ")}</Badge>
+                        <Badge variant={item.risk_level === "financial" ? "destructive" : "outline"}>
+                          {item.risk_level.replaceAll("_", " ")}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{item.title}</p>
+                        {item.detail ? (
+                          <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{item.detail}</p>
+                        ) : null}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {item.created_at ? new Date(item.created_at).toLocaleString() : "No timestamp"}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={item.href}>
+                        Open
+                        <Zap className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="queue" className="mt-4 space-y-4">
           {pending.length === 0 ? (
