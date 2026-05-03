@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CROG-VRS Storefront
 
-## Getting Started
+This app is the public Next.js replacement layer for the legacy Drupal website at
+`cabin-rentals-of-georgia.com`.
 
-First, run the development server:
+The migration pattern is Strangler Fig:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Drupal remains the live fallback for routes that have not been migrated.
+- Next.js owns only the routes that have been deliberately promoted.
+- Revenue-sensitive paths stay on Drupal until quote, availability, checkout, payment, redirect,
+  SEO, and analytics parity are proven.
+- Public traffic must never be routed to `crog-ai.com`.
+- Staff tools, agent orchestration, privileged APIs, and Command Center workflows belong only in
+  `apps/command-center`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Current Boundary
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The storefront app contains public guest-facing surfaces such as:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Homepage and legacy homepage shell.
+- Cabin/category/content route scaffolding.
+- Availability and booking surfaces.
+- Guest itinerary and agreement signing routes.
+- Owner portal entry points.
+- Redirect and legacy content mirrors.
 
-## Learn More
+The app also preserves legacy SEO behavior through:
 
-To learn more about Next.js, take a look at the following resources:
+- `src/proxy.ts` redirect handling.
+- `src/data/legacy-redirects.ts`.
+- `src/data/drupal_granular_blueprint.json`.
+- Next.js rewrites in `next.config.ts` that send unpromoted routes back to the legacy origin.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Promotion Rules
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+A Drupal route can move to Next.js only after all of the following are true:
 
-## Deploy on Vercel
+1. The Next.js route renders production content from local CROG-VRS data or an approved static
+   mirror.
+2. Canonical URL, title, description, metadata, redirects, and structured content are verified
+   against the Drupal route.
+3. Quote, availability, checkout, and guest-intent behavior are verified when the route affects
+   bookings.
+4. Analytics and conversion events are present.
+5. Staff has an explicit rollback path to the Drupal route.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Safe Development
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Use staging, beta, local hostnames, or direct Spark 2 ports for testing. Do not flip public DNS or
+Cloudflare tunnel routing for `cabin-rentals-of-georgia.com` as part of normal development.
+
+When adding a route, keep Drupal as fallback until parity is proven route-by-route.

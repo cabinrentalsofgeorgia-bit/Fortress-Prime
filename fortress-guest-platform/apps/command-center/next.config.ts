@@ -7,14 +7,9 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: [
-        "cabin-rentals-of-georgia.com",
-        "www.cabin-rentals-of-georgia.com",
-        "staging.cabin-rentals-of-georgia.com",
-        "beta.cabin-rentals-of-georgia.com",
-        "cabin-rentals-of-georgia.vercel.app",
         "localhost:3001",
-        "192.168.0.100:3001",
-        "192.168.0.114:3001",
+        "localhost:3005",
+        "127.0.0.1:3005",
         ...staffHostsForServerActions(),
       ],
     },

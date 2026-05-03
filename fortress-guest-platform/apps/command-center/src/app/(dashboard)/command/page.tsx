@@ -23,6 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   useFunnelHQ,
   useParityDashboard,
+  usePendingApprovals,
   useSovereignPulse,
   useSystemHealth,
 } from "@/lib/hooks";
@@ -40,6 +41,21 @@ function formatPercent(value: number | null | undefined): string {
   if (value == null) return "--";
   const normalized = value <= 1 ? value * 100 : value;
   return `${normalized.toFixed(1)}%`;
+}
+
+function formatMetricValue(value: string | number | null | undefined): string {
+  if (typeof value === "number") return value.toLocaleString();
+  if (typeof value === "string" && value.trim().length > 0) return value;
+  return "--";
+}
+
+function metricNumber(value: string | number | null | undefined): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
 }
 
 function formatUptime(seconds: number | undefined): string {
@@ -132,11 +148,13 @@ export default function CommandCenterPage() {
   const pulse = useSovereignPulse();
   const funnel = useFunnelHQ();
   const health = useSystemHealth();
+  const financialApprovals = usePendingApprovals();
 
   const parityData = parity.data;
   const pulseData = pulse.data;
   const funnelData = funnel.data;
   const healthData = health.data;
+  const financialApprovalCount = financialApprovals.data?.length ?? 0;
 
   const nodes = healthData?.nodes ? Object.values(healthData.nodes) : [];
   const onlineNodes = nodes.filter((node) => node.online);
@@ -154,6 +172,74 @@ export default function CommandCenterPage() {
     !funnelData && funnel.error ? errorMessage(funnel.error, "Funnel HQ unavailable.") : null,
     !healthData && health.error ? errorMessage(health.error, "System Health unavailable.") : null,
   ].filter(Boolean) as string[];
+  const operations = healthData?.integrations?.operations;
+  const quoteCheckout = operations?.quote_checkout;
+  const channex = operations?.channex;
+  const checkoutHolds = operations?.checkout_holds;
+  const twilio = operations?.twilio;
+  const queues = operations?.queues;
+  const operatingWorkflows = [
+    {
+      label: "Quote Checkout",
+      status: quoteCheckout?.status ?? "unknown",
+      detail: `Pending ${formatMetricValue(quoteCheckout?.guest_pending)} · drift ${formatMetricValue(
+        quoteCheckout?.parity_drifts_24h,
+      )} · unresolved empty ${formatMetricValue(quoteCheckout?.unresolved_empty_streamline_prices_24h)}`,
+    },
+    {
+      label: "Channex",
+      status: channex?.status ?? "unknown",
+      detail: `Pending ${formatMetricValue(channex?.pending)} · failed ${formatMetricValue(
+        channex?.failed,
+      )} · processed 24h ${formatMetricValue(channex?.processed_24h)}`,
+    },
+    {
+      label: "Checkout Holds",
+      status: checkoutHolds?.status ?? "unknown",
+      detail: `Active ${formatMetricValue(checkoutHolds?.active)} · stale ${formatMetricValue(
+        checkoutHolds?.stale_active,
+      )} · converted 24h ${formatMetricValue(checkoutHolds?.converted_24h)}`,
+    },
+    {
+      label: "Guest Messages",
+      status: twilio?.status ?? "unknown",
+      detail: `Inbound ${formatMetricValue(twilio?.inbound_24h)} · failed ${formatMetricValue(
+        twilio?.failed_24h,
+      )} · review ${formatMetricValue(twilio?.needs_review)}`,
+    },
+    {
+      label: "Work Queues",
+      status: queues?.status ?? "unknown",
+      detail: `Queued ${formatMetricValue(queues?.queued)} · failed 24h ${formatMetricValue(
+        queues?.failed_24h,
+      )} · VRS failed ${formatMetricValue(queues?.vrs_failed_24h)}`,
+    },
+  ];
+  const seoPendingHuman = pulseData?.seo_queue.pending_human ?? 0;
+  const taylorPendingApproval = metricNumber(quoteCheckout?.taylor_pending_approval);
+  const guestMessageReview = metricNumber(twilio?.needs_review);
+  const approvalWorkflows = [
+    {
+      label: "SEO Review",
+      status: seoPendingHuman > 0 ? "queued" : "online",
+      detail: `${seoPendingHuman.toLocaleString()} pending human review`,
+    },
+    {
+      label: "Taylor Quotes",
+      status: taylorPendingApproval > 0 ? "queued" : "online",
+      detail: `${taylorPendingApproval.toLocaleString()} awaiting staff approval`,
+    },
+    {
+      label: "Financial Variance",
+      status: financialApprovals.error ? "degraded" : financialApprovalCount > 0 ? "queued" : "online",
+      detail: `${financialApprovalCount.toLocaleString()} pending absorb or invoice decision`,
+    },
+    {
+      label: "Guest Messages",
+      status: guestMessageReview > 0 ? "queued" : twilio?.status ?? "unknown",
+      detail: `${guestMessageReview.toLocaleString()} drafted or flagged for review`,
+    },
+  ];
 
   if (
     !parityData &&
@@ -257,6 +343,52 @@ export default function CommandCenterPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card className="border-emerald-500/20 bg-zinc-950/90">
+        <CardHeader className="border-b border-zinc-800/80">
+          <CardTitle className="flex items-center gap-2 text-zinc-50">
+            <Activity className="h-5 w-5 text-emerald-300" />
+            Operating Cockpit
+          </CardTitle>
+          <CardDescription>
+            Staff workflow posture from the live CROG-VRS operations health feed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 pt-6 md:grid-cols-2 2xl:grid-cols-5">
+          {operatingWorkflows.map((workflow) => (
+            <OpsStatusRow
+              key={workflow.label}
+              label={workflow.label}
+              value={workflow.status}
+              tone={statusTone(workflow.status)}
+              detail={workflow.detail}
+            />
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card className="border-amber-500/20 bg-zinc-950/90">
+        <CardHeader className="border-b border-zinc-800/80">
+          <CardTitle className="flex items-center gap-2 text-zinc-50">
+            <Scale className="h-5 w-5 text-amber-300" />
+            Human Approval Queue
+          </CardTitle>
+          <CardDescription>
+            Public, financial, and guest-facing actions that still require staff sign-off.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 pt-6 md:grid-cols-2 xl:grid-cols-4">
+          {approvalWorkflows.map((workflow) => (
+            <OpsStatusRow
+              key={workflow.label}
+              label={workflow.label}
+              value={workflow.status}
+              tone={statusTone(workflow.status)}
+              detail={workflow.detail}
+            />
+          ))}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-4">
         <Card className="border-cyan-500/20 bg-zinc-950/90">
