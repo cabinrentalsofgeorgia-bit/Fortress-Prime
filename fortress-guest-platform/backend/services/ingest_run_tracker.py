@@ -34,7 +34,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 import socket
 import sys
 import time
@@ -43,6 +42,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from backend.services.legal.db_targets import LEGAL_CANONICAL_DB, legal_connect_kwargs
+
 logger = logging.getLogger("ingest_run_tracker")
 
 
@@ -50,35 +51,18 @@ logger = logging.getLogger("ingest_run_tracker")
 
 # Tracker writes target fortress_db (where legal.* lives operationally) — same
 # database the FastAPI handler queries via LegacySession.
-_DEFAULT_TRACKER_DB = "fortress_db"
+_DEFAULT_TRACKER_DB = LEGAL_CANONICAL_DB
 
 _RETRY_BACKOFFS_S = (0.5, 2.0, 8.0)   # sums to 10.5 s + per-attempt latency
 _RETRY_TOTAL_CAP_S = 30.0
 
 
-def _admin_dsn() -> dict[str, str]:
+def _admin_dsn() -> dict[str, object]:
     """
-    Parse POSTGRES_ADMIN_URI from env (loaded by the caller's .env step) and
-    return a psycopg2 connection-keywords dict targeting fortress_db.
+    Return psycopg2 connection-keywords for the tracker target DB.
     """
-    uri = os.environ.get("POSTGRES_ADMIN_URI", "")
-    m = re.match(
-        r"postgresql(?:\+\w+)?://([^:]+):([^@]+)@([^:/]+):?(\d+)?/[^?]+",
-        uri,
-    )
-    if not m:
-        raise RuntimeError(
-            "POSTGRES_ADMIN_URI not set or not parseable; "
-            "tracker requires admin DSN"
-        )
-    user, pw, host, port = m.groups()
-    return {
-        "host":     host,
-        "port":     int(port or 5432),
-        "user":     user,
-        "password": pw,
-        "dbname":   os.environ.get("INGEST_RUN_DB", _DEFAULT_TRACKER_DB),
-    }
+    target_db = os.environ.get("INGEST_RUN_DB", _DEFAULT_TRACKER_DB)
+    return legal_connect_kwargs(target_db)
 
 
 def _connect():

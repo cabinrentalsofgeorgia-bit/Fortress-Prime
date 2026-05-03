@@ -8,8 +8,9 @@ and avoid ad hoc path replacement in session factories.
 
 from __future__ import annotations
 
+import os
 from typing import Final
-from urllib.parse import SplitResult, urlsplit, urlunsplit
+from urllib.parse import SplitResult, unquote, urlsplit, urlunsplit
 
 LEGAL_CANONICAL_DB: Final = "fortress_db"
 LEGAL_PROD_DB: Final = "fortress_prod"
@@ -58,3 +59,33 @@ def legal_sync_database_url(target_db: str, base_url: str | None = None) -> str:
 
         base_url = settings.alembic_database_url
     return _target_url(base_url, target_db, async_driver=False)
+
+
+def legal_connect_kwargs(
+    target_db: str,
+    base_url: str | None = None,
+    *,
+    env_var: str = "POSTGRES_ADMIN_URI",
+) -> dict[str, object]:
+    """Return psycopg/psycopg2 connect kwargs for a Legal runtime target DB."""
+    if base_url is None:
+        base_url = os.environ.get(env_var, "").strip()
+        if not base_url:
+            raise RuntimeError(f"{env_var} is not set; Legal DB connection unavailable")
+
+    sync_url = legal_sync_database_url(target_db, base_url)
+    parsed = urlsplit(sync_url)
+    username = unquote(parsed.username or "")
+    password = unquote(parsed.password or "")
+    hostname = parsed.hostname or ""
+
+    if not username or not hostname:
+        raise ValueError("Legal database target URL is missing username or host")
+
+    return {
+        "host": hostname,
+        "port": parsed.port or 5432,
+        "user": username,
+        "password": password,
+        "dbname": parsed.path.removeprefix("/"),
+    }

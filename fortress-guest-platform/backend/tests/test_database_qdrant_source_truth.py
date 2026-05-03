@@ -177,6 +177,13 @@ def test_legal_db_target_urls_are_explicit_and_parsed() -> None:
         "postgresql://fortress_api:p%40ss@127.0.0.1:5432/"
         "fortress_prod?sslmode=disable"
     )
+    assert db_targets.legal_connect_kwargs(db_targets.LEGAL_CANONICAL_DB, base) == {
+        "host": "127.0.0.1",
+        "port": 5432,
+        "user": "fortress_api",
+        "password": "p@ss",
+        "dbname": "fortress_db",
+    }
 
     with pytest.raises(ValueError, match="unsupported Legal database target"):
         db_targets.legal_async_database_url("fortress_shadow", base)
