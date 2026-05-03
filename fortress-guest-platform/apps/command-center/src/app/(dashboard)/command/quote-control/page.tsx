@@ -83,6 +83,18 @@ type QuoteBookingReservationResponse = {
   message: string;
 };
 
+type QuoteBookingPaymentLinkResponse = {
+  ok: boolean;
+  reservation_id: string;
+  confirmation_code: string;
+  guest_email: string;
+  payment_link_id: string;
+  audit_id: string | null;
+  audit_hash: string | null;
+  stripe_mode: "test" | "live";
+  message: string;
+};
+
 type QuoteBookingProofLaneResponse = {
   ok: boolean;
   quote: QuoteBookingRecord;
@@ -179,6 +191,16 @@ function canCreateLocalHold(record: QuoteBookingRecord): boolean {
 
 function canConvertLocalReservation(record: QuoteBookingRecord): boolean {
   return record.kind === "quote" && metadataString(record, "readiness_state") === "local_hold_created";
+}
+
+function canSendPaymentLink(record: QuoteBookingRecord): boolean {
+  const balanceDue = Number(record.metadata?.balance_due ?? record.total_amount ?? 0);
+  return (
+    record.kind === "reservation" &&
+    record.status === "pending_payment" &&
+    balanceDue > 0 &&
+    record.metadata?.payment_link_sent !== true
+  );
 }
 
 function readinessTone(state: string | null): string {
@@ -305,20 +327,24 @@ function RecordRow({
   onSend,
   onCreateHold,
   onConvertHold,
+  onSendPayment,
   isActionPending,
   isSendPending,
   isHoldPending,
   isConvertPending,
+  isPaymentPending,
 }: {
   record: QuoteBookingRecord;
   onAction: (record: QuoteBookingRecord, action: SafeAction) => void;
   onSend: (record: QuoteBookingRecord) => void;
   onCreateHold: (record: QuoteBookingRecord) => void;
   onConvertHold: (record: QuoteBookingRecord) => void;
+  onSendPayment: (record: QuoteBookingRecord) => void;
   isActionPending: boolean;
   isSendPending: boolean;
   isHoldPending: boolean;
   isConvertPending: boolean;
+  isPaymentPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
   const readinessState = record.kind === "quote" ? metadataString(record, "readiness_state") : null;
@@ -327,6 +353,7 @@ function RecordRow({
   const canSend = canSendGuestQuote(record);
   const canHold = canCreateLocalHold(record);
   const canConvert = canConvertLocalReservation(record);
+  const canPayment = canSendPaymentLink(record);
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
@@ -472,6 +499,21 @@ function RecordRow({
               Reserve
             </Button>
           ) : null}
+          {canPayment ? (
+            <Button
+              onClick={() => onSendPayment(record)}
+              disabled={isPaymentPending}
+              size="sm"
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isPaymentPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CreditCard className="mr-2 h-4 w-4" />
+              )}
+              Pay Link
+            </Button>
+          ) : null}
           <Button
             onClick={() => onAction(record, "claim")}
             disabled={isActionPending}
@@ -555,6 +597,9 @@ export default function QuoteControlPage() {
   const [reservationTarget, setReservationTarget] = useState<QuoteBookingRecord | null>(null);
   const [reservationNote, setReservationNote] = useState("");
   const [isConvertingReservation, setIsConvertingReservation] = useState(false);
+  const [paymentTarget, setPaymentTarget] = useState<QuoteBookingRecord | null>(null);
+  const [paymentNote, setPaymentNote] = useState("");
+  const [isSendingPaymentLink, setIsSendingPaymentLink] = useState(false);
   const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
@@ -647,6 +692,10 @@ export default function QuoteControlPage() {
   const openConvertHold = (record: QuoteBookingRecord) => {
     setReservationTarget(record);
     setReservationNote("");
+  };
+  const openSendPayment = (record: QuoteBookingRecord) => {
+    setPaymentTarget(record);
+    setPaymentNote("");
   };
   const submitAction = () => {
     if (!actionTarget) return;
@@ -744,6 +793,27 @@ export default function QuoteControlPage() {
       toast.error(message);
     } finally {
       setIsConvertingReservation(false);
+    }
+  };
+  const submitSendPaymentLink = async () => {
+    if (!paymentTarget) return;
+    setIsSendingPaymentLink(true);
+    try {
+      const response = await api.post<QuoteBookingPaymentLinkResponse>(
+        `/api/vrs/quote-booking/control-tower/reservation/${paymentTarget.id}/send-payment-link`,
+        {
+          ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
+        },
+      );
+      toast.success(response.message || `Payment link sent for ${response.confirmation_code}`);
+      setPaymentTarget(null);
+      setPaymentNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Payment link handoff failed";
+      toast.error(message);
+    } finally {
+      setIsSendingPaymentLink(false);
     }
   };
 
@@ -957,10 +1027,12 @@ export default function QuoteControlPage() {
                   onSend={openSend}
                   onCreateHold={openCreateHold}
                   onConvertHold={openConvertHold}
+                  onSendPayment={openSendPayment}
                   isActionPending={actionMutation.isPending}
                   isSendPending={isSendingQuote}
                   isHoldPending={isCreatingHold}
                   isConvertPending={isConvertingReservation}
+                  isPaymentPending={isSendingPaymentLink}
                 />
               ))}
             </div>
@@ -1185,6 +1257,67 @@ export default function QuoteControlPage() {
                 <>
                   <ClipboardCheck className="mr-2 h-4 w-4" />
                   Create Reservation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(paymentTarget)} onOpenChange={(open) => !open && setPaymentTarget(null)}>
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Send Payment Link</DialogTitle>
+            <DialogDescription>{paymentTarget?.title || "Pending-payment reservation"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-3 text-sm text-emerald-100">
+              This creates and emails a Stripe-hosted payment link. CROG-VRS does not charge the card here,
+              mark the reservation paid, write to Streamline, touch the public website, or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Guest</p>
+                <p className="truncate">{paymentTarget?.guest_label || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Reservation</p>
+                <p className="truncate">{paymentTarget?.title || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Balance Due</p>
+                <p>{formatMoney(Number(paymentTarget?.metadata?.balance_due ?? paymentTarget?.total_amount ?? 0))}</p>
+              </div>
+            </div>
+            <Textarea
+              value={paymentNote}
+              onChange={(event) => setPaymentNote(event.target.value)}
+              placeholder="Internal payment handoff note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setPaymentTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitSendPaymentLink}
+              disabled={isSendingPaymentLink || !paymentTarget || !canSendPaymentLink(paymentTarget)}
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isSendingPaymentLink ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Send Payment Link
                 </>
               )}
             </Button>

@@ -155,6 +155,22 @@ class QuoteBookingReservationResponse(BaseModel):
     message: str
 
 
+class QuoteBookingPaymentLinkRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingPaymentLinkResponse(BaseModel):
+    ok: bool
+    reservation_id: str
+    confirmation_code: str
+    guest_email: str
+    payment_link_id: str
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    stripe_mode: Literal["test", "live"]
+    message: str
+
+
 class QuoteBookingProofLaneRequest(BaseModel):
     guest_email: str | None = Field(default=None, max_length=320)
     property_id: UUID | None = None
@@ -237,6 +253,13 @@ def _stripe_secret_mode() -> Literal["test", "live", "unknown"]:
     return "unknown"
 
 
+def _stripe_payment_mode_or_error() -> Literal["test", "live"]:
+    mode = _stripe_secret_mode()
+    if mode not in {"test", "live"}:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+    return mode
+
+
 def _resolve_proof_lane_email(current_user: StaffUser, requested_email: str | None) -> str:
     email = (requested_email or current_user.email or "").strip().lower()
     if not email or "@" not in email:
@@ -311,6 +334,64 @@ def _create_proof_lane_payment_link(
         "payment_link_id": link.id,
         "product_id": product.id,
         "price_id": price.id,
+    }
+
+
+def _create_reservation_payment_link(
+    *,
+    reservation_id: str,
+    confirmation_code: str,
+    quote_id: str | None,
+    hold_id: str | None,
+    amount_cents: int,
+    property_id: str,
+    property_name: str,
+    guest_email: str,
+) -> dict[str, Any]:
+    mode = _stripe_payment_mode_or_error()
+    stripe.api_key = settings.stripe_secret_key
+
+    product = stripe.Product.create(
+        name=f"CROG-VRS Reservation Payment - {confirmation_code}",
+        description=f"Reservation balance for {property_name}",
+        metadata={
+            "type": "crog_vrs_reservation_payment",
+            "reservation_id": reservation_id,
+            "confirmation_code": confirmation_code,
+            "quote_id": quote_id or "",
+            "hold_id": hold_id or "",
+            "property_id": property_id,
+            "safe_staff_approved": "true",
+            "stripe_mode": mode,
+        },
+    )
+    price = stripe.Price.create(
+        product=product.id,
+        unit_amount=amount_cents,
+        currency="usd",
+    )
+    link = stripe.PaymentLink.create(
+        line_items=[{"price": price.id, "quantity": 1}],
+        payment_method_types=["card"],
+        metadata={
+            "type": "crog_vrs_reservation_payment",
+            "reservation_id": reservation_id,
+            "confirmation_code": confirmation_code,
+            "quote_id": quote_id or "",
+            "hold_id": hold_id or "",
+            "property_id": property_id,
+            "guest_email": guest_email,
+            "safe_staff_approved": "true",
+            "stripe_mode": mode,
+        },
+    )
+    return {
+        "payment_link_url": link.url,
+        "payment_link_id": link.id,
+        "product_id": product.id,
+        "price_id": price.id,
+        "amount_cents": amount_cents,
+        "stripe_mode": mode,
     }
 
 
@@ -649,6 +730,12 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
                 record.metadata["local_reservation_id"] = str(metadata.get("reservation_id"))
             if metadata.get("confirmation_code"):
                 record.metadata["confirmation_code"] = str(metadata.get("confirmation_code"))
+        elif action == "send_reservation_payment_link":
+            record.metadata["payment_link_sent"] = True
+            if metadata.get("payment_link_id"):
+                record.metadata["payment_link_id"] = str(metadata.get("payment_link_id"))
+            if metadata.get("stripe_mode"):
+                record.metadata["stripe_mode"] = str(metadata.get("stripe_mode"))
 
         note = metadata.get("note")
         if isinstance(note, str) and note.strip():
@@ -790,6 +877,70 @@ def _build_guest_quote_email(quote: GuestQuote, record: QuoteBookingRecord, paym
         f"Length: {nights}\n"
         f"Total: {amount}\n\n"
         f"Review and reserve: {payment_url}\n"
+    )
+    return subject, html_body, text_body
+
+
+def _build_reservation_payment_email(
+    reservation: Reservation,
+    property_name: str,
+    payment_url: str,
+) -> tuple[str, str, str]:
+    amount = _display_money(reservation.balance_due or reservation.total_amount)
+    check_in = _display_date(reservation.check_in_date)
+    check_out = _display_date(reservation.check_out_date)
+    subject = f"Payment link for reservation {reservation.confirmation_code}"
+
+    safe_property_name = escape(property_name or "your cabin")
+    safe_amount = escape(amount)
+    safe_check_in = escape(check_in)
+    safe_check_out = escape(check_out)
+    safe_confirmation = escape(reservation.confirmation_code or "")
+    safe_payment_url = escape(payment_url, quote=True)
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#18181b;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;background:#ffffff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="background:#18181b;padding:24px 28px;">
+                <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Cabin Rentals of Georgia</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px;">
+                <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">Your reservation payment link is ready.</p>
+                <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 24px;border-collapse:collapse;">
+                  <tr><td style="padding:8px 0;color:#71717a;">Reservation</td><td style="padding:8px 0;text-align:right;font-weight:600;">{safe_confirmation}</td></tr>
+                  <tr><td style="padding:8px 0;color:#71717a;">Cabin</td><td style="padding:8px 0;text-align:right;font-weight:600;">{safe_property_name}</td></tr>
+                  <tr><td style="padding:8px 0;color:#71717a;">Stay</td><td style="padding:8px 0;text-align:right;font-weight:600;">{safe_check_in} to {safe_check_out}</td></tr>
+                  <tr><td style="padding:8px 0;color:#71717a;">Balance due</td><td style="padding:8px 0;text-align:right;font-weight:700;">{safe_amount}</td></tr>
+                </table>
+                <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6;">Use the secure Stripe-hosted link below to complete payment.</p>
+                <p style="margin:0 0 24px;">
+                  <a href="{safe_payment_url}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;">Pay balance</a>
+                </p>
+                <p style="margin:0;color:#71717a;font-size:13px;line-height:1.6;">If the button does not open, copy and paste this link into your browser:<br><a href="{safe_payment_url}" style="color:#2563eb;word-break:break-all;">{safe_payment_url}</a></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+    text_body = (
+        "Your Cabin Rentals of Georgia reservation payment link is ready.\n\n"
+        f"Reservation: {reservation.confirmation_code}\n"
+        f"Cabin: {property_name}\n"
+        f"Stay: {check_in} to {check_out}\n"
+        f"Balance due: {amount}\n\n"
+        f"Pay balance: {payment_url}\n"
     )
     return subject, html_body, text_body
 
@@ -945,6 +1096,51 @@ async def _record_quote_reservation_audit(
             "reservation_status": "pending_payment",
             "payment_intent_created": False,
             "payment_captured": False,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
+async def _record_reservation_payment_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    reservation: Reservation,
+    outcome: str,
+    note: str | None,
+    detail: str,
+    payment_link_id: str | None = None,
+    stripe_mode: str | None = None,
+) -> OpenShellAuditLog | None:
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.send_reservation_payment_link",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("reservation", str(reservation.id)),
+        purpose="Staff-approved payment link handoff for a pending-payment local reservation.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "quote_id": breakdown.get("quote_ref"),
+            "hold_id": breakdown.get("hold_ref"),
+            "guest_email": reservation.guest_email,
+            "payment_link_id": payment_link_id,
+            "stripe_mode": stripe_mode,
+            "balance_due": _money(reservation.balance_due),
+            "note": note,
+            "detail": detail,
+            "payment_link_handoff_only": True,
+            "payment_captured": False,
+            "reservation_status_after": reservation.status,
             "streamline_write": "blocked",
             "legacy_storefront": "untouched",
             "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
@@ -1126,6 +1322,8 @@ async def quote_booking_control_tower(
     reservations: list[QuoteBookingRecord] = []
     for reservation, property_name in reservation_rows.all():
         stop_level, stop_reason = _reservation_stop_level(reservation)
+        price_breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+        payment_link_id = price_breakdown.get("control_tower_payment_link_id")
         reservations.append(
             QuoteBookingRecord(
                 id=str(reservation.id),
@@ -1149,6 +1347,12 @@ async def quote_booking_control_tower(
                     "booking_source": reservation.booking_source,
                     "streamline_reservation_id": reservation.streamline_reservation_id,
                     "balance_due": _money(reservation.balance_due),
+                    "paid_amount": _money(reservation.paid_amount),
+                    "quote_ref": price_breakdown.get("quote_ref"),
+                    "hold_ref": price_breakdown.get("hold_ref"),
+                    "payment_link_id": payment_link_id,
+                    "payment_link_sent": bool(payment_link_id),
+                    "stripe_mode": price_breakdown.get("control_tower_payment_stripe_mode"),
                 },
             )
         )
@@ -1781,6 +1985,183 @@ async def quote_booking_control_convert_hold(
         audit_id=str(audit.id) if audit else None,
         audit_hash=audit.entry_hash if audit else None,
         message="Local pending-payment reservation created. No card was charged, no PaymentIntent was created, no Streamline write occurred, and the legacy site was untouched.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/reservation/{reservation_id}/send-payment-link",
+    response_model=QuoteBookingPaymentLinkResponse,
+)
+async def quote_booking_control_send_payment_link(
+    reservation_id: UUID,
+    body: QuoteBookingPaymentLinkRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingPaymentLinkResponse:
+    """Create and email a Stripe-hosted payment link for a local pending-payment reservation."""
+    reservation = await db.get(Reservation, reservation_id)
+    if reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    note = (body.note or "").strip() or None
+    if reservation.status != "pending_payment":
+        await _record_reservation_payment_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail=f"Reservation status is {reservation.status}; expected pending_payment.",
+        )
+        raise HTTPException(status_code=409, detail="Only pending-payment reservations can receive this handoff")
+
+    balance_due = Decimal(str(reservation.balance_due or "0.00"))
+    if balance_due <= Decimal("0.00"):
+        await _record_reservation_payment_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail="Reservation has no balance due.",
+        )
+        raise HTTPException(status_code=409, detail="Reservation has no balance due")
+
+    guest_email = (reservation.guest_email or "").strip()
+    if not guest_email or "@" not in guest_email:
+        await _record_reservation_payment_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            detail="Reservation guest email is missing or invalid.",
+        )
+        raise HTTPException(status_code=422, detail="Reservation guest email is missing or invalid")
+
+    breakdown = dict(reservation.price_breakdown or {})
+    if breakdown.get("control_tower_payment_link_id"):
+        await _record_reservation_payment_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="blocked",
+            note=note,
+            payment_link_id=str(breakdown.get("control_tower_payment_link_id")),
+            stripe_mode=str(breakdown.get("control_tower_payment_stripe_mode") or ""),
+            detail="A Control Tower payment link has already been created for this reservation.",
+        )
+        raise HTTPException(status_code=409, detail="A payment link has already been created for this reservation")
+
+    prop = await db.get(Property, reservation.property_id)
+    property_name = prop.name if prop else "Cabin Rentals of Georgia"
+    amount_cents = int((balance_due * Decimal("100")).to_integral_value())
+    if amount_cents < 50:
+        raise HTTPException(status_code=422, detail="Payment link amount must be at least $0.50")
+
+    try:
+        link_result = await asyncio.to_thread(
+            _create_reservation_payment_link,
+            reservation_id=str(reservation.id),
+            confirmation_code=reservation.confirmation_code,
+            quote_id=str(breakdown.get("quote_ref") or ""),
+            hold_id=str(breakdown.get("hold_ref") or ""),
+            amount_cents=amount_cents,
+            property_id=str(reservation.property_id),
+            property_name=property_name,
+            guest_email=guest_email,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        await _record_reservation_payment_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="failure",
+            note=note,
+            detail=f"Stripe payment link creation failed: {str(exc)[:160]}",
+        )
+        raise HTTPException(status_code=502, detail=f"Stripe payment link creation failed: {str(exc)[:160]}") from exc
+
+    subject, html_body, text_body = _build_reservation_payment_email(
+        reservation,
+        property_name,
+        str(link_result["payment_link_url"]),
+    )
+    if not is_email_configured():
+        await _record_reservation_payment_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="failure",
+            note=note,
+            payment_link_id=str(link_result["payment_link_id"]),
+            stripe_mode=str(link_result["stripe_mode"]),
+            detail="SMTP email delivery is not configured.",
+        )
+        raise HTTPException(status_code=503, detail="Email delivery is not configured")
+
+    sent = await asyncio.to_thread(
+        send_email,
+        to=guest_email,
+        subject=subject,
+        html_body=html_body,
+        text_body=text_body,
+    )
+    if not sent:
+        await _record_reservation_payment_audit(
+            db=db,
+            current_user=current_user,
+            reservation=reservation,
+            outcome="failure",
+            note=note,
+            payment_link_id=str(link_result["payment_link_id"]),
+            stripe_mode=str(link_result["stripe_mode"]),
+            detail="SMTP provider returned a send failure.",
+        )
+        raise HTTPException(status_code=502, detail="Reservation payment email dispatch failed")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    breakdown.update(
+        {
+            "control_tower_payment_link_id": str(link_result["payment_link_id"]),
+            "control_tower_payment_product_id": str(link_result["product_id"]),
+            "control_tower_payment_price_id": str(link_result["price_id"]),
+            "control_tower_payment_amount_cents": amount_cents,
+            "control_tower_payment_stripe_mode": str(link_result["stripe_mode"]),
+            "control_tower_payment_link_sent_at": now_iso,
+            "control_tower_payment_email_sent_to": guest_email,
+            "payment_captured": False,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+        }
+    )
+    reservation.price_breakdown = breakdown
+    reservation.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(reservation)
+
+    audit = await _record_reservation_payment_audit(
+        db=db,
+        current_user=current_user,
+        reservation=reservation,
+        outcome="success",
+        note=note,
+        payment_link_id=str(link_result["payment_link_id"]),
+        stripe_mode=str(link_result["stripe_mode"]),
+        detail="Stripe-hosted payment link emailed to guest. Local reservation remains pending payment.",
+    )
+    return QuoteBookingPaymentLinkResponse(
+        ok=True,
+        reservation_id=str(reservation.id),
+        confirmation_code=reservation.confirmation_code,
+        guest_email=guest_email,
+        payment_link_id=str(link_result["payment_link_id"]),
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        stripe_mode=link_result["stripe_mode"],
+        message="Payment link sent. Reservation remains pending payment; no card was charged inside CROG-VRS, no Streamline write occurred, and the legacy site was untouched.",
     )
 
 
