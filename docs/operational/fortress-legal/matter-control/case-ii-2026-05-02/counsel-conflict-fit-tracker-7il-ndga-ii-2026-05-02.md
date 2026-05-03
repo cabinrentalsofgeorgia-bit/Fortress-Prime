@@ -5,6 +5,8 @@ Operator service status: not served as of 2026-05-02
 
 Use this to control outreach. Send conflict-check language first. Do not send the attorney package or evidence until conflicts clear.
 
+Operational control: `counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md`. The tracker is the ledger; the control document is the release rule. Keep `Package Sent` as `No` until Phase 2 release is approved.
+
 ## Conflict Screen Names
 
 - 7IL Properties, LLC
@@ -29,6 +31,26 @@ Use this to control outreach. Send conflict-check language first. Do not send th
 | 3 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
 | 4 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
 | 5 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
+
+## Release Discipline
+
+- Phase 0: conflict names only; no package, evidence, draft answer, strategy notes, or privileged material.
+- Phase 1: fit screen only after conflicts clear.
+- Phase 2: curated package only after fit, scope, budget, and confidentiality expectations are acceptable.
+- Phase 3: engagement / filing work only after engagement terms or explicit limited-scope instructions.
+
+## Outcome Codes
+
+| Code | Meaning |
+|---|---|
+| C0 | Not contacted |
+| C1 | Conflict check sent |
+| C2 | More conflict names requested |
+| C3 | Conflict cleared |
+| C4 | Conflict identified / stop |
+| F1 | Fit call scheduled |
+| F2 | Good Phase 1 fit |
+| F3 | Poor fit or economics |
 
 ## Scoring Guide
 
