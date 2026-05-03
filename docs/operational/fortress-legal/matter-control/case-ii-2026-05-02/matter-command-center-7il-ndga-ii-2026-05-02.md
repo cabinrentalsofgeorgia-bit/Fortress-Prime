@@ -3,30 +3,31 @@
 Date: 2026-05-02
 Matter: 7IL Properties, LLC v. Knight / James, N.D. Ga. Case II
 Source complaint: `Complaint_7IL_v_Knight_James_NDGA-II.pdf`
-Operator service status: not served as of 2026-05-02
+Operator service status: not served as of 2026-05-03
 
 This command center is a live operating artifact. It is not a court filing and not legal advice. Update it whenever service, docket, counsel, deadline, evidence, or strategy facts change.
 
 ## Current Posture
 
 - Complaint filed: 2026-04-15.
-- Service: Gary Knight has not been served as of 2026-05-02.
+- Service: Gary Knight has not been served as of 2026-05-03.
 - Rough FRCP 4(m) service window from filing: through 2026-07-14, subject to court orders and exact time-computation rules.
 - Ordinary response window after formal service: generally 21 days after service unless waiver, statute, court order, or another rule changes timing.
 - Current operating posture: pro-se-capable, counsel-enhanced, counsel-independent if necessary.
 
 ## Today's Highest-Value Move
 
-Use the counsel target shortlist, first-response readiness gate, counsel conflict-check outreach control, and Phase 1 fit-call scorecard while beginning conflict checks. Do not transmit the attorney briefing package or evidence before Phase 2 release is approved.
+While not served, build the evidence machine: run Wilson Pruitt email intake controls, keep service status watched, and keep counsel-package release locked until conflicts and Phase 1 scoring clear.
 
 ## P0 Watch Items
 
 | Watch Item | Current Status | Trigger | Immediate Action |
 |---|---|---|---|
-| Service status | Not served as of 2026-05-02 | Summons/complaint, waiver request, proof of service, docket service entry | Record service facts, calculate deadline, notify cleared counsel candidates |
+| Service status | Not served as of 2026-05-03 | Summons/complaint, waiver request, proof of service, docket service entry | Record service facts, calculate deadline, notify cleared counsel candidates |
 | First response | Not yet due absent service | Formal service or waiver event | Finalize answer/Rule 12/counterclaim posture |
 | Conflict checks | Five public-source targets selected | Operator confirms service status and send order | Send Phase 0 conflict-check language only |
 | Counsel package | Ready but not sent | Conflict clears and Phase 1 fit score passes | Release only operator-approved Phase 2 package materials |
+| Wilson Pruitt email intake | Protocol/register ready | Operator exports or identifies email sets | Freeze originals, hash, attachment-link, privilege-screen, and issue-tag before promotion |
 | Answer matrix | Initial matrix generated | Complaint/exhibits reviewed | Convert workbench into filing-ready response language |
 | Qdrant alias health | Known cleanup item | Runtime cutover planned | Populate/verify v2 before alias reliance |
 
@@ -40,6 +41,8 @@ Use the counsel target shortlist, first-response readiness gate, counsel conflic
 | Counsel conflict-check outreach control | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md` | Phase 0/1/2 release control before any attorney package or evidence is sent |
 | Conflict-check email | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Counsel_Conflict_Check_Email_7IL_NDGA_II_20260502.md` | First counsel contact |
 | Pro se playbook | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/ProSe_First_Response_Playbook_7IL_NDGA_II_20260502.md` | Response readiness |
+| Wilson Pruitt email intake protocol | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/evidence-traceability/wilson-pruitt-email-intake-protocol-7il-ndga-ii-2026-05-03.md` | Email custody, privilege screen, attachment, and issue-tag control |
+| Wilson Pruitt email evidence register | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/evidence-traceability/wilson-pruitt-email-evidence-register-7il-ndga-ii-2026-05-03.md` | Repo-safe metadata register and promotion queue |
 | Answer matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/First_Response_Answer_Matrix_7IL_NDGA_II_20260502.md` | Paragraph-by-paragraph workbench |
 | First-response readiness gate | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/filing-readiness/first-response-readiness-gate-7il-ndga-ii-2026-05-02.md` | Release gate before answer, Rule 12, extension, or counterclaim filing path |
 | Issue matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Issue_Matrix_7IL_NDGA_II_20260502.md` | Claims/defenses/counterclaims control |
@@ -58,6 +61,6 @@ Use the counsel target shortlist, first-response readiness gate, counsel conflic
 
 1. Check service status and docket.
 2. Update counsel conflict tracker.
-3. Add any new evidence to the evidence-to-pleading map.
+3. Add any new evidence to the evidence-to-pleading map only after custody, privilege, and source controls clear.
 4. Review answer matrix gaps.
 5. Record decisions in the decision log.

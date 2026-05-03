@@ -1,7 +1,7 @@
 # Service and Deadline Log - 7IL Case II
 
 Date opened: 2026-05-02
-Operator service status: Gary Knight has not been served as of 2026-05-02.
+Operator service status: Gary Knight has not been served as of 2026-05-03.
 
 This log controls the case clock. Update immediately if any summons, complaint, waiver request, service paper, process-server contact, court notice, or docket service entry appears.
 
@@ -11,6 +11,7 @@ This log controls the case clock. Update immediately if any summons, complaint, 
 |---|---:|---|---|
 | Complaint filed | 2026-04-15 | Complaint PDF / docket header | Case 2:26-cv-00113-RWS, Document 1 |
 | Operator confirmed not served | 2026-05-02 | Operator statement | No response deadline running from service as of this date |
+| Operator confirmed not served | 2026-05-03 | Operator statement | No response deadline running from service as of this date |
 | Rough Rule 4(m) service deadline | 2026-07-14 | 90-day calculation from filing date | Recalculate if court order or exact rule application changes it |
 
 
@@ -28,6 +29,7 @@ This log controls the case clock. Update immediately if any summons, complaint, 
 | Date/Time | Event Type | Served Person | Method | Documents Received | Proof/Docket Entry | Response Deadline | Action Taken |
 |---|---|---|---|---|---|---|---|
 | 2026-05-02 | Status confirmation | Gary Knight | Not served | None | None known | Not triggered | Continue prep and conflict checks |
+| 2026-05-03 | Status confirmation | Gary Knight | Not served | None | None known | Not triggered | Continue prep; prioritize Wilson Pruitt email intake controls |
 
 ## If Service Occurs
 

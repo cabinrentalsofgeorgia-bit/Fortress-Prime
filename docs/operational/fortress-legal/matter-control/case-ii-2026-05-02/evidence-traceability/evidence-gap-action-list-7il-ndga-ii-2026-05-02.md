@@ -1,7 +1,7 @@
 # Evidence Gap Action List - 7IL Case II
 
 Date: 2026-05-02
-Operator service status: not served as of 2026-05-02
+Operator service status: not served as of 2026-05-03
 
 This is the action list for closing evidence gaps before filing or transmitting a full counsel package.
 
@@ -22,7 +22,8 @@ This is the action list for closing evidence gaps before filing or transmitting 
 | P2 | 7IL member/citizenship proof not verified | Diversity allegation depends on member citizenship. | Pull entity/member evidence if available. | Counsel / Operator | Open |
 | P2 | Thatcher individual-capacity evidence not mapped | Offensive theory needs direct participation/control evidence. | Build Thatcher evidence file from emails/depositions/entity records. | Codex / counsel | Open |
 | P2 | Wilson role evidence not privilege-classified | High-sensitivity theory; must avoid privilege leakage and weak pleading. | Inventory closing/drafting materials and classify privileged/public. | Operator / counsel | Open |
+| P1 | Wilson Pruitt email export not frozen/registered | Emails leading up to closings and post-closing may carry closing-delay, inspection-report, repair-scope, easement/title, and accusation evidence, but cannot be used until custody and privilege controls clear. | Pull emails leading up to closings and post-closing; freeze originals, hash, attachment-link, privilege-screen, then issue-tag in the Wilson Pruitt register. | Operator / email custodian | Open |
 
 ## Immediate Next Move
 
-Close P1 gaps in this order: pull the final closing package and completion-proof folders, finish Exhibit G source verification, extend the Case I overlap chart with verdict/pretrial/Doc. 90 sources, use the DOT / GNRR outbound send log to send or counsel-review the drafted requests, route every reply through the response intake tracker, then map Fish Trap survey/driveway evidence.
+Close P1 gaps in this order: freeze and register Wilson Pruitt email exports, pull the final closing package and completion-proof folders, finish Exhibit G source verification, extend the Case I overlap chart with verdict/pretrial/Doc. 90 sources, use the DOT / GNRR outbound send log to send or counsel-review the drafted requests, route every reply through the response intake tracker, then map Fish Trap survey/driveway evidence.
