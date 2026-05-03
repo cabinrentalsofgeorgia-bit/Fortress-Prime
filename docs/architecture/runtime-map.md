@@ -27,6 +27,7 @@ Primary evidence reviewed:
 - `docs/operational/track-a-v3-case-i-vs-v2-regression-2026-05-02.md`
 - `docs/operational/fortress-legal-runtime-ownership-audit-2026-05-03.md`
 - `docs/operational/fortress-legal-qdrant-contract-audit-2026-05-03.md`
+- `docs/operational/fortress-legal-nas-layout-contract-audit-2026-05-03.md`
 - `deploy/systemd/*`, `deploy/litellm_config.yaml`, `deploy/fortress-prime-compose.yaml`
 - `fortress-guest-platform/backend/core/config.py`
 - `fortress-guest-platform/backend/core/qdrant.py`
@@ -134,7 +135,7 @@ Case source-drop authority for Wave 7 / Case I and II:
 
 Authoritative scoping rule: Case I and Case II ingest should walk the curated `Corporate_Legal/Business_Legal/<slug>` paths only. The legacy mixed dump `/mnt/fortress_nas/legal_vault/7il-v-knight-ndga/` must not be used as a source for rebuilding Case II.
 
-CONFLICT: `backend/api/legal_cases.py` still has fallback/older layout logic rooted at `/mnt/fortress_nas/sectors/legal/<slug>` and expects `nas_layout` shaped as `{root, subdirs, recursive}`. `vault_ingest_legal_case.py` supports both the old shape and the newer `{primary_root, include_subdirs, exclude_subdirs}` shape. The UI/API file-browser path may not match the batch-ingest source-of-truth shape until reconciled.
+CONFLICT: `backend/api/legal_cases.py` still has fallback/older layout logic rooted at `/mnt/fortress_nas/sectors/legal/<slug>` and expects `nas_layout` shaped as `{root, subdirs, recursive}`. `vault_ingest_legal_case.py` supports both the old shape and the newer `{primary_root, include_subdirs, exclude_subdirs}` shape. The 2026-05-03 NAS layout audit confirmed live Case I/II DB rows use the newer shape, Case II `curated/` exists, Case I declared include folders are missing, and the legacy `/sectors/legal/<slug>` fallback is absent for both 7IL slugs.
 
 CONFLICT: `legal_ediscovery.py` stores uploaded vault copies under `/mnt/fortress_nas/legal_vault`, while `LEGAL_VAULT_ROOT` in config defaults to `/mnt/fortress_nas/sectors/legal`. Treat `/mnt/fortress_nas/legal_vault` as the active process-vault-upload storage path, and treat `sectors/legal` as legacy/API fallback unless resolved.
 
@@ -386,5 +387,5 @@ Before new Fortress Legal features, resolve foundation ambiguity in this order:
 1. Prove live host ownership: Spark-2 current vs Spark-1 cutover state.
 2. Prove DB source-of-truth contract for Legal after PR #366/#405 era changes.
 3. Prove Qdrant alias/read/write contract for `legal_ediscovery_active` and v2.
-4. Reconcile `nas_layout` shape across migration, batch ingest, and legal case API.
+4. Reconcile `nas_layout` shape across migration, batch ingest, and legal case API; the next implementation PR should add a shared layout normalizer and teach the Legal case API the new `{primary_root, include_subdirs, exclude_subdirs}` shape without changing DB/NAS data.
 5. Re-audit frontend zone separation so privileged Legal never leaks into public storefront surfaces.
