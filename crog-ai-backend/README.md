@@ -110,6 +110,8 @@ uv run python scripts/research_range_trigger_guardrails.py --output docs/reports
 uv run python scripts/review_signal_outcomes.py --output docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md
 uv run python scripts/review_ticker_cluster_candidates.py --include-exclude --output docs/reports/dochia-v0-3-ticker-cluster-review-2026-05-03.md
 uv run python scripts/review_ticker_cluster_candidates.py --include-exclude --cluster-until 2025-09-24 --since 2025-09-25 --output docs/reports/dochia-v0-3-ticker-cluster-holdout-2026-05-03.md
+uv run python scripts/review_rolling_whipsaw_candidates.py --output docs/reports/dochia-v0-3-rolling-whipsaw-review-2026-05-03.md
+uv run python scripts/review_rolling_whipsaw_candidates.py --since 2025-09-25 --output docs/reports/dochia-v0-3-rolling-whipsaw-holdout-2026-05-03.md
 ```
 
 Best 2026-05-02 research candidate: 3-session intraday range trigger. It
@@ -172,6 +174,16 @@ clusters learned before 2025-09-25 and evaluated after, does not clear the
 default gate: top-15 exclusion cuts 4.74% of events, keeps F1 at 78.16%, and
 leaves 5-session average directional return flat at -0.04%. Keep v0.2
 candidate-only; do not persist the cluster candidate yet.
+
+Rolling whipsaw-risk reports:
+`docs/reports/dochia-v0-3-rolling-whipsaw-review-2026-05-03.md` and
+`docs/reports/dochia-v0-3-rolling-whipsaw-holdout-2026-05-03.md`. The rolling,
+date-safe suppressor uses only prior raw whipsaws before cooling down a ticker.
+It is not viable as a production filter: no candidate preserves at least 95% of
+raw v0.2 F1. Full-period best reductions cut 90%+ of events but collapse exact
+F1 into the 6.57%-14.07% range. Holdout behaves the same way, with the strongest
+reducers cutting 95%+ of events while exact F1 stays below 7.41%. Keep v0.2
+candidate-only; expose whipsaw risk as evidence instead of suppressing signals.
 
 ## Relationship to Fortress-Prime
 

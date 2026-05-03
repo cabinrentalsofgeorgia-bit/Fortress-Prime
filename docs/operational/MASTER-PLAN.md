@@ -2,7 +2,7 @@
 
 **Operator:** Gary Knight
 **Established:** 2026-04-29
-**Updated:** 2026-05-02 (v1.8 — MarketClub/Dochia Financial build activation)
+**Updated:** 2026-05-03 (v1.9 — Dochia v0.3 whipsaw research closed)
 **Cadence:** Updated on change
 
 ---
@@ -43,8 +43,8 @@ Both advance toward: white-shoe-grade output produced by single operator on his 
 | Plaintiff | 7 IL Properties, LLC (Colorado LLC, federal diversity) |
 | Phase | counsel_search |
 | Target counsel-hire | **2026-06-15** |
-| Today | 2026-05-02 |
-| **Days remaining** | **~44** |
+| Today | 2026-05-03 |
+| **Days remaining** | **~43** |
 
 **Counsel-hire deliverable:** Phase B v0.1 dry-run on Case I produces v3 brief exceeding v2. Validation passes → Phase B runs on Case II.
 
@@ -259,7 +259,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 | Legacy watchlist context | `watchlist` has 431 rows; `market_signals` has 1,105 rows through 2026-02-12; read-only grant applied for app overlays |
 | Calibration baseline | 24,204 daily observations; 91.44% coverage; 62.05% carried daily color accuracy; 40.67% exact alert match; 52.54% ±3-day alert match; score MAE 43.94 |
 | Calibration sweep | Best validated candidate: 3-session intraday range trigger; exact alert F1 76.64% vs 44.59% baseline, exact recall 91.93% vs 40.67%, precision 65.71%, ±3-day recall 95.21%; holdout after 2025-09-25 scores 83.18% F1 vs 46.26% baseline |
-| v0.3 guardrail research | Ticker-cluster holdout complete: full-period top-15 exclusion is promising (5.11% event cut, 74.98% F1), but chronological holdout misses the gate (4.74% event cut, 78.16% F1, -0.04% avg 5d return); next research targets rolling date-safe whipsaw-risk scoring |
+| v0.3 guardrail research | Closed as research-only: simple guardrails, ATR/cooldowns, ticker clusters, and rolling whipsaw suppressors all miss the promotion gate. Rolling date-safe holdout confirms suppression destroys recall: no candidate keeps at least 95% of raw v0.2 F1; strongest reducers cut 95%+ of events but stay below 7.41% F1 |
 | Candidate persisted state | v0.2 candidate has 328 `signal_scores` rows and 1,624 `signal_transitions` rows under non-production parameter set; internal API/BFF selector live for scanner, transitions, symbol detail, Portfolio Lens, and chart overlays |
 | Candidate lane comparison | v0.2 bullish lane unchanged at 129, risk unchanged at 47, re-entry 164→145, mixed 202→203, 61 daily states/scores change |
 | Promotion contract | Fresh Dochia scores still staged; legacy `market_signals` remains contextual until calibration/promotion |
@@ -292,7 +292,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Do not call generated weekly/monthly states "MarketClub truth"; they are Dochia-derived.
 - Avoid gamified trading prompts; build an evidence cockpit.
 
-**Immediate next step:** Build a rolling, date-safe whipsaw-risk score that can cool down names as they become noisy without relying on a fixed historical blocklist.
+**Immediate next step:** Build a user-facing Whipsaw Risk / Backtest panel in the Hedge Fund cockpit so noisy names are visible and explainable without suppressing the validated v0.2 daily range signal.
 
 ### 6.6 Architectural follow-ups
 
@@ -321,7 +321,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 
 ---
 
-## 7. Today's snapshot (2026-05-02 — MarketClub/Dochia activation)
+## 7. Today's snapshot (2026-05-03 — MarketClub/Dochia activation)
 
 **New Financial Division build track activated.**
 
@@ -352,7 +352,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Added v0.2 chart-overlay parity: the symbol chart now follows the active Production/v0.2 Range mode, using close-break daily events for production and range-trigger daily events for the v0.2 candidate.
 - Added read-only v0.2 promotion-review harness covering top-lane churn, recent whipsaw/transition pressure, and chart-level candidate event deltas.
 - Ran first v0.2 promotion-review report. Decision: do not promote range trigger yet. Risk lane is stable, but re-entry lane churn is 66.7%, mixed-timeframe churn is 52.9%, top whipsaw tickers show 8-9 candidate transitions in the 30-day window, and reviewed chart overlays add up to 29 candidate-only daily events on some symbols.
-- Added and ran read-only v0.3 range-trigger guardrail research for break buffers, same-direction close confirmation, ATR-normalized buffers, trailing per-symbol adaptive cooldowns, return-conditioned outcomes, ticker whipsaw clusters, and chronological ticker-cluster holdout. Decision: do not persist the fixed cluster candidate; next research targets rolling date-safe whipsaw-risk scoring.
+- Added and ran read-only v0.3 range-trigger guardrail research for break buffers, same-direction close confirmation, ATR-normalized buffers, trailing per-symbol adaptive cooldowns, return-conditioned outcomes, ticker whipsaw clusters, chronological ticker-cluster holdout, and rolling date-safe whipsaw suppressors. Decision: do not persist any v0.3 suppression filter; expose whipsaw risk and backtest evidence in the app instead.
 - Added internal Production/v0.2 Range toggle to the Command Center Hedge Fund page and promoted the production frontend build.
 - Added chart-data endpoint and chart overlay with close, daily/weekly channel bands, and generated triangle event markers.
 - Refined calibration metrics to separate carried-state agreement from exact new-alert agreement: 40.67% same-day alert match and 52.54% ±3-day alert match.

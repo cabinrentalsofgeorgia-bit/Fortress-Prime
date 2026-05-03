@@ -219,6 +219,15 @@ Useful query params:
   2025-09-25 and evaluates after; it does not clear the default gate, with
   4.74% event reduction, 78.16% F1, and -0.04% average 5-session directional
   return. Do not persist this candidate yet.
+- Added a rolling, date-safe whipsaw-risk suppressor and review script. Reports
+  are tracked at
+  `docs/reports/dochia-v0-3-rolling-whipsaw-review-2026-05-03.md` and
+  `docs/reports/dochia-v0-3-rolling-whipsaw-holdout-2026-05-03.md`. The
+  suppressor only uses prior raw whipsaws before cooling down a ticker, but no
+  candidate preserves at least 95% of raw v0.2 F1. Full-period high-reduction
+  rows collapse exact F1 into the 6.57%-14.07% range, and holdout rows with
+  95%+ event reduction stay below 7.41% F1. Do not persist this as a filter;
+  surface whipsaw risk as evidence in the app.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -228,6 +237,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: build a rolling, date-safe whipsaw-risk score that can
-cool down names as they become noisy without relying on a fixed historical
-blocklist.
+Next clean build step: add a user-facing Whipsaw Risk / Backtest panel to the
+Hedge Fund cockpit so noisy names are explainable without suppressing validated
+daily range signals.
