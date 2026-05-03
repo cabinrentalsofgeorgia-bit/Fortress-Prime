@@ -62,6 +62,13 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from backend.services.legal.db_targets import legal_connect_kwargs
+from backend.services.legal.qdrant_contract import (
+    LEGAL_LEGACY_VECTOR_SIZE,
+    LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
+
 logger = logging.getLogger("email_backfill_legal")
 
 
@@ -78,9 +85,9 @@ FETCH_BATCH         = 100
 RETRY_BACKOFFS_S    = (2.0, 8.0, 20.0)
 BAND_MONTHS         = 6
 
-QDRANT_COLLECTION_WORK_PRODUCT = "legal_ediscovery"
-QDRANT_COLLECTION_PRIVILEGED   = "legal_privileged_communications"
-EXPECTED_VECTOR_SIZE           = 768
+QDRANT_COLLECTION_WORK_PRODUCT = LEGAL_WORK_PRODUCT_COLLECTION
+QDRANT_COLLECTION_PRIVILEGED   = LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
+EXPECTED_VECTOR_SIZE           = LEGAL_LEGACY_VECTOR_SIZE
 
 MAILBOX_REGISTRY = {
     "gary-gk":   ("gary@garyknight.com",                "fortress/mailboxes/gary-garyknight"),
@@ -183,37 +190,9 @@ def _ensure_env_loaded() -> None:
         os.environ.setdefault(k, v)
 
 
-@dataclass
-class _DSN:
-    host: str
-    port: int
-    user: str
-    password: str
-    db: str
-
-
-def _parse_admin_dsn(dbname: str) -> _DSN:
-    uri = os.environ.get("POSTGRES_ADMIN_URI", "")
-    m = re.match(
-        r"postgresql(?:\+\w+)?://([^:]+):([^@]+)@([^:/]+):?(\d+)?/[^?]+",
-        uri,
-    )
-    if not m:
-        raise SystemExit(
-            "POSTGRES_ADMIN_URI not set or unparseable in environ; "
-            "load .env first"
-        )
-    user, pw, host, port = m.groups()
-    return _DSN(host=host, port=int(port or 5432), user=user, password=pw, db=dbname)
-
-
 def _connect(dbname: str):
     import psycopg2
-    dsn = _parse_admin_dsn(dbname)
-    conn = psycopg2.connect(
-        host=dsn.host, port=dsn.port, user=dsn.user,
-        password=dsn.password, dbname=dsn.db,
-    )
+    conn = psycopg2.connect(**legal_connect_kwargs(dbname))
     conn.autocommit = True
     return conn
 

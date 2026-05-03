@@ -93,7 +93,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import socket
 import sys
 import time
@@ -105,6 +104,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from backend.services.legal.db_targets import legal_connect_kwargs
+from backend.services.legal.qdrant_contract import (
+    LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
+
 logger = logging.getLogger("reprocess_failed_qdrant_uploads")
 
 # ─── config ────────────────────────────────────────────────────────────────
@@ -112,8 +117,8 @@ logger = logging.getLogger("reprocess_failed_qdrant_uploads")
 ENV_PATH = Path("/home/admin/Fortress-Prime/fortress-guest-platform/.env")
 AUDIT_DIR = Path("/mnt/fortress_nas/audits")
 
-QDRANT_WORK_PRODUCT_COLLECTION = "legal_ediscovery"
-QDRANT_PRIVILEGED_COLLECTION = "legal_privileged_communications"
+QDRANT_WORK_PRODUCT_COLLECTION = LEGAL_WORK_PRODUCT_COLLECTION
+QDRANT_PRIVILEGED_COLLECTION = LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
 
 # DBs that hold legal.vault_documents (kept in lock-step by vault ingestion).
 TARGET_DBS = ("fortress_db", "fortress_prod")
@@ -150,37 +155,9 @@ def _ensure_env_loaded() -> None:
         os.environ.setdefault(k, v)
 
 
-@dataclass
-class _DSN:
-    host: str
-    port: int
-    user: str
-    password: str
-    db: str
-
-
-def _parse_admin_dsn(dbname: str) -> _DSN:
-    uri = os.environ.get("POSTGRES_ADMIN_URI", "")
-    m = re.match(
-        r"postgresql(?:\+\w+)?://([^:]+):([^@]+)@([^:/]+):?(\d+)?/[^?]+",
-        uri,
-    )
-    if not m:
-        raise SystemExit(
-            "POSTGRES_ADMIN_URI not set or unparseable in environ; "
-            "load .env first"
-        )
-    user, pw, host, port = m.groups()
-    return _DSN(host=host, port=int(port or 5432), user=user, password=pw, db=dbname)
-
-
 def _connect(dbname: str):
     import psycopg2
-    dsn = _parse_admin_dsn(dbname)
-    conn = psycopg2.connect(
-        host=dsn.host, port=dsn.port, user=dsn.user,
-        password=dsn.password, dbname=dsn.db,
-    )
+    conn = psycopg2.connect(**legal_connect_kwargs(dbname))
     conn.autocommit = True
     return conn
 

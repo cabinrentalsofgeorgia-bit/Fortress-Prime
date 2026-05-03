@@ -75,6 +75,15 @@ Current DB contract from `backend/core/config.py`:
 - Allowed DB names are `fortress_prod`, `fortress_shadow`, `fortress_db`, and `fortress_shadow_test`.
 - Allowed Postgres port is `5432`.
 
+Current DB session contract from `backend/core/database.py`:
+
+- `Base` is the shared SQLAlchemy declarative metadata surface for ORM models and Alembic autogenerate.
+- `get_async_engine()` lazily creates one runtime async engine from `POSTGRES_API_URI`.
+- `AsyncSessionLocal`, `async_session_factory`, and `async_session_maker` are compatibility aliases for the same lazy runtime session factory.
+- `get_db()` is the FastAPI dependency; `init_db()` verifies connectivity and only runs `Base.metadata.create_all()` when `DB_AUTO_CREATE_TABLES=true`.
+- Direct imports of `async_engine` are legacy; callers should use `get_async_engine()` so they do not capture a stale `None` before lazy initialization.
+- Legal session targets use `backend/services/legal/db_targets.py`: `LEGAL_CANONICAL_DB=fortress_db` for `LegacySession`, and `LEGAL_PROD_DB=fortress_prod` for mirror `ProdSession`. This helper parses the configured DSN and replaces only the database path, preserving driver, credentials, host, port, and query options deliberately. Raw `psycopg` / `psycopg2` scripts, OCR layout lookup, and deliberation-vault writes use the same helper for connection kwargs where `POSTGRES_ADMIN_URI` is available.
+
 CONFLICT: `deploy/fortress-prime-compose.yaml` still defines `DATABASE_URL` against `fortress_guest` with an old role. Treat that compose file as a legacy/dev baseline unless it is brought forward to the current contract.
 
 CONFLICT: Spark-1 current-state docs show `fortress_db`, `fortress_prod`, and `fortress_shadow_test` created on Spark-1, but `fortress_shadow` absent and no service wired to those DBs yet.
@@ -85,10 +94,10 @@ Primary Qdrant URL in code defaults to `http://localhost:6333`. Docs identify th
 
 | Collection / alias | Vector size | Purpose | Current authority / conflict |
 |---|---:|---|---|
-| `legal_ediscovery` | 768 in legacy code/audit | Work-product and nonprivileged legal vault chunks. Hardcoded in `legal_ediscovery.py` and `vault_ingest_legal_case.py`. | **Legacy code authority.** Operational audit reported 738,918 points on 2026-04-29. |
+| `legal_ediscovery` | 768 in legacy code/audit | Work-product and nonprivileged legal vault chunks. Centralized in `backend/services/legal/qdrant_contract.py` and imported by ingest/reprocess/Council callers. | **Legacy code authority.** Operational audit reported 738,918 points on 2026-04-29. |
 | `legal_ediscovery_v2` | 2048 | Reindexed legal e-discovery collection using `legal-embed`. | **New retrieval authority per 2026-05-02 regression doc only when callers use alias.** |
 | `legal_ediscovery_active` | alias | Live alias points to `legal_ediscovery_v2`. | **CONFLICT:** 2026-05-03 live audit found Case I/II `case_slug` counts are zero in the alias target while backend callers still use legacy `legal_ediscovery`. Do not treat this alias as a safe 7IL evidence source yet. |
-| `legal_privileged_communications` | 768 | Physically separate privileged communications collection. | Hardcoded privileged path in `legal_ediscovery.py`. Audit reported 241,167 points. |
+| `legal_privileged_communications` | 768 | Physically separate privileged communications collection. | Centralized in `backend/services/legal/qdrant_contract.py`. Audit reported 241,167 points. |
 | `legal_privileged_communications_v2` | 2048 | Reindexed privileged collection. | Reindex complete but quality report says cutover deferred. Legacy collection remains active. |
 | `legal_caselaw` | 768 | Georgia/state caselaw. | Audit reported 2,711 points. Some docs later accept `legal_caselaw_v2` for caller cutover. |
 | `legal_caselaw_v2` | 2048 | Reindexed caselaw. | Accepted by quality report for cutover, but confirm caller code before relying on it. |

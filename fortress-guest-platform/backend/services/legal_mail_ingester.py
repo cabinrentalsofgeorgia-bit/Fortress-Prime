@@ -59,6 +59,7 @@ from backend.services.captain_multi_mailbox import (
 )
 from backend.core.config import settings
 from backend.services.ediscovery_agent import LegacySession
+from backend.services.legal.db_targets import LEGAL_PROD_DB, legal_async_database_url
 from backend.services.spark1_session import Spark1Session
 
 
@@ -913,30 +914,14 @@ def classify_inbound(
 #
 # Note on AsyncSessionLocal vs ProdSession: backend/core/database.py's
 # AsyncSessionLocal targets settings.database_url (typically fortress_shadow
-# at runtime). fortress_prod requires its own engine — built here by string-
-# replacing the DB name in settings.database_url, mirroring the pattern in
-# backend/services/ediscovery_agent.py for LegacySession (fortress_db).
+# at runtime). fortress_prod requires its own engine — built here through the
+# Legal DB target helper shared with LegacySession (fortress_db).
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def _build_prod_db_url() -> str:
-    """Construct the fortress_prod URL by replacing the DB name in settings.database_url.
-
-    Mirrors the LegacySession construction pattern in ediscovery_agent.py.
-    Tolerates whichever runtime DB the API is currently pointed at.
-    """
-    url = (
-        settings.database_url
-        .replace("/fortress_db", "/fortress_prod")
-        .replace("/fortress_shadow_test", "/fortress_prod")
-        .replace("/fortress_shadow", "/fortress_prod")
-        .replace("/fortress_guest", "/fortress_prod")
-    )
-    if url.startswith("postgresql://"):
-        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    elif url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-    return url
+    """Construct the fortress_prod async URL from the configured runtime DSN."""
+    return legal_async_database_url(LEGAL_PROD_DB)
 
 
 _prod_engine = create_async_engine(

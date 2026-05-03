@@ -39,6 +39,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from backend.services.legal.db_targets import LEGAL_CANONICAL_DB, legal_connect_kwargs
+
 logger = logging.getLogger("ocr_legal_case")
 
 # ─── config ────────────────────────────────────────────────────────────────
@@ -90,18 +92,18 @@ def _read_env_pgs() -> dict[str, str]:
 def _admin_dsn() -> tuple[str, str, str, str, str]:
     """Return (host, port, user, password, db) for fortress_db (read-only SELECT)."""
     env = _read_env_pgs()
-    uri = env.get("POSTGRES_ADMIN_URI", "")
-    # postgresql+asyncpg://user:pw@host:port/dbname
-    import re
-    m = re.match(
-        r"postgresql(?:\+\w+)?://([^:]+):([^@]+)@([^:/]+):?(\d+)?/([^?]+)",
-        uri,
+    uri = os.environ.get("POSTGRES_ADMIN_URI", "").strip() or env.get("POSTGRES_ADMIN_URI", "")
+    try:
+        dsn = legal_connect_kwargs(LEGAL_CANONICAL_DB, uri)
+    except Exception as exc:
+        raise SystemExit(f"could not parse POSTGRES_ADMIN_URI from {ENV_PATH}: {exc}") from exc
+    return (
+        str(dsn["host"]),
+        str(dsn["port"]),
+        str(dsn["user"]),
+        str(dsn["password"]),
+        str(dsn["dbname"]),
     )
-    if not m:
-        raise SystemExit(f"could not parse POSTGRES_ADMIN_URI from {ENV_PATH}")
-    user, pw, host, port, _ = m.groups()
-    # Layout actually lives in fortress_db (per CLAUDE.md / legal_email_intake).
-    return host, port or "5432", user, pw, "fortress_db"
 
 
 def fetch_case_layout(case_slug: str) -> dict[str, Any]:

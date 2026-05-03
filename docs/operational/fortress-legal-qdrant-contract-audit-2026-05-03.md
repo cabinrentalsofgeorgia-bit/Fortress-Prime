@@ -90,17 +90,18 @@ Payload sampling confirmed `legal_ediscovery_v2` points can carry `case_slug`, `
 
 | File | Collection contract | Meaning |
 |---|---|---|
-| `fortress-guest-platform/backend/services/legal_ediscovery.py` | `QDRANT_COLLECTION = "legal_ediscovery"`; `QDRANT_PRIVILEGED_COLLECTION = "legal_privileged_communications"` | Canonical single-file vault upload writes legacy 768-dim work-product and privileged collections. |
-| `fortress-guest-platform/backend/scripts/vault_ingest_legal_case.py` | `QDRANT_COLLECTION = "legal_ediscovery"`; `EXPECTED_VECTOR_SIZE = 768` | Batch ingest preflight requires legacy 768-dim work-product collection. |
-| `fortress-guest-platform/backend/scripts/email_backfill_legal.py` | `legal_ediscovery` and `legal_privileged_communications`; expected vector size 768 | Email backfill follows the same legacy ingest contract. |
-| `fortress-guest-platform/backend/scripts/backfill_vector_ids.py` | `legal_ediscovery` and `legal_privileged_communications` | Backfill/support tooling targets legacy collections. |
+| `fortress-guest-platform/backend/services/legal/qdrant_contract.py` | `LEGAL_WORK_PRODUCT_COLLECTION = "legal_ediscovery"`; `LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION = "legal_privileged_communications"`; `LEGAL_LEGACY_VECTOR_SIZE = 768` | Central source of truth for the current 7IL legacy-stable Qdrant contract. |
+| `fortress-guest-platform/backend/services/legal_ediscovery.py` | Imports work-product and privileged collection names from `qdrant_contract.py` | Canonical single-file vault upload writes legacy 768-dim work-product and privileged collections. |
+| `fortress-guest-platform/backend/scripts/vault_ingest_legal_case.py` | Imports work-product collection and expected vector size from `qdrant_contract.py` | Batch ingest preflight requires legacy 768-dim work-product collection. |
+| `fortress-guest-platform/backend/scripts/email_backfill_legal.py` | Imports work-product, privileged, and vector-size contract from `qdrant_contract.py` | Email backfill follows the same legacy ingest contract. |
+| `fortress-guest-platform/backend/scripts/backfill_vector_ids.py` | Imports work-product and privileged collection names from `qdrant_contract.py` | Backfill/support tooling targets legacy collections. |
 
 ### Legal Retrieval Paths
 
 | File | Collection contract | Meaning |
 |---|---|---|
-| `fortress-guest-platform/backend/services/legal_council.py` | `LEGAL_COLLECTION = "legal_ediscovery"` | Council e-discovery context freezing still retrieves from legacy 768-dim `legal_ediscovery`. |
-| `fortress-guest-platform/backend/services/legal_council.py` | `PRIVILEGED_COLLECTION = "legal_privileged_communications"` | Council privileged retrieval still retrieves from legacy 768-dim privileged collection. |
+| `fortress-guest-platform/backend/services/legal_council.py` | `LEGAL_COLLECTION` imports `LEGAL_WORK_PRODUCT_COLLECTION` from `qdrant_contract.py` | Council e-discovery context freezing still retrieves from legacy 768-dim `legal_ediscovery`. |
+| `fortress-guest-platform/backend/services/legal_council.py` | `PRIVILEGED_COLLECTION` imports `LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION` from `qdrant_contract.py` | Council privileged retrieval still retrieves from legacy 768-dim privileged collection. |
 | `fortress-guest-platform/backend/services/legal_council.py` | `CASELAW_COLLECTION = "legal_caselaw_v2"` | Council precedent retrieval uses 2048-dim v2 caselaw. |
 | `fortress-guest-platform/backend/services/knowledge_retriever.py` | `LEGAL_COLLECTION = "legal_library_v2"` | Legal-library retrieval uses 2048-dim v2 legal library. |
 | `fortress-guest-platform/backend/services/legal_auditor.py` | `STATUTORY_COLLECTION = "legal_library_v2"` | Statutory/legal-auditor retrieval uses 2048-dim v2 legal library. |
@@ -148,12 +149,12 @@ Safer options are:
 
 ## Recommended Next Move
 
-Do **not** change runtime Qdrant aliases or backend callers in this docs PR.
+Do **not** change runtime Qdrant aliases as part of foundation cleanup.
 
-Next foundation PR should be a targeted design/implementation PR that chooses one of these paths:
+Next migration PR should choose one of these paths:
 
-1. **Legacy-stable path:** explicitly document and enforce that 7IL runtime retrieval remains on `legal_ediscovery` / `legal_privileged_communications` until Wave 7 reindex completes.
+1. **Legacy-stable path:** keep enforcing that 7IL runtime retrieval remains on `legal_ediscovery` / `legal_privileged_communications` until Wave 7 reindex completes.
 2. **V2 migration path:** reindex 7IL Case I/II work-product and privileged points into v2, verify case counts and retrieval quality, then migrate code callers to `legal_ediscovery_active` with matching 2048-dim query embeddings.
 3. **Dual-write path:** preserve legacy reads while adding a tested 2048-dim v2 write/update path for new ingest.
 
-Given the current 7IL priority, the least-risk near-term choice is the legacy-stable path: leave code on legacy collections, prevent any 7IL process from relying on `legal_ediscovery_active`, and schedule v2 migration separately after Case II ingest scope is stable.
+Given the current 7IL priority, the least-risk near-term choice is the legacy-stable path: leave runtime on legacy collections, prevent any 7IL process from relying on `legal_ediscovery_active`, and schedule v2 migration separately after Case II ingest scope is stable. A follow-up hardening PR centralized the legacy-stable collection names in `backend/services/legal/qdrant_contract.py` so future caller changes have a single place to review.

@@ -31,7 +31,7 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-from backend.core.config import settings
+from backend.services.legal.db_targets import LEGAL_CANONICAL_DB, legal_async_database_url
 
 logger = structlog.get_logger()
 
@@ -40,13 +40,7 @@ logger = structlog.get_logger()
 # ═══════════════════════════════════════════════════════════════════════
 
 # Runtime API DB is typically fortress_shadow; legacy legal/ediscovery lives in fortress_db.
-_LEGACY_DB_URL = (
-    settings.database_url.replace("/fortress_guest", "/fortress_db").replace("/fortress_shadow", "/fortress_db")
-)
-if _LEGACY_DB_URL.startswith("postgresql://"):
-    _LEGACY_DB_URL = _LEGACY_DB_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-elif not _LEGACY_DB_URL.startswith("postgresql+asyncpg://"):
-    _LEGACY_DB_URL = _LEGACY_DB_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+_LEGACY_DB_URL = legal_async_database_url(LEGAL_CANONICAL_DB)
 
 _legacy_engine = create_async_engine(
     _LEGACY_DB_URL,
