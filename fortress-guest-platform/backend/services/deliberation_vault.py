@@ -26,6 +26,8 @@ from typing import Optional
 
 import psycopg2
 
+from backend.services.legal.db_targets import LEGAL_CANONICAL_DB, legal_connect_kwargs
+
 try:
     from dotenv import load_dotenv
 
@@ -45,19 +47,30 @@ logger = logging.getLogger("deliberation_vault")
 # ═══════════════════════════════════════════════════════════════════════
 
 _DB_HOST = os.getenv("DB_HOST", "192.168.0.100")
-_DB_NAME = "fortress_db"
 _DB_USER = os.getenv("DB_USER", os.getenv("FGP_DB_USER", "miner_bot"))
 _DB_PASS = os.getenv("DB_PASS", os.getenv("ADMIN_DB_PASS", ""))
 
 
+def _legacy_vault_connect_kwargs() -> dict[str, object]:
+    """Fallback for older vault deployments without POSTGRES_ADMIN_URI."""
+    return {
+        "host": _DB_HOST,
+        "dbname": LEGAL_CANONICAL_DB,
+        "user": _DB_USER,
+        "password": _DB_PASS,
+    }
+
+
+def _vault_connect_kwargs() -> dict[str, object]:
+    """Return connect kwargs for the canonical deliberation vault DB."""
+    if os.getenv("POSTGRES_ADMIN_URI", "").strip():
+        return legal_connect_kwargs(LEGAL_CANONICAL_DB)
+    return _legacy_vault_connect_kwargs()
+
+
 def _get_vault_conn():
     """Open a connection to fortress_db for vault writes."""
-    return psycopg2.connect(
-        host=_DB_HOST,
-        dbname=_DB_NAME,
-        user=_DB_USER,
-        password=_DB_PASS,
-    )
+    return psycopg2.connect(**_vault_connect_kwargs())
 
 
 def get_vault_connection():

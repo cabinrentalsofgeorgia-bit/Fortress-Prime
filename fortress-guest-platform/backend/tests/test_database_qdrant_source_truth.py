@@ -10,8 +10,10 @@ os.environ.setdefault("LITELLM_MASTER_KEY", "test-litellm-master-key")
 import backend.core.database as database
 from backend.scripts import backfill_vector_ids
 from backend.scripts import email_backfill_legal
+from backend.scripts import ocr_legal_case
 from backend.scripts import reprocess_failed_qdrant_uploads
 from backend.scripts import vault_ingest_legal_case
+from backend.services import deliberation_vault
 from backend.services import legal_council
 from backend.services import legal_ediscovery
 from backend.services.legal import db_targets
@@ -187,3 +189,53 @@ def test_legal_db_target_urls_are_explicit_and_parsed() -> None:
 
     with pytest.raises(ValueError, match="unsupported Legal database target"):
         db_targets.legal_async_database_url("fortress_shadow", base)
+
+
+def test_ocr_layout_lookup_uses_legal_db_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    base = "postgresql://fortress_admin:p%40ss@127.0.0.1:5432/fortress_shadow"
+
+    monkeypatch.delenv("POSTGRES_ADMIN_URI", raising=False)
+    monkeypatch.setattr(
+        ocr_legal_case,
+        "_read_env_pgs",
+        lambda: {"POSTGRES_ADMIN_URI": base},
+    )
+
+    assert ocr_legal_case._admin_dsn() == (
+        "127.0.0.1",
+        "5432",
+        "fortress_admin",
+        "p@ss",
+        db_targets.LEGAL_CANONICAL_DB,
+    )
+
+
+def test_deliberation_vault_prefers_admin_uri_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = "postgresql://fortress_admin:p%40ss@127.0.0.1:5432/fortress_shadow"
+    monkeypatch.setenv("POSTGRES_ADMIN_URI", base)
+
+    assert deliberation_vault._vault_connect_kwargs() == {
+        "host": "127.0.0.1",
+        "port": 5432,
+        "user": "fortress_admin",
+        "password": "p@ss",
+        "dbname": db_targets.LEGAL_CANONICAL_DB,
+    }
+
+
+def test_deliberation_vault_keeps_legacy_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("POSTGRES_ADMIN_URI", raising=False)
+    monkeypatch.setattr(deliberation_vault, "_DB_HOST", "10.0.0.5")
+    monkeypatch.setattr(deliberation_vault, "_DB_USER", "legacy_user")
+    monkeypatch.setattr(deliberation_vault, "_DB_PASS", "legacy-pass")
+
+    assert deliberation_vault._vault_connect_kwargs() == {
+        "host": "10.0.0.5",
+        "dbname": db_targets.LEGAL_CANONICAL_DB,
+        "user": "legacy_user",
+        "password": "legacy-pass",
+    }
