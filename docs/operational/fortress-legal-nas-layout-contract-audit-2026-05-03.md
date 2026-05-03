@@ -117,7 +117,7 @@ Affected API endpoints now share the reconciled layout interpretation:
 - `GET /api/internal/legal/cases/{slug}/files`
 - `GET /api/internal/legal/cases/{slug}/download/{filename}`
 
-The remaining API concern is download addressing: recursive layouts still download by filename, so duplicate filenames in different nested folders can be ambiguous.
+Post-audit update: download URLs now include `subdir` and `relative_path` query parameters for stable recursive addressing; filename-only downloads remain backward compatible for unique matches and fail with conflict when ambiguous.
 
 ## Migration History
 
@@ -144,7 +144,7 @@ After PR #410, treat this as the current safe contract:
 
 1. Case I source-of-truth layout points to missing `curated` and `case-i-context` folders.
 2. `{}` intentionally means different things in different callers: batch ingest treats it as invalid; API treats it as fallback.
-3. Download-by-filename may be ambiguous in recursive layouts because nested relative paths are not part of the download route.
+3. Filename-only manual downloads can still be ambiguous in recursive layouts, but now fail with conflict instead of choosing an arbitrary match.
 4. The old `/mnt/fortress_nas/sectors/legal` fallback is still in code but is not valid for Case I/II.
 
 ## Recommended Next Move
@@ -155,5 +155,5 @@ The narrow resolver reconciliation recommended by this audit landed in PR #410. 
 
 1. Keep Case II on the curated `Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/curated` source path.
 2. Decide separately whether to create Case I `curated` / `case-i-context` folders or update its DB layout to current real paths.
-3. Add stable download addressing for recursive layouts so duplicate filenames cannot resolve ambiguously.
+3. Consider a future document-id based download route if the UI needs immutable links independent of NAS path changes.
 4. Leave non-7IL `{}` batch-ingest rows untouched until each matter receives explicit scoping.
