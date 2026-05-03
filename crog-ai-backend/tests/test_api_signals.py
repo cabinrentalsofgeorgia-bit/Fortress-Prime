@@ -420,6 +420,103 @@ class FakeSignalStore:
             "created_at": dt.datetime(2026, 5, 3, 19, 1, tzinfo=dt.UTC),
         }
 
+    def promotion_dry_run(
+        self,
+        *,
+        candidate_parameter_set: str,
+        decision_id: str | None = None,
+        limit: int = 100,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]:
+        return {
+            "generated_at": dt.datetime(2026, 5, 3, 20, 30, tzinfo=dt.UTC),
+            "candidate_parameter_set": candidate_parameter_set,
+            "baseline_parameter_set": "dochia_v0_estimated",
+            "approval": {
+                "status": "ready_for_dry_run",
+                "decision_id": DECISION_ID,
+                "reviewer": "Gary Knight",
+                "decision_created_at": dt.datetime(2026, 5, 3, 19, 1, tzinfo=dt.UTC),
+                "rollback_criteria": "Rollback if whipsaw pressure rises.",
+                "detail": f"decision_id={decision_id or DECISION_ID}",
+            },
+            "summary": {
+                "target_table": "hedge_fund.market_signals",
+                "target_columns": [
+                    "ticker",
+                    "signal_type",
+                    "action",
+                    "confidence_score",
+                    "price_target",
+                    "source_sender",
+                    "source_subject",
+                    "raw_reasoning",
+                    "model_used",
+                    "extracted_at",
+                ],
+                "write_path_enabled": False,
+                "candidate_signal_count": 3,
+                "proposed_insert_count": min(limit, 2),
+                "bullish_count": 1,
+                "risk_count": 1,
+                "skipped_neutral_count": 1,
+                "latest_bar_date": dt.date(2026, 4, 24),
+                "min_abs_score": min_abs_score,
+            },
+            "proposed_rows": [
+                {
+                    "ticker": "AA",
+                    "action": "BUY",
+                    "signal_type": "Dochia bullish alignment",
+                    "confidence_score": 80,
+                    "price_target": None,
+                    "source_sender": "Dochia Signal Engine",
+                    "source_subject": f"Dry-run promotion {candidate_parameter_set}",
+                    "raw_reasoning": "Dochia dry-run signal for AA: composite score +80.",
+                    "model_used": "v0.2-candidate",
+                    "extracted_at": dt.datetime(2026, 5, 2, 12, 0, tzinfo=dt.UTC),
+                    "candidate_bar_date": dt.date(2026, 4, 24),
+                    "composite_score": 80,
+                    "lineage": {
+                        "source_pipeline": "dochia_signal_scores",
+                        "parameter_set": candidate_parameter_set,
+                        "model_version": "v0.2-candidate",
+                        "computed_at": dt.datetime(2026, 5, 2, 12, 0, tzinfo=dt.UTC),
+                        "explanation_payload": {
+                            "ticker": "AA",
+                            "composite_score": 80,
+                        },
+                        "rollback_marker": "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+                    },
+                },
+                {
+                    "ticker": "AGIO",
+                    "action": "SELL",
+                    "signal_type": "Dochia risk alignment",
+                    "confidence_score": 80,
+                    "price_target": None,
+                    "source_sender": "Dochia Signal Engine",
+                    "source_subject": f"Dry-run promotion {candidate_parameter_set}",
+                    "raw_reasoning": "Dochia dry-run signal for AGIO: composite score -80.",
+                    "model_used": "v0.2-candidate",
+                    "extracted_at": dt.datetime(2026, 5, 2, 12, 0, tzinfo=dt.UTC),
+                    "candidate_bar_date": dt.date(2026, 4, 24),
+                    "composite_score": -80,
+                    "lineage": {
+                        "source_pipeline": "dochia_signal_scores",
+                        "parameter_set": candidate_parameter_set,
+                        "model_version": "v0.2-candidate",
+                        "computed_at": dt.datetime(2026, 5, 2, 12, 0, tzinfo=dt.UTC),
+                        "explanation_payload": {
+                            "ticker": "AGIO",
+                            "composite_score": -80,
+                        },
+                        "rollback_marker": "dochia-dry-run:dochia_v0_2_range_daily:AGIO:2026-04-24",
+                    },
+                },
+            ][:limit],
+        }
+
     def symbol_chart(
         self,
         *,
@@ -742,6 +839,29 @@ def test_shadow_review_decision_records_endpoint_creates_audit_row() -> None:
     assert payload["reviewer"] == "Gary Knight"
     assert payload["reviewed_tickers"] == ["AA", "BTU"]
     assert payload["promotion_gate_status"] == "ready_for_shadow"
+
+
+def test_promotion_dry_run_endpoint_returns_read_only_market_signal_plan() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/promotion-dry-run/daily"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&limit=2&min_abs_score=50"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["candidate_parameter_set"] == "dochia_v0_2_range_daily"
+    assert payload["approval"]["status"] == "ready_for_dry_run"
+    assert payload["summary"]["target_table"] == "hedge_fund.market_signals"
+    assert payload["summary"]["write_path_enabled"] is False
+    assert payload["summary"]["proposed_insert_count"] == 2
+    assert payload["proposed_rows"][0]["action"] == "BUY"
+    assert payload["proposed_rows"][1]["action"] == "SELL"
+    assert payload["proposed_rows"][0]["lineage"]["source_pipeline"] == "dochia_signal_scores"
+    assert "rollback_marker" in payload["proposed_rows"][0]["lineage"]
 
 
 def test_symbol_chart_endpoint_returns_overlay_data() -> None:

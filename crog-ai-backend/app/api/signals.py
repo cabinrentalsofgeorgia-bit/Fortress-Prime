@@ -334,6 +334,62 @@ class ShadowReviewDecisionRecord(BaseModel):
     created_at: dt.datetime
 
 
+class PromotionDryRunApproval(BaseModel):
+    status: Literal["missing_promote_decision", "blocked_by_review", "ready_for_dry_run"]
+    decision_id: UUID | None
+    reviewer: str | None
+    decision_created_at: dt.datetime | None
+    rollback_criteria: str | None
+    detail: str
+
+
+class PromotionDryRunLineage(BaseModel):
+    source_pipeline: str
+    parameter_set: str
+    model_version: str
+    computed_at: dt.datetime
+    explanation_payload: dict[str, object]
+    rollback_marker: str
+
+
+class PromotionDryRunMarketSignalRow(BaseModel):
+    ticker: str
+    action: Literal["BUY", "SELL"]
+    signal_type: str
+    confidence_score: int
+    price_target: Decimal | None
+    source_sender: str
+    source_subject: str
+    raw_reasoning: str
+    model_used: str
+    extracted_at: dt.datetime
+    candidate_bar_date: dt.date
+    composite_score: int
+    lineage: PromotionDryRunLineage
+
+
+class PromotionDryRunSummary(BaseModel):
+    target_table: str
+    target_columns: list[str]
+    write_path_enabled: bool
+    candidate_signal_count: int
+    proposed_insert_count: int
+    bullish_count: int
+    risk_count: int
+    skipped_neutral_count: int
+    latest_bar_date: dt.date | None
+    min_abs_score: int
+
+
+class PromotionDryRunResponse(BaseModel):
+    generated_at: dt.datetime
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    approval: PromotionDryRunApproval
+    summary: PromotionDryRunSummary
+    proposed_rows: list[PromotionDryRunMarketSignalRow]
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -606,6 +662,24 @@ def create_shadow_review_decision_record_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/promotion-dry-run/daily", response_model=PromotionDryRunResponse)
+def promotion_dry_run_daily(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[
+        str, Query(min_length=1, max_length=100)
+    ] = "dochia_v0_2_range_daily",
+    decision_id: UUID | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    min_abs_score: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> dict[str, object]:
+    return store.promotion_dry_run(
+        candidate_parameter_set=candidate_parameter_set,
+        decision_id=str(decision_id) if decision_id else None,
+        limit=limit,
+        min_abs_score=min_abs_score,
+    )
 
 
 @router.get("/{ticker}/chart", response_model=SymbolSignalChart)

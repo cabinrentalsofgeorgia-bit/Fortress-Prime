@@ -443,6 +443,67 @@ export interface FinancialShadowReviewDecisionRecord {
   created_at: string;
 }
 
+export type FinancialPromotionDryRunApprovalStatus =
+  | "missing_promote_decision"
+  | "blocked_by_review"
+  | "ready_for_dry_run";
+
+export interface FinancialPromotionDryRunApproval {
+  status: FinancialPromotionDryRunApprovalStatus;
+  decision_id: string | null;
+  reviewer: string | null;
+  decision_created_at: string | null;
+  rollback_criteria: string | null;
+  detail: string;
+}
+
+export interface FinancialPromotionDryRunLineage {
+  source_pipeline: string;
+  parameter_set: string;
+  model_version: string;
+  computed_at: string;
+  explanation_payload: Record<string, unknown>;
+  rollback_marker: string;
+}
+
+export interface FinancialPromotionDryRunMarketSignalRow {
+  ticker: string;
+  action: "BUY" | "SELL";
+  signal_type: string;
+  confidence_score: number;
+  price_target: string | number | null;
+  source_sender: string;
+  source_subject: string;
+  raw_reasoning: string;
+  model_used: string;
+  extracted_at: string;
+  candidate_bar_date: string;
+  composite_score: number;
+  lineage: FinancialPromotionDryRunLineage;
+}
+
+export interface FinancialPromotionDryRunSummary {
+  target_table: string;
+  target_columns: string[];
+  write_path_enabled: boolean;
+  candidate_signal_count: number;
+  proposed_insert_count: number;
+  bullish_count: number;
+  risk_count: number;
+  skipped_neutral_count: number;
+  latest_bar_date: string | null;
+  min_abs_score: number;
+}
+
+export interface FinancialPromotionDryRunResponse {
+  generated_at: string;
+  candidate_parameter_set: string;
+  baseline_parameter_set: string;
+  approval: FinancialPromotionDryRunApproval;
+  summary: FinancialPromotionDryRunSummary;
+  proposed_rows: FinancialPromotionDryRunMarketSignalRow[];
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

@@ -15,6 +15,7 @@ import type {
   FinancialDailyCalibrationResponse,
   FinancialShadowReviewDecisionRecord,
   FinancialShadowReviewDecisionRecordCreate,
+  FinancialPromotionDryRunResponse,
   FinancialPromotionGateResponse,
   FinancialShadowReviewResponse,
   FinancialSignalTransition,
@@ -251,6 +252,19 @@ export function useCreateFinancialShadowDecisionRecord() {
       toast.success("Decision record saved");
     },
     onError: (error) => toast.error(error.message || "Failed to save decision record"),
+  });
+}
+
+export function useFinancialPromotionDryRun(params?: {
+  candidate_parameter_set?: string;
+  decision_id?: string;
+  limit?: number;
+  min_abs_score?: number;
+}) {
+  return useQuery<FinancialPromotionDryRunResponse>({
+    queryKey: ["financial", "signals", "promotion-dry-run", "daily", params],
+    queryFn: () => api.get("/api/financial/signals/promotion-dry-run/daily", params),
+    staleTime: 60_000,
   });
 }
 

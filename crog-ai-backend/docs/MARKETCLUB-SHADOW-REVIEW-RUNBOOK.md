@@ -1,6 +1,6 @@
 # MarketClub / Dochia Shadow Review Runbook
 
-**Status:** Read-only promotion review
+**Status:** Read-only promotion review + dry-run preview
 **Date:** 2026-05-03
 
 ## Purpose
@@ -19,6 +19,8 @@ approval mechanism.
 - Decision records:
   `GET /api/financial/signals/shadow-review/decision-records?candidate_parameter_set=dochia_v0_2_range_daily`
   and `POST /api/financial/signals/shadow-review/decision-records`
+- Promotion dry-run:
+  `GET /api/financial/signals/promotion-dry-run/daily?candidate_parameter_set=dochia_v0_2_range_daily`
 
 ## Review Gates
 
@@ -53,6 +55,19 @@ The API recomputes and stores the current Shadow Review evidence packet with
 the record. A `promote_to_market_signals` decision is still only permission to
 build the next dry-run promotion step; it is not a production write.
 
+## Promotion Dry-Run Review
+
+The dry-run endpoint and cockpit panel generate proposed `hedge_fund.market_signals`
+rows without inserting them. Review:
+
+- Approval state and decision record id.
+- Proposed BUY/SELL counts and skipped neutral count.
+- Target columns for `hedge_fund.market_signals`.
+- Per-row source pipeline, parameter set, model version, computed timestamp,
+  explanation payload, and rollback marker.
+
+Dry-run output is still preview-only. It does not enable production writes.
+
 ## Hard Stops
 
 - Any Promotion Gate `hold`.
@@ -60,8 +75,9 @@ build the next dry-run promotion step; it is not a production write.
 - Unreviewed high whipsaw-risk ticker in the shadow packet.
 - No named human approver.
 
-## Next Build Step After Approval
+## Next Build Step After Dry-Run Approval
 
-If the decision is `promote_to_market_signals`, build the promotion pipeline as
-dry-run first. It must preserve lineage fields: source pipeline, parameter set,
-model version, computed time, explanation payload, and rollback marker.
+After a recorded `promote_to_market_signals` decision and accepted dry-run
+output, build the guarded write path. It must insert only with named approval,
+preserve lineage fields, attach rollback/depromotion controls, and provide a
+safe way to disable or remove a promoted candidate set.
