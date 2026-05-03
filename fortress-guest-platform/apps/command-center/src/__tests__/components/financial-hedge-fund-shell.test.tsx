@@ -1,0 +1,311 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+import { HedgeFundSignalsShell } from "@/app/(dashboard)/financial/hedge-fund/_components/hedge-fund-signals-shell";
+
+const latestSignals = [
+  {
+    ticker: "AA",
+    bar_date: "2026-04-24",
+    parameter_set_id: "11111111-1111-1111-1111-111111111111",
+    parameter_set_name: "dochia_v0_estimated",
+    dochia_version: "v0",
+    monthly_state: 1,
+    weekly_state: 1,
+    daily_state: 1,
+    momentum_state: 0,
+    composite_score: 80,
+    computed_at: "2026-05-02T12:00:00Z",
+    monthly_channel_high: "75.6999",
+    monthly_channel_low: "55.0400",
+    weekly_channel_high: "75.6999",
+    weekly_channel_low: "63.0300",
+    daily_channel_high: "69.3750",
+    daily_channel_low: "65.1500",
+    state_labels: {
+      monthly: "green",
+      weekly: "green",
+      daily: "green",
+      momentum: "neutral",
+    },
+  },
+  {
+    ticker: "AGIO",
+    bar_date: "2026-04-24",
+    parameter_set_id: "11111111-1111-1111-1111-111111111111",
+    parameter_set_name: "dochia_v0_estimated",
+    dochia_version: "v0",
+    monthly_state: -1,
+    weekly_state: -1,
+    daily_state: -1,
+    momentum_state: 0,
+    composite_score: -80,
+    computed_at: "2026-05-02T12:00:00Z",
+    monthly_channel_high: "36.3500",
+    monthly_channel_low: "25.6200",
+    weekly_channel_high: "35.9900",
+    weekly_channel_low: "25.6200",
+    daily_channel_high: "27.0350",
+    daily_channel_low: "25.6200",
+    state_labels: {
+      monthly: "red",
+      weekly: "red",
+      daily: "red",
+      momentum: "neutral",
+    },
+  },
+];
+
+const transitions = [
+  {
+    id: "22222222-2222-2222-2222-222222222222",
+    ticker: "AA",
+    parameter_set_name: "dochia_v0_estimated",
+    transition_type: "breakout_bullish",
+    from_score: 50,
+    to_score: 80,
+    from_bar_date: "2026-04-14",
+    to_bar_date: "2026-04-22",
+    from_states: { monthly: 1, weekly: 1, daily: -1, momentum: 0 },
+    to_states: { monthly: 1, weekly: 1, daily: 1, momentum: 0 },
+    detected_at: "2026-05-02T12:01:00Z",
+    acknowledged_by_user_id: null,
+    acknowledged_at: null,
+    notes: "daily triangle green",
+  },
+];
+
+const chartData = {
+  ticker: "AA",
+  sessions: 2,
+  bars: [
+    {
+      ticker: "AA",
+      bar_date: "2026-04-23",
+      open: "66.00",
+      high: "69.00",
+      low: "65.00",
+      close: "68.00",
+      volume: 1000,
+      daily_channel_high: "67.00",
+      daily_channel_low: "64.00",
+      weekly_channel_high: "70.00",
+      weekly_channel_low: "60.00",
+      monthly_channel_high: "75.00",
+      monthly_channel_low: "55.00",
+    },
+    {
+      ticker: "AA",
+      bar_date: "2026-04-24",
+      open: "68.00",
+      high: "70.00",
+      low: "66.00",
+      close: "69.00",
+      volume: 1200,
+      daily_channel_high: "69.00",
+      daily_channel_low: "65.00",
+      weekly_channel_high: "70.00",
+      weekly_channel_low: "61.00",
+      monthly_channel_high: "75.00",
+      monthly_channel_low: "55.00",
+    },
+  ],
+  events: [
+    {
+      ticker: "AA",
+      timeframe: "daily",
+      state: "green",
+      bar_date: "2026-04-24",
+      trigger_price: "69.00",
+      channel_high: "68.50",
+      channel_low: "65.00",
+      lookback_sessions: 3,
+      reason: "close broke above channel",
+    },
+  ],
+};
+
+vi.mock("recharts", () => ({
+  CartesianGrid: () => null,
+  Line: () => null,
+  LineChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  ReferenceDot: () => null,
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Tooltip: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+}));
+
+const watchlistCandidates = {
+  generated_at: "2026-05-02T18:00:00Z",
+  lanes: [
+    {
+      id: "bullish_alignment",
+      label: "Bullish Alignment",
+      description: "Current scores with monthly, weekly, and daily support.",
+      candidates: [
+        {
+          ...latestSignals[0],
+          latest_transition_type: "breakout_bullish",
+          latest_transition_bar_date: "2026-04-22",
+          latest_transition_notes: "daily triangle green",
+          sector: "Materials",
+          watchlist_signal_count: 4,
+          watchlist_last_signal_at: "2026-02-12T17:00:00Z",
+          legacy_action: "BUY",
+          legacy_signal_type: "Technical",
+          legacy_confidence_score: 87,
+          legacy_price_target: "84.50",
+          legacy_signal_at: "2026-02-12T17:01:00Z",
+        },
+      ],
+    },
+    {
+      id: "risk_alignment",
+      label: "Risk Alignment",
+      description: "Current scores that should stay on the risk desk.",
+      candidates: [],
+    },
+    {
+      id: "reentry",
+      label: "Re-entry",
+      description: "Recent bullish turns with non-negative current scores.",
+      candidates: [],
+    },
+    {
+      id: "mixed_timeframes",
+      label: "Mixed Timeframes",
+      description: "Symbols where the timeframes are not in agreement.",
+      candidates: [],
+    },
+  ],
+};
+
+const dailyCalibration = {
+  parameter_set_name: "dochia_v0_estimated",
+  generated_at: "2026-05-02T21:30:00Z",
+  since: null,
+  until: null,
+  total_observations: 24204,
+  covered_observations: 22131,
+  exact_bar_observations: 22127,
+  missing_observations: 2073,
+  neutral_generated_observations: 290,
+  matches: 13733,
+  exact_event_matches: 6130,
+  exact_event_accuracy: 0.2771,
+  window_event_matches: 9475,
+  window_event_accuracy: 0.4281,
+  event_window_days: 3,
+  no_generated_event_observations: 13800,
+  opposite_generated_event_observations: 2201,
+  accuracy: 0.6205,
+  coverage_rate: 0.9144,
+  exact_coverage_rate: 0.9142,
+  green_precision: 0.6303,
+  green_recall: 0.6351,
+  red_precision: 0.6272,
+  red_recall: 0.6059,
+  score_mae: 43.94,
+  score_rmse: 55.74,
+  confusion: {
+    green: { green: 7060, red: 3967, neutral: 90, missing: 1135 },
+    red: { green: 4141, red: 6673, neutral: 200, missing: 938 },
+  },
+  event_confusion: {
+    green: { green: 3100, red: 1010, none: 7007, missing: 1135 },
+    red: { green: 1191, red: 3030, none: 6793, missing: 938 },
+  },
+  top_tickers: [
+    {
+      ticker: "HUT",
+      observations: 143,
+      covered_observations: 139,
+      exact_bar_observations: 139,
+      matches: 85,
+      accuracy: 0.6115,
+      score_mae: 41.4,
+    },
+  ],
+};
+
+vi.mock("@/lib/hooks", () => ({
+  useFinancialLatestSignals: () => ({
+    data: latestSignals,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+  useFinancialSignalTransitions: () => ({
+    data: transitions,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+  useFinancialSignalDetail: () => ({
+    data: {
+      ticker: "AA",
+      latest: latestSignals[0],
+      recent_transitions: transitions,
+    },
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+  useFinancialSignalChart: () => ({
+    data: chartData,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+  useFinancialWatchlistCandidates: () => ({
+    data: watchlistCandidates,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+  useFinancialDailyCalibration: () => ({
+    data: dailyCalibration,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+}));
+
+describe("HedgeFundSignalsShell", () => {
+  it("renders latest signals, score context, and transition feed", () => {
+    render(<HedgeFundSignalsShell />);
+
+    expect(screen.getByRole("heading", { name: "Hedge Fund Signals" })).toBeInTheDocument();
+    expect(screen.getByText("Signal Scanner")).toBeInTheDocument();
+    expect(screen.getAllByText("AA").length).toBeGreaterThan(0);
+    expect(screen.getByText("AGIO")).toBeInTheDocument();
+    expect(screen.getAllByText("Bullish break").length).toBeGreaterThan(0);
+    expect(screen.getByText("Score Distribution")).toBeInTheDocument();
+    expect(screen.getByText("Portfolio Lens")).toBeInTheDocument();
+    expect(screen.getByText("BUY")).toBeInTheDocument();
+    expect(screen.getByText("Calibration Baseline")).toBeInTheDocument();
+    expect(screen.getByText("62.1%")).toBeInTheDocument();
+    expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
+    expect(screen.getByText("1 triangle events")).toBeInTheDocument();
+    expect(screen.getAllByText("dochia_v0_estimated").length).toBeGreaterThan(0);
+  });
+
+  it("switches the internal signal model badge without leaving the page", () => {
+    render(<HedgeFundSignalsShell />);
+
+    fireEvent.click(screen.getByRole("button", { name: "v0.2 Range" }));
+
+    expect(screen.getByText("dochia_v0_2_range_daily")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "v0.2 Range" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+});

@@ -58,7 +58,7 @@ describe("Sidebar", () => {
 
     expect(screen.queryByText("Iron Dome Ledger")).not.toBeInTheDocument();
     expect(screen.queryByText("E-Discovery Vault")).not.toBeInTheDocument();
-    expect(screen.queryByText("Damage Claims")).not.toBeInTheDocument();
+    expect(screen.getByText("Damage Claims")).toBeInTheDocument();
   });
 
   it("shows legal routes for a legal user and hides operations routes", () => {

@@ -135,6 +135,176 @@ export interface DashboardStats {
   total_revenue_mtd?: number;
 }
 
+export interface FinancialSignalStateLabels {
+  monthly: string;
+  weekly: string;
+  daily: string;
+  momentum: string;
+}
+
+export interface FinancialLatestSignal {
+  ticker: string;
+  bar_date: string;
+  parameter_set_id: string;
+  parameter_set_name: string;
+  dochia_version: string;
+  monthly_state: -1 | 0 | 1;
+  weekly_state: -1 | 0 | 1;
+  daily_state: -1 | 0 | 1;
+  momentum_state: -1 | 0 | 1;
+  composite_score: number;
+  computed_at: string;
+  monthly_channel_high: string | number | null;
+  monthly_channel_low: string | number | null;
+  weekly_channel_high: string | number | null;
+  weekly_channel_low: string | number | null;
+  daily_channel_high: string | number | null;
+  daily_channel_low: string | number | null;
+  state_labels: FinancialSignalStateLabels;
+}
+
+export type FinancialTransitionType =
+  | "peak_to_exit"
+  | "exit_to_reentry"
+  | "full_reversal"
+  | "breakout_bullish"
+  | "breakout_bearish";
+
+export interface FinancialSignalTransition {
+  id: string;
+  ticker: string;
+  parameter_set_name: string;
+  transition_type: FinancialTransitionType;
+  from_score: number;
+  to_score: number;
+  from_bar_date: string;
+  to_bar_date: string;
+  from_states: Record<string, number>;
+  to_states: Record<string, number>;
+  detected_at: string;
+  acknowledged_by_user_id: string | null;
+  acknowledged_at: string | null;
+  notes: string | null;
+}
+
+export interface FinancialSymbolSignalDetail {
+  ticker: string;
+  latest: FinancialLatestSignal;
+  recent_transitions: FinancialSignalTransition[];
+}
+
+export interface FinancialSignalChartBar {
+  ticker: string;
+  bar_date: string;
+  open: string | number;
+  high: string | number;
+  low: string | number;
+  close: string | number;
+  volume: number | null;
+  daily_channel_high: string | number | null;
+  daily_channel_low: string | number | null;
+  weekly_channel_high: string | number | null;
+  weekly_channel_low: string | number | null;
+  monthly_channel_high: string | number | null;
+  monthly_channel_low: string | number | null;
+}
+
+export interface FinancialSignalChartEvent {
+  ticker: string;
+  timeframe: "daily" | "weekly" | "monthly";
+  state: "green" | "red" | "neutral";
+  bar_date: string;
+  trigger_price: string | number;
+  channel_high: string | number;
+  channel_low: string | number;
+  lookback_sessions: number;
+  reason: string;
+}
+
+export interface FinancialSignalChartResponse {
+  ticker: string;
+  sessions: number;
+  bars: FinancialSignalChartBar[];
+  events: FinancialSignalChartEvent[];
+}
+
+export interface FinancialWatchlistCandidate {
+  ticker: string;
+  bar_date: string;
+  parameter_set_name: string;
+  monthly_state: -1 | 0 | 1;
+  weekly_state: -1 | 0 | 1;
+  daily_state: -1 | 0 | 1;
+  momentum_state: -1 | 0 | 1;
+  composite_score: number;
+  latest_transition_type: FinancialTransitionType | null;
+  latest_transition_bar_date: string | null;
+  latest_transition_notes: string | null;
+  sector: string | null;
+  watchlist_signal_count: number | null;
+  watchlist_last_signal_at: string | null;
+  legacy_action: string | null;
+  legacy_signal_type: string | null;
+  legacy_confidence_score: number | null;
+  legacy_price_target: string | number | null;
+  legacy_signal_at: string | null;
+  state_labels: FinancialSignalStateLabels;
+}
+
+export interface FinancialWatchlistCandidateLane {
+  id: "bullish_alignment" | "risk_alignment" | "reentry" | "mixed_timeframes";
+  label: string;
+  description: string;
+  candidates: FinancialWatchlistCandidate[];
+}
+
+export interface FinancialWatchlistCandidatesResponse {
+  generated_at: string;
+  lanes: FinancialWatchlistCandidateLane[];
+}
+
+export interface FinancialDailyCalibrationTicker {
+  ticker: string;
+  observations: number;
+  covered_observations: number;
+  exact_bar_observations: number;
+  matches: number;
+  accuracy: number | null;
+  score_mae: number | null;
+}
+
+export interface FinancialDailyCalibrationResponse {
+  parameter_set_name: string;
+  generated_at: string;
+  since: string | null;
+  until: string | null;
+  total_observations: number;
+  covered_observations: number;
+  exact_bar_observations: number;
+  missing_observations: number;
+  neutral_generated_observations: number;
+  matches: number;
+  exact_event_matches: number;
+  exact_event_accuracy: number | null;
+  window_event_matches: number;
+  window_event_accuracy: number | null;
+  event_window_days: number;
+  no_generated_event_observations: number;
+  opposite_generated_event_observations: number;
+  accuracy: number | null;
+  coverage_rate: number | null;
+  exact_coverage_rate: number | null;
+  green_precision: number | null;
+  green_recall: number | null;
+  red_precision: number | null;
+  red_recall: number | null;
+  score_mae: number | null;
+  score_rmse: number | null;
+  confusion: Record<"green" | "red", Record<"green" | "red" | "neutral" | "missing", number>>;
+  event_confusion: Record<"green" | "red", Record<"green" | "red" | "none" | "missing", number>>;
+  top_tickers: FinancialDailyCalibrationTicker[];
+}
+
 export type ServiceHealthState = "up" | "down";
 
 export interface ServiceHealthResponse {
@@ -1096,6 +1266,48 @@ export interface SystemHealthDatabases {
   qdrant: Record<string, QdrantCollectionStats>;
 }
 
+export interface StreamlineSyncHealth {
+  service: "streamline";
+  unit: string;
+  status: "online" | "degraded" | "offline";
+  worker_active: boolean;
+  circuit_open_recent: boolean;
+  stale_data_fallback: boolean;
+  recent_circuit_events: number;
+  recent_circuit_methods?: Array<{ method: string; count: number }>;
+  primary_circuit_method?: string | null;
+  last_error_count: number | null;
+  last_error_categories?: Record<string, number>;
+  last_reservation_errors: number | null;
+  last_properties_updated: number | null;
+  last_reservations_updated: number | null;
+  last_elapsed_seconds: number | null;
+  last_sync_summary: string | null;
+  last_cycle_summary: string | null;
+  latest_circuit_summary: string | null;
+  checked_at: string;
+}
+
+export interface SystemHealthIntegrations {
+  streamline_sync?: StreamlineSyncHealth;
+  operations?: OperationalHealth;
+}
+
+export interface OperationalHealthMetric {
+  status: "online" | "degraded" | "offline" | "unknown";
+  [key: string]: string | number | null;
+}
+
+export interface OperationalHealth {
+  status: "online" | "degraded" | "offline" | "unknown";
+  checked_at: string;
+  channex: OperationalHealthMetric;
+  checkout_holds: OperationalHealthMetric;
+  quote_checkout: OperationalHealthMetric;
+  twilio: OperationalHealthMetric;
+  queues: OperationalHealthMetric;
+}
+
 export interface SystemHealthResponse {
   status: "healthy" | "degraded";
   service: string;
@@ -1105,6 +1317,7 @@ export interface SystemHealthResponse {
   /** Backend may omit or null when collectors are offline; UI must guard Object.values. */
   nodes?: Record<string, NodeMetrics> | null;
   services: SystemHealthService[];
+  integrations?: SystemHealthIntegrations;
   databases: SystemHealthDatabases;
   /** C2 pulse merged in by `/api/telemetry/ws/system-health` stream. */
   pulse?: CommandC2PulseResponse;
