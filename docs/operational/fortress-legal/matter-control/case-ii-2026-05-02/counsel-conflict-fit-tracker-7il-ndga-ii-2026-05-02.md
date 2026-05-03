@@ -5,7 +5,7 @@ Operator service status: not served as of 2026-05-02
 
 Use this to control outreach. Send conflict-check language first. Do not send the attorney package or evidence until conflicts clear.
 
-Operational control: `counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md`. Phase 1 scorecard: `counsel-phase1-fit-call-scorecard-7il-ndga-ii-2026-05-02.md`. The tracker is the ledger; the control documents are the release rules. Keep `Package Sent` as `No` until Phase 2 release is approved.
+Operational control: `counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md`. Phase 1 scorecard: `counsel-phase1-fit-call-scorecard-7il-ndga-ii-2026-05-02.md`. Target shortlist: `counsel-target-shortlist-7il-ndga-ii-2026-05-03.md`. The tracker is the ledger; the control documents are the release rules. Keep `Package Sent` as `No` until Phase 2 release is approved.
 
 ## Conflict Screen Names
 
@@ -26,11 +26,15 @@ Operational control: `counsel-conflict-check-outreach-control-7il-ndga-ii-2026-0
 
 | Priority | Counsel/Firm | Contact | Date Contacted | Conflict Result | Federal Litigation Fit | Counterclaim Appetite | Fee Structure | Phase 1 Cap | Package Sent | Next Action | Score |
 |---:|---|---|---:|---|---|---|---|---:|---|---|---:|
-| 1 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
-| 2 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
-| 3 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
-| 4 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
-| 5 |  |  |  | Pending |  |  |  |  | No | Send conflict check |  |
+| 1 | Robbins Firm | info@robbinsfirm.com / 678-701-9381 |  | Pending C0 | Strong business/real-estate/trial/appellate hypothesis | Open | Ask capped/flexible Phase 1 |  | No | Send Phase 0 conflict check only |  |
+| 2 | Flake Law | 678-528-1688 / firm contact path |  | Pending C0 | Strong business litigation/trial hypothesis | Open | Ask capped Phase 1 |  | No | Send Phase 0 conflict check only |  |
+| 3 | Jett Law Group | allie@jettlawgroup.com / 404-369-0388 |  | Pending C0 | Strong real-estate/title/easement hypothesis | Open | Ask capped Phase 1 |  | No | Send Phase 0 conflict check only |  |
+| 4 | The Weitz Firm | taylor@weitz-firm.com / 678-576-5808 |  | Pending C0 | Strong real-estate litigation/N.D. Ga. hypothesis | Open | Ask capped Phase 1 |  | No | Send Phase 0 conflict check only |  |
+| 5 | The Hanson Firm | 404-460-7940 |  | Pending C0 | Strong business/commercial real-estate/N.D. Ga. hypothesis | Open | Ask value-based/capped Phase 1 |  | No | Send Phase 0 conflict check only |  |
+
+## Source-Control Note
+
+Candidate names, contacts, and fit hypotheses are sourced from public firm websites captured in `counsel-target-shortlist-7il-ndga-ii-2026-05-03.md`. These are not endorsements and do not indicate conflict clearance.
 
 ## Release Discipline
 

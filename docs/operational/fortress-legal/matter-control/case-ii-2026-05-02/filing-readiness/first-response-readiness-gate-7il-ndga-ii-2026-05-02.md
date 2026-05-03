@@ -13,6 +13,7 @@ This is not a filing and not legal advice. It is a release gate for deciding whe
 | Federal Rules of Civil Procedure - U.S. Courts | `https://www.uscourts.gov/forms-rules/current-rules-practice-procedure/federal-rules-civil-procedure` | Official federal rules source page; use live rule text before filing. |
 | Federal Rules PDF - U.S. Courts | `https://www.uscourts.gov/file/document/rules-civil-procedure` | Current rules pamphlet source for Rule 4, Rule 8, Rule 12, and Rule 13 checks. |
 | N.D. Ga. Local Rules page | `https://www.gand.uscourts.gov/court-info/local-rules-and-orders/local-rules` | Local rule and form/filing practice source; confirm current version before filing. |
+| Counsel target shortlist | `../counsel-target-shortlist-7il-ndga-ii-2026-05-03.md` | Public-source five-target conflict-check bench and send queue. |
 | Counsel Phase 1 fit-call scorecard | `../counsel-phase1-fit-call-scorecard-7il-ndga-ii-2026-05-02.md` | Post-conflict fit, budget, scope, and package-release decision gate. |
 | Counsel conflict-check outreach control | `../counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md` | Phase 0/1/2 release rule for counsel outreach before package transmission. |
 | Service and deadline log | `../service-deadline-log-7il-ndga-ii-2026-05-02.md` | Service event capture and response-deadline control. |
@@ -72,7 +73,7 @@ This is not a filing and not legal advice. It is a release gate for deciding whe
 
 ## Immediate Next Actions
 
-1. Fill the counsel conflict tracker with five targets and send only Phase 0 conflict-check language under the outreach control.
+1. Reconfirm service status, then send Phase 0 conflict-check language to the five-target counsel shortlist under the outreach control.
 2. Keep service/deadline log updated daily.
 3. Convert the answer matrix's highest-risk paragraphs into evidence-backed response candidates after the closing/title package and Exhibit G source gates advance.
 4. Prepare a neutral extension-request draft only as an emergency fallback after service occurs.
