@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from html import escape
 from typing import Any, Literal
 from uuid import UUID
 
+import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.security import require_operator_manager_admin
 from backend.models import Guest, GuestQuote, GuestQuoteStatus, Property, Reservation, ReservationHold
@@ -31,6 +33,11 @@ CONTROL_TOWER_BLOCKED_CAPABILITIES = [
     "change_cloudflare_dns_or_tunnel",
     "mutate_legacy_drupal_or_aws",
 ]
+PROOF_LANE_ALLOWED_EMAIL_DOMAINS = {
+    "cabin-rentals-of-georgia.com",
+    "crog-ai.com",
+    "garyknight.com",
+}
 
 
 @router.get("/operations/ping")
@@ -114,6 +121,22 @@ class QuoteBookingSendResponse(BaseModel):
     message: str
 
 
+class QuoteBookingProofLaneRequest(BaseModel):
+    guest_email: str | None = Field(default=None, max_length=320)
+    property_id: UUID | None = None
+    amount_cents: int = Field(default=100, ge=50, le=5000)
+    mark_reviewed: bool = True
+
+
+class QuoteBookingProofLaneResponse(BaseModel):
+    ok: bool
+    quote: QuoteBookingRecord
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    stripe_mode: Literal["test"]
+    message: str
+
+
 def _iso(value: Any) -> str | None:
     if value is None:
         return None
@@ -142,6 +165,10 @@ def _guest_name(first_name: str | None, last_name: str | None, fallback: str | N
     return name or fallback
 
 
+def _money_decimal_from_cents(amount_cents: int) -> Decimal:
+    return (Decimal(amount_cents) / Decimal("100")).quantize(Decimal("0.01"))
+
+
 def _display_money(value: Any) -> str:
     money = _money(value)
     if money is None:
@@ -155,6 +182,92 @@ def _display_date(value: Any) -> str:
     if hasattr(value, "strftime"):
         return value.strftime("%b %-d, %Y")
     return str(value)
+
+
+def _stripe_secret_mode() -> Literal["test", "live", "unknown"]:
+    key = settings.stripe_secret_key or ""
+    if key.startswith("sk_test_"):
+        return "test"
+    if key.startswith("sk_live_"):
+        return "live"
+    return "unknown"
+
+
+def _resolve_proof_lane_email(current_user: StaffUser, requested_email: str | None) -> str:
+    email = (requested_email or current_user.email or "").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=422, detail="A staff/test email is required for proof lane quotes")
+
+    domain = email.rsplit("@", 1)[-1]
+    current_user_email = (current_user.email or "").strip().lower()
+    if email == current_user_email or domain in PROOF_LANE_ALLOWED_EMAIL_DOMAINS:
+        return email
+
+    raise HTTPException(status_code=422, detail="Proof lane quotes can only be sent to staff/test email domains")
+
+
+async def _resolve_proof_lane_property(db: AsyncSession, property_id: UUID | None) -> Property:
+    if property_id:
+        prop = await db.get(Property, property_id)
+        if prop is None:
+            raise HTTPException(status_code=404, detail="Proof lane property not found")
+        return prop
+
+    result = await db.execute(
+        select(Property).where(Property.is_active.is_(True)).order_by(Property.name.asc()).limit(1)
+    )
+    prop = result.scalar_one_or_none()
+    if prop is None:
+        raise HTTPException(status_code=422, detail="No active property is available for the proof lane")
+    return prop
+
+
+def _create_proof_lane_payment_link(
+    *,
+    quote_id: str,
+    amount_cents: int,
+    property_id: str,
+    property_name: str,
+    guest_email: str,
+) -> dict[str, Any]:
+    if _stripe_secret_mode() != "test":
+        raise HTTPException(status_code=423, detail="Proof lane payment links require Stripe test mode")
+    stripe.api_key = settings.stripe_secret_key
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
+
+    product = stripe.Product.create(
+        name=f"CROG-VRS Proof Lane - {property_name}",
+        description="Internal CROG-VRS quote-to-booking proof lane. Stripe test mode only.",
+        metadata={
+            "type": "crog_vrs_proof_lane",
+            "quote_id": quote_id,
+            "property_id": property_id,
+            "safe_internal_only": "true",
+        },
+    )
+    price = stripe.Price.create(
+        product=product.id,
+        unit_amount=amount_cents,
+        currency="usd",
+    )
+    link = stripe.PaymentLink.create(
+        line_items=[{"price": price.id, "quantity": 1}],
+        payment_method_types=["card"],
+        metadata={
+            "type": "crog_vrs_proof_lane",
+            "quote_id": quote_id,
+            "property_id": property_id,
+            "guest_email": guest_email,
+            "safe_internal_only": "true",
+        },
+    )
+    return {
+        "payment_link_url": link.url,
+        "payment_link_id": link.id,
+        "product_id": product.id,
+        "price_id": price.id,
+    }
 
 
 def _hold_stop_level(hold: ReservationHold, now: datetime) -> tuple[Literal["clear", "inspect", "stop"], str]:
@@ -939,6 +1052,154 @@ async def quote_booking_control_tower(
         reservations=reservations,
         parity_audits=parity_audits,
         generated_at=now.isoformat(),
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/proof-lane/test-quote",
+    response_model=QuoteBookingProofLaneResponse,
+)
+async def quote_booking_proof_lane_test_quote(
+    body: QuoteBookingProofLaneRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingProofLaneResponse:
+    """Create a Stripe-test, staff-only quote for proving the guarded send lane."""
+    if _stripe_secret_mode() != "test":
+        raise HTTPException(status_code=423, detail="Proof lane is locked unless Stripe is in test mode")
+
+    guest_email = _resolve_proof_lane_email(current_user, body.guest_email)
+    prop = await _resolve_proof_lane_property(db, body.property_id)
+    amount = _money_decimal_from_cents(body.amount_cents)
+    check_in = date.today() + timedelta(days=90)
+    check_out = check_in + timedelta(days=2)
+    now_naive = datetime.utcnow()
+
+    quote = GuestQuote(
+        target_property_id=str(prop.id),
+        property_id=prop.id,
+        guest_name="CROG-VRS Proof Lane",
+        guest_email=guest_email,
+        guest_phone="proof-lane",
+        check_in=check_in,
+        check_out=check_out,
+        nights=2,
+        adults=2,
+        children=0,
+        pets=0,
+        base_rent=amount,
+        taxes=Decimal("0.00"),
+        fees=Decimal("0.00"),
+        total_amount=amount,
+        base_price=float(amount),
+        ai_adjusted_price=float(amount),
+        sovereign_narrative="Internal CROG-VRS proof lane test quote. Stripe test mode only.",
+        campaign="proof_lane_test",
+        target_keyword="internal-proof-lane",
+        quote_breakdown={
+            "base_rent": str(amount),
+            "taxes": "0.00",
+            "fees": "0.00",
+            "total": str(amount),
+            "pricing_source": "proof_lane_test",
+            "nightly_breakdown": [
+                {"date": check_in.isoformat(), "rate": str((amount / 2).quantize(Decimal("0.01")))},
+                {"date": (check_in + timedelta(days=1)).isoformat(), "rate": str((amount / 2).quantize(Decimal("0.01")))},
+            ],
+        },
+        source_snapshot={
+            "parity_status": "MATCH",
+            "quote_parity_status": "MATCH",
+            "proof_lane": True,
+            "safe_internal_only": True,
+            "stripe_mode": "test",
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "cloudflare_dns_or_tunnel": "untouched",
+        },
+        expires_at=now_naive + timedelta(hours=48),
+        status=GuestQuoteStatus.PENDING,
+    )
+    db.add(quote)
+    await db.flush()
+
+    try:
+        link_result = await asyncio.to_thread(
+            _create_proof_lane_payment_link,
+            quote_id=str(quote.id),
+            amount_cents=body.amount_cents,
+            property_id=str(prop.id),
+            property_name=prop.name,
+            guest_email=guest_email,
+        )
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as exc:  # noqa: BLE001
+        await db.rollback()
+        raise HTTPException(status_code=502, detail=f"Stripe test payment link failed: {str(exc)[:160]}") from exc
+
+    quote.stripe_payment_link_url = str(link_result["payment_link_url"])
+    quote.stripe_payment_link_id = str(link_result["payment_link_id"])
+    await db.commit()
+    await db.refresh(quote)
+
+    audit = await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.proof_lane_test_quote_created",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("quote", str(quote.id)),
+        purpose="Create a safe internal quote-to-booking proof lane test quote.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome="success",
+        metadata_json={
+            "quote_id": str(quote.id),
+            "guest_email": guest_email,
+            "property_id": str(prop.id),
+            "property_name": prop.name,
+            "amount_cents": body.amount_cents,
+            "stripe_mode": "test",
+            "safe_internal_only": True,
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+    if body.mark_reviewed:
+        await record_audit_event(
+            db=db,
+            actor_id=str(current_user.id),
+            actor_email=current_user.email,
+            action="quote_booking.mark_reviewed",
+            resource_type="quote_booking_control_item",
+            resource_id=_control_resource_id("quote", str(quote.id)),
+            purpose="Staff approval for an internal proof lane test quote.",
+            tool_name="quote_booking_control_tower",
+            redaction_status="metadata_only",
+            model_route="human_staff",
+            outcome="success",
+            metadata_json={
+                "kind": "quote",
+                "item_id": str(quote.id),
+                "action": "mark_reviewed",
+                "note": "Proof lane test quote approved by staff action.",
+                "safe_action_only": True,
+                "proof_lane": True,
+                "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+            },
+        )
+
+    record = await _quote_control_record(db, quote, datetime.now(timezone.utc), datetime.utcnow())
+    return QuoteBookingProofLaneResponse(
+        ok=True,
+        quote=record,
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        stripe_mode="test",
+        message="Proof lane test quote created in Stripe test mode and reviewed. It is eligible for the controlled internal send workflow only.",
     )
 
 

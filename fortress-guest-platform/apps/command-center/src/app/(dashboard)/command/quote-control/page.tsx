@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   CreditCard,
+  FlaskConical,
   Loader2,
   LockKeyhole,
   PauseCircle,
@@ -57,6 +58,15 @@ type QuoteBookingSendResponse = {
   guest_email: string;
   audit_id: string | null;
   audit_hash: string | null;
+  message: string;
+};
+
+type QuoteBookingProofLaneResponse = {
+  ok: boolean;
+  quote: QuoteBookingRecord;
+  audit_id: string | null;
+  audit_hash: string | null;
+  stripe_mode: "test";
   message: string;
 };
 
@@ -457,6 +467,7 @@ export default function QuoteControlPage() {
   const [sendTarget, setSendTarget] = useState<QuoteBookingRecord | null>(null);
   const [sendNote, setSendNote] = useState("");
   const [isSendingQuote, setIsSendingQuote] = useState(false);
+  const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
 
@@ -579,6 +590,24 @@ export default function QuoteControlPage() {
       setIsSendingQuote(false);
     }
   };
+  const createProofQuote = async () => {
+    setIsCreatingProofQuote(true);
+    try {
+      const response = await api.post<QuoteBookingProofLaneResponse>(
+        "/api/vrs/quote-booking/control-tower/proof-lane/test-quote",
+        {},
+      );
+      toast.success(response.message || "Proof lane test quote created");
+      setKindFilter("quote");
+      setStopFilter("clear");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Proof lane creation failed";
+      toast.error(message);
+    } finally {
+      setIsCreatingProofQuote(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -672,6 +701,46 @@ export default function QuoteControlPage() {
           tone={metric(summary, "hard_stops") > 0 ? "danger" : "success"}
         />
       </div>
+
+      <Card className="border-emerald-500/20 bg-zinc-950/90">
+        <CardHeader className="border-b border-zinc-800/80">
+          <CardTitle className="flex items-center gap-2 text-zinc-50">
+            <FlaskConical className="h-5 w-5 text-emerald-300" />
+            Proof Lane
+          </CardTitle>
+          <CardDescription>
+            Stripe test mode, staff email only, no Streamline write, and no legacy storefront change.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 pt-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-3 py-3">
+              <p className="text-xs uppercase text-zinc-500">Payment</p>
+              <p className="mt-1 text-emerald-100">Stripe test link</p>
+            </div>
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-3 py-3">
+              <p className="text-xs uppercase text-zinc-500">Approval</p>
+              <p className="mt-1 text-emerald-100">Staff reviewed</p>
+            </div>
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-3 py-3">
+              <p className="text-xs uppercase text-zinc-500">Boundary</p>
+              <p className="mt-1 text-emerald-100">Internal only</p>
+            </div>
+          </div>
+          <Button
+            onClick={createProofQuote}
+            disabled={isCreatingProofQuote}
+            className="bg-emerald-700 text-white hover:bg-emerald-600"
+          >
+            {isCreatingProofQuote ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FlaskConical className="mr-2 h-4 w-4" />
+            )}
+            Create Test Quote
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card className="border-cyan-500/20 bg-zinc-950/90">
         <CardHeader className="border-b border-zinc-800/80">
