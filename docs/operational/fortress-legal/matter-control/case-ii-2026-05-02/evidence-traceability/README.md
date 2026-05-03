@@ -8,17 +8,18 @@ Use order:
 2. Evidence custody registry
 3. Wilson Pruitt email intake protocol
 4. Wilson Pruitt email Batch 001 intake kit
-5. Wilson Pruitt email evidence register
-6. Wilson Pruitt adverse-alignment proof matrix
-7. Count-to-evidence trace map
-8. Paragraph evidence trace matrix
-9. Inspection reports and closing-scope addendum
-10. Inspection comments spreadsheet curation addendum
-11. River Heights inspection source status
-12. Terry Wilson River Heights repair reference pin
-13. Evidence gap action list
-14. DOT / GNRR response intake tracker
-15. DOT / GNRR outbound send log
+5. Wilson Pruitt email Batch 001 manifest generator
+6. Wilson Pruitt email evidence register
+7. Wilson Pruitt adverse-alignment proof matrix
+8. Count-to-evidence trace map
+9. Paragraph evidence trace matrix
+10. Inspection reports and closing-scope addendum
+11. Inspection comments spreadsheet curation addendum
+12. River Heights inspection source status
+13. Terry Wilson River Heights repair reference pin
+14. Evidence gap action list
+15. DOT / GNRR response intake tracker
+16. DOT / GNRR outbound send log
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-03.
 
@@ -30,3 +31,5 @@ Wilson Pruitt email lane: originals must be frozen and hashed on NAS, attachment
 Wilson Pruitt claim-evaluation lane: Wilson Pruitt / Terry Wilson concerns are treated as counsel-review hypotheses. Use the adverse-alignment proof matrix to force duty, breach, causation, damages, procedural-route, and privilege gates before any pleading decision.
 
 Wilson Pruitt Batch 001 lane: use the Batch 001 intake kit before opening, normalizing, or analyzing newly copied Wilson Pruitt email exports.
+
+Wilson Pruitt manifest-generator lane: after source exports land in Batch 001, run `tools/wpe_batch_manifest.py` to produce timestamped source, privilege-screen, and issue-tagging TSVs on NAS.
