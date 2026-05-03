@@ -69,6 +69,9 @@ Dochia-derived until independent truth data exists.
   shadow review and explicit promote/defer runbook.
 - Supervised Shadow Review is complete: read-only decision packet, app panel,
   and operator runbook. This still does not approve production writes.
+- Decision Record capture is complete: supervised promote/defer records are
+  persisted with the current Shadow Review evidence packet. This still does not
+  approve production writes by itself.
 
 ### Phase 5 — App Surface
 
@@ -96,6 +99,8 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
 | `GET /api/financial/signals/promotion-gate/daily` | production vs v0.2 Range promotion-gate comparison |
 | `GET /api/financial/signals/shadow-review/daily` | read-only promotion review packet with gate, lane churn, transition pressure, whipsaw evidence, and decision template |
+| `GET /api/financial/signals/shadow-review/decision-records` | recent supervised Shadow Review decision records |
+| `POST /api/financial/signals/shadow-review/decision-records` | persist a supervised promote/defer decision record with the current evidence packet |
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
 | `GET /api/financial/signals/{ticker}/whipsaw-risk` | symbol whipsaw count/rate and forward-return evidence |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
@@ -112,6 +117,9 @@ Useful query params:
   `top_tickers`, `event_window_days`
 - `shadow-review/daily`: `candidate_parameter_set`, `lookback_days`,
   `review_limit`, `whipsaw_window_sessions`, `outcome_horizon_sessions`
+- `shadow-review/decision-records`: `candidate_parameter_set`, `limit` for
+  reads; writes require `decision`, `reviewer`, `rationale`, and
+  `rollback_criteria`
 - `{ticker}/chart`: `sessions`, `as_of`
 - `{ticker}/whipsaw-risk`: `sessions`, `as_of`, optional `parameter_set`,
   `whipsaw_window_sessions`, `outcome_horizon_sessions`
@@ -260,6 +268,12 @@ Useful query params:
   and a human decision template. Live database smoke returned `needs_review`,
   4 lane reviews, 8 transition-pressure tickers, and 8 whipsaw-review tickers.
   Production `market_signals` writes remain blocked.
+- Added supervised Decision Record capture. Backend endpoint
+  `/api/financial/signals/shadow-review/decision-records` persists a
+  promote/defer record with reviewer, rationale, rollback criteria, reviewed
+  tickers, and the current Shadow Review evidence payload. The Hedge Fund
+  cockpit can now record and list those decisions. Production `market_signals`
+  writes remain blocked.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -269,6 +283,6 @@ Useful query params:
   status, and live backend/BFF reads for production, v0.2 candidate, whipsaw,
   Promotion Gate, and Shadow Review selectors.
 
-Next clean build step: capture the supervised Shadow Review human decision
-record. If the decision is `promote_to_market_signals`, build the promotion path
-as dry-run first before any guarded `market_signals` write.
+Next clean build step: after a recorded `promote_to_market_signals` decision,
+build the promotion path as dry-run first before any guarded `market_signals`
+write.

@@ -424,6 +424,24 @@ const shadowReview = {
   },
 };
 
+const shadowDecisionRecords = [
+  {
+    id: "33333333-3333-3333-3333-333333333333",
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    baseline_parameter_set: "dochia_v0_estimated",
+    decision: "continue_shadow",
+    reviewer: "Gary Knight",
+    rationale: "Keep watching lane churn and whipsaw pressure.",
+    rollback_criteria: "Rollback if the promotion gate moves to hold.",
+    reviewed_tickers: ["AA", "BTU"],
+    notes: "Operator reviewed chart overlays.",
+    shadow_review_generated_at: "2026-05-03T18:30:00Z",
+    promotion_gate_status: "ready_for_shadow",
+    recommendation_status: "needs_review",
+    created_at: "2026-05-03T19:00:00Z",
+  },
+];
+
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
     data: latestSignals,
@@ -491,6 +509,17 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialShadowDecisionRecords: () => ({
+    data: shadowDecisionRecords,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+  useCreateFinancialShadowDecisionRecord: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 
 describe("HedgeFundSignalsShell", () => {
@@ -514,6 +543,9 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Needs human review")).toBeInTheDocument();
     expect(screen.getByText("Lane Churn")).toBeInTheDocument();
     expect(screen.getByText("Human Decision Record")).toBeInTheDocument();
+    expect(screen.getByText("Decision Record")).toBeInTheDocument();
+    expect(screen.getByText("Decision Records")).toBeInTheDocument();
+    expect(screen.getAllByText("Continue shadow").length).toBeGreaterThan(0);
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
     expect(screen.getByText("Whipsaw Risk / Backtest")).toBeInTheDocument();

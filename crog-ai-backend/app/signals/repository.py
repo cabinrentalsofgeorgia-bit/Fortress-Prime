@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import datetime as dt
 from collections import Counter
+from decimal import Decimal
 from typing import Any, Protocol
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from app.database import connect
 from app.signals.calibration_repository import fetch_daily_calibration
@@ -73,6 +75,29 @@ class SignalDataStore(Protocol):
         self,
         *,
         candidate_parameter_set: str,
+        lookback_days: int = 30,
+        review_limit: int = 8,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]: ...
+
+    def shadow_review_decision_records(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]: ...
+
+    def create_shadow_review_decision_record(
+        self,
+        *,
+        candidate_parameter_set: str,
+        decision: str,
+        reviewer: str,
+        rationale: str,
+        rollback_criteria: str,
+        reviewed_tickers: list[str],
+        notes: str | None = None,
         lookback_days: int = 30,
         review_limit: int = 8,
         whipsaw_window_sessions: int = 5,
@@ -789,6 +814,159 @@ def fetch_shadow_review(
     }
 
 
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, (dt.datetime, dt.date)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+SHADOW_DECISION_RECORD_SELECT = """
+    SELECT
+        id,
+        candidate_parameter_set,
+        baseline_parameter_set,
+        decision,
+        reviewer,
+        rationale,
+        rollback_criteria,
+        reviewed_tickers,
+        notes,
+        shadow_review_generated_at,
+        promotion_gate_status,
+        recommendation_status,
+        created_at
+    FROM hedge_fund.signal_shadow_review_decisions
+"""
+
+
+def fetch_shadow_review_decision_records(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {"limit": limit}
+    where = ""
+    if candidate_parameter_set:
+        where = "WHERE candidate_parameter_set = %(candidate_parameter_set)s"
+        params["candidate_parameter_set"] = candidate_parameter_set
+    sql = f"""
+        {SHADOW_DECISION_RECORD_SELECT}
+        {where}
+        ORDER BY created_at DESC
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, params)
+        return [dict(row) for row in cur.fetchall()]
+
+
+def create_shadow_review_decision_record(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    decision: str,
+    reviewer: str,
+    rationale: str,
+    rollback_criteria: str,
+    reviewed_tickers: list[str],
+    notes: str | None = None,
+    lookback_days: int = 30,
+    review_limit: int = 8,
+    whipsaw_window_sessions: int = 5,
+    outcome_horizon_sessions: int = 5,
+) -> dict[str, Any]:
+    evidence = fetch_shadow_review(
+        conn,
+        candidate_parameter_set=candidate_parameter_set,
+        lookback_days=lookback_days,
+        review_limit=review_limit,
+        whipsaw_window_sessions=whipsaw_window_sessions,
+        outcome_horizon_sessions=outcome_horizon_sessions,
+    )
+    promotion_gate_status = evidence["promotion_gate"]["recommendation"]["status"]
+    recommendation_status = evidence["recommendation"]["status"]
+    if decision == "promote_to_market_signals" and recommendation_status == "hold":
+        raise ValueError("Cannot record a promote decision while Shadow Review is on hold.")
+    if decision == "promote_to_market_signals" and promotion_gate_status == "hold":
+        raise ValueError("Cannot record a promote decision while Promotion Gate is on hold.")
+
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            INSERT INTO hedge_fund.signal_shadow_review_decisions (
+                candidate_parameter_set,
+                baseline_parameter_set,
+                decision,
+                reviewer,
+                rationale,
+                rollback_criteria,
+                reviewed_tickers,
+                notes,
+                shadow_review_generated_at,
+                promotion_gate_status,
+                recommendation_status,
+                evidence_payload
+            ) VALUES (
+                %(candidate_parameter_set)s,
+                %(baseline_parameter_set)s,
+                %(decision)s,
+                %(reviewer)s,
+                %(rationale)s,
+                %(rollback_criteria)s,
+                %(reviewed_tickers)s,
+                %(notes)s,
+                %(shadow_review_generated_at)s,
+                %(promotion_gate_status)s,
+                %(recommendation_status)s,
+                %(evidence_payload)s
+            )
+            RETURNING *
+            """,
+            {
+                "candidate_parameter_set": candidate_parameter_set,
+                "baseline_parameter_set": evidence["baseline_parameter_set"],
+                "decision": decision,
+                "reviewer": reviewer,
+                "rationale": rationale,
+                "rollback_criteria": rollback_criteria,
+                "reviewed_tickers": reviewed_tickers,
+                "notes": notes,
+                "shadow_review_generated_at": evidence["generated_at"],
+                "promotion_gate_status": promotion_gate_status,
+                "recommendation_status": recommendation_status,
+                "evidence_payload": Jsonb(_json_safe(evidence)),
+            },
+        )
+        row = cur.fetchone()
+    if row is None:
+        raise RuntimeError("shadow review decision insert returned no row")
+    return {
+        key: row[key]
+        for key in [
+            "id",
+            "candidate_parameter_set",
+            "baseline_parameter_set",
+            "decision",
+            "reviewer",
+            "rationale",
+            "rollback_criteria",
+            "reviewed_tickers",
+            "notes",
+            "shadow_review_generated_at",
+            "promotion_gate_status",
+            "recommendation_status",
+            "created_at",
+        ]
+    }
+
+
 WATCHLIST_CANDIDATE_BASE_SQL = """
     WITH latest_scores AS (
         SELECT
@@ -1035,6 +1213,51 @@ class PostgresSignalDataStore:
             return fetch_shadow_review(
                 conn,
                 candidate_parameter_set=candidate_parameter_set,
+                lookback_days=lookback_days,
+                review_limit=review_limit,
+                whipsaw_window_sessions=whipsaw_window_sessions,
+                outcome_horizon_sessions=outcome_horizon_sessions,
+            )
+
+    def shadow_review_decision_records(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_shadow_review_decision_records(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                limit=limit,
+            )
+
+    def create_shadow_review_decision_record(
+        self,
+        *,
+        candidate_parameter_set: str,
+        decision: str,
+        reviewer: str,
+        rationale: str,
+        rollback_criteria: str,
+        reviewed_tickers: list[str],
+        notes: str | None = None,
+        lookback_days: int = 30,
+        review_limit: int = 8,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            return create_shadow_review_decision_record(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                decision=decision,
+                reviewer=reviewer,
+                rationale=rationale,
+                rollback_criteria=rollback_criteria,
+                reviewed_tickers=reviewed_tickers,
+                notes=notes,
                 lookback_days=lookback_days,
                 review_limit=review_limit,
                 whipsaw_window_sessions=whipsaw_window_sessions,

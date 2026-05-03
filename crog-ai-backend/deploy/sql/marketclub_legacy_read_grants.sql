@@ -4,3 +4,7 @@ GRANT SELECT ON TABLE
     hedge_fund.market_signals,
     hedge_fund.active_strategies
 TO crog_ai_app;
+
+GRANT SELECT, INSERT ON TABLE
+    hedge_fund.signal_shadow_review_decisions
+TO crog_ai_app;
