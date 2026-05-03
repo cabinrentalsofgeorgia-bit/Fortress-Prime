@@ -108,6 +108,8 @@ uv run python scripts/compare_signal_candidate_lanes.py --limit-tickers 500 --to
 uv run python scripts/review_signal_candidate_promotion.py --lane-limit 50 --chart-ticker-limit 24
 uv run python scripts/research_range_trigger_guardrails.py --output docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md
 uv run python scripts/review_signal_outcomes.py --output docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md
+uv run python scripts/review_ticker_cluster_candidates.py --include-exclude --output docs/reports/dochia-v0-3-ticker-cluster-review-2026-05-03.md
+uv run python scripts/review_ticker_cluster_candidates.py --include-exclude --cluster-until 2025-09-24 --since 2025-09-25 --output docs/reports/dochia-v0-3-ticker-cluster-holdout-2026-05-03.md
 ```
 
 Best 2026-05-02 research candidate: 3-session intraday range trigger. It
@@ -160,6 +162,16 @@ forward returns are flat for both production close and v0.2 raw range: v0.2
 v0.2 whipsaw clusters are ticker-specific, led by MOD, ISRG, MRVL, DLR, and HD.
 Future candidates must preserve alert quality, reduce whipsaw clusters, and
 avoid degrading forward directional returns.
+
+Ticker-cluster reports:
+`docs/reports/dochia-v0-3-ticker-cluster-review-2026-05-03.md` and
+`docs/reports/dochia-v0-3-ticker-cluster-holdout-2026-05-03.md`. Full-period
+top-15 exclusion cuts 5.11% of events while keeping F1 at 74.98% and improving
+5-session average directional return to +0.05%. Chronological holdout, with
+clusters learned before 2025-09-25 and evaluated after, does not clear the
+default gate: top-15 exclusion cuts 4.74% of events, keeps F1 at 78.16%, and
+leaves 5-session average directional return flat at -0.04%. Keep v0.2
+candidate-only; do not persist the cluster candidate yet.
 
 ## Relationship to Fortress-Prime
 
