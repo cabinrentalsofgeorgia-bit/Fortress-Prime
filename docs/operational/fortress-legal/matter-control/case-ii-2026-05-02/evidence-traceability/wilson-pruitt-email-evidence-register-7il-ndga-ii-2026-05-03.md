@@ -24,12 +24,12 @@ Purpose: track Wilson Pruitt email intake from raw export through custody, privi
 
 | Intake ID | Source Set | Date Range | From / Custodian | Subject / Descriptor | Attachments | SHA256 / Manifest | Privilege Status | Issue Tags | Target Workbench | Status | Next Action |
 |---|---|---|---|---|---:|---|---|---|---|---|---|
-| WPE-20260503-001 | Wilson Pruitt export | pre-closing | TBD | Closing lead-up emails | TBD | Pending | Pending | `closing-delay`, `psa-repair-scope` | Closing delay chronology; PSA repair scope | PULL | Export originals and hash. |
-| WPE-20260503-002 | Wilson Pruitt export | post-closing | TBD | Post-closing conduct emails | TBD | Pending | Pending | `post-closing-conduct`, `opposing-accusation` | Case II issue matrix; answer matrix | PULL | Export originals and hash. |
-| WPE-20260503-003 | Wilson Pruitt export | report transmission | TBD | Inspection-report transmission emails | TBD | Pending | Pending | `inspection-report`, `case-i-overlap` | River Heights inspection source status; inspection addenda | PULL | Export originals and hash. |
+| WPE-20260503-001 | Wilson Pruitt export | pre-closing | TBD | Closing lead-up emails | TBD | Pending | Pending | `closing-delay`, `psa-repair-scope`, `professional-negligence-gate` | Closing delay chronology; PSA repair scope; Wilson Pruitt proof matrix | PULL | Export originals and hash. |
+| WPE-20260503-002 | Wilson Pruitt export | post-closing | TBD | Post-closing conduct emails | TBD | Pending | Pending | `post-closing-conduct`, `opposing-accusation`, `adverse-alignment`, `civil-conspiracy-gate` | Case II issue matrix; answer matrix; Wilson Pruitt proof matrix | PULL | Export originals and hash. |
+| WPE-20260503-003 | Wilson Pruitt export | report transmission | TBD | Inspection-report transmission emails | TBD | Pending | Pending | `inspection-report`, `case-i-overlap`, `professional-negligence-gate` | River Heights inspection source status; inspection addenda; Wilson Pruitt proof matrix | PULL | Export originals and hash. |
 | WPE-20260503-004 | Dee McBee Case I emails | 2021 / Case I | TBD | Surrendered Case I report emails | TBD | Pending | Pending | `inspection-report`, `case-i-overlap` | Inspection source status; overlap chart | PULL | Locate source copies and link. |
-| WPE-20260503-005 | Terry Wilson production / authentication | 2021-2025 | TBD | Amendment #2 / repair-reference email lane | TBD | Pending | Pending | `psa-repair-scope`, `inspection-report`, `case-i-overlap` | Terry Wilson repair pin; PSA matrix | PULL | Link existing source pins to parent emails if available. |
-| WPE-20260503-006 | Wilson Pruitt export | easement/title | TBD | Easement/title/crossing emails | TBD | Pending | Pending | `easement-title`, `post-closing-conduct` | Easement source map; DOT/GNRR lanes | PULL | Export originals and hash. |
+| WPE-20260503-005 | Terry Wilson production / authentication | 2021-2025 | TBD | Amendment #2 / repair-reference email lane | TBD | Pending | Pending | `psa-repair-scope`, `inspection-report`, `case-i-overlap`, `professional-negligence-gate` | Terry Wilson repair pin; PSA matrix; Wilson Pruitt proof matrix | PULL | Link existing source pins to parent emails if available. |
+| WPE-20260503-006 | Wilson Pruitt export | easement/title | TBD | Easement/title/crossing emails | TBD | Pending | Pending | `easement-title`, `post-closing-conduct`, `procedural-joinder-gate`, `privilege-waiver-gate` | Easement source map; DOT/GNRR lanes; Wilson Pruitt proof matrix | PULL | Export originals and hash. |
 
 ## Attachment Manifest Placeholder
 
@@ -47,6 +47,7 @@ Purpose: track Wilson Pruitt email intake from raw export through custody, privi
 | WPE-20260503-004 | Case I overlap / 2021 report provenance | Case I-to-Case II overlap chart | Pending | Source path, hash, production context. |
 | WPE-20260503-005 | Amendment #2 repair-reference linkage | Terry Wilson repair pin / PSA matrix | Pending | Parent email link or production-authentication citation. |
 | WPE-20260503-006 | Easement/title/crossing conduct and knowledge | Easement source map / DOT-GNRR source index | Pending | Privilege screen and source corroboration. |
+| WPE-20260503-001 through WPE-20260503-006 | Wilson Pruitt professional-liability / adverse-alignment gates | Wilson Pruitt adverse-alignment proof matrix | Pending | Original hashes, privilege screen, duty/scope classification, procedural-route review, causation/damages proof. |
 
 ## Open Questions For Operator
 

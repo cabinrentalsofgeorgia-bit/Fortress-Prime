@@ -61,6 +61,11 @@ Create or use this NAS layout:
 | `case-i-overlap` | Communications tying 2021 Case I evidence or productions to Case II allegations. | Case I-to-Case II overlap chart. |
 | `opposing-accusation` | Plaintiff-side accusations or threat framing. | Answer matrix and count-to-evidence map. |
 | `counsel-review` | High-sensitivity item requiring lawyer review before use. | Counterclaim or privilege-risk lane. |
+| `professional-negligence-gate` | Specific attorney/closing professional act or omission needing duty, standard-of-care, causation, damages, and expert/affidavit review. | Wilson Pruitt claim evaluation workbench. |
+| `adverse-alignment` | Conduct that may show interests or actions adverse to Gary, without treating it as proven wrongdoing. | Wilson Pruitt adverse-alignment proof matrix. |
+| `civil-conspiracy-gate` | Evidence possibly relevant to underlying tort, common design, overt acts, or damages. | Civil conspiracy gate. |
+| `procedural-joinder-gate` | Evidence/research relevant to whether a nonparty professional can be joined in Case II. | Rule 13(h)/14/20 route review. |
+| `privilege-waiver-gate` | Source may affect privilege or work-product exposure if a professional-liability claim is asserted. | Privilege/counsel review. |
 
 ## Privilege / Sensitivity Screen
 

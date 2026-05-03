@@ -27,7 +27,7 @@ While not served, build the evidence machine: run Wilson Pruitt email intake con
 | First response | Not yet due absent service | Formal service or waiver event | Finalize answer/Rule 12/counterclaim posture |
 | Conflict checks | Five public-source targets selected | Operator confirms service status and send order | Send Phase 0 conflict-check language only |
 | Counsel package | Ready but not sent | Conflict clears and Phase 1 fit score passes | Release only operator-approved Phase 2 package materials |
-| Wilson Pruitt email intake | Protocol/register ready | Operator exports or identifies email sets | Freeze originals, hash, attachment-link, privilege-screen, and issue-tag before promotion |
+| Wilson Pruitt email intake | Protocol/register and claim-evaluation gates ready | Operator exports or identifies email sets | Freeze originals, hash, attachment-link, privilege-screen, issue-tag, then route through proof matrix before promotion |
 | Answer matrix | Initial matrix generated | Complaint/exhibits reviewed | Convert workbench into filing-ready response language |
 | Qdrant alias health | Known cleanup item | Runtime cutover planned | Populate/verify v2 before alias reliance |
 
@@ -43,6 +43,8 @@ While not served, build the evidence machine: run Wilson Pruitt email intake con
 | Pro se playbook | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/ProSe_First_Response_Playbook_7IL_NDGA_II_20260502.md` | Response readiness |
 | Wilson Pruitt email intake protocol | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/evidence-traceability/wilson-pruitt-email-intake-protocol-7il-ndga-ii-2026-05-03.md` | Email custody, privilege screen, attachment, and issue-tag control |
 | Wilson Pruitt email evidence register | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/evidence-traceability/wilson-pruitt-email-evidence-register-7il-ndga-ii-2026-05-03.md` | Repo-safe metadata register and promotion queue |
+| Wilson Pruitt claim evaluation workbench | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/filing-readiness/wilson-pruitt-claim-evaluation-workbench-7il-ndga-ii-2026-05-03.md` | Counsel-review gates for professional-negligence, coordinated-conduct, procedural route, causation, damages, and privilege risk |
+| Wilson Pruitt adverse-alignment proof matrix | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/evidence-traceability/wilson-pruitt-adverse-alignment-proof-matrix-7il-ndga-ii-2026-05-03.md` | Source-to-gate matrix for Wilson Pruitt / Terry Wilson evidence intake and pleading discipline |
 | Answer matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/First_Response_Answer_Matrix_7IL_NDGA_II_20260502.md` | Paragraph-by-paragraph workbench |
 | First-response readiness gate | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/filing-readiness/first-response-readiness-gate-7il-ndga-ii-2026-05-02.md` | Release gate before answer, Rule 12, extension, or counterclaim filing path |
 | Issue matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Issue_Matrix_7IL_NDGA_II_20260502.md` | Claims/defenses/counterclaims control |
@@ -53,7 +55,7 @@ While not served, build the evidence machine: run Wilson Pruitt email intake con
 |---|---|---|
 | Mention pro se fallback to counsel? | Keep internal unless counsel asks about urgency or budget. | Open |
 | Phase 1 budget ceiling | Set a hard cap and deliverables before any Phase 2 package release. | Open |
-| Wilson theory framing | Present as evaluation issue, not as a locked claim, until counsel reviews. | Open |
+| Wilson Pruitt theory framing | Treat as discovery-target/counsel-memo until duty, procedural route, source proof, expert/affidavit, causation, damages, and privilege gates pass. | Open |
 | Top counsel targets | Five-target public-source shortlist is ready; confirm service status before first send. | Ready for operator send decision |
 | First filing path | Preserve answer, Rule 12, and counterclaim options until service and counsel review. | Open |
 
