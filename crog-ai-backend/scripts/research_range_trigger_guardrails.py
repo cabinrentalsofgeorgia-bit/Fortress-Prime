@@ -28,8 +28,18 @@ from app.signals.guardrail_sweep import (  # noqa: E402
 )
 from scripts.sweep_daily_signal_parameters import _database_url  # noqa: E402
 
-DEFAULT_BREAK_PCTS = (Decimal("0"), Decimal("0.001"), Decimal("0.0025"), Decimal("0.005"), Decimal("0.01"))
-DEFAULT_DEBOUNCE_SESSIONS = (0, 1, 2, 3)
+DEFAULT_BREAK_PCTS = (Decimal("0"), Decimal("0.001"))
+DEFAULT_DEBOUNCE_SESSIONS = (0, 1)
+DEFAULT_ATR_PERIODS = (14,)
+DEFAULT_ATR_MULTIPLIERS = (
+    Decimal("0"),
+    Decimal("0.025"),
+    Decimal("0.05"),
+    Decimal("0.075"),
+    Decimal("0.10"),
+    Decimal("0.15"),
+)
+DEFAULT_ADAPTIVE_COOLDOWN_PROFILES = ("off", "20:3:3", "30:4:4")
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,11 +51,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ticker", default=None)
     parser.add_argument("--lookback", action="append", type=int, default=None)
     parser.add_argument("--min-break-pct", action="append", type=Decimal, default=None)
+    parser.add_argument("--atr-period", action="append", type=int, default=None)
+    parser.add_argument("--atr-multiplier", action="append", type=Decimal, default=None)
     parser.add_argument("--debounce-sessions", action="append", type=int, default=None)
+    parser.add_argument(
+        "--adaptive-cooldown-profile",
+        action="append",
+        default=None,
+        help="off or lookback:min_events:cooldown_sessions; can be passed more than once.",
+    )
     parser.add_argument(
         "--directional-close-mode",
         choices=["both", "none", "required"],
-        default="both",
+        default="none",
         help="Whether intraday breaks must close in the breakout direction.",
     )
     parser.add_argument("--event-window-days", type=int, default=3)
@@ -65,6 +83,23 @@ def _break_pct(value: str | Decimal) -> str:
     return f"{Decimal(str(value)) * Decimal('100'):.2f}%"
 
 
+def _atr_label(period_sessions: int, multiplier: str | Decimal) -> str:
+    multiplier_decimal = Decimal(str(multiplier))
+    if period_sessions == 0 or multiplier_decimal == 0:
+        return "-"
+    return f"{period_sessions} x {multiplier_decimal:.3f}"
+
+
+def _adaptive_label(result: dict[str, Any]) -> str:
+    if result["adaptive_cooldown_sessions"] == 0:
+        return "-"
+    return (
+        f"{result['adaptive_cooldown_lookback_sessions']}d/"
+        f"{result['adaptive_cooldown_min_events']} -> "
+        f"{result['adaptive_cooldown_sessions']}"
+    )
+
+
 def _table_row(values: list[object]) -> str:
     return "| " + " | ".join(str(value) for value in values) + " |"
 
@@ -77,22 +112,62 @@ def _directional_options(mode: str) -> list[bool]:
     return [False, True]
 
 
+def _atr_configs(args: argparse.Namespace) -> list[tuple[int, Decimal]]:
+    periods = args.atr_period or list(DEFAULT_ATR_PERIODS)
+    multipliers = args.atr_multiplier or list(DEFAULT_ATR_MULTIPLIERS)
+    configs = {(0, Decimal("0"))}
+    for period in periods:
+        if period < 1:
+            continue
+        for multiplier in multipliers:
+            if multiplier > 0:
+                configs.add((period, multiplier))
+    return sorted(configs, key=lambda item: (item[0], item[1]))
+
+
+def _parse_adaptive_cooldown_profiles(
+    profiles: list[str] | None,
+) -> list[tuple[int, int, int]]:
+    parsed: list[tuple[int, int, int]] = []
+    for profile in profiles or list(DEFAULT_ADAPTIVE_COOLDOWN_PROFILES):
+        if profile == "off":
+            parsed.append((0, 0, 0))
+            continue
+        try:
+            lookback, min_events, sessions = (int(part) for part in profile.split(":"))
+        except ValueError as exc:
+            raise SystemExit(
+                "adaptive-cooldown-profile must be off or lookback:min_events:sessions"
+            ) from exc
+        parsed.append((lookback, min_events, sessions))
+    return parsed
+
+
 def _candidate_grid(args: argparse.Namespace) -> list[GuardedRangeCandidate]:
     lookbacks = args.lookback or [3]
     min_break_pcts = args.min_break_pct or list(DEFAULT_BREAK_PCTS)
     debounce_sessions = args.debounce_sessions or list(DEFAULT_DEBOUNCE_SESSIONS)
     directional_options = _directional_options(args.directional_close_mode)
+    atr_configs = _atr_configs(args)
+    adaptive_profiles = _parse_adaptive_cooldown_profiles(args.adaptive_cooldown_profile)
     return [
         GuardedRangeCandidate(
             lookback_sessions=lookback,
             min_break_pct=min_break_pct,
+            atr_period_sessions=atr_period,
+            atr_multiplier=atr_multiplier,
             debounce_sessions=debounce,
             require_directional_close=require_directional_close,
+            adaptive_cooldown_lookback_sessions=adaptive_lookback,
+            adaptive_cooldown_min_events=adaptive_min_events,
+            adaptive_cooldown_sessions=adaptive_sessions,
         )
         for lookback in lookbacks
         for min_break_pct in min_break_pcts
+        for atr_period, atr_multiplier in atr_configs
         for debounce in debounce_sessions
         for require_directional_close in directional_options
+        for adaptive_lookback, adaptive_min_events, adaptive_sessions in adaptive_profiles
     ]
 
 
@@ -107,9 +182,22 @@ def _validate_args(args: argparse.Namespace) -> None:
     for min_break_pct in args.min_break_pct or list(DEFAULT_BREAK_PCTS):
         if min_break_pct < 0 or min_break_pct >= 1:
             raise SystemExit("min-break-pct must be >= 0 and < 1")
+    for atr_period in args.atr_period or list(DEFAULT_ATR_PERIODS):
+        if atr_period < 1:
+            raise SystemExit("atr-period must be at least 1")
+    for atr_multiplier in args.atr_multiplier or list(DEFAULT_ATR_MULTIPLIERS):
+        if atr_multiplier < 0:
+            raise SystemExit("atr-multiplier must be non-negative")
     for debounce in args.debounce_sessions or list(DEFAULT_DEBOUNCE_SESSIONS):
         if debounce < 0:
             raise SystemExit("debounce-sessions must be non-negative")
+    for lookback, min_events, sessions in _parse_adaptive_cooldown_profiles(
+        args.adaptive_cooldown_profile
+    ):
+        if (lookback, min_events, sessions) == (0, 0, 0):
+            continue
+        if lookback < 1 or min_events < 1 or sessions < 1:
+            raise SystemExit("adaptive cooldown values must be positive")
 
 
 def _pick_recommendation(
@@ -125,8 +213,14 @@ def _pick_recommendation(
         if not (
             result.lookback_sessions == raw_range.lookback_sessions
             and result.min_break_pct == raw_range.min_break_pct
+            and result.atr_period_sessions == raw_range.atr_period_sessions
+            and result.atr_multiplier == raw_range.atr_multiplier
             and result.debounce_sessions == raw_range.debounce_sessions
             and result.require_directional_close == raw_range.require_directional_close
+            and result.adaptive_cooldown_sessions == raw_range.adaptive_cooldown_sessions
+            and result.adaptive_cooldown_lookback_sessions
+            == raw_range.adaptive_cooldown_lookback_sessions
+            and result.adaptive_cooldown_min_events == raw_range.adaptive_cooldown_min_events
         )
         and (result.exact_event_f1 or 0) >= minimum_f1
         and (result.generated_event_reduction or 0) >= 0.15
@@ -150,7 +244,9 @@ def _render_result_row(result: dict[str, Any], rank: int | str) -> str:
             rank,
             result["lookback_sessions"],
             _break_pct(result["min_break_pct"]),
+            _atr_label(result["atr_period_sessions"], result["atr_multiplier"]),
             result["debounce_sessions"],
+            _adaptive_label(result),
             "yes" if result["require_directional_close"] else "no",
             _pct(result["exact_event_f1"]),
             _pct(result["exact_event_precision"]),
@@ -163,12 +259,62 @@ def _render_result_row(result: dict[str, Any], rank: int | str) -> str:
     )
 
 
+def _append_results_table(
+    lines: list[str],
+    *,
+    rows: list[dict[str, Any]],
+    rank_prefix: str = "",
+) -> None:
+    lines.extend(
+        [
+            _table_row(
+                [
+                    "Rank",
+                    "Lookback",
+                    "Break buffer",
+                    "ATR buffer",
+                    "Debounce",
+                    "Adaptive cooldown",
+                    "Directional close",
+                    "F1",
+                    "Precision",
+                    "Recall",
+                    "±3d recall",
+                    "Carried",
+                    "Generated",
+                    "Event reduction",
+                ]
+            ),
+            _table_row(
+                [
+                    "---:",
+                    "---:",
+                    "---:",
+                    "---:",
+                    "---:",
+                    "---",
+                    "---",
+                    "---:",
+                    "---:",
+                    "---:",
+                    "---:",
+                    "---:",
+                    "---:",
+                    "---:",
+                ]
+            ),
+        ]
+    )
+    for rank, result in enumerate(rows, start=1):
+        lines.append(_render_result_row(result, f"{rank_prefix}{rank}"))
+
+
 def _render_markdown(payload: dict[str, Any]) -> str:
     close_baseline = payload["production_close_baseline"]
     raw_range = payload["raw_range_baseline"]
     recommendation = payload["recommendation"]
     lines = [
-        "# Dochia v0.3 Range Guardrail Research",
+        "# Dochia v0.3 ATR/Cooldown Guardrail Research",
         "",
         f"Generated: {payload['generated_at']}",
         f"Scope: ticker={payload['ticker'] or 'all'} since={payload['since'] or 'beginning'} until={payload['until'] or 'latest'}",
@@ -204,26 +350,17 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         "",
         "## Top Guardrail Candidates",
         "",
-        _table_row(
-            [
-                "Rank",
-                "Lookback",
-                "Break buffer",
-                "Debounce",
-                "Directional close",
-                "F1",
-                "Precision",
-                "Recall",
-                "±3d recall",
-                "Carried",
-                "Generated",
-                "Event reduction",
-            ]
-        ),
-        _table_row(["---:", "---:", "---:", "---:", "---", "---:", "---:", "---:", "---:", "---:", "---:", "---:"]),
     ]
-    for rank, result in enumerate(payload["top_results"], start=1):
-        lines.append(_render_result_row(result, rank))
+    _append_results_table(lines, rows=payload["top_results"])
+
+    lines.extend(["", "## Best Event-Reduction Candidates", ""])
+    _append_results_table(lines, rows=payload["best_reduction_results"], rank_prefix="R")
+
+    lines.extend(["", "## Best Adaptive Cooldown Candidates", ""])
+    if payload["best_adaptive_results"]:
+        _append_results_table(lines, rows=payload["best_adaptive_results"], rank_prefix="A")
+    else:
+        lines.append("_No adaptive cooldown candidates were present in this run._")
 
     lines.extend(["", "## Recommendation", ""])
     if recommendation is None:
@@ -231,7 +368,7 @@ def _render_markdown(payload: dict[str, Any]) -> str:
             [
                 "No v0.3 guardrail cleared the default quality bar of at least 85% of raw-range F1 while cutting generated events by at least 15%. Keep v0.2 in candidate-only mode and expand the research grid before promotion.",
                 "",
-                "Next move: test ATR-normalized buffers and ticker-specific cooldowns against the same promotion-review churn packet.",
+                "Next move: test return-conditioned outcomes and per-ticker whipsaw clusters before persisting another parameter set.",
             ]
         )
     else:
@@ -243,7 +380,9 @@ def _render_markdown(payload: dict[str, Any]) -> str:
                     [
                         "Lookback",
                         "Break buffer",
+                        "ATR buffer",
                         "Debounce",
+                        "Adaptive cooldown",
                         "Directional close",
                         "F1",
                         "Precision",
@@ -252,12 +391,19 @@ def _render_markdown(payload: dict[str, Any]) -> str:
                         "Event reduction",
                     ]
                 ),
-                _table_row(["---:", "---:", "---:", "---", "---:", "---:", "---:", "---:", "---:"]),
+                _table_row(
+                    ["---:", "---:", "---:", "---:", "---:", "---", "---:", "---:", "---:", "---:", "---:"]
+                ),
                 _table_row(
                     [
                         recommendation["lookback_sessions"],
                         _break_pct(recommendation["min_break_pct"]),
+                        _atr_label(
+                            recommendation["atr_period_sessions"],
+                            recommendation["atr_multiplier"],
+                        ),
                         recommendation["debounce_sessions"],
+                        _adaptive_label(recommendation),
                         "yes" if recommendation["require_directional_close"] else "no",
                         _pct(recommendation["exact_event_f1"]),
                         _pct(recommendation["exact_event_precision"]),
@@ -296,8 +442,11 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         for result in results
         if result.lookback_sessions == 3
         and result.min_break_pct == Decimal("0")
+        and result.atr_period_sessions == 0
+        and result.atr_multiplier == Decimal("0")
         and result.debounce_sessions == 0
         and not result.require_directional_close
+        and result.adaptive_cooldown_sessions == 0
     )
     close_baseline = evaluate_daily_sweep_candidate(
         observations,
@@ -307,6 +456,32 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
     recommendation = _pick_recommendation(results, raw_range=raw_range)
     top_results = [result.as_json_dict() for result in results[: args.top]]
+    best_reduction_results = [
+        result.as_json_dict()
+        for result in sorted(
+            results,
+            key=lambda item: (
+                item.generated_event_reduction or 0,
+                item.exact_event_f1 or 0,
+            ),
+            reverse=True,
+        )[: args.top]
+    ]
+    best_adaptive_results = [
+        result.as_json_dict()
+        for result in sorted(
+            (
+                result
+                for result in results
+                if result.adaptive_cooldown_sessions > 0
+            ),
+            key=lambda item: (
+                item.exact_event_f1 or 0,
+                item.generated_event_reduction or 0,
+            ),
+            reverse=True,
+        )[: args.top]
+    ]
     raw_range_payload = raw_range.as_json_dict()
     close_payload = close_baseline.as_json_dict()
     return {
@@ -320,6 +495,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "production_close_baseline": close_payload,
         "raw_range_baseline": raw_range_payload,
         "top_results": top_results,
+        "best_reduction_results": best_reduction_results,
+        "best_adaptive_results": best_adaptive_results,
         "recommendation": recommendation.as_json_dict() if recommendation else None,
     }
 

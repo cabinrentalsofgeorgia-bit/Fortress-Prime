@@ -16,16 +16,26 @@ from app.signals.trade_triangles import EodBar, TriangleState
 class GuardedRangeCandidate:
     lookback_sessions: int
     min_break_pct: Decimal = Decimal("0")
+    atr_period_sessions: int = 0
+    atr_multiplier: Decimal = Decimal("0")
     debounce_sessions: int = 0
     require_directional_close: bool = False
+    adaptive_cooldown_sessions: int = 0
+    adaptive_cooldown_lookback_sessions: int = 0
+    adaptive_cooldown_min_events: int = 0
 
 
 @dataclass(frozen=True, slots=True)
 class GuardrailSweepResult:
     lookback_sessions: int
     min_break_pct: Decimal
+    atr_period_sessions: int
+    atr_multiplier: Decimal
     debounce_sessions: int
     require_directional_close: bool
+    adaptive_cooldown_sessions: int
+    adaptive_cooldown_lookback_sessions: int
+    adaptive_cooldown_min_events: int
     total_observations: int
     covered_observations: int
     generated_events: int
@@ -45,6 +55,7 @@ class GuardrailSweepResult:
     def as_json_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["min_break_pct"] = str(self.min_break_pct)
+        payload["atr_multiplier"] = str(self.atr_multiplier)
         return payload
 
 
@@ -74,8 +85,80 @@ def _validate_candidate(candidate: GuardedRangeCandidate) -> None:
         raise ValueError("min_break_pct must be non-negative")
     if candidate.min_break_pct >= 1:
         raise ValueError("min_break_pct must be less than 1")
+    if candidate.atr_period_sessions < 0:
+        raise ValueError("atr_period_sessions must be non-negative")
+    if candidate.atr_multiplier < 0:
+        raise ValueError("atr_multiplier must be non-negative")
+    if candidate.atr_multiplier > 0 and candidate.atr_period_sessions < 1:
+        raise ValueError("atr_period_sessions must be at least 1 when atr_multiplier is set")
     if candidate.debounce_sessions < 0:
         raise ValueError("debounce_sessions must be non-negative")
+    if candidate.adaptive_cooldown_sessions < 0:
+        raise ValueError("adaptive_cooldown_sessions must be non-negative")
+    if candidate.adaptive_cooldown_lookback_sessions < 0:
+        raise ValueError("adaptive_cooldown_lookback_sessions must be non-negative")
+    if candidate.adaptive_cooldown_min_events < 0:
+        raise ValueError("adaptive_cooldown_min_events must be non-negative")
+    has_adaptive_value = any(
+        (
+            candidate.adaptive_cooldown_sessions,
+            candidate.adaptive_cooldown_lookback_sessions,
+            candidate.adaptive_cooldown_min_events,
+        )
+    )
+    if has_adaptive_value and (
+        candidate.adaptive_cooldown_sessions < 1
+        or candidate.adaptive_cooldown_lookback_sessions < 1
+        or candidate.adaptive_cooldown_min_events < 1
+    ):
+        raise ValueError("adaptive cooldown requires sessions, lookback, and min_events")
+
+
+def _true_range(bar: EodBar, previous_close: Decimal | None) -> Decimal:
+    if previous_close is None:
+        return bar.high - bar.low
+    return max(
+        bar.high - bar.low,
+        abs(bar.high - previous_close),
+        abs(bar.low - previous_close),
+    )
+
+
+def _average_true_range(
+    ordered: list[EodBar],
+    *,
+    current_index: int,
+    period_sessions: int,
+) -> Decimal | None:
+    if period_sessions < 1 or current_index < 1:
+        return None
+    start = max(0, current_index - period_sessions)
+    ranges: list[Decimal] = []
+    for index in range(start, current_index):
+        previous_close = ordered[index - 1].close if index > 0 else None
+        ranges.append(_true_range(ordered[index], previous_close))
+    if not ranges:
+        return None
+    return sum(ranges) / Decimal(len(ranges))
+
+
+def _active_debounce_sessions(
+    candidate: GuardedRangeCandidate,
+    *,
+    event_indices: list[int],
+    current_index: int,
+) -> int:
+    active = candidate.debounce_sessions
+    if candidate.adaptive_cooldown_sessions == 0:
+        return active
+
+    recent_events = sum(
+        current_index - event_index <= candidate.adaptive_cooldown_lookback_sessions
+        for event_index in event_indices
+    )
+    if recent_events >= candidate.adaptive_cooldown_min_events:
+        active = max(active, candidate.adaptive_cooldown_sessions)
+    return active
 
 
 def _guarded_range_break_state(
@@ -83,10 +166,20 @@ def _guarded_range_break_state(
     *,
     channel_high: Decimal,
     channel_low: Decimal,
+    average_true_range: Decimal | None,
     candidate: GuardedRangeCandidate,
 ) -> int:
     high_threshold = channel_high * (Decimal("1") + candidate.min_break_pct)
     low_threshold = channel_low * (Decimal("1") - candidate.min_break_pct)
+    if average_true_range is not None and candidate.atr_multiplier > 0:
+        high_threshold = max(
+            high_threshold,
+            channel_high + average_true_range * candidate.atr_multiplier,
+        )
+        low_threshold = min(
+            low_threshold,
+            channel_low - average_true_range * candidate.atr_multiplier,
+        )
     broke_high = bar.high > high_threshold
     broke_low = bar.low < low_threshold
 
@@ -123,6 +216,7 @@ def generated_guarded_range_event_history(
 
     current_state = TriangleState.NEUTRAL.numeric
     last_event_index: int | None = None
+    event_indices: list[int] = []
     state_by_date: dict[dt.date, int] = {}
     event_by_date: dict[dt.date, int] = {}
     event_dates_by_state: dict[int, list[dt.date]] = defaultdict(list)
@@ -137,16 +231,27 @@ def generated_guarded_range_event_history(
                 bar,
                 channel_high=channel_high,
                 channel_low=channel_low,
+                average_true_range=_average_true_range(
+                    ordered,
+                    current_index=index,
+                    period_sessions=candidate.atr_period_sessions,
+                ),
                 candidate=candidate,
             )
             if next_state != TriangleState.NEUTRAL.numeric and next_state != current_state:
+                active_debounce = _active_debounce_sessions(
+                    candidate,
+                    event_indices=event_indices,
+                    current_index=index,
+                )
                 within_debounce = (
                     last_event_index is not None
-                    and index - last_event_index <= candidate.debounce_sessions
+                    and index - last_event_index <= active_debounce
                 )
                 if not within_debounce:
                     current_state = next_state
                     last_event_index = index
+                    event_indices.append(index)
                     event_by_date[bar.bar_date] = next_state
                     event_dates_by_state[next_state].append(bar.bar_date)
 
@@ -241,8 +346,13 @@ def evaluate_guarded_range_candidate(
     return GuardrailSweepResult(
         lookback_sessions=candidate.lookback_sessions,
         min_break_pct=candidate.min_break_pct,
+        atr_period_sessions=candidate.atr_period_sessions,
+        atr_multiplier=candidate.atr_multiplier,
         debounce_sessions=candidate.debounce_sessions,
         require_directional_close=candidate.require_directional_close,
+        adaptive_cooldown_sessions=candidate.adaptive_cooldown_sessions,
+        adaptive_cooldown_lookback_sessions=candidate.adaptive_cooldown_lookback_sessions,
+        adaptive_cooldown_min_events=candidate.adaptive_cooldown_min_events,
         total_observations=len(observations),
         covered_observations=covered,
         generated_events=generated_events,

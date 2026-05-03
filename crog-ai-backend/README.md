@@ -106,7 +106,7 @@ uv run python scripts/sweep_daily_signal_parameters.py --lookback-min 2 --lookba
 uv run python scripts/validate_daily_signal_candidate.py --top-tickers 15 --min-slice-observations 50
 uv run python scripts/compare_signal_candidate_lanes.py --limit-tickers 500 --top 12
 uv run python scripts/review_signal_candidate_promotion.py --lane-limit 50 --chart-ticker-limit 24
-uv run python scripts/research_range_trigger_guardrails.py --output docs/reports/dochia-v0-3-guardrail-research-2026-05-03.md
+uv run python scripts/research_range_trigger_guardrails.py --output docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md
 ```
 
 Best 2026-05-02 research candidate: 3-session intraday range trigger. It
@@ -144,6 +144,13 @@ simple guardrail cleared the default quality bar of at least 85% of raw-range
 F1 while cutting generated events by at least 15%. Next research moves to
 ATR-normalized buffers and ticker-specific cooldowns before creating another
 non-production parameter set.
+
+Second report:
+`docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md`. Decision: do
+not parameterize this grid either. A light 14-session ATR buffer at 0.025 keeps
+F1 close to raw range at 74.40% but cuts only 2.23% of events. The best
+adaptive cooldown row cuts 21.48% of events but drops F1 to 56.22%. Next
+research moves to return-conditioned outcomes and per-ticker whipsaw clusters.
 
 ## Relationship to Fortress-Prime
 

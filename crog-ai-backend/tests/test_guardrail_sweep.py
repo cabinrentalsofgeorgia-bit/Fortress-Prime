@@ -118,7 +118,7 @@ def test_guardrail_sweep_reports_event_reduction_and_ranks_quality() -> None:
             trading_day=dt.date(2026, 1, 4),
             triangle_color="red",
             score=-15,
-        )
+        ),
     ]
 
     results = sweep_guarded_range_candidates(
@@ -136,3 +136,61 @@ def test_guardrail_sweep_reports_event_reduction_and_ranks_quality() -> None:
     assert results[0].generated_events == 1
     assert results[0].raw_range_generated_events == 2
     assert results[0].generated_event_reduction == 0.5
+
+
+def test_atr_buffer_suppresses_break_that_is_small_for_recent_range() -> None:
+    bars = [
+        _bar(0, open_="10", high="10", low="9", close="10"),
+        _bar(1, open_="10", high="11", low="9", close="10"),
+        _bar(2, open_="10", high="11.50", low="9.50", close="11.25"),
+    ]
+
+    raw_history = generated_guarded_range_event_history(
+        bars,
+        candidate=GuardedRangeCandidate(lookback_sessions=2),
+    )
+    atr_history = generated_guarded_range_event_history(
+        bars,
+        candidate=GuardedRangeCandidate(
+            lookback_sessions=2,
+            atr_period_sessions=2,
+            atr_multiplier=Decimal("0.50"),
+        ),
+    )
+
+    event_date = dt.date(2026, 1, 3)
+    assert raw_history is not None
+    assert atr_history is not None
+    assert raw_history.event_on(event_date) == 1
+    assert atr_history.event_on(event_date) is None
+
+
+def test_adaptive_cooldown_only_tightens_after_recent_symbol_churn() -> None:
+    bars = [
+        _bar(0, open_="10", high="10", low="9", close="10"),
+        _bar(1, open_="10", high="11", low="10", close="11"),
+        _bar(2, open_="11", high="12", low="10", close="12"),
+        _bar(3, open_="10", high="10", low="8", close="8"),
+        _bar(4, open_="10", high="13", low="9", close="12"),
+    ]
+
+    raw_history = generated_guarded_range_event_history(
+        bars,
+        candidate=GuardedRangeCandidate(lookback_sessions=2),
+    )
+    adaptive_history = generated_guarded_range_event_history(
+        bars,
+        candidate=GuardedRangeCandidate(
+            lookback_sessions=2,
+            adaptive_cooldown_lookback_sessions=4,
+            adaptive_cooldown_min_events=2,
+            adaptive_cooldown_sessions=2,
+        ),
+    )
+
+    churn_date = dt.date(2026, 1, 5)
+    assert raw_history is not None
+    assert adaptive_history is not None
+    assert raw_history.event_on(churn_date) == 1
+    assert adaptive_history.event_on(churn_date) is None
+    assert adaptive_history.state_as_of(churn_date) == -1

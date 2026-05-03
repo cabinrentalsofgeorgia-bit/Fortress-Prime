@@ -198,6 +198,12 @@ Useful query params:
   the strongest F1 candidate at 76.64%. The best simple reductions cut events
   by 15-27%, but exact F1 falls to roughly 56-60%, below the default quality
   bar.
+- Added ATR-normalized buffers and trailing per-symbol adaptive cooldowns to
+  the same read-only research harness. Second report is tracked at
+  `docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md`. Decision:
+  do not persist this grid as a parameter set. A 14-session ATR buffer at
+  0.025 keeps F1 at 74.40% but cuts only 2.23% of events. The best adaptive
+  cooldown row cuts 21.48% of events but drops F1 to 56.22%.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -207,6 +213,5 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: expand v0.3 research to ATR-normalized buffers and
-ticker-specific cooldowns, then persist only a candidate that preserves enough
-raw-range F1 while materially reducing whipsaw pressure.
+Next clean build step: research return-conditioned outcomes and per-ticker
+whipsaw clusters before persisting any v0.3 parameter set.
