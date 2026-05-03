@@ -104,6 +104,15 @@ class SignalDataStore(Protocol):
         outcome_horizon_sessions: int = 5,
     ) -> dict[str, Any]: ...
 
+    def promotion_dry_run(
+        self,
+        *,
+        candidate_parameter_set: str,
+        decision_id: str | None = None,
+        limit: int = 100,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]: ...
+
     def symbol_chart(
         self,
         *,
@@ -967,6 +976,243 @@ def create_shadow_review_decision_record(
     }
 
 
+PROMOTION_DRY_RUN_TARGET_COLUMNS = [
+    "ticker",
+    "signal_type",
+    "action",
+    "confidence_score",
+    "price_target",
+    "source_sender",
+    "source_subject",
+    "raw_reasoning",
+    "model_used",
+    "extracted_at",
+]
+
+
+def _latest_promote_decision_record(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    decision_id: str | None = None,
+) -> dict[str, Any] | None:
+    params: dict[str, Any] = {"candidate_parameter_set": candidate_parameter_set}
+    conditions = [
+        "candidate_parameter_set = %(candidate_parameter_set)s",
+        "decision = 'promote_to_market_signals'",
+    ]
+    if decision_id:
+        conditions.append("id = %(decision_id)s")
+        params["decision_id"] = decision_id
+    where_clause = " AND ".join(conditions)
+    sql = f"""
+        {SHADOW_DECISION_RECORD_SELECT}
+        WHERE {where_clause}
+        ORDER BY created_at DESC
+        LIMIT 1
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, params)
+        row = cur.fetchone()
+    return dict(row) if row else None
+
+
+def _promotion_dry_run_approval(
+    decision: dict[str, Any] | None,
+    *,
+    decision_id: str | None,
+) -> dict[str, Any]:
+    if decision is None:
+        detail = "No promote decision record found for this candidate."
+        if decision_id:
+            detail = "No promote decision record matched the supplied decision id."
+        return {
+            "status": "missing_promote_decision",
+            "decision_id": None,
+            "reviewer": None,
+            "decision_created_at": None,
+            "rollback_criteria": None,
+            "detail": f"{detail} Dry-run remains preview-only.",
+        }
+
+    if (
+        decision["promotion_gate_status"] == "hold"
+        or decision["recommendation_status"] == "hold"
+    ):
+        return {
+            "status": "blocked_by_review",
+            "decision_id": decision["id"],
+            "reviewer": decision["reviewer"],
+            "decision_created_at": decision["created_at"],
+            "rollback_criteria": decision["rollback_criteria"],
+            "detail": "Promote record exists, but the captured review status is on hold.",
+        }
+
+    return {
+        "status": "ready_for_dry_run",
+        "decision_id": decision["id"],
+        "reviewer": decision["reviewer"],
+        "decision_created_at": decision["created_at"],
+        "rollback_criteria": decision["rollback_criteria"],
+        "detail": "Promote record found; dry-run can be reviewed before any guarded write path.",
+    }
+
+
+def _score_state_label(value: int) -> str:
+    if value > 0:
+        return "green"
+    if value < 0:
+        return "red"
+    return "neutral"
+
+
+def _market_signal_action(score: int) -> str:
+    if score >= 0:
+        return "BUY"
+    return "SELL"
+
+
+def _promotion_signal_type(score: int) -> str:
+    if score >= 50:
+        return "Dochia bullish alignment"
+    if score <= -50:
+        return "Dochia risk alignment"
+    return "Dochia watch"
+
+
+def _promotion_raw_reasoning(row: dict[str, Any]) -> str:
+    score = int(row["composite_score"])
+    states = {
+        "monthly": _score_state_label(int(row["monthly_state"])),
+        "weekly": _score_state_label(int(row["weekly_state"])),
+        "daily": _score_state_label(int(row["daily_state"])),
+        "momentum": _score_state_label(int(row["momentum_state"])),
+    }
+    state_text = ", ".join(f"{key}={value}" for key, value in states.items())
+    return (
+        f"Dochia dry-run signal for {row['ticker']}: composite score {score:+d}; "
+        f"{state_text}; candidate bar {row['bar_date']}."
+    )
+
+
+def _promotion_lineage(row: dict[str, Any], *, candidate_parameter_set: str) -> dict[str, Any]:
+    score = int(row["composite_score"])
+    states = {
+        "monthly": int(row["monthly_state"]),
+        "weekly": int(row["weekly_state"]),
+        "daily": int(row["daily_state"]),
+        "momentum": int(row["momentum_state"]),
+    }
+    return {
+        "source_pipeline": "dochia_signal_scores",
+        "parameter_set": candidate_parameter_set,
+        "model_version": str(row["dochia_version"]),
+        "computed_at": row["computed_at"],
+        "explanation_payload": {
+            "ticker": row["ticker"],
+            "bar_date": row["bar_date"],
+            "composite_score": score,
+            "states": states,
+            "daily_trigger_mode": daily_trigger_mode_for_parameter_set(
+                candidate_parameter_set
+            ).value,
+            "channels": {
+                "monthly_high": row["monthly_channel_high"],
+                "monthly_low": row["monthly_channel_low"],
+                "weekly_high": row["weekly_channel_high"],
+                "weekly_low": row["weekly_channel_low"],
+                "daily_high": row["daily_channel_high"],
+                "daily_low": row["daily_channel_low"],
+            },
+        },
+        "rollback_marker": (
+            f"dochia-dry-run:{candidate_parameter_set}:{row['ticker']}:{row['bar_date']}"
+        ),
+    }
+
+
+def _promotion_dry_run_row(
+    row: dict[str, Any],
+    *,
+    candidate_parameter_set: str,
+) -> dict[str, Any]:
+    score = int(row["composite_score"])
+    return {
+        "ticker": row["ticker"],
+        "action": _market_signal_action(score),
+        "signal_type": _promotion_signal_type(score),
+        "confidence_score": min(100, max(1, abs(score))),
+        "price_target": None,
+        "source_sender": "Dochia Signal Engine",
+        "source_subject": f"Dry-run promotion {candidate_parameter_set}",
+        "raw_reasoning": _promotion_raw_reasoning(row),
+        "model_used": str(row["dochia_version"]),
+        "extracted_at": row["computed_at"],
+        "candidate_bar_date": row["bar_date"],
+        "composite_score": score,
+        "lineage": _promotion_lineage(row, candidate_parameter_set=candidate_parameter_set),
+    }
+
+
+def fetch_promotion_dry_run(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    decision_id: str | None = None,
+    limit: int = 100,
+    min_abs_score: int = 50,
+) -> dict[str, Any]:
+    generated_at = dt.datetime.now(dt.UTC)
+    decision = _latest_promote_decision_record(
+        conn,
+        candidate_parameter_set=candidate_parameter_set,
+        decision_id=decision_id,
+    )
+    candidate_rows = fetch_latest_scores(
+        conn,
+        limit=500,
+        parameter_set=candidate_parameter_set,
+    )
+    eligible_rows: list[dict[str, Any]] = []
+    skipped_neutral_count = 0
+    for row in candidate_rows:
+        score = int(row["composite_score"])
+        if abs(score) < min_abs_score:
+            skipped_neutral_count += 1
+            continue
+        eligible_rows.append(row)
+    eligible_rows.sort(
+        key=lambda row: (-abs(int(row["composite_score"])), str(row["ticker"]))
+    )
+    proposed_rows = [
+        _promotion_dry_run_row(row, candidate_parameter_set=candidate_parameter_set)
+        for row in eligible_rows[:limit]
+    ]
+
+    latest_dates = [row["bar_date"] for row in candidate_rows if row.get("bar_date")]
+    bullish_count = sum(1 for row in proposed_rows if row["action"] == "BUY")
+    risk_count = sum(1 for row in proposed_rows if row["action"] == "SELL")
+    return {
+        "generated_at": generated_at,
+        "candidate_parameter_set": candidate_parameter_set,
+        "baseline_parameter_set": PRODUCTION_PARAMETER_SET,
+        "approval": _promotion_dry_run_approval(decision, decision_id=decision_id),
+        "summary": {
+            "target_table": "hedge_fund.market_signals",
+            "target_columns": PROMOTION_DRY_RUN_TARGET_COLUMNS,
+            "write_path_enabled": False,
+            "candidate_signal_count": len(candidate_rows),
+            "proposed_insert_count": len(proposed_rows),
+            "bullish_count": bullish_count,
+            "risk_count": risk_count,
+            "skipped_neutral_count": skipped_neutral_count,
+            "latest_bar_date": max(latest_dates) if latest_dates else None,
+            "min_abs_score": min_abs_score,
+        },
+        "proposed_rows": proposed_rows,
+    }
+
+
 WATCHLIST_CANDIDATE_BASE_SQL = """
     WITH latest_scores AS (
         SELECT
@@ -1262,6 +1508,24 @@ class PostgresSignalDataStore:
                 review_limit=review_limit,
                 whipsaw_window_sessions=whipsaw_window_sessions,
                 outcome_horizon_sessions=outcome_horizon_sessions,
+            )
+
+    def promotion_dry_run(
+        self,
+        *,
+        candidate_parameter_set: str,
+        decision_id: str | None = None,
+        limit: int = 100,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_dry_run(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                decision_id=decision_id,
+                limit=limit,
+                min_abs_score=min_abs_score,
             )
 
     def symbol_chart(

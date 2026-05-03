@@ -442,6 +442,95 @@ const shadowDecisionRecords = [
   },
 ];
 
+const promotionDryRun = {
+  generated_at: "2026-05-03T20:30:00Z",
+  candidate_parameter_set: "dochia_v0_2_range_daily",
+  baseline_parameter_set: "dochia_v0_estimated",
+  approval: {
+    status: "ready_for_dry_run",
+    decision_id: "33333333-3333-3333-3333-333333333333",
+    reviewer: "Gary Knight",
+    decision_created_at: "2026-05-03T19:00:00Z",
+    rollback_criteria: "Rollback if whipsaw pressure rises.",
+    detail: "Promote record found; dry-run can be reviewed before any guarded write path.",
+  },
+  summary: {
+    target_table: "hedge_fund.market_signals",
+    target_columns: [
+      "ticker",
+      "signal_type",
+      "action",
+      "confidence_score",
+      "price_target",
+      "source_sender",
+      "source_subject",
+      "raw_reasoning",
+      "model_used",
+      "extracted_at",
+    ],
+    write_path_enabled: false,
+    candidate_signal_count: 3,
+    proposed_insert_count: 2,
+    bullish_count: 1,
+    risk_count: 1,
+    skipped_neutral_count: 1,
+    latest_bar_date: "2026-04-24",
+    min_abs_score: 50,
+  },
+  proposed_rows: [
+    {
+      ticker: "AA",
+      action: "BUY",
+      signal_type: "Dochia bullish alignment",
+      confidence_score: 80,
+      price_target: null,
+      source_sender: "Dochia Signal Engine",
+      source_subject: "Dry-run promotion dochia_v0_2_range_daily",
+      raw_reasoning: "Dochia dry-run signal for AA: composite score +80.",
+      model_used: "v0.2-candidate",
+      extracted_at: "2026-05-02T12:00:00Z",
+      candidate_bar_date: "2026-04-24",
+      composite_score: 80,
+      lineage: {
+        source_pipeline: "dochia_signal_scores",
+        parameter_set: "dochia_v0_2_range_daily",
+        model_version: "v0.2-candidate",
+        computed_at: "2026-05-02T12:00:00Z",
+        explanation_payload: {
+          ticker: "AA",
+          composite_score: 80,
+        },
+        rollback_marker: "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+      },
+    },
+    {
+      ticker: "AGIO",
+      action: "SELL",
+      signal_type: "Dochia risk alignment",
+      confidence_score: 80,
+      price_target: null,
+      source_sender: "Dochia Signal Engine",
+      source_subject: "Dry-run promotion dochia_v0_2_range_daily",
+      raw_reasoning: "Dochia dry-run signal for AGIO: composite score -80.",
+      model_used: "v0.2-candidate",
+      extracted_at: "2026-05-02T12:00:00Z",
+      candidate_bar_date: "2026-04-24",
+      composite_score: -80,
+      lineage: {
+        source_pipeline: "dochia_signal_scores",
+        parameter_set: "dochia_v0_2_range_daily",
+        model_version: "v0.2-candidate",
+        computed_at: "2026-05-02T12:00:00Z",
+        explanation_payload: {
+          ticker: "AGIO",
+          composite_score: -80,
+        },
+        rollback_marker: "dochia-dry-run:dochia_v0_2_range_daily:AGIO:2026-04-24",
+      },
+    },
+  ],
+};
+
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
     data: latestSignals,
@@ -516,6 +605,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionDryRun: () => ({
+    data: promotionDryRun,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -529,11 +625,11 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByRole("heading", { name: "Hedge Fund Signals" })).toBeInTheDocument();
     expect(screen.getByText("Signal Scanner")).toBeInTheDocument();
     expect(screen.getAllByText("AA").length).toBeGreaterThan(0);
-    expect(screen.getByText("AGIO")).toBeInTheDocument();
+    expect(screen.getAllByText("AGIO").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Bullish break").length).toBeGreaterThan(0);
     expect(screen.getByText("Score Distribution")).toBeInTheDocument();
     expect(screen.getByText("Portfolio Lens")).toBeInTheDocument();
-    expect(screen.getByText("BUY")).toBeInTheDocument();
+    expect(screen.getAllByText("BUY").length).toBeGreaterThan(0);
     expect(screen.getByText("Calibration Baseline")).toBeInTheDocument();
     expect(screen.getByText("62.1%")).toBeInTheDocument();
     expect(screen.getAllByText("Promotion Gate").length).toBeGreaterThan(0);
@@ -546,6 +642,10 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Decision Record")).toBeInTheDocument();
     expect(screen.getByText("Decision Records")).toBeInTheDocument();
     expect(screen.getAllByText("Continue shadow").length).toBeGreaterThan(0);
+    expect(screen.getByText("Promotion Dry-Run")).toBeInTheDocument();
+    expect(screen.getByText("market_signals Preview")).toBeInTheDocument();
+    expect(screen.getByText("Ready for dry-run")).toBeInTheDocument();
+    expect(screen.getByText("hedge_fund.market_signals")).toBeInTheDocument();
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
     expect(screen.getByText("Whipsaw Risk / Backtest")).toBeInTheDocument();

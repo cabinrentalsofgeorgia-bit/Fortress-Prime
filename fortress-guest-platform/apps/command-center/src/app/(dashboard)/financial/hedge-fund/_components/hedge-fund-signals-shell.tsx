@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   BriefcaseBusiness,
   ClipboardCheck,
+  FileSearch,
   Gauge,
   Info,
   RefreshCw,
@@ -42,6 +43,7 @@ import {
   useFinancialLatestSignals,
   useFinancialDailyCalibration,
   useFinancialPromotionGate,
+  useFinancialPromotionDryRun,
   useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
   useFinancialSignalDetail,
@@ -53,6 +55,9 @@ import {
 import type {
   FinancialDailyCalibrationResponse,
   FinancialLatestSignal,
+  FinancialPromotionDryRunApprovalStatus,
+  FinancialPromotionDryRunMarketSignalRow,
+  FinancialPromotionDryRunResponse,
   FinancialPromotionGateGuardrailStatus,
   FinancialPromotionGateRecommendationStatus,
   FinancialPromotionGateResponse,
@@ -228,6 +233,20 @@ function shadowDecisionLabel(decision: FinancialShadowReviewDecision): string {
   if (decision === "promote_to_market_signals") return "Promote to dry-run";
   if (decision === "continue_shadow") return "Continue shadow";
   return "Defer";
+}
+
+function promotionDryRunApprovalClasses(status: FinancialPromotionDryRunApprovalStatus): string {
+  if (status === "ready_for_dry_run") {
+    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  }
+  if (status === "blocked_by_review") return "border-red-500/40 bg-red-500/10 text-red-600";
+  return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+}
+
+function promotionDryRunApprovalLabel(status: FinancialPromotionDryRunApprovalStatus): string {
+  if (status === "ready_for_dry_run") return "Ready for dry-run";
+  if (status === "blocked_by_review") return "Blocked by review";
+  return "Promote decision missing";
 }
 
 function formatSignedNumber(value: number | null | undefined, digits = 0): string {
@@ -1408,6 +1427,150 @@ function ShadowReviewPanel({
   );
 }
 
+function PromotionDryRunRow({ row }: { row: FinancialPromotionDryRunMarketSignalRow }) {
+  return (
+    <div className="grid gap-2 border-b border-border px-3 py-3 text-xs last:border-b-0 lg:grid-cols-[70px_76px_64px_88px_98px_minmax(0,1fr)]">
+      <span className="font-mono font-semibold">{row.ticker}</span>
+      <span>
+        <Badge variant="outline" className={cn("font-medium", legacyActionClasses(row.action))}>
+          {row.action}
+        </Badge>
+      </span>
+      <span className={cn("font-mono font-semibold", scoreClasses(row.composite_score))}>
+        {row.composite_score > 0 ? "+" : ""}
+        {row.composite_score}
+      </span>
+      <span className="font-mono text-muted-foreground">{row.confidence_score}</span>
+      <span className="text-muted-foreground">{formatDate(row.candidate_bar_date)}</span>
+      <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+        {row.lineage.rollback_marker}
+      </span>
+    </div>
+  );
+}
+
+function PromotionDryRunPanel({
+  dryRun,
+  loading,
+  error,
+}: {
+  dryRun: FinancialPromotionDryRunResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Promotion dry-run unavailable.
+      </div>
+    );
+  }
+
+  if (loading && !dryRun) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading promotion dry-run…</div>;
+  }
+
+  if (!dryRun) {
+    return (
+      <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+        No promotion dry-run data.
+      </div>
+    );
+  }
+
+  const summary = dryRun.summary;
+  const previewRows = dryRun.proposed_rows.slice(0, 8);
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">market_signals Preview</p>
+          <p className="text-xs text-muted-foreground">
+            {dryRun.baseline_parameter_set} → {dryRun.candidate_parameter_set}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Badge
+            variant="outline"
+            className={cn("font-medium", promotionDryRunApprovalClasses(dryRun.approval.status))}
+          >
+            {promotionDryRunApprovalLabel(dryRun.approval.status)}
+          </Badge>
+          <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-600">
+            Writes locked
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Proposed Rows</p>
+          <p className="mt-1 font-mono text-2xl font-bold">{summary.proposed_insert_count}</p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Bullish</p>
+          <p className="mt-1 font-mono text-2xl font-bold text-emerald-500">
+            {summary.bullish_count}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Risk</p>
+          <p className="mt-1 font-mono text-2xl font-bold text-red-500">{summary.risk_count}</p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Neutral Skipped</p>
+          <p className="mt-1 font-mono text-2xl font-bold">{summary.skipped_neutral_count}</p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Target</p>
+          <p className="mt-1 truncate font-mono text-sm font-semibold">{summary.target_table}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="overflow-hidden border border-border">
+          <div className="hidden border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground lg:grid lg:grid-cols-[70px_76px_64px_88px_98px_minmax(0,1fr)]">
+            <span>Ticker</span>
+            <span>Action</span>
+            <span>Score</span>
+            <span>Confidence</span>
+            <span>Bar</span>
+            <span>Rollback Marker</span>
+          </div>
+          {previewRows.length ? (
+            previewRows.map((row) => <PromotionDryRunRow key={row.lineage.rollback_marker} row={row} />)
+          ) : (
+            <div className="p-4 text-sm text-muted-foreground">No proposed rows clear the threshold.</div>
+          )}
+        </div>
+
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Approval</h2>
+            <span className="text-xs text-muted-foreground">{formatDate(dryRun.generated_at)}</span>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">{dryRun.approval.detail}</p>
+          <div className="mt-3 space-y-2 text-xs">
+            <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
+              <span className="text-muted-foreground">Reviewer</span>
+              <span className="truncate font-medium">{dryRun.approval.reviewer ?? "—"}</span>
+            </div>
+            <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
+              <span className="text-muted-foreground">Decision</span>
+              <span className="truncate font-mono">{dryRun.approval.decision_id ?? "—"}</span>
+            </div>
+            <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
+              <span className="text-muted-foreground">Columns</span>
+              <span className="truncate font-mono">{summary.target_columns.length}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SymbolPanel({
   signal,
   transitions,
@@ -1571,6 +1734,11 @@ export function HedgeFundSignalsShell() {
     candidate_parameter_set: "dochia_v0_2_range_daily",
     limit: 5,
   });
+  const promotionDryRun = useFinancialPromotionDryRun({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    limit: 25,
+    min_abs_score: 50,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
@@ -1616,7 +1784,8 @@ export function HedgeFundSignalsShell() {
     dailyCalibration.isFetching ||
     promotionGate.isFetching ||
     shadowReview.isFetching ||
-    shadowDecisionRecords.isFetching;
+    shadowDecisionRecords.isFetching ||
+    promotionDryRun.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
@@ -1673,6 +1842,7 @@ export function HedgeFundSignalsShell() {
               void promotionGate.refetch();
               void shadowReview.refetch();
               void shadowDecisionRecords.refetch();
+              void promotionDryRun.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -1789,6 +1959,25 @@ export function HedgeFundSignalsShell() {
             decisionRecordsLoading={shadowDecisionRecords.isLoading}
             onSubmitDecision={handleShadowDecisionSubmit}
             submittingDecision={createShadowDecisionRecord.isPending}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileSearch className="h-5 w-5 text-primary" />
+            <CardTitle>Promotion Dry-Run</CardTitle>
+          </div>
+          <Badge variant="outline">
+            {promotionDryRun.data ? formatDate(promotionDryRun.data.generated_at) : "—"}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <PromotionDryRunPanel
+            dryRun={promotionDryRun.data ?? null}
+            loading={promotionDryRun.isLoading}
+            error={promotionDryRun.isError}
           />
         </CardContent>
       </Card>

@@ -72,6 +72,9 @@ Dochia-derived until independent truth data exists.
 - Decision Record capture is complete: supervised promote/defer records are
   persisted with the current Shadow Review evidence packet. This still does not
   approve production writes by itself.
+- Promotion Dry-Run is complete: proposed `hedge_fund.market_signals` rows are
+  generated read-only with approval state, lineage payload, and rollback marker.
+  Guarded production writes remain blocked.
 
 ### Phase 5 — App Surface
 
@@ -274,15 +277,21 @@ Useful query params:
   tickers, and the current Shadow Review evidence payload. The Hedge Fund
   cockpit can now record and list those decisions. Production `market_signals`
   writes remain blocked.
+- Added Promotion Dry-Run app surface. Backend endpoint
+  `/api/financial/signals/promotion-dry-run/daily` previews candidate rows that
+  would enter `hedge_fund.market_signals`, including approval state, target
+  columns, source pipeline, parameter set, model version, computed timestamp,
+  explanation payload, and rollback marker. The Hedge Fund cockpit now renders
+  that preview and keeps production writes locked.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
   `https://crog-ai.com/financial/hedge-fund`.
-- Latest verification passed: 49 backend tests, ruff, backend health, focused UI
+- Latest verification passed: 52 backend tests, ruff, backend health, focused UI
   tests, focused UI lint, TypeScript, production Command Center build, service
   status, and live backend/BFF reads for production, v0.2 candidate, whipsaw,
-  Promotion Gate, and Shadow Review selectors.
+  Promotion Gate, Shadow Review, and Promotion Dry-Run selectors.
 
-Next clean build step: after a recorded `promote_to_market_signals` decision,
-build the promotion path as dry-run first before any guarded `market_signals`
-write.
+Next clean build step: after a recorded `promote_to_market_signals` decision
+and accepted dry-run output, build the guarded `market_signals` write path with
+explicit rollback/depromotion controls.
