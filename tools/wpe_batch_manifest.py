@@ -25,6 +25,7 @@ SCREENSHOT_FORMATS = {".png", ".jpg", ".jpeg", ".heic", ".tif", ".tiff"}
 SOURCE_COLUMNS = ["batch_id", "intake_id", "source_family", "original_path", "original_filename", "file_format", "bytes", "sha256", "source_mailbox_or_custodian", "date_range", "date_copied", "copy_operator", "native_available", "fallback_type", "notes"]
 PRIVILEGE_COLUMNS = ["batch_id", "intake_id", "original_path", "from_to_cc_summary", "subject_or_descriptor", "privilege_status", "screen_reason", "counsel_review_needed", "repo_safe_label", "next_action"]
 ISSUE_COLUMNS = ["batch_id", "intake_id", "source_family", "privilege_status", "issue_tags", "target_workbench", "proof_gate_id", "promotion_status", "required_before_promotion", "notes"]
+AUDIT_COLUMNS = ["batch_id", "intake_id", "source_folder", "source_family", "folder_exists", "source_file_count", "native_count", "fallback_count", "unknown_format_count", "total_bytes", "readiness_status", "next_action"]
 
 @dataclass(frozen=True)
 class SourceFamily:
@@ -67,6 +68,14 @@ def fallback_type(suffix: str) -> str:
 
 def native_available(suffix: str) -> str:
     return "yes" if suffix.lower() in NATIVE_FORMATS else "no"
+
+def format_bucket(suffix: str) -> str:
+    suffix = suffix.lower()
+    if suffix in NATIVE_FORMATS:
+        return "native"
+    if suffix in PDF_FORMATS or suffix in SCREENSHOT_FORMATS:
+        return "fallback"
+    return "unknown"
 
 def iter_source_files(batch_root: Path, include_hidden: bool) -> Iterable[tuple[SourceFamily, Path]]:
     for family in SOURCE_FAMILIES:
@@ -128,6 +137,70 @@ def issue_row(source: dict[str, str], family: SourceFamily) -> dict[str, str]:
         "notes": "Generated queue row; do not promote until privilege status is source-controlled or counsel-approved.",
     }
 
+def audit_rows(batch_root: Path, batch_id: str, include_hidden: bool) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for family in SOURCE_FAMILIES:
+        folder = batch_root / family.folder
+        files: list[Path] = []
+        if folder.exists():
+            for item in sorted(folder.rglob("*")):
+                if not item.is_file():
+                    continue
+                if not include_hidden and (item.name.startswith(".") or item.name in SYSTEM_FILENAMES):
+                    continue
+                files.append(item)
+        native_count = 0
+        fallback_count = 0
+        unknown_count = 0
+        total_bytes = 0
+        for item in files:
+            total_bytes += item.stat().st_size
+            bucket = format_bucket(item.suffix or "[none]")
+            if bucket == "native":
+                native_count += 1
+            elif bucket == "fallback":
+                fallback_count += 1
+            else:
+                unknown_count += 1
+        if not folder.exists():
+            status = "MISSING_FOLDER"
+            next_action = "Create folder before copying source exports."
+        elif not files:
+            status = "EMPTY"
+            next_action = "Copy source exports here if this family exists; otherwise leave empty intentionally."
+        elif unknown_count:
+            status = "REVIEW_UNKNOWN_FORMATS"
+            next_action = "Confirm unknown formats before manifest generation or move non-source files out."
+        else:
+            status = "READY_TO_MANIFEST"
+            next_action = "Run manifest generator after all intended source exports are copied."
+        rows.append({
+            "batch_id": batch_id,
+            "intake_id": family.intake_id,
+            "source_folder": str(folder),
+            "source_family": family.label,
+            "folder_exists": "yes" if folder.exists() else "no",
+            "source_file_count": str(len(files)),
+            "native_count": str(native_count),
+            "fallback_count": str(fallback_count),
+            "unknown_format_count": str(unknown_count),
+            "total_bytes": str(total_bytes),
+            "readiness_status": status,
+            "next_action": next_action,
+        })
+    return rows
+
+def print_audit_summary(rows: list[dict[str, str]]) -> None:
+    for row in rows:
+        print(
+            "{intake_id}\t{readiness_status}\tfiles={source_file_count}\tnative={native_count}\tfallback={fallback_count}\tunknown={unknown_format_count}\t{source_folder}".format(**row)
+        )
+    ready = sum(1 for row in rows if row["readiness_status"] == "READY_TO_MANIFEST")
+    empty = sum(1 for row in rows if row["readiness_status"] == "EMPTY")
+    review = sum(1 for row in rows if row["readiness_status"] == "REVIEW_UNKNOWN_FORMATS")
+    missing = sum(1 for row in rows if row["readiness_status"] == "MISSING_FOLDER")
+    print(f"AUDIT_SUMMARY ready={ready} empty={empty} review_unknown={review} missing={missing}")
+
 def write_tsv(path: Path, columns: list[str], rows: list[dict[str, str]], dry_run: bool) -> None:
     if dry_run:
         return
@@ -148,6 +221,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--copy-operator", default="operator")
     parser.add_argument("--include-hidden", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--audit-drop", action="store_true", help="Audit Batch 001 source drop folders by family before manifesting.")
+    parser.add_argument("--audit-output", type=Path)
     parser.add_argument("--source-output", type=Path)
     parser.add_argument("--privilege-output", type=Path)
     parser.add_argument("--issue-output", type=Path)
@@ -158,12 +233,21 @@ def main() -> int:
     nas_root = args.nas_root
     batch_root = nas_root / "01_originals_frozen" / args.batch_id
     stamp = timestamp()
+    audit_output = args.audit_output or nas_root / "00_README" / f"{args.batch_id}_SOURCE_DROP_AUDIT_{stamp}.tsv"
     source_output = args.source_output or nas_root / "00_README" / f"{args.batch_id}_SOURCE_MANIFEST_GENERATED_{stamp}.tsv"
     privilege_output = args.privilege_output or nas_root / "04_privilege_screen" / f"{args.batch_id}_PRIVILEGE_SCREEN_QUEUE_GENERATED_{stamp}.tsv"
     issue_output = args.issue_output or nas_root / "05_issue_tagged_review" / f"{args.batch_id}_ISSUE_TAGGING_QUEUE_GENERATED_{stamp}.tsv"
     if not batch_root.exists():
         print(f"Batch root does not exist: {batch_root}", file=sys.stderr)
         return 2
+    if args.audit_drop:
+        rows = audit_rows(batch_root, args.batch_id, args.include_hidden)
+        write_tsv(audit_output, AUDIT_COLUMNS, rows, args.dry_run)
+        mode = "DRY RUN" if args.dry_run else "WROTE"
+        print(f"{mode}: Batch 001 source-drop audit for {batch_root}")
+        print(f"audit_output={audit_output}")
+        print_audit_summary(rows)
+        return 0
     sources: list[dict[str, str]] = []
     privileges: list[dict[str, str]] = []
     issues: list[dict[str, str]] = []
