@@ -20,6 +20,13 @@ Purpose: track Wilson Pruitt email intake from raw export through custody, privi
 | `HOLD` | Privileged, sensitive, incomplete, duplicate, or needs counsel/operator review. |
 | `REJECT` | Duplicate, irrelevant, corrupt, or outside scope. |
 
+
+## Batch Control
+
+| Batch ID | Source Families | NAS Intake Kit | Current Status | Next Action |
+|---|---|---|---|---|
+| WPE-BATCH-001 | Pre-closing, post-closing, report transmission, Dee McBee Case I, Terry Wilson production, easement/title/crossing | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/wilson-pruitt-email-intake-20260503/00_README/WPE_BATCH_001_OPERATOR_DROP_INSTRUCTIONS_20260503.md` | Ready for operator source drop | Copy source exports into Batch 001 folders, then hash and fill source manifest. |
+
 ## Intake Register
 
 | Intake ID | Source Set | Date Range | From / Custodian | Subject / Descriptor | Attachments | SHA256 / Manifest | Privilege Status | Issue Tags | Target Workbench | Status | Next Action |

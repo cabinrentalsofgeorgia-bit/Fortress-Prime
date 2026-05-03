@@ -7,17 +7,18 @@ Use order:
 1. Complaint exhibit coverage audit
 2. Evidence custody registry
 3. Wilson Pruitt email intake protocol
-4. Wilson Pruitt email evidence register
-5. Wilson Pruitt adverse-alignment proof matrix
-6. Count-to-evidence trace map
-7. Paragraph evidence trace matrix
-8. Inspection reports and closing-scope addendum
-9. Inspection comments spreadsheet curation addendum
-10. River Heights inspection source status
-11. Terry Wilson River Heights repair reference pin
-12. Evidence gap action list
-13. DOT / GNRR response intake tracker
-14. DOT / GNRR outbound send log
+4. Wilson Pruitt email Batch 001 intake kit
+5. Wilson Pruitt email evidence register
+6. Wilson Pruitt adverse-alignment proof matrix
+7. Count-to-evidence trace map
+8. Paragraph evidence trace matrix
+9. Inspection reports and closing-scope addendum
+10. Inspection comments spreadsheet curation addendum
+11. River Heights inspection source status
+12. Terry Wilson River Heights repair reference pin
+13. Evidence gap action list
+14. DOT / GNRR response intake tracker
+15. DOT / GNRR outbound send log
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-03.
 
@@ -27,3 +28,5 @@ Critical current evidence finding: the River Heights inspection source has been 
 Wilson Pruitt email lane: originals must be frozen and hashed on NAS, attachments linked to parent emails, privilege-screened, and issue-tagged before any email fact is promoted into an answer, counterclaim, or evidence workbench.
 
 Wilson Pruitt claim-evaluation lane: Wilson Pruitt / Terry Wilson concerns are treated as counsel-review hypotheses. Use the adverse-alignment proof matrix to force duty, breach, causation, damages, procedural-route, and privilege gates before any pleading decision.
+
+Wilson Pruitt Batch 001 lane: use the Batch 001 intake kit before opening, normalizing, or analyzing newly copied Wilson Pruitt email exports.
