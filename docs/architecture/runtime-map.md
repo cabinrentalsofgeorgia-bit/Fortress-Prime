@@ -26,6 +26,7 @@ Primary evidence reviewed:
 - `docs/operational/qdrant-legal-audit-2026-04-29.md`
 - `docs/operational/track-a-v3-case-i-vs-v2-regression-2026-05-02.md`
 - `docs/operational/fortress-legal-runtime-ownership-audit-2026-05-03.md`
+- `docs/operational/fortress-legal-qdrant-contract-audit-2026-05-03.md`
 - `deploy/systemd/*`, `deploy/litellm_config.yaml`, `deploy/fortress-prime-compose.yaml`
 - `fortress-guest-platform/backend/core/config.py`
 - `fortress-guest-platform/backend/core/qdrant.py`
@@ -85,7 +86,7 @@ Primary Qdrant URL in code defaults to `http://localhost:6333`. Docs identify th
 |---|---:|---|---|
 | `legal_ediscovery` | 768 in legacy code/audit | Work-product and nonprivileged legal vault chunks. Hardcoded in `legal_ediscovery.py` and `vault_ingest_legal_case.py`. | **Legacy code authority.** Operational audit reported 738,918 points on 2026-04-29. |
 | `legal_ediscovery_v2` | 2048 | Reindexed legal e-discovery collection using `legal-embed`. | **New retrieval authority per 2026-05-02 regression doc only when callers use alias.** |
-| `legal_ediscovery_active` | alias | Qdrant alias documented as swapped to `legal_ediscovery_v2`. | **CONFLICT:** regression docs call alias swap canonical; ingest code still hardcodes `legal_ediscovery`. Verify all retrieval callers before treating v2 as universal runtime. |
+| `legal_ediscovery_active` | alias | Live alias points to `legal_ediscovery_v2`. | **CONFLICT:** 2026-05-03 live audit found Case I/II `case_slug` counts are zero in the alias target while backend callers still use legacy `legal_ediscovery`. Do not treat this alias as a safe 7IL evidence source yet. |
 | `legal_privileged_communications` | 768 | Physically separate privileged communications collection. | Hardcoded privileged path in `legal_ediscovery.py`. Audit reported 241,167 points. |
 | `legal_privileged_communications_v2` | 2048 | Reindexed privileged collection. | Reindex complete but quality report says cutover deferred. Legacy collection remains active. |
 | `legal_caselaw` | 768 | Georgia/state caselaw. | Audit reported 2,711 points. Some docs later accept `legal_caselaw_v2` for caller cutover. |
@@ -235,7 +236,7 @@ Rollback behavior: `vault_ingest_legal_case.py --rollback` deletes case `legal.v
 
 CONFLICT: the script usage example still shows legacy slug `7il-v-knight-ndga`; canonical Case I/II slugs are `7il-v-knight-ndga-i` and `7il-v-knight-ndga-ii`.
 
-CONFLICT: v2 retrieval docs say `legal_ediscovery_active` points at `legal_ediscovery_v2`, but the single-file ingest service still writes to hardcoded `legal_ediscovery`. That may be correct during a staged v1/v2 transition, but it is an open runtime contract until documented in code.
+CONFLICT: v2 retrieval docs say `legal_ediscovery_active` points at `legal_ediscovery_v2`, but the single-file ingest service still writes to hardcoded `legal_ediscovery`. The 2026-05-03 Qdrant audit makes this operational: Case I and Case II have points in legacy `legal_ediscovery` and zero `case_slug`-filtered points in the active v2 alias target. Current safe 7IL retrieval remains legacy until a separate v2 migration/reindex proves coverage.
 
 ## 8. Required Environment Variables
 
