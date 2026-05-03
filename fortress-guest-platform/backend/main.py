@@ -23,7 +23,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.core.config import settings
-from backend.core.database import init_db, close_db, get_db, async_engine
+from backend.core.database import init_db, close_db, get_db
 from backend.core.public_api_paths import is_public_api_path
 from backend.core.queue import create_arq_pool
 from backend.api import guests, messages, reservations, properties, workorders, analytics, webhooks, webhooks_channex, guestbook
