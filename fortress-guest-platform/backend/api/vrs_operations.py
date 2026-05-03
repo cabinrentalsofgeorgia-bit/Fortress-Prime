@@ -20,13 +20,16 @@ from backend.models import Guest, GuestQuote, GuestQuoteStatus, Property, Reserv
 from backend.models.openshell_audit import OpenShellAuditLog
 from backend.models.parity_audit import ParityAudit
 from backend.services.email_service import is_email_configured, send_email
+from backend.services.hold_service import create_inventory_hold
 from backend.models.staff import StaffUser
 from backend.services.openshell_audit import record_audit_event
 
 router = APIRouter()
 
 CONTROL_TOWER_BLOCKED_CAPABILITIES = [
-    "create_checkout_hold",
+    "create_hold_without_staff_approval",
+    "create_payment_intent_without_staff_approval",
+    "convert_hold_to_reservation",
     "charge_or_refund_payment",
     "write_streamline",
     "publish_public_content",
@@ -121,6 +124,20 @@ class QuoteBookingSendResponse(BaseModel):
     message: str
 
 
+class QuoteBookingHoldRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingHoldResponse(BaseModel):
+    ok: bool
+    quote_id: str
+    hold_id: str
+    expires_at: str
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
 class QuoteBookingProofLaneRequest(BaseModel):
     guest_email: str | None = Field(default=None, max_length=320)
     property_id: UUID | None = None
@@ -182,6 +199,16 @@ def _display_date(value: Any) -> str:
     if hasattr(value, "strftime"):
         return value.strftime("%b %-d, %Y")
     return str(value)
+
+
+def _quote_guest_names(quote: GuestQuote) -> tuple[str, str]:
+    guest_name = (quote.guest_name or "").strip()
+    parts = guest_name.split()
+    if not parts:
+        return "Guest", "Quote"
+    if len(parts) == 1:
+        return parts[0][:100], "Quote"
+    return parts[0][:100], " ".join(parts[1:])[:100]
 
 
 def _stripe_secret_mode() -> Literal["test", "live", "unknown"]:
@@ -315,14 +342,12 @@ async def _quote_overlap_counts(
     db: AsyncSession,
     quote: GuestQuote,
     now: datetime,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     if not quote.property_id or not quote.check_in or not quote.check_out:
-        return 0, 0
+        return 0, 0, 0
 
-    hold_count = await _count(
-        db,
-        select(func.count())
-        .select_from(ReservationHold)
+    hold_rows = await db.execute(
+        select(ReservationHold.id, ReservationHold.quote_snapshot)
         .where(
             ReservationHold.property_id == quote.property_id,
             ReservationHold.status == "active",
@@ -331,6 +356,15 @@ async def _quote_overlap_counts(
             ReservationHold.check_out_date > quote.check_in,
         ),
     )
+    own_hold_count = 0
+    other_hold_count = 0
+    for _hold_id, quote_snapshot in hold_rows.all():
+        snapshot = quote_snapshot if isinstance(quote_snapshot, dict) else {}
+        if str(snapshot.get("quote_ref") or "") == str(quote.id):
+            own_hold_count += 1
+        else:
+            other_hold_count += 1
+
     reservation_count = await _count(
         db,
         select(func.count())
@@ -342,7 +376,7 @@ async def _quote_overlap_counts(
             Reservation.check_out_date > quote.check_in,
         ),
     )
-    return hold_count, reservation_count
+    return other_hold_count, reservation_count, own_hold_count
 
 
 async def _quote_readiness_machine_state(
@@ -357,13 +391,24 @@ async def _quote_readiness_machine_state(
         or (status == GuestQuoteStatus.PENDING and quote.expires_at and quote.expires_at < now_naive)
     )
     has_stay = bool(quote.property_id and quote.check_in and quote.check_out)
-    hold_conflicts, reservation_conflicts = await _quote_overlap_counts(db, quote, now)
+    hold_conflicts, reservation_conflicts, own_hold_count = await _quote_overlap_counts(db, quote, now)
     payment_ready = bool((quote.stripe_payment_link_url or "").strip())
     parity_status = _quote_parity_status(quote)
     parity_upper = parity_status.upper()
     parity_passed = parity_upper in {"MATCH", "PASS", "PASSED", "CLEAR"}
     parity_missing = parity_upper in {"", "NONE", "NULL", "NOT_CHECKED", "UNKNOWN"}
     parity_drift = not parity_passed and not parity_missing
+    availability_check_status = (
+        "fail" if (not has_stay or hold_conflicts or reservation_conflicts) else "watch" if own_hold_count else "pass"
+    )
+    if not has_stay:
+        availability_detail = "Property and stay dates are required."
+    elif hold_conflicts or reservation_conflicts:
+        availability_detail = f"{hold_conflicts} active hold conflict(s), {reservation_conflicts} reservation conflict(s)."
+    elif own_hold_count:
+        availability_detail = f"{own_hold_count} active local hold already exists for this quote."
+    else:
+        availability_detail = "Availability is clear."
 
     checks = [
         _check(
@@ -373,12 +418,8 @@ async def _quote_readiness_machine_state(
         ),
         _check(
             "Availability",
-            "fail" if (not has_stay or hold_conflicts or reservation_conflicts) else "pass",
-            (
-                f"{hold_conflicts} active hold conflict(s), {reservation_conflicts} reservation conflict(s)."
-                if has_stay
-                else "Property and stay dates are required."
-            ),
+            availability_check_status,
+            availability_detail,
         ),
         _check(
             "Stripe handoff",
@@ -401,6 +442,9 @@ async def _quote_readiness_machine_state(
     elif not has_stay or hold_conflicts or reservation_conflicts:
         state = "hold_conflict"
         reasons = ["Availability is blocked by missing stay data or an overlapping hold/reservation."]
+    elif own_hold_count:
+        state = "local_hold_created"
+        reasons = ["A staff-approved local checkout hold already exists for this quote."]
     elif not payment_ready:
         state = "missing_payment_handoff"
         reasons = ["Stripe payment handoff is missing."]
@@ -420,6 +464,7 @@ async def _quote_readiness_machine_state(
         "readiness_checks": checks,
         "hold_conflicts": hold_conflicts,
         "reservation_conflicts": reservation_conflicts,
+        "local_hold_count": own_hold_count,
         "parity_status": parity_status,
     }
 
@@ -433,6 +478,7 @@ def _finalize_quote_readiness(quotes: list[QuoteBookingRecord]) -> dict[str, int
         "parity_missing_quotes": 0,
         "missing_payment_handoff_quotes": 0,
         "hold_conflict_quotes": 0,
+        "local_hold_created_quotes": 0,
         "quotes_needing_staff_approval": 0,
     }
     stop_states = {
@@ -484,6 +530,8 @@ def _finalize_quote_readiness(quotes: list[QuoteBookingRecord]) -> dict[str, int
             counts["missing_payment_handoff_quotes"] += 1
         if state == "hold_conflict":
             counts["hold_conflict_quotes"] += 1
+        if state == "local_hold_created":
+            counts["local_hold_created_quotes"] += 1
         if state == "needs_staff_approval":
             counts["quotes_needing_staff_approval"] += 1
 
@@ -549,6 +597,10 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
             record.dismissed = True
         elif action == "send_guest_quote":
             record.metadata["guest_quote_sent"] = True
+        elif action == "create_local_hold":
+            record.metadata["local_hold_created"] = True
+            if metadata.get("hold_id"):
+                record.metadata["local_hold_id"] = str(metadata.get("hold_id"))
 
         note = metadata.get("note")
         if isinstance(note, str) and note.strip():
@@ -736,6 +788,59 @@ async def _record_quote_send_audit(
             "note": note,
             "detail": detail,
             "safe_send_only": True,
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
+async def _record_quote_hold_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    quote: GuestQuote,
+    record: QuoteBookingRecord | None,
+    outcome: str,
+    note: str | None,
+    detail: str,
+    hold_id: str | None = None,
+) -> OpenShellAuditLog | None:
+    readiness_state = None
+    readiness_reasons: list[str] = []
+    if record is not None:
+        readiness_state = str(record.metadata.get("readiness_state") or "")
+        readiness_reasons = [
+            str(item)
+            for item in (record.metadata.get("readiness_reasons") or [])
+            if isinstance(item, str)
+        ]
+
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.create_local_hold",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("quote", str(quote.id)),
+        purpose="Staff-approved local checkout hold from a ready guest quote.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "quote_id": str(quote.id),
+            "hold_id": hold_id,
+            "guest_email": quote.guest_email,
+            "property_id": str(quote.property_id) if quote.property_id else None,
+            "total_amount": _money(quote.total_amount),
+            "readiness_state": readiness_state,
+            "readiness_reasons": readiness_reasons,
+            "note": note,
+            "detail": detail,
+            "local_hold_only": True,
+            "payment_intent_created": False,
+            "payment_captured": False,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
             "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
         },
     )
@@ -1200,6 +1305,177 @@ async def quote_booking_proof_lane_test_quote(
         audit_hash=audit.entry_hash if audit else None,
         stripe_mode="test",
         message="Proof lane test quote created in Stripe test mode and reviewed. It is eligible for the controlled internal send workflow only.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/quote/{quote_id}/create-hold",
+    response_model=QuoteBookingHoldResponse,
+)
+async def quote_booking_control_create_hold(
+    quote_id: UUID,
+    body: QuoteBookingHoldRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingHoldResponse:
+    """Create a local inventory hold from a sent, ready quote. No payment capture or Streamline write."""
+    quote = await db.get(GuestQuote, quote_id)
+    if quote is None:
+        raise HTTPException(status_code=404, detail="Guest quote not found")
+
+    note = (body.note or "").strip() or None
+    record = await _quote_control_record(db, quote, datetime.now(timezone.utc), datetime.utcnow())
+    readiness_state = str(record.metadata.get("readiness_state") or "blocked")
+    if readiness_state != "ready":
+        await _record_quote_hold_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail=f"Readiness gate refused local hold: {readiness_state}.",
+        )
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Quote is not ready for a local hold.",
+                "readiness_state": readiness_state,
+                "readiness_reasons": record.metadata.get("readiness_reasons") or [],
+            },
+        )
+
+    if not record.metadata.get("guest_quote_sent"):
+        await _record_quote_hold_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail="Guest quote has not been sent through the controlled workflow.",
+        )
+        raise HTTPException(status_code=409, detail="Send the quote before creating a local checkout hold")
+
+    if not quote.property_id or not quote.check_in or not quote.check_out:
+        await _record_quote_hold_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail="Quote is missing property or stay dates.",
+        )
+        raise HTTPException(status_code=422, detail="Quote is missing property or stay dates")
+
+    guest_email = (quote.guest_email or "").strip()
+    if not guest_email or "@" not in guest_email:
+        await _record_quote_hold_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail="Guest email is missing or invalid.",
+        )
+        raise HTTPException(status_code=422, detail="Guest email is missing or invalid")
+
+    first_name, last_name = _quote_guest_names(quote)
+    guest_phone = (quote.guest_phone or "").strip() or f"quote-{str(quote.id)[:8]}"
+    guest = (
+        await db.execute(select(Guest).where(Guest.email == guest_email))
+    ).scalar_one_or_none()
+    if guest is None:
+        guest = (
+            await db.execute(select(Guest).where(Guest.phone_number == guest_phone))
+        ).scalar_one_or_none()
+    if guest is None:
+        guest = Guest(
+            email=guest_email,
+            first_name=first_name,
+            last_name=last_name,
+            phone=guest_phone,
+        )
+        db.add(guest)
+        await db.flush()
+    else:
+        guest.email = guest_email
+        guest.first_name = first_name
+        guest.last_name = last_name
+        guest.phone = guest_phone
+
+    quote_snapshot = {
+        "quote_ref": str(quote.id),
+        "source": "quote_booking_control_tower",
+        "quote_breakdown": quote.quote_breakdown or {},
+        "source_snapshot": quote.source_snapshot or {},
+        "total": str(quote.total_amount or "0.00"),
+        "payment_link_id": quote.stripe_payment_link_id,
+        "payment_link_url_present": bool(quote.stripe_payment_link_url),
+        "payment_intent_created": False,
+        "streamline_write": "blocked",
+        "legacy_storefront": "untouched",
+    }
+    try:
+        hold = await create_inventory_hold(
+            db,
+            property_id=quote.property_id,
+            check_in=quote.check_in,
+            check_out=quote.check_out,
+            session_id=f"quote-control-{quote.id}",
+            guest_id=guest.id,
+            num_guests=max(1, int((quote.adults or 0) + (quote.children or 0))),
+            amount_total=quote.total_amount,
+            quote_snapshot=quote_snapshot,
+            special_requests=note or f"Created from controlled CROG-VRS quote {quote.id}.",
+        )
+        await db.commit()
+        await db.refresh(hold)
+    except HTTPException as exc:
+        await db.rollback()
+        await _record_quote_hold_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail=str(exc.detail),
+        )
+        raise
+    except Exception as exc:  # noqa: BLE001
+        await db.rollback()
+        await _record_quote_hold_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="failure",
+            note=note,
+            detail=f"Local hold creation failed: {str(exc)[:160]}",
+        )
+        raise HTTPException(status_code=500, detail="Local hold creation failed") from exc
+
+    audit = await _record_quote_hold_audit(
+        db=db,
+        current_user=current_user,
+        quote=quote,
+        record=record,
+        outcome="success",
+        note=note,
+        detail="Local checkout hold created without payment capture or Streamline write.",
+        hold_id=str(hold.id),
+    )
+    return QuoteBookingHoldResponse(
+        ok=True,
+        quote_id=str(quote.id),
+        hold_id=str(hold.id),
+        expires_at=hold.expires_at.isoformat(),
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Local checkout hold created. No card was charged, no PaymentIntent was created, no Streamline write occurred, and the legacy site was untouched.",
     )
 
 

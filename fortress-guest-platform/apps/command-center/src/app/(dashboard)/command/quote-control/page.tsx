@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  CalendarCheck,
   CheckCircle2,
   ClipboardCheck,
   CreditCard,
@@ -56,6 +57,16 @@ type QuoteBookingSendResponse = {
   ok: boolean;
   quote_id: string;
   guest_email: string;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+};
+
+type QuoteBookingHoldResponse = {
+  ok: boolean;
+  quote_id: string;
+  hold_id: string;
+  expires_at: string;
   audit_id: string | null;
   audit_hash: string | null;
   message: string;
@@ -140,7 +151,19 @@ function metadataStrings(record: QuoteBookingRecord, key: string): string[] {
 }
 
 function canSendGuestQuote(record: QuoteBookingRecord): boolean {
-  return record.kind === "quote" && metadataString(record, "readiness_state") === "ready";
+  return (
+    record.kind === "quote" &&
+    metadataString(record, "readiness_state") === "ready" &&
+    record.metadata?.guest_quote_sent !== true
+  );
+}
+
+function canCreateLocalHold(record: QuoteBookingRecord): boolean {
+  return (
+    record.kind === "quote" &&
+    metadataString(record, "readiness_state") === "ready" &&
+    record.metadata?.guest_quote_sent === true
+  );
 }
 
 function readinessTone(state: string | null): string {
@@ -149,6 +172,8 @@ function readinessTone(state: string | null): string {
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
     case "needs_staff_approval":
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+    case "local_hold_created":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-200";
     case "expired":
     case "blocked":
     case "parity_drift":
@@ -261,20 +286,25 @@ function RecordRow({
   record,
   onAction,
   onSend,
+  onCreateHold,
   isActionPending,
   isSendPending,
+  isHoldPending,
 }: {
   record: QuoteBookingRecord;
   onAction: (record: QuoteBookingRecord, action: SafeAction) => void;
   onSend: (record: QuoteBookingRecord) => void;
+  onCreateHold: (record: QuoteBookingRecord) => void;
   isActionPending: boolean;
   isSendPending: boolean;
+  isHoldPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
   const readinessState = record.kind === "quote" ? metadataString(record, "readiness_state") : null;
   const readinessLabel = record.kind === "quote" ? metadataString(record, "readiness_label") : null;
   const readinessReasons = record.kind === "quote" ? metadataStrings(record, "readiness_reasons") : [];
   const canSend = canSendGuestQuote(record);
+  const canHold = canCreateLocalHold(record);
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
@@ -390,6 +420,21 @@ function RecordRow({
               Send
             </Button>
           ) : null}
+          {canHold ? (
+            <Button
+              onClick={() => onCreateHold(record)}
+              disabled={isHoldPending}
+              size="sm"
+              className="bg-cyan-700 text-white hover:bg-cyan-600"
+            >
+              {isHoldPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CalendarCheck className="mr-2 h-4 w-4" />
+              )}
+              Hold
+            </Button>
+          ) : null}
           <Button
             onClick={() => onAction(record, "claim")}
             disabled={isActionPending}
@@ -467,6 +512,9 @@ export default function QuoteControlPage() {
   const [sendTarget, setSendTarget] = useState<QuoteBookingRecord | null>(null);
   const [sendNote, setSendNote] = useState("");
   const [isSendingQuote, setIsSendingQuote] = useState(false);
+  const [holdTarget, setHoldTarget] = useState<QuoteBookingRecord | null>(null);
+  const [holdNote, setHoldNote] = useState("");
+  const [isCreatingHold, setIsCreatingHold] = useState(false);
   const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
@@ -552,6 +600,10 @@ export default function QuoteControlPage() {
     setSendTarget(record);
     setSendNote("");
   };
+  const openCreateHold = (record: QuoteBookingRecord) => {
+    setHoldTarget(record);
+    setHoldNote("");
+  };
   const submitAction = () => {
     if (!actionTarget) return;
     actionMutation.mutate(
@@ -606,6 +658,27 @@ export default function QuoteControlPage() {
       toast.error(message);
     } finally {
       setIsCreatingProofQuote(false);
+    }
+  };
+  const submitCreateHold = async () => {
+    if (!holdTarget) return;
+    setIsCreatingHold(true);
+    try {
+      const response = await api.post<QuoteBookingHoldResponse>(
+        `/api/vrs/quote-booking/control-tower/quote/${holdTarget.id}/create-hold`,
+        {
+          ...(holdNote.trim() ? { note: holdNote.trim() } : {}),
+        },
+      );
+      toast.success(response.message || "Local checkout hold created");
+      setHoldTarget(null);
+      setHoldNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Local hold creation failed";
+      toast.error(message);
+    } finally {
+      setIsCreatingHold(false);
     }
   };
 
@@ -817,8 +890,10 @@ export default function QuoteControlPage() {
                   record={record}
                   onAction={openAction}
                   onSend={openSend}
+                  onCreateHold={openCreateHold}
                   isActionPending={actionMutation.isPending}
                   isSendPending={isSendingQuote}
+                  isHoldPending={isCreatingHold}
                 />
               ))}
             </div>
@@ -916,6 +991,69 @@ export default function QuoteControlPage() {
                 <>
                   <Send className="mr-2 h-4 w-4" />
                   Send Quote
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(holdTarget)} onOpenChange={(open) => !open && setHoldTarget(null)}>
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Create Local Hold</DialogTitle>
+            <DialogDescription>{holdTarget?.title || "Sent quote"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-3 py-3 text-sm text-cyan-100">
+              This creates a local checkout hold only. It does not charge a card, create a PaymentIntent,
+              convert a reservation, write to Streamline, touch the public website, or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Guest</p>
+                <p className="truncate">{holdTarget?.guest_label || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Stay</p>
+                <p>
+                  {formatDate(holdTarget?.check_in)} to {formatDate(holdTarget?.check_out)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Total</p>
+                <p>{formatMoney(holdTarget?.total_amount)}</p>
+              </div>
+            </div>
+            <Textarea
+              value={holdNote}
+              onChange={(event) => setHoldNote(event.target.value)}
+              placeholder="Internal hold note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setHoldTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitCreateHold}
+              disabled={isCreatingHold || !holdTarget || !canCreateLocalHold(holdTarget)}
+              className="bg-cyan-700 text-white hover:bg-cyan-600"
+            >
+              {isCreatingHold ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CalendarCheck className="mr-2 h-4 w-4" />
+                  Create Hold
                 </>
               )}
             </Button>
