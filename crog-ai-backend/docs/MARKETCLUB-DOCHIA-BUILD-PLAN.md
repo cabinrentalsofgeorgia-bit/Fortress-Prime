@@ -210,6 +210,15 @@ Useful query params:
   range: v0.2 5-session win rate is 50.33% with +0.01% average directional
   return. The worst v0.2 whipsaw clusters are concentrated in MOD, ISRG, MRVL,
   DLR, and HD.
+- Added ticker-cluster cooldown/exclusion research with a chronological
+  holdout. Reports are tracked at
+  `docs/reports/dochia-v0-3-ticker-cluster-review-2026-05-03.md` and
+  `docs/reports/dochia-v0-3-ticker-cluster-holdout-2026-05-03.md`. Full-period
+  top-15 exclusion is promising: 5.11% fewer events, 74.98% F1, and +0.05%
+  average 5-session directional return. The holdout learns clusters before
+  2025-09-25 and evaluates after; it does not clear the default gate, with
+  4.74% event reduction, 78.16% F1, and -0.04% average 5-session directional
+  return. Do not persist this candidate yet.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -219,6 +228,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: design a ticker-cluster exclusion/cooldown candidate
-that targets the worst whipsaw names without degrading forward directional
-returns on the broader universe.
+Next clean build step: build a rolling, date-safe whipsaw-risk score that can
+cool down names as they become noisy without relying on a fixed historical
+blocklist.
