@@ -143,6 +143,200 @@ def _quote_stop_level(quote: GuestQuote, now_naive: datetime) -> tuple[Literal["
     return "inspect", "Quote status needs staff review."
 
 
+def _quote_parity_status(quote: GuestQuote) -> str:
+    snapshot = quote.source_snapshot if isinstance(quote.source_snapshot, dict) else {}
+    raw = (
+        snapshot.get("parity_status")
+        or snapshot.get("drift_status")
+        or snapshot.get("quote_parity_status")
+        or "not_checked"
+    )
+    return str(raw or "not_checked")
+
+
+def _check(label: str, status: str, detail: str) -> dict[str, str]:
+    return {"label": label, "status": status, "detail": detail}
+
+
+async def _quote_overlap_counts(
+    db: AsyncSession,
+    quote: GuestQuote,
+    now: datetime,
+) -> tuple[int, int]:
+    if not quote.property_id or not quote.check_in or not quote.check_out:
+        return 0, 0
+
+    hold_count = await _count(
+        db,
+        select(func.count())
+        .select_from(ReservationHold)
+        .where(
+            ReservationHold.property_id == quote.property_id,
+            ReservationHold.status == "active",
+            ReservationHold.expires_at >= now,
+            ReservationHold.check_in_date < quote.check_out,
+            ReservationHold.check_out_date > quote.check_in,
+        ),
+    )
+    reservation_count = await _count(
+        db,
+        select(func.count())
+        .select_from(Reservation)
+        .where(
+            Reservation.property_id == quote.property_id,
+            Reservation.status.notin_(["cancelled", "canceled", "no_show"]),
+            Reservation.check_in_date < quote.check_out,
+            Reservation.check_out_date > quote.check_in,
+        ),
+    )
+    return hold_count, reservation_count
+
+
+async def _quote_readiness_machine_state(
+    db: AsyncSession,
+    quote: GuestQuote,
+    now: datetime,
+    now_naive: datetime,
+) -> dict[str, Any]:
+    status = str(quote.status or "").lower()
+    is_expired = bool(
+        status == GuestQuoteStatus.EXPIRED
+        or (status == GuestQuoteStatus.PENDING and quote.expires_at and quote.expires_at < now_naive)
+    )
+    has_stay = bool(quote.property_id and quote.check_in and quote.check_out)
+    hold_conflicts, reservation_conflicts = await _quote_overlap_counts(db, quote, now)
+    payment_ready = bool(quote.stripe_payment_link_id or quote.stripe_payment_link_url)
+    parity_status = _quote_parity_status(quote)
+    parity_upper = parity_status.upper()
+    parity_passed = parity_upper in {"MATCH", "PASS", "PASSED", "CLEAR"}
+    parity_missing = parity_upper in {"", "NONE", "NULL", "NOT_CHECKED", "UNKNOWN"}
+    parity_drift = not parity_passed and not parity_missing
+
+    checks = [
+        _check(
+            "Expiration",
+            "fail" if is_expired else "pass",
+            f"Expires {quote.expires_at.isoformat()}" if quote.expires_at else "No expiration timestamp found.",
+        ),
+        _check(
+            "Availability",
+            "fail" if (not has_stay or hold_conflicts or reservation_conflicts) else "pass",
+            (
+                f"{hold_conflicts} active hold conflict(s), {reservation_conflicts} reservation conflict(s)."
+                if has_stay
+                else "Property and stay dates are required."
+            ),
+        ),
+        _check(
+            "Stripe handoff",
+            "pass" if payment_ready else "fail",
+            "Payment link is attached." if payment_ready else "No Stripe payment link is attached.",
+        ),
+        _check(
+            "Streamline parity",
+            "pass" if parity_passed else "fail" if parity_drift else "watch",
+            f"Parity status: {parity_status}.",
+        ),
+    ]
+
+    if is_expired:
+        state = "expired"
+        reasons = ["Quote is expired and cannot be sent or reused."]
+    elif status != GuestQuoteStatus.PENDING:
+        state = "blocked"
+        reasons = [f"Quote status is {status}; send workflow only handles pending quotes."]
+    elif not has_stay or hold_conflicts or reservation_conflicts:
+        state = "hold_conflict"
+        reasons = ["Availability is blocked by missing stay data or an overlapping hold/reservation."]
+    elif not payment_ready:
+        state = "missing_payment_handoff"
+        reasons = ["Stripe payment handoff is missing."]
+    elif parity_drift:
+        state = "parity_drift"
+        reasons = [f"Streamline parity is {parity_status}."]
+    elif parity_missing:
+        state = "parity_missing"
+        reasons = ["Streamline parity has not been verified."]
+    else:
+        state = "machine_ready"
+        reasons = ["Expiration, availability, payment handoff, and parity checks passed."]
+
+    return {
+        "readiness_machine_state": state,
+        "readiness_reasons": reasons,
+        "readiness_checks": checks,
+        "hold_conflicts": hold_conflicts,
+        "reservation_conflicts": reservation_conflicts,
+        "parity_status": parity_status,
+    }
+
+
+def _finalize_quote_readiness(quotes: list[QuoteBookingRecord]) -> dict[str, int]:
+    counts = {
+        "ready_quotes": 0,
+        "blocked_quotes": 0,
+        "expired_quotes": 0,
+        "parity_drift_quotes": 0,
+        "parity_missing_quotes": 0,
+        "missing_payment_handoff_quotes": 0,
+        "hold_conflict_quotes": 0,
+        "quotes_needing_staff_approval": 0,
+    }
+    stop_states = {
+        "blocked",
+        "expired",
+        "parity_drift",
+        "parity_missing",
+        "missing_payment_handoff",
+        "hold_conflict",
+    }
+
+    for record in quotes:
+        machine_state = str(record.metadata.get("readiness_machine_state") or "blocked")
+        reasons = list(record.metadata.get("readiness_reasons") or [])
+        if machine_state == "machine_ready":
+            if record.reviewed:
+                state = "ready"
+                label = "Ready"
+                reasons = ["All readiness checks passed and staff approval is recorded."]
+                record.stop_level = "clear"
+                record.stop_reason = "Quote is ready for a controlled guest-send workflow."
+            else:
+                state = "needs_staff_approval"
+                label = "Needs Approval"
+                reasons = ["Staff approval has not been recorded."]
+                record.stop_level = "inspect"
+                record.stop_reason = "Quote passes machine checks but still needs staff approval."
+        else:
+            state = machine_state
+            label = state.replace("_", " ").title()
+            record.stop_level = "stop" if state in stop_states else "inspect"
+            record.stop_reason = reasons[0] if reasons else "Quote readiness is blocked."
+
+        record.metadata["readiness_state"] = state
+        record.metadata["readiness_label"] = label
+        record.metadata["readiness_reasons"] = reasons
+
+        if state == "ready":
+            counts["ready_quotes"] += 1
+        if state in stop_states:
+            counts["blocked_quotes"] += 1
+        if state == "expired":
+            counts["expired_quotes"] += 1
+        if state == "parity_drift":
+            counts["parity_drift_quotes"] += 1
+        if state == "parity_missing":
+            counts["parity_missing_quotes"] += 1
+        if state == "missing_payment_handoff":
+            counts["missing_payment_handoff_quotes"] += 1
+        if state == "hold_conflict":
+            counts["hold_conflict_quotes"] += 1
+        if state == "needs_staff_approval":
+            counts["quotes_needing_staff_approval"] += 1
+
+    return counts
+
+
 def _reservation_stop_level(reservation: Reservation) -> tuple[Literal["clear", "inspect", "stop"], str]:
     if not reservation.streamline_reservation_id:
         return "inspect", "Local reservation has not been linked to a Streamline reservation id."
@@ -309,6 +503,7 @@ async def quote_booking_control_tower(
     quotes: list[QuoteBookingRecord] = []
     for quote, property_name, property_slug in quote_rows.all():
         stop_level, stop_reason = _quote_stop_level(quote, now_naive)
+        readiness_metadata = await _quote_readiness_machine_state(db, quote, now, now_naive)
         title = property_name or quote.target_property_id or "Guest quote"
         quotes.append(
             QuoteBookingRecord(
@@ -323,7 +518,7 @@ async def quote_booking_control_tower(
                 check_out=_iso(quote.check_out),
                 total_amount=_money(quote.total_amount),
                 payment_state="payment_link_created" if quote.stripe_payment_link_id else "no_payment_link",
-                parity_status=str((quote.source_snapshot or {}).get("parity_status") or "not_checked"),
+                parity_status=str(readiness_metadata.get("parity_status") or "not_checked"),
                 stop_level=stop_level,
                 stop_reason=stop_reason,
                 href="/vrs/quotes",
@@ -334,6 +529,7 @@ async def quote_booking_control_tower(
                     "property_slug": property_slug,
                     "stripe_payment_link_id": quote.stripe_payment_link_id,
                     "expires_at": _iso(quote.expires_at),
+                    **readiness_metadata,
                 },
             )
         )
@@ -445,16 +641,6 @@ async def quote_booking_control_tower(
             )
         )
 
-    hard_stops = sum(
-        1
-        for row in [*quotes, *holds, *reservations, *parity_audits]
-        if row.stop_level == "stop"
-    )
-    inspection_items = sum(
-        1
-        for row in [*quotes, *holds, *reservations, *parity_audits]
-        if row.stop_level == "inspect"
-    )
     summary = {
         "pending_quotes": pending_quotes,
         "expired_pending_quotes": expired_pending_quotes,
@@ -464,18 +650,22 @@ async def quote_booking_control_tower(
         "converted_holds_24h": converted_holds_24h,
         "direct_reservations_24h": direct_reservations_24h,
         "parity_drifts_24h": parity_drifts_24h,
-        "hard_stops": hard_stops,
-        "inspection_items": inspection_items,
     }
 
     all_records = [*quotes, *holds, *reservations, *parity_audits]
     await _apply_control_audits(db, all_records)
+    readiness_summary = _finalize_quote_readiness(quotes)
+    hard_stops = sum(1 for row in all_records if row.stop_level == "stop")
+    inspection_items = sum(1 for row in all_records if row.stop_level == "inspect")
     assigned_items = sum(1 for row in all_records if row.assigned_to)
     escalated_items = sum(1 for row in all_records if row.escalated)
     reviewed_items = sum(1 for row in all_records if row.reviewed)
     dismissed_items = sum(1 for row in all_records if row.dismissed)
     summary.update(
         {
+            **readiness_summary,
+            "hard_stops": hard_stops,
+            "inspection_items": inspection_items,
             "assigned_items": assigned_items,
             "escalated_items": escalated_items,
             "reviewed_items": reviewed_items,
@@ -497,6 +687,21 @@ async def quote_booking_control_tower(
             status="locked",
             detail="This surface cannot send quotes, create holds, charge cards, issue refunds, or write to Streamline.",
             href="/ai-engine",
+        ),
+        QuoteBookingSafeguard(
+            id="quote_readiness",
+            label="Quote readiness gate",
+            status=(
+                "attention"
+                if summary.get("blocked_quotes", 0) or summary.get("quotes_needing_staff_approval", 0)
+                else "clear"
+            ),
+            detail=(
+                f"{summary.get('ready_quotes', 0)} ready, "
+                f"{summary.get('quotes_needing_staff_approval', 0)} need staff approval, "
+                f"{summary.get('blocked_quotes', 0)} blocked."
+            ),
+            href="/command/quote-control",
         ),
         QuoteBookingSafeguard(
             id="legacy_boundary",

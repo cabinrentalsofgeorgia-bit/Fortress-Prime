@@ -105,6 +105,35 @@ function stopTone(level: QuoteBookingRecord["stop_level"]): string {
   }
 }
 
+function metadataString(record: QuoteBookingRecord, key: string): string | null {
+  const value = record.metadata?.[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function metadataStrings(record: QuoteBookingRecord, key: string): string[] {
+  const value = record.metadata?.[key];
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function readinessTone(state: string | null): string {
+  switch (state) {
+    case "ready":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+    case "needs_staff_approval":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+    case "expired":
+    case "blocked":
+    case "parity_drift":
+    case "parity_missing":
+    case "missing_payment_handoff":
+    case "hold_conflict":
+      return "border-rose-500/30 bg-rose-500/10 text-rose-200";
+    default:
+      return "border-zinc-700 bg-zinc-950 text-zinc-300";
+  }
+}
+
 function safeguardTone(status: QuoteBookingSafeguard["status"]): string {
   switch (status) {
     case "clear":
@@ -211,6 +240,9 @@ function RecordRow({
   isActionPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
+  const readinessState = record.kind === "quote" ? metadataString(record, "readiness_state") : null;
+  const readinessLabel = record.kind === "quote" ? metadataString(record, "readiness_label") : null;
+  const readinessReasons = record.kind === "quote" ? metadataStrings(record, "readiness_reasons") : [];
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
@@ -221,6 +253,9 @@ function RecordRow({
             <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">{kindLabel(record.kind)}</Badge>
             <Badge className={stopTone(record.stop_level)}>{record.stop_level}</Badge>
             <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">{record.status}</Badge>
+            {readinessLabel ? (
+              <Badge className={readinessTone(readinessState)}>{readinessLabel}</Badge>
+            ) : null}
             {record.assigned_to ? (
               <Badge className="border-cyan-500/30 bg-cyan-500/10 text-cyan-100">
                 assigned
@@ -298,6 +333,12 @@ function RecordRow({
             <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
               <span className="text-xs uppercase text-zinc-500">Latest note</span>
               <p className="mt-1">{record.last_note}</p>
+            </div>
+          ) : null}
+          {readinessReasons.length > 0 ? (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
+              <span className="text-xs uppercase text-zinc-500">Readiness gate</span>
+              <p className="mt-1">{readinessReasons.slice(0, 3).join(" ")}</p>
             </div>
           ) : null}
         </div>
@@ -542,22 +583,22 @@ export default function QuoteControlPage() {
           tone={metric(summary, "pending_quotes") > 0 ? "warning" : "success"}
         />
         <SummaryMetric
-          label="Active Holds"
-          value={metric(summary, "active_holds")}
-          detail="Checkout locks currently active"
-          tone={metric(summary, "active_holds") > 0 ? "warning" : "default"}
+          label="Ready Quotes"
+          value={metric(summary, "ready_quotes")}
+          detail="Eligible for controlled guest-send"
+          tone={metric(summary, "ready_quotes") > 0 ? "success" : "default"}
         />
         <SummaryMetric
-          label="Converted Holds"
-          value={metric(summary, "converted_holds_24h")}
-          detail="Converted in the last 24 hours"
-          tone="success"
+          label="Need Approval"
+          value={metric(summary, "quotes_needing_staff_approval")}
+          detail="Machine checks passed, staff gate open"
+          tone={metric(summary, "quotes_needing_staff_approval") > 0 ? "warning" : "success"}
         />
         <SummaryMetric
-          label="Parity Drifts"
-          value={metric(summary, "parity_drifts_24h")}
-          detail="Streamline mismatch in last 24 hours"
-          tone={metric(summary, "parity_drifts_24h") > 0 ? "danger" : "success"}
+          label="Blocked Quotes"
+          value={metric(summary, "blocked_quotes")}
+          detail="Expired, conflict, missing payment, or parity issue"
+          tone={metric(summary, "blocked_quotes") > 0 ? "danger" : "success"}
         />
         <SummaryMetric
           label="Hard Stops"
