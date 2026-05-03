@@ -99,6 +99,22 @@ Batch 001 should update these register rows when sources are available:
 - Do not place email bodies in repo documents.
 
 
+## Source-Drop Audit
+
+After source exports are copied into the Batch 001 frozen folders, run this preflight before manifest generation:
+
+```bash
+python3 tools/wpe_batch_manifest.py --audit-drop --dry-run
+```
+
+If the per-folder statuses are correct, write the audit TSV to NAS:
+
+```bash
+python3 tools/wpe_batch_manifest.py --audit-drop
+```
+
+Only run the source manifest after all intended source families are either `READY_TO_MANIFEST` or intentionally `EMPTY`.
+
 ## Manifest Generator
 
 After source exports are copied into the Batch 001 frozen folders, run:

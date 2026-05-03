@@ -8,19 +8,20 @@ Use order:
 2. Evidence custody registry
 3. Wilson Pruitt email intake protocol
 4. Wilson Pruitt email Batch 001 intake kit
-5. Wilson Pruitt email Batch 001 manifest generator
-6. Wilson Pruitt email evidence register
-7. Wilson Pruitt actor dossier and public-record check workbench
-8. Wilson Pruitt adverse-alignment proof matrix
-9. Count-to-evidence trace map
-10. Paragraph evidence trace matrix
-11. Inspection reports and closing-scope addendum
-12. Inspection comments spreadsheet curation addendum
-13. River Heights inspection source status
-14. Terry Wilson River Heights repair reference pin
-15. Evidence gap action list
-16. DOT / GNRR response intake tracker
-17. DOT / GNRR outbound send log
+5. Wilson Pruitt email Batch 001 source-drop audit
+6. Wilson Pruitt email Batch 001 manifest generator
+7. Wilson Pruitt email evidence register
+8. Wilson Pruitt actor dossier and public-record check workbench
+9. Wilson Pruitt adverse-alignment proof matrix
+10. Count-to-evidence trace map
+11. Paragraph evidence trace matrix
+12. Inspection reports and closing-scope addendum
+13. Inspection comments spreadsheet curation addendum
+14. River Heights inspection source status
+15. Terry Wilson River Heights repair reference pin
+16. Evidence gap action list
+17. DOT / GNRR response intake tracker
+18. DOT / GNRR outbound send log
 
 Current controlling fact: Gary Knight has not been served as of 2026-05-03.
 
@@ -36,3 +37,4 @@ Wilson Pruitt Batch 001 lane: use the Batch 001 intake kit before opening, norma
 Wilson Pruitt manifest-generator lane: after source exports land in Batch 001, run `tools/wpe_batch_manifest.py` to produce timestamped source, privilege-screen, and issue-tagging TSVs on NAS.
 
 Wilson Pruitt actor-dossier lane: use `../actor-dossiers/wilson-pruitt-actor-dossier-7il-ndga-ii-2026-05-03.md` to track identity, role, source packets, public-record checks, and claim-readiness status without promoting raw accusations.
+Wilson Pruitt source-drop audit lane: after the operator copies exports into Batch 001, run `tools/wpe_batch_manifest.py --audit-drop --dry-run` to check per-folder readiness before writing manifests.
