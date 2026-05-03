@@ -204,6 +204,12 @@ Useful query params:
   do not persist this grid as a parameter set. A 14-session ATR buffer at
   0.025 keeps F1 at 74.40% but cuts only 2.23% of events. The best adaptive
   cooldown row cuts 21.48% of events but drops F1 to 56.22%.
+- Added a return-outcome and ticker whipsaw-cluster review layer. Report is
+  tracked at `docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md`.
+  Directional forward returns are flat for both production close and v0.2 raw
+  range: v0.2 5-session win rate is 50.33% with +0.01% average directional
+  return. The worst v0.2 whipsaw clusters are concentrated in MOD, ISRG, MRVL,
+  DLR, and HD.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -213,5 +219,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: research return-conditioned outcomes and per-ticker
-whipsaw clusters before persisting any v0.3 parameter set.
+Next clean build step: design a ticker-cluster exclusion/cooldown candidate
+that targets the worst whipsaw names without degrading forward directional
+returns on the broader universe.
