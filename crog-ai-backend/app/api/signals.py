@@ -204,6 +204,43 @@ class SymbolSignalChart(BaseModel):
     events: list[SymbolChartEvent]
 
 
+class SignalReturnOutcome(BaseModel):
+    horizon_sessions: int
+    evaluated_events: int
+    win_count: int
+    win_rate: float | None
+    average_directional_return: float | None
+    median_directional_return: float | None
+    p25_directional_return: float | None
+    p75_directional_return: float | None
+
+
+class SymbolWhipsawEvent(BaseModel):
+    event_date: dt.date
+    state: str
+    sessions_since_previous: int | None
+    is_whipsaw: bool
+    directional_return: float | None
+
+
+class SymbolWhipsawRisk(BaseModel):
+    ticker: str
+    parameter_set_name: str
+    daily_trigger_mode: str
+    sessions: int
+    as_of: dt.date | None
+    whipsaw_window_sessions: int
+    outcome_horizon_sessions: int
+    event_count: int
+    whipsaw_count: int
+    whipsaw_rate: float | None
+    latest_whipsaw_date: dt.date | None
+    risk_score: int
+    risk_level: str
+    outcome: SignalReturnOutcome
+    recent_events: list[SymbolWhipsawEvent]
+
+
 def _state_label(value: int) -> str:
     if value > 0:
         return "green"
@@ -332,6 +369,29 @@ def symbol_signal_chart(
     if not chart["bars"]:
         raise HTTPException(status_code=404, detail=f"chart data not found for {ticker.upper()}")
     return chart
+
+
+@router.get("/{ticker}/whipsaw-risk", response_model=SymbolWhipsawRisk)
+def symbol_whipsaw_risk(
+    ticker: Annotated[str, Path(min_length=1, max_length=20)],
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    sessions: Annotated[int, Query(ge=30, le=500)] = 260,
+    as_of: dt.date | None = None,
+    parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    whipsaw_window_sessions: Annotated[int, Query(ge=1, le=30)] = 5,
+    outcome_horizon_sessions: Annotated[int, Query(ge=1, le=60)] = 5,
+) -> dict[str, object]:
+    risk = store.symbol_whipsaw_risk(
+        ticker=ticker.upper(),
+        sessions=sessions,
+        as_of=as_of,
+        parameter_set=parameter_set,
+        whipsaw_window_sessions=whipsaw_window_sessions,
+        outcome_horizon_sessions=outcome_horizon_sessions,
+    )
+    if risk["sessions"] == 0:
+        raise HTTPException(status_code=404, detail=f"whipsaw data not found for {ticker.upper()}")
+    return risk
 
 
 @router.get("/{ticker}", response_model=SymbolSignalDetail)

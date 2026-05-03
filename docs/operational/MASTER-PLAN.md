@@ -263,7 +263,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 | Candidate persisted state | v0.2 candidate has 328 `signal_scores` rows and 1,624 `signal_transitions` rows under non-production parameter set; internal API/BFF selector live for scanner, transitions, symbol detail, Portfolio Lens, and chart overlays |
 | Candidate lane comparison | v0.2 bullish lane unchanged at 129, risk unchanged at 47, re-entry 164→145, mixed 202→203, 61 daily states/scores change |
 | Promotion contract | Fresh Dochia scores still staged; legacy `market_signals` remains contextual until calibration/promotion |
-| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, synced chart overlays, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, and internal Production/v0.2 Range toggle |
+| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, synced chart overlays, Whipsaw Risk / Backtest evidence, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, and internal Production/v0.2 Range toggle |
 
 **Signal doctrine:**
 
@@ -280,8 +280,8 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 2. Database scorer: populate `hedge_fund.signal_scores` and `signal_transitions` idempotently. Complete initial fresh batch.
 3. Calibration harness: compare generated daily state/score against 24,204 MarketClub observations. Baseline complete; refinement remains.
 4. Production contract: promote approved signals to `hedge_fund.market_signals`.
-5. API surface: scanner, symbol detail, portfolio board, alert inbox, backtest lab, model health. Scanner, symbol detail, chart data, alert feed, watchlist-candidate lanes, and daily calibration endpoint complete.
-6. Command Center UI: Financial / Hedge Fund route with sober cockpit UX, not gamified retail nudges. First route, chart overlays, Portfolio Lens, and Calibration Baseline complete at `/financial/hedge-fund`.
+5. API surface: scanner, symbol detail, portfolio board, alert inbox, backtest lab, model health. Scanner, symbol detail, chart data, whipsaw/backtest evidence, alert feed, watchlist-candidate lanes, and daily calibration endpoint complete.
+6. Command Center UI: Financial / Hedge Fund route with sober cockpit UX, not gamified retail nudges. First route, chart overlays, Whipsaw Risk / Backtest, Portfolio Lens, and Calibration Baseline complete at `/financial/hedge-fund`.
 
 **Product principles:**
 
@@ -292,7 +292,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Do not call generated weekly/monthly states "MarketClub truth"; they are Dochia-derived.
 - Avoid gamified trading prompts; build an evidence cockpit.
 
-**Immediate next step:** Build a user-facing Whipsaw Risk / Backtest panel in the Hedge Fund cockpit so noisy names are visible and explainable without suppressing the validated v0.2 daily range signal.
+**Immediate next step:** Add a compact promotion-gate panel that compares production and v0.2 Range side by side before any `market_signals` promotion.
 
 ### 6.6 Architectural follow-ups
 
@@ -353,6 +353,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Added read-only v0.2 promotion-review harness covering top-lane churn, recent whipsaw/transition pressure, and chart-level candidate event deltas.
 - Ran first v0.2 promotion-review report. Decision: do not promote range trigger yet. Risk lane is stable, but re-entry lane churn is 66.7%, mixed-timeframe churn is 52.9%, top whipsaw tickers show 8-9 candidate transitions in the 30-day window, and reviewed chart overlays add up to 29 candidate-only daily events on some symbols.
 - Added and ran read-only v0.3 range-trigger guardrail research for break buffers, same-direction close confirmation, ATR-normalized buffers, trailing per-symbol adaptive cooldowns, return-conditioned outcomes, ticker whipsaw clusters, chronological ticker-cluster holdout, and rolling date-safe whipsaw suppressors. Decision: do not persist any v0.3 suppression filter; expose whipsaw risk and backtest evidence in the app instead.
+- Added the Whipsaw Risk / Backtest backend endpoint and cockpit panel. Selected tickers now show daily whipsaw count/rate, risk level, 5-session forward-return outcome, and recent daily event context for both production and v0.2 Range modes.
 - Added internal Production/v0.2 Range toggle to the Command Center Hedge Fund page and promoted the production frontend build.
 - Added chart-data endpoint and chart overlay with close, daily/weekly channel bands, and generated triangle event markers.
 - Refined calibration metrics to separate carried-state agreement from exact new-alert agreement: 40.67% same-day alert match and 52.54% ±3-day alert match.

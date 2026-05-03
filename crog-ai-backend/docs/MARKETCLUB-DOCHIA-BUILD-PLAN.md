@@ -90,6 +90,7 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
+| `GET /api/financial/signals/{ticker}/whipsaw-risk` | symbol whipsaw count/rate and forward-return evidence |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
 Useful query params:
@@ -101,6 +102,8 @@ Useful query params:
 - `watchlist-candidates`: `limit`, optional `parameter_set`
 - `calibration/daily`: `since`, `until`, `ticker`, `parameter_set`, `top_tickers`
 - `{ticker}/chart`: `sessions`, `as_of`
+- `{ticker}/whipsaw-risk`: `sessions`, `as_of`, optional `parameter_set`,
+  `whipsaw_window_sessions`, `outcome_horizon_sessions`
 - `{ticker}`: `transition_limit`, `lookback_days`, optional `parameter_set`
 
 ## Operations
@@ -228,6 +231,11 @@ Useful query params:
   rows collapse exact F1 into the 6.57%-14.07% range, and holdout rows with
   95%+ event reduction stay below 7.41% F1. Do not persist this as a filter;
   surface whipsaw risk as evidence in the app.
+- Added the Whipsaw Risk / Backtest app surface. Backend endpoint
+  `/api/financial/signals/{ticker}/whipsaw-risk` returns selected-symbol daily
+  whipsaw count/rate, risk level, 5-session forward-return outcome, and recent
+  daily events for either production or v0.2 Range mode. The Command Center
+  Hedge Fund cockpit now renders that evidence beside the selected ticker chart.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -237,6 +245,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: add a user-facing Whipsaw Risk / Backtest panel to the
-Hedge Fund cockpit so noisy names are explainable without suppressing validated
-daily range signals.
+Next clean build step: use the Whipsaw Risk / Backtest evidence to add a compact
+promotion-gate panel that compares production and v0.2 Range side by side before
+any `market_signals` promotion.

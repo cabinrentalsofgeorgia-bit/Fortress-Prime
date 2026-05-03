@@ -126,6 +126,41 @@ const chartData = {
   ],
 };
 
+const whipsawRisk = {
+  ticker: "AA",
+  parameter_set_name: "dochia_v0_estimated",
+  daily_trigger_mode: "close",
+  sessions: 260,
+  as_of: "2026-04-24",
+  whipsaw_window_sessions: 5,
+  outcome_horizon_sessions: 5,
+  event_count: 6,
+  whipsaw_count: 2,
+  whipsaw_rate: 0.4,
+  latest_whipsaw_date: "2026-04-22",
+  risk_score: 45,
+  risk_level: "elevated",
+  outcome: {
+    horizon_sessions: 5,
+    evaluated_events: 5,
+    win_count: 3,
+    win_rate: 0.6,
+    average_directional_return: 0.0123,
+    median_directional_return: 0.01,
+    p25_directional_return: -0.004,
+    p75_directional_return: 0.026,
+  },
+  recent_events: [
+    {
+      event_date: "2026-04-22",
+      state: "green",
+      sessions_since_previous: 2,
+      is_whipsaw: true,
+      directional_return: 0.018,
+    },
+  ],
+};
+
 vi.mock("recharts", () => ({
   CartesianGrid: () => null,
   Line: () => null,
@@ -262,6 +297,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialWhipsawRisk: () => ({
+    data: whipsawRisk,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useFinancialWatchlistCandidates: () => ({
     data: watchlistCandidates,
     isError: false,
@@ -294,6 +336,9 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("62.1%")).toBeInTheDocument();
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
+    expect(screen.getByText("Whipsaw Risk / Backtest")).toBeInTheDocument();
+    expect(screen.getByText("Elevated")).toBeInTheDocument();
+    expect(screen.getByText("60.0%")).toBeInTheDocument();
     expect(screen.getAllByText("dochia_v0_estimated").length).toBeGreaterThan(0);
   });
 

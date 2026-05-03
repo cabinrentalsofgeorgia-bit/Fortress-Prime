@@ -55,6 +55,7 @@ Current Financial / Hedge Fund endpoints:
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and parameter-set aware triangle overlay events |
+| `GET /api/financial/signals/{ticker}/whipsaw-risk` | symbol whipsaw count/rate and forward-return backtest evidence |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
 Internal candidate reads can pass `parameter_set=dochia_v0_2_range_daily` to
@@ -184,6 +185,12 @@ raw v0.2 F1. Full-period best reductions cut 90%+ of events but collapse exact
 F1 into the 6.57%-14.07% range. Holdout behaves the same way, with the strongest
 reducers cutting 95%+ of events while exact F1 stays below 7.41%. Keep v0.2
 candidate-only; expose whipsaw risk as evidence instead of suppressing signals.
+
+Whipsaw Risk / Backtest app surface: the symbol-level API now exposes daily
+whipsaw count/rate, risk level, 5-session forward-return outcome, and recent
+daily events through `/api/financial/signals/{ticker}/whipsaw-risk`. The Command
+Center Hedge Fund cockpit renders that evidence beside the selected ticker
+chart for both production and v0.2 Range modes.
 
 ## Relationship to Fortress-Prime
 

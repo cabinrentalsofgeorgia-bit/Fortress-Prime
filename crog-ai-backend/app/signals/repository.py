@@ -11,6 +11,7 @@ from psycopg.rows import dict_row
 from app.database import connect
 from app.signals.calibration_repository import fetch_daily_calibration
 from app.signals.chart_repository import fetch_symbol_chart
+from app.signals.whipsaw_risk import fetch_symbol_whipsaw_risk
 
 
 class SignalDataStore(Protocol):
@@ -60,6 +61,17 @@ class SignalDataStore(Protocol):
         sessions: int,
         as_of: dt.date | None = None,
         parameter_set: str | None = None,
+    ) -> dict[str, Any]: ...
+
+    def symbol_whipsaw_risk(
+        self,
+        *,
+        ticker: str,
+        sessions: int,
+        as_of: dt.date | None = None,
+        parameter_set: str | None = None,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
     ) -> dict[str, Any]: ...
 
 
@@ -447,4 +459,26 @@ class PostgresSignalDataStore:
                 sessions=sessions,
                 as_of=as_of,
                 parameter_set=parameter_set,
+            )
+
+    def symbol_whipsaw_risk(
+        self,
+        *,
+        ticker: str,
+        sessions: int,
+        as_of: dt.date | None = None,
+        parameter_set: str | None = None,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_symbol_whipsaw_risk(
+                conn,
+                ticker=ticker,
+                sessions=sessions,
+                as_of=as_of,
+                parameter_set=parameter_set,
+                whipsaw_window_sessions=whipsaw_window_sessions,
+                outcome_horizon_sessions=outcome_horizon_sessions,
             )
