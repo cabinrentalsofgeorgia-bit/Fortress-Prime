@@ -98,6 +98,17 @@ Batch 001 should update these register rows when sources are available:
 - Do not convert suspicion into pleading language. Convert it into a source row, issue tag, proof gate, or counsel question.
 - Do not place email bodies in repo documents.
 
+
+## Manifest Generator
+
+After source exports are copied into the Batch 001 frozen folders, run:
+
+```bash
+python3 tools/wpe_batch_manifest.py
+```
+
+Use `--dry-run` first if you only want to confirm the source count and planned output paths. The generator writes timestamped source, privilege-screen, and issue-tagging TSVs on NAS; all generated privilege rows start as `PENDING` and issue rows start as `HOLD`.
+
 ## Completion Definition
 
 Batch 001 is complete when:

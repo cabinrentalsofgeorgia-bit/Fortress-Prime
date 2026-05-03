@@ -25,7 +25,7 @@ Purpose: track Wilson Pruitt email intake from raw export through custody, privi
 
 | Batch ID | Source Families | NAS Intake Kit | Current Status | Next Action |
 |---|---|---|---|---|
-| WPE-BATCH-001 | Pre-closing, post-closing, report transmission, Dee McBee Case I, Terry Wilson production, easement/title/crossing | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/wilson-pruitt-email-intake-20260503/00_README/WPE_BATCH_001_OPERATOR_DROP_INSTRUCTIONS_20260503.md` | Ready for operator source drop | Copy source exports into Batch 001 folders, then hash and fill source manifest. |
+| WPE-BATCH-001 | Pre-closing, post-closing, report transmission, Dee McBee Case I, Terry Wilson production, easement/title/crossing | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/wilson-pruitt-email-intake-20260503/00_README/WPE_BATCH_001_OPERATOR_DROP_INSTRUCTIONS_20260503.md` | Ready for operator source drop | Copy source exports into Batch 001 folders, then run `python3 tools/wpe_batch_manifest.py`. |
 
 ## Intake Register
 
@@ -65,3 +65,5 @@ Purpose: track Wilson Pruitt email intake from raw export through custody, privi
 | Are any emails from or to operator counsel mixed into the Wilson Pruitt set? | Privilege screen and segregation. | Open |
 | Do attachments include inspection reports, repair lists, closing statements, title docs, or easement drafts? | Attachment issue tagging and promotion targets. | Open |
 | Are Dee McBee and Terry Wilson email sets already separated by Case I source? | Needed for provenance and Case I-to-Case II overlap mapping. | Open |
+
+Manifest generator: `tools/wpe_batch_manifest.py` writes timestamped source, privilege-screen, and issue-tagging TSVs after source exports are copied into Batch 001.
