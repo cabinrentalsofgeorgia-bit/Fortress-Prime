@@ -291,7 +291,11 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Portfolio Lens")).toBeInTheDocument();
     expect(screen.getByText("BUY")).toBeInTheDocument();
     expect(screen.getByText("Calibration Baseline")).toBeInTheDocument();
-    expect(screen.getByText("62.1%")).toBeInTheDocument();
+    expect(screen.getAllByText("62.1%").length).toBeGreaterThan(0);
+    expect(screen.getByText("Promotion Review")).toBeInTheDocument();
+    expect(screen.getByText("Shadow-ready")).toBeInTheDocument();
+    expect(screen.getByText("Operator review required")).toBeInTheDocument();
+    expect(screen.getByText("Whipsaw Watch")).toBeInTheDocument();
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
     expect(screen.getAllByText("dochia_v0_estimated").length).toBeGreaterThan(0);

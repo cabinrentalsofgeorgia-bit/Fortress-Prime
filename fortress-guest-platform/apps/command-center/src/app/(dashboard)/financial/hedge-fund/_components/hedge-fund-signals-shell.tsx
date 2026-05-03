@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   CartesianGrid,
@@ -95,6 +96,32 @@ const TRANSITION_LABELS: Record<FinancialTransitionType, string> = {
 const EMPTY_SIGNALS: FinancialLatestSignal[] = [];
 const EMPTY_TRANSITIONS: FinancialSignalTransition[] = [];
 const EMPTY_LANES: FinancialWatchlistCandidateLane[] = [];
+
+const PROMOTION_REVIEW = {
+  decision: "Shadow-ready",
+  status: "Operator review required",
+  reviewedAt: "2026-05-03",
+  referenceDate: "2026-04-24",
+  validation: [
+    { label: "Overall F1", production: "44.6%", candidate: "76.6%", delta: "+32.1pt" },
+    { label: "Holdout F1", production: "46.3%", candidate: "83.2%", delta: "+36.9pt" },
+    { label: "Candidate recall", production: "40.7%", candidate: "91.9%", delta: "+51.3pt" },
+    { label: "Carried match", production: "62.1%", candidate: "94.9%", delta: "+32.9pt" },
+  ],
+  lanes: [
+    { label: "Bullish", production: 129, candidate: 129, note: "stable" },
+    { label: "Risk", production: 47, candidate: 47, note: "stable" },
+    { label: "Re-entry", production: 164, candidate: 146, note: "review exits" },
+    { label: "Mixed", production: 202, candidate: 203, note: "acceptable churn" },
+  ],
+  whipsaws: [
+    { ticker: "LPX", production: 3, candidate: 9, latest: "Bearish break" },
+    { ticker: "PNR", production: 4, candidate: 9, latest: "Bullish break" },
+    { ticker: "IR", production: 4, candidate: 9, latest: "Bearish break" },
+    { ticker: "DTE", production: 4, candidate: 9, latest: "Re-entry" },
+    { ticker: "BNDX", production: 1, candidate: 8, latest: "Bearish break" },
+  ],
+};
 
 function formatDate(value?: string | null): string {
   if (!value) return "—";
@@ -578,6 +605,100 @@ function CalibrationPanel({
   );
 }
 
+function PromotionReviewPanel() {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+      <div className="space-y-3">
+        <div className="border border-amber-500/40 bg-amber-500/5 p-3">
+          <p className="text-xs text-muted-foreground">Promotion Gate</p>
+          <p className="mt-1 text-lg font-semibold">{PROMOTION_REVIEW.decision}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{PROMOTION_REVIEW.status}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="border border-border p-3">
+            <p className="text-xs text-muted-foreground">Review Date</p>
+            <p className="mt-1 font-mono text-sm">{formatDate(PROMOTION_REVIEW.reviewedAt)}</p>
+          </div>
+          <div className="border border-border p-3">
+            <p className="text-xs text-muted-foreground">Market Date</p>
+            <p className="mt-1 font-mono text-sm">{formatDate(PROMOTION_REVIEW.referenceDate)}</p>
+          </div>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Next Gate</p>
+          <p className="mt-1 text-sm">
+            Review re-entry exits and whipsaw clusters in chart context before any production flip.
+          </p>
+        </div>
+      </div>
+
+      <div className="border border-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Validation Lift</h2>
+          <Badge variant="outline">v0.2 Range</Badge>
+        </div>
+        <div className="mt-4 space-y-3">
+          {PROMOTION_REVIEW.validation.map((row) => (
+            <div
+              key={row.label}
+              className="grid grid-cols-[96px_minmax(0,1fr)_56px] items-center gap-3 text-xs"
+            >
+              <span className="text-muted-foreground">{row.label}</span>
+              <div className="grid grid-cols-2 overflow-hidden border border-border font-mono">
+                <span className="bg-muted/40 px-2 py-1.5 text-muted-foreground">
+                  {row.production}
+                </span>
+                <span className="px-2 py-1.5 font-semibold text-emerald-600">
+                  {row.candidate}
+                </span>
+              </div>
+              <span className="text-right font-mono font-semibold text-emerald-600">
+                {row.delta}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+        <div className="border border-border p-3">
+          <h2 className="text-sm font-semibold">Lane Deltas</h2>
+          <div className="mt-3 space-y-2">
+            {PROMOTION_REVIEW.lanes.map((row) => (
+              <div key={row.label} className="grid grid-cols-[72px_1fr_72px] items-center gap-2 text-xs">
+                <span className="font-medium">{row.label}</span>
+                <span className="font-mono text-muted-foreground">
+                  {row.production} → {row.candidate}
+                </span>
+                <Badge variant="outline" className="justify-center text-[10px]">
+                  {row.note}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="border border-border p-3">
+          <h2 className="text-sm font-semibold">Whipsaw Watch</h2>
+          <div className="mt-3 space-y-2">
+            {PROMOTION_REVIEW.whipsaws.map((row) => (
+              <div
+                key={row.ticker}
+                className="grid grid-cols-[48px_64px_minmax(0,1fr)] items-center gap-2 text-xs"
+              >
+                <span className="font-mono font-semibold">{row.ticker}</span>
+                <span className="font-mono text-muted-foreground">
+                  {row.production} → {row.candidate}
+                </span>
+                <span className="truncate text-muted-foreground">{row.latest}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function numericValue(value: string | number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
   const numeric = Number(value);
@@ -1022,6 +1143,21 @@ export function HedgeFundSignalsShell() {
             loading={dailyCalibration.isLoading}
             error={dailyCalibration.isError}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="h-5 w-5 text-primary" />
+            <CardTitle>Promotion Review</CardTitle>
+          </div>
+          <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-600">
+            Shadow mode
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <PromotionReviewPanel />
         </CardContent>
       </Card>
 
