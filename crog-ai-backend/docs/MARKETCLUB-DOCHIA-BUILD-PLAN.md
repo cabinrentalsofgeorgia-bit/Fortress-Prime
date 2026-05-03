@@ -1,7 +1,7 @@
 # MarketClub / Dochia Build Plan
 
 **Status:** Active build track
-**Date:** 2026-05-02
+**Date:** 2026-05-03
 **Scope:** CROG-AI backend, Financial Division hedge-fund signal app
 
 ## Thesis
@@ -64,6 +64,9 @@ Dochia-derived until independent truth data exists.
 - Promote approved signals into `hedge_fund.market_signals`.
 - Preserve lineage fields: source pipeline, parameter set, model version,
   computed_at, and explanation payload.
+- Compact Promotion Gate is complete for production vs v0.2 Range review.
+- No `market_signals` promotion is approved yet; next phase is a supervised
+  shadow review and explicit promote/defer runbook.
 
 ### Phase 5 — App Surface
 
@@ -74,9 +77,9 @@ Dochia-derived until independent truth data exists.
 - Portfolio board: first signal-lane/watchlist context complete; true holdings
   exposure remains.
 - Alert inbox: new signals, reversals, whipsaw warnings.
-- Backtest lab: setup history and return distribution.
-- Model health: daily calibration baseline complete; freshness, failed-ticker,
-  and drift views remain.
+- Backtest lab: symbol whipsaw risk and forward-return evidence complete.
+- Model health: daily calibration baseline and Promotion Gate complete;
+  freshness, failed-ticker, and drift views remain.
 
 ## API Contract
 
@@ -89,6 +92,7 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/transitions` | recent signal-change alert feed |
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
+| `GET /api/financial/signals/promotion-gate/daily` | production vs v0.2 Range promotion-gate comparison |
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
 | `GET /api/financial/signals/{ticker}/whipsaw-risk` | symbol whipsaw count/rate and forward-return evidence |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
@@ -101,6 +105,8 @@ Useful query params:
   optional `parameter_set`
 - `watchlist-candidates`: `limit`, optional `parameter_set`
 - `calibration/daily`: `since`, `until`, `ticker`, `parameter_set`, `top_tickers`
+- `promotion-gate/daily`: `candidate_parameter_set`, `since`, `until`,
+  `top_tickers`, `event_window_days`
 - `{ticker}/chart`: `sessions`, `as_of`
 - `{ticker}/whipsaw-risk`: `sessions`, `as_of`, optional `parameter_set`,
   `whipsaw_window_sessions`, `outcome_horizon_sessions`
@@ -117,6 +123,9 @@ Useful query params:
   `deploy/sql/marketclub_legacy_read_grants.sql`.
 - Command Center production build is promoted through
   `crog-ai-frontend.service` on port 3005.
+- Live Promotion Gate smoke on 2026-05-03 returned
+  `ready_for_shadow` for `dochia_v0_2_range_daily` with 328 production
+  signal rows and 328 candidate signal rows.
 
 ## Design Guardrails
 
