@@ -179,6 +179,12 @@ Useful query params:
 - Added v0.2 chart-overlay parity: the chart endpoint accepts `parameter_set`
   and switches daily event markers from close-break production mode to
   range-trigger v0.2 candidate mode.
+- Added read-only promotion review script and dated review note:
+  `scripts/review_signal_candidate_promotion.py` and
+  `docs/dochia-v0-2-promotion-review-2026-05-03.md`. Current gate is
+  shadow-ready but not production-promoted: truth validation is strong, top
+  bullish/risk lanes are stable, but re-entry churn and whipsaw clusters need
+  chart-level operator review.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -188,6 +194,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: run v0.2 promotion review across top-lane symbols,
-whipsaw clusters, and chart-level candidate events before deciding whether the
-range trigger can become the next production parameter set.
+Next clean build step: add a compact Promotion Review panel to the Hedge Fund
+cockpit showing validation, lane deltas, whipsaw clusters, and promotion gate
+status before any production flip.
