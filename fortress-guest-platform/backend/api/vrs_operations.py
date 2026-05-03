@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from html import escape
 from typing import Any, Literal
 from uuid import UUID
 
@@ -15,10 +17,20 @@ from backend.core.security import require_operator_manager_admin
 from backend.models import Guest, GuestQuote, GuestQuoteStatus, Property, Reservation, ReservationHold
 from backend.models.openshell_audit import OpenShellAuditLog
 from backend.models.parity_audit import ParityAudit
+from backend.services.email_service import is_email_configured, send_email
 from backend.models.staff import StaffUser
 from backend.services.openshell_audit import record_audit_event
 
 router = APIRouter()
+
+CONTROL_TOWER_BLOCKED_CAPABILITIES = [
+    "create_checkout_hold",
+    "charge_or_refund_payment",
+    "write_streamline",
+    "publish_public_content",
+    "change_cloudflare_dns_or_tunnel",
+    "mutate_legacy_drupal_or_aws",
+]
 
 
 @router.get("/operations/ping")
@@ -89,6 +101,19 @@ class QuoteBookingActionResponse(BaseModel):
     message: str
 
 
+class QuoteBookingSendRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingSendResponse(BaseModel):
+    ok: bool
+    quote_id: str
+    guest_email: str
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
 def _iso(value: Any) -> str | None:
     if value is None:
         return None
@@ -115,6 +140,21 @@ def _uuid(value: UUID | str | None) -> str | None:
 def _guest_name(first_name: str | None, last_name: str | None, fallback: str | None = None) -> str | None:
     name = f"{first_name or ''} {last_name or ''}".strip()
     return name or fallback
+
+
+def _display_money(value: Any) -> str:
+    money = _money(value)
+    if money is None:
+        return "the quoted total"
+    return f"${money:,.2f}"
+
+
+def _display_date(value: Any) -> str:
+    if value is None:
+        return "TBD"
+    if hasattr(value, "strftime"):
+        return value.strftime("%b %-d, %Y")
+    return str(value)
 
 
 def _hold_stop_level(hold: ReservationHold, now: datetime) -> tuple[Literal["clear", "inspect", "stop"], str]:
@@ -205,7 +245,7 @@ async def _quote_readiness_machine_state(
     )
     has_stay = bool(quote.property_id and quote.check_in and quote.check_out)
     hold_conflicts, reservation_conflicts = await _quote_overlap_counts(db, quote, now)
-    payment_ready = bool(quote.stripe_payment_link_id or quote.stripe_payment_link_url)
+    payment_ready = bool((quote.stripe_payment_link_url or "").strip())
     parity_status = _quote_parity_status(quote)
     parity_upper = parity_status.upper()
     parity_passed = parity_upper in {"MATCH", "PASS", "PASSED", "CLEAR"}
@@ -230,7 +270,7 @@ async def _quote_readiness_machine_state(
         _check(
             "Stripe handoff",
             "pass" if payment_ready else "fail",
-            "Payment link is attached." if payment_ready else "No Stripe payment link is attached.",
+            "Guest checkout payment link is attached." if payment_ready else "No guest checkout payment link is attached.",
         ),
         _check(
             "Streamline parity",
@@ -394,6 +434,8 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
             record.reviewed = True
         elif action == "dismiss":
             record.dismissed = True
+        elif action == "send_guest_quote":
+            record.metadata["guest_quote_sent"] = True
 
         note = metadata.get("note")
         if isinstance(note, str) and note.strip():
@@ -427,6 +469,163 @@ async def _load_control_item(db: AsyncSession, kind: str, item_id: str):
     if row is None:
         raise HTTPException(status_code=404, detail="Control Tower item not found")
     return normalized, row
+
+
+async def _quote_control_record(
+    db: AsyncSession,
+    quote: GuestQuote,
+    now: datetime,
+    now_naive: datetime,
+) -> QuoteBookingRecord:
+    property_name: str | None = None
+    property_slug: str | None = None
+    if quote.property_id:
+        property_record = await db.get(Property, quote.property_id)
+        if property_record:
+            property_name = property_record.name
+            property_slug = property_record.slug
+
+    stop_level, stop_reason = _quote_stop_level(quote, now_naive)
+    readiness_metadata = await _quote_readiness_machine_state(db, quote, now, now_naive)
+    title = property_name or quote.target_property_id or "Guest quote"
+    record = QuoteBookingRecord(
+        id=str(quote.id),
+        kind="quote",
+        title=title,
+        status=str(quote.status),
+        property_id=_uuid(quote.property_id) or quote.target_property_id,
+        property_name=property_name or quote.target_property_id,
+        guest_label=quote.guest_email or quote.guest_name,
+        check_in=_iso(quote.check_in),
+        check_out=_iso(quote.check_out),
+        total_amount=_money(quote.total_amount),
+        payment_state="payment_link_created" if quote.stripe_payment_link_url else "no_payment_link",
+        parity_status=str(readiness_metadata.get("parity_status") or "not_checked"),
+        stop_level=stop_level,
+        stop_reason=stop_reason,
+        href="/vrs/quotes",
+        created_at=_iso(quote.created_at),
+        updated_at=_iso(quote.updated_at),
+        metadata={
+            "campaign": quote.campaign,
+            "property_slug": property_slug,
+            "stripe_payment_link_id": quote.stripe_payment_link_id,
+            "expires_at": _iso(quote.expires_at),
+            **readiness_metadata,
+        },
+    )
+    await _apply_control_audits(db, [record])
+    _finalize_quote_readiness([record])
+    return record
+
+
+def _build_guest_quote_email(quote: GuestQuote, record: QuoteBookingRecord, payment_url: str) -> tuple[str, str, str]:
+    property_name = record.property_name or record.title or "your selected cabin"
+    amount = _display_money(quote.total_amount)
+    check_in = _display_date(quote.check_in)
+    check_out = _display_date(quote.check_out)
+    nights = f"{quote.nights} night{'s' if quote.nights != 1 else ''}" if quote.nights else "your stay"
+    subject = f"Your Cabin Rentals of Georgia quote for {property_name}"
+
+    safe_property_name = escape(property_name)
+    safe_amount = escape(amount)
+    safe_check_in = escape(check_in)
+    safe_check_out = escape(check_out)
+    safe_nights = escape(nights)
+    safe_payment_url = escape(payment_url, quote=True)
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#18181b;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;background:#ffffff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="background:#18181b;padding:24px 28px;">
+                <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Cabin Rentals of Georgia</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px;">
+                <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">Your cabin quote is ready.</p>
+                <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 24px;border-collapse:collapse;">
+                  <tr><td style="padding:8px 0;color:#71717a;">Cabin</td><td style="padding:8px 0;text-align:right;font-weight:600;">{safe_property_name}</td></tr>
+                  <tr><td style="padding:8px 0;color:#71717a;">Stay</td><td style="padding:8px 0;text-align:right;font-weight:600;">{safe_check_in} to {safe_check_out}</td></tr>
+                  <tr><td style="padding:8px 0;color:#71717a;">Length</td><td style="padding:8px 0;text-align:right;font-weight:600;">{safe_nights}</td></tr>
+                  <tr><td style="padding:8px 0;color:#71717a;">Total</td><td style="padding:8px 0;text-align:right;font-weight:700;">{safe_amount}</td></tr>
+                </table>
+                <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6;">Use the secure checkout link below to review and reserve the cabin.</p>
+                <p style="margin:0 0 24px;">
+                  <a href="{safe_payment_url}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;">Review and reserve</a>
+                </p>
+                <p style="margin:0;color:#71717a;font-size:13px;line-height:1.6;">If the button does not open, copy and paste this link into your browser:<br><a href="{safe_payment_url}" style="color:#2563eb;word-break:break-all;">{safe_payment_url}</a></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+    text_body = (
+        "Your Cabin Rentals of Georgia quote is ready.\n\n"
+        f"Cabin: {property_name}\n"
+        f"Stay: {check_in} to {check_out}\n"
+        f"Length: {nights}\n"
+        f"Total: {amount}\n\n"
+        f"Review and reserve: {payment_url}\n"
+    )
+    return subject, html_body, text_body
+
+
+async def _record_quote_send_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    quote: GuestQuote,
+    record: QuoteBookingRecord | None,
+    outcome: str,
+    note: str | None,
+    detail: str,
+) -> OpenShellAuditLog | None:
+    readiness_state = None
+    readiness_reasons: list[str] = []
+    if record is not None:
+        readiness_state = str(record.metadata.get("readiness_state") or "")
+        readiness_reasons = [
+            str(item)
+            for item in (record.metadata.get("readiness_reasons") or [])
+            if isinstance(item, str)
+        ]
+
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.send_guest_quote",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("quote", str(quote.id)),
+        purpose="Controlled staff-approved guest quote send.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "quote_id": str(quote.id),
+            "guest_email": quote.guest_email,
+            "property_name": record.property_name if record else None,
+            "total_amount": _money(quote.total_amount),
+            "readiness_state": readiness_state,
+            "readiness_reasons": readiness_reasons,
+            "note": note,
+            "detail": detail,
+            "safe_send_only": True,
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
 
 
 @router.get(
@@ -517,7 +716,7 @@ async def quote_booking_control_tower(
                 check_in=_iso(quote.check_in),
                 check_out=_iso(quote.check_out),
                 total_amount=_money(quote.total_amount),
-                payment_state="payment_link_created" if quote.stripe_payment_link_id else "no_payment_link",
+                payment_state="payment_link_created" if quote.stripe_payment_link_url else "no_payment_link",
                 parity_status=str(readiness_metadata.get("parity_status") or "not_checked"),
                 stop_level=stop_level,
                 stop_reason=stop_reason,
@@ -683,9 +882,9 @@ async def quote_booking_control_tower(
         ),
         QuoteBookingSafeguard(
             id="read_only",
-            label="Read-only first pass",
+            label="Controlled send only",
             status="locked",
-            detail="This surface cannot send quotes, create holds, charge cards, issue refunds, or write to Streamline.",
+            detail="Only readiness-approved quote emails can be sent. Holds, charges, refunds, Streamline writes, public content, DNS, and tunnels stay locked.",
             href="/ai-engine",
         ),
         QuoteBookingSafeguard(
@@ -744,6 +943,134 @@ async def quote_booking_control_tower(
 
 
 @router.post(
+    "/quote-booking/control-tower/quote/{quote_id}/send",
+    response_model=QuoteBookingSendResponse,
+)
+async def quote_booking_control_send_quote(
+    quote_id: UUID,
+    body: QuoteBookingSendRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingSendResponse:
+    """Send one staff-approved quote email after the server-side readiness gate passes."""
+    quote = await db.get(GuestQuote, quote_id)
+    if quote is None:
+        raise HTTPException(status_code=404, detail="Guest quote not found")
+
+    note = (body.note or "").strip() or None
+    now = datetime.now(timezone.utc)
+    now_naive = datetime.utcnow()
+    record = await _quote_control_record(db, quote, now, now_naive)
+    readiness_state = str(record.metadata.get("readiness_state") or "blocked")
+    if readiness_state != "ready":
+        await _record_quote_send_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail=f"Readiness gate refused send: {readiness_state}.",
+        )
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Quote is not ready to send.",
+                "readiness_state": readiness_state,
+                "readiness_reasons": record.metadata.get("readiness_reasons") or [],
+            },
+        )
+
+    guest_email = (quote.guest_email or "").strip()
+    if not guest_email or "@" not in guest_email:
+        await _record_quote_send_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail="Guest email is missing or invalid.",
+        )
+        raise HTTPException(status_code=422, detail="Guest email is missing or invalid")
+
+    payment_url = (quote.stripe_payment_link_url or "").strip()
+    if not payment_url:
+        await _record_quote_send_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="blocked",
+            note=note,
+            detail="Guest checkout payment link is missing.",
+        )
+        raise HTTPException(status_code=409, detail="Guest checkout payment link is missing")
+
+    if not is_email_configured():
+        audit = await _record_quote_send_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="failure",
+            note=note,
+            detail="SMTP email delivery is not configured.",
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Email delivery is not configured.",
+                "audit_id": str(audit.id) if audit else None,
+            },
+        )
+
+    subject, html_body, text_body = _build_guest_quote_email(quote, record, payment_url)
+    sent = await asyncio.to_thread(
+        send_email,
+        to=guest_email,
+        subject=subject,
+        html_body=html_body,
+        text_body=text_body,
+    )
+    if not sent:
+        audit = await _record_quote_send_audit(
+            db=db,
+            current_user=current_user,
+            quote=quote,
+            record=record,
+            outcome="failure",
+            note=note,
+            detail="SMTP provider returned a send failure.",
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "Quote email dispatch failed.",
+                "audit_id": str(audit.id) if audit else None,
+            },
+        )
+
+    audit = await _record_quote_send_audit(
+        db=db,
+        current_user=current_user,
+        quote=quote,
+        record=record,
+        outcome="success",
+        note=note,
+        detail="Quote email sent to guest through controlled staff workflow.",
+    )
+    return QuoteBookingSendResponse(
+        ok=True,
+        quote_id=str(quote.id),
+        guest_email=guest_email,
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Quote sent to guest. Source booking, payment, public site, DNS, Cloudflare, and Streamline records were not changed.",
+    )
+
+
+@router.post(
     "/quote-booking/control-tower/{kind}/{item_id}/action",
     response_model=QuoteBookingActionResponse,
 )
@@ -767,13 +1094,7 @@ async def quote_booking_control_action(
         "note": note,
         "source_status": str(getattr(row, "status", "") or ""),
         "safe_action_only": True,
-        "blocked_capabilities": [
-            "send_guest_quote",
-            "create_checkout_hold",
-            "charge_or_refund_payment",
-            "write_streamline",
-            "publish_public_content",
-        ],
+        "blocked_capabilities": ["send_guest_quote_without_readiness_approval", *CONTROL_TOWER_BLOCKED_CAPABILITIES],
     }
     audit = await record_audit_event(
         db=db,

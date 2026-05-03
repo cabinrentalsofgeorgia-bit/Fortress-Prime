@@ -9,9 +9,11 @@ import {
   CheckCircle2,
   ClipboardCheck,
   CreditCard,
+  Loader2,
   LockKeyhole,
   PauseCircle,
   RefreshCw,
+  Send,
   ShieldCheck,
   Siren,
   StickyNote,
@@ -32,12 +34,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/lib/api";
 import {
   useQuoteBookingControlAction,
   useQuoteBookingControlTower,
   type QuoteBookingRecord,
   type QuoteBookingSafeguard,
 } from "@/lib/hooks";
+import { toast } from "sonner";
 
 type KindFilter = "all" | QuoteBookingRecord["kind"];
 type StopFilter = "all" | QuoteBookingRecord["stop_level"];
@@ -45,6 +49,15 @@ type SafeAction = "claim" | "mark_reviewed" | "escalate" | "dismiss" | "note";
 type ActionTarget = {
   record: QuoteBookingRecord;
   action: SafeAction;
+};
+
+type QuoteBookingSendResponse = {
+  ok: boolean;
+  quote_id: string;
+  guest_email: string;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
 };
 
 const KIND_FILTERS: { id: KindFilter; label: string }[] = [
@@ -114,6 +127,10 @@ function metadataStrings(record: QuoteBookingRecord, key: string): string[] {
   const value = record.metadata?.[key];
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function canSendGuestQuote(record: QuoteBookingRecord): boolean {
+  return record.kind === "quote" && metadataString(record, "readiness_state") === "ready";
 }
 
 function readinessTone(state: string | null): string {
@@ -233,16 +250,21 @@ function SafeguardRow({ safeguard }: { safeguard: QuoteBookingSafeguard }) {
 function RecordRow({
   record,
   onAction,
+  onSend,
   isActionPending,
+  isSendPending,
 }: {
   record: QuoteBookingRecord;
   onAction: (record: QuoteBookingRecord, action: SafeAction) => void;
+  onSend: (record: QuoteBookingRecord) => void;
   isActionPending: boolean;
+  isSendPending: boolean;
 }) {
   const Icon = KIND_ICONS[record.kind];
   const readinessState = record.kind === "quote" ? metadataString(record, "readiness_state") : null;
   const readinessLabel = record.kind === "quote" ? metadataString(record, "readiness_label") : null;
   const readinessReasons = record.kind === "quote" ? metadataStrings(record, "readiness_reasons") : [];
+  const canSend = canSendGuestQuote(record);
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
@@ -343,6 +365,21 @@ function RecordRow({
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
+          {canSend ? (
+            <Button
+              onClick={() => onSend(record)}
+              disabled={isSendPending}
+              size="sm"
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isSendPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Send
+            </Button>
+          ) : null}
           <Button
             onClick={() => onAction(record, "claim")}
             disabled={isActionPending}
@@ -417,6 +454,9 @@ export default function QuoteControlPage() {
   const [stopFilter, setStopFilter] = useState<StopFilter>("all");
   const [actionTarget, setActionTarget] = useState<ActionTarget | null>(null);
   const [actionNote, setActionNote] = useState("");
+  const [sendTarget, setSendTarget] = useState<QuoteBookingRecord | null>(null);
+  const [sendNote, setSendNote] = useState("");
+  const [isSendingQuote, setIsSendingQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
 
@@ -497,6 +537,10 @@ export default function QuoteControlPage() {
     setActionTarget({ record, action });
     setActionNote("");
   };
+  const openSend = (record: QuoteBookingRecord) => {
+    setSendTarget(record);
+    setSendNote("");
+  };
   const submitAction = () => {
     if (!actionTarget) return;
     actionMutation.mutate(
@@ -513,6 +557,27 @@ export default function QuoteControlPage() {
         },
       },
     );
+  };
+  const submitSend = async () => {
+    if (!sendTarget) return;
+    setIsSendingQuote(true);
+    try {
+      const response = await api.post<QuoteBookingSendResponse>(
+        `/api/vrs/quote-booking/control-tower/quote/${sendTarget.id}/send`,
+        {
+          ...(sendNote.trim() ? { note: sendNote.trim() } : {}),
+        },
+      );
+      toast.success(response.message || `Quote sent to ${response.guest_email}`);
+      setSendTarget(null);
+      setSendNote("");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Quote send failed";
+      toast.error(message);
+    } finally {
+      setIsSendingQuote(false);
+    }
   };
 
   return (
@@ -682,7 +747,9 @@ export default function QuoteControlPage() {
                   key={`${record.kind}-${record.id}`}
                   record={record}
                   onAction={openAction}
+                  onSend={openSend}
                   isActionPending={actionMutation.isPending}
+                  isSendPending={isSendingQuote}
                 />
               ))}
             </div>
@@ -725,6 +792,63 @@ export default function QuoteControlPage() {
               className="bg-cyan-700 text-white hover:bg-cyan-600"
             >
               {actionMutation.isPending ? "Recording..." : "Record Action"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(sendTarget)} onOpenChange={(open) => !open && setSendTarget(null)}>
+        <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Send Guest Quote</DialogTitle>
+            <DialogDescription>{sendTarget?.title || "Ready quote"}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-3 text-sm text-emerald-100">
+              Server-side readiness is required again before delivery. This sends the quote email only; it does not
+              create a hold, charge a card, change Streamline, touch the public website, or alter DNS/tunnels.
+            </div>
+            <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-2">
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Guest</p>
+                <p className="truncate">{sendTarget?.guest_label || "--"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-zinc-500">Total</p>
+                <p>{formatMoney(sendTarget?.total_amount)}</p>
+              </div>
+            </div>
+            <Textarea
+              value={sendNote}
+              onChange={(event) => setSendNote(event.target.value)}
+              placeholder="Internal send note"
+              className="min-h-28 border-zinc-700 bg-zinc-950 text-zinc-100"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+              onClick={() => setSendTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitSend}
+              disabled={isSendingQuote || !sendTarget || !canSendGuestQuote(sendTarget)}
+              className="bg-emerald-700 text-white hover:bg-emerald-600"
+            >
+              {isSendingQuote ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Quote
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
