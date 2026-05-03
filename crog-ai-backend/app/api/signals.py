@@ -230,6 +230,73 @@ class PromotionGateResponse(BaseModel):
     recommendation: PromotionGateRecommendation
 
 
+class ShadowReviewLaneChange(BaseModel):
+    lane_id: str
+    label: str
+    production_tickers: list[str]
+    candidate_tickers: list[str]
+    added_tickers: list[str]
+    removed_tickers: list[str]
+    unchanged_tickers: list[str]
+    churn_rate: float
+
+
+class ShadowReviewTransitionPressure(BaseModel):
+    ticker: str
+    production_transition_count: int
+    candidate_transition_count: int
+    delta: int
+    latest_candidate_transition_type: TransitionKind | None
+    latest_candidate_transition_date: dt.date | None
+
+
+class ShadowReviewWhipsawTicker(BaseModel):
+    ticker: str
+    risk_level: str
+    risk_score: int
+    event_count: int
+    whipsaw_count: int
+    whipsaw_rate: float | None
+    win_rate: float | None
+    average_directional_return: float | None
+    latest_whipsaw_date: dt.date | None
+
+
+class ShadowReviewChecklistItem(BaseModel):
+    id: str
+    label: str
+    status: Literal["pass", "review", "hold", "blocked"]
+    detail: str
+
+
+class ShadowReviewRecommendation(BaseModel):
+    status: Literal["ready_for_shadow_review", "needs_review", "hold"]
+    label: str
+    rationale: str
+
+
+class ShadowReviewDecisionRecordTemplate(BaseModel):
+    candidate_parameter_set: str
+    allowed_decisions: list[str]
+    required_approver: str
+    required_evidence: list[str]
+
+
+class ShadowReviewResponse(BaseModel):
+    generated_at: dt.datetime
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    lookback_days: int
+    review_limit: int
+    promotion_gate: PromotionGateResponse
+    lane_reviews: list[ShadowReviewLaneChange]
+    transition_pressure: list[ShadowReviewTransitionPressure]
+    whipsaw_reviews: list[ShadowReviewWhipsawTicker]
+    checklist: list[ShadowReviewChecklistItem]
+    recommendation: ShadowReviewRecommendation
+    decision_record_template: ShadowReviewDecisionRecordTemplate
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -434,6 +501,26 @@ def promotion_gate_daily(
         until=until,
         top_tickers=top_tickers,
         event_window_days=event_window_days,
+    )
+
+
+@router.get("/shadow-review/daily", response_model=ShadowReviewResponse)
+def shadow_review_daily(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[
+        str, Query(min_length=1, max_length=100)
+    ] = "dochia_v0_2_range_daily",
+    lookback_days: Annotated[int, Query(ge=1, le=365)] = 30,
+    review_limit: Annotated[int, Query(ge=1, le=20)] = 8,
+    whipsaw_window_sessions: Annotated[int, Query(ge=1, le=30)] = 5,
+    outcome_horizon_sessions: Annotated[int, Query(ge=1, le=60)] = 5,
+) -> dict[str, object]:
+    return store.shadow_review(
+        candidate_parameter_set=candidate_parameter_set,
+        lookback_days=lookback_days,
+        review_limit=review_limit,
+        whipsaw_window_sessions=whipsaw_window_sessions,
+        outcome_horizon_sessions=outcome_horizon_sessions,
     )
 
 

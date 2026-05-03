@@ -67,6 +67,8 @@ Dochia-derived until independent truth data exists.
 - Compact Promotion Gate is complete for production vs v0.2 Range review.
 - No `market_signals` promotion is approved yet; next phase is a supervised
   shadow review and explicit promote/defer runbook.
+- Supervised Shadow Review is complete: read-only decision packet, app panel,
+  and operator runbook. This still does not approve production writes.
 
 ### Phase 5 — App Surface
 
@@ -78,8 +80,8 @@ Dochia-derived until independent truth data exists.
   exposure remains.
 - Alert inbox: new signals, reversals, whipsaw warnings.
 - Backtest lab: symbol whipsaw risk and forward-return evidence complete.
-- Model health: daily calibration baseline and Promotion Gate complete;
-  freshness, failed-ticker, and drift views remain.
+- Model health: daily calibration baseline, Promotion Gate, and Shadow Review
+  complete; freshness, failed-ticker, and drift views remain.
 
 ## API Contract
 
@@ -93,6 +95,7 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
 | `GET /api/financial/signals/promotion-gate/daily` | production vs v0.2 Range promotion-gate comparison |
+| `GET /api/financial/signals/shadow-review/daily` | read-only promotion review packet with gate, lane churn, transition pressure, whipsaw evidence, and decision template |
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
 | `GET /api/financial/signals/{ticker}/whipsaw-risk` | symbol whipsaw count/rate and forward-return evidence |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
@@ -107,6 +110,8 @@ Useful query params:
 - `calibration/daily`: `since`, `until`, `ticker`, `parameter_set`, `top_tickers`
 - `promotion-gate/daily`: `candidate_parameter_set`, `since`, `until`,
   `top_tickers`, `event_window_days`
+- `shadow-review/daily`: `candidate_parameter_set`, `lookback_days`,
+  `review_limit`, `whipsaw_window_sessions`, `outcome_horizon_sessions`
 - `{ticker}/chart`: `sessions`, `as_of`
 - `{ticker}/whipsaw-risk`: `sessions`, `as_of`, optional `parameter_set`,
   `whipsaw_window_sessions`, `outcome_horizon_sessions`
@@ -245,15 +250,25 @@ Useful query params:
   whipsaw count/rate, risk level, 5-session forward-return outcome, and recent
   daily events for either production or v0.2 Range mode. The Command Center
   Hedge Fund cockpit now renders that evidence beside the selected ticker chart.
+- Added the Promotion Gate app surface. Backend endpoint
+  `/api/financial/signals/promotion-gate/daily` compares production and v0.2
+  Range on calibration, coverage, score error, signal count, re-entry pressure,
+  and guardrail status before any `market_signals` promotion.
+- Added the supervised Shadow Review app surface and runbook. Backend endpoint
+  `/api/financial/signals/shadow-review/daily` combines Promotion Gate status,
+  lane churn, transition pressure, whipsaw/backtest tickers, checklist status,
+  and a human decision template. Live database smoke returned `needs_review`,
+  4 lane reviews, 8 transition-pressure tickers, and 8 whipsaw-review tickers.
+  Production `market_signals` writes remain blocked.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
   `https://crog-ai.com/financial/hedge-fund`.
-- Latest verification passed: 28 backend tests, ruff, backend health, focused UI
+- Latest verification passed: 49 backend tests, ruff, backend health, focused UI
   tests, focused UI lint, TypeScript, production Command Center build, service
-  status, and live backend/BFF reads for both production and v0.2 candidate
-  selectors. `/financial/hedge-fund` returns 200 after frontend restart.
+  status, and live backend/BFF reads for production, v0.2 candidate, whipsaw,
+  Promotion Gate, and Shadow Review selectors.
 
-Next clean build step: use the Whipsaw Risk / Backtest evidence to add a compact
-promotion-gate panel that compares production and v0.2 Range side by side before
-any `market_signals` promotion.
+Next clean build step: capture the supervised Shadow Review human decision
+record. If the decision is `promote_to_market_signals`, build the promotion path
+as dry-run first before any guarded `market_signals` write.

@@ -14,6 +14,7 @@ import type {
   FinancialLatestSignal,
   FinancialDailyCalibrationResponse,
   FinancialPromotionGateResponse,
+  FinancialShadowReviewResponse,
   FinancialSignalTransition,
   FinancialSignalChartResponse,
   FinancialSymbolSignalDetail,
@@ -203,6 +204,20 @@ export function useFinancialPromotionGate(params?: {
   return useQuery<FinancialPromotionGateResponse>({
     queryKey: ["financial", "signals", "promotion-gate", "daily", params],
     queryFn: () => api.get("/api/financial/signals/promotion-gate/daily", params),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useFinancialShadowReview(params?: {
+  candidate_parameter_set?: string;
+  lookback_days?: number;
+  review_limit?: number;
+  whipsaw_window_sessions?: number;
+  outcome_horizon_sessions?: number;
+}) {
+  return useQuery<FinancialShadowReviewResponse>({
+    queryKey: ["financial", "signals", "shadow-review", "daily", params],
+    queryFn: () => api.get("/api/financial/signals/shadow-review/daily", params),
     staleTime: 5 * 60_000,
   });
 }
