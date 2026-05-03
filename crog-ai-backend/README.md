@@ -105,6 +105,7 @@ Daily event parameter sweeps and candidate validation are also read-only:
 uv run python scripts/sweep_daily_signal_parameters.py --lookback-min 2 --lookback-max 10 --top 12
 uv run python scripts/validate_daily_signal_candidate.py --top-tickers 15 --min-slice-observations 50
 uv run python scripts/compare_signal_candidate_lanes.py --limit-tickers 500 --top 12
+uv run python scripts/review_signal_candidate_promotion.py --lane-limit 50 --chart-ticker-limit 24
 ```
 
 Best 2026-05-02 research candidate: 3-session intraday range trigger. It
@@ -125,6 +126,14 @@ transition rows since 2026-03-25 under the non-production parameter set.
 Portfolio-lane comparison over 328 fresh tickers keeps
 bullish alignment at 129 and risk alignment at 47; re-entry moves 164 to 145,
 mixed timeframes 202 to 203, and 61 daily states/scores change.
+
+The promotion-review script is read-only and combines persisted top-lane churn,
+recent transition pressure, and chart-level candidate-only daily events into one
+review packet. It is the required gate before flipping a candidate parameter set
+to production.
+
+First report: `docs/reports/dochia-v0-2-promotion-review-2026-05-03.md`.
+Decision: do not promote v0.2 yet; add guardrail research first.
 
 ## Relationship to Fortress-Prime
 

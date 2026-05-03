@@ -291,7 +291,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Do not call generated weekly/monthly states "MarketClub truth"; they are Dochia-derived.
 - Avoid gamified trading prompts; build an evidence cockpit.
 
-**Immediate next step:** Run v0.2 promotion review: compare top-lane symbols, whipsaw clusters, and chart-level candidate events before deciding whether the range trigger can become the next production parameter set.
+**Immediate next step:** Add v0.3 guardrail research for the range trigger: reduce whipsaw pressure with debounce, close-confirmation, or volatility filters before any production promotion.
 
 ### 6.6 Architectural follow-ups
 
@@ -349,6 +349,8 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Registered non-production `dochia_v0_2_range_daily` and wired daily trigger mode through score/transition previews. Dry run: 328 candidate score rows, 1,624 candidate transitions since 2026-03-25, bullish/risk lane counts unchanged, 61 daily states/scores changed.
 - Persisted v0.2 candidate scores/transitions under non-production parameter set and added internal `parameter_set` selectors to scanner, transitions, symbol detail, Portfolio Lens, and chart-overlay API reads. Production remains default.
 - Added v0.2 chart-overlay parity: the symbol chart now follows the active Production/v0.2 Range mode, using close-break daily events for production and range-trigger daily events for the v0.2 candidate.
+- Added read-only v0.2 promotion-review harness covering top-lane churn, recent whipsaw/transition pressure, and chart-level candidate event deltas.
+- Ran first v0.2 promotion-review report. Decision: do not promote range trigger yet. Risk lane is stable, but re-entry lane churn is 66.7%, mixed-timeframe churn is 52.9%, top whipsaw tickers show 8-9 candidate transitions in the 30-day window, and reviewed chart overlays add up to 29 candidate-only daily events on some symbols.
 - Added internal Production/v0.2 Range toggle to the Command Center Hedge Fund page and promoted the production frontend build.
 - Added chart-data endpoint and chart overlay with close, daily/weekly channel bands, and generated triangle event markers.
 - Refined calibration metrics to separate carried-state agreement from exact new-alert agreement: 40.67% same-day alert match and 52.54% ±3-day alert match.

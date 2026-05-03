@@ -179,6 +179,15 @@ Useful query params:
 - Added v0.2 chart-overlay parity: the chart endpoint accepts `parameter_set`
   and switches daily event markers from close-break production mode to
   range-trigger v0.2 candidate mode.
+- Added a read-only promotion-review harness that combines persisted top-lane
+  churn, recent whipsaw/transition pressure, and chart-level candidate-only
+  daily events before any production flip.
+- First promotion-review run is tracked at
+  `docs/reports/dochia-v0-2-promotion-review-2026-05-03.md`. Decision: do not
+  promote v0.2 yet. Re-entry lane churn is 66.7%, mixed-timeframe churn is
+  52.9%, top whipsaw tickers show 8-9 candidate transitions in the 30-day
+  window, and reviewed chart overlays add up to 29 candidate-only daily events
+  on some symbols.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -188,6 +197,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: run v0.2 promotion review across top-lane symbols,
-whipsaw clusters, and chart-level candidate events before deciding whether the
-range trigger can become the next production parameter set.
+Next clean build step: add v0.3 guardrail research for the range trigger:
+reduce whipsaw pressure with debounce, close-confirmation, or volatility
+filters before any production promotion.
