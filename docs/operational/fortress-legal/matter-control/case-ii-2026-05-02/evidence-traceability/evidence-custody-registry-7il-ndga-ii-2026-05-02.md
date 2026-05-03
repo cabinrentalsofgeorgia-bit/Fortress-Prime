@@ -30,6 +30,17 @@ This registry records source paths, file sizes, and SHA256 hashes for key files.
 | Thatcher_John_2023-07-31.ptx | `curated/documents/case-i-context/09_depositions/thatcher/Thatcher_John_2023-07-31.ptx` | 92236 | `d540a2960780ee7f8729907653887cf0f0ef38279412f91b08dcb0e338942f67` |
 
 
+## Pending Wilson Pruitt Email Intake Controls
+
+These rows are tracking controls only. They are not evidence entries until original emails/exports are saved, hashed, attachment-linked, privilege-screened, and promoted.
+
+| Intake Lane | Placeholder Path | Source-Control Use | Status |
+|---|---|---|---|
+| Wilson Pruitt originals | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/wilson-pruitt-email-intake-20260503/01_originals_frozen/` | Raw `.eml`, `.msg`, mailbox export, PDF print, or source screenshots exactly as received. | Pull / export pending. |
+| Wilson Pruitt normalized review copies | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/wilson-pruitt-email-intake-20260503/02_normalized_exports/` | Searchable review copies generated only after originals are frozen. | Pending originals. |
+| Wilson Pruitt native attachments | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/wilson-pruitt-email-intake-20260503/03_attachments_native/` | Inspection reports, repair lists, title/closing/easement attachments, and other native files linked to parent emails. | Pending originals. |
+| Wilson Pruitt privilege screen | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/wilson-pruitt-email-intake-20260503/04_privilege_screen/` | Counsel/operator review for privileged, work-product, settlement-sensitive, and third-party-counsel communications. | Pending originals. |
+
 ## Pending DOT / GNRR Response Intake Controls
 
 These rows are tracking controls only. They are not evidence entries until a produced record is saved, hashed, and promoted into the registry.
