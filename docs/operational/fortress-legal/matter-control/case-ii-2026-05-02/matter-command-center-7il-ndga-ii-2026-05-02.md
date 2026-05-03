@@ -47,6 +47,8 @@ While not served, build the evidence machine: run Wilson Pruitt email intake con
 | Wilson Pruitt manifest generator | `tools/wpe_batch_manifest.py` | Generates Batch 001 source hash manifest, privilege-screen queue, and issue-tagging queue after source files are copied |
 | Wilson Pruitt claim evaluation workbench | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/filing-readiness/wilson-pruitt-claim-evaluation-workbench-7il-ndga-ii-2026-05-03.md` | Counsel-review gates for professional-negligence, coordinated-conduct, procedural route, causation, damages, and privilege risk |
 | Wilson Pruitt adverse-alignment proof matrix | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/evidence-traceability/wilson-pruitt-adverse-alignment-proof-matrix-7il-ndga-ii-2026-05-03.md` | Source-to-gate matrix for Wilson Pruitt / Terry Wilson evidence intake and pleading discipline |
+| Wilson Pruitt actor dossier | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/actor-dossiers/wilson-pruitt-actor-dossier-7il-ndga-ii-2026-05-03.md` | Identity, role, source-packet, public-record, and claim-readiness control for Wilson Pruitt / Terry Wilson |
+| Wilson Pruitt public-record check workbench | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/actor-dossiers/wilson-pruitt-public-record-check-workbench-7il-ndga-ii-2026-05-03.md` | Litigation-history and counterclaim verification workflow for 2020-present checks |
 | Answer matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/First_Response_Answer_Matrix_7IL_NDGA_II_20260502.md` | Paragraph-by-paragraph workbench |
 | First-response readiness gate | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/filing-readiness/first-response-readiness-gate-7il-ndga-ii-2026-05-02.md` | Release gate before answer, Rule 12, extension, or counterclaim filing path |
 | Issue matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Issue_Matrix_7IL_NDGA_II_20260502.md` | Claims/defenses/counterclaims control |
@@ -67,4 +69,5 @@ While not served, build the evidence machine: run Wilson Pruitt email intake con
 2. Update counsel conflict tracker.
 3. Add any new evidence to the evidence-to-pleading map only after custody, privilege, and source controls clear.
 4. Review answer matrix gaps.
-5. Record decisions in the decision log.
+5. Complete actor-dossier/public-record checks only through official or source-controlled records.
+6. Record decisions in the decision log.
