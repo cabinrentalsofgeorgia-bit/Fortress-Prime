@@ -13,6 +13,16 @@ This log controls the case clock. Update immediately if any summons, complaint, 
 | Operator confirmed not served | 2026-05-02 | Operator statement | No response deadline running from service as of this date |
 | Rough Rule 4(m) service deadline | 2026-07-14 | 90-day calculation from filing date | Recalculate if court order or exact rule application changes it |
 
+
+## Rule / Deadline Source Controls
+
+| Source | Control Use |
+|---|---|
+| U.S. Courts Federal Rules of Civil Procedure page | Official source page for current federal civil rules. |
+| U.S. Courts Federal Rules PDF | Live rule text source for Rule 4 service/waiver, Rule 8 answer framework, Rule 12 response/motion posture, and Rule 13 counterclaim checks. |
+| N.D. Ga. Local Rules page | Local rule source; verify current civil rules before filing or computing any local-practice requirement. |
+| First-response readiness gate | Release gate for answer, Rule 12, extension, counterclaim, and filing-mechanics decisions. |
+
 ## Service Event Table
 
 | Date/Time | Event Type | Served Person | Method | Documents Received | Proof/Docket Entry | Response Deadline | Action Taken |
@@ -28,3 +38,4 @@ This log controls the case clock. Update immediately if any summons, complaint, 
 - Calculate response deadline conservatively.
 - Notify conflict-cleared counsel candidates.
 - Move answer matrix from workbench mode to filing-readiness mode.
+- Update first-response readiness gate.

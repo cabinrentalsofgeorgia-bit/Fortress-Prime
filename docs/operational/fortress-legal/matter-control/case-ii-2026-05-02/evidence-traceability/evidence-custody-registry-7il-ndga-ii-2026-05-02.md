@@ -28,3 +28,27 @@ This registry records source paths, file sizes, and SHA256 hashes for key files.
 | Exh._C___2021.03.07_Thor_James_Water_Easement.pdf | `curated/documents/case-i-context/04_deposition_exhibits_7il/Exh._C___2021.03.07_Thor_James_Water_Easement.pdf` | 2579820 | `0677afed54ddd35effac9b6ecd004541b6581bb457cc24d5fb649992f6b46a33` |
 | Knight_Gary_Deposition_Transcript.pdf | `curated/documents/case-i-context/09_depositions/knight/Knight_Gary_Deposition_Transcript.pdf` | 3017685 | `8c8b94626654ab9832a02c512ae189740a3c91c326987f75ee17c27229163543` |
 | Thatcher_John_2023-07-31.ptx | `curated/documents/case-i-context/09_depositions/thatcher/Thatcher_John_2023-07-31.ptx` | 92236 | `d540a2960780ee7f8729907653887cf0f0ef38279412f91b08dcb0e338942f67` |
+
+
+## Pending DOT / GNRR Response Intake Controls
+
+These rows are tracking controls only. They are not evidence entries until a produced record is saved, hashed, and promoted into the registry.
+
+| Intake Lane | Placeholder Path | Source-Control Use | Status |
+|---|---|---|---|
+| GDOT open-records response | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/gdot-open-records/` | Lease/right-of-way, MP386.3 crossing file, maps, operator-control, consent/no-objection responses. | Pending request send / response. |
+| GNRR / Blue Ridge response | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/gnrr-blue-ridge/` | Crossing agreement file, assignments, fee/insurance/maintenance records, current operator/control records. | Counsel/operator send decision pending. |
+| County / title follow-up | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/incoming/dot-gnrr-records-request-20260502/county-title-follow-up/` | Deeds, plats, railroad exceptions, title commitments, exception schedules, surveys, maps. | Pull target open. |
+
+## NAS-Only Privileged Staging Controls
+
+These items are not repo-committed exhibits. They are source-control leads retained in privileged NAS staging.
+
+| Item | Source-Control Use | Bytes | SHA256 |
+|---|---|---:|---|
+| Case I / 2021 River Heights standalone home inspection | 253 River Heights report, inspected March 22, 2021; source copy from GAND received-from-Gary lane | 11723968 | `a3e6eb2c836a4cc1694675f84db590bc452ce2694f68b413adecbc768cdd2533` |
+| Case I / 2021 River Heights home-inspection email package | Dee McBee production copy of email/report package | 76463761 | `92428124ad00bbb9bf956bb28ab6f5d1a8cef247d1305627d1c1bc3360e8d402` |
+| Inspection Comments spreadsheet | Repair-comparison triage lead only; not a source inspection report | 15677 | `90c78d0fcb23020e542e49d99d4f9f0657ea745bd6e211c4c2ce228eda3a2e8a` |
+| Inspection of 92 Fish Trap.pdf | May 14, 2025 Fish Trap source report; supports Exhibit H source control | 18513810 | `d055e93d072329279a046ca2a239ea25dbcddd23aa7d59391bf2ee20fdbb1c5e` |
+| 92 inspection.pdf | 2021-era Fish Trap source report; supports Fish Trap baseline comparison | 11301693 | `f5a1637488870d6c402cf0a59837ddab03cfbd73dc6d3540baa32fd684ff965a` |
+| Terry Wilson Certificate of Authentication pages 23-26 | Wilson-production Amendment #2 page pin referencing 3/22/2021 Titus Pugh inspection summary and seller-fix comment list | 169900299 | `2070a460bb9d359e4ec07df15ade1e93144704caed085bea86b6dfd633cd02cd` |
