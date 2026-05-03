@@ -29,6 +29,7 @@ import httpx
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
@@ -595,10 +596,68 @@ def _is_under(child: Path, parent: Path) -> bool:
     return True
 
 
+def _validate_download_relative_path(relative_path: str) -> Path:
+    if "\\" in relative_path:
+        raise HTTPException(status_code=400, detail="Invalid relative_path")
+    rel_path = Path(relative_path)
+    if rel_path.is_absolute() or not rel_path.parts:
+        raise HTTPException(status_code=400, detail="Invalid relative_path")
+    if any(part in ("", ".", "..") for part in rel_path.parts):
+        raise HTTPException(status_code=400, detail="Invalid relative_path")
+    return rel_path
+
+
+def _case_file_download_url(
+    slug: str,
+    filename: str,
+    logical_name: str,
+    relative_path: str,
+) -> str:
+    query = urlencode({"subdir": logical_name, "relative_path": relative_path})
+    encoded_filename = quote(filename, safe="")
+    return f"{INTERNAL_LEGAL_API_PREFIX}/cases/{slug}/download/{encoded_filename}?{query}"
+
+
+def _case_file_response(
+    *,
+    candidate: Path,
+    slug: str,
+    filename: str,
+    logical_name: str,
+    nas_layout: Any,
+    relative_path: str | None = None,
+) -> FileResponse:
+    ext = candidate.suffix.lower()
+    media_type = MIME_MAP.get(ext, "application/octet-stream")
+    logger.info(
+        "legal_file_download",
+        slug=slug,
+        filename=filename,
+        subdir=logical_name,
+        relative_path=relative_path,
+        custom_layout=bool(nas_layout),
+    )
+    return FileResponse(
+        path=str(candidate.resolve()),
+        media_type=media_type,
+        filename=filename,
+    )
+
+
 @router.get("/cases/{slug}/download/{filename}", summary="Download a file from a case's NAS vault")
-async def download_case_file(slug: str, filename: str):
+async def download_case_file(
+    slug: str,
+    filename: str,
+    subdir: str | None = None,
+    relative_path: str | None = None,
+):
     if ".." in filename or "/" in filename or "\\" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
+    if (subdir is None) != (relative_path is None):
+        raise HTTPException(
+            status_code=400,
+            detail="subdir and relative_path must be provided together",
+        )
 
     async with LegacySession() as session:
         slug = await _resolve_case_slug(session, slug)
@@ -614,33 +673,69 @@ async def download_case_file(slug: str, filename: str):
     layout = _resolve_case_layout_details(slug, nas_layout)
     case_root, subdir_map, recursive = layout.root, layout.subdirs, layout.recursive
 
+    if subdir is not None and relative_path is not None:
+        if subdir not in subdir_map:
+            raise HTTPException(status_code=404, detail=f"Subdir '{subdir}' not found in case vault")
+
+        rel_path = _validate_download_relative_path(relative_path)
+        if rel_path.name != filename:
+            raise HTTPException(status_code=400, detail="relative_path filename mismatch")
+
+        base = case_root / subdir_map[subdir]
+        candidate = base / rel_path
+        if (
+            not candidate.is_file()
+            or not _is_under(candidate, base)
+            or not _is_under(candidate, case_root)
+            or _layout_excludes(candidate, case_root, layout.exclude_subdirs)
+        ):
+            raise HTTPException(status_code=404, detail=f"File '{filename}' not found in case vault")
+
+        return _case_file_response(
+            candidate=candidate,
+            slug=slug,
+            filename=filename,
+            logical_name=subdir,
+            nas_layout=nas_layout,
+            relative_path=relative_path,
+        )
+
+    matches: list[tuple[str, str, Path]] = []
     for logical_name, relative_path in subdir_map.items():
         d = case_root / relative_path
-        if not d.is_dir():
-            continue
-        if recursive:
-            iterator = (p for p in d.rglob(filename) if p.is_file())
-        else:
-            cand = d / filename
-            iterator = iter([cand]) if cand.is_file() else iter(())
-        for candidate in iterator:
-            if not _is_under(candidate, case_root):
+        for candidate in _walk_case_subdir(
+            d,
+            recursive,
+            case_root=case_root,
+            exclude_subdirs=layout.exclude_subdirs,
+        ):
+            if candidate.name != filename:
+                continue
+            if not _is_under(candidate, d) or not _is_under(candidate, case_root):
                 # Path-traversal guard: a symlink could escape case_root.
                 continue
-            if _layout_excludes(candidate, case_root, layout.exclude_subdirs):
-                continue
-            ext = candidate.suffix.lower()
-            media_type = MIME_MAP.get(ext, "application/octet-stream")
-            logger.info(
-                "legal_file_download",
-                slug=slug, filename=filename, subdir=logical_name,
-                custom_layout=bool(nas_layout),
-            )
-            return FileResponse(
-                path=str(candidate.resolve()),
-                media_type=media_type,
-                filename=filename,
-            )
+            rel_name = str(candidate.relative_to(d))
+            matches.append((logical_name, rel_name, candidate))
+
+    if len(matches) == 1:
+        logical_name, rel_name, candidate = matches[0]
+        return _case_file_response(
+            candidate=candidate,
+            slug=slug,
+            filename=filename,
+            logical_name=logical_name,
+            nas_layout=nas_layout,
+            relative_path=rel_name,
+        )
+
+    if len(matches) > 1:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Multiple files named '{filename}' found in case vault; "
+                "use subdir and relative_path"
+            ),
+        )
 
     raise HTTPException(status_code=404, detail=f"File '{filename}' not found in case vault")
 
@@ -672,12 +767,18 @@ async def list_case_files(slug: str):
         ):
             if not _is_under(f, case_root):
                 continue
+            relative_file_path = str(f.relative_to(d))
             files.append({
                 "filename":     f.name,
                 "subdir":       logical_name,            # logical, not physical
-                "relative_path": str(f.relative_to(d)),  # for nested layouts
+                "relative_path": relative_file_path,      # for nested layouts
                 "size_bytes":   f.stat().st_size,
-                "download_url": f"{INTERNAL_LEGAL_API_PREFIX}/cases/{slug}/download/{f.name}",
+                "download_url": _case_file_download_url(
+                    slug,
+                    f.name,
+                    logical_name,
+                    relative_file_path,
+                ),
             })
     return {"case_slug": slug, "files": files, "total": len(files)}
 

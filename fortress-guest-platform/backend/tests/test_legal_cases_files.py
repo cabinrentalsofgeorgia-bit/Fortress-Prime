@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
@@ -103,10 +104,14 @@ class TestListFilesDefaultLayout:
         subdirs = {f["subdir"] for f in result["files"]}
         assert subdirs <= set(_DEFAULT_SUBDIR_MAP.keys())
         # Each entry has a download_url referencing the slug
-        assert all(
-            f["download_url"] == f"/api/internal/legal/cases/{slug}/download/{f['filename']}"
-            for f in result["files"]
-        )
+        for f in result["files"]:
+            parsed = urlsplit(f["download_url"])
+            params = parse_qs(parsed.query)
+            assert parsed.path == f"/api/internal/legal/cases/{slug}/download/{f['filename']}"
+            assert params == {
+                "subdir": [f["subdir"]],
+                "relative_path": [f["relative_path"]],
+            }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -181,6 +186,13 @@ class TestListFilesWave7Layout:
         assert names == {
             ("curated", "emails/Argo.eml", "Argo.eml"),
             ("curated", "pleadings/Complaint.pdf", "Complaint.pdf"),
+        }
+        argo = next(f for f in result["files"] if f["filename"] == "Argo.eml")
+        parsed = urlsplit(argo["download_url"])
+        assert parsed.path == "/api/internal/legal/cases/7il-v-knight-ndga-ii/download/Argo.eml"
+        assert parse_qs(parsed.query) == {
+            "subdir": ["curated"],
+            "relative_path": ["emails/Argo.eml"],
         }
 
 
@@ -297,6 +309,79 @@ class TestDownloadCustomLayout:
         resp = await download_case_file("7il", "#1 Complaint.pdf")
         assert isinstance(resp, FileResponse)
         assert Path(resp.path).resolve() == target.resolve()
+
+
+class TestDownloadStableAddressing:
+    @pytest.mark.asyncio
+    async def test_relative_path_selects_nested_duplicate_filename(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ):
+        case_root = tmp_path / "case"
+        email_target = case_root / "curated" / "emails" / "Report.pdf"
+        pleading_target = case_root / "curated" / "pleadings" / "Report.pdf"
+        email_target.parent.mkdir(parents=True)
+        pleading_target.parent.mkdir(parents=True)
+        email_target.write_bytes(b"email")
+        pleading_target.write_bytes(b"pleading")
+
+        layout = {
+            "primary_root": str(case_root),
+            "include_subdirs": ["curated"],
+        }
+        _patch_legacy_session(monkeypatch, _row(nas_layout=layout))
+
+        from fastapi.responses import FileResponse
+        resp = await download_case_file(
+            "case",
+            "Report.pdf",
+            subdir="curated",
+            relative_path="emails/Report.pdf",
+        )
+        assert isinstance(resp, FileResponse)
+        assert Path(resp.path).resolve() == email_target.resolve()
+
+    @pytest.mark.asyncio
+    async def test_filename_only_duplicate_download_returns_conflict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ):
+        case_root = tmp_path / "case"
+        for folder in ("emails", "pleadings"):
+            target = case_root / "curated" / folder / "Report.pdf"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(folder.encode())
+
+        layout = {
+            "primary_root": str(case_root),
+            "include_subdirs": ["curated"],
+        }
+        _patch_legacy_session(monkeypatch, _row(nas_layout=layout))
+
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            await download_case_file("case", "Report.pdf")
+        assert exc_info.value.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_relative_path_traversal_rejected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ):
+        case_root = tmp_path / "case"
+        (case_root / "curated").mkdir(parents=True)
+        layout = {
+            "primary_root": str(case_root),
+            "include_subdirs": ["curated"],
+        }
+        _patch_legacy_session(monkeypatch, _row(nas_layout=layout))
+
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            await download_case_file(
+                "case",
+                "secret.pdf",
+                subdir="curated",
+                relative_path="../secret.pdf",
+            )
+        assert exc_info.value.status_code == 400
 
 
 # ─────────────────────────────────────────────────────────────────────────────

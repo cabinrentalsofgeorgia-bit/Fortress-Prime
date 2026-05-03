@@ -338,7 +338,7 @@ Do not store real secrets in repo files. The names below are runtime contract na
 2. Which live LiteLLM alias map is authoritative now: Spark-5 BRAIN-era or Spark-3+4 TP=2 Phase 9?
 3. Should legal ingest write directly to `legal_ediscovery_v2` / `legal_ediscovery_active`, or is legacy `legal_ediscovery` intentionally retained as ingest source with separate reindex?
 4. Are Qdrant aliases managed in code/config, or only by operator/manual Qdrant API calls?
-5. Should recursive Legal Command Center downloads include a nested relative path or stable document id instead of filename-only lookup?
+5. Should recursive Legal Command Center downloads later move from `subdir` + `relative_path` query parameters to stable document ids?
 6. Should `/mnt/fortress_nas/sectors/legal` remain an active legal file root or be marked legacy-only?
 7. Which DB is the legal case metadata source of truth after Spark-1 migration: `fortress_prod`, `fortress_db`, or Spark-1 `fortress_prod` mirror?
 8. What is the exact production Qdrant storage path and snapshot/backup policy for privileged collections?
@@ -388,5 +388,4 @@ Before new Fortress Legal features, resolve foundation ambiguity in this order:
 1. Prove live host ownership: Spark-2 current vs Spark-1 cutover state.
 2. Prove DB source-of-truth contract for Legal after PR #366/#405 era changes.
 3. Prove Qdrant alias/read/write contract for `legal_ediscovery_active` and v2.
-4. Reconcile download addressing for recursive Legal Command Center file browsing so duplicate filenames cannot resolve ambiguously.
-5. Re-audit frontend zone separation so privileged Legal never leaks into public storefront surfaces.
+4. Re-audit frontend zone separation so privileged Legal never leaks into public storefront surfaces.
