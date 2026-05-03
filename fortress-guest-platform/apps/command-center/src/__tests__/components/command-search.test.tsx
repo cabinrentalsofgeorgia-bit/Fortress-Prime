@@ -574,11 +574,11 @@ describe("CommandSearch", () => {
     await user.click(screen.getByRole("button", { name: /execute command/i }));
     await user.type(screen.getByLabelText("command-input"), "ledger sync");
 
-    const paperclipHeading = screen.getByText("PAPERCLIP AI");
-    const paperclipGroup = paperclipHeading.parentElement;
-    expect(paperclipGroup).not.toBeNull();
+    const revenueHeading = screen.getByText("Revenue");
+    const revenueGroup = revenueHeading.parentElement;
+    expect(revenueGroup).not.toBeNull();
 
-    const groupButtons = within(paperclipGroup!).getAllByRole("button");
+    const groupButtons = within(revenueGroup!).getAllByRole("button");
     const labels = groupButtons.map((button) => button.textContent ?? "");
 
     expect(labels[0]).toContain("Sync Adjudication Ledger");

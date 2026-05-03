@@ -521,7 +521,7 @@ export function FolioSheet({ reservationId, open, onOpenChange }: FolioSheetProp
                       ...fin,
                       security_deposit: {
                         is_required: updated.security_deposit_required,
-                        amount: updated.security_deposit_amount,
+                        amount_cents: updated.security_deposit_amount,
                         status: updated.security_deposit_status,
                         stripe_payment_intent: fin.security_deposit?.stripe_payment_intent ?? null,
                         updated_at: new Date().toISOString(),

@@ -7,6 +7,8 @@ export const revalidate = 0;
 
 const COMMAND_CENTER =
   process.env.COMMAND_CENTER_URL || "http://127.0.0.1:9800";
+const CROG_AI_BACKEND =
+  process.env.CROG_AI_BACKEND_URL || "http://127.0.0.1:8026";
 const INTERNAL_TUNNEL_SIGNATURE =
   process.env.INTERNAL_API_TOKEN || process.env.SWARM_API_KEY || "";
 
@@ -22,6 +24,10 @@ const COMMAND_CENTER_PREFIXES = [
   "/api/signup",
   "/api/profile",
   "/api/users",
+];
+
+const CROG_AI_PREFIXES = [
+  "/api/financial/signals",
 ];
 
 const SESSION_COOKIE = "fortress_session";
@@ -45,13 +51,22 @@ const PUBLIC_FGP_PATH_PREFIXES = [
   "/api/dispatch/",
 ];
 
-function resolveUpstream(pathname: string): { base: string; isCC: boolean } {
+function resolveUpstream(pathname: string): { base: string; isCC: boolean; isCrogAI: boolean } {
   const isCC = COMMAND_CENTER_PREFIXES.some((p) => pathname.startsWith(p));
-  return { base: isCC ? COMMAND_CENTER : getBackendBaseUrl(), isCC };
+  const isCrogAI = CROG_AI_PREFIXES.some((p) => pathname.startsWith(p));
+  return {
+    base: isCC ? COMMAND_CENTER : isCrogAI ? CROG_AI_BACKEND : getBackendBaseUrl(),
+    isCC,
+    isCrogAI,
+  };
 }
 
-function shouldSignInternalFgpRequest(pathname: string, isCC: boolean): boolean {
-  if (isCC) return false;
+function shouldSignInternalFgpRequest(
+  pathname: string,
+  isCC: boolean,
+  isCrogAI: boolean,
+): boolean {
+  if (isCC || isCrogAI) return false;
   return !PUBLIC_FGP_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
@@ -94,6 +109,7 @@ function buildUpstreamHeaders(
   request: NextRequest,
   token: string | null,
   isCC: boolean,
+  isCrogAI: boolean,
   pathname: string,
 ): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -128,7 +144,7 @@ function buildUpstreamHeaders(
   const host = request.headers.get("host") || request.nextUrl.host;
   if (host) headers["X-Forwarded-Host"] = host;
 
-  if (shouldSignInternalFgpRequest(pathname, isCC) && INTERNAL_TUNNEL_SIGNATURE) {
+  if (shouldSignInternalFgpRequest(pathname, isCC, isCrogAI) && INTERNAL_TUNNEL_SIGNATURE) {
     headers["X-Fortress-Ingress"] = "command_center";
     headers["X-Fortress-Tunnel-Signature"] = INTERNAL_TUNNEL_SIGNATURE;
   }
@@ -150,12 +166,12 @@ async function proxy(
 ) {
   await params;
   const pathname = request.nextUrl.pathname;
-  const { base, isCC } = resolveUpstream(pathname);
+  const { base, isCC, isCrogAI } = resolveUpstream(pathname);
   const target = `${base}${pathname}${request.nextUrl.search}`;
-  const upstream = isCC ? "CC:9800" : "FGP:8100";
+  const upstream = isCC ? "CC:9800" : isCrogAI ? "CROG-AI:8026" : "FGP:8100";
 
   const token = extractToken(request);
-  const headers = buildUpstreamHeaders(request, token, isCC, pathname);
+  const headers = buildUpstreamHeaders(request, token, isCC, isCrogAI, pathname);
 
   console.log(
     `[BFF] ${request.method} ${pathname} → ${upstream}` +
