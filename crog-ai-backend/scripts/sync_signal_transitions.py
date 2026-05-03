@@ -31,6 +31,7 @@ from scripts.sync_signal_scores import (  # noqa: E402
     _fetch_parameter_set,
     _fetch_reference_date,
     _is_fresh_enough,
+    _resolve_daily_trigger_mode,
 )
 
 
@@ -46,6 +47,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--since", type=dt.date.fromisoformat, default=None)
     parser.add_argument("--as-of", type=dt.date.fromisoformat, default=None)
     parser.add_argument("--parameter-set", default=None)
+    parser.add_argument(
+        "--daily-trigger-mode",
+        choices=["close", "range"],
+        default=None,
+        help=(
+            "Daily trigger mode. Defaults to close, except the "
+            "dochia_v0_2_range_daily candidate resolves to range."
+        ),
+    )
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--include-stale", action="store_true")
     parser.add_argument("--display-limit", type=int, default=120)
@@ -64,6 +74,10 @@ def build_transition_previews_and_parameter_set(
     conn: psycopg.Connection,
 ) -> tuple[list[SignalTransitionPreview], dict[str, Any], dt.date]:
     parameter_set = _fetch_parameter_set(conn, args.parameter_set)
+    daily_trigger_mode = _resolve_daily_trigger_mode(
+        str(parameter_set["name"]),
+        args.daily_trigger_mode,
+    )
     reference_date = _fetch_reference_date(conn, args.as_of)
     since = _effective_since(reference_date, args)
     tickers = args.tickers or _fetch_candidate_tickers(
@@ -82,7 +96,13 @@ def build_transition_previews_and_parameter_set(
         if len(rows) < args.min_bars:
             continue
         bars = [eod_row_to_bar(row) for row in rows]
-        snapshot = latest_triangle_snapshot(bars)
+        snapshot = latest_triangle_snapshot(
+            bars,
+            daily_trigger_mode=daily_trigger_mode,
+            daily_lookback_sessions=int(parameter_set["daily_lookback_days"]),
+            weekly_lookback_sessions=int(parameter_set["weekly_lookback_days"]),
+            monthly_lookback_sessions=int(parameter_set["monthly_lookback_days"]),
+        )
         if not args.include_stale and not _is_fresh_enough(
             snapshot.bar_date,
             reference_date=reference_date,

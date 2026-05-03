@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ticker", default=None)
     parser.add_argument("--parameter-set", default=None)
     parser.add_argument("--top-tickers", type=int, default=20)
+    parser.add_argument("--event-window-days", type=int, default=3)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
@@ -72,9 +73,20 @@ def _print_table(payload: dict[str, object]) -> None:
         "red precision/recall="
         f"{_pct(payload['red_precision'])}/{_pct(payload['red_recall'])}"
     )
+    print(
+        "event exact/window="
+        f"{_pct(payload['exact_event_accuracy'])}/"
+        f"{_pct(payload['window_event_accuracy'])} "
+        f"window_days={payload['event_window_days']} "
+        f"no_event={payload['no_generated_event_observations']} "
+        f"opposite_event={payload['opposite_generated_event_observations']}"
+    )
     print()
     print("confusion")
     print(json.dumps(payload["confusion"], indent=2, sort_keys=True))
+    print()
+    print("event confusion")
+    print(json.dumps(payload["event_confusion"], indent=2, sort_keys=True))
     print()
     print("ticker | obs | covered | exact | matches | accuracy | score_mae")
     print("-------|-----|---------|-------|---------|----------|----------")
@@ -100,6 +112,7 @@ def main() -> None:
             ticker=args.ticker,
             parameter_set=args.parameter_set,
             top_tickers=args.top_tickers,
+            event_window_days=args.event_window_days,
         )
 
     payload = result.as_json_dict()

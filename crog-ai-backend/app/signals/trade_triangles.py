@@ -35,6 +35,11 @@ class TriangleTimeframe(StrEnum):
     MONTHLY = "monthly"
 
 
+class TriangleTriggerMode(StrEnum):
+    CLOSE = "close"
+    RANGE = "range"
+
+
 LOOKBACK_SESSIONS: dict[TriangleTimeframe, int] = {
     TriangleTimeframe.DAILY: 3,
     TriangleTimeframe.WEEKLY: 15,
@@ -124,9 +129,71 @@ def _channel(reference_bars: Sequence[EodBar]) -> tuple[Decimal, Decimal]:
     )
 
 
+def _normalize_trigger_mode(trigger_mode: TriangleTriggerMode | str) -> TriangleTriggerMode:
+    if isinstance(trigger_mode, TriangleTriggerMode):
+        return trigger_mode
+    return TriangleTriggerMode(trigger_mode)
+
+
+def _break_state(
+    current: EodBar,
+    *,
+    channel_high: Decimal,
+    channel_low: Decimal,
+    trigger_mode: TriangleTriggerMode,
+) -> tuple[TriangleState, Decimal, str]:
+    if trigger_mode is TriangleTriggerMode.CLOSE:
+        if current.close > channel_high:
+            return (
+                TriangleState.GREEN,
+                current.close,
+                f"close {current.close} broke above prior high {channel_high}",
+            )
+        if current.close < channel_low:
+            return (
+                TriangleState.RED,
+                current.close,
+                f"close {current.close} broke below prior low {channel_low}",
+            )
+        return TriangleState.NEUTRAL, current.close, ""
+
+    broke_high = current.high > channel_high
+    broke_low = current.low < channel_low
+    if broke_high and broke_low:
+        if current.close >= current.open:
+            return (
+                TriangleState.GREEN,
+                current.high,
+                "range broke both sides; "
+                f"close {current.close} >= open {current.open}, choosing green above {channel_high}",
+            )
+        return (
+            TriangleState.RED,
+            current.low,
+            "range broke both sides; "
+            f"close {current.close} < open {current.open}, choosing red below {channel_low}",
+        )
+    if broke_high:
+        return (
+            TriangleState.GREEN,
+            current.high,
+            f"high {current.high} broke above prior high {channel_high}",
+        )
+    if broke_low:
+        return (
+            TriangleState.RED,
+            current.low,
+            f"low {current.low} broke below prior low {channel_low}",
+        )
+    return TriangleState.NEUTRAL, current.close, ""
+
+
 def detect_triangle_events(
     bars: Iterable[EodBar],
     timeframe: TriangleTimeframe,
+    *,
+    lookback_sessions: int | None = None,
+    trigger_mode: TriangleTriggerMode | str = TriangleTriggerMode.CLOSE,
 ) -> tuple[TriangleEvent, ...]:
     """Detect state-changing channel breaks for one timeframe.
 
@@ -135,7 +202,8 @@ def detect_triangle_events(
     bar, preventing look-ahead bias.
     """
     ordered = _sorted_bars(bars)
-    lookback = LOOKBACK_SESSIONS[timeframe]
+    lookback = lookback_sessions or LOOKBACK_SESSIONS[timeframe]
+    mode = _normalize_trigger_mode(trigger_mode)
     if len(ordered) <= lookback:
         return ()
 
@@ -147,15 +215,12 @@ def detect_triangle_events(
         current = ordered[index]
         previous = ordered[index - lookback : index]
         channel_high, channel_low = _channel(previous)
-
-        next_state = TriangleState.NEUTRAL
-        reason = ""
-        if current.close > channel_high:
-            next_state = TriangleState.GREEN
-            reason = f"close {current.close} broke above prior {lookback}-session high {channel_high}"
-        elif current.close < channel_low:
-            next_state = TriangleState.RED
-            reason = f"close {current.close} broke below prior {lookback}-session low {channel_low}"
+        next_state, trigger_price, reason = _break_state(
+            current,
+            channel_high=channel_high,
+            channel_low=channel_low,
+            trigger_mode=mode,
+        )
 
         if next_state is TriangleState.NEUTRAL or next_state is current_state:
             continue
@@ -165,11 +230,11 @@ def detect_triangle_events(
             timeframe=timeframe,
             state=next_state,
             bar_date=current.bar_date,
-            trigger_price=current.close,
+            trigger_price=trigger_price,
             channel_high=channel_high,
             channel_low=channel_low,
             lookback_sessions=lookback,
-            reason=reason,
+            reason=f"{reason} over prior {lookback}-session channel",
         )
         events.append(event)
         current_state = next_state
@@ -181,6 +246,10 @@ def latest_triangle_snapshot(
     bars: Iterable[EodBar],
     *,
     as_of: dt.date | None = None,
+    daily_trigger_mode: TriangleTriggerMode | str = TriangleTriggerMode.CLOSE,
+    daily_lookback_sessions: int | None = None,
+    weekly_lookback_sessions: int | None = None,
+    monthly_lookback_sessions: int | None = None,
 ) -> TriangleSnapshot:
     """Compute latest daily, weekly, and monthly states for one ticker."""
     ordered = _sorted_bars(bars)
@@ -189,8 +258,24 @@ def latest_triangle_snapshot(
     if not ordered:
         raise ValueError("at least one bar is required")
 
+    lookbacks = {
+        TriangleTimeframe.DAILY: daily_lookback_sessions or LOOKBACK_SESSIONS[TriangleTimeframe.DAILY],
+        TriangleTimeframe.WEEKLY: weekly_lookback_sessions
+        or LOOKBACK_SESSIONS[TriangleTimeframe.WEEKLY],
+        TriangleTimeframe.MONTHLY: monthly_lookback_sessions
+        or LOOKBACK_SESSIONS[TriangleTimeframe.MONTHLY],
+    }
     events_by_timeframe = {
-        timeframe: detect_triangle_events(ordered, timeframe)
+        timeframe: detect_triangle_events(
+            ordered,
+            timeframe,
+            lookback_sessions=lookbacks[timeframe],
+            trigger_mode=(
+                daily_trigger_mode
+                if timeframe is TriangleTimeframe.DAILY
+                else TriangleTriggerMode.CLOSE
+            ),
+        )
         for timeframe in TriangleTimeframe
     }
     all_events = tuple(
@@ -205,7 +290,7 @@ def latest_triangle_snapshot(
         return events[-1].state if events else TriangleState.NEUTRAL
 
     def _latest_channel(timeframe: TriangleTimeframe) -> tuple[Decimal | None, Decimal | None]:
-        lookback = LOOKBACK_SESSIONS[timeframe]
+        lookback = lookbacks[timeframe]
         if len(ordered) <= lookback:
             return None, None
         return _channel(ordered[-lookback - 1 : -1])

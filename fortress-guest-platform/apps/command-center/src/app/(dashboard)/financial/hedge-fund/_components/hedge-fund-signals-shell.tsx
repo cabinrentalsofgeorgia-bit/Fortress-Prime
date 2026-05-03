@@ -56,12 +56,32 @@ import type {
 import { cn } from "@/lib/utils";
 
 type ScoreBand = "all" | "bullish" | "neutral" | "risk";
+type SignalModelMode = "production" | "v0_2_range";
 
 const SCORE_BANDS: Array<{ id: ScoreBand; label: string; min?: number; max?: number }> = [
   { id: "all", label: "All" },
   { id: "bullish", label: "Bullish", min: 50 },
   { id: "neutral", label: "Neutral", min: -30, max: 30 },
   { id: "risk", label: "Risk", max: -50 },
+];
+
+const SIGNAL_MODEL_MODES: Array<{
+  id: SignalModelMode;
+  label: string;
+  parameterSet?: string;
+  badge: string;
+}> = [
+  {
+    id: "production",
+    label: "Production",
+    badge: "dochia_v0_estimated",
+  },
+  {
+    id: "v0_2_range",
+    label: "v0.2 Range",
+    parameterSet: "dochia_v0_2_range_daily",
+    badge: "dochia_v0_2_range_daily",
+  },
 ];
 
 const TRANSITION_LABELS: Record<FinancialTransitionType, string> = {
@@ -469,11 +489,25 @@ function CalibrationPanel({
   const confusion = calibration.confusion;
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
         <div className="border border-border p-3">
-          <p className="text-xs text-muted-foreground">Daily Color Accuracy</p>
+          <p className="text-xs text-muted-foreground">Carried State Match</p>
           <p className="mt-1 font-mono text-2xl font-bold">
             {formatPercent(calibration.accuracy)}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Exact Alert Match</p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {formatPercent(calibration.exact_event_accuracy)}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">
+            ±{calibration.event_window_days}d Alert Match
+          </p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {formatPercent(calibration.window_event_accuracy)}
           </p>
         </div>
         <div className="border border-border p-3">
@@ -799,8 +833,12 @@ export function HedgeFundSignalsShell() {
   const [tickerInput, setTickerInput] = useState("");
   const [scoreBand, setScoreBand] = useState<ScoreBand>("all");
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+  const [signalModelMode, setSignalModelMode] = useState<SignalModelMode>("production");
 
   const activeBand = SCORE_BANDS.find((band) => band.id === scoreBand) ?? SCORE_BANDS[0];
+  const activeSignalMode =
+    SIGNAL_MODEL_MODES.find((mode) => mode.id === signalModelMode) ?? SIGNAL_MODEL_MODES[0];
+  const activeParameterSet = activeSignalMode.parameterSet;
   const tickerQuery = tickerInput.trim().toUpperCase() || undefined;
   const latestParams = useMemo(
     () => ({
@@ -808,13 +846,21 @@ export function HedgeFundSignalsShell() {
       ticker: tickerQuery,
       min_score: activeBand.min,
       max_score: activeBand.max,
+      parameter_set: activeParameterSet,
     }),
-    [activeBand.max, activeBand.min, tickerQuery],
+    [activeBand.max, activeBand.min, activeParameterSet, tickerQuery],
   );
 
   const latest = useFinancialLatestSignals(latestParams);
-  const transitions = useFinancialSignalTransitions({ limit: 120, lookback_days: 30 });
-  const watchlistCandidates = useFinancialWatchlistCandidates({ limit: 8 });
+  const transitions = useFinancialSignalTransitions({
+    limit: 120,
+    lookback_days: 30,
+    parameter_set: activeParameterSet,
+  });
+  const watchlistCandidates = useFinancialWatchlistCandidates({
+    limit: 8,
+    parameter_set: activeParameterSet,
+  });
   const dailyCalibration = useFinancialDailyCalibration({ top_tickers: 8 });
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
@@ -823,6 +869,7 @@ export function HedgeFundSignalsShell() {
   const detail = useFinancialSignalDetail(activeTicker, {
     transition_limit: 12,
     lookback_days: 30,
+    parameter_set: activeParameterSet,
   });
   const chart = useFinancialSignalChart(activeTicker, { sessions: 180 });
 
@@ -857,7 +904,28 @@ export function HedgeFundSignalsShell() {
             Dochia v0 daily, weekly, and monthly signal cockpit.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex h-10 items-center gap-1 border border-border bg-background p-1">
+            {SIGNAL_MODEL_MODES.map((mode) => (
+              <Button
+                key={mode.id}
+                type="button"
+                size="sm"
+                variant={signalModelMode === mode.id ? "default" : "ghost"}
+                className="h-8 px-3"
+                onClick={() => {
+                  setSignalModelMode(mode.id);
+                  setSelectedTicker(null);
+                }}
+                aria-pressed={signalModelMode === mode.id}
+              >
+                {mode.label}
+              </Button>
+            ))}
+          </div>
+          <Badge variant="outline" className="font-mono">
+            {activeSignalMode.badge}
+          </Badge>
           <Badge variant="outline" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-600">
             <Info className="h-3 w-3" />
             Calibration pending

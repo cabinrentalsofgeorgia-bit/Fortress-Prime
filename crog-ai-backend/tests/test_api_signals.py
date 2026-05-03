@@ -20,15 +20,17 @@ class FakeSignalStore:
         ticker: str | None = None,
         min_score: int | None = None,
         max_score: int | None = None,
+        parameter_set: str | None = None,
     ) -> list[dict[str, Any]]:
         if ticker == "MISSING":
             return []
+        parameter_set_name = parameter_set or "dochia_v0_estimated"
         row = {
             "ticker": ticker or "AA",
             "bar_date": dt.date(2026, 4, 24),
             "parameter_set_id": PARAMETER_SET_ID,
-            "parameter_set_name": "dochia_v0_estimated",
-            "dochia_version": "v0",
+            "parameter_set_name": parameter_set_name,
+            "dochia_version": "v0.2-candidate" if parameter_set else "v0",
             "monthly_state": 1,
             "weekly_state": 1,
             "daily_state": 1,
@@ -56,11 +58,13 @@ class FakeSignalStore:
         transition_type: str | None = None,
         since: dt.date | None = None,
         lookback_days: int | None = None,
+        parameter_set: str | None = None,
     ) -> list[dict[str, Any]]:
+        parameter_set_name = parameter_set or "dochia_v0_estimated"
         row = {
             "id": TRANSITION_ID,
             "ticker": ticker or "AA",
-            "parameter_set_name": "dochia_v0_estimated",
+            "parameter_set_name": parameter_set_name,
             "transition_type": transition_type or "breakout_bullish",
             "from_score": 50,
             "to_score": 80,
@@ -75,11 +79,17 @@ class FakeSignalStore:
         }
         return [row][:limit]
 
-    def watchlist_candidates(self, *, limit: int) -> dict[str, list[dict[str, Any]]]:
+    def watchlist_candidates(
+        self,
+        *,
+        limit: int,
+        parameter_set: str | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        parameter_set_name = parameter_set or "dochia_v0_estimated"
         row = {
             "ticker": "AA",
             "bar_date": dt.date(2026, 4, 24),
-            "parameter_set_name": "dochia_v0_estimated",
+            "parameter_set_name": parameter_set_name,
             "monthly_state": 1,
             "weekly_state": 1,
             "daily_state": 1,
@@ -112,6 +122,7 @@ class FakeSignalStore:
         ticker: str | None = None,
         parameter_set: str | None = None,
         top_tickers: int = 20,
+        event_window_days: int = 3,
     ) -> dict[str, Any]:
         return {
             "parameter_set_name": parameter_set or "dochia_v0_estimated",
@@ -124,6 +135,13 @@ class FakeSignalStore:
             "missing_observations": 1,
             "neutral_generated_observations": 0,
             "matches": 1,
+            "exact_event_matches": 1,
+            "exact_event_accuracy": 0.5,
+            "window_event_matches": 1,
+            "window_event_accuracy": 0.5,
+            "event_window_days": event_window_days,
+            "no_generated_event_observations": 1,
+            "opposite_generated_event_observations": 0,
             "accuracy": 0.5,
             "coverage_rate": 2 / 3,
             "exact_coverage_rate": 2 / 3,
@@ -136,6 +154,10 @@ class FakeSignalStore:
             "confusion": {
                 "green": {"green": 1, "red": 0, "neutral": 0, "missing": 1},
                 "red": {"green": 1, "red": 0, "neutral": 0, "missing": 0},
+            },
+            "event_confusion": {
+                "green": {"green": 1, "red": 0, "none": 0, "missing": 1},
+                "red": {"green": 0, "red": 0, "none": 1, "missing": 0},
             },
             "top_tickers": [
                 {
@@ -222,6 +244,21 @@ def test_latest_scores_endpoint_returns_scanner_rows() -> None:
     assert payload[0]["state_labels"]["monthly"] == "green"
 
 
+def test_latest_scores_endpoint_accepts_parameter_set_selector() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/latest?limit=1&parameter_set=dochia_v0_2_range_daily"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["parameter_set_name"] == "dochia_v0_2_range_daily"
+    assert payload[0]["dochia_version"] == "v0.2-candidate"
+
+
 def test_transitions_endpoint_returns_recent_alert_rows() -> None:
     app = create_app()
     app.dependency_overrides[get_signal_store] = FakeSignalStore
@@ -238,6 +275,20 @@ def test_transitions_endpoint_returns_recent_alert_rows() -> None:
     assert payload[0]["to_score"] == 80
 
 
+def test_transitions_endpoint_accepts_parameter_set_selector() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/transitions?limit=1&parameter_set=dochia_v0_2_range_daily"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["parameter_set_name"] == "dochia_v0_2_range_daily"
+
+
 def test_symbol_signal_detail_endpoint_combines_latest_and_transitions() -> None:
     app = create_app()
     app.dependency_overrides[get_signal_store] = FakeSignalStore
@@ -250,6 +301,19 @@ def test_symbol_signal_detail_endpoint_combines_latest_and_transitions() -> None
     assert payload["ticker"] == "AAPL"
     assert payload["latest"]["ticker"] == "AAPL"
     assert payload["recent_transitions"][0]["ticker"] == "AAPL"
+
+
+def test_symbol_signal_detail_endpoint_accepts_parameter_set_selector() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get("/api/financial/signals/aapl?parameter_set=dochia_v0_2_range_daily")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["latest"]["parameter_set_name"] == "dochia_v0_2_range_daily"
+    assert payload["recent_transitions"][0]["parameter_set_name"] == "dochia_v0_2_range_daily"
 
 
 def test_watchlist_candidates_endpoint_returns_portfolio_lanes() -> None:
@@ -267,6 +331,20 @@ def test_watchlist_candidates_endpoint_returns_portfolio_lanes() -> None:
     assert payload["lanes"][0]["candidates"][0]["state_labels"]["weekly"] == "green"
 
 
+def test_watchlist_candidates_endpoint_accepts_parameter_set_selector() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/watchlist-candidates?limit=3&parameter_set=dochia_v0_2_range_daily"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["lanes"][0]["candidates"][0]["parameter_set_name"] == "dochia_v0_2_range_daily"
+
+
 def test_daily_calibration_endpoint_returns_model_health_metrics() -> None:
     app = create_app()
     app.dependency_overrides[get_signal_store] = FakeSignalStore
@@ -278,7 +356,9 @@ def test_daily_calibration_endpoint_returns_model_health_metrics() -> None:
     payload = response.json()
     assert payload["parameter_set_name"] == "dochia_v0_estimated"
     assert payload["accuracy"] == 0.5
+    assert payload["exact_event_accuracy"] == 0.5
     assert payload["confusion"]["green"]["missing"] == 1
+    assert payload["event_confusion"]["red"]["none"] == 1
     assert payload["top_tickers"][0]["ticker"] == "aa"
 
 

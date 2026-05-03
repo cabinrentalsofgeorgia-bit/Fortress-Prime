@@ -14,6 +14,11 @@ from app.signals.calibration import (
     DailyCalibrationResult,
     evaluate_daily_calibration,
 )
+from app.signals.calibration_sweep import (
+    DailySweepResult,
+    DailyTriggerMode,
+    sweep_daily_event_candidates,
+)
 from app.signals.db_preview import eod_row_to_bar
 from app.signals.trade_triangles import EodBar
 
@@ -123,6 +128,7 @@ def fetch_daily_calibration(
     ticker: str | None = None,
     parameter_set: str | None = None,
     top_tickers: int = 20,
+    event_window_days: int = 3,
 ) -> DailyCalibrationResult:
     parameter = _fetch_parameter_set(conn, parameter_set)
     observations = _fetch_observations(conn, since=since, until=until, ticker=ticker)
@@ -142,4 +148,40 @@ def fetch_daily_calibration(
         since=since,
         until=until,
         top_ticker_count=top_tickers,
+        event_window_days=event_window_days,
     )
+
+
+def fetch_daily_sweep_results(
+    conn: psycopg.Connection,
+    *,
+    since: dt.date | None = None,
+    until: dt.date | None = None,
+    ticker: str | None = None,
+    lookbacks: list[int],
+    trigger_modes: list[DailyTriggerMode],
+    event_window_days: int = 3,
+) -> list[DailySweepResult]:
+    observations = _fetch_observations(conn, since=since, until=until, ticker=ticker)
+    tickers = sorted({observation.ticker for observation in observations})
+    bars_by_ticker = _fetch_bars_by_ticker(conn, tickers=tickers, until=until)
+    return sweep_daily_event_candidates(
+        observations,
+        bars_by_ticker,
+        lookbacks=lookbacks,
+        trigger_modes=trigger_modes,
+        event_window_days=event_window_days,
+    )
+
+
+def fetch_daily_sweep_inputs(
+    conn: psycopg.Connection,
+    *,
+    since: dt.date | None = None,
+    until: dt.date | None = None,
+    ticker: str | None = None,
+) -> tuple[list[CalibrationObservation], dict[str, list[EodBar]]]:
+    observations = _fetch_observations(conn, since=since, until=until, ticker=ticker)
+    tickers = sorted({observation.ticker for observation in observations})
+    bars_by_ticker = _fetch_bars_by_ticker(conn, tickers=tickers, until=until)
+    return observations, bars_by_ticker

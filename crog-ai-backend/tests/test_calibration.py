@@ -33,6 +33,12 @@ def test_generated_state_history_carries_daily_triangle_state() -> None:
     assert latest is not None
     assert latest.daily_state == 1
     assert latest.composite_score == 15
+    assert history.daily_event_on(dt.date(2026, 1, 4)) == 1
+    assert history.has_daily_event_within(
+        trading_day=dt.date(2026, 1, 5),
+        state=1,
+        window_days=1,
+    )
 
 
 def test_evaluate_daily_calibration_reports_confusion_and_score_error() -> None:
@@ -69,7 +75,16 @@ def test_evaluate_daily_calibration_reports_confusion_and_score_error() -> None:
     assert result.covered_observations == 2
     assert result.matches == 1
     assert result.accuracy == 0.5
+    assert result.exact_event_matches == 1
+    assert result.exact_event_accuracy == 0.5
+    assert result.window_event_matches == 1
+    assert result.window_event_accuracy == 0.5
+    assert result.no_generated_event_observations == 1
+    assert result.opposite_generated_event_observations == 0
     assert result.confusion["green"]["green"] == 1
     assert result.confusion["green"]["missing"] == 1
     assert result.confusion["red"]["green"] == 1
+    assert result.event_confusion["green"]["green"] == 1
+    assert result.event_confusion["green"]["missing"] == 1
+    assert result.event_confusion["red"]["none"] == 1
     assert result.score_mae == 15

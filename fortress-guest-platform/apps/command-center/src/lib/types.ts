@@ -284,6 +284,13 @@ export interface FinancialDailyCalibrationResponse {
   missing_observations: number;
   neutral_generated_observations: number;
   matches: number;
+  exact_event_matches: number;
+  exact_event_accuracy: number | null;
+  window_event_matches: number;
+  window_event_accuracy: number | null;
+  event_window_days: number;
+  no_generated_event_observations: number;
+  opposite_generated_event_observations: number;
   accuracy: number | null;
   coverage_rate: number | null;
   exact_coverage_rate: number | null;
@@ -294,6 +301,7 @@ export interface FinancialDailyCalibrationResponse {
   score_mae: number | null;
   score_rmse: number | null;
   confusion: Record<"green" | "red", Record<"green" | "red" | "neutral" | "missing", number>>;
+  event_confusion: Record<"green" | "red", Record<"green" | "red" | "none" | "missing", number>>;
   top_tickers: FinancialDailyCalibrationTicker[];
 }
 

@@ -15,8 +15,10 @@ from app.signals.trade_triangles import (
     detect_triangle_events,
 )
 
+STATE_BY_LABEL = {"red": -1, "neutral": 0, "green": 1}
 STATE_LABELS = {-1: "red", 0: "neutral", 1: "green"}
 CONFUSION_LABELS = ("green", "red", "neutral", "missing")
+EVENT_CONFUSION_LABELS = ("green", "red", "none", "missing")
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,12 +53,29 @@ class GeneratedCalibrationHistory:
     ticker: str
     dates: tuple[dt.date, ...]
     states_by_date: dict[dt.date, GeneratedCalibrationState]
+    daily_events_by_date: dict[dt.date, int]
+    daily_event_dates_by_state: dict[int, tuple[dt.date, ...]]
 
     def as_of(self, trading_day: dt.date) -> GeneratedCalibrationState | None:
         index = bisect_right(self.dates, trading_day) - 1
         if index < 0:
             return None
         return self.states_by_date[self.dates[index]]
+
+    def daily_event_on(self, trading_day: dt.date) -> int | None:
+        return self.daily_events_by_date.get(trading_day)
+
+    def has_daily_event_within(
+        self,
+        *,
+        trading_day: dt.date,
+        state: int,
+        window_days: int,
+    ) -> bool:
+        for event_date in self.daily_event_dates_by_state.get(state, ()):
+            if abs((event_date - trading_day).days) <= window_days:
+                return True
+        return False
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +101,13 @@ class DailyCalibrationResult:
     missing_observations: int
     neutral_generated_observations: int
     matches: int
+    exact_event_matches: int
+    exact_event_accuracy: float | None
+    window_event_matches: int
+    window_event_accuracy: float | None
+    event_window_days: int
+    no_generated_event_observations: int
+    opposite_generated_event_observations: int
     accuracy: float | None
     coverage_rate: float | None
     exact_coverage_rate: float | None
@@ -92,6 +118,7 @@ class DailyCalibrationResult:
     score_mae: float | None
     score_rmse: float | None
     confusion: dict[str, dict[str, int]]
+    event_confusion: dict[str, dict[str, int]]
     top_tickers: list[TickerCalibrationStats]
 
     def as_json_dict(self) -> dict[str, Any]:
@@ -123,9 +150,14 @@ def generated_state_history(
         raise ValueError("bars must contain exactly one ticker")
 
     events_by_date: dict[dt.date, list[tuple[TriangleTimeframe, int]]] = defaultdict(list)
+    daily_events_by_date: dict[dt.date, int] = {}
+    daily_event_dates_by_state: dict[int, list[dt.date]] = defaultdict(list)
     for timeframe in TriangleTimeframe:
         for event in detect_triangle_events(ordered, timeframe):
             events_by_date[event.bar_date].append((timeframe, event.state.numeric))
+            if timeframe is TriangleTimeframe.DAILY:
+                daily_events_by_date[event.bar_date] = event.state.numeric
+                daily_event_dates_by_state[event.state.numeric].append(event.bar_date)
 
     monthly_state = 0
     weekly_state = 0
@@ -163,6 +195,11 @@ def generated_state_history(
         ticker=ticker,
         dates=tuple(dates),
         states_by_date=states_by_date,
+        daily_events_by_date=daily_events_by_date,
+        daily_event_dates_by_state={
+            state: tuple(sorted(event_dates))
+            for state, event_dates in daily_event_dates_by_state.items()
+        },
     )
 
 
@@ -193,6 +230,7 @@ def evaluate_daily_calibration(
     since: dt.date | None = None,
     until: dt.date | None = None,
     top_ticker_count: int = 20,
+    event_window_days: int = 3,
 ) -> DailyCalibrationResult:
     histories = {
         ticker: history
@@ -201,6 +239,9 @@ def evaluate_daily_calibration(
     }
 
     confusion = {actual: dict.fromkeys(CONFUSION_LABELS, 0) for actual in ("green", "red")}
+    event_confusion = {
+        actual: dict.fromkeys(EVENT_CONFUSION_LABELS, 0) for actual in ("green", "red")
+    }
     ticker_counts: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"observations": 0, "covered": 0, "exact": 0, "matches": 0, "score_deltas": []}
     )
@@ -210,6 +251,10 @@ def evaluate_daily_calibration(
     missing = 0
     neutral = 0
     matches = 0
+    exact_event_matches = 0
+    window_event_matches = 0
+    no_event = 0
+    opposite_event = 0
     score_deltas: list[int] = []
 
     for observation in observations:
@@ -221,6 +266,7 @@ def evaluate_daily_calibration(
         generated_state = history.as_of(observation.trading_day) if history else None
         if generated_state is None:
             generated = "missing"
+            event_generated = "missing"
             missing += 1
         else:
             covered += 1
@@ -238,7 +284,26 @@ def evaluate_daily_calibration(
             score_deltas.append(delta)
             stats["score_deltas"].append(delta)
 
+            actual_state = STATE_BY_LABEL[actual]
+            generated_event_state = history.daily_event_on(observation.trading_day)
+            if generated_event_state is None:
+                event_generated = "none"
+                no_event += 1
+            else:
+                event_generated = STATE_LABELS[generated_event_state]
+                if event_generated == actual:
+                    exact_event_matches += 1
+                else:
+                    opposite_event += 1
+            if history.has_daily_event_within(
+                trading_day=observation.trading_day,
+                state=actual_state,
+                window_days=event_window_days,
+            ):
+                window_event_matches += 1
+
         confusion[actual][generated] += 1
+        event_confusion[actual][event_generated] += 1
 
     top_tickers = [
         TickerCalibrationStats(
@@ -275,6 +340,13 @@ def evaluate_daily_calibration(
         missing_observations=missing,
         neutral_generated_observations=neutral,
         matches=matches,
+        exact_event_matches=exact_event_matches,
+        exact_event_accuracy=_safe_rate(exact_event_matches, covered),
+        window_event_matches=window_event_matches,
+        window_event_accuracy=_safe_rate(window_event_matches, covered),
+        event_window_days=event_window_days,
+        no_generated_event_observations=no_event,
+        opposite_generated_event_observations=opposite_event,
         accuracy=_safe_rate(matches, covered),
         coverage_rate=_safe_rate(covered, total),
         exact_coverage_rate=_safe_rate(exact, total),
@@ -285,5 +357,6 @@ def evaluate_daily_calibration(
         score_mae=_score_mae(score_deltas),
         score_rmse=_score_rmse(score_deltas),
         confusion=confusion,
+        event_confusion=event_confusion,
         top_tickers=top_tickers[:top_ticker_count],
     )

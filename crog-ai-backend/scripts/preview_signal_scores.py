@@ -64,6 +64,15 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Scoring parameter set name. Defaults to production set.",
     )
+    parser.add_argument(
+        "--daily-trigger-mode",
+        choices=["close", "range"],
+        default=None,
+        help=(
+            "Daily trigger mode. Defaults to close, except the "
+            "dochia_v0_2_range_daily candidate resolves to range."
+        ),
+    )
     parser.add_argument("--json", action="store_true", help="Emit JSON instead of a compact table.")
     return parser.parse_args()
 
@@ -81,7 +90,16 @@ def _fetch_parameter_set(conn: psycopg.Connection, name: str | None) -> dict[str
         if name:
             cur.execute(
                 """
-                SELECT id, name, weight_monthly, weight_weekly, weight_daily, weight_momentum
+                SELECT
+                    id,
+                    name,
+                    monthly_lookback_days,
+                    weekly_lookback_days,
+                    daily_lookback_days,
+                    weight_monthly,
+                    weight_weekly,
+                    weight_daily,
+                    weight_momentum
                 FROM hedge_fund.scoring_parameters
                 WHERE name = %s
                 """,
@@ -90,7 +108,16 @@ def _fetch_parameter_set(conn: psycopg.Connection, name: str | None) -> dict[str
         else:
             cur.execute(
                 """
-                SELECT id, name, weight_monthly, weight_weekly, weight_daily, weight_momentum
+                SELECT
+                    id,
+                    name,
+                    monthly_lookback_days,
+                    weekly_lookback_days,
+                    daily_lookback_days,
+                    weight_monthly,
+                    weight_weekly,
+                    weight_daily,
+                    weight_momentum
                 FROM hedge_fund.scoring_parameters
                 WHERE is_production = TRUE
                 ORDER BY created_at DESC
@@ -142,11 +169,23 @@ def _fetch_bars(conn: psycopg.Connection, ticker: str, as_of: dt.date | None) ->
         return [dict(row) for row in cur.fetchall()]
 
 
+def _resolve_daily_trigger_mode(parameter_set_name: str, explicit_mode: str | None) -> str:
+    if explicit_mode:
+        return explicit_mode
+    if parameter_set_name == "dochia_v0_2_range_daily":
+        return "range"
+    return "close"
+
+
 def build_previews(args: argparse.Namespace) -> list[SignalScorePreview]:
     url = _database_url()
     with psycopg.connect(url) as conn:
         conn.execute("SET default_transaction_read_only = on")
         parameter_set = _fetch_parameter_set(conn, args.parameter_set)
+        daily_trigger_mode = _resolve_daily_trigger_mode(
+            str(parameter_set["name"]),
+            args.daily_trigger_mode,
+        )
         tickers = args.tickers or _fetch_candidate_tickers(
             conn,
             limit=args.limit_tickers,
@@ -160,7 +199,13 @@ def build_previews(args: argparse.Namespace) -> list[SignalScorePreview]:
             if len(rows) < args.min_bars:
                 continue
             bars = [eod_row_to_bar(row) for row in rows]
-            snapshot = latest_triangle_snapshot(bars)
+            snapshot = latest_triangle_snapshot(
+                bars,
+                daily_trigger_mode=daily_trigger_mode,
+                daily_lookback_sessions=int(parameter_set["daily_lookback_days"]),
+                weekly_lookback_sessions=int(parameter_set["weekly_lookback_days"]),
+                monthly_lookback_sessions=int(parameter_set["monthly_lookback_days"]),
+            )
             previews.append(
                 preview_from_snapshot(
                     snapshot,

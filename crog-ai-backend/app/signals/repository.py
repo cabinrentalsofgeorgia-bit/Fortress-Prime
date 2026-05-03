@@ -21,6 +21,7 @@ class SignalDataStore(Protocol):
         ticker: str | None = None,
         min_score: int | None = None,
         max_score: int | None = None,
+        parameter_set: str | None = None,
     ) -> list[dict[str, Any]]: ...
 
     def recent_transitions(
@@ -31,9 +32,15 @@ class SignalDataStore(Protocol):
         transition_type: str | None = None,
         since: dt.date | None = None,
         lookback_days: int | None = None,
+        parameter_set: str | None = None,
     ) -> list[dict[str, Any]]: ...
 
-    def watchlist_candidates(self, *, limit: int) -> dict[str, list[dict[str, Any]]]: ...
+    def watchlist_candidates(
+        self,
+        *,
+        limit: int,
+        parameter_set: str | None = None,
+    ) -> dict[str, list[dict[str, Any]]]: ...
 
     def daily_calibration(
         self,
@@ -43,6 +50,7 @@ class SignalDataStore(Protocol):
         ticker: str | None = None,
         parameter_set: str | None = None,
         top_tickers: int = 20,
+        event_window_days: int = 3,
     ) -> dict[str, Any]: ...
 
     def symbol_chart(
@@ -54,6 +62,12 @@ class SignalDataStore(Protocol):
     ) -> dict[str, Any]: ...
 
 
+def _parameter_filter(alias: str, parameter_set: str | None) -> str:
+    if parameter_set:
+        return f"{alias}.name = %(parameter_set)s AND {alias}.is_active = TRUE"
+    return f"{alias}.is_production = TRUE"
+
+
 def fetch_latest_scores(
     conn: psycopg.Connection,
     *,
@@ -61,9 +75,12 @@ def fetch_latest_scores(
     ticker: str | None = None,
     min_score: int | None = None,
     max_score: int | None = None,
+    parameter_set: str | None = None,
 ) -> list[dict[str, Any]]:
-    conditions = ["p.is_production = TRUE"]
+    conditions = [_parameter_filter("p", parameter_set)]
     params: dict[str, Any] = {"limit": limit}
+    if parameter_set:
+        params["parameter_set"] = parameter_set
 
     if ticker:
         conditions.append("v.ticker = %(ticker)s")
@@ -144,9 +161,12 @@ def fetch_recent_transitions(
     transition_type: str | None = None,
     since: dt.date | None = None,
     lookback_days: int | None = None,
+    parameter_set: str | None = None,
 ) -> list[dict[str, Any]]:
-    conditions = ["p.is_production = TRUE"]
+    conditions = [_parameter_filter("p", parameter_set)]
     params: dict[str, Any] = {"limit": limit}
+    if parameter_set:
+        params["parameter_set"] = parameter_set
 
     if ticker:
         conditions.append("t.ticker = %(ticker)s")
@@ -159,10 +179,12 @@ def fetch_recent_transitions(
         params["since"] = since
     elif lookback_days is not None:
         conditions.append(
-            """
+            f"""
             t.to_bar_date >= (
-                SELECT COALESCE(MAX(to_bar_date), CURRENT_DATE)
-                FROM hedge_fund.signal_transitions
+                SELECT COALESCE(MAX(t2.to_bar_date), CURRENT_DATE)
+                FROM hedge_fund.signal_transitions t2
+                JOIN hedge_fund.scoring_parameters p2 ON p2.id = t2.parameter_set_id
+                WHERE {_parameter_filter("p2", parameter_set)}
             ) - %(lookback_days)s::int
             """
         )
@@ -223,7 +245,7 @@ WATCHLIST_CANDIDATE_BASE_SQL = """
                 ) AS rn
             FROM hedge_fund.v_signal_scores_composite v
             JOIN hedge_fund.scoring_parameters p ON p.id = v.parameter_set_id
-            WHERE p.is_production = TRUE
+            WHERE {score_parameter_filter}
         ) ranked
         WHERE rn = 1
     ),
@@ -235,7 +257,7 @@ WATCHLIST_CANDIDATE_BASE_SQL = """
             t.notes AS latest_transition_notes
         FROM hedge_fund.signal_transitions t
         JOIN hedge_fund.scoring_parameters p ON p.id = t.parameter_set_id
-        WHERE p.is_production = TRUE
+        WHERE {transition_parameter_filter}
         ORDER BY t.ticker, t.to_bar_date DESC, t.detected_at DESC
     ),
     latest_watchlist AS (
@@ -289,6 +311,7 @@ def fetch_watchlist_candidates(
     conn: psycopg.Connection,
     *,
     limit: int,
+    parameter_set: str | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     lane_specs = {
         "bullish_alignment": {
@@ -315,15 +338,22 @@ def fetch_watchlist_candidates(
         },
     }
     lanes: dict[str, list[dict[str, Any]]] = {}
+    params: dict[str, Any] = {"limit": limit}
+    if parameter_set:
+        params["parameter_set"] = parameter_set
+    base_sql = WATCHLIST_CANDIDATE_BASE_SQL.format(
+        score_parameter_filter=_parameter_filter("p", parameter_set),
+        transition_parameter_filter=_parameter_filter("p", parameter_set),
+    )
     with conn.cursor(row_factory=dict_row) as cur:
         for lane_id, spec in lane_specs.items():
             sql = f"""
-                {WATCHLIST_CANDIDATE_BASE_SQL}
+                {base_sql}
                 WHERE {spec["where"]}
                 ORDER BY {spec["order"]}
                 LIMIT %(limit)s
             """
-            cur.execute(sql, {"limit": limit})
+            cur.execute(sql, params)
             lanes[lane_id] = [dict(row) for row in cur.fetchall()]
     return lanes
 
@@ -336,6 +366,7 @@ class PostgresSignalDataStore:
         ticker: str | None = None,
         min_score: int | None = None,
         max_score: int | None = None,
+        parameter_set: str | None = None,
     ) -> list[dict[str, Any]]:
         with connect() as conn:
             return fetch_latest_scores(
@@ -344,6 +375,7 @@ class PostgresSignalDataStore:
                 ticker=ticker,
                 min_score=min_score,
                 max_score=max_score,
+                parameter_set=parameter_set,
             )
 
     def recent_transitions(
@@ -354,6 +386,7 @@ class PostgresSignalDataStore:
         transition_type: str | None = None,
         since: dt.date | None = None,
         lookback_days: int | None = None,
+        parameter_set: str | None = None,
     ) -> list[dict[str, Any]]:
         with connect() as conn:
             return fetch_recent_transitions(
@@ -363,11 +396,17 @@ class PostgresSignalDataStore:
                 transition_type=transition_type,
                 since=since,
                 lookback_days=lookback_days,
+                parameter_set=parameter_set,
             )
 
-    def watchlist_candidates(self, *, limit: int) -> dict[str, list[dict[str, Any]]]:
+    def watchlist_candidates(
+        self,
+        *,
+        limit: int,
+        parameter_set: str | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
         with connect() as conn:
-            return fetch_watchlist_candidates(conn, limit=limit)
+            return fetch_watchlist_candidates(conn, limit=limit, parameter_set=parameter_set)
 
     def daily_calibration(
         self,
@@ -377,6 +416,7 @@ class PostgresSignalDataStore:
         ticker: str | None = None,
         parameter_set: str | None = None,
         top_tickers: int = 20,
+        event_window_days: int = 3,
     ) -> dict[str, Any]:
         with connect() as conn:
             conn.execute("SET default_transaction_read_only = on")
@@ -387,6 +427,7 @@ class PostgresSignalDataStore:
                 ticker=ticker,
                 parameter_set=parameter_set,
                 top_tickers=top_tickers,
+                event_window_days=event_window_days,
             ).as_json_dict()
 
     def symbol_chart(

@@ -41,8 +41,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-stale-days", type=int, default=5)
     parser.add_argument("--as-of", type=dt.date.fromisoformat, default=None)
     parser.add_argument("--parameter-set", default=None)
+    parser.add_argument(
+        "--daily-trigger-mode",
+        choices=["close", "range"],
+        default=None,
+        help=(
+            "Daily trigger mode. Defaults to close, except the "
+            "dochia_v0_2_range_daily candidate resolves to range."
+        ),
+    )
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--include-stale", action="store_true")
+    parser.add_argument("--display-limit", type=int, default=120)
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
@@ -60,7 +70,16 @@ def _fetch_parameter_set(conn: psycopg.Connection, name: str | None) -> dict[str
         if name:
             cur.execute(
                 """
-                SELECT id, name, weight_monthly, weight_weekly, weight_daily, weight_momentum
+                SELECT
+                    id,
+                    name,
+                    monthly_lookback_days,
+                    weekly_lookback_days,
+                    daily_lookback_days,
+                    weight_monthly,
+                    weight_weekly,
+                    weight_daily,
+                    weight_momentum
                 FROM hedge_fund.scoring_parameters
                 WHERE name = %s
                 """,
@@ -69,7 +88,16 @@ def _fetch_parameter_set(conn: psycopg.Connection, name: str | None) -> dict[str
         else:
             cur.execute(
                 """
-                SELECT id, name, weight_monthly, weight_weekly, weight_daily, weight_momentum
+                SELECT
+                    id,
+                    name,
+                    monthly_lookback_days,
+                    weekly_lookback_days,
+                    daily_lookback_days,
+                    weight_monthly,
+                    weight_weekly,
+                    weight_daily,
+                    weight_momentum
                 FROM hedge_fund.scoring_parameters
                 WHERE is_production = TRUE
                 ORDER BY created_at DESC
@@ -170,11 +198,23 @@ def _fetch_bars(conn: psycopg.Connection, ticker: str, as_of: dt.date | None) ->
         return [dict(row) for row in cur.fetchall()]
 
 
+def _resolve_daily_trigger_mode(parameter_set_name: str, explicit_mode: str | None) -> str:
+    if explicit_mode:
+        return explicit_mode
+    if parameter_set_name == "dochia_v0_2_range_daily":
+        return "range"
+    return "close"
+
+
 def build_previews_and_parameter_set(
     args: argparse.Namespace,
     conn: psycopg.Connection,
 ) -> tuple[list[SignalScorePreview], dict[str, Any]]:
     parameter_set = _fetch_parameter_set(conn, args.parameter_set)
+    daily_trigger_mode = _resolve_daily_trigger_mode(
+        str(parameter_set["name"]),
+        args.daily_trigger_mode,
+    )
     reference_date = _fetch_reference_date(conn, args.as_of)
     tickers = args.tickers or _fetch_candidate_tickers(
         conn,
@@ -192,7 +232,13 @@ def build_previews_and_parameter_set(
         if len(rows) < args.min_bars:
             continue
         bars = [eod_row_to_bar(row) for row in rows]
-        snapshot = latest_triangle_snapshot(bars)
+        snapshot = latest_triangle_snapshot(
+            bars,
+            daily_trigger_mode=daily_trigger_mode,
+            daily_lookback_sessions=int(parameter_set["daily_lookback_days"]),
+            weekly_lookback_sessions=int(parameter_set["weekly_lookback_days"]),
+            monthly_lookback_sessions=int(parameter_set["monthly_lookback_days"]),
+        )
         if not args.include_stale and not _is_fresh_enough(
             snapshot.bar_date,
             reference_date=reference_date,
@@ -212,17 +258,25 @@ def build_previews_and_parameter_set(
     return previews, parameter_set
 
 
-def _print_table(previews: list[SignalScorePreview], *, execute: bool) -> None:
+def _print_table(
+    previews: list[SignalScorePreview],
+    *,
+    execute: bool,
+    display_limit: int,
+) -> None:
     mode = "EXECUTE" if execute else "DRY RUN"
     print(f"{mode}: {len(previews)} latest signal score rows")
     print("ticker | as_of      | M  W  D | score | events")
     print("-------|------------|---------|-------|-------")
-    for item in previews:
+    for item in previews[:display_limit]:
         print(
             f"{item.ticker:<6} | {item.bar_date} | "
             f"{item.monthly_state:+d} {item.weekly_state:+d} {item.daily_state:+d} | "
             f"{item.composite_score:+5d} | {item.event_count:>5d}"
         )
+    hidden = len(previews) - display_limit
+    if hidden > 0:
+        print(f"... {hidden} more rows hidden; use --json for full output")
 
 
 def _write_previews(
@@ -262,7 +316,7 @@ def main() -> None:
         }
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        _print_table(previews, execute=args.execute)
+        _print_table(previews, execute=args.execute, display_limit=args.display_limit)
         if args.execute:
             print(f"rows_written={written}")
         else:

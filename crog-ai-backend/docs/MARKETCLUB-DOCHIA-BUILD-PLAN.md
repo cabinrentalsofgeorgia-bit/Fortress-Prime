@@ -94,12 +94,14 @@ Base app entrypoint: `app.main:app`
 
 Useful query params:
 
-- `latest`: `limit`, `ticker`, `min_score`, `max_score`
-- `transitions`: `limit`, `ticker`, `transition_type`, `since`, `lookback_days`
-- `watchlist-candidates`: `limit`
+- `latest`: `limit`, `ticker`, `min_score`, `max_score`, optional
+  `parameter_set`
+- `transitions`: `limit`, `ticker`, `transition_type`, `since`, `lookback_days`,
+  optional `parameter_set`
+- `watchlist-candidates`: `limit`, optional `parameter_set`
 - `calibration/daily`: `since`, `until`, `ticker`, `parameter_set`, `top_tickers`
 - `{ticker}/chart`: `sessions`, `as_of`
-- `{ticker}`: `transition_limit`, `lookback_days`
+- `{ticker}`: `transition_limit`, `lookback_days`, optional `parameter_set`
 
 ## Operations
 
@@ -143,6 +145,33 @@ Useful query params:
 - Added a read-only daily calibration harness and endpoint. Baseline against
   24,204 MarketClub daily observations: 91.44% coverage, 62.05% daily color
   accuracy on covered observations, score MAE 43.94.
+- Refined calibration to separate carried-state agreement from alert-event
+  agreement. Exact same-day daily alert match is 40.67%; ±3-day alert match is
+  52.54%; 12,952 covered observations have no generated event on the same day.
+- Added a read-only daily parameter sweep harness. Best research candidate is
+  the 3-session intraday range trigger: exact alert F1 improves from 44.59% to
+  76.64%, exact recall from 40.67% to 91.93%, precision is 65.71%, ±3-day
+  recall is 95.21%, and carried-state agreement is 94.91%. Production scoring
+  remains on the close-break baseline until out-of-sample validation.
+- Added a read-only candidate validation report and corrected sweep precision
+  to count distinct generated events matched. Chronological holdout after
+  2025-09-25 is stronger than train: candidate F1 83.18% vs 46.26% baseline,
+  exact recall 90.73%, precision 76.78%, and carried-state agreement 95.06%.
+  Every covered quarter from 2024-Q2 through 2026-Q2 improves over baseline.
+- Wired the validated daily range trigger as a selectable engine mode and
+  registered non-production parameter set `dochia_v0_2_range_daily`. Dry-run
+  previews remain read-only: 328 latest candidate score rows, 1,624 recent
+  candidate transition rows since 2026-03-25 versus 1,005 baseline transition
+  rows. Candidate lane comparison over 328 fresh tickers keeps bullish
+  alignment at 129 and risk alignment at 47, changes 61 daily states/scores,
+  moves re-entry from 164 to 145, and mixed timeframes from 202 to 203.
+- Persisted v0.2 candidate scores/transitions under the non-production
+  parameter set: 328 `signal_scores` rows and 1,624 `signal_transitions` rows.
+  Added internal `parameter_set` selectors for scanner, transition feed, symbol
+  detail, and Portfolio Lens reads. Defaults still use production only.
+- Added the internal Command Center parameter-set toggle on the Hedge Fund page.
+  The cockpit defaults to Production and can switch scanner, transition feed,
+  symbol detail, and Portfolio Lens reads to v0.2 Range.
 - Surfaced the calibration baseline in the Hedge Fund UI.
 - Added chart-data endpoint and UI chart overlay with close, daily/weekly
   channel bands, and generated triangle event markers.
@@ -150,8 +179,10 @@ Useful query params:
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
   `https://crog-ai.com/financial/hedge-fund`.
-- Verification passed: 21 backend tests, focused UI test, eslint, TypeScript,
-  production build, and live BFF reads are clean on spark-2.
+- Latest verification passed: 28 backend tests, ruff, backend health, focused UI
+  tests, focused UI lint, TypeScript, production Command Center build, service
+  status, and live backend/BFF reads for both production and v0.2 candidate
+  selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: begin calibration refinement against the daily truth
-corpus.
+Next clean build step: add v0.2 chart-overlay parity so the symbol chart can
+show range-trigger daily events when the v0.2 candidate mode is selected.

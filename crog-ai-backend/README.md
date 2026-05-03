@@ -57,6 +57,10 @@ Current Financial / Hedge Fund endpoints:
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
+Internal candidate reads can pass `parameter_set=dochia_v0_2_range_daily` to
+`latest`, `transitions`, `watchlist-candidates`, and symbol detail. Omitting the
+parameter keeps the production filter.
+
 Systemd service on spark-node-2:
 
 ```bash
@@ -89,8 +93,36 @@ uv run python scripts/calibrate_daily_signals.py --top-tickers 20
 ```
 
 Baseline from 2026-05-02: 24,204 historical daily observations, 91.44%
-coverage, 62.05% daily color accuracy on covered observations, and 43.94
-score MAE for `dochia_v0_estimated`.
+coverage, 62.05% carried daily color accuracy on covered observations, 40.67%
+exact same-day alert match, 52.54% alert match within ±3 days, and 43.94 score
+MAE for `dochia_v0_estimated`.
+
+Daily event parameter sweeps and candidate validation are also read-only:
+
+```bash
+uv run python scripts/sweep_daily_signal_parameters.py --lookback-min 2 --lookback-max 10 --top 12
+uv run python scripts/validate_daily_signal_candidate.py --top-tickers 15 --min-slice-observations 50
+uv run python scripts/compare_signal_candidate_lanes.py --limit-tickers 500 --top 12
+```
+
+Best 2026-05-02 research candidate: 3-session intraday range trigger. It
+improves exact alert F1 from 44.59% to 76.64%, exact recall from 40.67% to
+91.93%, and ±3-day recall from 52.54% to 95.21%. Chronological holdout after
+2025-09-25 scores 83.18% candidate F1 vs 46.26% baseline F1. It is not promoted
+to production scoring until a v0.2 score/transition preview passes review.
+
+Non-production candidate path:
+
+```bash
+uv run python scripts/sync_signal_scores.py --parameter-set dochia_v0_2_range_daily --limit-tickers 500 --display-limit 0
+uv run python scripts/sync_signal_transitions.py --parameter-set dochia_v0_2_range_daily --limit-tickers 500 --display-limit 0
+```
+
+Latest candidate persistence: 328 candidate score rows and 1,624 candidate
+transition rows since 2026-03-25 under the non-production parameter set.
+Portfolio-lane comparison over 328 fresh tickers keeps
+bullish alignment at 129 and risk alignment at 47; re-entry moves 164 to 145,
+mixed timeframes 202 to 203, and 61 daily states/scores change.
 
 ## Relationship to Fortress-Prime
 

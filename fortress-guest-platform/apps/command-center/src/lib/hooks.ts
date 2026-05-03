@@ -84,6 +84,7 @@ export function useFinancialLatestSignals(params?: {
   ticker?: string;
   min_score?: number;
   max_score?: number;
+  parameter_set?: string;
 }) {
   return useQuery<FinancialLatestSignal[]>({
     queryKey: ["financial", "signals", "latest", params],
@@ -99,6 +100,7 @@ export function useFinancialSignalTransitions(params?: {
   transition_type?: FinancialTransitionType;
   since?: string;
   lookback_days?: number;
+  parameter_set?: string;
 }) {
   return useQuery<FinancialSignalTransition[]>({
     queryKey: ["financial", "signals", "transitions", params],
@@ -113,6 +115,7 @@ export function useFinancialSignalDetail(
   params?: {
     transition_limit?: number;
     lookback_days?: number;
+    parameter_set?: string;
   },
 ) {
   const normalized = ticker?.trim().toUpperCase() ?? "";
@@ -142,7 +145,7 @@ export function useFinancialSignalChart(
   });
 }
 
-export function useFinancialWatchlistCandidates(params?: { limit?: number }) {
+export function useFinancialWatchlistCandidates(params?: { limit?: number; parameter_set?: string }) {
   return useQuery<FinancialWatchlistCandidatesResponse>({
     queryKey: ["financial", "signals", "watchlist-candidates", params],
     queryFn: () => api.get("/api/financial/signals/watchlist-candidates", params),
@@ -157,6 +160,7 @@ export function useFinancialDailyCalibration(params?: {
   ticker?: string;
   parameter_set?: string;
   top_tickers?: number;
+  event_window_days?: number;
 }) {
   return useQuery<FinancialDailyCalibrationResponse>({
     queryKey: ["financial", "signals", "calibration", "daily", params],

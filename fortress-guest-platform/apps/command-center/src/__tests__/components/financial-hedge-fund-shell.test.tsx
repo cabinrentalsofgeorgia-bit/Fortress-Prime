@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -193,6 +193,13 @@ const dailyCalibration = {
   missing_observations: 2073,
   neutral_generated_observations: 290,
   matches: 13733,
+  exact_event_matches: 6130,
+  exact_event_accuracy: 0.2771,
+  window_event_matches: 9475,
+  window_event_accuracy: 0.4281,
+  event_window_days: 3,
+  no_generated_event_observations: 13800,
+  opposite_generated_event_observations: 2201,
   accuracy: 0.6205,
   coverage_rate: 0.9144,
   exact_coverage_rate: 0.9142,
@@ -205,6 +212,10 @@ const dailyCalibration = {
   confusion: {
     green: { green: 7060, red: 3967, neutral: 90, missing: 1135 },
     red: { green: 4141, red: 6673, neutral: 200, missing: 938 },
+  },
+  event_confusion: {
+    green: { green: 3100, red: 1010, none: 7007, missing: 1135 },
+    red: { green: 1191, red: 3030, none: 6793, missing: 938 },
   },
   top_tickers: [
     {
@@ -283,5 +294,18 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("62.1%")).toBeInTheDocument();
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
+    expect(screen.getAllByText("dochia_v0_estimated").length).toBeGreaterThan(0);
+  });
+
+  it("switches the internal signal model badge without leaving the page", () => {
+    render(<HedgeFundSignalsShell />);
+
+    fireEvent.click(screen.getByRole("button", { name: "v0.2 Range" }));
+
+    expect(screen.getByText("dochia_v0_2_range_daily")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "v0.2 Range" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 });

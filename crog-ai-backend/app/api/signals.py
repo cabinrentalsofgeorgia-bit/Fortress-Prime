@@ -146,6 +146,13 @@ class DailyCalibrationResponse(BaseModel):
     missing_observations: int
     neutral_generated_observations: int
     matches: int
+    exact_event_matches: int
+    exact_event_accuracy: float | None
+    window_event_matches: int
+    window_event_accuracy: float | None
+    event_window_days: int
+    no_generated_event_observations: int
+    opposite_generated_event_observations: int
     accuracy: float | None
     coverage_rate: float | None
     exact_coverage_rate: float | None
@@ -156,6 +163,7 @@ class DailyCalibrationResponse(BaseModel):
     score_mae: float | None
     score_rmse: float | None
     confusion: dict[str, dict[str, int]]
+    event_confusion: dict[str, dict[str, int]]
     top_tickers: list[TickerCalibrationStats]
 
 
@@ -213,6 +221,7 @@ def latest_scores(
     ticker: Annotated[str | None, Query(min_length=1, max_length=20)] = None,
     min_score: Annotated[int | None, Query(ge=-100, le=100)] = None,
     max_score: Annotated[int | None, Query(ge=-100, le=100)] = None,
+    parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
 ) -> list[dict[str, object]]:
     if min_score is not None and max_score is not None and min_score > max_score:
         raise HTTPException(status_code=400, detail="min_score cannot exceed max_score")
@@ -221,6 +230,7 @@ def latest_scores(
         ticker=ticker,
         min_score=min_score,
         max_score=max_score,
+        parameter_set=parameter_set,
     )
 
 
@@ -232,6 +242,7 @@ def recent_transitions(
     transition_type: TransitionKind | None = None,
     since: dt.date | None = None,
     lookback_days: Annotated[int | None, Query(ge=1, le=365)] = 30,
+    parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
 ) -> list[dict[str, object]]:
     return store.recent_transitions(
         limit=limit,
@@ -239,6 +250,7 @@ def recent_transitions(
         transition_type=transition_type.value if transition_type else None,
         since=since,
         lookback_days=lookback_days,
+        parameter_set=parameter_set,
     )
 
 
@@ -246,6 +258,7 @@ def recent_transitions(
 def watchlist_candidates(
     store: Annotated[SignalDataStore, Depends(get_signal_store)],
     limit: Annotated[int, Query(ge=1, le=25)] = 8,
+    parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
 ) -> dict[str, object]:
     lane_labels = {
         "bullish_alignment": {
@@ -265,7 +278,7 @@ def watchlist_candidates(
             "description": "Symbols where the timeframes are not in agreement.",
         },
     }
-    candidate_lanes = store.watchlist_candidates(limit=limit)
+    candidate_lanes = store.watchlist_candidates(limit=limit, parameter_set=parameter_set)
     lanes = [
         {
             "id": lane_id,
@@ -286,6 +299,7 @@ def daily_calibration(
     ticker: Annotated[str | None, Query(min_length=1, max_length=20)] = None,
     parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
     top_tickers: Annotated[int, Query(ge=1, le=100)] = 20,
+    event_window_days: Annotated[int, Query(ge=0, le=10)] = 3,
 ) -> dict[str, object]:
     if since is not None and until is not None and since > until:
         raise HTTPException(status_code=400, detail="since cannot be after until")
@@ -295,6 +309,7 @@ def daily_calibration(
         ticker=ticker,
         parameter_set=parameter_set,
         top_tickers=top_tickers,
+        event_window_days=event_window_days,
     )
 
 
@@ -317,15 +332,21 @@ def symbol_signal_detail(
     store: Annotated[SignalDataStore, Depends(get_signal_store)],
     transition_limit: Annotated[int, Query(ge=1, le=200)] = 25,
     lookback_days: Annotated[int | None, Query(ge=1, le=365)] = 30,
+    parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
 ) -> dict[str, object]:
     normalized_ticker = ticker.upper()
-    latest = store.latest_scores(limit=1, ticker=normalized_ticker)
+    latest = store.latest_scores(
+        limit=1,
+        ticker=normalized_ticker,
+        parameter_set=parameter_set,
+    )
     if not latest:
         raise HTTPException(status_code=404, detail=f"signal not found for {normalized_ticker}")
     transitions = store.recent_transitions(
         limit=transition_limit,
         ticker=normalized_ticker,
         lookback_days=lookback_days,
+        parameter_set=parameter_set,
     )
     return {
         "ticker": normalized_ticker,
