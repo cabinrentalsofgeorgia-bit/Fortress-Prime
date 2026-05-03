@@ -75,6 +75,9 @@ Dochia-derived until independent truth data exists.
 - Promotion Dry-Run is complete: proposed `hedge_fund.market_signals` rows are
   generated read-only with approval state, lineage payload, and rollback marker.
   Guarded production writes remain blocked.
+- Promotion Dry-Run Acceptance is complete: accepted dry-run snapshots are
+  persisted only after a ready `promote_to_market_signals` decision record and
+  non-zero proposed output. Guarded production writes remain blocked.
 
 ### Phase 5 — App Surface
 
@@ -104,6 +107,9 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/shadow-review/daily` | read-only promotion review packet with gate, lane churn, transition pressure, whipsaw evidence, and decision template |
 | `GET /api/financial/signals/shadow-review/decision-records` | recent supervised Shadow Review decision records |
 | `POST /api/financial/signals/shadow-review/decision-records` | persist a supervised promote/defer decision record with the current evidence packet |
+| `GET /api/financial/signals/promotion-dry-run/daily` | read-only proposed `hedge_fund.market_signals` rows plus approval state |
+| `GET /api/financial/signals/promotion-dry-run/acceptances` | recent accepted dry-run snapshots for audit review |
+| `POST /api/financial/signals/promotion-dry-run/acceptances` | persist an accepted dry-run snapshot; rejects unless a ready promote decision backs the dry-run |
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
 | `GET /api/financial/signals/{ticker}/whipsaw-risk` | symbol whipsaw count/rate and forward-return evidence |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
@@ -123,6 +129,10 @@ Useful query params:
 - `shadow-review/decision-records`: `candidate_parameter_set`, `limit` for
   reads; writes require `decision`, `reviewer`, `rationale`, and
   `rollback_criteria`
+- `promotion-dry-run/daily`: `candidate_parameter_set`, optional `decision_id`,
+  `limit`, `min_abs_score`
+- `promotion-dry-run/acceptances`: `candidate_parameter_set`, `limit` for
+  reads; writes require `accepted_by` and `acceptance_rationale`
 - `{ticker}/chart`: `sessions`, `as_of`
 - `{ticker}/whipsaw-risk`: `sessions`, `as_of`, optional `parameter_set`,
   `whipsaw_window_sessions`, `outcome_horizon_sessions`
@@ -142,6 +152,9 @@ Useful query params:
 - Live Promotion Gate smoke on 2026-05-03 returned
   `ready_for_shadow` for `dochia_v0_2_range_daily` with 328 production
   signal rows and 328 candidate signal rows.
+- Live dry-run acceptance remains a gate, not a write path: without an actual
+  promote decision record, acceptance creation must reject and no production
+  `market_signals` insert is allowed.
 
 ## Design Guardrails
 

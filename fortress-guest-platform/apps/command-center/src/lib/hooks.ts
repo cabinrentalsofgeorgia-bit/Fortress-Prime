@@ -15,6 +15,8 @@ import type {
   FinancialDailyCalibrationResponse,
   FinancialShadowReviewDecisionRecord,
   FinancialShadowReviewDecisionRecordCreate,
+  FinancialPromotionDryRunAcceptance,
+  FinancialPromotionDryRunAcceptanceCreate,
   FinancialPromotionDryRunResponse,
   FinancialPromotionGateResponse,
   FinancialShadowReviewResponse,
@@ -265,6 +267,36 @@ export function useFinancialPromotionDryRun(params?: {
     queryKey: ["financial", "signals", "promotion-dry-run", "daily", params],
     queryFn: () => api.get("/api/financial/signals/promotion-dry-run/daily", params),
     staleTime: 60_000,
+  });
+}
+
+export function useFinancialPromotionDryRunAcceptances(params?: {
+  candidate_parameter_set?: string;
+  limit?: number;
+}) {
+  return useQuery<FinancialPromotionDryRunAcceptance[]>({
+    queryKey: ["financial", "signals", "promotion-dry-run", "acceptances", params],
+    queryFn: () => api.get("/api/financial/signals/promotion-dry-run/acceptances", params),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateFinancialPromotionDryRunAcceptance() {
+  const qc = useQueryClient();
+  return useMutation<
+    FinancialPromotionDryRunAcceptance,
+    ApiError,
+    FinancialPromotionDryRunAcceptanceCreate
+  >({
+    mutationFn: (payload) =>
+      api.post("/api/financial/signals/promotion-dry-run/acceptances", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["financial", "signals", "promotion-dry-run"],
+      });
+      toast.success("Dry-run accepted");
+    },
+    onError: (error) => toast.error(error.message || "Failed to accept dry-run"),
   });
 }
 

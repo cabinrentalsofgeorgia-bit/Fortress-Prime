@@ -1,6 +1,6 @@
 # MarketClub / Dochia Shadow Review Runbook
 
-**Status:** Read-only promotion review + dry-run preview
+**Status:** Read-only promotion review + dry-run preview + acceptance gate
 **Date:** 2026-05-03
 
 ## Purpose
@@ -21,6 +21,9 @@ approval mechanism.
   and `POST /api/financial/signals/shadow-review/decision-records`
 - Promotion dry-run:
   `GET /api/financial/signals/promotion-dry-run/daily?candidate_parameter_set=dochia_v0_2_range_daily`
+- Promotion dry-run acceptances:
+  `GET /api/financial/signals/promotion-dry-run/acceptances?candidate_parameter_set=dochia_v0_2_range_daily`
+  and `POST /api/financial/signals/promotion-dry-run/acceptances`
 
 ## Review Gates
 
@@ -30,6 +33,8 @@ approval mechanism.
 3. Transition-pressure tickers must be inspected on chart overlay.
 4. High whipsaw-risk tickers must be reviewed in the Whipsaw / Backtest panel.
 5. A human decision record must be captured before promotion.
+6. A dry-run acceptance record must be captured after the promote decision and
+   before any guarded production write path exists.
 
 ## Allowed Decisions
 
@@ -68,12 +73,34 @@ rows without inserting them. Review:
 
 Dry-run output is still preview-only. It does not enable production writes.
 
+## Dry-Run Acceptance
+
+The acceptance endpoint persists an audit snapshot of the exact dry-run output
+reviewed by the operator. It must reject unless the dry-run approval state is
+`ready_for_dry_run`, which requires an actual
+`promote_to_market_signals` decision record.
+
+Capture in the cockpit or acceptance API:
+
+- Accepted by.
+- Acceptance rationale.
+- Candidate parameter set.
+- Decision record id.
+- Dry-run generated timestamp and proposed row counts.
+- Target table and target columns.
+- Rollback criteria inherited from the promote decision.
+
+The acceptance record is still not a production write. It is the final gate
+before building a guarded production write path.
+
 ## Hard Stops
 
 - Any Promotion Gate `hold`.
 - Missing live backend or frontend Promotion Gate data.
 - Unreviewed high whipsaw-risk ticker in the shadow packet.
 - No named human approver.
+- No actual `promote_to_market_signals` decision record.
+- No accepted dry-run snapshot.
 
 ## Next Build Step After Dry-Run Approval
 

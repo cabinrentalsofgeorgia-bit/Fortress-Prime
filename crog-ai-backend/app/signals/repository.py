@@ -113,6 +113,24 @@ class SignalDataStore(Protocol):
         min_abs_score: int = 50,
     ) -> dict[str, Any]: ...
 
+    def promotion_dry_run_acceptances(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]: ...
+
+    def create_promotion_dry_run_acceptance(
+        self,
+        *,
+        candidate_parameter_set: str,
+        accepted_by: str,
+        acceptance_rationale: str,
+        decision_id: str | None = None,
+        limit: int = 500,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]: ...
+
     def symbol_chart(
         self,
         *,
@@ -1213,6 +1231,160 @@ def fetch_promotion_dry_run(
     }
 
 
+PROMOTION_DRY_RUN_ACCEPTANCE_SELECT = """
+    SELECT
+        id,
+        decision_record_id,
+        candidate_parameter_set,
+        baseline_parameter_set,
+        accepted_by,
+        acceptance_rationale,
+        rollback_criteria,
+        dry_run_generated_at,
+        dry_run_candidate_signal_count,
+        dry_run_proposed_insert_count,
+        dry_run_bullish_count,
+        dry_run_risk_count,
+        dry_run_skipped_neutral_count,
+        min_abs_score,
+        target_table,
+        target_columns,
+        created_at
+    FROM hedge_fund.signal_promotion_dry_run_acceptances
+"""
+
+
+def fetch_promotion_dry_run_acceptances(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {"limit": limit}
+    where = ""
+    if candidate_parameter_set:
+        where = "WHERE candidate_parameter_set = %(candidate_parameter_set)s"
+        params["candidate_parameter_set"] = candidate_parameter_set
+    sql = f"""
+        {PROMOTION_DRY_RUN_ACCEPTANCE_SELECT}
+        {where}
+        ORDER BY created_at DESC
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, params)
+        return [dict(row) for row in cur.fetchall()]
+
+
+def create_promotion_dry_run_acceptance(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    accepted_by: str,
+    acceptance_rationale: str,
+    decision_id: str | None = None,
+    limit: int = 500,
+    min_abs_score: int = 50,
+) -> dict[str, Any]:
+    dry_run = fetch_promotion_dry_run(
+        conn,
+        candidate_parameter_set=candidate_parameter_set,
+        decision_id=decision_id,
+        limit=limit,
+        min_abs_score=min_abs_score,
+    )
+    approval = dry_run["approval"]
+    if approval["status"] != "ready_for_dry_run":
+        raise ValueError("Cannot accept dry-run output without a ready promote decision record.")
+    if dry_run["summary"]["proposed_insert_count"] == 0:
+        raise ValueError("Cannot accept dry-run output with no proposed market_signals rows.")
+
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            INSERT INTO hedge_fund.signal_promotion_dry_run_acceptances (
+                decision_record_id,
+                candidate_parameter_set,
+                baseline_parameter_set,
+                accepted_by,
+                acceptance_rationale,
+                rollback_criteria,
+                dry_run_generated_at,
+                dry_run_candidate_signal_count,
+                dry_run_proposed_insert_count,
+                dry_run_bullish_count,
+                dry_run_risk_count,
+                dry_run_skipped_neutral_count,
+                min_abs_score,
+                target_table,
+                target_columns,
+                dry_run_payload
+            ) VALUES (
+                %(decision_record_id)s,
+                %(candidate_parameter_set)s,
+                %(baseline_parameter_set)s,
+                %(accepted_by)s,
+                %(acceptance_rationale)s,
+                %(rollback_criteria)s,
+                %(dry_run_generated_at)s,
+                %(dry_run_candidate_signal_count)s,
+                %(dry_run_proposed_insert_count)s,
+                %(dry_run_bullish_count)s,
+                %(dry_run_risk_count)s,
+                %(dry_run_skipped_neutral_count)s,
+                %(min_abs_score)s,
+                %(target_table)s,
+                %(target_columns)s,
+                %(dry_run_payload)s
+            )
+            RETURNING *
+            """,
+            {
+                "decision_record_id": approval["decision_id"],
+                "candidate_parameter_set": candidate_parameter_set,
+                "baseline_parameter_set": dry_run["baseline_parameter_set"],
+                "accepted_by": accepted_by,
+                "acceptance_rationale": acceptance_rationale,
+                "rollback_criteria": approval["rollback_criteria"] or "",
+                "dry_run_generated_at": dry_run["generated_at"],
+                "dry_run_candidate_signal_count": dry_run["summary"]["candidate_signal_count"],
+                "dry_run_proposed_insert_count": dry_run["summary"]["proposed_insert_count"],
+                "dry_run_bullish_count": dry_run["summary"]["bullish_count"],
+                "dry_run_risk_count": dry_run["summary"]["risk_count"],
+                "dry_run_skipped_neutral_count": dry_run["summary"]["skipped_neutral_count"],
+                "min_abs_score": min_abs_score,
+                "target_table": dry_run["summary"]["target_table"],
+                "target_columns": dry_run["summary"]["target_columns"],
+                "dry_run_payload": Jsonb(_json_safe(dry_run)),
+            },
+        )
+        row = cur.fetchone()
+    if row is None:
+        raise RuntimeError("promotion dry-run acceptance insert returned no row")
+    return {
+        key: row[key]
+        for key in [
+            "id",
+            "decision_record_id",
+            "candidate_parameter_set",
+            "baseline_parameter_set",
+            "accepted_by",
+            "acceptance_rationale",
+            "rollback_criteria",
+            "dry_run_generated_at",
+            "dry_run_candidate_signal_count",
+            "dry_run_proposed_insert_count",
+            "dry_run_bullish_count",
+            "dry_run_risk_count",
+            "dry_run_skipped_neutral_count",
+            "min_abs_score",
+            "target_table",
+            "target_columns",
+            "created_at",
+        ]
+    }
+
+
 WATCHLIST_CANDIDATE_BASE_SQL = """
     WITH latest_scores AS (
         SELECT
@@ -1523,6 +1695,41 @@ class PostgresSignalDataStore:
             return fetch_promotion_dry_run(
                 conn,
                 candidate_parameter_set=candidate_parameter_set,
+                decision_id=decision_id,
+                limit=limit,
+                min_abs_score=min_abs_score,
+            )
+
+    def promotion_dry_run_acceptances(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_dry_run_acceptances(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                limit=limit,
+            )
+
+    def create_promotion_dry_run_acceptance(
+        self,
+        *,
+        candidate_parameter_set: str,
+        accepted_by: str,
+        acceptance_rationale: str,
+        decision_id: str | None = None,
+        limit: int = 500,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            return create_promotion_dry_run_acceptance(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                accepted_by=accepted_by,
+                acceptance_rationale=acceptance_rationale,
                 decision_id=decision_id,
                 limit=limit,
                 min_abs_score=min_abs_score,

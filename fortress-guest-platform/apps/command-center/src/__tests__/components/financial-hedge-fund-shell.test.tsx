@@ -531,6 +531,39 @@ const promotionDryRun = {
   ],
 };
 
+const promotionDryRunAcceptances = [
+  {
+    id: "44444444-4444-4444-4444-444444444444",
+    decision_record_id: "33333333-3333-3333-3333-333333333333",
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    baseline_parameter_set: "dochia_v0_estimated",
+    accepted_by: "MarketClub Operator",
+    acceptance_rationale: "Accepted after dry-run preview matched the promote record.",
+    rollback_criteria: "Rollback if whipsaw pressure rises.",
+    dry_run_generated_at: "2026-05-03T20:30:00Z",
+    dry_run_candidate_signal_count: 3,
+    dry_run_proposed_insert_count: 2,
+    dry_run_bullish_count: 1,
+    dry_run_risk_count: 1,
+    dry_run_skipped_neutral_count: 1,
+    min_abs_score: 50,
+    target_table: "hedge_fund.market_signals",
+    target_columns: [
+      "ticker",
+      "signal_type",
+      "action",
+      "confidence_score",
+      "price_target",
+      "source_sender",
+      "source_subject",
+      "raw_reasoning",
+      "model_used",
+      "extracted_at",
+    ],
+    created_at: "2026-05-03T20:45:00Z",
+  },
+];
+
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
     data: latestSignals,
@@ -612,7 +645,18 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionDryRunAcceptances: () => ({
+    data: promotionDryRunAcceptances,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useCreateFinancialPromotionDryRunAcceptance: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
@@ -646,6 +690,10 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("market_signals Preview")).toBeInTheDocument();
     expect(screen.getByText("Ready for dry-run")).toBeInTheDocument();
     expect(screen.getByText("hedge_fund.market_signals")).toBeInTheDocument();
+    expect(screen.getByText("Dry-Run Acceptance")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accept Dry-Run" })).toBeInTheDocument();
+    expect(screen.getByText("1 saved")).toBeInTheDocument();
+    expect(screen.getByText("MarketClub Operator")).toBeInTheDocument();
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
     expect(screen.getByText("Whipsaw Risk / Backtest")).toBeInTheDocument();

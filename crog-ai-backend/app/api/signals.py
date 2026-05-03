@@ -390,6 +390,39 @@ class PromotionDryRunResponse(BaseModel):
     proposed_rows: list[PromotionDryRunMarketSignalRow]
 
 
+class PromotionDryRunAcceptanceCreate(BaseModel):
+    candidate_parameter_set: str = Field(
+        default="dochia_v0_2_range_daily",
+        min_length=1,
+        max_length=100,
+    )
+    decision_id: UUID | None = None
+    accepted_by: str = Field(min_length=2, max_length=120)
+    acceptance_rationale: str = Field(min_length=12, max_length=2000)
+    limit: int = Field(default=500, ge=1, le=500)
+    min_abs_score: int = Field(default=50, ge=1, le=100)
+
+
+class PromotionDryRunAcceptance(BaseModel):
+    id: UUID
+    decision_record_id: UUID
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    accepted_by: str
+    acceptance_rationale: str
+    rollback_criteria: str
+    dry_run_generated_at: dt.datetime
+    dry_run_candidate_signal_count: int
+    dry_run_proposed_insert_count: int
+    dry_run_bullish_count: int
+    dry_run_risk_count: int
+    dry_run_skipped_neutral_count: int
+    min_abs_score: int
+    target_table: str
+    target_columns: list[str]
+    created_at: dt.datetime
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -680,6 +713,43 @@ def promotion_dry_run_daily(
         limit=limit,
         min_abs_score=min_abs_score,
     )
+
+
+@router.get(
+    "/promotion-dry-run/acceptances",
+    response_model=list[PromotionDryRunAcceptance],
+)
+def promotion_dry_run_acceptances(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+) -> list[dict[str, object]]:
+    return store.promotion_dry_run_acceptances(
+        candidate_parameter_set=candidate_parameter_set,
+        limit=limit,
+    )
+
+
+@router.post(
+    "/promotion-dry-run/acceptances",
+    response_model=PromotionDryRunAcceptance,
+    status_code=201,
+)
+def create_promotion_dry_run_acceptance_endpoint(
+    payload: PromotionDryRunAcceptanceCreate,
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+) -> dict[str, object]:
+    try:
+        return store.create_promotion_dry_run_acceptance(
+            candidate_parameter_set=payload.candidate_parameter_set,
+            accepted_by=payload.accepted_by.strip(),
+            acceptance_rationale=payload.acceptance_rationale.strip(),
+            decision_id=str(payload.decision_id) if payload.decision_id else None,
+            limit=payload.limit,
+            min_abs_score=payload.min_abs_score,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/{ticker}/chart", response_model=SymbolSignalChart)

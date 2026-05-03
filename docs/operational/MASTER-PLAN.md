@@ -2,7 +2,7 @@
 
 **Operator:** Gary Knight
 **Established:** 2026-04-29
-**Updated:** 2026-05-03 (v2.3 — Dochia promotion dry-run ready)
+**Updated:** 2026-05-03 (v2.4 — Dochia dry-run acceptance gate ready)
 **Cadence:** Updated on change
 
 ---
@@ -262,8 +262,8 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 | v0.3 guardrail research | Closed as research-only: simple guardrails, ATR/cooldowns, ticker clusters, and rolling whipsaw suppressors all miss the promotion gate. Rolling date-safe holdout confirms suppression destroys recall: no candidate keeps at least 95% of raw v0.2 F1; strongest reducers cut 95%+ of events but stay below 7.41% F1 |
 | Candidate persisted state | v0.2 candidate has 328 `signal_scores` rows and 1,624 `signal_transitions` rows under non-production parameter set; internal API/BFF selector live for scanner, transitions, symbol detail, Portfolio Lens, and chart overlays |
 | Candidate lane comparison | v0.2 bullish lane unchanged at 129, risk unchanged at 47, re-entry 164→145, mixed 202→203, 61 daily states/scores change |
-| Promotion contract | Fresh Dochia scores still staged; legacy `market_signals` remains contextual. Dry-run promotion path can now preview proposed rows, lineage, rollback markers, and approval state; production writes remain blocked |
-| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, synced chart overlays, Whipsaw Risk / Backtest evidence, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, Promotion Gate, Shadow Review, Decision Records, Promotion Dry-Run, and internal Production/v0.2 Range toggle |
+| Promotion contract | Fresh Dochia scores still staged; legacy `market_signals` remains contextual. Dry-run promotion path can preview proposed rows, lineage, rollback markers, approval state, and accepted dry-run snapshots; production writes remain blocked |
+| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, synced chart overlays, Whipsaw Risk / Backtest evidence, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, Promotion Gate, Shadow Review, Decision Records, Promotion Dry-Run, Dry-Run Acceptance, and internal Production/v0.2 Range toggle |
 
 **Signal doctrine:**
 
@@ -279,9 +279,9 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 1. Deterministic Trade Triangle engine: pure daily/weekly/monthly state calculation from EOD bars. Complete initial slice.
 2. Database scorer: populate `hedge_fund.signal_scores` and `signal_transitions` idempotently. Complete initial fresh batch.
 3. Calibration harness: compare generated daily state/score against 24,204 MarketClub observations. Baseline complete; refinement remains.
-4. Production contract: promote approved signals to `hedge_fund.market_signals`. Dry-run planner complete; guarded write path remains locked.
-5. API surface: scanner, symbol detail, portfolio board, alert inbox, backtest lab, model health. Scanner, symbol detail, chart data, whipsaw/backtest evidence, alert feed, watchlist-candidate lanes, daily calibration, promotion-gate comparison, Shadow Review packet, Decision Records, and Promotion Dry-Run complete.
-6. Command Center UI: Financial / Hedge Fund route with sober cockpit UX, not gamified retail nudges. First route, chart overlays, Whipsaw Risk / Backtest, Portfolio Lens, Calibration Baseline, Promotion Gate, Shadow Review, Decision Records, and Promotion Dry-Run complete at `/financial/hedge-fund`.
+4. Production contract: promote approved signals to `hedge_fund.market_signals`. Dry-run planner and acceptance audit record complete; guarded write path remains locked.
+5. API surface: scanner, symbol detail, portfolio board, alert inbox, backtest lab, model health. Scanner, symbol detail, chart data, whipsaw/backtest evidence, alert feed, watchlist-candidate lanes, daily calibration, promotion-gate comparison, Shadow Review packet, Decision Records, Promotion Dry-Run, and Dry-Run Acceptance complete.
+6. Command Center UI: Financial / Hedge Fund route with sober cockpit UX, not gamified retail nudges. First route, chart overlays, Whipsaw Risk / Backtest, Portfolio Lens, Calibration Baseline, Promotion Gate, Shadow Review, Decision Records, Promotion Dry-Run, and Dry-Run Acceptance complete at `/financial/hedge-fund`.
 
 **Product principles:**
 
@@ -292,7 +292,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Do not call generated weekly/monthly states "MarketClub truth"; they are Dochia-derived.
 - Avoid gamified trading prompts; build an evidence cockpit.
 
-**Immediate next step:** Run and review the Promotion Dry-Run after a recorded `promote_to_market_signals` decision. The next build slice is a guarded production write path only after named approval, rollback criteria, and accepted dry-run output.
+**Immediate next step:** Record an actual `promote_to_market_signals` decision only after operator review, then accept the generated Promotion Dry-Run output. The next build slice is the guarded production write path, but only after those two durable records exist.
 
 ### 6.6 Architectural follow-ups
 
@@ -358,6 +358,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Added the supervised Shadow Review backend endpoint, cockpit panel, and runbook. The read-only packet combines Promotion Gate status, lane churn, transition pressure, whipsaw/backtest tickers, a checklist, and an explicit human decision template. Live database smoke returned `needs_review`, 4 lane reviews, 8 transition-pressure tickers, and 8 whipsaw-review tickers. Production `market_signals` writes remain blocked.
 - Added supervised Decision Record capture. The Shadow Review panel can now persist and list named promote/defer records with rationale, reviewed tickers, rollback criteria, and the current Shadow Review evidence payload. Production `market_signals` writes remain blocked.
 - Added Promotion Dry-Run planning. Backend endpoint previews proposed `hedge_fund.market_signals` rows from the candidate parameter set with source pipeline, parameter set, model version, computed timestamp, explanation payload, rollback marker, and decision-record approval state. The cockpit now shows proposed rows and keeps writes locked.
+- Added Promotion Dry-Run Acceptance records. Backend endpoints list and persist accepted dry-run snapshots only when the dry-run is backed by a `promote_to_market_signals` decision record and has non-zero proposed rows. The cockpit now shows recent acceptances and the acceptance form; production `market_signals` writes remain blocked.
 - Added internal Production/v0.2 Range toggle to the Command Center Hedge Fund page and promoted the production frontend build.
 - Added chart-data endpoint and chart overlay with close, daily/weekly channel bands, and generated triangle event markers.
 - Refined calibration metrics to separate carried-state agreement from exact new-alert agreement: 40.67% same-day alert match and 52.54% ±3-day alert match.
@@ -506,6 +507,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 | 2026-04-29 | v1.5 | Late-late-session — SSH alias divergence, NGC CLI installed, IP truth table |
 | 2026-04-29 | v1.6 | Closing-session — F2 PMTU fix, W1 pull pattern, Principles 7+8, 4 new briefs |
 | 2026-04-29 | v1.7 | Embed deployment closing — full 6-STOP journey, W3 weights path proven, Principle 9 (NIM profile class verification), Principle 10 anti-pattern (NGC CLI layout vs HF-cache), §5.4 NIM deployment pattern fully documented end-to-end, 13 briefs total staged for next session |
+| 2026-05-03 | v2.4 | MarketClub / Dochia dry-run acceptance gate added: accepted dry-run snapshots are durable audit records, and guarded production writes remain blocked until actual promote decision plus accepted dry-run output exists |
 
 ---
 

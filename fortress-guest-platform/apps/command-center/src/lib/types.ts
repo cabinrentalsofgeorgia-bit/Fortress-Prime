@@ -504,6 +504,35 @@ export interface FinancialPromotionDryRunResponse {
   proposed_rows: FinancialPromotionDryRunMarketSignalRow[];
 }
 
+export interface FinancialPromotionDryRunAcceptanceCreate {
+  candidate_parameter_set: string;
+  decision_id?: string | null;
+  accepted_by: string;
+  acceptance_rationale: string;
+  limit?: number;
+  min_abs_score?: number;
+}
+
+export interface FinancialPromotionDryRunAcceptance {
+  id: string;
+  decision_record_id: string;
+  candidate_parameter_set: string;
+  baseline_parameter_set: string;
+  accepted_by: string;
+  acceptance_rationale: string;
+  rollback_criteria: string;
+  dry_run_generated_at: string;
+  dry_run_candidate_signal_count: number;
+  dry_run_proposed_insert_count: number;
+  dry_run_bullish_count: number;
+  dry_run_risk_count: number;
+  dry_run_skipped_neutral_count: number;
+  min_abs_score: number;
+  target_table: string;
+  target_columns: string[];
+  created_at: string;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;
