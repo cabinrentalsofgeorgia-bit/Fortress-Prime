@@ -19,6 +19,7 @@ if not _MINER_BOT_PASSWORD:
 
 try:
     from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, Text, DateTime, Enum as SQLEnum
+    from sqlalchemy.engine import URL
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker
     import enum
@@ -42,7 +43,14 @@ MODEL = "mistral:latest"
 API_TIMEOUT = 30
 
 # SQLAlchemy Setup
-DATABASE_URL = f"postgresql://{ADMIN_USER}:{ADMIN_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = URL.create(
+    "postgresql",
+    username=ADMIN_USER,
+    password=ADMIN_PASS,
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_NAME,
+)
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

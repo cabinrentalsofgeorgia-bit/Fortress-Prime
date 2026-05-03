@@ -6,10 +6,9 @@ from sqlalchemy import create_engine, text
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [HIVE MIND EXTRACT] - %(message)s')
 
 # Default aligns with active Fortress backend config when env is absent.
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://fgp_app:fortress2024@localhost:5432/fortress_guest",
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL env var required")
 
 
 def _fetch_rows(conn):

@@ -1,9 +1,12 @@
+import os
 import pandas as pd
 from sqlalchemy import create_engine, text
 import re
 
 # --- CONFIGURATION ---
-DB_URL = "postgresql://analyst_reader:6652201a@localhost:5432/fortress_db"
+DB_URL = os.getenv("DATABASE_URL", "")
+if not DB_URL:
+    raise RuntimeError("DATABASE_URL env var required")
 engine = create_engine(DB_URL)
 
 def get_stats():

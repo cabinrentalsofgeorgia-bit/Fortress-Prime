@@ -26,7 +26,9 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "fortress_db")
 DB_PORT = os.getenv("DB_PORT", "5432")
 ANALYST_USER = os.getenv("DB_USER", "analyst_reader")  # Uses DB_USER from .env
-ANALYST_PASS = os.getenv("DB_PASSWORD", "6652201a")  # Uses DB_PASSWORD from .env
+ANALYST_PASS = os.getenv("DB_PASSWORD")
+if not ANALYST_PASS:
+    raise RuntimeError("DB_PASSWORD env var required")
 
 # Spark-1 (Ollama) Configuration
 WORKER_IP = "192.168.0.104"

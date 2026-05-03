@@ -14,6 +14,7 @@ CLI:
 
 from __future__ import annotations
 
+import os
 import argparse
 import json
 import sys
@@ -195,7 +196,9 @@ def _extract_analysis(response: dict[str, Any]) -> dict[str, Any]:
 
 TWO_PLACES = Decimal("0.01")
 ONE_HUNDRED = Decimal("100")
-SHADOW_DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+SHADOW_DSN = os.environ.get("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
+if not SHADOW_DSN:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
 
 
 def _money(v: Decimal) -> Decimal:

@@ -17,12 +17,15 @@ Taxable base = base_rent + cleaning_fee + party_fee
 """
 from __future__ import annotations
 
+import os
 from decimal import Decimal
 from uuid import uuid4
 
 import psycopg2
 
-SHADOW_DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+SHADOW_DSN = os.environ.get("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
+if not SHADOW_DSN:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
 
 # ── Global fees — applied uniformly to all active properties ──────────────────
 # Each entry: (name, flat_amount, fee_type, percentage_rate, is_optional)

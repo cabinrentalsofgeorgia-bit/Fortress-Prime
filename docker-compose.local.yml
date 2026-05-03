@@ -12,7 +12,7 @@ services:
     environment:
       POSTGRES_DB: fortress_db
       POSTGRES_USER: miner_bot
-      POSTGRES_PASSWORD: ${MINER_BOT_DB_PASSWORD}  # export MINER_BOT_DB_PASSWORD before docker compose up
+      POSTGRES_PASSWORD: ${MINER_BOT_DB_PASSWORD:?set MINER_BOT_DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       # Persistent data volume for database - mounted to Synology DS1825+ storage

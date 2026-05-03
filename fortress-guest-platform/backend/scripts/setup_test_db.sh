@@ -17,7 +17,7 @@
 #     the test DB URL from it by replacing the database name)
 #
 # Usage:
-#   POSTGRES_ADMIN_URI="postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow" \
+#   POSTGRES_ADMIN_URI="postgresql://fortress_admin:PASSWORD@127.0.0.1:5432/fortress_shadow" \
 #     bash backend/scripts/setup_test_db.sh
 
 set -euo pipefail

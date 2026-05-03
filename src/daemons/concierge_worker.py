@@ -49,10 +49,9 @@ VLLM_TIMEOUT      = float(os.getenv("CONCIERGE_VLLM_TIMEOUT_SECONDS", "45"))
 FAILURE_COOLDOWN  = float(os.getenv("CONCIERGE_FAILURE_COOLDOWN_SECONDS", "60"))
 POLL_INTERVAL     = float(os.getenv("CONCIERGE_POLL_INTERVAL_SECONDS", "10"))
 BATCH_SIZE        = int(os.getenv("CONCIERGE_BATCH_SIZE", "5"))
-DATABASE_URL      = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://fgp_app:fortress2024@localhost:5432/fortress_guest"
-).replace("postgresql://", "postgresql+asyncpg://")
+DATABASE_URL      = os.getenv("DATABASE_URL", "").replace("postgresql://", "postgresql+asyncpg://")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL env var required")
 
 SYSTEM_PROMPT = (
     "You are a highly professional, warm, and hospitable luxury cabin concierge "

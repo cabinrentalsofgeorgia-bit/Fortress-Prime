@@ -41,9 +41,9 @@ log = logging.getLogger("build_holdout")
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-DB_URI              = os.getenv("POSTGRES_ADMIN_URI",
-                        "postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow"
-                      ).replace("+asyncpg", "")
+DB_URI = os.getenv("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
+if not DB_URI:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
 HOLDOUT_DIR         = Path(os.getenv("HOLDOUT_DIR",
                         "/mnt/fortress_nas/finetune-artifacts/holdouts"))
 HOLDOUT_DAYS        = int(os.getenv("EVAL_HOLDOUT_DAYS",   "7"))

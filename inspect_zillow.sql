@@ -1,5 +1,5 @@
 -- Inspection queries for Zillow expense data
--- Run these with: psql "postgresql://analyst_reader:6652201a@localhost:5432/fortress_db" -f inspect_zillow.sql
+-- Run these with: psql "postgresql://analyst_reader:PASSWORD@localhost:5432/fortress_db" -f inspect_zillow.sql
 
 -- 1. Raw Zillow transactions (First 5 rows)
 SELECT * FROM finance_invoices WHERE vendor = 'Zillow' LIMIT 5;

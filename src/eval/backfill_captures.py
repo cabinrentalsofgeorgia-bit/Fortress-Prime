@@ -62,9 +62,9 @@ log = logging.getLogger("backfill")
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-DB_URI          = os.getenv("POSTGRES_ADMIN_URI",
-                    "postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow"
-                  ).replace("+asyncpg", "")
+DB_URI = os.getenv("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
+if not DB_URI:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
 PROMPTS_DIR     = Path(os.getenv("PROMPTS_DIR",
                     "/mnt/fortress_nas/fortress_data/ai_brain/logs"))
 QUARANTINE_FILE = Path(os.getenv("QUARANTINE_FILE",

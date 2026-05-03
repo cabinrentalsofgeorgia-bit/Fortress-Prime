@@ -19,6 +19,7 @@ load_dotenv()
 
 try:
     from sqlalchemy import create_engine, Column, Integer, String, Numeric, Date, Text, DateTime, CheckConstraint
+    from sqlalchemy.engine import URL
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.exc import IntegrityError
@@ -34,7 +35,14 @@ ADMIN_USER = os.getenv("ADMIN_DB_USER", "miner_bot")
 ADMIN_PASS = os.getenv("ADMIN_DB_PASS", _MINER_BOT_PASSWORD)
 
 # SQLAlchemy Setup
-DATABASE_URL = f"postgresql://{ADMIN_USER}:{ADMIN_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = URL.create(
+    "postgresql",
+    username=ADMIN_USER,
+    password=ADMIN_PASS,
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_NAME,
+)
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

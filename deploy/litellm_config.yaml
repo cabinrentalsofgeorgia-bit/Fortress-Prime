@@ -31,7 +31,7 @@ model_list:
     litellm_params:
       model: openai/nemotron-3-super
       api_base: http://10.10.10.3:8000/v1
-      api_key: EMPTY
+      api_key: os.environ/SOVEREIGN_LLM_API_KEY
       max_tokens: 6000
       temperature: 0.3
       top_p: 0.95
@@ -48,7 +48,7 @@ model_list:
     litellm_params:
       model: openai/nemotron-3-super
       api_base: http://10.10.10.3:8000/v1
-      api_key: EMPTY
+      api_key: os.environ/SOVEREIGN_LLM_API_KEY
       max_tokens: 4000
       temperature: 0.5
       top_p: 0.95
@@ -68,7 +68,7 @@ model_list:
     litellm_params:
       model: openai/nemotron-3-super
       api_base: http://10.10.10.3:8000/v1
-      api_key: EMPTY
+      api_key: os.environ/SOVEREIGN_LLM_API_KEY
       max_tokens: 2000
       temperature: 0.4
       top_p: 0.95
@@ -87,7 +87,7 @@ model_list:
     litellm_params:
       model: openai/nemotron-3-super
       api_base: http://10.10.10.3:8000/v1
-      api_key: EMPTY
+      api_key: os.environ/SOVEREIGN_LLM_API_KEY
       max_tokens: 6000
       temperature: 0.3
       top_p: 0.95
@@ -105,7 +105,7 @@ model_list:
     litellm_params:
       model: openai/nemotron-3-super
       api_base: http://10.10.10.3:8000/v1
-      api_key: EMPTY
+      api_key: os.environ/SOVEREIGN_LLM_API_KEY
       max_tokens: 2000
       temperature: 0.4
       top_p: 0.95
@@ -131,7 +131,7 @@ model_list:
     litellm_params:
       model: openai/nvidia/llama-nemotron-embed-1b-v2
       api_base: http://spark-3:8102/v1
-      api_key: dummy
+      api_key: os.environ/SOVEREIGN_EMBED_API_KEY
       timeout: 60
 
   # ──────────────────────────────────────────────────────────────────────────

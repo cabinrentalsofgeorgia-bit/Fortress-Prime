@@ -64,15 +64,12 @@ OPERATOR_NAME      = os.getenv("HUNTER_OPERATOR_NAME", "Taylor")
 COMPANY_NAME       = os.getenv("HUNTER_COMPANY_NAME", "Cabin Rentals of Georgia")
 LLM_BASE_URL       = os.getenv("LITELLM_BASE_URL", "http://10.10.10.1:8002/v1")
 LLM_MODEL          = os.getenv("DGX_INFERENCE_MODEL", "meta/llama-3.3-70b-instruct")
-LLM_API_KEY        = os.getenv("DGX_INFERENCE_API_KEY", "sk-fortress-master-123")
+LLM_API_KEY        = os.getenv("DGX_INFERENCE_API_KEY", "")
 LLM_TIMEOUT        = float(os.getenv("HUNTER_LLM_TIMEOUT", "60"))
 TWILIO_SID         = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_TOKEN       = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM        = os.getenv("TWILIO_PHONE_NUMBER", "")
-DB_URL             = os.getenv(
-    "DATABASE_URL",
-    "postgresql://fgp_app:fortress2024@localhost:5432/fortress_guest"
-).replace("postgresql+asyncpg://", "postgresql://")
+DB_URL             = os.getenv("DATABASE_URL", "").replace("postgresql+asyncpg://", "postgresql://")
 
 
 SYSTEM_PROMPT = (
@@ -99,7 +96,7 @@ def get_db() -> psycopg2.extensions.connection:
         r"postgresql://([^:]+):([^@]+)@([^:/]+)(?::(\d+))?/(.+)", url
     )
     if not match:
-        raise ValueError(f"Cannot parse DATABASE_URL: {url}")
+        raise ValueError("Cannot parse DATABASE_URL")
     user, password, host, port, dbname = match.groups()
     return psycopg2.connect(
         host=host, port=int(port or 5432),

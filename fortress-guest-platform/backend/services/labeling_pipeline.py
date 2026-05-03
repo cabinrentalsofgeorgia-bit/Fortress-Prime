@@ -45,10 +45,9 @@ log = logging.getLogger("labeling_pipeline")
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-DB_URI = os.getenv(
-    "POSTGRES_ADMIN_URI",
-    "postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow"
-).replace("+asyncpg", "")
+DB_URI = os.getenv("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
+if not DB_URI:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
 
 LITELLM_BASE    = os.getenv("LITELLM_BASE_URL",         "http://127.0.0.1:8002/v1")
 LITELLM_KEY     = os.getenv("LITELLM_MASTER_KEY",        "")

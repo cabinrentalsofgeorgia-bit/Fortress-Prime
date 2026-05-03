@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 from decimal import Decimal
 from uuid import uuid4
 
 import psycopg2
 
-SHADOW_DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+SHADOW_DSN = os.environ.get("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
+if not SHADOW_DSN:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
 
 ADDONS = [
     ("Early Check-In (1 hour)", "Arrive one hour before standard check-in time.", Decimal('50.00'), 'flat_fee'),

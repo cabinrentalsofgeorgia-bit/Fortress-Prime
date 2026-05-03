@@ -9,15 +9,20 @@ with display_order and is_hero flag.
 Idempotent: deletes existing images per property before re-inserting.
 """
 
+import os
 import json
 import time
 import requests
 import psycopg2
 
-SHADOW_DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+SHADOW_DSN = os.environ.get("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
 STREAMLINE_URL = "https://web.streamlinevrs.com/api/json"
-STREAMLINE_KEY = "f97677a4725bc121cf83011825b0ea46"
-STREAMLINE_SECRET = "54f7236b53f30e60a28c7aaadd31e8f17b532e00"
+STREAMLINE_KEY = os.environ.get("STREAMLINE_API_KEY", "")
+STREAMLINE_SECRET = os.environ.get("STREAMLINE_API_SECRET", "")
+if not SHADOW_DSN:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
+if not STREAMLINE_KEY or not STREAMLINE_SECRET:
+    raise RuntimeError("STREAMLINE_API_KEY and STREAMLINE_API_SECRET env vars required")
 
 
 def streamline_call(method: str, params: dict | None = None) -> dict:

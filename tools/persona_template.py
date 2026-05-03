@@ -52,8 +52,8 @@ log = logging.getLogger("council")
 # =============================================================================
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "ba9bea29e2db1d31025171ffb33d74f151987bdb2fa6760beaa54ab28c23ff5d")
-QDRANT_HEADERS = {"api-key": QDRANT_API_KEY}
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
+QDRANT_HEADERS = {"api-key": QDRANT_API_KEY} if QDRANT_API_KEY else {}
 
 # Embeddings go through Nginx LB (distributes across all 4 nodes)
 EMBED_URL = os.getenv("EMBED_URL", "http://192.168.0.100/api/embeddings")

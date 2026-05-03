@@ -32,10 +32,9 @@ logging.basicConfig(
 )
 log = logging.getLogger("build_judge_dataset")
 
-DB_URI = os.getenv(
-    "POSTGRES_ADMIN_URI",
-    "postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow"
-).replace("+asyncpg", "")
+DB_URI = os.getenv("POSTGRES_ADMIN_URI", "").replace("+asyncpg", "")
+if not DB_URI:
+    raise RuntimeError("POSTGRES_ADMIN_URI env var required")
 
 _SYSTEM = (
     'You are a quality judge for {task_type} responses. '

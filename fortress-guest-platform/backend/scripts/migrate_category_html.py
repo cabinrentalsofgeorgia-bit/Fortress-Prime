@@ -82,8 +82,9 @@ async def scrape_categories(dry_run: bool = False) -> None:
     import os
     from sqlalchemy import text as sa_text
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-
-    raw_url = os.environ.get("DATABASE_URL", "postgresql://fgp_app:fortress2024@localhost:5432/fortress_guest")
+    raw_url = os.environ.get("DATABASE_URL", "")
+    if not raw_url:
+        raise RuntimeError("DATABASE_URL env var required")
     db_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1) if "asyncpg" not in raw_url else raw_url
     engine = create_async_engine(db_url, echo=False)
     SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

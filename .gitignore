@@ -105,3 +105,24 @@ nohup.out
 # Backup files
 *.bak
 scratch/
+
+# Secret hygiene hardening - real credentials stay outside the repo workspace.
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+*.env.local
+*.env.backup
+*.env.production*
+*.secret
+*.credentials
+*.p12
+*.pfx
+*.crt
+*.csr
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+nginx/ssl/
+deploy/litellm_config.local.yaml

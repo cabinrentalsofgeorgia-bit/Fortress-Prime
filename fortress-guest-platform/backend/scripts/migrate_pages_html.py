@@ -223,13 +223,9 @@ async def run_heist(dry_run: bool = False) -> None:
     from sqlalchemy import text as sa_text
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-    raw_url = os.environ.get(
-        "DATABASE_URL",
-        os.environ.get(
-            "POSTGRES_API_URI",
-            "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow",
-        ),
-    )
+    raw_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_API_URI", "")
+    if not raw_url:
+        raise RuntimeError("DATABASE_URL or POSTGRES_API_URI env var required")
     db_url = (
         raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
         if "asyncpg" not in raw_url

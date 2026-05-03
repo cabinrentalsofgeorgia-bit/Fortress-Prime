@@ -7,11 +7,15 @@ The API reads from fortress_shadow but blocked_days were synced
 into fortress_guest. This script bridges the gap.
 """
 
+import os
+
 import psycopg2
 from datetime import date
 
-GUEST_DSN = "postgresql://fgp_app:fortress2024@localhost:5432/fortress_guest"
-SHADOW_DSN = "postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow"
+GUEST_DSN = os.environ.get("FORTRESS_GUEST_DSN")
+SHADOW_DSN = os.environ.get("FORTRESS_SHADOW_DSN")
+if not GUEST_DSN or not SHADOW_DSN:
+    raise RuntimeError("FORTRESS_GUEST_DSN and FORTRESS_SHADOW_DSN env vars required")
 
 
 def main():

@@ -265,7 +265,7 @@ class Settings(BaseSettings):
         the application.
 
         Example:
-            TEST_DATABASE_URL=postgresql://fortress_api:fortress@127.0.0.1:5432/fortress_shadow_test
+            TEST_DATABASE_URL=postgresql://fortress_api:PASSWORD@127.0.0.1:5432/fortress_shadow_test
         """
         raw = os.getenv("TEST_DATABASE_URL", "").strip()
         if not raw:

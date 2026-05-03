@@ -9,7 +9,7 @@
 # Run this BEFORE executing the COMMIT form of the cleanup script (G.1.6).
 #
 # Usage:
-#   POSTGRES_ADMIN_URI="postgresql://fortress_admin:fortress@127.0.0.1:5432/fortress_shadow" \
+#   POSTGRES_ADMIN_URI="postgresql://fortress_admin:PASSWORD@127.0.0.1:5432/fortress_shadow" \
 #     bash backend/scripts/g1_5_backup_fortress_shadow.sh
 #
 # The POSTGRES_ADMIN_URI env var is read from the shell environment. If not set,

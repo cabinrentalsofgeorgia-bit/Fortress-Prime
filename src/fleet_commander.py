@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 try:
     from sqlalchemy import create_engine, text
+    from sqlalchemy.engine import URL
     from sqlalchemy.exc import IntegrityError, OperationalError
 except ImportError:
     print("❌ Error: SQLAlchemy required. Install with: pip install sqlalchemy")
@@ -34,7 +35,14 @@ if not DB_PASSWORD:
         "Set it in .env or export it from the vault. See docs/OPERATIONS.md."
     )
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = URL.create(
+    "postgresql",
+    username=DB_USER,
+    password=DB_PASSWORD,
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_NAME,
+)
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # Target date for fresh signals (Jan 20, 2026)
@@ -268,7 +276,7 @@ if __name__ == "__main__":
         print("✅ Database connection verified.")
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
-        print(f"   Please ensure PostgreSQL is running and accessible at {DATABASE_URL}")
+        print(f"   Please ensure PostgreSQL is running and accessible at {DB_HOST}:{DB_PORT}/{DB_NAME}")
         exit(1)
     
     main_loop()

@@ -11,7 +11,7 @@ Usage:
   python -m src.legal.fetch_expanded_text [--max-new N]
 """
 from __future__ import annotations
-import json, sys, time, re, logging
+import os, json, sys, time, re, logging
 import urllib.request, urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,7 +23,9 @@ logging.basicConfig(
 )
 log = logging.getLogger("fetch_expanded")
 
-API_TOKEN   = "1e8f8581c60a9cf6357dafcdc0c0ee8aa62b0c92"
+API_TOKEN = os.environ.get("COURTLISTENER_API_TOKEN")
+if not API_TOKEN:
+    raise RuntimeError("COURTLISTENER_API_TOKEN env var required")
 BASE_URL    = "https://www.courtlistener.com/api/rest/v4"
 RATE_SLEEP  = 0.5
 PAGE_SLEEP  = 1.5

@@ -1071,7 +1071,7 @@ VRS_API = os.getenv("VRS_API_URL", "http://127.0.0.1:8100")
 # The CC authenticates users via its own JWT (fortress_session cookie).
 # When proxying to the VRS backend, we mint a short-lived service token
 # signed with the backend's secret so auth-gated endpoints accept it.
-_VRS_JWT_SECRET = os.getenv("VRS_JWT_SECRET_KEY", "oyt1L9BhC-6P2G0qwaEZ4LjtNB7r628WeAVxuNME9ulrD3j-CIgAZFOZ5xLOwIku")
+_VRS_JWT_SECRET = os.getenv("VRS_JWT_SECRET_KEY", "")
 _VRS_SERVICE_USER_ID = os.getenv("VRS_SERVICE_USER_ID", "69171062-62bf-4dd7-8478-61f748da78ef")
 _vrs_service_token: str = ""
 _vrs_token_exp: float = 0
@@ -1083,6 +1083,8 @@ def _get_vrs_service_token() -> str:
     now = time.time()
     if _vrs_service_token and now < _vrs_token_exp - 30:
         return _vrs_service_token
+    if not _VRS_JWT_SECRET:
+        raise RuntimeError("VRS_JWT_SECRET_KEY env var required")
     exp = now + 3600
     payload = {
         "sub": _VRS_SERVICE_USER_ID,
