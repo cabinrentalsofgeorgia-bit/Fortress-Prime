@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Fortress stack health checker
+Documentation=file:///home/admin/Fortress-Prime/docs/operational/known-good-network-map-2026-05-03.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+WorkingDirectory=/home/admin/Fortress-Prime
+ExecStart=/home/admin/Fortress-Prime/tools/fortress_stack_health.sh
+

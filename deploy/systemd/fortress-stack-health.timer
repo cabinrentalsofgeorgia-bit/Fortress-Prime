@@ -1,0 +1,13 @@
+[Unit]
+Description=Run Fortress stack health checker hourly
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+AccuracySec=5min
+Persistent=true
+Unit=fortress-stack-health.service
+
+[Install]
+WantedBy=timers.target
+
