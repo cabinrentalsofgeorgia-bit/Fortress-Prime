@@ -964,6 +964,55 @@ export function useBulkRejectSeoRedirectRemaps() {
 // ---------------------------------------------------------------------------
 // Message Templates
 // ---------------------------------------------------------------------------
+export interface AgentStats {
+  period_days: number;
+  total_messages: number;
+  auto_answered: number;
+  escalated_to_human: number;
+  automation_rate_pct: number;
+  avg_ai_confidence: number;
+  sentiment_distribution: Record<string, number>;
+  intent_distribution: Record<string, number>;
+  auto_work_orders_created: number;
+  generated_at: string;
+}
+
+export function useAgentStats() {
+  return useQuery<AgentStats>({
+    queryKey: ["agent-stats"],
+    queryFn: () => api.get("/api/agent/stats"),
+    refetchInterval: 60_000,
+  });
+}
+
+export interface AgentWorkItem {
+  id: string;
+  source: string;
+  source_label: string;
+  status: string;
+  title: string;
+  detail: string | null;
+  risk_level: string;
+  requires_human_approval: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  href: string;
+}
+
+export interface AgentWorkItemsResponse {
+  items: AgentWorkItem[];
+  total: number;
+  summary: Record<string, number>;
+}
+
+export function useAgentWorkItems(limit = 80) {
+  return useQuery<AgentWorkItemsResponse>({
+    queryKey: ["agent-work-items", limit],
+    queryFn: () => api.get("/api/agent/work-items", { limit }),
+    refetchInterval: 60_000,
+  });
+}
+
 export function useMessageTemplates() {
   return useQuery<MessageTemplate[]>({
     queryKey: ["message-templates"],

@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  useAgentStats,
   useFunnelHQ,
   useParityDashboard,
   usePendingApprovals,
@@ -161,11 +162,13 @@ export default function CommandCenterPage() {
   const funnel = useFunnelHQ();
   const health = useSystemHealth();
   const financialApprovals = usePendingApprovals();
+  const agentStats = useAgentStats();
 
   const parityData = parity.data;
   const pulseData = pulse.data;
   const funnelData = funnel.data;
   const healthData = health.data;
+  const agentData = agentStats.data;
   const financialApprovalCount = financialApprovals.data?.length ?? 0;
 
   const nodes = healthData?.nodes ? Object.values(healthData.nodes) : [];
@@ -410,6 +413,70 @@ export default function CommandCenterPage() {
               href={workflow.href}
             />
           ))}
+        </CardContent>
+      </Card>
+
+      <Card className="border-cyan-500/20 bg-zinc-950/90">
+        <CardHeader className="border-b border-zinc-800/80">
+          <CardTitle className="flex items-center gap-2 text-zinc-50">
+            <Cpu className="h-5 w-5 text-cyan-300" />
+            Agentic Enterprise Layer
+          </CardTitle>
+          <CardDescription>
+            Guest concierge automation, staff escalation, and work-order creation from the existing agent core.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <TacticalStat
+              label="Automation Rate"
+              value={agentData ? `${agentData.automation_rate_pct.toFixed(1)}%` : "--"}
+              detail={`${agentData?.auto_answered ?? "--"}/${agentData?.total_messages ?? "--"} messages in ${agentData?.period_days ?? "--"}d`}
+            />
+            <TacticalStat
+              label="Human Escalations"
+              value={agentData?.escalated_to_human ?? "--"}
+              detail="Queued before guest-facing response"
+            />
+            <TacticalStat
+              label="AI Confidence"
+              value={agentData ? formatPercent(agentData.avg_ai_confidence) : "--"}
+              detail={agentStats.error ? "Agent stats unavailable" : "Average classified-message confidence"}
+            />
+            <TacticalStat
+              label="Auto Work Orders"
+              value={agentData?.auto_work_orders_created ?? "--"}
+              detail="Maintenance handoffs created by automation"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild className="bg-cyan-700 text-white hover:bg-cyan-600">
+              <Link href="/ai-engine">
+                Agent Desk
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+            >
+              <Link href="/messages">
+                Guest Messages
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+            >
+              <Link href="/work-orders">
+                Work Orders
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
