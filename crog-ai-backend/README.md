@@ -106,6 +106,7 @@ uv run python scripts/sweep_daily_signal_parameters.py --lookback-min 2 --lookba
 uv run python scripts/validate_daily_signal_candidate.py --top-tickers 15 --min-slice-observations 50
 uv run python scripts/compare_signal_candidate_lanes.py --limit-tickers 500 --top 12
 uv run python scripts/review_signal_candidate_promotion.py --lane-limit 50 --chart-ticker-limit 24
+uv run python scripts/research_range_trigger_guardrails.py --output docs/reports/dochia-v0-3-guardrail-research-2026-05-03.md
 ```
 
 Best 2026-05-02 research candidate: 3-session intraday range trigger. It
@@ -134,6 +135,15 @@ to production.
 
 First report: `docs/reports/dochia-v0-2-promotion-review-2026-05-03.md`.
 Decision: do not promote v0.2 yet; add guardrail research first.
+
+v0.3 guardrail research is read-only and sweeps range-trigger buffers,
+same-direction close confirmation, and post-event debounce windows against the
+same MarketClub daily alert corpus. First report:
+`docs/reports/dochia-v0-3-guardrail-research-2026-05-03.md`. Decision: no
+simple guardrail cleared the default quality bar of at least 85% of raw-range
+F1 while cutting generated events by at least 15%. Next research moves to
+ATR-normalized buffers and ticker-specific cooldowns before creating another
+non-production parameter set.
 
 ## Relationship to Fortress-Prime
 
