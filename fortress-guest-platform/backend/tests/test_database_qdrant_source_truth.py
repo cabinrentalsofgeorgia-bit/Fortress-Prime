@@ -14,6 +14,7 @@ from backend.scripts import reprocess_failed_qdrant_uploads
 from backend.scripts import vault_ingest_legal_case
 from backend.services import legal_council
 from backend.services import legal_ediscovery
+from backend.services.legal import db_targets
 from backend.services.legal import qdrant_contract
 
 
@@ -156,3 +157,26 @@ def test_legal_qdrant_runtime_callers_share_contract() -> None:
         legal_council.PRIVILEGED_COLLECTION
         == qdrant_contract.LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
     )
+
+
+def test_legal_db_target_urls_are_explicit_and_parsed() -> None:
+    base = (
+        "postgresql://fortress_api:p%40ss@127.0.0.1:5432/"
+        "fortress_shadow_test?sslmode=disable"
+    )
+
+    assert db_targets.legal_async_database_url(db_targets.LEGAL_CANONICAL_DB, base) == (
+        "postgresql+asyncpg://fortress_api:p%40ss@127.0.0.1:5432/"
+        "fortress_db?sslmode=disable"
+    )
+    assert db_targets.legal_async_database_url(db_targets.LEGAL_PROD_DB, base) == (
+        "postgresql+asyncpg://fortress_api:p%40ss@127.0.0.1:5432/"
+        "fortress_prod?sslmode=disable"
+    )
+    assert db_targets.legal_sync_database_url(db_targets.LEGAL_PROD_DB, base) == (
+        "postgresql://fortress_api:p%40ss@127.0.0.1:5432/"
+        "fortress_prod?sslmode=disable"
+    )
+
+    with pytest.raises(ValueError, match="unsupported Legal database target"):
+        db_targets.legal_async_database_url("fortress_shadow", base)

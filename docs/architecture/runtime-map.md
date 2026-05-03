@@ -82,6 +82,7 @@ Current DB session contract from `backend/core/database.py`:
 - `AsyncSessionLocal`, `async_session_factory`, and `async_session_maker` are compatibility aliases for the same lazy runtime session factory.
 - `get_db()` is the FastAPI dependency; `init_db()` verifies connectivity and only runs `Base.metadata.create_all()` when `DB_AUTO_CREATE_TABLES=true`.
 - Direct imports of `async_engine` are legacy; callers should use `get_async_engine()` so they do not capture a stale `None` before lazy initialization.
+- Legal session targets use `backend/services/legal/db_targets.py`: `LEGAL_CANONICAL_DB=fortress_db` for `LegacySession`, and `LEGAL_PROD_DB=fortress_prod` for mirror `ProdSession`. This helper parses the configured DSN and replaces only the database path, preserving driver, credentials, host, port, and query options deliberately.
 
 CONFLICT: `deploy/fortress-prime-compose.yaml` still defines `DATABASE_URL` against `fortress_guest` with an old role. Treat that compose file as a legacy/dev baseline unless it is brought forward to the current contract.
 
