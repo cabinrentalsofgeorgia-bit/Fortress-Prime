@@ -986,6 +986,90 @@ export function useAgentStats() {
   });
 }
 
+export interface AgentQueueHealthSource {
+  source: string;
+  source_label: string;
+  status: string;
+  pending_count: number;
+  failed_count: number;
+  action_count_24h: number;
+  oldest_pending_at: string | null;
+  oldest_pending_age_hours: number | null;
+  href: string;
+}
+
+export interface AgentQueueHealthResponse {
+  sources: AgentQueueHealthSource[];
+  summary: Record<string, number>;
+  generated_at: string;
+}
+
+export function useAgentQueueHealth() {
+  return useQuery<AgentQueueHealthResponse>({
+    queryKey: ["agent-queue-health"],
+    queryFn: () => api.get("/api/agent/queue-health"),
+    refetchInterval: 60_000,
+  });
+}
+
+export interface AgentAutonomyGate {
+  id: string;
+  label: string;
+  status: string;
+  risk_level: string;
+  human_approval_required: boolean;
+  blockers: string[];
+  signals: Record<string, number>;
+  href: string;
+}
+
+export interface AgentAutonomyGatesResponse {
+  gates: AgentAutonomyGate[];
+  summary: Record<string, number>;
+  generated_at: string;
+}
+
+export function useAgentAutonomyGates() {
+  return useQuery<AgentAutonomyGatesResponse>({
+    queryKey: ["agent-autonomy-gates"],
+    queryFn: () => api.get("/api/agent/autonomy-gates"),
+    refetchInterval: 60_000,
+  });
+}
+
+export interface AgentOperator {
+  id: string;
+  label: string;
+  purpose: string;
+  status: string;
+  autonomy_level: string;
+  risk_level: string;
+  gate_id: string;
+  source: string | null;
+  queue_status: string | null;
+  pending_count: number;
+  failed_count: number;
+  human_approval_required: boolean;
+  allowed_actions: string[];
+  blocked_actions: string[];
+  data_scope: string[];
+  href: string;
+}
+
+export interface AgentOperatorsResponse {
+  operators: AgentOperator[];
+  summary: Record<string, number>;
+  generated_at: string;
+}
+
+export function useAgentOperators() {
+  return useQuery<AgentOperatorsResponse>({
+    queryKey: ["agent-operators"],
+    queryFn: () => api.get("/api/agent/operators"),
+    refetchInterval: 60_000,
+  });
+}
+
 export interface AgentWorkItem {
   id: string;
   source: string;
@@ -998,6 +1082,12 @@ export interface AgentWorkItem {
   created_at: string | null;
   updated_at: string | null;
   href: string;
+  assigned_to: string | null;
+  escalated: boolean;
+  last_action: string | null;
+  last_action_by: string | null;
+  last_action_at: string | null;
+  actions: string[];
 }
 
 export interface AgentWorkItemsResponse {
@@ -1011,6 +1101,70 @@ export function useAgentWorkItems(limit = 80) {
     queryKey: ["agent-work-items", limit],
     queryFn: () => api.get("/api/agent/work-items", { limit }),
     refetchInterval: 60_000,
+  });
+}
+
+export interface AgentWorkItemAuditEntry {
+  id: string;
+  source: string;
+  source_label: string;
+  item_id: string | null;
+  action: string;
+  actor_email: string | null;
+  assignee: string | null;
+  note: string | null;
+  outcome: string;
+  created_at: string | null;
+  audit_hash: string;
+}
+
+export interface AgentWorkItemAuditResponse {
+  items: AgentWorkItemAuditEntry[];
+  total: number;
+  summary: Record<string, number>;
+}
+
+export function useAgentWorkItemAudit(limit = 80) {
+  return useQuery<AgentWorkItemAuditResponse>({
+    queryKey: ["agent-work-item-audit", limit],
+    queryFn: () => api.get("/api/agent/work-items/audit", { limit }),
+    refetchInterval: 60_000,
+  });
+}
+
+export type AgentWorkItemAction = "assign" | "escalate" | "dismiss" | "mark_reviewed";
+
+export interface AgentWorkItemActionInput {
+  source: string;
+  id: string;
+  action: AgentWorkItemAction;
+  assignee?: string;
+  note?: string;
+}
+
+export interface AgentWorkItemActionResponse {
+  ok: boolean;
+  source: string;
+  id: string;
+  action: string;
+  status: string;
+  audit_id: string | null;
+  audit_hash: string | null;
+  message: string;
+}
+
+export function useAgentWorkItemAction() {
+  const qc = useQueryClient();
+  return useMutation<AgentWorkItemActionResponse, Error, AgentWorkItemActionInput>({
+    mutationFn: ({ source, id, action, assignee, note }) =>
+      api.post(`/api/agent/work-items/${source}/${id}/action`, { action, assignee, note }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["agent-work-items"] });
+      qc.invalidateQueries({ queryKey: ["agent-work-item-audit"] });
+      qc.invalidateQueries({ queryKey: ["agent-stats"] });
+      toast.success(result.message || "Work item action recorded");
+    },
+    onError: (err) => toast.error(err.message || "Failed to update work item"),
   });
 }
 
