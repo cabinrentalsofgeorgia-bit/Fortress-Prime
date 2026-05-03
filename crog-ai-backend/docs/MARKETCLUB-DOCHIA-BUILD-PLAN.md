@@ -188,6 +188,16 @@ Useful query params:
   52.9%, top whipsaw tickers show 8-9 candidate transitions in the 30-day
   window, and reviewed chart overlays add up to 29 candidate-only daily events
   on some symbols.
+- Added a read-only v0.3 guardrail research harness for the range trigger. It
+  sweeps minimum intraday break buffers, same-direction close confirmation, and
+  post-event debounce windows against the MarketClub daily alert corpus before
+  creating another non-production parameter set.
+- First v0.3 guardrail report is tracked at
+  `docs/reports/dochia-v0-3-guardrail-research-2026-05-03.md`. Decision: do
+  not promote or parameterize these simple filters yet. Raw v0.2 range remains
+  the strongest F1 candidate at 76.64%. The best simple reductions cut events
+  by 15-27%, but exact F1 falls to roughly 56-60%, below the default quality
+  bar.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -197,6 +207,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: add v0.3 guardrail research for the range trigger:
-reduce whipsaw pressure with debounce, close-confirmation, or volatility
-filters before any production promotion.
+Next clean build step: expand v0.3 research to ATR-normalized buffers and
+ticker-specific cooldowns, then persist only a candidate that preserves enough
+raw-range F1 while materially reducing whipsaw pressure.
