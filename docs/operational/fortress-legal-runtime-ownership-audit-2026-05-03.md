@@ -115,13 +115,24 @@ Why this matters:
 - Process arguments can be visible to local users and captured in process listings, telemetry, debug logs, shell history, or incident artifacts.
 - Because the key appeared in live process arguments, assume the credential is exposed.
 
-Recommended remediation:
+Remediation performed on 2026-05-03:
 
-1. Rotate the affected NGC credential.
-2. Move the key out of command-line arguments.
-3. Prefer a root-owned environment file, systemd credential, or Docker secret-style injection.
-4. Restart only the affected NIM service after the replacement secret path is in place.
-5. Re-run a redacted process-argument check after restart to prove the key no longer appears in `ps` output.
+1. Kept the existing root-owned env file at `/etc/fortress/nim.env` (`root:root`, `600`).
+2. Patched `/etc/systemd/system/fortress-nim-sovereign.service` so Docker receives `-e NGC_API_KEY` from the environment instead of `-e NGC_API_KEY=<value>`.
+3. Created timestamped systemd-unit backups under `/etc/systemd/system/`.
+4. Ran `systemctl daemon-reload`.
+5. Restarted only `fortress-nim-sovereign.service`.
+6. Verified the service is active.
+7. Verified `/v1/models` returned HTTP 200.
+8. Verified the service MainPID process args no longer contain `NGC_API_KEY=<value>` or an `nvapi-` token pattern.
+9. Verified the unit file no longer contains an inline `NGC_API_KEY=<value>` assignment.
+
+Remaining remediation:
+
+1. Rotate the affected NGC credential from NVIDIA/NGC because it was already exposed before this cleanup.
+2. Replace `/etc/fortress/nim.env` with the newly rotated key.
+3. Restart only `fortress-nim-sovereign.service`.
+4. Re-run the same redacted process-argument and `/v1/models` checks.
 
 Do not commit the key, print it, or paste it into issue/PR text.
 
