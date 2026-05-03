@@ -105,6 +105,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from backend.services.legal.qdrant_contract import (
+    LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
+
 logger = logging.getLogger("reprocess_failed_qdrant_uploads")
 
 # ─── config ────────────────────────────────────────────────────────────────
@@ -112,8 +117,8 @@ logger = logging.getLogger("reprocess_failed_qdrant_uploads")
 ENV_PATH = Path("/home/admin/Fortress-Prime/fortress-guest-platform/.env")
 AUDIT_DIR = Path("/mnt/fortress_nas/audits")
 
-QDRANT_WORK_PRODUCT_COLLECTION = "legal_ediscovery"
-QDRANT_PRIVILEGED_COLLECTION = "legal_privileged_communications"
+QDRANT_WORK_PRODUCT_COLLECTION = LEGAL_WORK_PRODUCT_COLLECTION
+QDRANT_PRIVILEGED_COLLECTION = LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
 
 # DBs that hold legal.vault_documents (kept in lock-step by vault ingestion).
 TARGET_DBS = ("fortress_db", "fortress_prod")

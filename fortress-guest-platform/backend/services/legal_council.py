@@ -42,6 +42,10 @@ from backend.services.deliberation_vault import (
     load_active_roster,
     vault_deliberation,
 )
+from backend.services.legal.qdrant_contract import (
+    LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
 
 # ═══════════════════════════════════════════════════════════════════════
 # Load environment from root .env (not handled by pydantic-settings for
@@ -76,7 +80,7 @@ PERSONAS_DIR = os.getenv(
 # Legacy `legal_library` and `legal_caselaw` removed from the allowlist so the
 # council strictly uses the cut-over targets.
 LEGAL_ALLOWED_VECTOR_COLLECTIONS = frozenset(
-    {"legal_library_v2", "legal_ediscovery", "legal_caselaw_v2"}
+    {"legal_library_v2", LEGAL_WORK_PRODUCT_COLLECTION, "legal_caselaw_v2"}
 )
 
 # Precedent retrieval knobs — legal_caselaw_v2 holds the controlling-authority corpus
@@ -1191,13 +1195,13 @@ def _dedupe_top(items: List[str], limit: int) -> List[str]:
 
 # legal_ediscovery holds 859+ vectorised chunks for active cases (indexed by process_vault_upload)
 # legal_library has only 3 points (stale/legacy) — use legal_ediscovery for context freezing
-LEGAL_COLLECTION = "legal_ediscovery"
+LEGAL_COLLECTION = LEGAL_WORK_PRODUCT_COLLECTION
 
 # PR G — Council pulls from this collection in addition to LEGAL_COLLECTION when
 # COUNCIL_INCLUDE_PRIVILEGED_RETRIEVAL is enabled. Privileged chunks are kept
 # physically separate so the storage layer enforces the privileged track, not
 # just a payload tag.
-PRIVILEGED_COLLECTION = "legal_privileged_communications"
+PRIVILEGED_COLLECTION = LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
 
 # Warning block appended to deliberation output whenever any privileged chunk
 # was retrieved. Wording is exact per PR G spec; if you change it here, also
@@ -1294,7 +1298,7 @@ async def freeze_context(
         "with_vector": False,
     }
     # Filter to the specific case when querying legal_ediscovery
-    if case_slug and LEGAL_COLLECTION == "legal_ediscovery":
+    if case_slug and LEGAL_COLLECTION == LEGAL_WORK_PRODUCT_COLLECTION:
         body["filter"] = {"must": [{"key": "case_slug", "match": {"value": case_slug}}]}
 
     try:

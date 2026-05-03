@@ -26,6 +26,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.http_client import shared_client
+from backend.services.legal.qdrant_contract import (
+    LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
 from backend.vrs.domain.automations import StreamlineEventPayload
 from backend.vrs.infrastructure.event_bus import publish_vrs_event
 from backend.services.legal_evidence_ingestion import _chunk_document
@@ -34,11 +38,11 @@ logger = structlog.get_logger()
 
 NAS_VAULT_ROOT = Path("/mnt/fortress_nas/legal_vault")
 LOCAL_VAULT_FALLBACK = Path("/home/admin/Fortress-Prime/data/legal_vault")
-QDRANT_COLLECTION = "legal_ediscovery"
+QDRANT_COLLECTION = LEGAL_WORK_PRODUCT_COLLECTION
 # PR G — privileged communications go to a physically separate collection so
 # Council retrieval can distinguish work product from privileged content at
 # the storage layer, not just by payload tag.
-QDRANT_PRIVILEGED_COLLECTION = "legal_privileged_communications"
+QDRANT_PRIVILEGED_COLLECTION = LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
 QDRANT_URL = settings.qdrant_url.rstrip("/")
 EMBED_URL = f"{settings.embed_base_url.rstrip('/')}/api/embeddings"
 EMBED_MODEL = settings.embed_model

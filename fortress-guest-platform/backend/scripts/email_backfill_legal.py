@@ -62,6 +62,12 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from backend.services.legal.qdrant_contract import (
+    LEGAL_LEGACY_VECTOR_SIZE,
+    LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
+
 logger = logging.getLogger("email_backfill_legal")
 
 
@@ -78,9 +84,9 @@ FETCH_BATCH         = 100
 RETRY_BACKOFFS_S    = (2.0, 8.0, 20.0)
 BAND_MONTHS         = 6
 
-QDRANT_COLLECTION_WORK_PRODUCT = "legal_ediscovery"
-QDRANT_COLLECTION_PRIVILEGED   = "legal_privileged_communications"
-EXPECTED_VECTOR_SIZE           = 768
+QDRANT_COLLECTION_WORK_PRODUCT = LEGAL_WORK_PRODUCT_COLLECTION
+QDRANT_COLLECTION_PRIVILEGED   = LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
+EXPECTED_VECTOR_SIZE           = LEGAL_LEGACY_VECTOR_SIZE
 
 MAILBOX_REGISTRY = {
     "gary-gk":   ("gary@garyknight.com",                "fortress/mailboxes/gary-garyknight"),

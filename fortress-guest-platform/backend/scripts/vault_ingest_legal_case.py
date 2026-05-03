@@ -60,6 +60,10 @@ from backend.services.legal.nas_layout import (
     LayoutNormalizationError,
     normalize_case_layout,
 )
+from backend.services.legal.qdrant_contract import (
+    LEGAL_LEGACY_VECTOR_SIZE,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
 
 logger = logging.getLogger("vault_ingest_legal_case")
 
@@ -75,8 +79,8 @@ HASH_STREAM_THRESHOLD_BYTES = 100 * 1024 * 1024  # 100 MB
 DEFAULT_MAX_FILE_SIZE_MB = 500
 DEFAULT_JOBS = 4
 
-QDRANT_COLLECTION = "legal_ediscovery"
-EXPECTED_VECTOR_SIZE = 768
+QDRANT_COLLECTION = LEGAL_WORK_PRODUCT_COLLECTION
+EXPECTED_VECTOR_SIZE = LEGAL_LEGACY_VECTOR_SIZE
 
 # vault_documents statuses that we treat as "already done — skip".
 TERMINAL_STATUSES_FOR_RESUME = (

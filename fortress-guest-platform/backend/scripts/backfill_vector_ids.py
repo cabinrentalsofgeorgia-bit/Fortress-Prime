@@ -65,6 +65,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from backend.services.legal.qdrant_contract import (
+    LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION,
+    LEGAL_WORK_PRODUCT_COLLECTION,
+)
+
 logger = logging.getLogger("backfill_vector_ids")
 
 # ─── config ────────────────────────────────────────────────────────────────
@@ -72,8 +77,8 @@ logger = logging.getLogger("backfill_vector_ids")
 ENV_PATH = Path("/home/admin/Fortress-Prime/fortress-guest-platform/.env")
 AUDIT_DIR = Path("/mnt/fortress_nas/audits")
 
-QDRANT_WORK_PRODUCT_COLLECTION = "legal_ediscovery"
-QDRANT_PRIVILEGED_COLLECTION = "legal_privileged_communications"
+QDRANT_WORK_PRODUCT_COLLECTION = LEGAL_WORK_PRODUCT_COLLECTION
+QDRANT_PRIVILEGED_COLLECTION = LEGAL_PRIVILEGED_COMMUNICATIONS_COLLECTION
 QDRANT_SCROLL_BATCH = 512
 
 # DBs that hold legal.vault_documents (kept in lock-step by vault ingestion).
