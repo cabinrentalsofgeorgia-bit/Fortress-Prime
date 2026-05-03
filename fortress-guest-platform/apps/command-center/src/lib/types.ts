@@ -269,6 +269,72 @@ export interface FinancialWhipsawRiskResponse {
   recent_events: FinancialWhipsawEvent[];
 }
 
+export interface FinancialPromotionGateCalibration {
+  total_observations: number;
+  covered_observations: number;
+  accuracy: number | null;
+  exact_event_accuracy: number | null;
+  window_event_accuracy: number | null;
+  coverage_rate: number | null;
+  exact_coverage_rate: number | null;
+  score_mae: number | null;
+  score_rmse: number | null;
+}
+
+export interface FinancialPromotionGateModel {
+  id: "production" | "candidate";
+  label: string;
+  parameter_set_name: string;
+  daily_trigger_mode: "close" | "range";
+  latest_bar_date: string | null;
+  signal_count: number;
+  bullish_count: number;
+  risk_count: number;
+  neutral_count: number;
+  reentry_count: number;
+  average_score: number | null;
+  calibration: FinancialPromotionGateCalibration;
+}
+
+export interface FinancialPromotionGateDeltas {
+  window_event_accuracy: number | null;
+  exact_event_accuracy: number | null;
+  coverage_rate: number | null;
+  score_mae: number | null;
+  signal_count: number;
+  reentry_count: number;
+}
+
+export type FinancialPromotionGateGuardrailStatus = "pass" | "watch" | "fail";
+export type FinancialPromotionGateRecommendationStatus = "hold" | "review" | "ready_for_shadow";
+
+export interface FinancialPromotionGateGuardrail {
+  id: string;
+  label: string;
+  status: FinancialPromotionGateGuardrailStatus;
+  detail: string;
+}
+
+export interface FinancialPromotionGateRecommendation {
+  status: FinancialPromotionGateRecommendationStatus;
+  label: string;
+  rationale: string;
+}
+
+export interface FinancialPromotionGateResponse {
+  generated_at: string;
+  candidate_parameter_set: string;
+  baseline_parameter_set: string;
+  since: string | null;
+  until: string | null;
+  event_window_days: number;
+  production: FinancialPromotionGateModel;
+  candidate: FinancialPromotionGateModel;
+  deltas: FinancialPromotionGateDeltas;
+  guardrails: FinancialPromotionGateGuardrail[];
+  recommendation: FinancialPromotionGateRecommendation;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

@@ -39,6 +39,7 @@ import {
 import {
   useFinancialLatestSignals,
   useFinancialDailyCalibration,
+  useFinancialPromotionGate,
   useFinancialSignalDetail,
   useFinancialSignalChart,
   useFinancialSignalTransitions,
@@ -48,6 +49,9 @@ import {
 import type {
   FinancialDailyCalibrationResponse,
   FinancialLatestSignal,
+  FinancialPromotionGateGuardrailStatus,
+  FinancialPromotionGateRecommendationStatus,
+  FinancialPromotionGateResponse,
   FinancialSignalChartResponse,
   FinancialSignalTransition,
   FinancialTransitionType,
@@ -174,6 +178,24 @@ function whipsawRiskLabel(level: FinancialWhipsawRiskLevel): string {
   if (level === "high") return "High";
   if (level === "elevated") return "Elevated";
   return "Quiet";
+}
+
+function promotionRecommendationClasses(status: FinancialPromotionGateRecommendationStatus): string {
+  if (status === "hold") return "border-red-500/40 bg-red-500/10 text-red-600";
+  if (status === "review") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+}
+
+function promotionGuardrailClasses(status: FinancialPromotionGateGuardrailStatus): string {
+  if (status === "fail") return "border-red-500/40 bg-red-500/10 text-red-600";
+  if (status === "watch") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+}
+
+function formatSignedNumber(value: number | null | undefined, digits = 0): string {
+  if (value === null || value === undefined) return "—";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(digits)}`;
 }
 
 function StatePill({ label, value }: { label: string; value: number }) {
@@ -905,6 +927,139 @@ function WhipsawRiskPanel({
   );
 }
 
+function PromotionGatePanel({
+  gate,
+  loading,
+  error,
+}: {
+  gate: FinancialPromotionGateResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Promotion gate unavailable.
+      </div>
+    );
+  }
+
+  if (loading && !gate) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading promotion gate…</div>;
+  }
+
+  if (!gate) {
+    return (
+      <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+        No promotion-gate data.
+      </div>
+    );
+  }
+
+  const metricRows = [
+    {
+      label: "± Window Match",
+      production: formatPercent(gate.production.calibration.window_event_accuracy),
+      candidate: formatPercent(gate.candidate.calibration.window_event_accuracy),
+      delta: formatSignedPercent(gate.deltas.window_event_accuracy),
+    },
+    {
+      label: "Exact Alert Match",
+      production: formatPercent(gate.production.calibration.exact_event_accuracy),
+      candidate: formatPercent(gate.candidate.calibration.exact_event_accuracy),
+      delta: formatSignedPercent(gate.deltas.exact_event_accuracy),
+    },
+    {
+      label: "Coverage",
+      production: formatPercent(gate.production.calibration.coverage_rate),
+      candidate: formatPercent(gate.candidate.calibration.coverage_rate),
+      delta: formatSignedPercent(gate.deltas.coverage_rate),
+    },
+    {
+      label: "Score MAE",
+      production: formatMetricNumber(gate.production.calibration.score_mae),
+      candidate: formatMetricNumber(gate.candidate.calibration.score_mae),
+      delta: formatSignedNumber(gate.deltas.score_mae, 1),
+    },
+    {
+      label: "Signals",
+      production: gate.production.signal_count.toLocaleString(),
+      candidate: gate.candidate.signal_count.toLocaleString(),
+      delta: formatSignedNumber(gate.deltas.signal_count),
+    },
+    {
+      label: "Re-entry",
+      production: gate.production.reentry_count.toLocaleString(),
+      candidate: gate.candidate.reentry_count.toLocaleString(),
+      delta: formatSignedNumber(gate.deltas.reentry_count),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Production vs v0.2 Range</p>
+          <p className="text-xs text-muted-foreground">
+            {gate.baseline_parameter_set} → {gate.candidate_parameter_set}
+          </p>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn("font-medium", promotionRecommendationClasses(gate.recommendation.status))}
+        >
+          {gate.recommendation.label}
+        </Badge>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="overflow-hidden border border-border">
+          <div className="grid grid-cols-[minmax(120px,1fr)_repeat(3,minmax(92px,0.7fr))] border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <span>Metric</span>
+            <span className="text-right">{gate.production.label}</span>
+            <span className="text-right">{gate.candidate.label}</span>
+            <span className="text-right">Delta</span>
+          </div>
+          {metricRows.map((row) => (
+            <div
+              key={row.label}
+              className="grid grid-cols-[minmax(120px,1fr)_repeat(3,minmax(92px,0.7fr))] border-b border-border px-3 py-2 text-xs last:border-b-0"
+            >
+              <span className="font-medium">{row.label}</span>
+              <span className="text-right font-mono text-muted-foreground">{row.production}</span>
+              <span className="text-right font-mono font-semibold">{row.candidate}</span>
+              <span className="text-right font-mono text-muted-foreground">{row.delta}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Guardrails</h2>
+            <span className="text-xs text-muted-foreground">{formatDate(gate.generated_at)}</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {gate.guardrails.map((guardrail) => (
+              <div key={guardrail.id} className="flex items-center justify-between gap-2 text-xs">
+                <span className="min-w-0 truncate">{guardrail.label}</span>
+                <Badge
+                  variant="outline"
+                  className={cn("shrink-0 font-medium", promotionGuardrailClasses(guardrail.status))}
+                >
+                  {guardrail.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">{gate.recommendation.rationale}</p>
+    </div>
+  );
+}
+
 function SymbolPanel({
   signal,
   transitions,
@@ -1053,6 +1208,10 @@ export function HedgeFundSignalsShell() {
     parameter_set: activeParameterSet,
   });
   const dailyCalibration = useFinancialDailyCalibration({ top_tickers: 8 });
+  const promotionGate = useFinancialPromotionGate({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    top_tickers: 8,
+  });
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
   const watchlistLanes = watchlistCandidates.data?.lanes ?? EMPTY_LANES;
@@ -1094,7 +1253,8 @@ export function HedgeFundSignalsShell() {
     chart.isFetching ||
     whipsawRisk.isFetching ||
     watchlistCandidates.isFetching ||
-    dailyCalibration.isFetching;
+    dailyCalibration.isFetching ||
+    promotionGate.isFetching;
 
   return (
     <div className="space-y-6">
@@ -1143,6 +1303,7 @@ export function HedgeFundSignalsShell() {
               void whipsawRisk.refetch();
               void watchlistCandidates.refetch();
               void dailyCalibration.refetch();
+              void promotionGate.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -1217,6 +1378,25 @@ export function HedgeFundSignalsShell() {
             calibration={dailyCalibration.data ?? null}
             loading={dailyCalibration.isLoading}
             error={dailyCalibration.isError}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-primary" />
+            <CardTitle>Promotion Gate</CardTitle>
+          </div>
+          <Badge variant="outline">
+            {promotionGate.data ? formatDate(promotionGate.data.generated_at) : "—"}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <PromotionGatePanel
+            gate={promotionGate.data ?? null}
+            loading={promotionGate.isLoading}
+            error={promotionGate.isError}
           />
         </CardContent>
       </Card>

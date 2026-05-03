@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -165,6 +165,69 @@ class DailyCalibrationResponse(BaseModel):
     confusion: dict[str, dict[str, int]]
     event_confusion: dict[str, dict[str, int]]
     top_tickers: list[TickerCalibrationStats]
+
+
+class PromotionGateCalibrationSummary(BaseModel):
+    total_observations: int
+    covered_observations: int
+    accuracy: float | None
+    exact_event_accuracy: float | None
+    window_event_accuracy: float | None
+    coverage_rate: float | None
+    exact_coverage_rate: float | None
+    score_mae: float | None
+    score_rmse: float | None
+
+
+class PromotionGateModelSummary(BaseModel):
+    id: Literal["production", "candidate"]
+    label: str
+    parameter_set_name: str
+    daily_trigger_mode: str
+    latest_bar_date: dt.date | None
+    signal_count: int
+    bullish_count: int
+    risk_count: int
+    neutral_count: int
+    reentry_count: int
+    average_score: float | None
+    calibration: PromotionGateCalibrationSummary
+
+
+class PromotionGateDeltas(BaseModel):
+    window_event_accuracy: float | None
+    exact_event_accuracy: float | None
+    coverage_rate: float | None
+    score_mae: float | None
+    signal_count: int
+    reentry_count: int
+
+
+class PromotionGateGuardrail(BaseModel):
+    id: str
+    label: str
+    status: Literal["pass", "watch", "fail"]
+    detail: str
+
+
+class PromotionGateRecommendation(BaseModel):
+    status: Literal["hold", "review", "ready_for_shadow"]
+    label: str
+    rationale: str
+
+
+class PromotionGateResponse(BaseModel):
+    generated_at: dt.datetime
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    since: dt.date | None
+    until: dt.date | None
+    event_window_days: int
+    production: PromotionGateModelSummary
+    candidate: PromotionGateModelSummary
+    deltas: PromotionGateDeltas
+    guardrails: list[PromotionGateGuardrail]
+    recommendation: PromotionGateRecommendation
 
 
 class SymbolChartBar(BaseModel):
@@ -347,6 +410,28 @@ def daily_calibration(
         until=until,
         ticker=ticker,
         parameter_set=parameter_set,
+        top_tickers=top_tickers,
+        event_window_days=event_window_days,
+    )
+
+
+@router.get("/promotion-gate/daily", response_model=PromotionGateResponse)
+def promotion_gate_daily(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[
+        str, Query(min_length=1, max_length=100)
+    ] = "dochia_v0_2_range_daily",
+    since: dt.date | None = None,
+    until: dt.date | None = None,
+    top_tickers: Annotated[int, Query(ge=1, le=100)] = 20,
+    event_window_days: Annotated[int, Query(ge=0, le=10)] = 3,
+) -> dict[str, object]:
+    if since is not None and until is not None and since > until:
+        raise HTTPException(status_code=400, detail="since cannot be after until")
+    return store.promotion_gate(
+        candidate_parameter_set=candidate_parameter_set,
+        since=since,
+        until=until,
         top_tickers=top_tickers,
         event_window_days=event_window_days,
     )
