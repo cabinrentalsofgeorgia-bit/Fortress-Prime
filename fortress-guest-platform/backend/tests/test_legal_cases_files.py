@@ -152,6 +152,38 @@ class TestListFilesCustomLayout:
         }
 
 
+class TestListFilesWave7Layout:
+    @pytest.mark.asyncio
+    async def test_list_files_wave7_layout_walks_curated_paths_only(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ):
+        root = tmp_path / "Business_Legal" / "7il-v-knight-ndga-ii"
+        (root / "curated" / "pleadings").mkdir(parents=True)
+        (root / "curated" / "pleadings" / "Complaint.pdf").write_bytes(b"x")
+        (root / "curated" / "emails").mkdir()
+        (root / "curated" / "emails" / "Argo.eml").write_bytes(b"x")
+        (root / "curated" / "private").mkdir()
+        (root / "curated" / "private" / "DoNotServe.pdf").write_bytes(b"x")
+        (root / "legacy_dump").mkdir()
+        (root / "legacy_dump" / "Poison.pdf").write_bytes(b"x")
+
+        layout = {
+            "primary_root": str(root),
+            "include_subdirs": ["curated"],
+            "exclude_subdirs": ["curated/private"],
+        }
+        _patch_legacy_session(monkeypatch, _row(nas_layout=layout))
+
+        result = await list_case_files("7il-v-knight-ndga-ii")
+
+        assert result["total"] == 2
+        names = {(f["subdir"], f["relative_path"], f["filename"]) for f in result["files"]}
+        assert names == {
+            ("curated", "emails/Argo.eml", "Argo.eml"),
+            ("curated", "pleadings/Complaint.pdf", "Complaint.pdf"),
+        }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. test_list_files_recursive_flag — nested folder structure
 # ─────────────────────────────────────────────────────────────────────────────
@@ -342,6 +374,16 @@ class TestHelpers:
         assert m == {"evidence": "ev"}
         assert rec is True
 
+    def test_resolve_layout_wave7_shape_defaults_recursive_true(self):
+        layout = {
+            "primary_root": "/mnt/business/7il-v-knight-ndga-i",
+            "include_subdirs": ["curated", "case-i-context"],
+        }
+        root, m, rec = _resolve_case_layout("any", layout)
+        assert root == Path("/mnt/business/7il-v-knight-ndga-i")
+        assert m == {"curated": "curated", "case-i-context": "case-i-context"}
+        assert rec is True
+
     def test_resolve_layout_skips_empty_subdir_values(self):
         layout = {"root": "/mnt/y", "subdirs": {"a": "x", "b": "", "c": None}}
         _, m, _ = _resolve_case_layout("any", layout)
@@ -362,6 +404,21 @@ class TestHelpers:
 
         rec = _walk_case_subdir(tmp_path, recursive=True)
         assert sorted(p.name for p in rec) == ["nested.pdf", "real.pdf"]
+
+    def test_walk_honors_layout_excludes(self, tmp_path: Path):
+        (tmp_path / "curated" / "public").mkdir(parents=True)
+        (tmp_path / "curated" / "public" / "ok.pdf").write_bytes(b"x")
+        (tmp_path / "curated" / "private").mkdir()
+        (tmp_path / "curated" / "private" / "skip.pdf").write_bytes(b"x")
+
+        rec = _walk_case_subdir(
+            tmp_path / "curated",
+            recursive=True,
+            case_root=tmp_path,
+            exclude_subdirs={"curated/private"},
+        )
+
+        assert [p.name for p in rec] == ["ok.pdf"]
 
     def test_is_under_rejects_paths_outside_parent(self, tmp_path: Path):
         parent = tmp_path / "case"

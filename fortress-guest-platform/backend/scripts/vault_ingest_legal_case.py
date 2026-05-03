@@ -56,6 +56,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from backend.services.legal.nas_layout import (
+    LayoutNormalizationError,
+    normalize_case_layout,
+)
+
 logger = logging.getLogger("vault_ingest_legal_case")
 
 # ─── config ────────────────────────────────────────────────────────────────
@@ -316,40 +321,11 @@ def run_preflight(case_slug: str) -> dict[str, Any]:
 
 
 def _normalize_layout(raw: Any) -> dict[str, Any]:
-    """nas_layout column may be dict, str, or None (caught above)."""
-    if isinstance(raw, str):
-        try:
-            raw = json.loads(raw)
-        except Exception:
-            raw = None
-    if not raw:
-        raise PreflightError("nas_layout is empty after normalize")
-    if raw.get("primary_root") or raw.get("include_subdirs"):
-        root = Path(str(raw.get("primary_root") or raw.get("root") or "")).expanduser()
-        includes = raw.get("include_subdirs") or []
-        if isinstance(includes, str):
-            includes = [includes]
-        subdirs = {str(v): str(v) for v in includes if v not in (None, "")}
-        recursive_raw = raw.get("recursive")
-        recursive = True if recursive_raw is None else bool(recursive_raw)
-    else:
-        root = Path(str(raw.get("root") or "")).expanduser()
-        subs = raw.get("subdirs") or {}
-        if not isinstance(subs, dict):
-            subs = {}
-        subdirs = {
-            str(k): str(v) for k, v in subs.items() if v not in (None, "")
-        }
-        recursive = bool(raw.get("recursive"))
-    excludes = raw.get("exclude_subdirs") or []
-    if isinstance(excludes, str):
-        excludes = [excludes]
-    return {
-        "root": root,
-        "subdirs": subdirs,
-        "recursive": recursive,
-        "exclude_subdirs": {str(v).strip("/") for v in excludes if v not in (None, "")},
-    }
+    """Normalize legal.cases.nas_layout for the vault ingest walker."""
+    try:
+        return normalize_case_layout("", raw, require_layout=True).as_ingest_dict()
+    except LayoutNormalizationError as exc:
+        raise PreflightError(str(exc)) from exc
 
 
 # ─── physical-path dedup walk ─────────────────────────────────────────────
