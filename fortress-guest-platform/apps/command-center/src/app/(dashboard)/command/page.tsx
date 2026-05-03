@@ -122,13 +122,15 @@ function OpsStatusRow({
   value,
   tone,
   detail,
+  href,
 }: {
   label: string;
   value: string;
   tone: string;
   detail: string;
+  href?: string;
 }) {
-  return (
+  const content = (
     <div className="flex items-start justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/70 px-4 py-3">
       <div>
         <p className="text-sm font-medium text-zinc-100">{label}</p>
@@ -141,6 +143,16 @@ function OpsStatusRow({
       </span>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block transition hover:-translate-y-0.5 hover:border-zinc-700">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 export default function CommandCenterPage() {
@@ -182,6 +194,7 @@ export default function CommandCenterPage() {
     {
       label: "Quote Checkout",
       status: quoteCheckout?.status ?? "unknown",
+      href: "/vrs/quotes",
       detail: `Pending ${formatMetricValue(quoteCheckout?.guest_pending)} · drift ${formatMetricValue(
         quoteCheckout?.parity_drifts_24h,
       )} · unresolved empty ${formatMetricValue(quoteCheckout?.unresolved_empty_streamline_prices_24h)}`,
@@ -189,6 +202,7 @@ export default function CommandCenterPage() {
     {
       label: "Channex",
       status: channex?.status ?? "unknown",
+      href: "/system-health",
       detail: `Pending ${formatMetricValue(channex?.pending)} · failed ${formatMetricValue(
         channex?.failed,
       )} · processed 24h ${formatMetricValue(channex?.processed_24h)}`,
@@ -196,6 +210,7 @@ export default function CommandCenterPage() {
     {
       label: "Checkout Holds",
       status: checkoutHolds?.status ?? "unknown",
+      href: "/vrs/quotes",
       detail: `Active ${formatMetricValue(checkoutHolds?.active)} · stale ${formatMetricValue(
         checkoutHolds?.stale_active,
       )} · converted 24h ${formatMetricValue(checkoutHolds?.converted_24h)}`,
@@ -203,6 +218,7 @@ export default function CommandCenterPage() {
     {
       label: "Guest Messages",
       status: twilio?.status ?? "unknown",
+      href: "/messages",
       detail: `Inbound ${formatMetricValue(twilio?.inbound_24h)} · failed ${formatMetricValue(
         twilio?.failed_24h,
       )} · review ${formatMetricValue(twilio?.needs_review)}`,
@@ -210,6 +226,7 @@ export default function CommandCenterPage() {
     {
       label: "Work Queues",
       status: queues?.status ?? "unknown",
+      href: "/system-health",
       detail: `Queued ${formatMetricValue(queues?.queued)} · failed 24h ${formatMetricValue(
         queues?.failed_24h,
       )} · VRS failed ${formatMetricValue(queues?.vrs_failed_24h)}`,
@@ -222,21 +239,25 @@ export default function CommandCenterPage() {
     {
       label: "SEO Review",
       status: seoPendingHuman > 0 ? "queued" : "online",
+      href: "/seo-review?status=pending_human",
       detail: `${seoPendingHuman.toLocaleString()} pending human review`,
     },
     {
       label: "Taylor Quotes",
       status: taylorPendingApproval > 0 ? "queued" : "online",
+      href: "/vrs/quotes",
       detail: `${taylorPendingApproval.toLocaleString()} awaiting staff approval`,
     },
     {
       label: "Financial Variance",
       status: financialApprovals.error ? "degraded" : financialApprovalCount > 0 ? "queued" : "online",
+      href: "/command/triage",
       detail: `${financialApprovalCount.toLocaleString()} pending absorb or invoice decision`,
     },
     {
       label: "Guest Messages",
       status: guestMessageReview > 0 ? "queued" : twilio?.status ?? "unknown",
+      href: "/messages",
       detail: `${guestMessageReview.toLocaleString()} drafted or flagged for review`,
     },
   ];
@@ -362,6 +383,7 @@ export default function CommandCenterPage() {
               value={workflow.status}
               tone={statusTone(workflow.status)}
               detail={workflow.detail}
+              href={workflow.href}
             />
           ))}
         </CardContent>
@@ -385,6 +407,7 @@ export default function CommandCenterPage() {
               value={workflow.status}
               tone={statusTone(workflow.status)}
               detail={workflow.detail}
+              href={workflow.href}
             />
           ))}
         </CardContent>
