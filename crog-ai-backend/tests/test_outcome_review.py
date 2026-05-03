@@ -7,7 +7,9 @@ from app.signals.guardrail_sweep import (
     generated_guarded_range_event_history,
 )
 from app.signals.outcome_review import (
+    RollingWhipsawCandidate,
     TickerClusterCandidate,
+    apply_rolling_whipsaw_candidate,
     apply_ticker_cluster_candidate,
     build_ticker_whipsaw_outcomes,
     evaluate_event_histories,
@@ -163,3 +165,40 @@ def test_evaluate_event_histories_scores_exact_and_precision() -> None:
     assert summary.generated_events == 2
     assert summary.exact_event_matches == 2
     assert summary.exact_event_f1 == 1
+
+
+def test_apply_rolling_whipsaw_candidate_uses_only_prior_churn() -> None:
+    bars = [
+        _bar(0, open_="10", high="10", low="9", close="10"),
+        _bar(1, open_="11", high="11", low="10", close="11"),
+        _bar(2, open_="12", high="12", low="10", close="12"),
+        _bar(3, open_="9", high="10", low="8", close="8"),
+        _bar(4, open_="13", high="13", low="9", close="12"),
+        _bar(5, open_="8", high="9", low="7", close="8"),
+        _bar(6, open_="14", high="14", low="8", close="13"),
+    ]
+    history = generated_guarded_range_event_history(
+        bars,
+        candidate=GuardedRangeCandidate(lookback_sessions=2),
+    )
+    assert history is not None
+
+    adjusted = apply_rolling_whipsaw_candidate(
+        {"AA": history},
+        {"AA": bars},
+        candidate=RollingWhipsawCandidate(
+            risk_lookback_sessions=4,
+            min_whipsaws=2,
+            cooldown_sessions=2,
+            whipsaw_window_sessions=2,
+        ),
+    )
+
+    event_dates = list(adjusted["AA"].event_by_date)
+    assert event_dates == [
+        dt.date(2026, 1, 3),
+        dt.date(2026, 1, 4),
+        dt.date(2026, 1, 5),
+    ]
+    assert dt.date(2026, 1, 6) not in adjusted["AA"].event_by_date
+    assert dt.date(2026, 1, 7) not in adjusted["AA"].event_by_date

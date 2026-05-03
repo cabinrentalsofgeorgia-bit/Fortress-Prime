@@ -172,6 +172,111 @@ class FakeSignalStore:
             ][:top_tickers],
         }
 
+    def promotion_gate(
+        self,
+        *,
+        candidate_parameter_set: str,
+        since: dt.date | None = None,
+        until: dt.date | None = None,
+        top_tickers: int = 20,
+        event_window_days: int = 3,
+    ) -> dict[str, Any]:
+        production_calibration = self.daily_calibration(
+            since=since,
+            until=until,
+            top_tickers=top_tickers,
+            event_window_days=event_window_days,
+        )
+        candidate_calibration = {
+            **self.daily_calibration(
+                since=since,
+                until=until,
+                parameter_set=candidate_parameter_set,
+                top_tickers=top_tickers,
+                event_window_days=event_window_days,
+            ),
+            "window_event_accuracy": 0.46,
+            "exact_event_accuracy": 0.3,
+            "score_mae": 42.0,
+        }
+        return {
+            "generated_at": dt.datetime(2026, 5, 2, 22, 0, tzinfo=dt.UTC),
+            "candidate_parameter_set": candidate_parameter_set,
+            "baseline_parameter_set": "dochia_v0_estimated",
+            "since": since,
+            "until": until,
+            "event_window_days": event_window_days,
+            "production": {
+                "id": "production",
+                "label": "Production",
+                "parameter_set_name": production_calibration["parameter_set_name"],
+                "daily_trigger_mode": "close",
+                "latest_bar_date": dt.date(2026, 4, 24),
+                "signal_count": 120,
+                "bullish_count": 40,
+                "risk_count": 20,
+                "neutral_count": 18,
+                "reentry_count": 7,
+                "average_score": 12.5,
+                "calibration": {
+                    "total_observations": production_calibration["total_observations"],
+                    "covered_observations": production_calibration["covered_observations"],
+                    "accuracy": production_calibration["accuracy"],
+                    "exact_event_accuracy": production_calibration["exact_event_accuracy"],
+                    "window_event_accuracy": production_calibration["window_event_accuracy"],
+                    "coverage_rate": production_calibration["coverage_rate"],
+                    "exact_coverage_rate": production_calibration["exact_coverage_rate"],
+                    "score_mae": production_calibration["score_mae"],
+                    "score_rmse": production_calibration["score_rmse"],
+                },
+            },
+            "candidate": {
+                "id": "candidate",
+                "label": "v0.2 Range",
+                "parameter_set_name": candidate_parameter_set,
+                "daily_trigger_mode": "range",
+                "latest_bar_date": dt.date(2026, 4, 24),
+                "signal_count": 118,
+                "bullish_count": 43,
+                "risk_count": 21,
+                "neutral_count": 15,
+                "reentry_count": 9,
+                "average_score": 14.0,
+                "calibration": {
+                    "total_observations": candidate_calibration["total_observations"],
+                    "covered_observations": candidate_calibration["covered_observations"],
+                    "accuracy": candidate_calibration["accuracy"],
+                    "exact_event_accuracy": candidate_calibration["exact_event_accuracy"],
+                    "window_event_accuracy": candidate_calibration["window_event_accuracy"],
+                    "coverage_rate": candidate_calibration["coverage_rate"],
+                    "exact_coverage_rate": candidate_calibration["exact_coverage_rate"],
+                    "score_mae": candidate_calibration["score_mae"],
+                    "score_rmse": candidate_calibration["score_rmse"],
+                },
+            },
+            "deltas": {
+                "window_event_accuracy": 0.0319,
+                "exact_event_accuracy": 0.0229,
+                "coverage_rate": 0.0,
+                "score_mae": -1.94,
+                "signal_count": -2,
+                "reentry_count": 2,
+            },
+            "guardrails": [
+                {
+                    "id": "window_event_accuracy",
+                    "label": "Window alert match",
+                    "status": "pass",
+                    "detail": "Candidate should not materially trail production.",
+                }
+            ],
+            "recommendation": {
+                "status": "ready_for_shadow",
+                "label": "Ready for shadow",
+                "rationale": "Candidate clears the compact promotion gate.",
+            },
+        }
+
     def symbol_chart(
         self,
         *,
@@ -228,6 +333,51 @@ class FakeSignalStore:
                     "channel_low": Decimal("65.00"),
                     "lookback_sessions": 3,
                     "reason": "close 69.00 broke above prior 3-session high 68.50",
+                }
+            ],
+        }
+
+    def symbol_whipsaw_risk(
+        self,
+        *,
+        ticker: str,
+        sessions: int,
+        as_of: dt.date | None = None,
+        parameter_set: str | None = None,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]:
+        return {
+            "ticker": ticker,
+            "parameter_set_name": parameter_set or "dochia_v0_estimated",
+            "daily_trigger_mode": "range" if parameter_set else "close",
+            "sessions": sessions,
+            "as_of": as_of or dt.date(2026, 4, 24),
+            "whipsaw_window_sessions": whipsaw_window_sessions,
+            "outcome_horizon_sessions": outcome_horizon_sessions,
+            "event_count": 4,
+            "whipsaw_count": 2,
+            "whipsaw_rate": 2 / 3,
+            "latest_whipsaw_date": dt.date(2026, 4, 22),
+            "risk_score": 67,
+            "risk_level": "elevated",
+            "outcome": {
+                "horizon_sessions": outcome_horizon_sessions,
+                "evaluated_events": 3,
+                "win_count": 2,
+                "win_rate": 2 / 3,
+                "average_directional_return": 0.0123,
+                "median_directional_return": 0.01,
+                "p25_directional_return": -0.005,
+                "p75_directional_return": 0.02,
+            },
+            "recent_events": [
+                {
+                    "event_date": dt.date(2026, 4, 22),
+                    "state": "green",
+                    "sessions_since_previous": 2,
+                    "is_whipsaw": True,
+                    "directional_return": 0.018,
                 }
             ],
         }
@@ -365,6 +515,26 @@ def test_daily_calibration_endpoint_returns_model_health_metrics() -> None:
     assert payload["top_tickers"][0]["ticker"] == "aa"
 
 
+def test_promotion_gate_endpoint_compares_candidate_to_production() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/promotion-gate/daily"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&top_tickers=3"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["candidate_parameter_set"] == "dochia_v0_2_range_daily"
+    assert payload["production"]["daily_trigger_mode"] == "close"
+    assert payload["candidate"]["daily_trigger_mode"] == "range"
+    assert payload["deltas"]["signal_count"] == -2
+    assert payload["guardrails"][0]["status"] == "pass"
+    assert payload["recommendation"]["status"] == "ready_for_shadow"
+
+
 def test_symbol_chart_endpoint_returns_overlay_data() -> None:
     app = create_app()
     app.dependency_overrides[get_signal_store] = FakeSignalStore
@@ -394,6 +564,27 @@ def test_symbol_chart_endpoint_accepts_parameter_set_selector() -> None:
     payload = response.json()
     assert payload["parameter_set_name"] == "dochia_v0_2_range_daily"
     assert payload["daily_trigger_mode"] == "range"
+
+
+def test_symbol_whipsaw_risk_endpoint_returns_backtest_context() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/aa/whipsaw-risk"
+        "?sessions=60&parameter_set=dochia_v0_2_range_daily"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ticker"] == "AA"
+    assert payload["parameter_set_name"] == "dochia_v0_2_range_daily"
+    assert payload["daily_trigger_mode"] == "range"
+    assert payload["whipsaw_count"] == 2
+    assert payload["risk_level"] == "elevated"
+    assert payload["outcome"]["horizon_sessions"] == 5
+    assert payload["recent_events"][0]["is_whipsaw"] is True
 
 
 def test_symbol_signal_detail_404_when_no_latest_score() -> None:

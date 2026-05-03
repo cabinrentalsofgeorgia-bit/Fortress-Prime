@@ -1,7 +1,7 @@
 # MarketClub / Dochia Build Plan
 
 **Status:** Active build track
-**Date:** 2026-05-02
+**Date:** 2026-05-03
 **Scope:** CROG-AI backend, Financial Division hedge-fund signal app
 
 ## Thesis
@@ -64,6 +64,9 @@ Dochia-derived until independent truth data exists.
 - Promote approved signals into `hedge_fund.market_signals`.
 - Preserve lineage fields: source pipeline, parameter set, model version,
   computed_at, and explanation payload.
+- Compact Promotion Gate is complete for production vs v0.2 Range review.
+- No `market_signals` promotion is approved yet; next phase is a supervised
+  shadow review and explicit promote/defer runbook.
 
 ### Phase 5 — App Surface
 
@@ -74,9 +77,9 @@ Dochia-derived until independent truth data exists.
 - Portfolio board: first signal-lane/watchlist context complete; true holdings
   exposure remains.
 - Alert inbox: new signals, reversals, whipsaw warnings.
-- Backtest lab: setup history and return distribution.
-- Model health: daily calibration baseline complete; freshness, failed-ticker,
-  and drift views remain.
+- Backtest lab: symbol whipsaw risk and forward-return evidence complete.
+- Model health: daily calibration baseline and Promotion Gate complete;
+  freshness, failed-ticker, and drift views remain.
 
 ## API Contract
 
@@ -89,7 +92,9 @@ Base app entrypoint: `app.main:app`
 | `GET /api/financial/signals/transitions` | recent signal-change alert feed |
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
+| `GET /api/financial/signals/promotion-gate/daily` | production vs v0.2 Range promotion-gate comparison |
 | `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
+| `GET /api/financial/signals/{ticker}/whipsaw-risk` | symbol whipsaw count/rate and forward-return evidence |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
 Useful query params:
@@ -100,7 +105,11 @@ Useful query params:
   optional `parameter_set`
 - `watchlist-candidates`: `limit`, optional `parameter_set`
 - `calibration/daily`: `since`, `until`, `ticker`, `parameter_set`, `top_tickers`
+- `promotion-gate/daily`: `candidate_parameter_set`, `since`, `until`,
+  `top_tickers`, `event_window_days`
 - `{ticker}/chart`: `sessions`, `as_of`
+- `{ticker}/whipsaw-risk`: `sessions`, `as_of`, optional `parameter_set`,
+  `whipsaw_window_sessions`, `outcome_horizon_sessions`
 - `{ticker}`: `transition_limit`, `lookback_days`, optional `parameter_set`
 
 ## Operations
@@ -114,6 +123,9 @@ Useful query params:
   `deploy/sql/marketclub_legacy_read_grants.sql`.
 - Command Center production build is promoted through
   `crog-ai-frontend.service` on port 3005.
+- Live Promotion Gate smoke on 2026-05-03 returned
+  `ready_for_shadow` for `dochia_v0_2_range_daily` with 328 production
+  signal rows and 328 candidate signal rows.
 
 ## Design Guardrails
 
@@ -219,6 +231,20 @@ Useful query params:
   2025-09-25 and evaluates after; it does not clear the default gate, with
   4.74% event reduction, 78.16% F1, and -0.04% average 5-session directional
   return. Do not persist this candidate yet.
+- Added a rolling, date-safe whipsaw-risk suppressor and review script. Reports
+  are tracked at
+  `docs/reports/dochia-v0-3-rolling-whipsaw-review-2026-05-03.md` and
+  `docs/reports/dochia-v0-3-rolling-whipsaw-holdout-2026-05-03.md`. The
+  suppressor only uses prior raw whipsaws before cooling down a ticker, but no
+  candidate preserves at least 95% of raw v0.2 F1. Full-period high-reduction
+  rows collapse exact F1 into the 6.57%-14.07% range, and holdout rows with
+  95%+ event reduction stay below 7.41% F1. Do not persist this as a filter;
+  surface whipsaw risk as evidence in the app.
+- Added the Whipsaw Risk / Backtest app surface. Backend endpoint
+  `/api/financial/signals/{ticker}/whipsaw-risk` returns selected-symbol daily
+  whipsaw count/rate, risk level, 5-session forward-return outcome, and recent
+  daily events for either production or v0.2 Range mode. The Command Center
+  Hedge Fund cockpit now renders that evidence beside the selected ticker chart.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -228,6 +254,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: build a rolling, date-safe whipsaw-risk score that can
-cool down names as they become noisy without relying on a fixed historical
-blocklist.
+Next clean build step: use the Whipsaw Risk / Backtest evidence to add a compact
+promotion-gate panel that compares production and v0.2 Range side by side before
+any `market_signals` promotion.

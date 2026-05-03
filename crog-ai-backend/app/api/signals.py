@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -167,6 +167,69 @@ class DailyCalibrationResponse(BaseModel):
     top_tickers: list[TickerCalibrationStats]
 
 
+class PromotionGateCalibrationSummary(BaseModel):
+    total_observations: int
+    covered_observations: int
+    accuracy: float | None
+    exact_event_accuracy: float | None
+    window_event_accuracy: float | None
+    coverage_rate: float | None
+    exact_coverage_rate: float | None
+    score_mae: float | None
+    score_rmse: float | None
+
+
+class PromotionGateModelSummary(BaseModel):
+    id: Literal["production", "candidate"]
+    label: str
+    parameter_set_name: str
+    daily_trigger_mode: str
+    latest_bar_date: dt.date | None
+    signal_count: int
+    bullish_count: int
+    risk_count: int
+    neutral_count: int
+    reentry_count: int
+    average_score: float | None
+    calibration: PromotionGateCalibrationSummary
+
+
+class PromotionGateDeltas(BaseModel):
+    window_event_accuracy: float | None
+    exact_event_accuracy: float | None
+    coverage_rate: float | None
+    score_mae: float | None
+    signal_count: int
+    reentry_count: int
+
+
+class PromotionGateGuardrail(BaseModel):
+    id: str
+    label: str
+    status: Literal["pass", "watch", "fail"]
+    detail: str
+
+
+class PromotionGateRecommendation(BaseModel):
+    status: Literal["hold", "review", "ready_for_shadow"]
+    label: str
+    rationale: str
+
+
+class PromotionGateResponse(BaseModel):
+    generated_at: dt.datetime
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    since: dt.date | None
+    until: dt.date | None
+    event_window_days: int
+    production: PromotionGateModelSummary
+    candidate: PromotionGateModelSummary
+    deltas: PromotionGateDeltas
+    guardrails: list[PromotionGateGuardrail]
+    recommendation: PromotionGateRecommendation
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -202,6 +265,43 @@ class SymbolSignalChart(BaseModel):
     sessions: int
     bars: list[SymbolChartBar]
     events: list[SymbolChartEvent]
+
+
+class SignalReturnOutcome(BaseModel):
+    horizon_sessions: int
+    evaluated_events: int
+    win_count: int
+    win_rate: float | None
+    average_directional_return: float | None
+    median_directional_return: float | None
+    p25_directional_return: float | None
+    p75_directional_return: float | None
+
+
+class SymbolWhipsawEvent(BaseModel):
+    event_date: dt.date
+    state: str
+    sessions_since_previous: int | None
+    is_whipsaw: bool
+    directional_return: float | None
+
+
+class SymbolWhipsawRisk(BaseModel):
+    ticker: str
+    parameter_set_name: str
+    daily_trigger_mode: str
+    sessions: int
+    as_of: dt.date | None
+    whipsaw_window_sessions: int
+    outcome_horizon_sessions: int
+    event_count: int
+    whipsaw_count: int
+    whipsaw_rate: float | None
+    latest_whipsaw_date: dt.date | None
+    risk_score: int
+    risk_level: str
+    outcome: SignalReturnOutcome
+    recent_events: list[SymbolWhipsawEvent]
 
 
 def _state_label(value: int) -> str:
@@ -315,6 +415,28 @@ def daily_calibration(
     )
 
 
+@router.get("/promotion-gate/daily", response_model=PromotionGateResponse)
+def promotion_gate_daily(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[
+        str, Query(min_length=1, max_length=100)
+    ] = "dochia_v0_2_range_daily",
+    since: dt.date | None = None,
+    until: dt.date | None = None,
+    top_tickers: Annotated[int, Query(ge=1, le=100)] = 20,
+    event_window_days: Annotated[int, Query(ge=0, le=10)] = 3,
+) -> dict[str, object]:
+    if since is not None and until is not None and since > until:
+        raise HTTPException(status_code=400, detail="since cannot be after until")
+    return store.promotion_gate(
+        candidate_parameter_set=candidate_parameter_set,
+        since=since,
+        until=until,
+        top_tickers=top_tickers,
+        event_window_days=event_window_days,
+    )
+
+
 @router.get("/{ticker}/chart", response_model=SymbolSignalChart)
 def symbol_signal_chart(
     ticker: Annotated[str, Path(min_length=1, max_length=20)],
@@ -332,6 +454,29 @@ def symbol_signal_chart(
     if not chart["bars"]:
         raise HTTPException(status_code=404, detail=f"chart data not found for {ticker.upper()}")
     return chart
+
+
+@router.get("/{ticker}/whipsaw-risk", response_model=SymbolWhipsawRisk)
+def symbol_whipsaw_risk(
+    ticker: Annotated[str, Path(min_length=1, max_length=20)],
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    sessions: Annotated[int, Query(ge=30, le=500)] = 260,
+    as_of: dt.date | None = None,
+    parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    whipsaw_window_sessions: Annotated[int, Query(ge=1, le=30)] = 5,
+    outcome_horizon_sessions: Annotated[int, Query(ge=1, le=60)] = 5,
+) -> dict[str, object]:
+    risk = store.symbol_whipsaw_risk(
+        ticker=ticker.upper(),
+        sessions=sessions,
+        as_of=as_of,
+        parameter_set=parameter_set,
+        whipsaw_window_sessions=whipsaw_window_sessions,
+        outcome_horizon_sessions=outcome_horizon_sessions,
+    )
+    if risk["sessions"] == 0:
+        raise HTTPException(status_code=404, detail=f"whipsaw data not found for {ticker.upper()}")
+    return risk
 
 
 @router.get("/{ticker}", response_model=SymbolSignalDetail)
