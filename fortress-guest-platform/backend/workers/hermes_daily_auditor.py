@@ -133,7 +133,7 @@ async def _audit_single_reservation(
     if not confirmation_code:
         return "skipped_no_confirmation"
 
-    result = await client.fetch_live_quote(res.streamline_reservation_id)
+    result = await client.fetch_live_quote(confirmation_code)
     if result is None:
         logger.warning(
             "daily_audit_no_data",

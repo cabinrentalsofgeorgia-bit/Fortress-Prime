@@ -95,7 +95,7 @@ export function OperationsHealthGrid({ health }: { health?: OperationalHealth })
           rows={[
             ["Guest pending", "guest_pending"],
             ["Taylor approval", "taylor_pending_approval"],
-            ["Upstream empty 24h", "empty_streamline_prices_24h"],
+            ["Unresolved empty", "unresolved_empty_streamline_prices_24h"],
           ]}
         />
         <OpsCard

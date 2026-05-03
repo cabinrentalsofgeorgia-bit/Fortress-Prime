@@ -37,8 +37,8 @@ router = APIRouter()
 QDRANT_URL = os.getenv("QDRANT_HTTP_URL", "http://127.0.0.1:6333").rstrip("/")
 
 _SYSTEMD_UNITS: tuple[tuple[str, int, str], ...] = (
-    ("fortress-backend.service", 8100, "Fortress API"),
-    ("fortress-frontend.service", 3001, "Command Center"),
+    ("fortress-backend.service", 8000, "Fortress API"),
+    ("crog-ai-frontend.service", 3005, "Command Center"),
     ("fortress-arq-worker.service", 0, "ARQ Worker"),
     ("fortress-sync-worker.service", 0, "Streamline Sync"),
     ("cloudflared.service", 0, "Cloudflare Tunnel"),
@@ -292,6 +292,7 @@ async def _operational_health(db: AsyncSession) -> dict[str, Any]:
         "parity_checks_24h": 0,
         "parity_drifts_24h": 0,
         "empty_streamline_prices_24h": 0,
+        "unresolved_empty_streamline_prices_24h": 0,
         "holds_missing_payment_intent": 0,
         "last_quote_at": None,
     }
@@ -451,6 +452,17 @@ async def _operational_health(db: AsyncSession) -> dict[str, Any]:
               AND local_total > 0
             """,
         )
+        quote_checkout["unresolved_empty_streamline_prices_24h"] = await _fetch_count(
+            db,
+            """
+            SELECT COUNT(*)
+            FROM parity_audits
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+              AND LOWER(status) = 'discrepancy'
+              AND streamline_total = 0
+              AND local_total > 0
+            """,
+        )
 
     if quote_tables_seen:
         quote_checkout["status"] = (
@@ -459,7 +471,7 @@ async def _operational_health(db: AsyncSession) -> dict[str, Any]:
                 quote_checkout["stale_pending"]
                 or quote_checkout["taylor_pending_approval"] > 20
                 or quote_checkout["parity_drifts_24h"]
-                or quote_checkout["empty_streamline_prices_24h"]
+                or quote_checkout["unresolved_empty_streamline_prices_24h"]
                 or quote_checkout["holds_missing_payment_intent"]
             )
             else "online"

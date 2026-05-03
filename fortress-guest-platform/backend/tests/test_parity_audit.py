@@ -7,7 +7,9 @@ Tests ensure that:
   - auto-learn inserts new fee rows with is_active=false
 """
 
+import asyncio
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -71,6 +73,21 @@ class TestParityDetection:
 
         result = _make_live_quote("1200.00", fees=[], taxes="0.00", rent="1200.00")
         assert _streamline_quote_has_financial_data(result) is True
+
+    def test_daily_auditor_fetches_price_by_confirmation_code(self):
+        from backend.workers.hermes_daily_auditor import _audit_single_reservation
+
+        client = SimpleNamespace(fetch_live_quote=AsyncMock(return_value=None))
+        reservation = SimpleNamespace(
+            id="reservation-id",
+            confirmation_code="CONF-123",
+            streamline_reservation_id="STREAMLINE-INTERNAL-456",
+        )
+
+        outcome = asyncio.run(_audit_single_reservation(MagicMock(), reservation, client))
+
+        assert outcome == "skipped_no_data"
+        client.fetch_live_quote.assert_awaited_once_with("CONF-123")
 
 
 class TestDisplayFeeClassification:
