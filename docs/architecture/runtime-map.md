@@ -25,6 +25,7 @@ Primary evidence reviewed:
 - `docs/operational/spark1-current-state-2026-04-29.md`
 - `docs/operational/qdrant-legal-audit-2026-04-29.md`
 - `docs/operational/track-a-v3-case-i-vs-v2-regression-2026-05-02.md`
+- `docs/operational/fortress-legal-runtime-ownership-audit-2026-05-03.md`
 - `deploy/systemd/*`, `deploy/litellm_config.yaml`, `deploy/fortress-prime-compose.yaml`
 - `fortress-guest-platform/backend/core/config.py`
 - `fortress-guest-platform/backend/core/qdrant.py`
@@ -50,6 +51,8 @@ Primary evidence reviewed:
 | `spark-6` | Staged inference worker; cable pending in shared docs. | No authoritative Legal runtime dependency. | Treat as future capacity until live service evidence exists. |
 
 Canonical conclusion: Fortress Legal's **target** isolation host is Spark-1, but the **current operational control plane** remains Spark-2 unless a later cutover document proves otherwise.
+
+Live audit note: `docs/operational/fortress-legal-runtime-ownership-audit-2026-05-03.md` verified this current-state call on 2026-05-03. Spark-2 showed active backend, ARQ, command-center, Postgres, Redis, Qdrant, LiteLLM, Ollama, Ray head, and sync/indexing services. Spark-1 was reachable and running Postgres/Redis/NIM/Ollama/Ray worker, but no Legal backend, ARQ, command-center, Qdrant, or LiteLLM runtime was observed.
 
 ## 2. Database Names And Purposes
 
