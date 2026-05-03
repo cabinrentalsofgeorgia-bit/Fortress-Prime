@@ -107,6 +107,7 @@ uv run python scripts/validate_daily_signal_candidate.py --top-tickers 15 --min-
 uv run python scripts/compare_signal_candidate_lanes.py --limit-tickers 500 --top 12
 uv run python scripts/review_signal_candidate_promotion.py --lane-limit 50 --chart-ticker-limit 24
 uv run python scripts/research_range_trigger_guardrails.py --output docs/reports/dochia-v0-3-atr-cooldown-research-2026-05-03.md
+uv run python scripts/review_signal_outcomes.py --output docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md
 ```
 
 Best 2026-05-02 research candidate: 3-session intraday range trigger. It
@@ -151,6 +152,14 @@ not parameterize this grid either. A light 14-session ATR buffer at 0.025 keeps
 F1 close to raw range at 74.40% but cuts only 2.23% of events. The best
 adaptive cooldown row cuts 21.48% of events but drops F1 to 56.22%. Next
 research moves to return-conditioned outcomes and per-ticker whipsaw clusters.
+
+Return-outcome report:
+`docs/reports/dochia-v0-3-return-outcome-review-2026-05-03.md`. Directional
+forward returns are flat for both production close and v0.2 raw range: v0.2
+5-session win rate is 50.33% with +0.01% average directional return. The worst
+v0.2 whipsaw clusters are ticker-specific, led by MOD, ISRG, MRVL, DLR, and HD.
+Future candidates must preserve alert quality, reduce whipsaw clusters, and
+avoid degrading forward directional returns.
 
 ## Relationship to Fortress-Prime
 
