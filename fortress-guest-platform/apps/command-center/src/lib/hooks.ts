@@ -18,6 +18,7 @@ import type {
   FinancialSymbolSignalDetail,
   FinancialTransitionType,
   FinancialWatchlistCandidatesResponse,
+  FinancialWhipsawRiskResponse,
   ReviewQueueItem,
   ConversationThread,
   MessageTemplate,
@@ -140,6 +141,27 @@ export function useFinancialSignalChart(
   return useQuery<FinancialSignalChartResponse>({
     queryKey: ["financial", "signals", "chart", normalized, params],
     queryFn: () => api.get(`/api/financial/signals/${encodeURIComponent(normalized)}/chart`, params),
+    enabled: Boolean(normalized),
+    refetchInterval: 60_000,
+    staleTime: 15_000,
+  });
+}
+
+export function useFinancialWhipsawRisk(
+  ticker: string | null,
+  params?: {
+    sessions?: number;
+    as_of?: string;
+    parameter_set?: string;
+    whipsaw_window_sessions?: number;
+    outcome_horizon_sessions?: number;
+  },
+) {
+  const normalized = ticker?.trim().toUpperCase() ?? "";
+  return useQuery<FinancialWhipsawRiskResponse>({
+    queryKey: ["financial", "signals", "whipsaw-risk", normalized, params],
+    queryFn: () =>
+      api.get(`/api/financial/signals/${encodeURIComponent(normalized)}/whipsaw-risk`, params),
     enabled: Boolean(normalized),
     refetchInterval: 60_000,
     staleTime: 15_000,

@@ -232,6 +232,51 @@ class FakeSignalStore:
             ],
         }
 
+    def symbol_whipsaw_risk(
+        self,
+        *,
+        ticker: str,
+        sessions: int,
+        as_of: dt.date | None = None,
+        parameter_set: str | None = None,
+        whipsaw_window_sessions: int = 5,
+        outcome_horizon_sessions: int = 5,
+    ) -> dict[str, Any]:
+        return {
+            "ticker": ticker,
+            "parameter_set_name": parameter_set or "dochia_v0_estimated",
+            "daily_trigger_mode": "range" if parameter_set else "close",
+            "sessions": sessions,
+            "as_of": as_of or dt.date(2026, 4, 24),
+            "whipsaw_window_sessions": whipsaw_window_sessions,
+            "outcome_horizon_sessions": outcome_horizon_sessions,
+            "event_count": 4,
+            "whipsaw_count": 2,
+            "whipsaw_rate": 2 / 3,
+            "latest_whipsaw_date": dt.date(2026, 4, 22),
+            "risk_score": 67,
+            "risk_level": "elevated",
+            "outcome": {
+                "horizon_sessions": outcome_horizon_sessions,
+                "evaluated_events": 3,
+                "win_count": 2,
+                "win_rate": 2 / 3,
+                "average_directional_return": 0.0123,
+                "median_directional_return": 0.01,
+                "p25_directional_return": -0.005,
+                "p75_directional_return": 0.02,
+            },
+            "recent_events": [
+                {
+                    "event_date": dt.date(2026, 4, 22),
+                    "state": "green",
+                    "sessions_since_previous": 2,
+                    "is_whipsaw": True,
+                    "directional_return": 0.018,
+                }
+            ],
+        }
+
 
 def test_latest_scores_endpoint_returns_scanner_rows() -> None:
     app = create_app()
@@ -394,6 +439,27 @@ def test_symbol_chart_endpoint_accepts_parameter_set_selector() -> None:
     payload = response.json()
     assert payload["parameter_set_name"] == "dochia_v0_2_range_daily"
     assert payload["daily_trigger_mode"] == "range"
+
+
+def test_symbol_whipsaw_risk_endpoint_returns_backtest_context() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/aa/whipsaw-risk"
+        "?sessions=60&parameter_set=dochia_v0_2_range_daily"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ticker"] == "AA"
+    assert payload["parameter_set_name"] == "dochia_v0_2_range_daily"
+    assert payload["daily_trigger_mode"] == "range"
+    assert payload["whipsaw_count"] == 2
+    assert payload["risk_level"] == "elevated"
+    assert payload["outcome"]["horizon_sessions"] == 5
+    assert payload["recent_events"][0]["is_whipsaw"] is True
 
 
 def test_symbol_signal_detail_404_when_no_latest_score() -> None:

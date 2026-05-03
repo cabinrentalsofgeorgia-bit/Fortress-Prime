@@ -230,6 +230,45 @@ export interface FinancialSignalChartResponse {
   events: FinancialSignalChartEvent[];
 }
 
+export type FinancialWhipsawRiskLevel = "quiet" | "elevated" | "high";
+
+export interface FinancialWhipsawOutcome {
+  horizon_sessions: number;
+  evaluated_events: number;
+  win_count: number;
+  win_rate: number | null;
+  average_directional_return: number | null;
+  median_directional_return: number | null;
+  p25_directional_return: number | null;
+  p75_directional_return: number | null;
+}
+
+export interface FinancialWhipsawEvent {
+  event_date: string;
+  state: "green" | "red" | "neutral";
+  sessions_since_previous: number | null;
+  is_whipsaw: boolean;
+  directional_return: number | null;
+}
+
+export interface FinancialWhipsawRiskResponse {
+  ticker: string;
+  parameter_set_name: string;
+  daily_trigger_mode: "close" | "range";
+  sessions: number;
+  as_of: string | null;
+  whipsaw_window_sessions: number;
+  outcome_horizon_sessions: number;
+  event_count: number;
+  whipsaw_count: number;
+  whipsaw_rate: number | null;
+  latest_whipsaw_date: string | null;
+  risk_score: number;
+  risk_level: FinancialWhipsawRiskLevel;
+  outcome: FinancialWhipsawOutcome;
+  recent_events: FinancialWhipsawEvent[];
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

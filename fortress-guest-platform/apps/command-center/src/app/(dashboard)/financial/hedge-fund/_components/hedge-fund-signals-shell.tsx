@@ -43,6 +43,7 @@ import {
   useFinancialSignalChart,
   useFinancialSignalTransitions,
   useFinancialWatchlistCandidates,
+  useFinancialWhipsawRisk,
 } from "@/lib/hooks";
 import type {
   FinancialDailyCalibrationResponse,
@@ -52,6 +53,8 @@ import type {
   FinancialTransitionType,
   FinancialWatchlistCandidate,
   FinancialWatchlistCandidateLane,
+  FinancialWhipsawRiskLevel,
+  FinancialWhipsawRiskResponse,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -119,6 +122,12 @@ function formatPercent(value: number | null | undefined): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function formatSignedPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${(value * 100).toFixed(1)}%`;
+}
+
 function formatMetricNumber(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   return value.toFixed(1);
@@ -153,6 +162,18 @@ function transitionClasses(type: FinancialTransitionType): string {
     return "border-red-500/40 bg-red-500/10 text-red-600";
   }
   return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+}
+
+function whipsawRiskClasses(level: FinancialWhipsawRiskLevel): string {
+  if (level === "high") return "border-red-500/40 bg-red-500/10 text-red-600";
+  if (level === "elevated") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+}
+
+function whipsawRiskLabel(level: FinancialWhipsawRiskLevel): string {
+  if (level === "high") return "High";
+  if (level === "elevated") return "Elevated";
+  return "Quiet";
 }
 
 function StatePill({ label, value }: { label: string; value: number }) {
@@ -737,6 +758,153 @@ function SignalChart({
   );
 }
 
+function WhipsawRiskPanel({
+  risk,
+  loading,
+  error,
+}: {
+  risk: FinancialWhipsawRiskResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Whipsaw risk unavailable.
+      </div>
+    );
+  }
+
+  if (loading && !risk) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading whipsaw risk…</div>;
+  }
+
+  if (!risk) {
+    return (
+      <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+        No whipsaw risk data.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Risk</p>
+          <div className="mt-2 flex items-center gap-2">
+            <Badge variant="outline" className={cn("font-medium", whipsawRiskClasses(risk.risk_level))}>
+              {whipsawRiskLabel(risk.risk_level)}
+            </Badge>
+            <span className="font-mono text-sm font-semibold">{risk.risk_score}</span>
+          </div>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Whipsaws</p>
+          <p className="mt-1 font-mono text-xl font-bold">
+            {risk.whipsaw_count}
+            <span className="text-xs font-normal text-muted-foreground"> / {risk.event_count}</span>
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">
+            {risk.outcome_horizon_sessions}d Win
+          </p>
+          <p className="mt-1 font-mono text-xl font-bold">
+            {formatPercent(risk.outcome.win_rate)}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">
+            Avg {risk.outcome_horizon_sessions}d
+          </p>
+          <p
+            className={cn(
+              "mt-1 font-mono text-xl font-bold",
+              (risk.outcome.average_directional_return ?? 0) >= 0
+                ? "text-emerald-500"
+                : "text-red-500",
+            )}
+          >
+            {formatSignedPercent(risk.outcome.average_directional_return)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]">
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Backtest</h2>
+            <span className="text-xs text-muted-foreground">
+              {risk.outcome.evaluated_events} events
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-muted/40 p-2">
+              <span className="text-muted-foreground">Median</span>
+              <p className="mt-1 font-mono font-semibold">
+                {formatSignedPercent(risk.outcome.median_directional_return)}
+              </p>
+            </div>
+            <div className="bg-muted/40 p-2">
+              <span className="text-muted-foreground">Whipsaw Rate</span>
+              <p className="mt-1 font-mono font-semibold">{formatPercent(risk.whipsaw_rate)}</p>
+            </div>
+            <div className="bg-muted/40 p-2">
+              <span className="text-muted-foreground">P25</span>
+              <p className="mt-1 font-mono font-semibold">
+                {formatSignedPercent(risk.outcome.p25_directional_return)}
+              </p>
+            </div>
+            <div className="bg-muted/40 p-2">
+              <span className="text-muted-foreground">P75</span>
+              <p className="mt-1 font-mono font-semibold">
+                {formatSignedPercent(risk.outcome.p75_directional_return)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Recent Daily Events</h2>
+            <span className="text-xs text-muted-foreground">
+              {risk.daily_trigger_mode} · {risk.sessions} sessions
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {risk.recent_events.length ? (
+              risk.recent_events.slice(0, 5).map((event) => (
+                <div
+                  key={`${event.event_date}-${event.state}`}
+                  className="grid grid-cols-[82px_72px_minmax(0,1fr)_68px] items-center gap-2 text-xs"
+                >
+                  <span className="font-mono text-muted-foreground">{formatDate(event.event_date)}</span>
+                  <Badge variant="outline" className={cn("justify-center", stateClasses(event.state === "green" ? 1 : -1))}>
+                    {event.state}
+                  </Badge>
+                  <span className="truncate text-muted-foreground">
+                    {event.is_whipsaw ? "Flip" : "Trend"} ·{" "}
+                    {event.sessions_since_previous ?? "—"} sessions
+                  </span>
+                  <span className="text-right font-mono font-semibold">
+                    {formatSignedPercent(event.directional_return)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="border border-dashed border-border p-3 text-xs text-muted-foreground">
+                No recent daily events.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SymbolPanel({
   signal,
   transitions,
@@ -744,6 +912,9 @@ function SymbolPanel({
   chart,
   chartLoading,
   chartError,
+  whipsawRisk,
+  whipsawLoading,
+  whipsawError,
 }: {
   signal: FinancialLatestSignal | null;
   transitions: FinancialSignalTransition[];
@@ -751,6 +922,9 @@ function SymbolPanel({
   chart: FinancialSignalChartResponse | null;
   chartLoading: boolean;
   chartError: boolean;
+  whipsawRisk: FinancialWhipsawRiskResponse | null;
+  whipsawLoading: boolean;
+  whipsawError: boolean;
 }) {
   if (loading && !signal) {
     return (
@@ -822,6 +996,20 @@ function SymbolPanel({
 
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Whipsaw Risk / Backtest</h2>
+            <span className="text-xs text-muted-foreground">
+              {formatDate(whipsawRisk?.as_of)}
+            </span>
+          </div>
+          <WhipsawRiskPanel
+            risk={whipsawRisk}
+            loading={whipsawLoading}
+            error={whipsawError}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold">Recent Transitions</h2>
             <span className="text-xs text-muted-foreground">{formatDate(signal.bar_date)}</span>
           </div>
@@ -878,6 +1066,12 @@ export function HedgeFundSignalsShell() {
     sessions: 180,
     parameter_set: activeParameterSet,
   });
+  const whipsawRisk = useFinancialWhipsawRisk(activeTicker, {
+    sessions: 260,
+    parameter_set: activeParameterSet,
+    whipsaw_window_sessions: 5,
+    outcome_horizon_sessions: 5,
+  });
 
   const selectedSignal =
     detail.data?.latest ?? signals.find((signal) => signal.ticker === activeTicker) ?? null;
@@ -898,6 +1092,7 @@ export function HedgeFundSignalsShell() {
     transitions.isFetching ||
     detail.isFetching ||
     chart.isFetching ||
+    whipsawRisk.isFetching ||
     watchlistCandidates.isFetching ||
     dailyCalibration.isFetching;
 
@@ -945,6 +1140,7 @@ export function HedgeFundSignalsShell() {
               void transitions.refetch();
               void detail.refetch();
               void chart.refetch();
+              void whipsawRisk.refetch();
               void watchlistCandidates.refetch();
               void dailyCalibration.refetch();
             }}
@@ -1104,6 +1300,9 @@ export function HedgeFundSignalsShell() {
             chart={chart.data ?? null}
             chartLoading={chart.isLoading}
             chartError={chart.isError}
+            whipsawRisk={whipsawRisk.data ?? null}
+            whipsawLoading={whipsawRisk.isLoading}
+            whipsawError={whipsawRisk.isError}
           />
 
           <Card>
