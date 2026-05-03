@@ -107,6 +107,10 @@ type QuoteBookingPaymentApprovalResponse = {
   status: string;
   paid_amount: number | null;
   balance_due: number | null;
+  activation_state: string | null;
+  guest_confirmation_draft_id: string | null;
+  work_order_ids: string[];
+  housekeeping_task_id: string | null;
   audit_id: string | null;
   audit_hash: string | null;
   message: string;
@@ -284,6 +288,15 @@ function reconciliationLabel(state: string | null): string | null {
   }
 }
 
+function activationLabel(state: string | null): string | null {
+  switch (state) {
+    case "activated_pending_staff_confirmation_review":
+      return "Activation Ready";
+    default:
+      return state ? state.replace(/_/g, " ") : null;
+  }
+}
+
 function readinessTone(state: string | null): string {
   switch (state) {
     case "ready":
@@ -301,6 +314,15 @@ function readinessTone(state: string | null): string {
     case "missing_payment_handoff":
     case "hold_conflict":
       return "border-rose-500/30 bg-rose-500/10 text-rose-200";
+    default:
+      return "border-zinc-700 bg-zinc-950 text-zinc-300";
+  }
+}
+
+function activationTone(state: string | null): string {
+  switch (state) {
+    case "activated_pending_staff_confirmation_review":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
     default:
       return "border-zinc-700 bg-zinc-950 text-zinc-300";
   }
@@ -460,6 +482,15 @@ function RecordRow({
   const paymentReconciliationLabel = reconciliationLabel(paymentReconciliationState);
   const paymentReconciliationDetail =
     record.kind === "reservation" ? metadataString(record, "payment_reconciliation_detail") : null;
+  const activationState = record.kind === "reservation" ? metadataString(record, "activation_state") : null;
+  const activationStateLabel = activationLabel(activationState);
+  const draftStatus = record.kind === "reservation" ? metadataString(record, "guest_confirmation_draft_status") : null;
+  const draftSubject = record.kind === "reservation" ? metadataString(record, "guest_confirmation_draft_subject") : null;
+  const draftBody = record.kind === "reservation" ? metadataString(record, "guest_confirmation_draft_body") : null;
+  const sendPolicy = record.kind === "reservation" ? metadataString(record, "guest_confirmation_send_policy") : null;
+  const opsStatus = record.kind === "reservation" ? metadataString(record, "ops_handoff_status") : null;
+  const opsWorkOrderIds = record.kind === "reservation" ? metadataStrings(record, "ops_work_order_ids") : [];
+  const housekeepingTaskId = record.kind === "reservation" ? metadataString(record, "housekeeping_task_id") : null;
   const cleanupReason = metadataString(record, "cleanup_reason");
   const paymentReceivedCents =
     record.kind === "reservation" ? metadataNumber(record, "payment_reconciliation_amount_received_cents") : null;
@@ -485,6 +516,9 @@ function RecordRow({
             ) : null}
             {paymentReconciliationLabel ? (
               <Badge className={reconciliationTone(paymentReconciliationState)}>{paymentReconciliationLabel}</Badge>
+            ) : null}
+            {activationStateLabel ? (
+              <Badge className={activationTone(activationState)}>{activationStateLabel}</Badge>
             ) : null}
             {record.assigned_to ? (
               <Badge className="border-cyan-500/30 bg-cyan-500/10 text-cyan-100">
@@ -581,6 +615,30 @@ function RecordRow({
             <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-300">
               <span className="text-xs uppercase text-zinc-500">Payment reconciliation</span>
               <p className="mt-1">{paymentReconciliationDetail}</p>
+            </div>
+          ) : null}
+          {activationState ? (
+            <div className="rounded-lg border border-cyan-500/20 bg-cyan-950/10 px-3 py-3 text-sm text-zinc-200">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs uppercase text-cyan-200/80">Activation package</span>
+                {draftStatus ? (
+                  <Badge className="border-cyan-500/30 bg-cyan-500/10 text-cyan-100">{draftStatus}</Badge>
+                ) : null}
+                {opsStatus ? (
+                  <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-200">{opsStatus}</Badge>
+                ) : null}
+              </div>
+              {draftSubject ? <p className="mt-2 font-medium text-zinc-50">{draftSubject}</p> : null}
+              {draftBody ? (
+                <p className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-zinc-300">
+                  {draftBody}
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-cyan-100/80">
+                {sendPolicy ? <span>Send: {sendPolicy}</span> : null}
+                {opsWorkOrderIds.length > 0 ? <span>Work orders: {opsWorkOrderIds.length}</span> : null}
+                {housekeepingTaskId ? <span>Housekeeping task: ready</span> : null}
+              </div>
             </div>
           ) : null}
           {cleanupReason && (canCleanupHold || canCleanupReservation) ? (
@@ -1022,7 +1080,10 @@ export default function QuoteControlPage() {
           ...(paymentApprovalNote.trim() ? { note: paymentApprovalNote.trim() } : {}),
         },
       );
-      toast.success(response.message || `Payment posted for ${response.confirmation_code}`);
+      toast.success(
+        response.message ||
+          `Payment activated for ${response.confirmation_code}; draft and ops handoff are ready.`,
+      );
       setPaymentApprovalTarget(null);
       setPaymentApprovalNote("");
       await refetch();
@@ -1116,7 +1177,7 @@ export default function QuoteControlPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-8">
         <SummaryMetric
           label="Pending Quotes"
           value={metric(summary, "pending_quotes")}
@@ -1158,6 +1219,12 @@ export default function QuoteControlPage() {
                 ? "warning"
                 : "success"
           }
+        />
+        <SummaryMetric
+          label="Activation"
+          value={metric(summary, "activation_packages_pending")}
+          detail="Drafts and ops handoffs pending review"
+          tone={metric(summary, "activation_packages_pending") > 0 ? "warning" : "success"}
         />
         <SummaryMetric
           label="Cleanup"
@@ -1603,8 +1670,9 @@ export default function QuoteControlPage() {
           </DialogHeader>
           <div className="space-y-3">
             <div className="rounded-lg border border-amber-500/20 bg-amber-950/20 px-3 py-3 text-sm text-amber-100">
-              This posts local CROG-VRS payment state after a Stripe webhook signal. It does not charge a card,
-              write to Streamline, touch the public website, or alter DNS/tunnels.
+              This posts local CROG-VRS payment state after a Stripe webhook signal, creates the guest
+              confirmation draft, and opens the ops handoff. It does not charge a card, write to Streamline,
+              touch the public website, or alter DNS/tunnels.
             </div>
             <div className="grid gap-2 text-sm text-zinc-300 md:grid-cols-3">
               <div>

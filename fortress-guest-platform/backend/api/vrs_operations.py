@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from html import escape
 from typing import Any, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,8 +19,10 @@ from backend.core.security import require_operator_manager_admin
 from backend.models import Guest, GuestQuote, GuestQuoteStatus, Property, Reservation, ReservationHold
 from backend.models.openshell_audit import OpenShellAuditLog
 from backend.models.parity_audit import ParityAudit
+from backend.models.workorder import WorkOrder
 from backend.services.email_service import is_email_configured, send_email
 from backend.services.hold_service import create_inventory_hold
+from backend.services.housekeeping_service import HousekeepingTask
 from backend.services.reservation_engine import ReservationEngine
 from backend.models.staff import StaffUser
 from backend.services.openshell_audit import record_audit_event
@@ -182,6 +184,10 @@ class QuoteBookingPaymentApprovalResponse(BaseModel):
     status: str
     paid_amount: float | None = None
     balance_due: float | None = None
+    activation_state: str | None = None
+    guest_confirmation_draft_id: str | None = None
+    work_order_ids: list[str] = Field(default_factory=list)
+    housekeeping_task_id: str | None = None
     audit_id: str | None = None
     audit_hash: str | None = None
     message: str
@@ -699,6 +705,8 @@ def _finalize_quote_readiness(quotes: list[QuoteBookingRecord]) -> dict[str, int
 
 def _reservation_stop_level(reservation: Reservation) -> tuple[Literal["clear", "inspect", "stop"], str]:
     breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    activation_package = _activation_package_value(reservation)
+    activation_state = _activation_package_field(activation_package, "activation_state")
     payment_reconciliation_state = str(breakdown.get("control_tower_payment_reconciliation_state") or "")
     if payment_reconciliation_state == "stripe_paid_pending_staff_approval":
         return "inspect", "Stripe reports payment received; staff must approve before local payment posting."
@@ -707,6 +715,8 @@ def _reservation_stop_level(reservation: Reservation) -> tuple[Literal["clear", 
             breakdown.get("control_tower_payment_reconciliation_detail")
             or "Stripe payment reconciliation needs staff review."
         )
+    if activation_state == "activated_pending_staff_confirmation_review":
+        return "inspect", "Paid reservation is activated locally; guest confirmation draft and ops handoff await staff review."
     if payment_reconciliation_state == "staff_approved_local_payment_posted" and not reservation.streamline_reservation_id:
         return "inspect", "Local payment is posted; Streamline write remains blocked until parity approval."
     if not reservation.streamline_reservation_id:
@@ -832,6 +842,30 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
         elif action == "approve_reservation_payment_reconciliation":
             record.metadata["payment_reconciliation_approved"] = audit.outcome == "success"
             record.metadata["local_payment_posted"] = audit.outcome == "success"
+            if metadata.get("activation_state"):
+                record.metadata["activation_state"] = str(metadata.get("activation_state"))
+            if metadata.get("guest_confirmation_draft_id"):
+                record.metadata["guest_confirmation_draft_id"] = str(metadata.get("guest_confirmation_draft_id"))
+            if metadata.get("work_order_ids"):
+                record.metadata["ops_work_order_ids"] = metadata.get("work_order_ids")
+            if metadata.get("housekeeping_task_id"):
+                record.metadata["housekeeping_task_id"] = str(metadata.get("housekeeping_task_id"))
+        elif action == "activate_paid_reservation":
+            record.metadata["paid_reservation_activated"] = audit.outcome == "success"
+            if metadata.get("activation_state"):
+                record.metadata["activation_state"] = str(metadata.get("activation_state"))
+            if metadata.get("guest_confirmation_draft_id"):
+                record.metadata["guest_confirmation_draft_id"] = str(metadata.get("guest_confirmation_draft_id"))
+            if metadata.get("guest_confirmation_draft_status"):
+                record.metadata["guest_confirmation_draft_status"] = str(
+                    metadata.get("guest_confirmation_draft_status")
+                )
+            if metadata.get("ops_handoff_status"):
+                record.metadata["ops_handoff_status"] = str(metadata.get("ops_handoff_status"))
+            if metadata.get("work_order_ids"):
+                record.metadata["ops_work_order_ids"] = metadata.get("work_order_ids")
+            if metadata.get("housekeeping_task_id"):
+                record.metadata["housekeeping_task_id"] = str(metadata.get("housekeeping_task_id"))
         elif action == "expire_local_hold":
             record.metadata["cleanup_completed"] = audit.outcome == "success"
         elif action == "cancel_proof_reservation":
@@ -1043,6 +1077,194 @@ def _build_reservation_payment_email(
         f"Pay balance: {payment_url}\n"
     )
     return subject, html_body, text_body
+
+
+def _build_guest_confirmation_draft(reservation: Reservation, property_name: str) -> tuple[str, str]:
+    guest_name = (reservation.guest_name or "").strip() or "there"
+    check_in = _display_date(reservation.check_in_date)
+    check_out = _display_date(reservation.check_out_date)
+    total = _display_money(reservation.total_amount)
+    paid = _display_money(reservation.paid_amount)
+    balance = _display_money(reservation.balance_due)
+    guests = reservation.num_guests or 1
+    nights = reservation.nights_count or max(1, (reservation.check_out_date - reservation.check_in_date).days)
+    subject = f"Reservation confirmed: {reservation.confirmation_code}"
+    body = (
+        f"Hi {guest_name},\n\n"
+        "Your Cabin Rentals of Georgia reservation is confirmed.\n\n"
+        f"Reservation: {reservation.confirmation_code}\n"
+        f"Cabin: {property_name or 'your cabin'}\n"
+        f"Stay: {check_in} to {check_out}\n"
+        f"Length: {nights} night{'s' if nights != 1 else ''}\n"
+        f"Guests: {guests}\n"
+        f"Total: {total}\n"
+        f"Paid: {paid}\n"
+        f"Balance due: {balance}\n\n"
+        "We will follow up with arrival details, access information, and any stay-specific notes before check-in.\n\n"
+        "Thank you,\n"
+        "Cabin Rentals of Georgia"
+    )
+    return subject, body
+
+
+def _activation_package_value(reservation: Reservation) -> dict[str, Any] | None:
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    package = breakdown.get("control_tower_activation_package")
+    return package if isinstance(package, dict) else None
+
+
+def _activation_package_field(package: dict[str, Any] | None, key: str) -> str | None:
+    if not package:
+        return None
+    value = package.get(key)
+    return str(value) if value is not None else None
+
+
+async def _ensure_paid_reservation_activation_package(
+    *,
+    db: AsyncSession,
+    reservation: Reservation,
+    current_user: StaffUser,
+    note: str | None,
+) -> dict[str, Any]:
+    breakdown = dict(reservation.price_breakdown or {})
+    existing_package = breakdown.get("control_tower_activation_package")
+    if isinstance(existing_package, dict) and existing_package.get("activation_id"):
+        return existing_package
+
+    prop = await db.get(Property, reservation.property_id)
+    property_name = prop.name if prop else "your cabin"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    subject, body_text = _build_guest_confirmation_draft(reservation, property_name)
+
+    existing_work_orders = await db.execute(
+        select(WorkOrder).where(
+            WorkOrder.reservation_id == reservation.id,
+            WorkOrder.created_by == "crog_vrs_activation_lane",
+        )
+    )
+    work_orders = list(existing_work_orders.scalars().all())
+    activation_title = f"Paid reservation activation review: {reservation.confirmation_code}"
+    readiness_title = f"Pre-arrival readiness handoff: {reservation.confirmation_code}"
+
+    if not any(order.title == activation_title for order in work_orders):
+        work_orders.append(
+            WorkOrder(
+                ticket_number=f"ACT-{uuid4().hex[:10].upper()}",
+                property_id=reservation.property_id,
+                reservation_id=reservation.id,
+                guest_id=reservation.guest_id,
+                title=activation_title,
+                description=(
+                    "Review the staff-approved payment activation, inspect the guest confirmation draft, "
+                    "and send only after staff confirms the wording. Streamline writes and public-site "
+                    "changes remain blocked."
+                ),
+                category="other",
+                priority="medium",
+                status="open",
+                created_by="crog_vrs_activation_lane",
+            )
+        )
+
+    if not any(order.title == readiness_title for order in work_orders):
+        work_orders.append(
+            WorkOrder(
+                ticket_number=f"OPS-{uuid4().hex[:10].upper()}",
+                property_id=reservation.property_id,
+                reservation_id=reservation.id,
+                guest_id=reservation.guest_id,
+                title=readiness_title,
+                description=(
+                    "Coordinate arrival readiness for the activated local reservation: agreement, access, "
+                    "property notes, and internal staff handoff. No guest-facing commitment leaves CROG-VRS "
+                    "without staff review."
+                ),
+                category="other",
+                priority="medium",
+                status="open",
+                created_by="crog_vrs_activation_lane",
+            )
+        )
+
+    for order in work_orders:
+        if order.id is None:
+            db.add(order)
+
+    housekeeping_row = await db.execute(
+        select(HousekeepingTask)
+        .where(
+            HousekeepingTask.reservation_id == reservation.id,
+            HousekeepingTask.cleaning_type == "turnover",
+            HousekeepingTask.status != "cancelled",
+        )
+        .order_by(HousekeepingTask.created_at.asc())
+        .limit(1)
+    )
+    housekeeping_task = housekeeping_row.scalar_one_or_none()
+    if housekeeping_task is None:
+        housekeeping_task = HousekeepingTask(
+            property_id=reservation.property_id,
+            reservation_id=reservation.id,
+            scheduled_date=reservation.check_out_date,
+            scheduled_time=time(hour=11, minute=0),
+            status="pending",
+            cleaning_type="turnover",
+            estimated_minutes=prop.default_clean_minutes if prop and prop.default_clean_minutes else None,
+            notes=(
+                f"Turnover handoff generated by CROG-VRS activation lane for "
+                f"{reservation.confirmation_code}. Staff dispatch remains manual."
+            ),
+            dispatched_by="crog_vrs_activation_lane",
+            dispatch_payload={
+                "source": "quote_booking_control_tower",
+                "activation_lane": True,
+                "reservation_id": str(reservation.id),
+                "confirmation_code": reservation.confirmation_code,
+                "streamline_write": "blocked",
+                "legacy_storefront": "untouched",
+            },
+        )
+        db.add(housekeeping_task)
+
+    await db.flush()
+
+    work_order_ids = [str(order.id) for order in work_orders if order.id is not None]
+    draft_id = f"draft_{uuid4().hex[:12]}"
+    package = {
+        "activation_id": f"act_{uuid4().hex[:12]}",
+        "activation_state": "activated_pending_staff_confirmation_review",
+        "created_at": now_iso,
+        "created_by": current_user.email,
+        "staff_approval_note": note,
+        "guest_confirmation_draft": {
+            "id": draft_id,
+            "channel": "email",
+            "to": reservation.guest_email,
+            "subject": subject,
+            "body_text": body_text,
+            "status": "pending_staff_review",
+            "send_policy": "manual_staff_send_only",
+            "created_at": now_iso,
+        },
+        "ops_handoff": {
+            "status": "open",
+            "work_order_ids": work_order_ids,
+            "housekeeping_task_id": str(housekeeping_task.id) if housekeeping_task and housekeeping_task.id else None,
+            "handoff_policy": "internal_only",
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+        },
+        "safeguards": {
+            "guest_confirmation_send": "staff_review_required",
+            "streamline_write": "blocked",
+            "public_storefront": "untouched",
+            "dns_or_tunnel_change": "blocked",
+        },
+    }
+    breakdown["control_tower_activation_package"] = package
+    reservation.price_breakdown = breakdown
+    return package
 
 
 async def _record_quote_send_audit(
@@ -1257,8 +1479,20 @@ async def _record_reservation_payment_approval_audit(
     note: str | None,
     detail: str,
     amount_cents: int | None = None,
+    activation_package: dict[str, Any] | None = None,
 ) -> OpenShellAuditLog | None:
     breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    draft = (
+        activation_package.get("guest_confirmation_draft")
+        if isinstance(activation_package, dict)
+        and isinstance(activation_package.get("guest_confirmation_draft"), dict)
+        else {}
+    )
+    ops_handoff = (
+        activation_package.get("ops_handoff")
+        if isinstance(activation_package, dict) and isinstance(activation_package.get("ops_handoff"), dict)
+        else {}
+    )
     return await record_audit_event(
         db=db,
         actor_id=str(current_user.id),
@@ -1288,6 +1522,65 @@ async def _record_reservation_payment_approval_audit(
             "detail": detail,
             "staff_approved": outcome == "success",
             "local_payment_posted": outcome == "success",
+            "activation_id": _activation_package_field(activation_package, "activation_id"),
+            "activation_state": _activation_package_field(activation_package, "activation_state"),
+            "guest_confirmation_draft_id": draft.get("id"),
+            "guest_confirmation_draft_status": draft.get("status"),
+            "guest_confirmation_send_policy": draft.get("send_policy"),
+            "ops_handoff_status": ops_handoff.get("status"),
+            "work_order_ids": ops_handoff.get("work_order_ids") if isinstance(ops_handoff, dict) else [],
+            "housekeeping_task_id": ops_handoff.get("housekeeping_task_id") if isinstance(ops_handoff, dict) else None,
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+
+
+async def _record_paid_reservation_activation_audit(
+    *,
+    db: AsyncSession,
+    current_user: StaffUser,
+    reservation: Reservation,
+    activation_package: dict[str, Any],
+    outcome: str,
+    note: str | None,
+    detail: str,
+) -> OpenShellAuditLog | None:
+    draft = activation_package.get("guest_confirmation_draft")
+    if not isinstance(draft, dict):
+        draft = {}
+    ops_handoff = activation_package.get("ops_handoff")
+    if not isinstance(ops_handoff, dict):
+        ops_handoff = {}
+
+    return await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.activate_paid_reservation",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id("reservation", str(reservation.id)),
+        purpose="Staff-approved paid reservation activation with guest draft and internal operations handoff.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="human_staff",
+        outcome=outcome,
+        metadata_json={
+            "reservation_id": str(reservation.id),
+            "confirmation_code": reservation.confirmation_code,
+            "activation_id": activation_package.get("activation_id"),
+            "activation_state": activation_package.get("activation_state"),
+            "guest_confirmation_draft_id": draft.get("id"),
+            "guest_confirmation_draft_status": draft.get("status"),
+            "guest_confirmation_send_policy": draft.get("send_policy"),
+            "ops_handoff_status": ops_handoff.get("status"),
+            "work_order_ids": ops_handoff.get("work_order_ids"),
+            "housekeeping_task_id": ops_handoff.get("housekeeping_task_id"),
+            "note": note,
+            "detail": detail,
+            "staff_approved": outcome == "success",
+            "guest_facing_send": "blocked_until_staff_review",
             "streamline_write": "blocked",
             "legacy_storefront": "untouched",
             "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
@@ -1561,10 +1854,24 @@ async def quote_booking_control_tower(
     reservations: list[QuoteBookingRecord] = []
     payment_reconciliations_pending = 0
     payment_reconciliations_blocked = 0
+    activation_packages_pending = 0
     proof_reservations_cleanup_pending = 0
     for reservation, property_name in reservation_rows.all():
         stop_level, stop_reason = _reservation_stop_level(reservation)
         price_breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+        activation_package = _activation_package_value(reservation)
+        activation_state = _activation_package_field(activation_package, "activation_state")
+        draft = (
+            activation_package.get("guest_confirmation_draft")
+            if isinstance(activation_package, dict)
+            and isinstance(activation_package.get("guest_confirmation_draft"), dict)
+            else {}
+        )
+        ops_handoff = (
+            activation_package.get("ops_handoff")
+            if isinstance(activation_package, dict) and isinstance(activation_package.get("ops_handoff"), dict)
+            else {}
+        )
         proof_cleanup_eligible, proof_cleanup_reason = _proof_reservation_cleanup_eligible(reservation)
         if proof_cleanup_eligible:
             proof_reservations_cleanup_pending += 1
@@ -1576,6 +1883,9 @@ async def quote_booking_control_tower(
         elif reconciliation_state.endswith("_needs_staff_review"):
             payment_reconciliations_blocked += 1
             payment_state = "payment_reconciliation_review"
+        elif activation_state == "activated_pending_staff_confirmation_review":
+            activation_packages_pending += 1
+            payment_state = "activated_pending_confirmation"
         elif reconciliation_state == "staff_approved_local_payment_posted":
             payment_state = "local_payment_posted"
         elif payment_link_id:
@@ -1635,6 +1945,17 @@ async def quote_booking_control_tower(
                         "control_tower_payment_reconciliation_approved_at"
                     ),
                     "local_payment_posted": bool(price_breakdown.get("control_tower_payment_local_posted")),
+                    "activation_id": activation_package.get("activation_id") if activation_package else None,
+                    "activation_state": activation_state,
+                    "activation_created_at": activation_package.get("created_at") if activation_package else None,
+                    "guest_confirmation_draft_id": draft.get("id"),
+                    "guest_confirmation_draft_status": draft.get("status"),
+                    "guest_confirmation_draft_subject": draft.get("subject"),
+                    "guest_confirmation_draft_body": draft.get("body_text"),
+                    "guest_confirmation_send_policy": draft.get("send_policy"),
+                    "ops_handoff_status": ops_handoff.get("status"),
+                    "ops_work_order_ids": ops_handoff.get("work_order_ids"),
+                    "housekeeping_task_id": ops_handoff.get("housekeeping_task_id"),
                     "proof_lane": _is_proof_reservation(reservation),
                     "cleanup_eligible": proof_cleanup_eligible,
                     "cleanup_reason": proof_cleanup_reason,
@@ -1688,6 +2009,7 @@ async def quote_booking_control_tower(
         "parity_drifts_24h": parity_drifts_24h,
         "payment_reconciliations_pending": payment_reconciliations_pending,
         "payment_reconciliations_blocked": payment_reconciliations_blocked,
+        "activation_packages_pending": activation_packages_pending,
         "expired_local_holds_pending": expired_local_holds_pending,
         "proof_reservations_cleanup_pending": proof_reservations_cleanup_pending,
     }
@@ -1781,6 +2103,17 @@ async def quote_booking_control_tower(
                 f"{'' if summary.get('payment_reconciliations_pending', 0) == 1 else 's'} "
                 "await staff approval; "
                 f"{summary.get('payment_reconciliations_blocked', 0)} need review."
+            ),
+            href="/command/quote-control",
+        ),
+        QuoteBookingSafeguard(
+            id="paid_reservation_activation",
+            label="Paid reservation activation",
+            status="attention" if summary.get("activation_packages_pending", 0) else "clear",
+            detail=(
+                f"{summary.get('activation_packages_pending', 0)} activated paid reservation"
+                f"{'' if summary.get('activation_packages_pending', 0) == 1 else 's'} "
+                "have confirmation drafts and ops handoffs pending staff review."
             ),
             href="/command/quote-control",
         ),
@@ -2738,6 +3071,12 @@ async def quote_booking_control_approve_payment(
     )
     reservation.price_breakdown = breakdown
     reservation.updated_at = datetime.now(timezone.utc)
+    activation_package = await _ensure_paid_reservation_activation_package(
+        db=db,
+        reservation=reservation,
+        current_user=current_user,
+        note=note,
+    )
     await db.commit()
     await db.refresh(reservation)
 
@@ -2747,9 +3086,28 @@ async def quote_booking_control_approve_payment(
         reservation=reservation,
         outcome="success",
         note=note,
-        detail="Staff approved the reconciled Stripe payment and posted local reservation payment state.",
+        detail=(
+            "Staff approved the reconciled Stripe payment, posted local reservation payment state, "
+            "and created the activation package."
+        ),
         amount_cents=received_amount_cents,
+        activation_package=activation_package,
     )
+    activation_audit = await _record_paid_reservation_activation_audit(
+        db=db,
+        current_user=current_user,
+        reservation=reservation,
+        activation_package=activation_package,
+        outcome="success",
+        note=note,
+        detail="Guest confirmation draft and internal operations handoff were created for staff review.",
+    )
+    draft = activation_package.get("guest_confirmation_draft") if isinstance(activation_package, dict) else {}
+    if not isinstance(draft, dict):
+        draft = {}
+    ops_handoff = activation_package.get("ops_handoff") if isinstance(activation_package, dict) else {}
+    if not isinstance(ops_handoff, dict):
+        ops_handoff = {}
     return QuoteBookingPaymentApprovalResponse(
         ok=True,
         reservation_id=str(reservation.id),
@@ -2757,9 +3115,19 @@ async def quote_booking_control_approve_payment(
         status=reservation.status,
         paid_amount=_money(reservation.paid_amount),
         balance_due=_money(reservation.balance_due),
-        audit_id=str(audit.id) if audit else None,
-        audit_hash=audit.entry_hash if audit else None,
-        message="Payment reconciliation approved. CROG-VRS posted the local payment state; Streamline writes, the legacy website, DNS, and tunnels remained untouched.",
+        activation_state=str(activation_package.get("activation_state") or ""),
+        guest_confirmation_draft_id=str(draft.get("id")) if draft.get("id") else None,
+        work_order_ids=[
+            str(item)
+            for item in (ops_handoff.get("work_order_ids") or [])
+            if isinstance(item, str) and item.strip()
+        ],
+        housekeeping_task_id=str(ops_handoff.get("housekeeping_task_id"))
+        if ops_handoff.get("housekeeping_task_id")
+        else None,
+        audit_id=str(activation_audit.id if activation_audit else audit.id) if (activation_audit or audit) else None,
+        audit_hash=(activation_audit.entry_hash if activation_audit else audit.entry_hash) if (activation_audit or audit) else None,
+        message="Payment activated. CROG-VRS posted local payment state, created a staff-review guest confirmation draft, opened the ops handoff, and left Streamline, the legacy website, DNS, and tunnels untouched.",
     )
 
 
