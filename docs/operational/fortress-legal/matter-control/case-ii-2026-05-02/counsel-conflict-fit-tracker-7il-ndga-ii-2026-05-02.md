@@ -5,7 +5,7 @@ Operator service status: not served as of 2026-05-02
 
 Use this to control outreach. Send conflict-check language first. Do not send the attorney package or evidence until conflicts clear.
 
-Operational control: `counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md`. The tracker is the ledger; the control document is the release rule. Keep `Package Sent` as `No` until Phase 2 release is approved.
+Operational control: `counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md`. Phase 1 scorecard: `counsel-phase1-fit-call-scorecard-7il-ndga-ii-2026-05-02.md`. The tracker is the ledger; the control documents are the release rules. Keep `Package Sent` as `No` until Phase 2 release is approved.
 
 ## Conflict Screen Names
 
@@ -51,6 +51,13 @@ Operational control: `counsel-conflict-check-outreach-control-7il-ndga-ii-2026-0
 | F1 | Fit call scheduled |
 | F2 | Good Phase 1 fit |
 | F3 | Poor fit or economics |
+
+## Phase 1 Score Threshold
+
+- 90-100: Strong lead for Phase 2 package release if budget and scope are acceptable.
+- 80-89: Eligible for Phase 2 package release with operator approval.
+- 70-79: Backup only unless service deadline pressure requires limited help.
+- Under 70: Do not release package absent documented emergency reason.
 
 ## Scoring Guide
 
