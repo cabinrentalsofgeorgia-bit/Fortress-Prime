@@ -40,10 +40,12 @@ import {
 } from "@/components/ui/table";
 import {
   useCreateFinancialShadowDecisionRecord,
+  useCreateFinancialPromotionDryRunAcceptance,
   useFinancialLatestSignals,
   useFinancialDailyCalibration,
   useFinancialPromotionGate,
   useFinancialPromotionDryRun,
+  useFinancialPromotionDryRunAcceptances,
   useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
   useFinancialSignalDetail,
@@ -55,6 +57,8 @@ import {
 import type {
   FinancialDailyCalibrationResponse,
   FinancialLatestSignal,
+  FinancialPromotionDryRunAcceptance,
+  FinancialPromotionDryRunAcceptanceCreate,
   FinancialPromotionDryRunApprovalStatus,
   FinancialPromotionDryRunMarketSignalRow,
   FinancialPromotionDryRunResponse,
@@ -1453,11 +1457,22 @@ function PromotionDryRunPanel({
   dryRun,
   loading,
   error,
+  acceptances,
+  acceptancesLoading,
+  onSubmitAcceptance,
+  submittingAcceptance,
 }: {
   dryRun: FinancialPromotionDryRunResponse | null;
   loading: boolean;
   error: boolean;
+  acceptances: FinancialPromotionDryRunAcceptance[];
+  acceptancesLoading: boolean;
+  onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
+  submittingAcceptance: boolean;
 }) {
+  const [acceptedBy, setAcceptedBy] = useState("Gary Knight");
+  const [acceptanceRationale, setAcceptanceRationale] = useState("");
+
   if (error) {
     return (
       <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
@@ -1479,23 +1494,48 @@ function PromotionDryRunPanel({
     );
   }
 
-  const summary = dryRun.summary;
-  const previewRows = dryRun.proposed_rows.slice(0, 8);
+  const activeDryRun = dryRun;
+  const summary = activeDryRun.summary;
+  const previewRows = activeDryRun.proposed_rows.slice(0, 8);
+  const canAccept =
+    activeDryRun.approval.status === "ready_for_dry_run" &&
+    summary.proposed_insert_count > 0 &&
+    acceptedBy.trim().length >= 2 &&
+    acceptanceRationale.trim().length >= 12;
+
+  async function handleAcceptanceSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canAccept) return;
+    try {
+      await onSubmitAcceptance({
+        candidate_parameter_set: activeDryRun.candidate_parameter_set,
+        decision_id: activeDryRun.approval.decision_id,
+        accepted_by: acceptedBy,
+        acceptance_rationale: acceptanceRationale,
+        limit: 500,
+        min_abs_score: summary.min_abs_score,
+      });
+      setAcceptanceRationale("");
+    } catch {
+      // The mutation hook owns the operator-facing error toast.
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">market_signals Preview</p>
           <p className="text-xs text-muted-foreground">
-            {dryRun.baseline_parameter_set} → {dryRun.candidate_parameter_set}
+            {activeDryRun.baseline_parameter_set} → {activeDryRun.candidate_parameter_set}
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <Badge
             variant="outline"
-            className={cn("font-medium", promotionDryRunApprovalClasses(dryRun.approval.status))}
+            className={cn("font-medium", promotionDryRunApprovalClasses(activeDryRun.approval.status))}
           >
-            {promotionDryRunApprovalLabel(dryRun.approval.status)}
+            {promotionDryRunApprovalLabel(activeDryRun.approval.status)}
           </Badge>
           <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-600">
             Writes locked
@@ -1528,7 +1568,7 @@ function PromotionDryRunPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="overflow-hidden border border-border">
           <div className="hidden border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground lg:grid lg:grid-cols-[70px_76px_64px_88px_98px_minmax(0,1fr)]">
             <span>Ticker</span>
@@ -1545,29 +1585,77 @@ function PromotionDryRunPanel({
           )}
         </div>
 
-        <div className="border border-border p-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">Approval</h2>
-            <span className="text-xs text-muted-foreground">{formatDate(dryRun.generated_at)}</span>
+        <div className="space-y-3">
+          <div className="border border-border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Approval</h2>
+              <span className="text-xs text-muted-foreground">{formatDate(activeDryRun.generated_at)}</span>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">{activeDryRun.approval.detail}</p>
+            <div className="mt-3 space-y-2 text-xs">
+              <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
+                <span className="text-muted-foreground">Reviewer</span>
+                <span className="truncate font-medium">{activeDryRun.approval.reviewer ?? "—"}</span>
+              </div>
+              <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
+                <span className="text-muted-foreground">Decision</span>
+                <span className="truncate font-mono">{activeDryRun.approval.decision_id ?? "—"}</span>
+              </div>
+              <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
+                <span className="text-muted-foreground">Columns</span>
+                <span className="truncate font-mono">{summary.target_columns.length}</span>
+              </div>
+            </div>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">{dryRun.approval.detail}</p>
-          <div className="mt-3 space-y-2 text-xs">
-            <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
-              <span className="text-muted-foreground">Reviewer</span>
-              <span className="truncate font-medium">{dryRun.approval.reviewer ?? "—"}</span>
+
+          <form className="border border-border p-3" onSubmit={(event) => void handleAcceptanceSubmit(event)}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Dry-Run Acceptance</h2>
+              <Badge variant="outline">
+                {acceptancesLoading ? "Loading" : `${acceptances.length} saved`}
+              </Badge>
             </div>
-            <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
-              <span className="text-muted-foreground">Decision</span>
-              <span className="truncate font-mono">{dryRun.approval.decision_id ?? "—"}</span>
+            <label className="mt-3 block space-y-1 text-xs font-medium">
+              Accepted By
+              <Input
+                value={acceptedBy}
+                onChange={(event) => setAcceptedBy(event.target.value)}
+                className="h-9"
+              />
+            </label>
+            <label className="mt-3 block space-y-1 text-xs font-medium">
+              Acceptance Rationale
+              <textarea
+                value={acceptanceRationale}
+                onChange={(event) => setAcceptanceRationale(event.target.value)}
+                className="min-h-20 w-full resize-y border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+            </label>
+            <div className="mt-3 flex justify-end">
+              <Button type="submit" disabled={!canAccept || submittingAcceptance}>
+                {submittingAcceptance ? "Saving…" : "Accept Dry-Run"}
+              </Button>
             </div>
-            <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2">
-              <span className="text-muted-foreground">Columns</span>
-              <span className="truncate font-mono">{summary.target_columns.length}</span>
-            </div>
-          </div>
+
+            {acceptances.length ? (
+              <div className="mt-3 space-y-2">
+                {acceptances.slice(0, 2).map((acceptance) => (
+                  <div key={acceptance.id} className="border border-border/70 p-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{acceptance.accepted_by}</span>
+                      <span className="text-muted-foreground">{formatDate(acceptance.created_at)}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-muted-foreground">
+                      {acceptance.acceptance_rationale}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </form>
         </div>
       </div>
-    </div>
+  </div>
   );
 }
 
@@ -1739,7 +1827,12 @@ export function HedgeFundSignalsShell() {
     limit: 25,
     min_abs_score: 50,
   });
+  const promotionDryRunAcceptances = useFinancialPromotionDryRunAcceptances({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    limit: 3,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
+  const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
   const watchlistLanes = watchlistCandidates.data?.lanes ?? EMPTY_LANES;
@@ -1785,11 +1878,19 @@ export function HedgeFundSignalsShell() {
     promotionGate.isFetching ||
     shadowReview.isFetching ||
     shadowDecisionRecords.isFetching ||
-    promotionDryRun.isFetching;
+    promotionDryRun.isFetching ||
+    promotionDryRunAcceptances.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
     void shadowDecisionRecords.refetch();
+  }
+
+  async function handlePromotionDryRunAcceptanceSubmit(
+    payload: FinancialPromotionDryRunAcceptanceCreate,
+  ) {
+    await createPromotionDryRunAcceptance.mutateAsync(payload);
+    void promotionDryRunAcceptances.refetch();
   }
 
   return (
@@ -1843,6 +1944,7 @@ export function HedgeFundSignalsShell() {
               void shadowReview.refetch();
               void shadowDecisionRecords.refetch();
               void promotionDryRun.refetch();
+              void promotionDryRunAcceptances.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -1978,6 +2080,10 @@ export function HedgeFundSignalsShell() {
             dryRun={promotionDryRun.data ?? null}
             loading={promotionDryRun.isLoading}
             error={promotionDryRun.isError}
+            acceptances={promotionDryRunAcceptances.data ?? []}
+            acceptancesLoading={promotionDryRunAcceptances.isLoading}
+            onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
+            submittingAcceptance={createPromotionDryRunAcceptance.isPending}
           />
         </CardContent>
       </Card>

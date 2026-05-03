@@ -11,6 +11,7 @@ from app.main import create_app
 PARAMETER_SET_ID = UUID("11111111-1111-1111-1111-111111111111")
 TRANSITION_ID = UUID("22222222-2222-2222-2222-222222222222")
 DECISION_ID = UUID("33333333-3333-3333-3333-333333333333")
+ACCEPTANCE_ID = UUID("44444444-4444-4444-4444-444444444444")
 
 
 class FakeSignalStore:
@@ -517,6 +518,69 @@ class FakeSignalStore:
             ][:limit],
         }
 
+    def promotion_dry_run_acceptances(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_parameter_set": candidate_parameter_set or "dochia_v0_2_range_daily",
+                "baseline_parameter_set": "dochia_v0_estimated",
+                "accepted_by": "Gary Knight",
+                "acceptance_rationale": "Dry-run rows match the reviewed promote decision.",
+                "rollback_criteria": "Rollback if whipsaw pressure rises.",
+                "dry_run_generated_at": dt.datetime(2026, 5, 3, 20, 30, tzinfo=dt.UTC),
+                "dry_run_candidate_signal_count": 3,
+                "dry_run_proposed_insert_count": 2,
+                "dry_run_bullish_count": 1,
+                "dry_run_risk_count": 1,
+                "dry_run_skipped_neutral_count": 1,
+                "min_abs_score": 50,
+                "target_table": "hedge_fund.market_signals",
+                "target_columns": [
+                    "ticker",
+                    "signal_type",
+                    "action",
+                    "confidence_score",
+                    "price_target",
+                    "source_sender",
+                    "source_subject",
+                    "raw_reasoning",
+                    "model_used",
+                    "extracted_at",
+                ],
+                "created_at": dt.datetime(2026, 5, 3, 20, 45, tzinfo=dt.UTC),
+            }
+        ][:limit]
+
+    def create_promotion_dry_run_acceptance(
+        self,
+        *,
+        candidate_parameter_set: str,
+        accepted_by: str,
+        acceptance_rationale: str,
+        decision_id: str | None = None,
+        limit: int = 500,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]:
+        if accepted_by == "Blocked":
+            raise ValueError("Cannot accept dry-run output without a ready promote decision record.")
+        return {
+            **self.promotion_dry_run_acceptances(
+                candidate_parameter_set=candidate_parameter_set,
+                limit=1,
+            )[0],
+            "accepted_by": accepted_by,
+            "acceptance_rationale": acceptance_rationale,
+            "decision_record_id": UUID(decision_id) if decision_id else DECISION_ID,
+            "min_abs_score": min_abs_score,
+            "dry_run_proposed_insert_count": min(limit, 2),
+        }
+
     def symbol_chart(
         self,
         *,
@@ -862,6 +926,67 @@ def test_promotion_dry_run_endpoint_returns_read_only_market_signal_plan() -> No
     assert payload["proposed_rows"][1]["action"] == "SELL"
     assert payload["proposed_rows"][0]["lineage"]["source_pipeline"] == "dochia_signal_scores"
     assert "rollback_marker" in payload["proposed_rows"][0]["lineage"]
+
+
+def test_promotion_dry_run_acceptances_endpoint_returns_audit_rows() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/promotion-dry-run/acceptances"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&limit=3"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["id"] == str(ACCEPTANCE_ID)
+    assert payload[0]["decision_record_id"] == str(DECISION_ID)
+    assert payload[0]["dry_run_proposed_insert_count"] == 2
+    assert payload[0]["target_table"] == "hedge_fund.market_signals"
+
+
+def test_promotion_dry_run_acceptances_endpoint_creates_audit_row() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/acceptances",
+        json={
+            "candidate_parameter_set": "dochia_v0_2_range_daily",
+            "decision_id": str(DECISION_ID),
+            "accepted_by": "Gary Knight",
+            "acceptance_rationale": "Dry-run output matches the reviewed promote decision.",
+            "limit": 2,
+            "min_abs_score": 50,
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["accepted_by"] == "Gary Knight"
+    assert payload["decision_record_id"] == str(DECISION_ID)
+    assert payload["acceptance_rationale"] == "Dry-run output matches the reviewed promote decision."
+    assert payload["dry_run_proposed_insert_count"] == 2
+
+
+def test_promotion_dry_run_acceptances_endpoint_rejects_without_ready_decision() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/acceptances",
+        json={
+            "candidate_parameter_set": "dochia_v0_2_range_daily",
+            "accepted_by": "Blocked",
+            "acceptance_rationale": "Dry-run output cannot be accepted without approval.",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "ready promote decision" in response.json()["detail"]
 
 
 def test_symbol_chart_endpoint_returns_overlay_data() -> None:

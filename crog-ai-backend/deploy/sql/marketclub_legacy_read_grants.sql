@@ -6,5 +6,6 @@ GRANT SELECT ON TABLE
 TO crog_ai_app;
 
 GRANT SELECT, INSERT ON TABLE
-    hedge_fund.signal_shadow_review_decisions
+    hedge_fund.signal_shadow_review_decisions,
+    hedge_fund.signal_promotion_dry_run_acceptances
 TO crog_ai_app;
