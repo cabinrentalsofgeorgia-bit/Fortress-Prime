@@ -17,7 +17,7 @@ This command center is a live operating artifact. It is not a court filing and n
 
 ## Today's Highest-Value Move
 
-Use the first-response readiness gate while beginning conflict checks. Do not transmit the attorney briefing package or evidence before conflict clearance.
+Use the first-response readiness gate and counsel conflict-check outreach control while beginning conflict checks. Do not transmit the attorney briefing package or evidence before Phase 2 release is approved.
 
 ## P0 Watch Items
 
@@ -25,7 +25,7 @@ Use the first-response readiness gate while beginning conflict checks. Do not tr
 |---|---|---|---|
 | Service status | Not served as of 2026-05-02 | Summons/complaint, waiver request, proof of service, docket service entry | Record service facts, calculate deadline, notify cleared counsel candidates |
 | First response | Not yet due absent service | Formal service or waiver event | Finalize answer/Rule 12/counterclaim posture |
-| Conflict checks | Ready to begin | Operator selects counsel targets | Send short conflict-check email only |
+| Conflict checks | Ready to begin | Operator selects counsel targets | Send Phase 0 conflict-check language only |
 | Counsel package | Ready but not sent | Conflict clears | Send v2 attorney package + selected evidence index |
 | Answer matrix | Initial matrix generated | Complaint/exhibits reviewed | Convert workbench into filing-ready response language |
 | Qdrant alias health | Known cleanup item | Runtime cutover planned | Populate/verify v2 before alias reliance |
@@ -35,6 +35,7 @@ Use the first-response readiness gate while beginning conflict checks. Do not tr
 | Artifact | Path | Use |
 |---|---|---|
 | Attorney briefing package v2 | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Attorney_Briefing_Package_7IL_NDGA_II_v2_20260502T173909Z.md` | Send only after conflict clearance |
+| Counsel conflict-check outreach control | `docs/operational/fortress-legal/matter-control/case-ii-2026-05-02/counsel-conflict-check-outreach-control-7il-ndga-ii-2026-05-02.md` | Phase 0/1/2 release control before any attorney package or evidence is sent |
 | Conflict-check email | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/Counsel_Conflict_Check_Email_7IL_NDGA_II_20260502.md` | First counsel contact |
 | Pro se playbook | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/ProSe_First_Response_Playbook_7IL_NDGA_II_20260502.md` | Response readiness |
 | Answer matrix | `/mnt/fortress_nas/Corporate_Legal/Business_Legal/7il-v-knight-ndga-ii/filings/outgoing/First_Response_Answer_Matrix_7IL_NDGA_II_20260502.md` | Paragraph-by-paragraph workbench |
