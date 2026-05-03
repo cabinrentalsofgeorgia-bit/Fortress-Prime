@@ -259,10 +259,10 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 | Legacy watchlist context | `watchlist` has 431 rows; `market_signals` has 1,105 rows through 2026-02-12; read-only grant applied for app overlays |
 | Calibration baseline | 24,204 daily observations; 91.44% coverage; 62.05% carried daily color accuracy; 40.67% exact alert match; 52.54% ±3-day alert match; score MAE 43.94 |
 | Calibration sweep | Best validated candidate: 3-session intraday range trigger; exact alert F1 76.64% vs 44.59% baseline, exact recall 91.93% vs 40.67%, precision 65.71%, ±3-day recall 95.21%; holdout after 2025-09-25 scores 83.18% F1 vs 46.26% baseline |
-| Candidate persisted state | v0.2 candidate has 328 `signal_scores` rows and 1,624 `signal_transitions` rows under non-production parameter set; internal API/BFF selector live for scanner, transitions, symbol detail, and Portfolio Lens |
+| Candidate persisted state | v0.2 candidate has 328 `signal_scores` rows and 1,624 `signal_transitions` rows under non-production parameter set; internal API/BFF selector live for scanner, transitions, symbol detail, Portfolio Lens, and chart overlays |
 | Candidate lane comparison | v0.2 bullish lane unchanged at 129, risk unchanged at 47, re-entry 164→145, mixed 202→203, 61 daily states/scores change |
 | Promotion contract | Fresh Dochia scores still staged; legacy `market_signals` remains contextual until calibration/promotion |
-| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, chart overlays, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, and internal Production/v0.2 Range toggle |
+| UI state | Hedge Fund route live in production at `https://crog-ai.com/financial/hedge-fund` with scanner, synced chart overlays, alert feed, symbol panel, Portfolio Lens, Calibration Baseline, and internal Production/v0.2 Range toggle |
 
 **Signal doctrine:**
 
@@ -291,7 +291,7 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Do not call generated weekly/monthly states "MarketClub truth"; they are Dochia-derived.
 - Avoid gamified trading prompts; build an evidence cockpit.
 
-**Immediate next step:** Add v0.2 chart-overlay parity so the symbol chart can show range-trigger daily events when the v0.2 candidate mode is selected.
+**Immediate next step:** Run v0.2 promotion review: compare top-lane symbols, whipsaw clusters, and chart-level candidate events before deciding whether the range trigger can become the next production parameter set.
 
 ### 6.6 Architectural follow-ups
 
@@ -347,7 +347,8 @@ One chat session per day. Open with status. Plan three priorities. Execute. Clos
 - Added read-only daily calibration harness and FastAPI endpoint. Baseline: 24,204 observations, 91.44% coverage, 62.05% daily color accuracy, score MAE 43.94.
 - Added read-only daily parameter sweep harness and candidate validation report. Best candidate is the 3-session intraday range trigger: exact alert F1 76.64%, exact recall 91.93%, precision 65.71%, ±3-day recall 95.21%, and carried-state agreement 94.91%. Chronological holdout after 2025-09-25 scores 83.18% F1 vs 46.26% baseline.
 - Registered non-production `dochia_v0_2_range_daily` and wired daily trigger mode through score/transition previews. Dry run: 328 candidate score rows, 1,624 candidate transitions since 2026-03-25, bullish/risk lane counts unchanged, 61 daily states/scores changed.
-- Persisted v0.2 candidate scores/transitions under non-production parameter set and added internal `parameter_set` selectors to scanner, transitions, symbol detail, and Portfolio Lens API reads. Production remains default.
+- Persisted v0.2 candidate scores/transitions under non-production parameter set and added internal `parameter_set` selectors to scanner, transitions, symbol detail, Portfolio Lens, and chart-overlay API reads. Production remains default.
+- Added v0.2 chart-overlay parity: the symbol chart now follows the active Production/v0.2 Range mode, using close-break daily events for production and range-trigger daily events for the v0.2 candidate.
 - Added internal Production/v0.2 Range toggle to the Command Center Hedge Fund page and promoted the production frontend build.
 - Added chart-data endpoint and chart overlay with close, daily/weekly channel bands, and generated triangle event markers.
 - Refined calibration metrics to separate carried-state agreement from exact new-alert agreement: 40.67% same-day alert match and 52.54% ±3-day alert match.

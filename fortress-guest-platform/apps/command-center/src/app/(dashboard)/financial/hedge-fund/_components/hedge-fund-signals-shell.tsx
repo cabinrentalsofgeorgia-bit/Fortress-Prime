@@ -791,7 +791,10 @@ function SymbolPanel({
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold">Chart Overlay</h2>
-            <span className="text-xs text-muted-foreground">{chart?.sessions ?? 0} sessions</span>
+            <span className="text-xs text-muted-foreground">
+              {chart?.daily_trigger_mode === "range" ? "range daily" : "close daily"} ·{" "}
+              {chart?.sessions ?? 0} sessions
+            </span>
           </div>
           <SignalChart chart={chart} loading={chartLoading} error={chartError} />
         </div>
@@ -871,7 +874,10 @@ export function HedgeFundSignalsShell() {
     lookback_days: 30,
     parameter_set: activeParameterSet,
   });
-  const chart = useFinancialSignalChart(activeTicker, { sessions: 180 });
+  const chart = useFinancialSignalChart(activeTicker, {
+    sessions: 180,
+    parameter_set: activeParameterSet,
+  });
 
   const selectedSignal =
     detail.data?.latest ?? signals.find((signal) => signal.ticker === activeTicker) ?? null;

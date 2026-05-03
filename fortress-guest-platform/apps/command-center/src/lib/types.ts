@@ -223,6 +223,8 @@ export interface FinancialSignalChartEvent {
 
 export interface FinancialSignalChartResponse {
   ticker: string;
+  parameter_set_name: string;
+  daily_trigger_mode: "close" | "range";
   sessions: number;
   bars: FinancialSignalChartBar[];
   events: FinancialSignalChartEvent[];

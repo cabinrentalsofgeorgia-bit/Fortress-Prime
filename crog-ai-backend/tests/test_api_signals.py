@@ -178,9 +178,12 @@ class FakeSignalStore:
         ticker: str,
         sessions: int,
         as_of: dt.date | None = None,
+        parameter_set: str | None = None,
     ) -> dict[str, Any]:
         return {
             "ticker": ticker,
+            "parameter_set_name": parameter_set or "dochia_v0_estimated",
+            "daily_trigger_mode": "range" if parameter_set else "close",
             "sessions": 2,
             "bars": [
                 {
@@ -372,8 +375,25 @@ def test_symbol_chart_endpoint_returns_overlay_data() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["ticker"] == "AA"
+    assert payload["parameter_set_name"] == "dochia_v0_estimated"
+    assert payload["daily_trigger_mode"] == "close"
     assert payload["bars"][0]["daily_channel_high"] == "67.00"
     assert payload["events"][0]["timeframe"] == "daily"
+
+
+def test_symbol_chart_endpoint_accepts_parameter_set_selector() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/aa/chart?sessions=30&parameter_set=dochia_v0_2_range_daily"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["parameter_set_name"] == "dochia_v0_2_range_daily"
+    assert payload["daily_trigger_mode"] == "range"
 
 
 def test_symbol_signal_detail_404_when_no_latest_score() -> None:

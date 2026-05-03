@@ -168,13 +168,17 @@ Useful query params:
 - Persisted v0.2 candidate scores/transitions under the non-production
   parameter set: 328 `signal_scores` rows and 1,624 `signal_transitions` rows.
   Added internal `parameter_set` selectors for scanner, transition feed, symbol
-  detail, and Portfolio Lens reads. Defaults still use production only.
+  detail, Portfolio Lens, and chart-overlay reads. Defaults still use
+  production only.
 - Added the internal Command Center parameter-set toggle on the Hedge Fund page.
   The cockpit defaults to Production and can switch scanner, transition feed,
-  symbol detail, and Portfolio Lens reads to v0.2 Range.
+  symbol detail, Portfolio Lens, and chart overlays to v0.2 Range.
 - Surfaced the calibration baseline in the Hedge Fund UI.
 - Added chart-data endpoint and UI chart overlay with close, daily/weekly
   channel bands, and generated triangle event markers.
+- Added v0.2 chart-overlay parity: the chart endpoint accepts `parameter_set`
+  and switches daily event markers from close-break production mode to
+  range-trigger v0.2 candidate mode.
 - Added and enabled `crog-ai-backend.service` on spark-node-2.
 - Promoted the Command Center production build and restarted
   `crog-ai-frontend.service`; `/financial/hedge-fund` is live through
@@ -184,5 +188,6 @@ Useful query params:
   status, and live backend/BFF reads for both production and v0.2 candidate
   selectors. `/financial/hedge-fund` returns 200 after frontend restart.
 
-Next clean build step: add v0.2 chart-overlay parity so the symbol chart can
-show range-trigger daily events when the v0.2 candidate mode is selected.
+Next clean build step: run v0.2 promotion review across top-lane symbols,
+whipsaw clusters, and chart-level candidate events before deciding whether the
+range trigger can become the next production parameter set.
