@@ -54,12 +54,14 @@ Current Financial / Hedge Fund endpoints:
 | `GET /api/financial/signals/transitions` | recent signal-change alert feed |
 | `GET /api/financial/signals/watchlist-candidates` | portfolio-lens lanes with legacy watchlist context |
 | `GET /api/financial/signals/calibration/daily` | daily MarketClub truth calibration metrics |
-| `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and triangle overlay events |
+| `GET /api/financial/signals/{ticker}/chart` | EOD bars, rolling channels, and parameter-set aware triangle overlay events |
 | `GET /api/financial/signals/{ticker}` | symbol-level latest score plus recent transitions |
 
 Internal candidate reads can pass `parameter_set=dochia_v0_2_range_daily` to
-`latest`, `transitions`, `watchlist-candidates`, and symbol detail. Omitting the
-parameter keeps the production filter.
+`latest`, `transitions`, `watchlist-candidates`, symbol detail, and symbol chart.
+Omitting the parameter keeps the production filter. The chart endpoint uses
+close-break daily events for production and range-trigger daily events for the
+v0.2 candidate.
 
 Systemd service on spark-node-2:
 

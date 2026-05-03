@@ -197,6 +197,8 @@ class SymbolChartEvent(BaseModel):
 
 class SymbolSignalChart(BaseModel):
     ticker: str
+    parameter_set_name: str
+    daily_trigger_mode: str
     sessions: int
     bars: list[SymbolChartBar]
     events: list[SymbolChartEvent]
@@ -319,8 +321,14 @@ def symbol_signal_chart(
     store: Annotated[SignalDataStore, Depends(get_signal_store)],
     sessions: Annotated[int, Query(ge=30, le=500)] = 180,
     as_of: dt.date | None = None,
+    parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
 ) -> dict[str, object]:
-    chart = store.symbol_chart(ticker=ticker.upper(), sessions=sessions, as_of=as_of)
+    chart = store.symbol_chart(
+        ticker=ticker.upper(),
+        sessions=sessions,
+        as_of=as_of,
+        parameter_set=parameter_set,
+    )
     if not chart["bars"]:
         raise HTTPException(status_code=404, detail=f"chart data not found for {ticker.upper()}")
     return chart
