@@ -47,6 +47,7 @@ import {
   useFinancialPromotionDryRun,
   useFinancialPromotionDryRunAcceptances,
   useFinancialPromotionDryRunVerification,
+  useFinancialPromotionExecutions,
   useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
   useFinancialSignalDetail,
@@ -65,6 +66,7 @@ import type {
   FinancialPromotionDryRunResponse,
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunVerificationStatus,
+  FinancialPromotionExecution,
   FinancialPromotionGateGuardrailStatus,
   FinancialPromotionGateRecommendationStatus,
   FinancialPromotionGateResponse,
@@ -133,6 +135,19 @@ function formatDate(value?: string | null): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -271,6 +286,11 @@ function promotionDryRunVerificationMessage(
   if (status === "FAIL") return "Dry-run acceptance blocked";
   if (status === "INCONCLUSIVE") return "Source lineage unclear; acceptance blocked";
   return "Verification pending";
+}
+
+function promotionExecutionRollbackClasses(status: FinancialPromotionExecution["rollback_status"]): string {
+  if (status === "rolled_back") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
 }
 
 function formatSignedNumber(value: number | null | undefined, digits = 0): string {
@@ -1482,6 +1502,8 @@ function PromotionDryRunPanel({
   verificationError,
   acceptances,
   acceptancesLoading,
+  executions,
+  executionsLoading,
   onSubmitAcceptance,
   submittingAcceptance,
 }: {
@@ -1493,6 +1515,8 @@ function PromotionDryRunPanel({
   verificationError: boolean;
   acceptances: FinancialPromotionDryRunAcceptance[];
   acceptancesLoading: boolean;
+  executions: FinancialPromotionExecution[];
+  executionsLoading: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
 }) {
@@ -1769,6 +1793,57 @@ function PromotionDryRunPanel({
               </div>
             ) : null}
           </form>
+
+          <div className="border border-border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Execution Records</h2>
+              <Badge variant="outline">
+                {executionsLoading ? "Loading" : `${executions.length} recorded`}
+              </Badge>
+            </div>
+            {executions.length ? (
+              <div className="mt-3 space-y-2">
+                {executions.slice(0, 3).map((execution) => (
+                  <div key={execution.id} className="border border-border/70 p-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-medium">{execution.executed_by}</span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px]",
+                          promotionExecutionRollbackClasses(execution.rollback_status),
+                        )}
+                      >
+                        {execution.rollback_status === "rolled_back" ? "Rolled back" : "Active"}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-muted-foreground">Inserted rows</span>
+                        <p className="font-mono font-semibold">
+                          {execution.inserted_market_signal_ids.length}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Executed</span>
+                        <p className="truncate font-medium">{formatDateTime(execution.created_at)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-muted-foreground">Rollback marker</span>
+                      <p className="mt-1 truncate font-mono text-[11px]">
+                        {execution.rollback_markers[0] ?? "—"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-muted-foreground">
+                No guarded executions recorded.
+              </p>
+            )}
+          </div>
         </div>
       </div>
   </div>
@@ -1953,6 +2028,10 @@ export function HedgeFundSignalsShell() {
     candidate_parameter_set: "dochia_v0_2_range_daily",
     limit: 3,
   });
+  const promotionExecutions = useFinancialPromotionExecutions({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    limit: 5,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
   const signals = latest.data ?? EMPTY_SIGNALS;
@@ -2002,7 +2081,8 @@ export function HedgeFundSignalsShell() {
     shadowDecisionRecords.isFetching ||
     promotionDryRun.isFetching ||
     promotionDryRunVerification.isFetching ||
-    promotionDryRunAcceptances.isFetching;
+    promotionDryRunAcceptances.isFetching ||
+    promotionExecutions.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
@@ -2069,6 +2149,7 @@ export function HedgeFundSignalsShell() {
               void promotionDryRun.refetch();
               void promotionDryRunVerification.refetch();
               void promotionDryRunAcceptances.refetch();
+              void promotionExecutions.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -2209,6 +2290,8 @@ export function HedgeFundSignalsShell() {
             verificationError={promotionDryRunVerification.isError}
             acceptances={promotionDryRunAcceptances.data ?? []}
             acceptancesLoading={promotionDryRunAcceptances.isLoading}
+            executions={promotionExecutions.data ?? []}
+            executionsLoading={promotionExecutions.isLoading}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
           />

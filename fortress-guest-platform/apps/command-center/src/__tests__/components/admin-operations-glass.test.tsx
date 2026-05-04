@@ -131,6 +131,7 @@ vi.mock("@/lib/hooks", () => ({
       properties: [],
     },
   }),
+  useAsyncJobArchivePrune: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/lib/store", () => ({

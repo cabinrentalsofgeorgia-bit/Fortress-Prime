@@ -17,6 +17,7 @@ import type {
   FinancialShadowReviewDecisionRecordCreate,
   FinancialPromotionDryRunAcceptance,
   FinancialPromotionDryRunAcceptanceCreate,
+  FinancialPromotionExecution,
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunResponse,
   FinancialPromotionGateResponse,
@@ -292,6 +293,17 @@ export function useFinancialPromotionDryRunAcceptances(params?: {
   return useQuery<FinancialPromotionDryRunAcceptance[]>({
     queryKey: ["financial", "signals", "promotion-dry-run", "acceptances", params],
     queryFn: () => api.get("/api/financial/signals/promotion-dry-run/acceptances", params),
+    staleTime: 60_000,
+  });
+}
+
+export function useFinancialPromotionExecutions(params?: {
+  candidate_parameter_set?: string;
+  limit?: number;
+}) {
+  return useQuery<FinancialPromotionExecution[]>({
+    queryKey: ["financial", "signals", "promotion-dry-run", "executions", params],
+    queryFn: () => api.get("/api/financial/signals/promotion-dry-run/executions", params),
     staleTime: 60_000,
   });
 }
