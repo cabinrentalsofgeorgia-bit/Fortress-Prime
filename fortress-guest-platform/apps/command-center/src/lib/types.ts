@@ -601,6 +601,33 @@ export interface FinancialPromotionExecution {
   created_at: string;
 }
 
+export type FinancialPromotionRollbackEligibility =
+  | "ELIGIBLE"
+  | "ELIGIBLE_PARTIAL_AUDITED_ROWS"
+  | "ALREADY_ROLLED_BACK"
+  | "NOT_ELIGIBLE_NO_AUDITED_ROWS"
+  | "NOT_ELIGIBLE_NO_LIVE_AUDITED_ROWS";
+
+export interface FinancialPromotionRollbackDrill {
+  execution_id: string;
+  dry_run_acceptance_id: string;
+  candidate_parameter_set: string;
+  baseline_parameter_set: string;
+  executed_by: string;
+  executed_at: string;
+  inserted_market_signal_ids: number[];
+  rollback_markers: string[];
+  audited_market_signal_ids: number[];
+  rollback_preview_market_signal_ids: number[];
+  rollback_preview_count: number;
+  rollback_eligibility: FinancialPromotionRollbackEligibility;
+  already_rolled_back: boolean;
+  rollback_status: FinancialPromotionExecutionRollbackStatus;
+  rollback_by: string | null;
+  rollback_attempted_at: string | null;
+  rolled_back_at: string | null;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

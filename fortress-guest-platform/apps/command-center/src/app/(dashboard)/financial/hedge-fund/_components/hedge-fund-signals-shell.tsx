@@ -48,6 +48,7 @@ import {
   useFinancialPromotionDryRunAcceptances,
   useFinancialPromotionDryRunVerification,
   useFinancialPromotionExecutions,
+  useFinancialPromotionRollbackDrills,
   useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
   useFinancialSignalDetail,
@@ -67,6 +68,8 @@ import type {
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunVerificationStatus,
   FinancialPromotionExecution,
+  FinancialPromotionRollbackDrill,
+  FinancialPromotionRollbackEligibility,
   FinancialPromotionGateGuardrailStatus,
   FinancialPromotionGateRecommendationStatus,
   FinancialPromotionGateResponse,
@@ -291,6 +294,36 @@ function promotionDryRunVerificationMessage(
 function promotionExecutionRollbackClasses(status: FinancialPromotionExecution["rollback_status"]): string {
   if (status === "rolled_back") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
   return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+}
+
+function promotionRollbackEligibilityLabel(status: FinancialPromotionRollbackEligibility): string {
+  switch (status) {
+    case "ELIGIBLE":
+      return "Eligible";
+    case "ELIGIBLE_PARTIAL_AUDITED_ROWS":
+      return "Partial audited rows";
+    case "ALREADY_ROLLED_BACK":
+      return "Already rolled back";
+    case "NOT_ELIGIBLE_NO_AUDITED_ROWS":
+      return "No audited rows";
+    case "NOT_ELIGIBLE_NO_LIVE_AUDITED_ROWS":
+      return "No live audited rows";
+    default:
+      return status;
+  }
+}
+
+function promotionRollbackEligibilityClasses(status: FinancialPromotionRollbackEligibility): string {
+  if (status === "ELIGIBLE") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (status === "ALREADY_ROLLED_BACK") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  if (status === "ELIGIBLE_PARTIAL_AUDITED_ROWS") {
+    return "border-sky-500/40 bg-sky-500/10 text-sky-600";
+  }
+  return "border-red-500/40 bg-red-500/10 text-red-600";
+}
+
+function formatIdList(values: number[]): string {
+  return values.length ? values.join(", ") : "—";
 }
 
 function formatSignedNumber(value: number | null | undefined, digits = 0): string {
@@ -1504,6 +1537,8 @@ function PromotionDryRunPanel({
   acceptancesLoading,
   executions,
   executionsLoading,
+  rollbackDrills,
+  rollbackDrillsLoading,
   onSubmitAcceptance,
   submittingAcceptance,
 }: {
@@ -1517,6 +1552,8 @@ function PromotionDryRunPanel({
   acceptancesLoading: boolean;
   executions: FinancialPromotionExecution[];
   executionsLoading: boolean;
+  rollbackDrills: FinancialPromotionRollbackDrill[];
+  rollbackDrillsLoading: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
 }) {
@@ -1844,6 +1881,75 @@ function PromotionDryRunPanel({
               </p>
             )}
           </div>
+
+          <div className="border border-border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Rollback Drill</h2>
+              <Badge variant="outline">
+                {rollbackDrillsLoading ? "Loading" : `${rollbackDrills.length} checked`}
+              </Badge>
+            </div>
+            {rollbackDrills.length ? (
+              <div className="mt-3 space-y-2">
+                {rollbackDrills.slice(0, 3).map((drill) => (
+                  <div key={drill.execution_id} className="border border-border/70 p-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-mono text-[11px]">
+                        {drill.execution_id}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px]",
+                          promotionRollbackEligibilityClasses(drill.rollback_eligibility),
+                        )}
+                      >
+                        {promotionRollbackEligibilityLabel(drill.rollback_eligibility)}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-muted-foreground">Dry-run acceptance ID</span>
+                        <p className="truncate font-mono text-[11px]">
+                          {drill.dry_run_acceptance_id}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Rollback preview count</span>
+                        <p className="font-mono font-semibold">{drill.rollback_preview_count}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Already rolled back</span>
+                        <p className="font-medium">{drill.already_rolled_back ? "Yes" : "No"}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Rollback time</span>
+                        <p className="truncate font-medium">
+                          {formatDateTime(drill.rollback_attempted_at ?? drill.rolled_back_at)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-muted-foreground">Inserted market_signal IDs</span>
+                      <p className="mt-1 truncate font-mono text-[11px]">
+                        {formatIdList(drill.inserted_market_signal_ids)}
+                      </p>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-muted-foreground">Rollback markers</span>
+                      <p className="mt-1 truncate font-mono text-[11px]">
+                        {drill.rollback_markers.join(", ") || "—"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-muted-foreground">
+                No rollback drill records available.
+              </p>
+            )}
+          </div>
         </div>
       </div>
   </div>
@@ -2032,6 +2138,10 @@ export function HedgeFundSignalsShell() {
     candidate_parameter_set: "dochia_v0_2_range_daily",
     limit: 5,
   });
+  const promotionRollbackDrills = useFinancialPromotionRollbackDrills({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    limit: 5,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
   const signals = latest.data ?? EMPTY_SIGNALS;
@@ -2082,7 +2192,8 @@ export function HedgeFundSignalsShell() {
     promotionDryRun.isFetching ||
     promotionDryRunVerification.isFetching ||
     promotionDryRunAcceptances.isFetching ||
-    promotionExecutions.isFetching;
+    promotionExecutions.isFetching ||
+    promotionRollbackDrills.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
@@ -2150,6 +2261,7 @@ export function HedgeFundSignalsShell() {
               void promotionDryRunVerification.refetch();
               void promotionDryRunAcceptances.refetch();
               void promotionExecutions.refetch();
+              void promotionRollbackDrills.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -2292,6 +2404,8 @@ export function HedgeFundSignalsShell() {
             acceptancesLoading={promotionDryRunAcceptances.isLoading}
             executions={promotionExecutions.data ?? []}
             executionsLoading={promotionExecutions.isLoading}
+            rollbackDrills={promotionRollbackDrills.data ?? []}
+            rollbackDrillsLoading={promotionRollbackDrills.isLoading}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
           />

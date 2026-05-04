@@ -512,6 +512,32 @@ class PromotionExecution(BaseModel):
     created_at: dt.datetime
 
 
+class PromotionRollbackDrill(BaseModel):
+    execution_id: UUID
+    dry_run_acceptance_id: UUID
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    executed_by: str
+    executed_at: dt.datetime
+    inserted_market_signal_ids: list[int]
+    rollback_markers: list[str]
+    audited_market_signal_ids: list[int]
+    rollback_preview_market_signal_ids: list[int]
+    rollback_preview_count: int
+    rollback_eligibility: Literal[
+        "ELIGIBLE",
+        "ELIGIBLE_PARTIAL_AUDITED_ROWS",
+        "ALREADY_ROLLED_BACK",
+        "NOT_ELIGIBLE_NO_AUDITED_ROWS",
+        "NOT_ELIGIBLE_NO_LIVE_AUDITED_ROWS",
+    ]
+    already_rolled_back: bool
+    rollback_status: Literal["active", "rolled_back"]
+    rollback_by: str | None
+    rollback_attempted_at: dt.datetime | None
+    rolled_back_at: dt.datetime | None
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -876,6 +902,21 @@ def promotion_executions(
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ) -> list[dict[str, object]]:
     return store.promotion_executions(
+        candidate_parameter_set=candidate_parameter_set,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/promotion-dry-run/executions/rollback-drill",
+    response_model=list[PromotionRollbackDrill],
+)
+def promotion_rollback_drills(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+) -> list[dict[str, object]]:
+    return store.promotion_rollback_drills(
         candidate_parameter_set=candidate_parameter_set,
         limit=limit,
     )

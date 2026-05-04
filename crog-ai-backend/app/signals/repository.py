@@ -148,6 +148,13 @@ class SignalDataStore(Protocol):
         limit: int = 10,
     ) -> list[dict[str, Any]]: ...
 
+    def promotion_rollback_drills(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]: ...
+
     def execute_guarded_promotion(
         self,
         *,
@@ -1901,6 +1908,83 @@ def fetch_promotion_executions(
         return [_promotion_execution_response(dict(row)) for row in cur.fetchall()]
 
 
+PROMOTION_ROLLBACK_DRILL_SELECT = """
+    SELECT
+        execution_id,
+        dry_run_acceptance_id,
+        candidate_parameter_set,
+        baseline_parameter_set,
+        executed_by,
+        executed_at,
+        inserted_market_signal_ids,
+        rollback_markers,
+        audited_market_signal_ids,
+        rollback_preview_market_signal_ids,
+        rollback_preview_count,
+        rollback_eligibility,
+        already_rolled_back,
+        rollback_status,
+        rollback_by,
+        rollback_attempted_at,
+        rolled_back_at
+    FROM hedge_fund.v_signal_promotion_rollback_drill
+"""
+
+
+PROMOTION_ROLLBACK_DRILL_FIELDS = [
+    "execution_id",
+    "dry_run_acceptance_id",
+    "candidate_parameter_set",
+    "baseline_parameter_set",
+    "executed_by",
+    "executed_at",
+    "inserted_market_signal_ids",
+    "rollback_markers",
+    "audited_market_signal_ids",
+    "rollback_preview_market_signal_ids",
+    "rollback_preview_count",
+    "rollback_eligibility",
+    "already_rolled_back",
+    "rollback_status",
+    "rollback_by",
+    "rollback_attempted_at",
+    "rolled_back_at",
+]
+
+
+def _promotion_rollback_drill_response(row: dict[str, Any]) -> dict[str, Any]:
+    response = {key: row[key] for key in PROMOTION_ROLLBACK_DRILL_FIELDS}
+    response["inserted_market_signal_ids"] = list(response["inserted_market_signal_ids"] or [])
+    response["rollback_markers"] = list(response["rollback_markers"] or [])
+    response["audited_market_signal_ids"] = list(response["audited_market_signal_ids"] or [])
+    response["rollback_preview_market_signal_ids"] = list(
+        response["rollback_preview_market_signal_ids"] or []
+    )
+    return response
+
+
+def fetch_promotion_rollback_drills(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {"limit": limit}
+    where = ""
+    if candidate_parameter_set:
+        where = "WHERE candidate_parameter_set = %(candidate_parameter_set)s"
+        params["candidate_parameter_set"] = candidate_parameter_set
+    sql = f"""
+        {PROMOTION_ROLLBACK_DRILL_SELECT}
+        {where}
+        ORDER BY executed_at DESC
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, params)
+        return [_promotion_rollback_drill_response(dict(row)) for row in cur.fetchall()]
+
+
 def execute_guarded_promotion(
     conn: psycopg.Connection,
     *,
@@ -2347,6 +2431,20 @@ class PostgresSignalDataStore:
         with connect() as conn:
             conn.execute("SET default_transaction_read_only = on")
             return fetch_promotion_executions(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                limit=limit,
+            )
+
+    def promotion_rollback_drills(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_rollback_drills(
                 conn,
                 candidate_parameter_set=candidate_parameter_set,
                 limit=limit,
