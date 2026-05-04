@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS hedge_fund.signal_promotion_dry_run_acceptances (
     target_table TEXT NOT NULL,
     target_columns TEXT[] NOT NULL,
     dry_run_payload JSONB NOT NULL,
+    verification_status_snapshot TEXT,
+    verification_payload_snapshot JSONB,
+    candidate_set_hash TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

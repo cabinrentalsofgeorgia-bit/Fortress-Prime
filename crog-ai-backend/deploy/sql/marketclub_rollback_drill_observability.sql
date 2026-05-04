@@ -1,4 +1,5 @@
-CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_rollback_drill AS
+CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_rollback_drill
+WITH (security_invoker = true) AS
 WITH audited_rows AS (
     SELECT
         e.id AS execution_id,

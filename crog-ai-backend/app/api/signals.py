@@ -539,6 +539,36 @@ class PromotionRollbackDrill(BaseModel):
     rolled_back_at: dt.datetime | None
 
 
+class PromotionLifecycleEvent(BaseModel):
+    ts: dt.datetime
+    type: Literal[
+        "DECISION_CREATED",
+        "DRY_RUN_GENERATED",
+        "VERIFICATION_RESULT",
+        "ACCEPTANCE_CREATED",
+        "EXECUTION_COMPLETED",
+        "ROLLBACK_ELIGIBLE",
+        "ROLLBACK_COMPLETED",
+    ]
+    decision_id: UUID | None
+    acceptance_id: UUID | None
+    execution_id: UUID | None
+    candidate_id: str
+    actor: str | None
+    meta: dict[str, object]
+
+
+class PromotionReconciliation(BaseModel):
+    execution_id: UUID | None
+    acceptance_id: UUID
+    candidate_id: str
+    status: Literal["HEALTHY", "WARNING", "ERROR"]
+    checks: dict[str, Literal["PASS", "FAIL", "NA"]]
+    warnings: dict[str, object]
+    drilldown: dict[str, object]
+    explanation: str
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -919,6 +949,36 @@ def promotion_rollback_drills(
 ) -> list[dict[str, object]]:
     return store.promotion_rollback_drills(
         candidate_parameter_set=candidate_parameter_set,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/promotion/{promotion_id}/timeline",
+    response_model=list[PromotionLifecycleEvent],
+)
+def promotion_lifecycle_timeline(
+    promotion_id: Annotated[str, Path(min_length=1, max_length=120)],
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[dict[str, object]]:
+    return store.promotion_lifecycle_timeline(
+        promotion_id=promotion_id,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/promotion/{promotion_id}/reconciliation",
+    response_model=list[PromotionReconciliation],
+)
+def promotion_reconciliation(
+    promotion_id: Annotated[str, Path(min_length=1, max_length=120)],
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+) -> list[dict[str, object]]:
+    return store.promotion_reconciliation(
+        promotion_id=promotion_id,
         limit=limit,
     )
 
