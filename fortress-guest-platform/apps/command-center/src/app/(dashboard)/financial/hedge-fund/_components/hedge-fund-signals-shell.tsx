@@ -49,6 +49,7 @@ import {
   useFinancialPromotionDryRunVerification,
   useFinancialPromotionExecutions,
   useFinancialPromotionRollbackDrills,
+  useRollbackFinancialPromotionExecution,
   useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
   useFinancialSignalDetail,
@@ -68,6 +69,7 @@ import type {
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunVerificationStatus,
   FinancialPromotionExecution,
+  FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionRollbackDrill,
   FinancialPromotionRollbackEligibility,
   FinancialPromotionGateGuardrailStatus,
@@ -1541,6 +1543,8 @@ function PromotionDryRunPanel({
   rollbackDrillsLoading,
   onSubmitAcceptance,
   submittingAcceptance,
+  onSubmitRollback,
+  submittingRollback,
 }: {
   dryRun: FinancialPromotionDryRunResponse | null;
   loading: boolean;
@@ -1556,9 +1560,13 @@ function PromotionDryRunPanel({
   rollbackDrillsLoading: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
+  onSubmitRollback: (payload: FinancialPromotionExecutionRollbackCreate) => Promise<void>;
+  submittingRollback: boolean;
 }) {
   const [acceptedBy, setAcceptedBy] = useState("Gary Knight");
   const [acceptanceRationale, setAcceptanceRationale] = useState("");
+  const [rollbackOperatorToken, setRollbackOperatorToken] = useState("");
+  const [rollbackReason, setRollbackReason] = useState("");
 
   if (error) {
     return (
@@ -1587,12 +1595,17 @@ function PromotionDryRunPanel({
   const verificationStatus = verification?.overall_status ?? null;
   const flaggedVerificationRows =
     verification?.rows.filter((row) => row.conflict_type !== "NONE" || row.row_status !== "PASS") ?? [];
+  const eligibleRollbackDrillCount = rollbackDrills.filter((drill) => drill.rollback_eligible).length;
   const canAccept =
     activeDryRun.approval.status === "ready_for_dry_run" &&
     verificationStatus === "PASS" &&
     summary.proposed_insert_count > 0 &&
     acceptedBy.trim().length >= 2 &&
     acceptanceRationale.trim().length >= 12;
+  const canSubmitRollback =
+    rollbackOperatorToken.trim().length >= 8 &&
+    rollbackReason.trim().length >= 12 &&
+    !submittingRollback;
 
   async function handleAcceptanceSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1607,6 +1620,20 @@ function PromotionDryRunPanel({
         min_abs_score: summary.min_abs_score,
       });
       setAcceptanceRationale("");
+    } catch {
+      // The mutation hook owns the operator-facing error toast.
+    }
+  }
+
+  async function handleRollbackSubmit(executionId: string) {
+    if (!canSubmitRollback) return;
+    try {
+      await onSubmitRollback({
+        execution_id: executionId,
+        operator_token: rollbackOperatorToken.trim(),
+        rollback_reason: rollbackReason.trim(),
+      });
+      setRollbackReason("");
     } catch {
       // The mutation hook owns the operator-facing error toast.
     }
@@ -1889,6 +1916,28 @@ function PromotionDryRunPanel({
                 {rollbackDrillsLoading ? "Loading" : `${rollbackDrills.length} checked`}
               </Badge>
             </div>
+            {eligibleRollbackDrillCount ? (
+              <div className="mt-3 space-y-2 border border-border/70 p-2">
+                <label className="block space-y-1 text-xs font-medium">
+                  Operator Token
+                  <Input
+                    value={rollbackOperatorToken}
+                    onChange={(event) => setRollbackOperatorToken(event.target.value)}
+                    className="h-8"
+                    type="password"
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="block space-y-1 text-xs font-medium">
+                  Rollback Reason
+                  <textarea
+                    value={rollbackReason}
+                    onChange={(event) => setRollbackReason(event.target.value)}
+                    className="min-h-16 w-full resize-y border border-input bg-background px-2 py-2 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                </label>
+              </div>
+            ) : null}
             {rollbackDrills.length ? (
               <div className="mt-3 space-y-2">
                 {rollbackDrills.slice(0, 3).map((drill) => (
@@ -1941,6 +1990,19 @@ function PromotionDryRunPanel({
                         {drill.rollback_markers.join(", ") || "—"}
                       </p>
                     </div>
+                    {drill.rollback_eligible ? (
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={!canSubmitRollback}
+                          onClick={() => void handleRollbackSubmit(drill.execution_id)}
+                        >
+                          {submittingRollback ? "Rolling back…" : "Roll back execution"}
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -2144,6 +2206,7 @@ export function HedgeFundSignalsShell() {
   });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
+  const rollbackPromotionExecution = useRollbackFinancialPromotionExecution();
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
   const watchlistLanes = watchlistCandidates.data?.lanes ?? EMPTY_LANES;
@@ -2205,6 +2268,12 @@ export function HedgeFundSignalsShell() {
   ) {
     await createPromotionDryRunAcceptance.mutateAsync(payload);
     void promotionDryRunAcceptances.refetch();
+  }
+
+  async function handlePromotionRollbackSubmit(payload: FinancialPromotionExecutionRollbackCreate) {
+    await rollbackPromotionExecution.mutateAsync(payload);
+    void promotionExecutions.refetch();
+    void promotionRollbackDrills.refetch();
   }
 
   return (
@@ -2408,6 +2477,8 @@ export function HedgeFundSignalsShell() {
             rollbackDrillsLoading={promotionRollbackDrills.isLoading}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
+            onSubmitRollback={handlePromotionRollbackSubmit}
+            submittingRollback={rollbackPromotionExecution.isPending}
           />
         </CardContent>
       </Card>

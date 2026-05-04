@@ -621,11 +621,18 @@ export interface FinancialPromotionRollbackDrill {
   rollback_preview_market_signal_ids: number[];
   rollback_preview_count: number;
   rollback_eligibility: FinancialPromotionRollbackEligibility;
+  rollback_eligible: boolean;
   already_rolled_back: boolean;
   rollback_status: FinancialPromotionExecutionRollbackStatus;
   rollback_by: string | null;
   rollback_attempted_at: string | null;
   rolled_back_at: string | null;
+}
+
+export interface FinancialPromotionExecutionRollbackCreate {
+  execution_id: string;
+  operator_token: string;
+  rollback_reason: string;
 }
 
 export interface FinancialWatchlistCandidate {

@@ -603,6 +603,7 @@ const promotionRollbackDrills = [
     rollback_preview_market_signal_ids: [1201, 1202],
     rollback_preview_count: 2,
     rollback_eligibility: "ELIGIBLE",
+    rollback_eligible: true,
     already_rolled_back: false,
     rollback_status: "active",
     rollback_by: null,
@@ -760,6 +761,10 @@ vi.mock("@/lib/hooks", () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  useRollbackFinancialPromotionExecution: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 
 describe("HedgeFundSignalsShell", () => {
@@ -807,12 +812,14 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("1201, 1202")).toBeInTheDocument();
     expect(screen.getByText("Already rolled back")).toBeInTheDocument();
     expect(screen.getByText("No")).toBeInTheDocument();
+    expect(screen.getByLabelText("Operator Token")).toBeInTheDocument();
+    expect(screen.getByLabelText("Rollback Reason")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Roll back execution" })).toBeDisabled();
     expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText("dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24").length,
     ).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /execute/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /rollback/i })).not.toBeInTheDocument();
     expect(screen.getAllByText("MarketClub Operator").length).toBeGreaterThan(0);
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();

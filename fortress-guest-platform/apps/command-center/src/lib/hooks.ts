@@ -18,6 +18,7 @@ import type {
   FinancialPromotionDryRunAcceptance,
   FinancialPromotionDryRunAcceptanceCreate,
   FinancialPromotionExecution,
+  FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionRollbackDrill,
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunResponse,
@@ -318,6 +319,25 @@ export function useFinancialPromotionRollbackDrills(params?: {
     queryFn: () =>
       api.get("/api/financial/signals/promotion-dry-run/executions/rollback-drill", params),
     staleTime: 60_000,
+  });
+}
+
+export function useRollbackFinancialPromotionExecution() {
+  const qc = useQueryClient();
+  return useMutation<FinancialPromotionExecution, ApiError, FinancialPromotionExecutionRollbackCreate>({
+    mutationFn: ({ execution_id, operator_token, rollback_reason }) =>
+      api.post(
+        `/api/financial/signals/promotion-dry-run/executions/${execution_id}/rollback`,
+        { rollback_reason },
+        { headers: { "X-MarketClub-Operator-Token": operator_token } },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["financial", "signals", "promotion-dry-run"],
+      });
+      toast.success("Promotion rollback recorded");
+    },
+    onError: (error) => toast.error(error.message || "Failed to roll back promotion"),
   });
 }
 
