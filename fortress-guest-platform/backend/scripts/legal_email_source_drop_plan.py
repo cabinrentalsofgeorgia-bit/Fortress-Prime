@@ -1,8 +1,9 @@
 """Dry-run planner for Fortress Legal email source drops.
 
 This CLI is intentionally manifest-only. It inventories operator-controlled
-``.eml`` files and writes chain-of-custody metadata so the operator can review
-case/privilege guesses before any DB, Qdrant, NAS vault, or IMAP mutation.
+``.eml`` files, inventories Outlook ``.msg`` files, and writes
+chain-of-custody metadata so the operator can review case/privilege guesses
+before any DB, Qdrant, NAS vault, or IMAP mutation.
 """
 from __future__ import annotations
 
@@ -22,9 +23,9 @@ DEFAULT_AUDIT_DIR = Path("/mnt/fortress_nas/audits")
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Create a manifest-only plan for Fortress Legal .eml source drops",
+        description="Create a manifest-only plan for Fortress Legal email source drops",
     )
-    parser.add_argument("--source-root", required=True, help="Directory containing .eml files")
+    parser.add_argument("--source-root", required=True, help="Directory containing .eml or .msg files")
     parser.add_argument("--limit", type=int, default=None, help="Optional candidate limit")
     parser.add_argument(
         "--output",
