@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HedgeFundSignalsShell } from "@/app/(dashboard)/financial/hedge-fund/_components/hedge-fund-signals-shell";
 
@@ -562,6 +562,36 @@ const promotionDryRunAcceptances = [
     ],
     created_at: "2026-05-03T20:45:00Z",
   },
+  {
+    id: "77777777-7777-7777-7777-777777777777",
+    decision_record_id: "33333333-3333-3333-3333-333333333333",
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    baseline_parameter_set: "dochia_v0_estimated",
+    accepted_by: "MarketClub Operator",
+    acceptance_rationale: "Accepted after a second reviewed dry-run preview cleared the gate.",
+    rollback_criteria: "Rollback if whipsaw pressure rises.",
+    dry_run_generated_at: "2026-05-03T20:30:00Z",
+    dry_run_candidate_signal_count: 3,
+    dry_run_proposed_insert_count: 2,
+    dry_run_bullish_count: 1,
+    dry_run_risk_count: 1,
+    dry_run_skipped_neutral_count: 1,
+    min_abs_score: 50,
+    target_table: "hedge_fund.market_signals",
+    target_columns: [
+      "ticker",
+      "signal_type",
+      "action",
+      "confidence_score",
+      "price_target",
+      "source_sender",
+      "source_subject",
+      "raw_reasoning",
+      "model_used",
+      "extracted_at",
+    ],
+    created_at: "2026-05-04T12:45:00Z",
+  },
 ];
 
 const promotionExecutions = [
@@ -643,6 +673,10 @@ const promotionDryRunVerification = {
     },
   ],
 };
+
+let promotionDryRunAcceptancesMock = promotionDryRunAcceptances;
+let promotionExecutionsMock = promotionExecutions;
+let promotionDryRunVerificationMock = promotionDryRunVerification;
 
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
@@ -726,21 +760,21 @@ vi.mock("@/lib/hooks", () => ({
     refetch: vi.fn(),
   }),
   useFinancialPromotionDryRunVerification: () => ({
-    data: promotionDryRunVerification,
+    data: promotionDryRunVerificationMock,
     isError: false,
     isFetching: false,
     isLoading: false,
     refetch: vi.fn(),
   }),
   useFinancialPromotionDryRunAcceptances: () => ({
-    data: promotionDryRunAcceptances,
+    data: promotionDryRunAcceptancesMock,
     isError: false,
     isFetching: false,
     isLoading: false,
     refetch: vi.fn(),
   }),
   useFinancialPromotionExecutions: () => ({
-    data: promotionExecutions,
+    data: promotionExecutionsMock,
     isError: false,
     isFetching: false,
     isLoading: false,
@@ -761,6 +795,10 @@ vi.mock("@/lib/hooks", () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  useExecuteFinancialPromotionDryRunAcceptance: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
   useRollbackFinancialPromotionExecution: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -768,6 +806,12 @@ vi.mock("@/lib/hooks", () => ({
 }));
 
 describe("HedgeFundSignalsShell", () => {
+  beforeEach(() => {
+    promotionDryRunAcceptancesMock = promotionDryRunAcceptances;
+    promotionExecutionsMock = promotionExecutions;
+    promotionDryRunVerificationMock = promotionDryRunVerification;
+  });
+
   it("renders latest signals, score context, and transition feed", () => {
     render(<HedgeFundSignalsShell />);
 
@@ -800,7 +844,12 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("CROSS_MODEL_DIAGNOSTIC_ONLY")).toBeInTheDocument();
     expect(screen.getByText("Dry-Run Acceptance")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Accept Dry-Run" })).toBeInTheDocument();
-    expect(screen.getByText("1 saved")).toBeInTheDocument();
+    expect(screen.getByText("2 saved")).toBeInTheDocument();
+    expect(screen.getByText("Operator Execution")).toBeInTheDocument();
+    expect(screen.getByLabelText("Execution Operator Token")).toBeInTheDocument();
+    expect(screen.getByLabelText("Execution Rationale")).toBeInTheDocument();
+    expect(screen.getByLabelText("Execution Idempotency Key")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Execute accepted dry-run" })).toBeDisabled();
     expect(screen.getByText("Execution Records")).toBeInTheDocument();
     expect(screen.getByText("1 recorded")).toBeInTheDocument();
     expect(screen.getByText("Inserted rows")).toBeInTheDocument();
@@ -819,7 +868,6 @@ describe("HedgeFundSignalsShell", () => {
     expect(
       screen.getAllByText("dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24").length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: /execute/i })).not.toBeInTheDocument();
     expect(screen.getAllByText("MarketClub Operator").length).toBeGreaterThan(0);
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
@@ -839,5 +887,27 @@ describe("HedgeFundSignalsShell", () => {
       "aria-pressed",
       "true",
     );
+  });
+
+  it("hides the execution action when the gate fails or every acceptance has executed", () => {
+    promotionDryRunVerificationMock = {
+      ...promotionDryRunVerification,
+      overall_status: "FAIL",
+      failed_rows: 1,
+      passed_rows: 1,
+    };
+
+    const { unmount } = render(<HedgeFundSignalsShell />);
+
+    expect(screen.queryByRole("button", { name: "Execute accepted dry-run" })).not.toBeInTheDocument();
+    unmount();
+
+    promotionDryRunVerificationMock = promotionDryRunVerification;
+    promotionDryRunAcceptancesMock = [promotionDryRunAcceptances[0]];
+    promotionExecutionsMock = promotionExecutions;
+
+    render(<HedgeFundSignalsShell />);
+
+    expect(screen.queryByRole("button", { name: "Execute accepted dry-run" })).not.toBeInTheDocument();
   });
 });

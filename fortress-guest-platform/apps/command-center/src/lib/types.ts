@@ -635,6 +635,13 @@ export interface FinancialPromotionExecutionRollbackCreate {
   rollback_reason: string;
 }
 
+export interface FinancialPromotionExecutionCreate {
+  dry_run_acceptance_id: string;
+  operator_token: string;
+  execution_rationale: string;
+  idempotency_key: string;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

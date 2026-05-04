@@ -18,6 +18,7 @@ import type {
   FinancialPromotionDryRunAcceptance,
   FinancialPromotionDryRunAcceptanceCreate,
   FinancialPromotionExecution,
+  FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionRollbackDrill,
   FinancialPromotionDryRunVerificationResponse,
@@ -319,6 +320,34 @@ export function useFinancialPromotionRollbackDrills(params?: {
     queryFn: () =>
       api.get("/api/financial/signals/promotion-dry-run/executions/rollback-drill", params),
     staleTime: 60_000,
+  });
+}
+
+export function useExecuteFinancialPromotionDryRunAcceptance() {
+  const qc = useQueryClient();
+  return useMutation<FinancialPromotionExecution, ApiError, FinancialPromotionExecutionCreate>({
+    mutationFn: ({
+      dry_run_acceptance_id,
+      operator_token,
+      execution_rationale,
+      idempotency_key,
+    }) =>
+      api.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        {
+          acceptance_id: dry_run_acceptance_id,
+          execution_rationale,
+          idempotency_key,
+        },
+        { headers: { "X-MarketClub-Operator-Token": operator_token } },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["financial", "signals", "promotion-dry-run"],
+      });
+      toast.success("Promotion execution recorded");
+    },
+    onError: (error) => toast.error(error.message || "Failed to execute dry-run promotion"),
   });
 }
 
