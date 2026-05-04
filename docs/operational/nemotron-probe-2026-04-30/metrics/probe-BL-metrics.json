@@ -1,0 +1,17 @@
+{
+  "probe": "BL",
+  "endpoint": "litellm",
+  "http_status": 200,
+  "wall_seconds": 48.72,
+  "content_chars": 5070,
+  "reasoning_chars": 0,
+  "reasoning_field_name": null,
+  "finish_reason": "stop",
+  "prompt_tokens": 736,
+  "completion_tokens": 1160,
+  "message_keys": [
+    "content",
+    "role",
+    "provider_specific_fields"
+  ]
+}

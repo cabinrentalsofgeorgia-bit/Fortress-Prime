@@ -1,0 +1,18 @@
+{
+  "probe": "DL",
+  "endpoint": "litellm",
+  "http_status": 200,
+  "wall_seconds": 133.77,
+  "content_chars": 4661,
+  "reasoning_chars": 8705,
+  "reasoning_field_name": "reasoning_content",
+  "finish_reason": "stop",
+  "prompt_tokens": 736,
+  "completion_tokens": 3203,
+  "message_keys": [
+    "content",
+    "role",
+    "reasoning_content",
+    "provider_specific_fields"
+  ]
+}
