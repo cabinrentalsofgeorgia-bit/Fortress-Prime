@@ -12,9 +12,11 @@ from __future__ import annotations
 import email
 import email.policy
 import hashlib
+import io
 import json
 import time
 import structlog
+from decimal import Decimal
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -121,6 +123,58 @@ def _file_hash(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _is_spreadsheet_file(mime_type: str, file_name: str) -> bool:
+    lowered_mime = (mime_type or "").lower()
+    lowered_name = (file_name or "").lower()
+    return (
+        "spreadsheet" in lowered_mime
+        or "officedocument.spreadsheetml.sheet" in lowered_mime
+        or lowered_name.endswith((".xlsx", ".xlsm"))
+    )
+
+
+def _format_spreadsheet_cell(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.isoformat(sep=" ")
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    return str(value).strip()
+
+
+def _extract_spreadsheet_text(file_bytes: bytes, file_name: str) -> str:
+    try:
+        from openpyxl import load_workbook
+    except ImportError as exc:  # pragma: no cover - dependency is present in runtime
+        logger.warning("xlsx_extraction_dependency_missing", file=file_name, error=str(exc)[:200])
+        return ""
+
+    try:
+        workbook = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+    except Exception as exc:
+        logger.warning("xlsx_extraction_failed", file=file_name, error=str(exc)[:200])
+        return ""
+
+    sections: list[str] = []
+    try:
+        for worksheet in workbook.worksheets:
+            rows: list[str] = []
+            for row in worksheet.iter_rows(values_only=True):
+                cells = [_format_spreadsheet_cell(value) for value in row]
+                while cells and not cells[-1]:
+                    cells.pop()
+                if any(cells):
+                    rows.append("\t".join(cells))
+
+            if rows:
+                sections.append(f"Sheet: {worksheet.title}\n" + "\n".join(rows))
+    finally:
+        workbook.close()
+
+    return "\n\n".join(sections)
+
+
 def _extract_text(file_bytes: bytes, mime_type: str, file_name: str) -> str:
     if "pdf" in mime_type.lower():
         try:
@@ -142,6 +196,12 @@ def _extract_text(file_bytes: bytes, mime_type: str, file_name: str) -> str:
         except Exception as exc:
             logger.warning("pypdf_extraction_failed", file=file_name, error=str(exc)[:200])
         return file_bytes.decode("utf-8", errors="ignore")
+
+    if _is_spreadsheet_file(mime_type, file_name):
+        spreadsheet_text = _extract_spreadsheet_text(file_bytes, file_name)
+        if spreadsheet_text.strip():
+            return spreadsheet_text
+        return ""
 
     if "csv" in mime_type.lower():
         return file_bytes.decode("utf-8", errors="ignore")
