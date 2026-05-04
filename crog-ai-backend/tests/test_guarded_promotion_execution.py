@@ -91,6 +91,15 @@ def _rollback_drill_sql() -> str:
     ).read_text(encoding="utf-8")
 
 
+def _operator_rollback_sql() -> str:
+    return (
+        Path(__file__).resolve().parents[1]
+        / "deploy"
+        / "sql"
+        / "marketclub_operator_rollback_action.sql"
+    ).read_text(encoding="utf-8")
+
+
 def _rollback_drill_row(**overrides: object) -> dict[str, object]:
     row: dict[str, object] = {
         "execution_id": EXECUTION_ID,
@@ -108,6 +117,7 @@ def _rollback_drill_row(**overrides: object) -> dict[str, object]:
         "rollback_preview_market_signal_ids": [1201],
         "rollback_preview_count": 1,
         "rollback_eligibility": "ELIGIBLE_PARTIAL_AUDITED_ROWS",
+        "rollback_eligible": False,
         "already_rolled_back": False,
         "rollback_status": "active",
         "rollback_by": None,
@@ -248,22 +258,89 @@ def test_sql_contract_requires_operator_roles_for_execution_and_rollback() -> No
 
 
 def test_sql_contract_scopes_rollback_to_audited_market_signal_ids_only() -> None:
-    sql = _guarded_execution_sql()
+    sql = _operator_rollback_sql()
 
     delete_block = sql.split("DELETE FROM hedge_fund.market_signals", 1)[1].split(
         "UPDATE hedge_fund.signal_promotion_executions", 1
     )[0]
-    assert "WHERE id = ANY(v_execution.inserted_market_signal_ids)" in delete_block
+    assert "USING hedge_fund.signal_promotion_execution_rows r" in delete_block
+    assert "WHERE r.execution_id = v_execution.id" in delete_block
+    assert "AND ms.id = r.market_signal_id" in delete_block
     assert "ticker" not in delete_block.lower()
     assert "candidate_bar_date" not in delete_block.lower()
     assert "candidate_parameter_set" not in delete_block.lower()
 
 
 def test_sql_contract_makes_second_rollback_safe_noop() -> None:
-    sql = _guarded_execution_sql()
+    sql = _operator_rollback_sql()
 
     assert "IF v_execution.rollback_status = 'rolled_back' THEN" in sql
+    assert "'already_rolled_back'" in sql
+    assert "INSERT INTO hedge_fund.signal_promotion_rollback_audits" in sql
     assert "RETURN v_execution;" in sql
+
+
+def test_operator_rollback_writes_audit_record_and_status() -> None:
+    sql = _operator_rollback_sql()
+
+    assert "CREATE TABLE IF NOT EXISTS hedge_fund.signal_promotion_rollback_audits" in sql
+    assert "INSERT INTO hedge_fund.signal_promotion_rollback_audits" in sql
+    assert "rollback_status = 'rolled_back'" in sql
+    assert "deleted_market_signal_ids" in sql
+    assert "completed_at" in sql
+    assert "UPDATE hedge_fund.signal_promotion_executions" in sql
+
+
+def test_operator_rollback_requires_authorized_admin_before_execution_lookup() -> None:
+    sql = _operator_rollback_sql()
+
+    operator_lookup = sql.index("FROM hedge_fund.signal_operator_memberships")
+    execution_lookup = sql.index("FROM hedge_fund.signal_promotion_executions")
+    assert operator_lookup < execution_lookup
+    assert "role = 'signal_admin'" in sql
+    assert "Active signal admin membership is required for guarded promotion rollback" in sql
+
+
+def test_operator_rollback_refuses_nonexistent_execution() -> None:
+    sql = _operator_rollback_sql()
+
+    assert "WHERE id = p_execution_id" in sql
+    assert "No guarded promotion execution found for rollback" in sql
+
+
+def test_operator_rollback_refuses_unaudited_execution_rows() -> None:
+    sql = _operator_rollback_sql()
+
+    assert "FROM hedge_fund.signal_promotion_execution_rows r" in sql
+    assert "WHERE r.execution_id = v_execution.id" in sql
+    assert "Guarded rollback requires audited market_signal rows for execution_id" in sql
+
+
+def test_operator_rollback_refuses_partial_live_audit_set() -> None:
+    sql = _operator_rollback_sql()
+
+    assert "cardinality(v_deleted_market_signal_ids) <> cardinality(v_audited_market_signal_ids)" in sql
+    assert "Guarded rollback requires all audited market_signal rows to still be live" in sql
+
+
+def test_operator_rollback_preserves_unaudited_market_signals() -> None:
+    sql = _operator_rollback_sql()
+    delete_block = sql.split("DELETE FROM hedge_fund.market_signals", 1)[1].split(
+        "RETURNING ms.id", 1
+    )[0]
+
+    assert "USING hedge_fund.signal_promotion_execution_rows r" in delete_block
+    assert "ms.id = r.market_signal_id" in delete_block
+    assert "ticker" not in delete_block.lower()
+    assert "candidate_bar_date" not in delete_block.lower()
+    assert "rollback_marker" not in delete_block.lower()
+
+
+def test_operator_rollback_drill_exposes_boolean_action_eligibility() -> None:
+    sql = _operator_rollback_sql()
+
+    assert "rollback_eligibility = 'ELIGIBLE' AS rollback_eligible" in sql
+    assert "audit_attempted_at AS rollback_attempted_at" in sql
 
 
 def test_rollback_drill_preview_only_includes_audited_market_signal_ids() -> None:

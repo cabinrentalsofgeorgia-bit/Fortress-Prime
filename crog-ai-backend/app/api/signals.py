@@ -531,6 +531,7 @@ class PromotionRollbackDrill(BaseModel):
         "NOT_ELIGIBLE_NO_AUDITED_ROWS",
         "NOT_ELIGIBLE_NO_LIVE_AUDITED_ROWS",
     ]
+    rollback_eligible: bool
     already_rolled_back: bool
     rollback_status: Literal["active", "rolled_back"]
     rollback_by: str | None

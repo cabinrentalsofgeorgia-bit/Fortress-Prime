@@ -686,6 +686,7 @@ class FakeSignalStore:
             "rollback_preview_market_signal_ids": [] if already_rolled_back else [1201, 1202],
             "rollback_preview_count": 0 if already_rolled_back else 2,
             "rollback_eligibility": "ALREADY_ROLLED_BACK" if already_rolled_back else "ELIGIBLE",
+            "rollback_eligible": not already_rolled_back,
             "already_rolled_back": already_rolled_back,
             "rollback_status": rollback_status,
             "rollback_by": rollback_by,
@@ -742,6 +743,8 @@ class FakeSignalStore:
     ) -> dict[str, Any]:
         if operator_token_sha256 != OPERATOR_TOKEN_SHA256:
             raise ValueError("Active signal admin membership is required")
+        if UUID(execution_id) != EXECUTION_ID:
+            raise ValueError("No guarded promotion execution found for rollback")
         return self._promotion_execution(
             rollback_status="rolled_back",
             rollback_by="MarketClub Operator",
@@ -1214,10 +1217,12 @@ def test_promotion_rollback_drill_endpoint_returns_read_only_scope() -> None:
     assert payload[0]["inserted_market_signal_ids"] == [1201, 1202]
     assert payload[0]["rollback_markers"][0].startswith("dochia-dry-run:")
     assert payload[0]["rollback_eligibility"] == "ELIGIBLE"
+    assert payload[0]["rollback_eligible"] is True
     assert payload[0]["rollback_preview_count"] == 2
     assert payload[0]["already_rolled_back"] is False
     assert payload[0]["rollback_attempted_at"] is None
     assert payload[1]["rollback_eligibility"] == "ALREADY_ROLLED_BACK"
+    assert payload[1]["rollback_eligible"] is False
     assert payload[1]["already_rolled_back"] is True
     assert payload[1]["rolled_back_at"] == "2026-05-03T21:30:00Z"
 
@@ -1319,6 +1324,72 @@ def test_rollback_promotion_execution_endpoint_returns_rolled_back_record() -> N
     assert payload["rollback_operator_membership_id"] == str(OPERATOR_MEMBERSHIP_ID)
     assert payload["rollback_by"] == "MarketClub Operator"
     assert payload["rollback_reason"] == "Operator rollback after post-promotion review."
+
+
+def test_rollback_promotion_execution_endpoint_is_repeat_safe() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    url = f"/api/financial/signals/promotion-dry-run/executions/{EXECUTION_ID}/rollback"
+    body = {"rollback_reason": "Operator repeated rollback after post-promotion review."}
+
+    first = client.post(url, headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN}, json=body)
+    second = client.post(url, headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN}, json=body)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.json()["id"] == str(EXECUTION_ID)
+    assert second.json()["rollback_status"] == "rolled_back"
+
+
+def test_rollback_promotion_execution_endpoint_rejects_unauthorized_operator() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/financial/signals/promotion-dry-run/executions/{EXECUTION_ID}/rollback",
+        headers={"X-MarketClub-Operator-Token": "wrong-operator-token"},
+        json={"rollback_reason": "Operator rollback after post-promotion review."},
+    )
+
+    assert response.status_code == 400
+    assert "Active signal admin membership is required" in response.json()["detail"]
+
+
+def test_rollback_promotion_execution_endpoint_rejects_nonexistent_execution() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions/"
+        "77777777-7777-7777-7777-777777777777/rollback",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={"rollback_reason": "Operator rollback after post-promotion review."},
+    )
+
+    assert response.status_code == 400
+    assert "No guarded promotion execution found for rollback" in response.json()["detail"]
+
+
+def test_rollback_promotion_execution_endpoint_refuses_ticker_date_payload() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/financial/signals/promotion-dry-run/executions/{EXECUTION_ID}/rollback",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "rollback_reason": "Operator rollback after post-promotion review.",
+            "ticker": "AA",
+            "candidate_bar_date": "2026-04-24",
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_symbol_chart_endpoint_returns_overlay_data() -> None:

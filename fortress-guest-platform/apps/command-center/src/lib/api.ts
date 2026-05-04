@@ -127,8 +127,12 @@ export const api = {
   get: <T>(path: string, params?: Record<string, string | number | boolean | undefined>) =>
     request<T>(path, { method: "GET", params }),
 
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
+  post: <T>(path: string, body?: unknown, options?: Pick<RequestOptions, "headers">) =>
+    request<T>(path, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+      headers: options?.headers,
+    }),
 
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
