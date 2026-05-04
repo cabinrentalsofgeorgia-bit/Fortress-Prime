@@ -52,6 +52,7 @@ import {
   useFinancialPromotionDryRunVerification,
   useFinancialPromotionExecutions,
   useFinancialPromotionLifecycleTimeline,
+  useFinancialPromotionPostExecutionAlerts,
   useFinancialPromotionPostExecutionMonitoring,
   useFinancialPromotionReconciliation,
   useFinancialPromotionRollbackDrills,
@@ -78,6 +79,8 @@ import type {
   FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionLifecycleEvent,
+  FinancialPromotionPostExecutionAlert,
+  FinancialPromotionPostExecutionAlertsResponse,
   FinancialPromotionPostExecutionMonitoringResponse,
   FinancialPromotionPostExecutionMonitoringRow,
   FinancialPromotionReconciliation,
@@ -374,6 +377,20 @@ function promotionMonitoringStatusClasses(status: string): string {
 
 function promotionMonitoringLabel(value: string): string {
   return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function promotionAlertSeverityClasses(severity: FinancialPromotionPostExecutionAlert["severity"]): string {
+  if (severity === "HIGH") return "border-red-500/40 bg-red-500/10 text-red-600";
+  if (severity === "MEDIUM") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-border bg-muted/30 text-muted-foreground";
+}
+
+function promotionAlertTypeLabel(type: FinancialPromotionPostExecutionAlert["alert_type"]): string {
+  return type
     .toLowerCase()
     .split("_")
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
@@ -1973,6 +1990,161 @@ function PostExecutionMonitoringPanel({
   );
 }
 
+function PostExecutionAlertsPanel({
+  alerts,
+  loading,
+  error,
+}: {
+  alerts: FinancialPromotionPostExecutionAlertsResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  const summary = alerts?.summary ?? null;
+  const rows = alerts?.alerts.slice(0, 10) ?? [];
+
+  return (
+    <div className="border border-border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Post-Execution Alerts</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-600">
+            No automated rollback
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "font-medium",
+              summary && summary.high_alerts > 0
+                ? "border-red-500/40 bg-red-500/10 text-red-600"
+                : summary && summary.total_alerts > 0
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                  : summary
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600"
+                    : "border-border bg-muted/30 text-muted-foreground",
+            )}
+          >
+            {loading && !alerts ? "Checking" : summary ? `${summary.total_alerts} alerts` : "No alerts"}
+          </Badge>
+        </div>
+      </div>
+
+      {error ? (
+        <p className="mt-3 text-xs text-destructive">Post-execution alerts unavailable.</p>
+      ) : loading && !alerts ? (
+        <p className="mt-3 text-xs text-muted-foreground">Loading post-execution alerts…</p>
+      ) : summary ? (
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-2 sm:grid-cols-5">
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">High</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.high_alerts}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Decay</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.signal_decay_alerts}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Whipsaw</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.whipsaw_after_promotion_alerts}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Drift</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.drift_alerts}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Stale</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.stale_execution_monitoring_alerts}</p>
+            </div>
+          </div>
+
+          {rows.length ? (
+            <div className="overflow-x-auto border border-border/70">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Alert</TableHead>
+                    <TableHead>Ticker</TableHead>
+                    <TableHead>Signal ID</TableHead>
+                    <TableHead>Metric</TableHead>
+                    <TableHead>Rollback Review</TableHead>
+                    <TableHead>Operator Note</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((alert) => (
+                    <TableRow key={alert.alert_id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px]", promotionAlertSeverityClasses(alert.severity))}
+                          >
+                            {alert.severity}
+                          </Badge>
+                          <p className="font-medium">{promotionAlertTypeLabel(alert.alert_type)}</p>
+                          <p className="text-[11px] text-muted-foreground">{formatDate(alert.alert_date)}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <span className="font-mono font-semibold">{alert.ticker}</span>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {alert.action} {formatDate(alert.candidate_bar_date)}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs">{alert.market_signal_id}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-xs">
+                          <p className="font-mono">{alert.metric_value ?? "—"}</p>
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px]", promotionMonitoringStatusClasses(alert.monitoring_status))}
+                          >
+                            {promotionMonitoringLabel(alert.drift_status)}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px]",
+                            alert.rollback_recommendation === "REVIEW_ROLLBACK_WARNING"
+                              ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                              : "border-border bg-muted/30 text-muted-foreground",
+                          )}
+                        >
+                          {promotionMonitoringLabel(alert.rollback_recommendation)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-72 space-y-1 text-xs">
+                          <p className="line-clamp-2">{alert.explanation}</p>
+                          <p className="line-clamp-2 text-muted-foreground">{alert.operator_guidance}</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No active post-execution alerts.</p>
+          )}
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">No post-execution alert rows yet.</p>
+      )}
+    </div>
+  );
+}
+
 function PromotionDryRunPanel({
   dryRun,
   loading,
@@ -1995,6 +2167,9 @@ function PromotionDryRunPanel({
   postExecutionMonitoring,
   postExecutionMonitoringLoading,
   postExecutionMonitoringError,
+  postExecutionAlerts,
+  postExecutionAlertsLoading,
+  postExecutionAlertsError,
   onSubmitAcceptance,
   submittingAcceptance,
   onSubmitExecution,
@@ -2023,6 +2198,9 @@ function PromotionDryRunPanel({
   postExecutionMonitoring: FinancialPromotionPostExecutionMonitoringResponse | null;
   postExecutionMonitoringLoading: boolean;
   postExecutionMonitoringError: boolean;
+  postExecutionAlerts: FinancialPromotionPostExecutionAlertsResponse | null;
+  postExecutionAlertsLoading: boolean;
+  postExecutionAlertsError: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
   onSubmitExecution: (payload: FinancialPromotionExecutionCreate) => Promise<void>;
@@ -2205,6 +2383,12 @@ function PromotionDryRunPanel({
         monitoring={postExecutionMonitoring}
         loading={postExecutionMonitoringLoading}
         error={postExecutionMonitoringError}
+      />
+
+      <PostExecutionAlertsPanel
+        alerts={postExecutionAlerts}
+        loading={postExecutionAlertsLoading}
+        error={postExecutionAlertsError}
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -2795,6 +2979,9 @@ export function HedgeFundSignalsShell() {
   const promotionPostExecutionMonitoring = useFinancialPromotionPostExecutionMonitoring(promotionAuditId, {
     limit: 100,
   });
+  const promotionPostExecutionAlerts = useFinancialPromotionPostExecutionAlerts(promotionAuditId, {
+    limit: 100,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
   const executePromotionDryRunAcceptance = useExecuteFinancialPromotionDryRunAcceptance();
@@ -2851,7 +3038,8 @@ export function HedgeFundSignalsShell() {
     promotionRollbackDrills.isFetching ||
     promotionLifecycleTimeline.isFetching ||
     promotionReconciliation.isFetching ||
-    promotionPostExecutionMonitoring.isFetching;
+    promotionPostExecutionMonitoring.isFetching ||
+    promotionPostExecutionAlerts.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
@@ -2866,6 +3054,7 @@ export function HedgeFundSignalsShell() {
     void promotionLifecycleTimeline.refetch();
     void promotionReconciliation.refetch();
     void promotionPostExecutionMonitoring.refetch();
+    void promotionPostExecutionAlerts.refetch();
   }
 
   async function handlePromotionExecutionSubmit(payload: FinancialPromotionExecutionCreate) {
@@ -2875,6 +3064,7 @@ export function HedgeFundSignalsShell() {
     void promotionLifecycleTimeline.refetch();
     void promotionReconciliation.refetch();
     void promotionPostExecutionMonitoring.refetch();
+    void promotionPostExecutionAlerts.refetch();
   }
 
   async function handlePromotionRollbackSubmit(payload: FinancialPromotionExecutionRollbackCreate) {
@@ -2884,6 +3074,7 @@ export function HedgeFundSignalsShell() {
     void promotionLifecycleTimeline.refetch();
     void promotionReconciliation.refetch();
     void promotionPostExecutionMonitoring.refetch();
+    void promotionPostExecutionAlerts.refetch();
   }
 
   return (
@@ -2944,6 +3135,7 @@ export function HedgeFundSignalsShell() {
               void promotionLifecycleTimeline.refetch();
               void promotionReconciliation.refetch();
               void promotionPostExecutionMonitoring.refetch();
+              void promotionPostExecutionAlerts.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -3097,6 +3289,9 @@ export function HedgeFundSignalsShell() {
             postExecutionMonitoring={promotionPostExecutionMonitoring.data ?? null}
             postExecutionMonitoringLoading={promotionPostExecutionMonitoring.isLoading}
             postExecutionMonitoringError={promotionPostExecutionMonitoring.isError}
+            postExecutionAlerts={promotionPostExecutionAlerts.data ?? null}
+            postExecutionAlertsLoading={promotionPostExecutionAlerts.isLoading}
+            postExecutionAlertsError={promotionPostExecutionAlerts.isError}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
             onSubmitExecution={handlePromotionExecutionSubmit}

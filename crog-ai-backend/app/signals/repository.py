@@ -178,6 +178,13 @@ class SignalDataStore(Protocol):
         limit: int = 100,
     ) -> dict[str, Any]: ...
 
+    def promotion_post_execution_alerts(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 100,
+    ) -> dict[str, Any]: ...
+
     def execute_guarded_promotion(
         self,
         *,
@@ -2283,6 +2290,101 @@ def fetch_promotion_post_execution_monitoring(
     }
 
 
+PROMOTION_POST_EXECUTION_ALERT_FIELDS = [
+    "alert_id",
+    "execution_id",
+    "acceptance_id",
+    "decision_record_id",
+    "candidate_id",
+    "market_signal_id",
+    "ticker",
+    "action",
+    "candidate_bar_date",
+    "alert_type",
+    "severity",
+    "alert_status",
+    "alert_date",
+    "metric_value",
+    "rollback_recommendation",
+    "monitoring_status",
+    "drift_status",
+    "evidence",
+    "explanation",
+    "operator_guidance",
+]
+
+
+def fetch_promotion_post_execution_alerts(
+    conn: psycopg.Connection,
+    *,
+    promotion_id: str,
+    limit: int = 100,
+) -> dict[str, Any]:
+    sql = """
+        SELECT
+            alert_id,
+            execution_id,
+            acceptance_id,
+            decision_record_id,
+            candidate_id,
+            market_signal_id,
+            ticker,
+            action,
+            candidate_bar_date,
+            alert_type,
+            severity,
+            alert_status,
+            alert_date,
+            metric_value,
+            rollback_recommendation,
+            monitoring_status,
+            drift_status,
+            evidence,
+            explanation,
+            operator_guidance
+        FROM hedge_fund.v_signal_promotion_post_execution_alerts
+        WHERE candidate_id = %(promotion_id)s
+           OR acceptance_id::TEXT = %(promotion_id)s
+           OR execution_id::TEXT = %(promotion_id)s
+        ORDER BY
+            CASE severity
+                WHEN 'HIGH' THEN 0
+                WHEN 'MEDIUM' THEN 1
+                ELSE 2
+            END,
+            alert_date DESC NULLS LAST,
+            ticker,
+            alert_type
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, {"promotion_id": promotion_id, "limit": limit})
+        rows = [
+            {key: row[key] for key in PROMOTION_POST_EXECUTION_ALERT_FIELDS}
+            for row in cur.fetchall()
+        ]
+    alert_counts = Counter(row["alert_type"] for row in rows)
+    severity_counts = Counter(row["severity"] for row in rows)
+    return {
+        "generated_at": dt.datetime.now(dt.UTC),
+        "promotion_id": promotion_id,
+        "summary": {
+            "total_alerts": len(rows),
+            "high_alerts": severity_counts["HIGH"],
+            "medium_alerts": severity_counts["MEDIUM"],
+            "low_alerts": severity_counts["LOW"],
+            "signal_decay_alerts": alert_counts["SIGNAL_DECAY"],
+            "whipsaw_after_promotion_alerts": alert_counts["WHIPSAW_AFTER_PROMOTION"],
+            "drift_alerts": alert_counts["DRIFT"],
+            "stale_execution_monitoring_alerts": alert_counts[
+                "STALE_EXECUTION_MONITORING"
+            ],
+            "rollback_recommendation_alerts": alert_counts["ROLLBACK_RECOMMENDATION"],
+        },
+        "alerts": rows,
+    }
+
+
 def execute_guarded_promotion(
     conn: psycopg.Connection,
     *,
@@ -2785,6 +2887,20 @@ class PostgresSignalDataStore:
         with connect() as conn:
             conn.execute("SET default_transaction_read_only = on")
             return fetch_promotion_post_execution_monitoring(
+                conn,
+                promotion_id=promotion_id,
+                limit=limit,
+            )
+
+    def promotion_post_execution_alerts(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_post_execution_alerts(
                 conn,
                 promotion_id=promotion_id,
                 limit=limit,

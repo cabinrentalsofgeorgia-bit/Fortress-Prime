@@ -1,5 +1,6 @@
 import datetime as dt
 import hashlib
+from collections import Counter
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -938,6 +939,156 @@ class FakeSignalStore:
             "rows": rows,
         }
 
+    def promotion_post_execution_alerts(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        alerts = [
+            {
+                "alert_id": "signal-decay-aa",
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "market_signal_id": 1201,
+                "ticker": "AA",
+                "action": "BUY",
+                "candidate_bar_date": dt.date(2026, 4, 24),
+                "alert_type": "SIGNAL_DECAY",
+                "severity": "HIGH",
+                "alert_status": "ACTIVE",
+                "alert_date": dt.date(2026, 4, 30),
+                "metric_value": Decimal("20"),
+                "rollback_recommendation": "REVIEW_ROLLBACK_WARNING",
+                "monitoring_status": "WARNING",
+                "drift_status": "PRICE_AND_SCORE_DRIFT",
+                "evidence": {"signal_decay_score": 20, "score_delta": -60},
+                "explanation": "Candidate score or daily triangle decayed after promotion.",
+                "operator_guidance": (
+                    "Warning only: review the audited execution; no automated rollback is performed."
+                ),
+            },
+            {
+                "alert_id": "whipsaw-aa",
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "market_signal_id": 1201,
+                "ticker": "AA",
+                "action": "BUY",
+                "candidate_bar_date": dt.date(2026, 4, 24),
+                "alert_type": "WHIPSAW_AFTER_PROMOTION",
+                "severity": "HIGH",
+                "alert_status": "ACTIVE",
+                "alert_date": dt.date(2026, 4, 30),
+                "metric_value": Decimal("-50"),
+                "rollback_recommendation": "REVIEW_ROLLBACK_WARNING",
+                "monitoring_status": "WARNING",
+                "drift_status": "PRICE_AND_SCORE_DRIFT",
+                "evidence": {"whipsaw_transition_type": "breakout_bearish"},
+                "explanation": "Candidate produced an opposite transition after promotion.",
+                "operator_guidance": (
+                    "Warning only: review whipsaw context; no automatic trade or signal change is made."
+                ),
+            },
+            {
+                "alert_id": "drift-aa",
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "market_signal_id": 1201,
+                "ticker": "AA",
+                "action": "BUY",
+                "candidate_bar_date": dt.date(2026, 4, 24),
+                "alert_type": "DRIFT",
+                "severity": "HIGH",
+                "alert_status": "ACTIVE",
+                "alert_date": dt.date(2026, 5, 1),
+                "metric_value": Decimal("-0.043478"),
+                "rollback_recommendation": "REVIEW_ROLLBACK_WARNING",
+                "monitoring_status": "WARNING",
+                "drift_status": "PRICE_AND_SCORE_DRIFT",
+                "evidence": {"outcome_5d_directional_return": "-0.043478"},
+                "explanation": "Promoted signal drifted away from candidate expectation.",
+                "operator_guidance": (
+                    "Warning only: review candidate drift; no automatic trade or signal change is made."
+                ),
+            },
+            {
+                "alert_id": "stale-agio",
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "market_signal_id": 1202,
+                "ticker": "AGIO",
+                "action": "BUY",
+                "candidate_bar_date": dt.date(2026, 4, 24),
+                "alert_type": "STALE_EXECUTION_MONITORING",
+                "severity": "MEDIUM",
+                "alert_status": "ACTIVE",
+                "alert_date": dt.date(2026, 5, 3),
+                "metric_value": Decimal("2.5"),
+                "rollback_recommendation": "NO_WARNING",
+                "monitoring_status": "PENDING",
+                "drift_status": "PENDING",
+                "evidence": {"outcome_1d_bar_date": None},
+                "explanation": "Execution monitoring is stale.",
+                "operator_guidance": (
+                    "Warning only: verify data freshness; no automatic trade, signal, "
+                    "or rollback action is made."
+                ),
+            },
+            {
+                "alert_id": "rollback-review-aa",
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "market_signal_id": 1201,
+                "ticker": "AA",
+                "action": "BUY",
+                "candidate_bar_date": dt.date(2026, 4, 24),
+                "alert_type": "ROLLBACK_RECOMMENDATION",
+                "severity": "HIGH",
+                "alert_status": "ACTIVE",
+                "alert_date": dt.date(2026, 4, 30),
+                "metric_value": Decimal("-0.043478"),
+                "rollback_recommendation": "REVIEW_ROLLBACK_WARNING",
+                "monitoring_status": "WARNING",
+                "drift_status": "PRICE_AND_SCORE_DRIFT",
+                "evidence": {"rollback_recommendation": "REVIEW_ROLLBACK_WARNING"},
+                "explanation": "Monitoring recommends operator rollback review.",
+                "operator_guidance": (
+                    "Warning only: this alert never calls rollback_guarded_signal_promotion."
+                ),
+            },
+        ][:limit]
+        alert_counts = Counter(alert["alert_type"] for alert in alerts)
+        severity_counts = Counter(alert["severity"] for alert in alerts)
+        return {
+            "generated_at": dt.datetime(2026, 5, 4, 13, 30, tzinfo=dt.UTC),
+            "promotion_id": promotion_id,
+            "summary": {
+                "total_alerts": len(alerts),
+                "high_alerts": severity_counts["HIGH"],
+                "medium_alerts": severity_counts["MEDIUM"],
+                "low_alerts": severity_counts["LOW"],
+                "signal_decay_alerts": alert_counts["SIGNAL_DECAY"],
+                "whipsaw_after_promotion_alerts": alert_counts["WHIPSAW_AFTER_PROMOTION"],
+                "drift_alerts": alert_counts["DRIFT"],
+                "stale_execution_monitoring_alerts": alert_counts[
+                    "STALE_EXECUTION_MONITORING"
+                ],
+                "rollback_recommendation_alerts": alert_counts["ROLLBACK_RECOMMENDATION"],
+            },
+            "alerts": alerts,
+        }
+
     def execute_guarded_promotion(
         self,
         *,
@@ -1558,6 +1709,42 @@ def test_promotion_post_execution_monitoring_endpoint_returns_warning_only_track
     assert warning["drift_status"] == "PRICE_AND_SCORE_DRIFT"
     assert warning["rollback_recommendation"] == "REVIEW_ROLLBACK_WARNING"
     assert "warning" in warning["explanation"].lower()
+
+
+def test_promotion_post_execution_alerts_endpoint_returns_warning_only_alerts() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        f"/api/financial/signals/promotion/{EXECUTION_ID}/alerts?limit=10"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["promotion_id"] == str(EXECUTION_ID)
+    assert payload["summary"]["total_alerts"] == 5
+    assert payload["summary"]["high_alerts"] == 4
+    assert payload["summary"]["medium_alerts"] == 1
+    assert payload["summary"]["signal_decay_alerts"] == 1
+    assert payload["summary"]["whipsaw_after_promotion_alerts"] == 1
+    assert payload["summary"]["drift_alerts"] == 1
+    assert payload["summary"]["stale_execution_monitoring_alerts"] == 1
+    assert payload["summary"]["rollback_recommendation_alerts"] == 1
+    alert_types = {alert["alert_type"] for alert in payload["alerts"]}
+    assert alert_types == {
+        "SIGNAL_DECAY",
+        "WHIPSAW_AFTER_PROMOTION",
+        "DRIFT",
+        "STALE_EXECUTION_MONITORING",
+        "ROLLBACK_RECOMMENDATION",
+    }
+    assert all(alert["alert_status"] == "ACTIVE" for alert in payload["alerts"])
+    assert all("Warning only" in alert["operator_guidance"] for alert in payload["alerts"])
+    guidance = " ".join(alert["operator_guidance"] for alert in payload["alerts"])
+    assert "no automated rollback is performed" in guidance
+    assert "no automatic trade or signal change is made" in guidance
+    assert "no automatic trade, signal, or rollback action is made" in guidance
 
 
 def test_execute_guarded_promotion_endpoint_returns_execution_record() -> None:

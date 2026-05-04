@@ -862,6 +862,134 @@ const promotionPostExecutionMonitoring = {
   ],
 };
 
+const promotionPostExecutionAlerts = {
+  generated_at: "2026-05-04T13:30:00Z",
+  promotion_id: "55555555-5555-5555-5555-555555555555",
+  summary: {
+    total_alerts: 5,
+    high_alerts: 4,
+    medium_alerts: 1,
+    low_alerts: 0,
+    signal_decay_alerts: 1,
+    whipsaw_after_promotion_alerts: 1,
+    drift_alerts: 1,
+    stale_execution_monitoring_alerts: 1,
+    rollback_recommendation_alerts: 1,
+  },
+  alerts: [
+    {
+      alert_id: "signal-decay-aa",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      market_signal_id: 1201,
+      ticker: "AA",
+      action: "BUY",
+      candidate_bar_date: "2026-04-24",
+      alert_type: "SIGNAL_DECAY",
+      severity: "HIGH",
+      alert_status: "ACTIVE",
+      alert_date: "2026-04-30",
+      metric_value: "20",
+      rollback_recommendation: "REVIEW_ROLLBACK_WARNING",
+      monitoring_status: "WARNING",
+      drift_status: "PRICE_AND_SCORE_DRIFT",
+      evidence: { signal_decay_score: 20, score_delta: -60 },
+      explanation: "Candidate score or daily triangle decayed after promotion.",
+      operator_guidance: "Warning only: review the audited execution; no automated rollback is performed.",
+    },
+    {
+      alert_id: "whipsaw-aa",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      market_signal_id: 1201,
+      ticker: "AA",
+      action: "BUY",
+      candidate_bar_date: "2026-04-24",
+      alert_type: "WHIPSAW_AFTER_PROMOTION",
+      severity: "HIGH",
+      alert_status: "ACTIVE",
+      alert_date: "2026-04-30",
+      metric_value: "-50",
+      rollback_recommendation: "REVIEW_ROLLBACK_WARNING",
+      monitoring_status: "WARNING",
+      drift_status: "PRICE_AND_SCORE_DRIFT",
+      evidence: { whipsaw_transition_type: "breakout_bearish" },
+      explanation: "Candidate produced an opposite transition after promotion.",
+      operator_guidance: "Warning only: review whipsaw context; no automatic trade or signal change is made.",
+    },
+    {
+      alert_id: "drift-aa",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      market_signal_id: 1201,
+      ticker: "AA",
+      action: "BUY",
+      candidate_bar_date: "2026-04-24",
+      alert_type: "DRIFT",
+      severity: "HIGH",
+      alert_status: "ACTIVE",
+      alert_date: "2026-05-01",
+      metric_value: "-0.043478",
+      rollback_recommendation: "REVIEW_ROLLBACK_WARNING",
+      monitoring_status: "WARNING",
+      drift_status: "PRICE_AND_SCORE_DRIFT",
+      evidence: { outcome_5d_directional_return: "-0.043478" },
+      explanation: "Promoted signal drifted away from candidate expectation.",
+      operator_guidance: "Warning only: review candidate drift; no automatic trade or signal change is made.",
+    },
+    {
+      alert_id: "stale-agio",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      market_signal_id: 1202,
+      ticker: "AGIO",
+      action: "BUY",
+      candidate_bar_date: "2026-04-24",
+      alert_type: "STALE_EXECUTION_MONITORING",
+      severity: "MEDIUM",
+      alert_status: "ACTIVE",
+      alert_date: "2026-05-03",
+      metric_value: "2.5",
+      rollback_recommendation: "NO_WARNING",
+      monitoring_status: "PENDING",
+      drift_status: "PENDING",
+      evidence: { outcome_1d_bar_date: null },
+      explanation: "Execution monitoring is stale.",
+      operator_guidance: "Warning only: verify data freshness; no automatic trade, signal, or rollback action is made.",
+    },
+    {
+      alert_id: "rollback-review-aa",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      market_signal_id: 1201,
+      ticker: "AA",
+      action: "BUY",
+      candidate_bar_date: "2026-04-24",
+      alert_type: "ROLLBACK_RECOMMENDATION",
+      severity: "HIGH",
+      alert_status: "ACTIVE",
+      alert_date: "2026-04-30",
+      metric_value: "-0.043478",
+      rollback_recommendation: "REVIEW_ROLLBACK_WARNING",
+      monitoring_status: "WARNING",
+      drift_status: "PRICE_AND_SCORE_DRIFT",
+      evidence: { rollback_recommendation: "REVIEW_ROLLBACK_WARNING" },
+      explanation: "Monitoring recommends operator rollback review.",
+      operator_guidance: "Warning only: this alert never calls rollback_guarded_signal_promotion.",
+    },
+  ],
+};
+
 let promotionDryRunAcceptancesMock = promotionDryRunAcceptances;
 let promotionExecutionsMock = promotionExecutions;
 let promotionDryRunVerificationMock = promotionDryRunVerification;
@@ -996,6 +1124,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionPostExecutionAlerts: () => ({
+    data: promotionPostExecutionAlerts,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -1061,11 +1196,21 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Post-Execution Monitoring")).toBeInTheDocument();
     expect(screen.getByText("1 warnings")).toBeInTheDocument();
     expect(screen.getByText("Rollback review")).toBeInTheDocument();
-    expect(screen.getByText("Price And Score Drift")).toBeInTheDocument();
-    expect(screen.getByText("Review Rollback Warning")).toBeInTheDocument();
+    expect(screen.getAllByText("Price And Score Drift").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Review Rollback Warning").length).toBeGreaterThan(0);
     expect(screen.getByText("-4.3%")).toBeInTheDocument();
     expect(screen.getAllByText("Whipsaw").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Decay").length).toBeGreaterThan(0);
+    expect(screen.getByText("Post-Execution Alerts")).toBeInTheDocument();
+    expect(screen.getByText("No automated rollback")).toBeInTheDocument();
+    expect(screen.getByText("5 alerts")).toBeInTheDocument();
+    expect(screen.getByText("Signal Decay")).toBeInTheDocument();
+    expect(screen.getByText("Whipsaw After Promotion")).toBeInTheDocument();
+    expect(screen.getAllByText("Drift").length).toBeGreaterThan(0);
+    expect(screen.getByText("Stale Execution Monitoring")).toBeInTheDocument();
+    expect(screen.getByText("Rollback Recommendation")).toBeInTheDocument();
+    expect(screen.getAllByText(/no automatic trade or signal change is made/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/no automatic trade, signal, or rollback action is made/i)).toBeInTheDocument();
     expect(screen.getByText("Dry-Run Verification Gate")).toBeInTheDocument();
     expect(screen.getByText("Eligible for operator dry-run acceptance review")).toBeInTheDocument();
     expect(screen.getByText("CROSS_MODEL_DIAGNOSTIC_ONLY")).toBeInTheDocument();
