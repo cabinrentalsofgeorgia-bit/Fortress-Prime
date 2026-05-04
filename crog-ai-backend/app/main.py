@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.meta import router as meta_router
 from app.api.signals import router as signals_router
 from app.database import PROJECT_ROOT
 
@@ -35,11 +36,8 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
+    app.include_router(meta_router)
     app.include_router(signals_router)
-
-    @app.get("/healthz")
-    def healthz() -> dict[str, str]:
-        return {"status": "ok"}
 
     return app
 
