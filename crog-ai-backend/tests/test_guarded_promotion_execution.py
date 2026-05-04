@@ -219,6 +219,30 @@ def test_sql_contract_enforces_full_guarded_execution_flow() -> None:
     assert "rollback_marker" in sql
 
 
+def test_sql_contract_blocks_execution_without_acceptance_or_human_decision() -> None:
+    sql = _guarded_execution_sql()
+    acceptance_lookup = sql.index("FROM hedge_fund.signal_promotion_dry_run_acceptances a")
+    decision_join = sql.index("JOIN hedge_fund.signal_shadow_review_decisions d")
+    market_insert = sql.index("INSERT INTO hedge_fund.market_signals")
+
+    assert decision_join > acceptance_lookup
+    assert "WHERE a.id = p_acceptance_id" in sql
+    assert "FOR UPDATE OF a" in sql
+    assert "No dry-run acceptance exists for guarded promotion execution" in sql
+    assert "Human promote_to_market_signals decision is required before execution" in sql
+    assert acceptance_lookup < market_insert
+
+
+def test_sql_contract_blocks_execution_when_verification_fails_or_inconclusive() -> None:
+    sql = _guarded_execution_sql()
+    verification_lookup = sql.index("FROM hedge_fund.verify_promotion_dry_run")
+    market_insert = sql.index("INSERT INTO hedge_fund.market_signals")
+
+    assert "v_verification_status IS DISTINCT FROM 'PASS'" in sql
+    assert "Promotion verification gate blocked execution" in sql
+    assert verification_lookup < market_insert
+
+
 def test_sql_contract_keeps_signal_and_audit_writes_transactional() -> None:
     sql = _guarded_execution_sql()
 
@@ -243,6 +267,28 @@ def test_sql_contract_has_idempotency_and_rollback_support() -> None:
     assert "DELETE FROM hedge_fund.market_signals" in sql
     assert "rollback_status = 'rolled_back'" in sql
     assert "GRANT EXECUTE ON FUNCTION" in sql
+
+
+def test_sql_contract_returns_same_execution_for_same_idempotency_key_before_double_write_check() -> None:
+    sql = _guarded_execution_sql()
+    idempotency_lookup = sql.index("WHERE idempotency_key = v_effective_idempotency_key")
+    same_key_return = sql.index("RETURN v_existing", idempotency_lookup)
+    acceptance_execution_lookup = sql.index("WHERE acceptance_id = p_acceptance_id")
+
+    assert idempotency_lookup < same_key_return < acceptance_execution_lookup
+    assert "Idempotency key is already attached to another promotion execution" in sql
+    assert "Dry-run acceptance has already been executed" in sql
+
+
+def test_sql_contract_records_inserted_market_signal_ids_for_rollback_after_execution() -> None:
+    sql = _guarded_execution_sql()
+
+    assert "v_inserted_market_signal_ids :=\n            array_append" in sql
+    assert "inserted_market_signal_ids" in sql
+    assert "signal_promotion_execution_rows" in sql
+    assert "market_signal_id" in sql
+    assert "row_payload" in sql
+    assert "rollback_markers" in sql
 
 
 def test_sql_contract_requires_operator_roles_for_execution_and_rollback() -> None:

@@ -41,6 +41,7 @@ import {
 import {
   useCreateFinancialShadowDecisionRecord,
   useCreateFinancialPromotionDryRunAcceptance,
+  useExecuteFinancialPromotionDryRunAcceptance,
   useFinancialLatestSignals,
   useFinancialDailyCalibration,
   useFinancialPromotionGate,
@@ -69,6 +70,7 @@ import type {
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunVerificationStatus,
   FinancialPromotionExecution,
+  FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionRollbackDrill,
   FinancialPromotionRollbackEligibility,
@@ -1543,6 +1545,8 @@ function PromotionDryRunPanel({
   rollbackDrillsLoading,
   onSubmitAcceptance,
   submittingAcceptance,
+  onSubmitExecution,
+  submittingExecution,
   onSubmitRollback,
   submittingRollback,
 }: {
@@ -1560,11 +1564,16 @@ function PromotionDryRunPanel({
   rollbackDrillsLoading: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
+  onSubmitExecution: (payload: FinancialPromotionExecutionCreate) => Promise<void>;
+  submittingExecution: boolean;
   onSubmitRollback: (payload: FinancialPromotionExecutionRollbackCreate) => Promise<void>;
   submittingRollback: boolean;
 }) {
   const [acceptedBy, setAcceptedBy] = useState("Gary Knight");
   const [acceptanceRationale, setAcceptanceRationale] = useState("");
+  const [executionOperatorToken, setExecutionOperatorToken] = useState("");
+  const [executionRationale, setExecutionRationale] = useState("");
+  const [executionIdempotencyKey, setExecutionIdempotencyKey] = useState("");
   const [rollbackOperatorToken, setRollbackOperatorToken] = useState("");
   const [rollbackReason, setRollbackReason] = useState("");
 
@@ -1595,6 +1604,16 @@ function PromotionDryRunPanel({
   const verificationStatus = verification?.overall_status ?? null;
   const flaggedVerificationRows =
     verification?.rows.filter((row) => row.conflict_type !== "NONE" || row.row_status !== "PASS") ?? [];
+  const executedAcceptanceIds = new Set(executions.map((execution) => execution.acceptance_id));
+  const executableAcceptance =
+    acceptances.find((acceptance) => !executedAcceptanceIds.has(acceptance.id)) ?? null;
+  const effectiveExecutionIdempotencyKey = executableAcceptance
+    ? executionIdempotencyKey.trim() || `acceptance:${executableAcceptance.id}`
+    : "";
+  const showExecutionAction =
+    verificationStatus === "PASS" &&
+    Boolean(executableAcceptance) &&
+    !verificationError;
   const eligibleRollbackDrillCount = rollbackDrills.filter((drill) => drill.rollback_eligible).length;
   const canAccept =
     activeDryRun.approval.status === "ready_for_dry_run" &&
@@ -1602,6 +1621,12 @@ function PromotionDryRunPanel({
     summary.proposed_insert_count > 0 &&
     acceptedBy.trim().length >= 2 &&
     acceptanceRationale.trim().length >= 12;
+  const canExecute =
+    showExecutionAction &&
+    executionOperatorToken.trim().length >= 16 &&
+    executionRationale.trim().length >= 12 &&
+    effectiveExecutionIdempotencyKey.length >= 8 &&
+    !submittingExecution;
   const canSubmitRollback =
     rollbackOperatorToken.trim().length >= 8 &&
     rollbackReason.trim().length >= 12 &&
@@ -1620,6 +1645,22 @@ function PromotionDryRunPanel({
         min_abs_score: summary.min_abs_score,
       });
       setAcceptanceRationale("");
+    } catch {
+      // The mutation hook owns the operator-facing error toast.
+    }
+  }
+
+  async function handleExecutionSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canExecute || !executableAcceptance) return;
+    try {
+      await onSubmitExecution({
+        dry_run_acceptance_id: executableAcceptance.id,
+        operator_token: executionOperatorToken.trim(),
+        execution_rationale: executionRationale.trim(),
+        idempotency_key: effectiveExecutionIdempotencyKey,
+      });
+      setExecutionRationale("");
     } catch {
       // The mutation hook owns the operator-facing error toast.
     }
@@ -1857,6 +1898,63 @@ function PromotionDryRunPanel({
               </div>
             ) : null}
           </form>
+
+          {showExecutionAction && executableAcceptance ? (
+            <form
+              className="border border-emerald-500/30 bg-emerald-500/5 p-3"
+              onSubmit={(event) => void handleExecutionSubmit(event)}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold">Operator Execution</h2>
+                <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600">
+                  Accepted
+                </Badge>
+              </div>
+              <div className="mt-3 grid gap-2 text-xs">
+                <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-2">
+                  <span className="text-muted-foreground">Acceptance</span>
+                  <span className="truncate font-mono">{executableAcceptance.id}</span>
+                </div>
+                <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-2">
+                  <span className="text-muted-foreground">Gate</span>
+                  <span className="font-medium">PASS</span>
+                </div>
+              </div>
+              <label className="mt-3 block space-y-1 text-xs font-medium">
+                Execution Operator Token
+                <Input
+                  value={executionOperatorToken}
+                  onChange={(event) => setExecutionOperatorToken(event.target.value)}
+                  className="h-9"
+                  type="password"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="mt-3 block space-y-1 text-xs font-medium">
+                Execution Rationale
+                <textarea
+                  value={executionRationale}
+                  onChange={(event) => setExecutionRationale(event.target.value)}
+                  className="min-h-20 w-full resize-y border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                />
+              </label>
+              <label className="mt-3 block space-y-1 text-xs font-medium">
+                Execution Idempotency Key
+                <Input
+                  value={executionIdempotencyKey}
+                  onChange={(event) => setExecutionIdempotencyKey(event.target.value)}
+                  className="h-9 font-mono text-xs"
+                  placeholder={`acceptance:${executableAcceptance.id}`}
+                />
+              </label>
+              <div className="mt-3 flex justify-end">
+                <Button type="submit" disabled={!canExecute}>
+                  <ArrowUpRight className="mr-2 h-4 w-4" />
+                  {submittingExecution ? "Executing…" : "Execute accepted dry-run"}
+                </Button>
+              </div>
+            </form>
+          ) : null}
 
           <div className="border border-border p-3">
             <div className="flex items-center justify-between gap-3">
@@ -2206,6 +2304,7 @@ export function HedgeFundSignalsShell() {
   });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
+  const executePromotionDryRunAcceptance = useExecuteFinancialPromotionDryRunAcceptance();
   const rollbackPromotionExecution = useRollbackFinancialPromotionExecution();
   const signals = latest.data ?? EMPTY_SIGNALS;
   const alertRows = transitions.data ?? EMPTY_TRANSITIONS;
@@ -2268,6 +2367,12 @@ export function HedgeFundSignalsShell() {
   ) {
     await createPromotionDryRunAcceptance.mutateAsync(payload);
     void promotionDryRunAcceptances.refetch();
+  }
+
+  async function handlePromotionExecutionSubmit(payload: FinancialPromotionExecutionCreate) {
+    await executePromotionDryRunAcceptance.mutateAsync(payload);
+    void promotionExecutions.refetch();
+    void promotionRollbackDrills.refetch();
   }
 
   async function handlePromotionRollbackSubmit(payload: FinancialPromotionExecutionRollbackCreate) {
@@ -2477,6 +2582,8 @@ export function HedgeFundSignalsShell() {
             rollbackDrillsLoading={promotionRollbackDrills.isLoading}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
+            onSubmitExecution={handlePromotionExecutionSubmit}
+            submittingExecution={executePromotionDryRunAcceptance.isPending}
             onSubmitRollback={handlePromotionRollbackSubmit}
             submittingRollback={rollbackPromotionExecution.isPending}
           />

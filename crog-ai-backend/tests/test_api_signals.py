@@ -858,6 +858,49 @@ class FakeSignalStore:
         }
 
 
+class NoAcceptanceSignalStore(FakeSignalStore):
+    def execute_guarded_promotion(
+        self,
+        *,
+        acceptance_id: str,
+        operator_token_sha256: str,
+        execution_rationale: str,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        raise ValueError("No dry-run acceptance exists for guarded promotion execution")
+
+
+class NoDecisionSignalStore(FakeSignalStore):
+    def execute_guarded_promotion(
+        self,
+        *,
+        acceptance_id: str,
+        operator_token_sha256: str,
+        execution_rationale: str,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        raise ValueError("Human promote_to_market_signals decision is required before execution")
+
+
+class ConflictingExecutionKeySignalStore(FakeSignalStore):
+    def execute_guarded_promotion(
+        self,
+        *,
+        acceptance_id: str,
+        operator_token_sha256: str,
+        execution_rationale: str,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        if idempotency_key == "operator-accepted-dry-run-20260505":
+            raise ValueError("Dry-run acceptance has already been executed")
+        return super().execute_guarded_promotion(
+            acceptance_id=acceptance_id,
+            operator_token_sha256=operator_token_sha256,
+            execution_rationale=execution_rationale,
+            idempotency_key=idempotency_key,
+        )
+
+
 def test_latest_scores_endpoint_returns_scanner_rows() -> None:
     app = create_app()
     app.dependency_overrides[get_signal_store] = FakeSignalStore
@@ -1250,6 +1293,136 @@ def test_execute_guarded_promotion_endpoint_returns_execution_record() -> None:
     assert payload["idempotency_key"] == "operator-accepted-dry-run-20260504"
     assert payload["verification_status"] == "PASS"
     assert payload["rollback_markers"][0].startswith("dochia-dry-run:")
+
+
+def test_execute_guarded_promotion_endpoint_rejects_without_acceptance() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = NoAcceptanceSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acceptance_id": "77777777-7777-7777-7777-777777777777",
+            "execution_rationale": "Operator attempted execution without acceptance.",
+            "idempotency_key": "operator-no-acceptance-20260504",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "No dry-run acceptance exists" in response.json()["detail"]
+
+
+def test_execute_guarded_promotion_endpoint_rejects_without_human_decision() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = NoDecisionSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "execution_rationale": "Operator attempted execution without promote decision.",
+            "idempotency_key": "operator-no-decision-20260504",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Human promote_to_market_signals decision is required" in response.json()["detail"]
+
+
+def test_execute_guarded_promotion_endpoint_is_idempotent_for_same_key() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+    payload = {
+        "acceptance_id": str(ACCEPTANCE_ID),
+        "execution_rationale": "Operator accepted the verified dry-run output.",
+        "idempotency_key": "operator-accepted-dry-run-20260504",
+    }
+
+    first = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json=payload,
+    )
+    second = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json=payload,
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert second.json()["id"] == first.json()["id"]
+    assert second.json()["inserted_market_signal_ids"] == first.json()["inserted_market_signal_ids"]
+
+
+def test_execute_guarded_promotion_endpoint_rejects_conflicting_key_after_execution() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = ConflictingExecutionKeySignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "execution_rationale": "Operator attempted duplicate execution with another key.",
+            "idempotency_key": "operator-accepted-dry-run-20260505",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "already been executed" in response.json()["detail"]
+
+
+def test_execute_guarded_promotion_endpoint_refuses_ticker_date_payload() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "execution_rationale": "Operator attempted execution with ticker date scope.",
+            "idempotency_key": "operator-ticker-date-20260504",
+            "ticker": "AA",
+            "candidate_bar_date": "2026-04-24",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_execute_guarded_promotion_endpoint_links_audit_and_rollback_eligibility() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    execution = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "execution_rationale": "Operator accepted the verified dry-run output.",
+            "idempotency_key": "operator-accepted-dry-run-20260504",
+        },
+    )
+    rollback_drill = client.get(
+        "/api/financial/signals/promotion-dry-run/executions/rollback-drill"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&limit=1"
+    )
+
+    assert execution.status_code == 201
+    assert rollback_drill.status_code == 200
+    assert execution.json()["inserted_market_signal_ids"] == [1201, 1202]
+    assert rollback_drill.json()[0]["dry_run_acceptance_id"] == str(ACCEPTANCE_ID)
+    assert rollback_drill.json()[0]["rollback_eligible"] is True
 
 
 def test_execute_guarded_promotion_endpoint_requires_operator_token() -> None:
