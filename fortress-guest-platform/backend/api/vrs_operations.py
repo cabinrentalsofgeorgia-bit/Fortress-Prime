@@ -791,13 +791,25 @@ def _reservation_stop_level(reservation: Reservation) -> tuple[Literal["clear", 
     return "clear", "Local reservation and Streamline reference are present."
 
 
+PARITY_CLEAR_STATUSES = {"MATCH", "CONFIRMED", "PASS", "PASSED", "CLEAR"}
+
+
 def _parity_stop_level(audit: ParityAudit) -> tuple[Literal["clear", "inspect", "stop"], str]:
     status = str(audit.status or "").upper()
-    if status == "MATCH":
+    if status in PARITY_CLEAR_STATUSES:
         return "clear", "Local ledger total matches Streamline."
     if status == "MINOR_DRIFT":
         return "inspect", "Minor quote drift needs staff review before repeating the pattern."
     return "stop", "Critical quote drift blocks autonomous quote-to-booking promotion."
+
+
+def _parity_monitor_severity(audit: ParityAudit) -> Literal["clear", "attention", "stop"]:
+    stop_level, _reason = _parity_stop_level(audit)
+    if stop_level == "stop":
+        return "stop"
+    if stop_level == "inspect":
+        return "attention"
+    return "clear"
 
 
 async def _count(db: AsyncSession, stmt: Any) -> int:
@@ -2578,7 +2590,7 @@ async def quote_booking_control_tower(
         db,
         select(func.count())
         .select_from(ParityAudit)
-        .where(ParityAudit.created_at >= day_ago, func.upper(ParityAudit.status) != "MATCH"),
+        .where(ParityAudit.created_at >= day_ago, func.upper(ParityAudit.status).notin_(PARITY_CLEAR_STATUSES)),
     )
 
     quote_rows = await db.execute(
@@ -2804,6 +2816,7 @@ async def quote_booking_control_tower(
     parity_audits: list[QuoteBookingRecord] = []
     for audit, confirmation_code, property_name in parity_rows.all():
         stop_level, stop_reason = _parity_stop_level(audit)
+        parity_severity = _parity_monitor_severity(audit)
         parity_audits.append(
             QuoteBookingRecord(
                 id=str(audit.id),
@@ -2821,8 +2834,16 @@ async def quote_booking_control_tower(
                 metadata={
                     "reservation_id": str(audit.reservation_id),
                     "confirmation_id": audit.confirmation_id,
+                    "local_total": _money(audit.local_total),
                     "streamline_total": _money(audit.streamline_total),
                     "delta": _money(audit.delta),
+                    "parity_monitor_status": audit.status,
+                    "parity_monitor_severity": parity_severity,
+                    "parity_review_policy": "staff_review_required_before_streamline_trust"
+                    if parity_severity != "clear"
+                    else "monitor_only",
+                    "streamline_write": "blocked",
+                    "legacy_storefront": "untouched",
                 },
             )
         )

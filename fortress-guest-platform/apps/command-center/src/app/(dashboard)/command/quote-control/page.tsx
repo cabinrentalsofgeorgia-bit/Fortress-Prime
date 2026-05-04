@@ -78,6 +78,17 @@ type ActivationExceptionItem = {
   primaryAction: ExceptionAction;
   secondaryAction?: ExceptionAction;
 };
+type ParityMonitorItem = {
+  id: string;
+  record: QuoteBookingRecord;
+  severity: ExceptionSeverity;
+  label: string;
+  detail: string;
+  localTotal: number | null;
+  streamlineTotal: number | null;
+  delta: number | null;
+  ageAt: string | null;
+};
 
 type ActivationTimelineEvent = {
   id: string;
@@ -608,6 +619,64 @@ function buildActivationExceptions(records: QuoteBookingRecord[]): ActivationExc
   });
 }
 
+function parityStatusIsClear(status: string | null): boolean {
+  return ["match", "confirmed", "pass", "passed", "clear"].includes((status || "").toLowerCase());
+}
+
+function buildParityMonitorItems(records: QuoteBookingRecord[]): ParityMonitorItem[] {
+  const items: ParityMonitorItem[] = [];
+
+  records.forEach((record) => {
+    if (record.kind === "parity") {
+      const status = record.parity_status || record.status;
+      const delta = metadataNumber(record, "delta");
+      const localTotal = metadataNumber(record, "local_total") ?? record.total_amount;
+      const streamlineTotal = metadataNumber(record, "streamline_total");
+      const isClear = parityStatusIsClear(status);
+      const severity: ExceptionSeverity = isClear ? "watch" : record.stop_level === "stop" ? "stop" : "attention";
+      items.push({
+        id: `parity-audit-${record.id}`,
+        record,
+        severity,
+        label: isClear ? "Parity Confirmed" : "Parity Drift",
+        detail: isClear
+          ? "Local ledger total matches Streamline for this audit."
+          : record.stop_reason || "Local and Streamline totals need staff review before trust promotion.",
+        localTotal,
+        streamlineTotal,
+        delta,
+        ageAt: record.created_at || record.updated_at,
+      });
+      return;
+    }
+
+    if (record.kind === "quote") {
+      const readinessState = metadataString(record, "readiness_state");
+      if (readinessState !== "parity_drift" && readinessState !== "parity_missing") return;
+      items.push({
+        id: `quote-parity-${record.id}`,
+        record,
+        severity: readinessState === "parity_drift" ? "stop" : "attention",
+        label: readinessState === "parity_drift" ? "Quote Parity Drift" : "Quote Parity Missing",
+        detail:
+          metadataStrings(record, "readiness_reasons")[0] ||
+          "Quote cannot advance until Streamline parity is inspected.",
+        localTotal: record.total_amount,
+        streamlineTotal: null,
+        delta: null,
+        ageAt: record.updated_at || record.created_at,
+      });
+    }
+  });
+
+  const severityRank: Record<ExceptionSeverity, number> = { stop: 0, attention: 1, watch: 2 };
+  return items.sort((left, right) => {
+    const severityDelta = severityRank[left.severity] - severityRank[right.severity];
+    if (severityDelta !== 0) return severityDelta;
+    return new Date(right.ageAt || 0).getTime() - new Date(left.ageAt || 0).getTime();
+  });
+}
+
 function cleanupLabel(action: CleanupAction): string {
   switch (action) {
     case "expire_hold":
@@ -1027,6 +1096,151 @@ function ActivationExceptionQueue({
               </div>
             );
           })
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ParityMonitorPanel({
+  items,
+  onDraftAssist,
+  onAction,
+}: {
+  items: ParityMonitorItem[];
+  onDraftAssist: (record: QuoteBookingRecord, draftType: DraftAssistType) => void;
+  onAction: (record: QuoteBookingRecord, action: SafeAction) => void;
+}) {
+  const stopCount = items.filter((item) => item.severity === "stop").length;
+  const attentionCount = items.filter((item) => item.severity === "attention").length;
+  const cleanCount = items.filter((item) => item.severity === "watch").length;
+  const maxDelta = items.reduce((max, item) => Math.max(max, Math.abs(item.delta ?? 0)), 0);
+
+  return (
+    <Card className="border-cyan-500/20 bg-zinc-950/90">
+      <CardHeader className="border-b border-zinc-800/80">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-zinc-50">
+              <ShieldCheck className="h-5 w-5 text-cyan-300" />
+              Streamline Parity Monitor
+            </CardTitle>
+            <CardDescription>
+              Local CROG-VRS totals versus Streamline audit signals. Review only; Streamline writes remain blocked.
+            </CardDescription>
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+          >
+            <Link href="/command/checkout-parity">
+              Parity Console
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-6">
+        <div className="grid gap-2 text-sm md:grid-cols-4">
+          <div className="rounded-lg border border-rose-500/20 bg-rose-950/10 px-3 py-3">
+            <p className="text-xs uppercase text-rose-200/70">Stops</p>
+            <p className="mt-1 text-2xl font-semibold text-rose-100">{stopCount}</p>
+          </div>
+          <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 px-3 py-3">
+            <p className="text-xs uppercase text-amber-200/70">Attention</p>
+            <p className="mt-1 text-2xl font-semibold text-amber-100">{attentionCount}</p>
+          </div>
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/10 px-3 py-3">
+            <p className="text-xs uppercase text-emerald-200/70">Clean</p>
+            <p className="mt-1 text-2xl font-semibold text-emerald-100">{cleanCount}</p>
+          </div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-3 py-3">
+            <p className="text-xs uppercase text-zinc-500">Max Delta</p>
+            <p className="mt-1 text-2xl font-semibold text-zinc-50">{formatMoney(maxDelta)}</p>
+          </div>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-6 text-sm text-zinc-400">
+            No parity audit records are in the current Control Tower window.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {items.slice(0, 10).map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4 xl:flex-row xl:items-start xl:justify-between"
+              >
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={exceptionSeverityTone(item.severity)}>{item.severity}</Badge>
+                    <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">
+                      {item.record.parity_status || item.record.status}
+                    </Badge>
+                    <span className="text-xs text-zinc-500">Age {formatAge(item.ageAt)}</span>
+                  </div>
+                  <div>
+                    <p className="break-words text-sm font-semibold text-zinc-50">{item.label}</p>
+                    <p className="mt-1 break-words text-sm text-zinc-400">{item.detail}</p>
+                  </div>
+                  <div className="grid gap-2 text-xs text-zinc-400 md:grid-cols-2 xl:grid-cols-5">
+                    <div>
+                      <p className="uppercase text-zinc-500">Record</p>
+                      <p className="truncate">{item.record.title || "--"}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase text-zinc-500">Cabin</p>
+                      <p className="truncate">{item.record.property_name || "--"}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase text-zinc-500">Local</p>
+                      <p>{formatMoney(item.localTotal)}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase text-zinc-500">Streamline</p>
+                      <p>{formatMoney(item.streamlineTotal)}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase text-zinc-500">Delta</p>
+                      <p>{formatMoney(item.delta)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 xl:justify-end">
+                  <Button
+                    onClick={() => onDraftAssist(item.record, "escalation_summary")}
+                    size="sm"
+                    className="bg-cyan-700 text-white hover:bg-cyan-600"
+                  >
+                    <StickyNote className="mr-2 h-4 w-4" />
+                    Draft
+                  </Button>
+                  <Button
+                    onClick={() => onAction(item.record, "mark_reviewed")}
+                    variant="outline"
+                    size="sm"
+                    className="border-emerald-500/40 bg-emerald-950/20 text-emerald-100 hover:bg-emerald-950/40"
+                  >
+                    Reviewed
+                    <CheckCircle2 className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+                  >
+                    <Link href={item.record.href}>
+                      Inspect
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -1863,6 +2077,7 @@ export default function QuoteControlPage() {
     return kindMatches && stopMatches;
   });
   const exceptionItems = useMemo(() => buildActivationExceptions(allRecords), [allRecords]);
+  const parityItems = useMemo(() => buildParityMonitorItems(allRecords), [allRecords]);
 
   if (isLoading && !data) {
     return (
@@ -2350,6 +2565,7 @@ export default function QuoteControlPage() {
       </div>
 
       <ActivationExceptionQueue items={exceptionItems} onRun={runExceptionAction} />
+      <ParityMonitorPanel items={parityItems} onDraftAssist={openDraftAssist} onAction={openAction} />
 
       <Card className="border-emerald-500/20 bg-zinc-950/90">
         <CardHeader className="border-b border-zinc-800/80">
