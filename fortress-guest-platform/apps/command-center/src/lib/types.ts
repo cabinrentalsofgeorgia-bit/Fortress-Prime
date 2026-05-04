@@ -778,6 +778,10 @@ export type FinancialPromotionPostExecutionAlertType =
   | "ROLLBACK_RECOMMENDATION";
 
 export type FinancialPromotionPostExecutionAlertSeverity = "LOW" | "MEDIUM" | "HIGH";
+export type FinancialPromotionPostExecutionAlertAcknowledgementStatus =
+  | "ACKNOWLEDGED"
+  | "WATCHING"
+  | "NO_ACTION_NEEDED";
 
 export interface FinancialPromotionPostExecutionAlertSummary {
   total_alerts: number;
@@ -812,6 +816,13 @@ export interface FinancialPromotionPostExecutionAlert {
   evidence: Record<string, unknown>;
   explanation: string;
   operator_guidance: string;
+  acknowledgement_count: number;
+  acknowledged: boolean;
+  latest_acknowledgement_status: FinancialPromotionPostExecutionAlertAcknowledgementStatus | null;
+  latest_acknowledged_by: string | null;
+  latest_acknowledged_at: string | null;
+  latest_acknowledgement_note: string | null;
+  acknowledgement_required: boolean;
 }
 
 export interface FinancialPromotionPostExecutionAlertsResponse {
@@ -819,6 +830,33 @@ export interface FinancialPromotionPostExecutionAlertsResponse {
   promotion_id: string;
   summary: FinancialPromotionPostExecutionAlertSummary;
   alerts: FinancialPromotionPostExecutionAlert[];
+}
+
+export interface FinancialPromotionPostExecutionAlertAcknowledgementCreate {
+  alert_id: string;
+  operator_token: string;
+  acknowledgement_status: FinancialPromotionPostExecutionAlertAcknowledgementStatus;
+  acknowledgement_note: string;
+}
+
+export interface FinancialPromotionPostExecutionAlertAcknowledgement {
+  id: string;
+  alert_id: string;
+  execution_id: string;
+  acceptance_id: string;
+  decision_record_id: string;
+  market_signal_id: number;
+  ticker: string;
+  action: "BUY" | "SELL";
+  candidate_bar_date: string;
+  alert_type: FinancialPromotionPostExecutionAlertType;
+  severity: FinancialPromotionPostExecutionAlertSeverity;
+  operator_membership_id: string;
+  acknowledged_by: string;
+  acknowledgement_status: FinancialPromotionPostExecutionAlertAcknowledgementStatus;
+  acknowledgement_note: string;
+  alert_evidence_snapshot: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface FinancialWatchlistCandidate {

@@ -489,6 +489,17 @@ class PromotionExecutionRollbackCreate(BaseModel):
     rollback_reason: str = Field(min_length=12, max_length=2000)
 
 
+class PromotionPostExecutionAlertAcknowledgementCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    acknowledgement_note: str = Field(min_length=8, max_length=2000)
+    acknowledgement_status: Literal[
+        "ACKNOWLEDGED",
+        "WATCHING",
+        "NO_ACTION_NEEDED",
+    ] = "ACKNOWLEDGED"
+
+
 class PromotionExecution(BaseModel):
     id: UUID
     acceptance_id: UUID
@@ -700,6 +711,17 @@ class PromotionPostExecutionAlert(BaseModel):
     evidence: dict[str, object]
     explanation: str
     operator_guidance: str
+    acknowledgement_count: int
+    acknowledged: bool
+    latest_acknowledgement_status: Literal[
+        "ACKNOWLEDGED",
+        "WATCHING",
+        "NO_ACTION_NEEDED",
+    ] | None
+    latest_acknowledged_by: str | None
+    latest_acknowledged_at: dt.datetime | None
+    latest_acknowledgement_note: str | None
+    acknowledgement_required: bool
 
 
 class PromotionPostExecutionAlertsResponse(BaseModel):
@@ -707,6 +729,36 @@ class PromotionPostExecutionAlertsResponse(BaseModel):
     promotion_id: str
     summary: PromotionPostExecutionAlertSummary
     alerts: list[PromotionPostExecutionAlert]
+
+
+class PromotionPostExecutionAlertAcknowledgement(BaseModel):
+    id: UUID
+    alert_id: str
+    execution_id: UUID
+    acceptance_id: UUID
+    decision_record_id: UUID
+    market_signal_id: int
+    ticker: str
+    action: Literal["BUY", "SELL"]
+    candidate_bar_date: dt.date
+    alert_type: Literal[
+        "SIGNAL_DECAY",
+        "WHIPSAW_AFTER_PROMOTION",
+        "DRIFT",
+        "STALE_EXECUTION_MONITORING",
+        "ROLLBACK_RECOMMENDATION",
+    ]
+    severity: Literal["LOW", "MEDIUM", "HIGH"]
+    operator_membership_id: UUID
+    acknowledged_by: str
+    acknowledgement_status: Literal[
+        "ACKNOWLEDGED",
+        "WATCHING",
+        "NO_ACTION_NEEDED",
+    ]
+    acknowledgement_note: str
+    alert_evidence_snapshot: dict[str, object]
+    created_at: dt.datetime
 
 
 class SymbolChartBar(BaseModel):
@@ -1151,6 +1203,28 @@ def promotion_post_execution_alerts(
         promotion_id=promotion_id,
         limit=limit,
     )
+
+
+@router.post(
+    "/promotion-alerts/{alert_id}/acknowledgements",
+    response_model=PromotionPostExecutionAlertAcknowledgement,
+    status_code=201,
+)
+def acknowledge_promotion_post_execution_alert(
+    alert_id: Annotated[str, Path(min_length=1, max_length=120)],
+    payload: PromotionPostExecutionAlertAcknowledgementCreate,
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    operator_token: OperatorToken,
+) -> dict[str, object]:
+    try:
+        return store.acknowledge_promotion_post_execution_alert(
+            alert_id=alert_id,
+            operator_token_sha256=_operator_token_sha256(operator_token),
+            acknowledgement_note=payload.acknowledgement_note.strip(),
+            acknowledgement_status=payload.acknowledgement_status,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post(

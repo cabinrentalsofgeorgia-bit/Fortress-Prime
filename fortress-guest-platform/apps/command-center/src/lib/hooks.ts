@@ -20,6 +20,8 @@ import type {
   FinancialPromotionExecution,
   FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
+  FinancialPromotionPostExecutionAlertAcknowledgement,
+  FinancialPromotionPostExecutionAlertAcknowledgementCreate,
   FinancialPromotionPostExecutionAlertsResponse,
   FinancialPromotionLifecycleEvent,
   FinancialPromotionPostExecutionMonitoringResponse,
@@ -390,6 +392,37 @@ export function useFinancialPromotionPostExecutionAlerts(
     enabled: Boolean(promotionId),
     refetchInterval: 60_000,
     staleTime: 60_000,
+  });
+}
+
+export function useAcknowledgeFinancialPromotionPostExecutionAlert() {
+  const qc = useQueryClient();
+  return useMutation<
+    FinancialPromotionPostExecutionAlertAcknowledgement,
+    ApiError,
+    FinancialPromotionPostExecutionAlertAcknowledgementCreate
+  >({
+    mutationFn: ({
+      alert_id,
+      operator_token,
+      acknowledgement_status,
+      acknowledgement_note,
+    }) =>
+      api.post(
+        `/api/financial/signals/promotion-alerts/${encodeURIComponent(alert_id)}/acknowledgements`,
+        {
+          acknowledgement_status,
+          acknowledgement_note,
+        },
+        { headers: { "X-MarketClub-Operator-Token": operator_token } },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["financial", "signals", "promotion"],
+      });
+      toast.success("Alert acknowledgement recorded");
+    },
+    onError: (error) => toast.error(error.message || "Failed to acknowledge alert"),
   });
 }
 
