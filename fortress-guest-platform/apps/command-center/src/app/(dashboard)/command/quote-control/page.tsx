@@ -65,6 +65,7 @@ type ExceptionAction =
   | "close_ops"
   | "expire_hold"
   | "cancel_proof"
+  | "draft_assist"
   | "open_audit"
   | "inspect";
 type ActivationExceptionItem = {
@@ -95,6 +96,15 @@ type ActivationTimelineEvent = {
   safeguards: string[];
   references: Record<string, string | string[]>;
   audit_hash: string | null;
+};
+type DraftAssistType =
+  | "guest_confirmation_review"
+  | "ops_handoff_note"
+  | "escalation_summary"
+  | "cleanup_note";
+type DraftAssistTarget = {
+  record: QuoteBookingRecord;
+  draftType: DraftAssistType;
 };
 
 type QuoteBookingSendResponse = {
@@ -196,6 +206,21 @@ type QuoteBookingProofLaneResponse = {
   audit_id: string | null;
   audit_hash: string | null;
   stripe_mode: "test";
+  message: string;
+};
+
+type QuoteBookingDraftAssistResponse = {
+  ok: boolean;
+  kind: string;
+  id: string;
+  draft_type: DraftAssistType;
+  title: string;
+  body: string;
+  suggested_note: string;
+  safeguards: string[];
+  references: Record<string, string | string[]>;
+  audit_id: string | null;
+  audit_hash: string | null;
   message: string;
 };
 
@@ -675,6 +700,8 @@ function timelineStageTone(stage: string): string {
       return "border-rose-500/30 bg-rose-500/10 text-rose-100";
     case "cleanup":
       return "border-zinc-600 bg-zinc-800 text-zinc-200";
+    case "assist":
+      return "border-violet-500/30 bg-violet-500/10 text-violet-100";
     default:
       return "border-zinc-700 bg-zinc-950 text-zinc-300";
   }
@@ -703,11 +730,33 @@ function exceptionActionLabel(action: ExceptionAction): string {
       return "Expire Hold";
     case "cancel_proof":
       return "Cancel Proof";
+    case "draft_assist":
+      return "Draft Assist";
     case "open_audit":
       return "Open Audit";
     case "inspect":
       return "Inspect";
   }
+}
+
+function draftAssistLabel(draftType: DraftAssistType): string {
+  switch (draftType) {
+    case "guest_confirmation_review":
+      return "Confirmation Review";
+    case "ops_handoff_note":
+      return "Ops Note";
+    case "escalation_summary":
+      return "Escalation Summary";
+    case "cleanup_note":
+      return "Cleanup Note";
+  }
+}
+
+function inferDraftAssistType(item: ActivationExceptionItem): DraftAssistType {
+  if (item.primaryAction === "send_confirmation") return "guest_confirmation_review";
+  if (item.primaryAction === "close_ops") return "ops_handoff_note";
+  if (item.primaryAction === "expire_hold" || item.primaryAction === "cancel_proof") return "cleanup_note";
+  return "escalation_summary";
 }
 
 function auditReferenceLabel(key: string): string {
@@ -860,9 +909,11 @@ function ExceptionActionButton({
             ? Timer
             : action === "cancel_proof"
               ? XCircle
-              : action === "open_audit"
-                ? History
-                : ArrowRight;
+              : action === "draft_assist"
+                ? StickyNote
+                : action === "open_audit"
+                  ? History
+                  : ArrowRight;
   const className = primary
     ? "bg-cyan-700 text-white hover:bg-cyan-600"
     : "border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900";
@@ -968,6 +1019,7 @@ function ActivationExceptionQueue({
                 </div>
                 <div className="flex flex-wrap gap-2 xl:justify-end">
                   <ExceptionActionButton item={item} action={item.primaryAction} onRun={onRun} primary />
+                  <ExceptionActionButton item={item} action="draft_assist" onRun={onRun} />
                   {item.secondaryAction ? (
                     <ExceptionActionButton item={item} action={item.secondaryAction} onRun={onRun} />
                   ) : null}
@@ -1626,6 +1678,137 @@ function ActivationAuditDialog({
   );
 }
 
+function DraftAssistDialog({
+  target,
+  result,
+  isLoading,
+  error,
+  onClose,
+  onAddNote,
+}: {
+  target: DraftAssistTarget | null;
+  result: QuoteBookingDraftAssistResponse | null;
+  isLoading: boolean;
+  error: string | null;
+  onClose: () => void;
+  onAddNote: () => void;
+}) {
+  const references = result ? Object.entries(result.references) : [];
+
+  return (
+    <Dialog open={Boolean(target)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-hidden border-zinc-800 bg-zinc-950 text-zinc-50 sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <StickyNote className="h-5 w-5 text-cyan-300" />
+            Draft Assist
+          </DialogTitle>
+          <DialogDescription>
+            {target?.record.title || "Control item"} ·{" "}
+            {target ? draftAssistLabel(target.draftType) : "Staff assist"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[68vh] space-y-4 overflow-y-auto pr-2">
+          <div className="rounded-lg border border-cyan-500/20 bg-cyan-950/10 px-4 py-3">
+            <div className="flex flex-wrap gap-2">
+              <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">staff draft only</Badge>
+              <Badge className="border-cyan-500/30 bg-cyan-500/10 text-cyan-100">
+                human approval required
+              </Badge>
+              <Badge className="border-rose-500/30 bg-rose-500/10 text-rose-100">no guest send</Badge>
+              <Badge className="border-rose-500/30 bg-rose-500/10 text-rose-100">Streamline blocked</Badge>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-8 text-sm text-zinc-300">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Drafting staff-only assistance...
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-rose-500/30 bg-rose-950/20 px-4 py-4 text-sm text-rose-100">
+              {error}
+            </div>
+          ) : result ? (
+            <>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="border-cyan-500/30 bg-cyan-500/10 text-cyan-100">
+                    {draftAssistLabel(result.draft_type)}
+                  </Badge>
+                  {result.audit_hash ? (
+                    <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">audited</Badge>
+                  ) : null}
+                </div>
+                <p className="mt-3 text-sm font-semibold text-zinc-50">{result.title}</p>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-300">
+                  {result.body}
+                </p>
+              </div>
+
+              {result.suggested_note ? (
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/10 px-4 py-3 text-sm text-emerald-100">
+                  <p className="text-xs uppercase text-emerald-200/80">Suggested Staff Note</p>
+                  <p className="mt-2">{result.suggested_note}</p>
+                </div>
+              ) : null}
+
+              {references.length > 0 ? (
+                <div className="grid gap-2 text-xs md:grid-cols-2">
+                  {references.map(([key, value]) => {
+                    const values = Array.isArray(value) ? value : [value];
+                    return (
+                      <div key={key} className="rounded-md border border-zinc-800 bg-zinc-900/70 px-3 py-2">
+                        <p className="uppercase text-zinc-500">{auditReferenceLabel(key)}</p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {values.map((ref) => (
+                            <span
+                              key={`${key}-${ref}`}
+                              className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-zinc-200"
+                              title={ref}
+                            >
+                              {shortAuditValue(ref)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {result.audit_hash ? (
+                <div className="rounded-md border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs">
+                  <p className="uppercase text-zinc-500">Draft Audit Hash</p>
+                  <p className="mt-1 break-all font-mono text-zinc-300">{result.audit_hash}</p>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+
+        <DialogFooter>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+          >
+            Close
+          </Button>
+          <Button
+            onClick={onAddNote}
+            disabled={!result?.suggested_note}
+            className="bg-cyan-700 text-white hover:bg-cyan-600"
+          >
+            Add As Note
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function QuoteControlPage() {
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [stopFilter, setStopFilter] = useState<StopFilter>("all");
@@ -1656,6 +1839,10 @@ export default function QuoteControlPage() {
   const [cleanupNote, setCleanupNote] = useState("");
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [auditTarget, setAuditTarget] = useState<QuoteBookingRecord | null>(null);
+  const [draftAssistTarget, setDraftAssistTarget] = useState<DraftAssistTarget | null>(null);
+  const [draftAssistResult, setDraftAssistResult] = useState<QuoteBookingDraftAssistResponse | null>(null);
+  const [draftAssistError, setDraftAssistError] = useState<string | null>(null);
+  const [isDraftingAssist, setIsDraftingAssist] = useState(false);
   const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
@@ -1773,6 +1960,39 @@ export default function QuoteControlPage() {
   const openAudit = (record: QuoteBookingRecord) => {
     setAuditTarget(record);
   };
+  const openDraftAssist = async (record: QuoteBookingRecord, draftType: DraftAssistType) => {
+    setDraftAssistTarget({ record, draftType });
+    setDraftAssistResult(null);
+    setDraftAssistError(null);
+    setIsDraftingAssist(true);
+    try {
+      const response = await api.post<QuoteBookingDraftAssistResponse>(
+        `/api/vrs/quote-booking/control-tower/${record.kind}/${record.id}/draft-assist`,
+        { draft_type: draftType },
+      );
+      setDraftAssistResult(response);
+      toast.success(response.message || "Staff assist draft created");
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Draft assist failed";
+      setDraftAssistError(message);
+      toast.error(message);
+    } finally {
+      setIsDraftingAssist(false);
+    }
+  };
+  const closeDraftAssist = () => {
+    setDraftAssistTarget(null);
+    setDraftAssistResult(null);
+    setDraftAssistError(null);
+    setIsDraftingAssist(false);
+  };
+  const addDraftAssistAsNote = () => {
+    if (!draftAssistTarget || !draftAssistResult?.suggested_note) return;
+    setActionTarget({ record: draftAssistTarget.record, action: "note" });
+    setActionNote(draftAssistResult.suggested_note);
+    closeDraftAssist();
+  };
   const runExceptionAction = (item: ActivationExceptionItem, action: ExceptionAction) => {
     switch (action) {
       case "approve_payment":
@@ -1789,6 +2009,9 @@ export default function QuoteControlPage() {
         break;
       case "cancel_proof":
         openCleanup(item.record, "cancel_proof");
+        break;
+      case "draft_assist":
+        void openDraftAssist(item.record, inferDraftAssistType(item));
         break;
       case "open_audit":
         openAudit(item.record);
@@ -2268,6 +2491,14 @@ export default function QuoteControlPage() {
       </Card>
 
       <ActivationAuditDialog record={auditTarget} onClose={() => setAuditTarget(null)} />
+      <DraftAssistDialog
+        target={draftAssistTarget}
+        result={draftAssistResult}
+        isLoading={isDraftingAssist}
+        error={draftAssistError}
+        onClose={closeDraftAssist}
+        onAddNote={addDraftAssistAsNote}
+      />
 
       <Dialog open={Boolean(actionTarget)} onOpenChange={(open) => !open && setActionTarget(null)}>
         <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">

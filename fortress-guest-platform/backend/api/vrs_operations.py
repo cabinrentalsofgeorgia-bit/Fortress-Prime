@@ -116,6 +116,31 @@ class QuoteBookingActionResponse(BaseModel):
     message: str
 
 
+class QuoteBookingDraftAssistRequest(BaseModel):
+    draft_type: Literal[
+        "guest_confirmation_review",
+        "ops_handoff_note",
+        "escalation_summary",
+        "cleanup_note",
+    ] | None = None
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteBookingDraftAssistResponse(BaseModel):
+    ok: bool
+    kind: str
+    id: str
+    draft_type: str
+    title: str
+    body: str
+    suggested_note: str
+    safeguards: list[str] = Field(default_factory=list)
+    references: dict[str, Any] = Field(default_factory=dict)
+    audit_id: str | None = None
+    audit_hash: str | None = None
+    message: str
+
+
 class QuoteBookingSendRequest(BaseModel):
     note: str | None = Field(default=None, max_length=1000)
 
@@ -806,6 +831,7 @@ def _timeline_action_label(action: str) -> str:
         "activate_paid_reservation": "Activation Package Created",
         "send_guest_confirmation": "Guest Confirmation Sent",
         "close_ops_handoff": "Ops Handoff Closed",
+        "draft_staff_assist": "Staff Assist Drafted",
         "expire_local_hold": "Expired Hold Cleanup",
         "cancel_proof_reservation": "Proof Reservation Cleanup",
     }
@@ -819,6 +845,8 @@ def _timeline_action_stage(action: str) -> str:
         return "payment"
     if action in {"activate_paid_reservation", "send_guest_confirmation", "close_ops_handoff"}:
         return "activation"
+    if action == "draft_staff_assist":
+        return "assist"
     if action in {"claim", "mark_reviewed", "escalate", "dismiss", "note"}:
         return "safeguard"
     if action in {"expire_local_hold", "cancel_proof_reservation"}:
@@ -872,6 +900,18 @@ def _timeline_references(
             references[key] = str(value)
 
     return references
+
+
+def _safe_reference_values(references: dict[str, Any]) -> dict[str, Any]:
+    safe: dict[str, Any] = {}
+    for key, value in references.items():
+        if value is None:
+            continue
+        if isinstance(value, list):
+            safe[key] = [str(item) for item in value if item]
+        else:
+            safe[key] = str(value)
+    return safe
 
 
 def _control_audit_timeline_event(audit: OpenShellAuditLog) -> dict[str, Any]:
@@ -1271,6 +1311,273 @@ async def _load_control_item(db: AsyncSession, kind: str, item_id: str):
     if row is None:
         raise HTTPException(status_code=404, detail="Control Tower item not found")
     return normalized, row
+
+
+def _default_assist_draft_type(kind: str, row: Any) -> str:
+    if kind == "hold":
+        return "cleanup_note"
+    if kind == "reservation":
+        breakdown = row.price_breakdown if isinstance(row.price_breakdown, dict) else {}
+        activation_package = _activation_package_value(row)
+        activation_state = _activation_package_field(activation_package, "activation_state")
+        draft = (
+            activation_package.get("guest_confirmation_draft")
+            if isinstance(activation_package, dict)
+            and isinstance(activation_package.get("guest_confirmation_draft"), dict)
+            else {}
+        )
+        ops_handoff = (
+            activation_package.get("ops_handoff")
+            if isinstance(activation_package, dict) and isinstance(activation_package.get("ops_handoff"), dict)
+            else {}
+        )
+        reconciliation_state = str(breakdown.get("control_tower_payment_reconciliation_state") or "")
+        if reconciliation_state.endswith("_needs_staff_review") or reconciliation_state == "stripe_paid_pending_staff_approval":
+            return "escalation_summary"
+        if str(draft.get("status") or "") in {"pending_staff_review", "send_failed"}:
+            return "guest_confirmation_review"
+        if activation_state in {"confirmation_sent_ops_open", "activated_pending_staff_confirmation_review"} and (
+            ops_handoff.get("status") == "open"
+        ):
+            return "ops_handoff_note"
+        if _proof_reservation_cleanup_eligible(row)[0]:
+            return "cleanup_note"
+    return "escalation_summary"
+
+
+async def _property_name_for_id(db: AsyncSession, property_id: UUID | None) -> str:
+    if not property_id:
+        return "Unassigned cabin"
+    prop = await db.get(Property, property_id)
+    return prop.name if prop else "Unknown cabin"
+
+
+async def _build_reservation_assist_draft(
+    *,
+    db: AsyncSession,
+    reservation: Reservation,
+    draft_type: str,
+    staff_note: str | None,
+) -> dict[str, Any]:
+    property_name = await _property_name_for_id(db, reservation.property_id)
+    breakdown = reservation.price_breakdown if isinstance(reservation.price_breakdown, dict) else {}
+    activation_package = _activation_package_value(reservation)
+    draft = (
+        activation_package.get("guest_confirmation_draft")
+        if isinstance(activation_package, dict)
+        and isinstance(activation_package.get("guest_confirmation_draft"), dict)
+        else {}
+    )
+    ops_handoff = (
+        activation_package.get("ops_handoff")
+        if isinstance(activation_package, dict) and isinstance(activation_package.get("ops_handoff"), dict)
+        else {}
+    )
+    references = _safe_reference_values(
+        _timeline_references(
+            {
+                "reservation_id": str(reservation.id),
+                "confirmation_code": reservation.confirmation_code,
+                "quote_id": breakdown.get("quote_ref"),
+                "hold_id": breakdown.get("hold_ref"),
+                "activation_id": activation_package.get("activation_id") if activation_package else None,
+                "guest_confirmation_draft_id": draft.get("id"),
+                "payment_link_id": breakdown.get("control_tower_payment_link_id"),
+                "checkout_session_id": breakdown.get("control_tower_payment_reconciliation_session_id"),
+                "payment_intent_id": breakdown.get("control_tower_payment_reconciliation_payment_intent_id"),
+                "work_order_ids": ops_handoff.get("work_order_ids"),
+                "housekeeping_task_id": ops_handoff.get("housekeeping_task_id"),
+            },
+            resource_kind="reservation",
+            resource_item_id=str(reservation.id),
+        )
+    )
+    stay = f"{_display_date(reservation.check_in_date)} to {_display_date(reservation.check_out_date)}"
+    money_line = (
+        f"Total {_display_money(reservation.total_amount)}; paid {_display_money(reservation.paid_amount)}; "
+        f"balance {_display_money(reservation.balance_due)}."
+    )
+    context_note = f"\n\nStaff context: {staff_note}" if staff_note else ""
+
+    if draft_type == "guest_confirmation_review":
+        title = f"Confirmation review draft for {reservation.confirmation_code}"
+        body = (
+            f"Review the guest confirmation for {reservation.confirmation_code} at {property_name}.\n\n"
+            f"Stay: {stay}\n"
+            f"{money_line}\n"
+            f"Draft status: {draft.get('status') or 'missing'}\n"
+            f"Send policy: {draft.get('send_policy') or 'manual staff approval required'}\n\n"
+            f"Current draft subject:\n{draft.get('subject') or '(no subject found)'}\n\n"
+            f"Current draft body:\n{draft.get('body_text') or '(no draft body found)'}\n\n"
+            "Staff checklist:\n"
+            "- Confirm guest, cabin, stay dates, totals, and balance.\n"
+            "- Confirm no refund, legal, owner-facing, or public commitment is implied.\n"
+            "- Send only from the staff-approved confirmation action.\n"
+            "- Keep Streamline, Drupal, AWS, DNS, tunnels, and the public storefront untouched."
+            f"{context_note}"
+        )
+        suggested_note = (
+            f"Reviewed confirmation draft for {reservation.confirmation_code}; "
+            "staff approval still required before guest send."
+        )
+    elif draft_type == "ops_handoff_note":
+        work_order_ids = ops_handoff.get("work_order_ids") if isinstance(ops_handoff.get("work_order_ids"), list) else []
+        title = f"Ops handoff note for {reservation.confirmation_code}"
+        body = (
+            f"Ops handoff for {reservation.confirmation_code} at {property_name}.\n\n"
+            f"Stay: {stay}\n"
+            f"Guest: {reservation.guest_email or reservation.guest_name or 'Unknown'}\n"
+            f"Work orders: {len(work_order_ids)} activation work order(s)\n"
+            f"Housekeeping task: {ops_handoff.get('housekeeping_task_id') or 'not linked'}\n"
+            f"Ops status: {ops_handoff.get('status') or 'unknown'}\n\n"
+            "Suggested staff note:\n"
+            "- Confirm pre-arrival readiness, access/account notes, and any property-specific handoff items.\n"
+            "- Close only the CROG-VRS activation work orders; leave the real housekeeping schedule in its own lane.\n"
+            "- Do not change Streamline, public storefront, DNS, tunnels, Drupal, or AWS."
+            f"{context_note}"
+        )
+        suggested_note = (
+            f"Ops handoff reviewed for {reservation.confirmation_code}; activation work orders can close "
+            "only after staff confirms readiness."
+        )
+    elif draft_type == "cleanup_note":
+        title = f"Cleanup note for {reservation.confirmation_code}"
+        body = (
+            f"Cleanup review for local reservation {reservation.confirmation_code}.\n\n"
+            f"Cabin: {property_name}\n"
+            f"Stay: {stay}\n"
+            f"Status: {reservation.status}\n"
+            f"{money_line}\n\n"
+            "Cleanup guardrails:\n"
+            "- Use this lane only for proof/test artifacts or eligible local cleanup.\n"
+            "- Do not cancel paid guest reservations from this lane.\n"
+            "- Do not write to Streamline or touch the public storefront."
+            f"{context_note}"
+        )
+        suggested_note = f"Reviewed cleanup eligibility for {reservation.confirmation_code}; no public or Streamline changes."
+    else:
+        title = f"Escalation summary for {reservation.confirmation_code}"
+        body = (
+            f"Escalation summary for {reservation.confirmation_code} at {property_name}.\n\n"
+            f"Stay: {stay}\n"
+            f"{money_line}\n"
+            f"Reservation status: {reservation.status}\n"
+            f"Payment reconciliation: {breakdown.get('control_tower_payment_reconciliation_state') or 'not set'}\n"
+            f"Payment detail: {breakdown.get('control_tower_payment_reconciliation_detail') or 'not set'}\n"
+            f"Activation state: {_activation_package_field(activation_package, 'activation_state') or 'not set'}\n\n"
+            "Recommended staff posture:\n"
+            "- Inspect payment evidence and audit drawer before taking action.\n"
+            "- Keep guest-facing commitments, refunds, legal posture, and owner-facing statements human-approved.\n"
+            "- Keep Streamline, Drupal, AWS, DNS, tunnels, and public storefront untouched."
+            f"{context_note}"
+        )
+        suggested_note = f"Escalation reviewed for {reservation.confirmation_code}; staff inspection remains required."
+
+    return {
+        "title": title,
+        "body": body,
+        "suggested_note": suggested_note,
+        "references": references,
+    }
+
+
+async def _build_hold_assist_draft(
+    *,
+    db: AsyncSession,
+    hold: ReservationHold,
+    draft_type: str,
+    staff_note: str | None,
+) -> dict[str, Any]:
+    property_name = await _property_name_for_id(db, hold.property_id)
+    snapshot = hold.quote_snapshot if isinstance(hold.quote_snapshot, dict) else {}
+    references = _safe_reference_values(
+        _timeline_references(
+            {
+                "hold_id": str(hold.id),
+                "quote_id": snapshot.get("quote_ref"),
+                "payment_intent_id": hold.payment_intent_id,
+            },
+            resource_kind="hold",
+            resource_item_id=str(hold.id),
+        )
+    )
+    context_note = f"\n\nStaff context: {staff_note}" if staff_note else ""
+    title = f"Hold cleanup note for {property_name}"
+    body = (
+        f"Local hold cleanup review for {property_name}.\n\n"
+        f"Stay: {_display_date(hold.check_in_date)} to {_display_date(hold.check_out_date)}\n"
+        f"Status: {hold.status}\n"
+        f"Expires: {_iso(hold.expires_at) or 'not set'}\n"
+        f"Amount: {_display_money(hold.amount_total)}\n\n"
+        "Cleanup guardrails:\n"
+        "- Expire only eligible CROG-VRS local holds.\n"
+        "- Do not charge, refund, create reservations, or write Streamline from this lane.\n"
+        "- Confirm the hold is no longer protecting an active staff workflow before cleanup."
+        f"{context_note}"
+    )
+    return {
+        "title": title,
+        "body": body,
+        "suggested_note": "Reviewed expired local hold cleanup; no guest, payment, public, or Streamline change.",
+        "references": references,
+    }
+
+
+async def _build_generic_assist_draft(
+    *,
+    kind: str,
+    row: Any,
+    draft_type: str,
+    staff_note: str | None,
+) -> dict[str, Any]:
+    title = f"{draft_type.replace('_', ' ').title()} for {kind}"
+    source_status = str(getattr(row, "status", "") or "unknown")
+    context_note = f"\n\nStaff context: {staff_note}" if staff_note else ""
+    body = (
+        f"Staff assist draft for {kind}:{row.id}.\n\n"
+        f"Source status: {source_status}\n\n"
+        "Recommended staff posture:\n"
+        "- Inspect the source record and audit context before acting.\n"
+        "- Keep all guest-facing, financial, legal, public, and irreversible actions human-approved.\n"
+        "- Do not change Streamline, Drupal, AWS, DNS, tunnels, or the public storefront from this lane."
+        f"{context_note}"
+    )
+    return {
+        "title": title,
+        "body": body,
+        "suggested_note": f"Reviewed {kind} with staff-assist draft; no source system was changed.",
+        "references": {f"{kind}_resource_id": str(row.id)},
+    }
+
+
+async def _build_staff_assist_draft(
+    *,
+    db: AsyncSession,
+    kind: str,
+    row: Any,
+    draft_type: str,
+    staff_note: str | None,
+) -> dict[str, Any]:
+    if kind == "reservation" and isinstance(row, Reservation):
+        return await _build_reservation_assist_draft(
+            db=db,
+            reservation=row,
+            draft_type=draft_type,
+            staff_note=staff_note,
+        )
+    if kind == "hold" and isinstance(row, ReservationHold):
+        return await _build_hold_assist_draft(
+            db=db,
+            hold=row,
+            draft_type=draft_type,
+            staff_note=staff_note,
+        )
+    return await _build_generic_assist_draft(
+        kind=kind,
+        row=row,
+        draft_type=draft_type,
+        staff_note=staff_note,
+    )
 
 
 async def _quote_control_record(
@@ -4079,6 +4386,82 @@ async def quote_booking_control_send_quote(
         audit_id=str(audit.id) if audit else None,
         audit_hash=audit.entry_hash if audit else None,
         message="Quote sent to guest. Source booking, payment, public site, DNS, Cloudflare, and Streamline records were not changed.",
+    )
+
+
+@router.post(
+    "/quote-booking/control-tower/{kind}/{item_id}/draft-assist",
+    response_model=QuoteBookingDraftAssistResponse,
+)
+async def quote_booking_control_draft_assist(
+    kind: str,
+    item_id: str,
+    body: QuoteBookingDraftAssistRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: StaffUser = Depends(require_operator_manager_admin),
+) -> QuoteBookingDraftAssistResponse:
+    """Draft staff-only assistance without mutating guest, payment, public, or Streamline state."""
+    normalized_kind, row = await _load_control_item(db, kind, item_id)
+    draft_type = body.draft_type or _default_assist_draft_type(normalized_kind, row)
+    note = (body.note or "").strip() or None
+    draft = await _build_staff_assist_draft(
+        db=db,
+        kind=normalized_kind,
+        row=row,
+        draft_type=draft_type,
+        staff_note=note,
+    )
+    references = draft.get("references") if isinstance(draft.get("references"), dict) else {}
+    safeguards = [
+        "staff draft only",
+        "human approval required",
+        "no guest send",
+        "no payment action",
+        "no Streamline write",
+        "legacy storefront untouched",
+        "DNS and tunnels untouched",
+    ]
+    audit = await record_audit_event(
+        db=db,
+        actor_id=str(current_user.id),
+        actor_email=current_user.email,
+        action="quote_booking.draft_staff_assist",
+        resource_type="quote_booking_control_item",
+        resource_id=_control_resource_id(normalized_kind, item_id),
+        purpose="Staff-only CROG-VRS draft assistance for quote-to-booking exception handling.",
+        tool_name="quote_booking_control_tower",
+        redaction_status="metadata_only",
+        model_route="deterministic_staff_assist",
+        outcome="success",
+        metadata_json={
+            "kind": normalized_kind,
+            "item_id": item_id,
+            "draft_type": draft_type,
+            "title": draft.get("title"),
+            "suggested_note": draft.get("suggested_note"),
+            "note": note,
+            "references": references,
+            "safe_draft_only": True,
+            "guest_facing_send": "blocked_until_staff_action",
+            "payment_action": "blocked",
+            "streamline_write": "blocked",
+            "legacy_storefront": "untouched",
+            "blocked_capabilities": CONTROL_TOWER_BLOCKED_CAPABILITIES,
+        },
+    )
+    return QuoteBookingDraftAssistResponse(
+        ok=True,
+        kind=normalized_kind,
+        id=item_id,
+        draft_type=draft_type,
+        title=str(draft.get("title") or "Staff Assist Draft"),
+        body=str(draft.get("body") or ""),
+        suggested_note=str(draft.get("suggested_note") or ""),
+        safeguards=safeguards,
+        references=references,
+        audit_id=str(audit.id) if audit else None,
+        audit_hash=audit.entry_hash if audit else None,
+        message="Staff assist draft created. Nothing was sent, published, charged, refunded, or written to Streamline.",
     )
 
 
