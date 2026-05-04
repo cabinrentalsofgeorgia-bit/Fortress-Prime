@@ -36,6 +36,20 @@ snapshot still returns `ERROR`.
 
 Any failed invariant returns `ERROR`. Clean invariants with cross-model, high-churn, or whipsaw warnings return `WARNING`. Fully clean rows return `HEALTHY`.
 
+## Post-Execution Monitoring
+
+Use `GET /api/financial/signals/promotion/{id}/monitoring` with a candidate parameter set, dry-run acceptance id, or execution id. The monitoring view is `hedge_fund.v_signal_promotion_post_execution_monitoring`.
+
+The monitor is read-only and evaluates only audited execution rows:
+
+- 1-session, 5-session, and 20-session directional returns from `hedge_fund.eod_bars`
+- whipsaw-after-promotion transitions from the candidate parameter set
+- signal decay when candidate score or daily triangle no longer supports the promoted action
+- drift between observed outcomes and the candidate expectation
+- rollback recommendation warnings
+
+Rollback recommendations are warnings only. The monitoring endpoint does not call rollback functions, delete `market_signals`, create rollback audit rows, or auto-heal promotion records.
+
 ## Snapshots
 
 Acceptance records persist:

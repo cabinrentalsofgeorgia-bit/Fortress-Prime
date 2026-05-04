@@ -687,6 +687,89 @@ export interface FinancialPromotionReconciliation {
   explanation: string;
 }
 
+export type FinancialPromotionMonitoringStatus = "PENDING" | "HEALTHY" | "WARNING" | "ROLLED_BACK";
+export type FinancialPromotionMonitoringDriftStatus =
+  | "PENDING"
+  | "IN_LINE"
+  | "PRICE_DRIFT"
+  | "SCORE_DRIFT"
+  | "PRICE_AND_SCORE_DRIFT";
+export type FinancialPromotionRollbackRecommendation =
+  | "NO_WARNING"
+  | "WATCH_WARNING"
+  | "REVIEW_ROLLBACK_WARNING"
+  | "NO_ACTION_ROLLED_BACK";
+
+export interface FinancialPromotionPostExecutionMonitoringSummary {
+  rows_checked: number;
+  live_rows: number;
+  pending_rows: number;
+  healthy_rows: number;
+  warning_rows: number;
+  rollback_warning_rows: number;
+  whipsaw_after_promotion_rows: number;
+  signal_decay_rows: number;
+  adverse_5d_rows: number;
+  adverse_20d_rows: number;
+}
+
+export interface FinancialPromotionPostExecutionMonitoringRow {
+  execution_id: string;
+  acceptance_id: string;
+  decision_record_id: string;
+  candidate_id: string;
+  baseline_parameter_set: string;
+  executed_by: string;
+  executed_at: string;
+  rollback_status: FinancialPromotionExecutionRollbackStatus;
+  market_signal_id: number;
+  market_signal_live: boolean;
+  ticker: string;
+  action: "BUY" | "SELL";
+  confidence_score: number;
+  candidate_bar_date: string;
+  rollback_marker: string;
+  candidate_score: number;
+  candidate_monthly_triangle: number | null;
+  candidate_weekly_triangle: number | null;
+  candidate_daily_triangle: number | null;
+  entry_close: string | number | null;
+  outcome_1d_bar_date: string | null;
+  outcome_1d_close: string | number | null;
+  outcome_1d_directional_return: string | number | null;
+  outcome_5d_bar_date: string | null;
+  outcome_5d_close: string | number | null;
+  outcome_5d_directional_return: string | number | null;
+  outcome_20d_bar_date: string | null;
+  outcome_20d_close: string | number | null;
+  outcome_20d_directional_return: string | number | null;
+  latest_candidate_bar_date: string | null;
+  latest_candidate_score: number | null;
+  latest_monthly_triangle: number | null;
+  latest_weekly_triangle: number | null;
+  latest_daily_triangle: number | null;
+  score_delta: number | null;
+  signal_decay_flag: boolean;
+  signal_decay_date: string | null;
+  signal_decay_score: number | null;
+  signal_decay_daily_triangle: number | null;
+  whipsaw_after_promotion_flag: boolean;
+  whipsaw_transition_date: string | null;
+  whipsaw_transition_type: FinancialTransitionType | null;
+  whipsaw_to_score: number | null;
+  drift_status: FinancialPromotionMonitoringDriftStatus;
+  rollback_recommendation: FinancialPromotionRollbackRecommendation;
+  monitoring_status: FinancialPromotionMonitoringStatus;
+  explanation: string;
+}
+
+export interface FinancialPromotionPostExecutionMonitoringResponse {
+  generated_at: string;
+  promotion_id: string;
+  summary: FinancialPromotionPostExecutionMonitoringSummary;
+  rows: FinancialPromotionPostExecutionMonitoringRow[];
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

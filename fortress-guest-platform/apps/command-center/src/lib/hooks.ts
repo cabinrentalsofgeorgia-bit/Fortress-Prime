@@ -21,6 +21,7 @@ import type {
   FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionLifecycleEvent,
+  FinancialPromotionPostExecutionMonitoringResponse,
   FinancialPromotionReconciliation,
   FinancialPromotionRollbackDrill,
   FinancialPromotionDryRunVerificationResponse,
@@ -353,6 +354,23 @@ export function useFinancialPromotionReconciliation(
         params,
       ),
     enabled: Boolean(promotionId),
+    staleTime: 60_000,
+  });
+}
+
+export function useFinancialPromotionPostExecutionMonitoring(
+  promotionId: string | null,
+  params?: { limit?: number },
+) {
+  return useQuery<FinancialPromotionPostExecutionMonitoringResponse>({
+    queryKey: ["financial", "signals", "promotion", promotionId, "post-execution-monitoring", params],
+    queryFn: () =>
+      api.get(
+        `/api/financial/signals/promotion/${encodeURIComponent(promotionId ?? "")}/monitoring`,
+        params,
+      ),
+    enabled: Boolean(promotionId),
+    refetchInterval: 60_000,
     staleTime: 60_000,
   });
 }

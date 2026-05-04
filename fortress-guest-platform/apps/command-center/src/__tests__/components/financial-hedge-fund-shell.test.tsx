@@ -745,6 +745,123 @@ const promotionReconciliation = [
   },
 ];
 
+const promotionPostExecutionMonitoring = {
+  generated_at: "2026-05-04T13:00:00Z",
+  promotion_id: "55555555-5555-5555-5555-555555555555",
+  summary: {
+    rows_checked: 2,
+    live_rows: 2,
+    pending_rows: 1,
+    healthy_rows: 0,
+    warning_rows: 1,
+    rollback_warning_rows: 1,
+    whipsaw_after_promotion_rows: 1,
+    signal_decay_rows: 1,
+    adverse_5d_rows: 1,
+    adverse_20d_rows: 0,
+  },
+  rows: [
+    {
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      baseline_parameter_set: "dochia_v0_estimated",
+      executed_by: "MarketClub Operator",
+      executed_at: "2026-05-03T21:00:00Z",
+      rollback_status: "active",
+      market_signal_id: 1201,
+      market_signal_live: true,
+      ticker: "AA",
+      action: "BUY",
+      confidence_score: 80,
+      candidate_bar_date: "2026-04-24",
+      rollback_marker: "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+      candidate_score: 80,
+      candidate_monthly_triangle: 1,
+      candidate_weekly_triangle: 1,
+      candidate_daily_triangle: 1,
+      entry_close: "69.00",
+      outcome_1d_bar_date: "2026-04-27",
+      outcome_1d_close: "70.00",
+      outcome_1d_directional_return: "0.014493",
+      outcome_5d_bar_date: "2026-05-01",
+      outcome_5d_close: "66.00",
+      outcome_5d_directional_return: "-0.043478",
+      outcome_20d_bar_date: null,
+      outcome_20d_close: null,
+      outcome_20d_directional_return: null,
+      latest_candidate_bar_date: "2026-05-01",
+      latest_candidate_score: 20,
+      latest_monthly_triangle: 1,
+      latest_weekly_triangle: 1,
+      latest_daily_triangle: -1,
+      score_delta: -60,
+      signal_decay_flag: true,
+      signal_decay_date: "2026-04-30",
+      signal_decay_score: 20,
+      signal_decay_daily_triangle: -1,
+      whipsaw_after_promotion_flag: true,
+      whipsaw_transition_date: "2026-04-30",
+      whipsaw_transition_type: "breakout_bearish",
+      whipsaw_to_score: -50,
+      drift_status: "PRICE_AND_SCORE_DRIFT",
+      rollback_recommendation: "REVIEW_ROLLBACK_WARNING",
+      monitoring_status: "WARNING",
+      explanation: "Candidate state whipsawed after promotion; rollback review warning only.",
+    },
+    {
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      baseline_parameter_set: "dochia_v0_estimated",
+      executed_by: "MarketClub Operator",
+      executed_at: "2026-05-03T21:00:00Z",
+      rollback_status: "active",
+      market_signal_id: 1202,
+      market_signal_live: true,
+      ticker: "AGIO",
+      action: "BUY",
+      confidence_score: 80,
+      candidate_bar_date: "2026-04-24",
+      rollback_marker: "dochia-dry-run:dochia_v0_2_range_daily:AGIO:2026-04-24",
+      candidate_score: 80,
+      candidate_monthly_triangle: 1,
+      candidate_weekly_triangle: 1,
+      candidate_daily_triangle: 1,
+      entry_close: "32.00",
+      outcome_1d_bar_date: "2026-04-27",
+      outcome_1d_close: "32.50",
+      outcome_1d_directional_return: "0.015625",
+      outcome_5d_bar_date: null,
+      outcome_5d_close: null,
+      outcome_5d_directional_return: null,
+      outcome_20d_bar_date: null,
+      outcome_20d_close: null,
+      outcome_20d_directional_return: null,
+      latest_candidate_bar_date: "2026-04-27",
+      latest_candidate_score: 80,
+      latest_monthly_triangle: 1,
+      latest_weekly_triangle: 1,
+      latest_daily_triangle: 1,
+      score_delta: 0,
+      signal_decay_flag: false,
+      signal_decay_date: null,
+      signal_decay_score: null,
+      signal_decay_daily_triangle: null,
+      whipsaw_after_promotion_flag: false,
+      whipsaw_transition_date: null,
+      whipsaw_transition_type: null,
+      whipsaw_to_score: null,
+      drift_status: "PENDING",
+      rollback_recommendation: "NO_WARNING",
+      monitoring_status: "PENDING",
+      explanation: "Outcome windows are still pending.",
+    },
+  ],
+};
+
 let promotionDryRunAcceptancesMock = promotionDryRunAcceptances;
 let promotionExecutionsMock = promotionExecutions;
 let promotionDryRunVerificationMock = promotionDryRunVerification;
@@ -872,6 +989,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionPostExecutionMonitoring: () => ({
+    data: promotionPostExecutionMonitoring,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -934,6 +1058,14 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("decision link")).toBeInTheDocument();
     expect(screen.getByText("Cross-model diagnostic")).toBeInTheDocument();
     expect(screen.getByText("Execution Drilldown")).toBeInTheDocument();
+    expect(screen.getByText("Post-Execution Monitoring")).toBeInTheDocument();
+    expect(screen.getByText("1 warnings")).toBeInTheDocument();
+    expect(screen.getByText("Rollback review")).toBeInTheDocument();
+    expect(screen.getByText("Price And Score Drift")).toBeInTheDocument();
+    expect(screen.getByText("Review Rollback Warning")).toBeInTheDocument();
+    expect(screen.getByText("-4.3%")).toBeInTheDocument();
+    expect(screen.getAllByText("Whipsaw").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Decay").length).toBeGreaterThan(0);
     expect(screen.getByText("Dry-Run Verification Gate")).toBeInTheDocument();
     expect(screen.getByText("Eligible for operator dry-run acceptance review")).toBeInTheDocument();
     expect(screen.getByText("CROSS_MODEL_DIAGNOSTIC_ONLY")).toBeInTheDocument();
