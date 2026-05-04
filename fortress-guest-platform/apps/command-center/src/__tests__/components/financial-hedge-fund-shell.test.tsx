@@ -589,6 +589,28 @@ const promotionExecutions = [
   },
 ];
 
+const promotionRollbackDrills = [
+  {
+    execution_id: "55555555-5555-5555-5555-555555555555",
+    dry_run_acceptance_id: "44444444-4444-4444-4444-444444444444",
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    baseline_parameter_set: "dochia_v0_estimated",
+    executed_by: "MarketClub Operator",
+    executed_at: "2026-05-04T12:52:00Z",
+    inserted_market_signal_ids: [1201, 1202],
+    rollback_markers: ["dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24"],
+    audited_market_signal_ids: [1201, 1202],
+    rollback_preview_market_signal_ids: [1201, 1202],
+    rollback_preview_count: 2,
+    rollback_eligibility: "ELIGIBLE",
+    already_rolled_back: false,
+    rollback_status: "active",
+    rollback_by: null,
+    rollback_attempted_at: null,
+    rolled_back_at: null,
+  },
+];
+
 const promotionDryRunVerification = {
   generated_at: "2026-05-03T20:31:00Z",
   candidate_parameter_set: "dochia_v0_2_range_daily",
@@ -723,6 +745,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionRollbackDrills: () => ({
+    data: promotionRollbackDrills,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -770,6 +799,14 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Execution Records")).toBeInTheDocument();
     expect(screen.getByText("1 recorded")).toBeInTheDocument();
     expect(screen.getByText("Inserted rows")).toBeInTheDocument();
+    expect(screen.getByText("Rollback Drill")).toBeInTheDocument();
+    expect(screen.getByText("1 checked")).toBeInTheDocument();
+    expect(screen.getByText("Dry-run acceptance ID")).toBeInTheDocument();
+    expect(screen.getByText("Rollback preview count")).toBeInTheDocument();
+    expect(screen.getByText("Inserted market_signal IDs")).toBeInTheDocument();
+    expect(screen.getByText("1201, 1202")).toBeInTheDocument();
+    expect(screen.getByText("Already rolled back")).toBeInTheDocument();
+    expect(screen.getByText("No")).toBeInTheDocument();
     expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText("dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24").length,

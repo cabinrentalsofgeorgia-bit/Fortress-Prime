@@ -61,6 +61,9 @@ class FakeCursor:
     def fetchone(self) -> dict[str, object]:
         return self.row
 
+    def fetchall(self) -> list[dict[str, object]]:
+        return [self.row]
+
 
 class FakeConnection:
     def __init__(self, row: dict[str, object]) -> None:
@@ -77,6 +80,42 @@ def _guarded_execution_sql() -> str:
         / "sql"
         / "marketclub_guarded_promotion_execution.sql"
     ).read_text(encoding="utf-8")
+
+
+def _rollback_drill_sql() -> str:
+    return (
+        Path(__file__).resolve().parents[1]
+        / "deploy"
+        / "sql"
+        / "marketclub_rollback_drill_observability.sql"
+    ).read_text(encoding="utf-8")
+
+
+def _rollback_drill_row(**overrides: object) -> dict[str, object]:
+    row: dict[str, object] = {
+        "execution_id": EXECUTION_ID,
+        "dry_run_acceptance_id": ACCEPTANCE_ID,
+        "candidate_parameter_set": "dochia_v0_2_range_daily",
+        "baseline_parameter_set": "dochia_v0_estimated",
+        "executed_by": "Gary Knight",
+        "executed_at": dt.datetime(2026, 5, 4, 12, 5, tzinfo=dt.UTC),
+        "inserted_market_signal_ids": [1201, 1202],
+        "rollback_markers": [
+            "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+            "dochia-dry-run:dochia_v0_2_range_daily:AGIO:2026-04-24",
+        ],
+        "audited_market_signal_ids": [1201, 1202],
+        "rollback_preview_market_signal_ids": [1201],
+        "rollback_preview_count": 1,
+        "rollback_eligibility": "ELIGIBLE_PARTIAL_AUDITED_ROWS",
+        "already_rolled_back": False,
+        "rollback_status": "active",
+        "rollback_by": None,
+        "rollback_attempted_at": None,
+        "rolled_back_at": None,
+    }
+    row.update(overrides)
+    return row
 
 
 def test_repository_executes_locked_database_function_not_raw_market_signal_insert() -> None:
@@ -120,6 +159,24 @@ def test_repository_rollback_uses_locked_database_function() -> None:
     assert "hedge_fund.rollback_guarded_signal_promotion" in conn.cursor_instance.sql
     assert conn.cursor_instance.params["execution_id"] == str(EXECUTION_ID)
     assert conn.cursor_instance.params["operator_token_sha256"] == OPERATOR_TOKEN_SHA256
+
+
+def test_repository_fetches_read_only_rollback_drill_view() -> None:
+    conn = FakeConnection(_rollback_drill_row())
+
+    result = repository.fetch_promotion_rollback_drills(
+        conn,  # type: ignore[arg-type]
+        candidate_parameter_set="dochia_v0_2_range_daily",
+        limit=3,
+    )
+
+    assert result[0]["execution_id"] == EXECUTION_ID
+    assert result[0]["dry_run_acceptance_id"] == ACCEPTANCE_ID
+    assert result[0]["rollback_preview_count"] == 1
+    assert result[0]["rollback_preview_market_signal_ids"] == [1201]
+    assert "hedge_fund.v_signal_promotion_rollback_drill" in conn.cursor_instance.sql
+    assert "DELETE FROM hedge_fund.market_signals" not in conn.cursor_instance.sql
+    assert conn.cursor_instance.params["candidate_parameter_set"] == "dochia_v0_2_range_daily"
 
 
 def test_python_execution_path_contains_no_direct_market_signals_write() -> None:
@@ -207,6 +264,64 @@ def test_sql_contract_makes_second_rollback_safe_noop() -> None:
 
     assert "IF v_execution.rollback_status = 'rolled_back' THEN" in sql
     assert "RETURN v_execution;" in sql
+
+
+def test_rollback_drill_preview_only_includes_audited_market_signal_ids() -> None:
+    sql = _rollback_drill_sql()
+
+    assert "CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_rollback_drill" in sql
+    assert "LEFT JOIN hedge_fund.signal_promotion_execution_rows r" in sql
+    assert "LEFT JOIN hedge_fund.market_signals ms" in sql
+    assert "ON ms.id = r.market_signal_id" in sql
+    assert "rollback_preview_market_signal_ids" in sql
+    assert "cardinality(rollback_preview_market_signal_ids)::INTEGER" in sql
+
+
+def test_rollback_drill_preview_does_not_match_by_ticker_or_date() -> None:
+    sql = _rollback_drill_sql()
+    live_signal_join = sql.split("LEFT JOIN hedge_fund.market_signals ms", 1)[1].split(
+        "),\nrollup AS", 1
+    )[0]
+
+    assert "ms.id = r.market_signal_id" in live_signal_join
+    assert "ticker" not in live_signal_join.lower()
+    assert "candidate_bar_date" not in live_signal_join.lower()
+    assert "bar_date" not in live_signal_join.lower()
+
+
+def test_rollback_drill_exposes_rolled_back_visibility() -> None:
+    sql = _rollback_drill_sql()
+    conn = FakeConnection(
+        _rollback_drill_row(
+            rollback_preview_market_signal_ids=[],
+            rollback_preview_count=0,
+            rollback_eligibility="ALREADY_ROLLED_BACK",
+            already_rolled_back=True,
+            rollback_status="rolled_back",
+            rollback_by="Gary Knight",
+            rollback_attempted_at=dt.datetime(2026, 5, 4, 12, 30, tzinfo=dt.UTC),
+            rolled_back_at=dt.datetime(2026, 5, 4, 12, 30, tzinfo=dt.UTC),
+        )
+    )
+
+    result = repository.fetch_promotion_rollback_drills(conn)  # type: ignore[arg-type]
+
+    assert "rollback_status = 'rolled_back' AS already_rolled_back" in sql
+    assert "rolled_back_at AS rollback_attempted_at" in sql
+    assert result[0]["already_rolled_back"] is True
+    assert result[0]["rollback_eligibility"] == "ALREADY_ROLLED_BACK"
+    assert result[0]["rolled_back_at"] == dt.datetime(2026, 5, 4, 12, 30, tzinfo=dt.UTC)
+
+
+def test_rollback_drill_is_read_only_and_cannot_affect_unaudited_rows() -> None:
+    sql = _rollback_drill_sql()
+    normalized = sql.upper()
+
+    assert " DELETE " not in normalized
+    assert " UPDATE " not in normalized
+    assert " INSERT " not in normalized
+    assert "GRANT SELECT ON TABLE hedge_fund.v_signal_promotion_rollback_drill" in sql
+    assert "GRANT EXECUTE" not in sql
 
 
 def test_sql_contract_keeps_security_definer_narrow() -> None:

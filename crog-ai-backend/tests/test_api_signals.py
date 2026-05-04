@@ -662,6 +662,37 @@ class FakeSignalStore:
             "created_at": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
         }
 
+    def _promotion_rollback_drill(
+        self,
+        *,
+        rollback_status: str = "active",
+        rollback_by: str | None = None,
+        rolled_back_at: dt.datetime | None = None,
+    ) -> dict[str, Any]:
+        already_rolled_back = rollback_status == "rolled_back"
+        return {
+            "execution_id": EXECUTION_ID,
+            "dry_run_acceptance_id": ACCEPTANCE_ID,
+            "candidate_parameter_set": "dochia_v0_2_range_daily",
+            "baseline_parameter_set": "dochia_v0_estimated",
+            "executed_by": "MarketClub Operator",
+            "executed_at": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
+            "inserted_market_signal_ids": [1201, 1202],
+            "rollback_markers": [
+                "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+                "dochia-dry-run:dochia_v0_2_range_daily:AGIO:2026-04-24",
+            ],
+            "audited_market_signal_ids": [1201, 1202],
+            "rollback_preview_market_signal_ids": [] if already_rolled_back else [1201, 1202],
+            "rollback_preview_count": 0 if already_rolled_back else 2,
+            "rollback_eligibility": "ALREADY_ROLLED_BACK" if already_rolled_back else "ELIGIBLE",
+            "already_rolled_back": already_rolled_back,
+            "rollback_status": rollback_status,
+            "rollback_by": rollback_by,
+            "rollback_attempted_at": rolled_back_at,
+            "rolled_back_at": rolled_back_at,
+        }
+
     def promotion_executions(
         self,
         *,
@@ -669,6 +700,21 @@ class FakeSignalStore:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         return [self._promotion_execution()][:limit]
+
+    def promotion_rollback_drills(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        return [
+            self._promotion_rollback_drill(),
+            self._promotion_rollback_drill(
+                rollback_status="rolled_back",
+                rollback_by="MarketClub Operator",
+                rolled_back_at=dt.datetime(2026, 5, 3, 21, 30, tzinfo=dt.UTC),
+            ),
+        ][:limit]
 
     def execute_guarded_promotion(
         self,
@@ -1149,6 +1195,31 @@ def test_promotion_executions_endpoint_returns_audit_rows() -> None:
     assert payload[0]["verification_status"] == "PASS"
     assert payload[0]["inserted_market_signal_ids"] == [1201, 1202]
     assert payload[0]["rollback_status"] == "active"
+
+
+def test_promotion_rollback_drill_endpoint_returns_read_only_scope() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/promotion-dry-run/executions/rollback-drill"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&limit=2"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["execution_id"] == str(EXECUTION_ID)
+    assert payload[0]["dry_run_acceptance_id"] == str(ACCEPTANCE_ID)
+    assert payload[0]["inserted_market_signal_ids"] == [1201, 1202]
+    assert payload[0]["rollback_markers"][0].startswith("dochia-dry-run:")
+    assert payload[0]["rollback_eligibility"] == "ELIGIBLE"
+    assert payload[0]["rollback_preview_count"] == 2
+    assert payload[0]["already_rolled_back"] is False
+    assert payload[0]["rollback_attempted_at"] is None
+    assert payload[1]["rollback_eligibility"] == "ALREADY_ROLLED_BACK"
+    assert payload[1]["already_rolled_back"] is True
+    assert payload[1]["rolled_back_at"] == "2026-05-03T21:30:00Z"
 
 
 def test_execute_guarded_promotion_endpoint_returns_execution_record() -> None:

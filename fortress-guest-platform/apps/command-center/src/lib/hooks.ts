@@ -18,6 +18,7 @@ import type {
   FinancialPromotionDryRunAcceptance,
   FinancialPromotionDryRunAcceptanceCreate,
   FinancialPromotionExecution,
+  FinancialPromotionRollbackDrill,
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunResponse,
   FinancialPromotionGateResponse,
@@ -304,6 +305,18 @@ export function useFinancialPromotionExecutions(params?: {
   return useQuery<FinancialPromotionExecution[]>({
     queryKey: ["financial", "signals", "promotion-dry-run", "executions", params],
     queryFn: () => api.get("/api/financial/signals/promotion-dry-run/executions", params),
+    staleTime: 60_000,
+  });
+}
+
+export function useFinancialPromotionRollbackDrills(params?: {
+  candidate_parameter_set?: string;
+  limit?: number;
+}) {
+  return useQuery<FinancialPromotionRollbackDrill[]>({
+    queryKey: ["financial", "signals", "promotion-dry-run", "rollback-drill", params],
+    queryFn: () =>
+      api.get("/api/financial/signals/promotion-dry-run/executions/rollback-drill", params),
     staleTime: 60_000,
   });
 }
