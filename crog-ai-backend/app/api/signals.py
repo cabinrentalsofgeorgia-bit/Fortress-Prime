@@ -731,6 +731,146 @@ class PromotionPostExecutionAlertsResponse(BaseModel):
     alerts: list[PromotionPostExecutionAlert]
 
 
+class SignalHealthDashboardSummary(BaseModel):
+    active_execution_count: int
+    degraded_execution_count: int
+    warning_execution_count: int
+    at_risk_signal_count: int
+    divergence_count: int
+    latest_divergence_bar_date: dt.date | None
+    rollback_review_count: int
+
+
+class SignalHealthActivePromotion(BaseModel):
+    execution_id: UUID
+    acceptance_id: UUID
+    candidate_id: str
+    baseline_parameter_set: str
+    executed_by: str
+    executed_at: dt.datetime
+    rollback_status: Literal["active", "rolled_back"]
+    inserted_count: int
+    live_signal_count: int
+    warning_signal_count: int
+    drift_signal_count: int
+    whipsaw_signal_count: int
+    decay_signal_count: int
+    rollback_review_count: int
+    avg_1d_return: Decimal | None
+    avg_5d_return: Decimal | None
+    avg_20d_return: Decimal | None
+    positive_1d_pct: Decimal | None
+    positive_5d_pct: Decimal | None
+    positive_20d_pct: Decimal | None
+    whipsaw_pct: Decimal | None
+    health_status: Literal["HEALTHY", "WARNING", "DEGRADED"]
+    key_flags: dict[str, bool]
+    explanation: str
+
+
+class SignalHealthAtRiskSignal(BaseModel):
+    execution_id: UUID
+    acceptance_id: UUID
+    decision_record_id: UUID
+    candidate_id: str
+    market_signal_id: int
+    ticker: str
+    action: Literal["BUY", "SELL"]
+    candidate_bar_date: dt.date
+    candidate_score: int
+    rollback_marker: str
+    outcome_5d_directional_return: Decimal | None
+    outcome_20d_directional_return: Decimal | None
+    drift_status: Literal[
+        "PENDING",
+        "IN_LINE",
+        "PRICE_DRIFT",
+        "SCORE_DRIFT",
+        "PRICE_AND_SCORE_DRIFT",
+    ]
+    whipsaw_after_promotion_flag: bool
+    signal_decay_flag: bool
+    rollback_recommendation: Literal[
+        "NO_WARNING",
+        "WATCH_WARNING",
+        "REVIEW_ROLLBACK_WARNING",
+        "NO_ACTION_ROLLED_BACK",
+    ]
+    monitoring_status: Literal["PENDING", "HEALTHY", "WARNING", "ROLLED_BACK"]
+    risk_score: int
+    risk_reason: Literal[
+        "whipsaw-after-promotion",
+        "5d return below threshold",
+        "drift vs expected range",
+    ]
+    explanation: str
+
+
+class SignalHealthModelDivergenceTrend(BaseModel):
+    bar_date: dt.date
+    candidate_80_count: int
+    production_matching_80_count: int
+    divergence_count: int
+    divergence_rate: Decimal | None
+    divergent_tickers: list[str]
+
+
+class SignalHealthModelDivergence(BaseModel):
+    latest_bar_date: dt.date | None
+    current_candidate_80_count: int
+    current_divergence_count: int
+    current_divergence_rate: Decimal | None
+    trend: list[SignalHealthModelDivergenceTrend]
+
+
+class SignalHealthExecutionOutcome(BaseModel):
+    execution_id: UUID
+    acceptance_id: UUID
+    candidate_id: str
+    baseline_parameter_set: str
+    executed_by: str
+    executed_at: dt.datetime
+    rollback_status: Literal["active", "rolled_back"]
+    inserted_count: int
+    avg_1d_return: Decimal | None
+    avg_5d_return: Decimal | None
+    avg_20d_return: Decimal | None
+    positive_1d_pct: Decimal | None
+    positive_5d_pct: Decimal | None
+    positive_20d_pct: Decimal | None
+    whipsaw_pct: Decimal | None
+    health_status: Literal["HEALTHY", "WARNING", "DEGRADED"]
+    key_flags: dict[str, bool]
+
+
+class SignalHealthAwarenessAlert(BaseModel):
+    severity: Literal["INFO", "WARNING"]
+    alert_type: Literal[
+        "CLEAR",
+        "DRIFT",
+        "WHIPSAW_AFTER_PROMOTION",
+        "SIGNAL_DECAY",
+        "PERFORMANCE_BAND",
+        "ROLLBACK_RECOMMENDATION",
+        "MODEL_PRODUCTION_DIVERGENCE",
+    ]
+    execution_id: UUID | None
+    message: str
+    non_blocking: bool
+
+
+class SignalHealthDashboardResponse(BaseModel):
+    generated_at: dt.datetime
+    candidate_parameter_set: str
+    production_parameter_set: str
+    summary: SignalHealthDashboardSummary
+    active_promotions: list[SignalHealthActivePromotion]
+    at_risk_signals: list[SignalHealthAtRiskSignal]
+    model_divergence: SignalHealthModelDivergence
+    execution_outcomes: list[SignalHealthExecutionOutcome]
+    awareness_alerts: list[SignalHealthAwarenessAlert]
+
+
 class PromotionPostExecutionAlertAcknowledgement(BaseModel):
     id: UUID
     alert_id: str
@@ -1202,6 +1342,30 @@ def promotion_post_execution_alerts(
     return store.promotion_post_execution_alerts(
         promotion_id=promotion_id,
         limit=limit,
+    )
+
+
+@router.get("/health-dashboard", response_model=SignalHealthDashboardResponse)
+def signal_health_dashboard(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[
+        str,
+        Query(min_length=1, max_length=80),
+    ] = "dochia_v0_2_range_daily",
+    production_parameter_set: Annotated[
+        str,
+        Query(min_length=1, max_length=80),
+    ] = "dochia_v0_estimated",
+    execution_limit: Annotated[int, Query(ge=1, le=25)] = 10,
+    risk_limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    divergence_lookback_bars: Annotated[int, Query(ge=1, le=120)] = 30,
+) -> dict[str, object]:
+    return store.signal_health_dashboard(
+        candidate_parameter_set=candidate_parameter_set,
+        production_parameter_set=production_parameter_set,
+        execution_limit=execution_limit,
+        risk_limit=risk_limit,
+        divergence_lookback_bars=divergence_lookback_bars,
     )
 
 

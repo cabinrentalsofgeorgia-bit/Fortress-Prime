@@ -1001,6 +1001,141 @@ promotionPostExecutionAlerts.alerts = promotionPostExecutionAlerts.alerts.map((a
   acknowledgement_required: index !== 0,
 }));
 
+const signalHealthDashboard = {
+  generated_at: "2026-05-04T14:15:00Z",
+  candidate_parameter_set: "dochia_v0_2_range_daily",
+  production_parameter_set: "dochia_v0_estimated",
+  summary: {
+    active_execution_count: 1,
+    degraded_execution_count: 1,
+    warning_execution_count: 0,
+    at_risk_signal_count: 1,
+    divergence_count: 3,
+    latest_divergence_bar_date: "2026-05-01",
+    rollback_review_count: 1,
+  },
+  active_promotions: [
+    {
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      candidate_id: "dochia_v0_2_range_daily",
+      baseline_parameter_set: "dochia_v0_estimated",
+      executed_by: "MarketClub Operator",
+      executed_at: "2026-05-03T21:00:00Z",
+      rollback_status: "active",
+      inserted_count: 4,
+      live_signal_count: 4,
+      warning_signal_count: 2,
+      drift_signal_count: 1,
+      whipsaw_signal_count: 1,
+      decay_signal_count: 1,
+      rollback_review_count: 1,
+      avg_1d_return: "0.0075",
+      avg_5d_return: "-0.0310",
+      avg_20d_return: null,
+      positive_1d_pct: "0.7500",
+      positive_5d_pct: "0.2500",
+      positive_20d_pct: null,
+      whipsaw_pct: "0.2500",
+      health_status: "DEGRADED",
+      key_flags: { drift: true, whipsaw: true, decay: true },
+      explanation: "Rollback review warning is present; operator review only.",
+    },
+  ],
+  at_risk_signals: [
+    {
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      decision_record_id: "33333333-3333-3333-3333-333333333333",
+      candidate_id: "dochia_v0_2_range_daily",
+      market_signal_id: 1201,
+      ticker: "AA",
+      action: "BUY",
+      candidate_bar_date: "2026-04-24",
+      candidate_score: 80,
+      rollback_marker: "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+      outcome_5d_directional_return: "-0.043478",
+      outcome_20d_directional_return: null,
+      drift_status: "PRICE_AND_SCORE_DRIFT",
+      whipsaw_after_promotion_flag: true,
+      signal_decay_flag: true,
+      rollback_recommendation: "REVIEW_ROLLBACK_WARNING",
+      monitoring_status: "WARNING",
+      risk_score: 105,
+      risk_reason: "whipsaw-after-promotion",
+      explanation: "Candidate state whipsawed after promotion; warning only.",
+    },
+  ],
+  model_divergence: {
+    latest_bar_date: "2026-05-01",
+    current_candidate_80_count: 12,
+    current_divergence_count: 3,
+    current_divergence_rate: "0.2500",
+    trend: [
+      {
+        bar_date: "2026-05-01",
+        candidate_80_count: 12,
+        production_matching_80_count: 9,
+        divergence_count: 3,
+        divergence_rate: "0.2500",
+        divergent_tickers: ["AA", "ACLX", "AEP"],
+      },
+      {
+        bar_date: "2026-04-30",
+        candidate_80_count: 10,
+        production_matching_80_count: 8,
+        divergence_count: 2,
+        divergence_rate: "0.2000",
+        divergent_tickers: ["ACLX", "AEP"],
+      },
+    ],
+  },
+  execution_outcomes: [
+    {
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      acceptance_id: "44444444-4444-4444-4444-444444444444",
+      candidate_id: "dochia_v0_2_range_daily",
+      baseline_parameter_set: "dochia_v0_estimated",
+      executed_by: "MarketClub Operator",
+      executed_at: "2026-05-03T21:00:00Z",
+      rollback_status: "active",
+      inserted_count: 4,
+      avg_1d_return: "0.0075",
+      avg_5d_return: "-0.0310",
+      avg_20d_return: null,
+      positive_1d_pct: "0.7500",
+      positive_5d_pct: "0.2500",
+      positive_20d_pct: null,
+      whipsaw_pct: "0.2500",
+      health_status: "DEGRADED",
+      key_flags: { drift: true, whipsaw: true, decay: true },
+    },
+  ],
+  awareness_alerts: [
+    {
+      severity: "WARNING",
+      alert_type: "DRIFT",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      message: "Drift detected in execution 55555555",
+      non_blocking: true,
+    },
+    {
+      severity: "WARNING",
+      alert_type: "WHIPSAW_AFTER_PROMOTION",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      message: "1 signals entered whipsaw after execution 55555555",
+      non_blocking: true,
+    },
+    {
+      severity: "WARNING",
+      alert_type: "PERFORMANCE_BAND",
+      execution_id: "55555555-5555-5555-5555-555555555555",
+      message: "5d performance below expected band in execution 55555555",
+      non_blocking: true,
+    },
+  ],
+};
+
 let promotionDryRunAcceptancesMock = promotionDryRunAcceptances;
 let promotionExecutionsMock = promotionExecutions;
 let promotionDryRunVerificationMock = promotionDryRunVerification;
@@ -1142,6 +1277,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialSignalHealthDashboard: () => ({
+    data: signalHealthDashboard,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useAcknowledgeFinancialPromotionPostExecutionAlert: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -1194,6 +1336,18 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Decision Record")).toBeInTheDocument();
     expect(screen.getByText("Decision Records")).toBeInTheDocument();
     expect(screen.getAllByText("Continue shadow").length).toBeGreaterThan(0);
+    expect(screen.getByText("Signal Health Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Awareness Alerts")).toBeInTheDocument();
+    expect(screen.getByText("Active Promotions Health")).toBeInTheDocument();
+    expect(screen.getAllByText("At-Risk Signals").length).toBeGreaterThan(0);
+    expect(screen.getByText("Model vs Production Divergence")).toBeInTheDocument();
+    expect(screen.getByText("Execution Outcome Summary")).toBeInTheDocument();
+    expect(screen.getAllByText("DEGRADED").length).toBeGreaterThan(0);
+    expect(screen.getByText("Drift detected in execution 55555555")).toBeInTheDocument();
+    expect(screen.getByText("1 signals entered whipsaw after execution 55555555")).toBeInTheDocument();
+    expect(screen.getByText("5d performance below expected band in execution 55555555")).toBeInTheDocument();
+    expect(screen.getByText("whipsaw-after-promotion")).toBeInTheDocument();
+    expect(screen.getByText("Candidate +80 while production is not +80.")).toBeInTheDocument();
     expect(screen.getByText("Promotion Dry-Run")).toBeInTheDocument();
     expect(screen.getByText("market_signals Preview")).toBeInTheDocument();
     expect(screen.getByText("Ready for dry-run")).toBeInTheDocument();
@@ -1213,7 +1367,7 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Rollback review")).toBeInTheDocument();
     expect(screen.getAllByText("Price And Score Drift").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Review Rollback Warning").length).toBeGreaterThan(0);
-    expect(screen.getByText("-4.3%")).toBeInTheDocument();
+    expect(screen.getAllByText("-4.3%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Whipsaw").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Decay").length).toBeGreaterThan(0);
     expect(screen.getByText("Post-Execution Alerts")).toBeInTheDocument();

@@ -185,6 +185,16 @@ class SignalDataStore(Protocol):
         limit: int = 100,
     ) -> dict[str, Any]: ...
 
+    def signal_health_dashboard(
+        self,
+        *,
+        candidate_parameter_set: str,
+        production_parameter_set: str = PRODUCTION_PARAMETER_SET,
+        execution_limit: int = 10,
+        risk_limit: int = 25,
+        divergence_lookback_bars: int = 30,
+    ) -> dict[str, Any]: ...
+
     def acknowledge_promotion_post_execution_alert(
         self,
         *,
@@ -2408,6 +2418,392 @@ def fetch_promotion_post_execution_alerts(
     }
 
 
+SIGNAL_HEALTH_ACTIVE_PROMOTION_FIELDS = [
+    "execution_id",
+    "acceptance_id",
+    "candidate_id",
+    "baseline_parameter_set",
+    "executed_by",
+    "executed_at",
+    "rollback_status",
+    "inserted_count",
+    "live_signal_count",
+    "warning_signal_count",
+    "drift_signal_count",
+    "whipsaw_signal_count",
+    "decay_signal_count",
+    "rollback_review_count",
+    "avg_1d_return",
+    "avg_5d_return",
+    "avg_20d_return",
+    "positive_1d_pct",
+    "positive_5d_pct",
+    "positive_20d_pct",
+    "whipsaw_pct",
+    "health_status",
+    "key_flags",
+    "explanation",
+]
+
+
+SIGNAL_HEALTH_AT_RISK_FIELDS = [
+    "execution_id",
+    "acceptance_id",
+    "decision_record_id",
+    "candidate_id",
+    "market_signal_id",
+    "ticker",
+    "action",
+    "candidate_bar_date",
+    "candidate_score",
+    "rollback_marker",
+    "outcome_5d_directional_return",
+    "outcome_20d_directional_return",
+    "drift_status",
+    "whipsaw_after_promotion_flag",
+    "signal_decay_flag",
+    "rollback_recommendation",
+    "monitoring_status",
+    "risk_score",
+    "risk_reason",
+    "explanation",
+]
+
+
+SIGNAL_HEALTH_EXECUTION_OUTCOME_FIELDS = [
+    "execution_id",
+    "acceptance_id",
+    "candidate_id",
+    "baseline_parameter_set",
+    "executed_by",
+    "executed_at",
+    "rollback_status",
+    "inserted_count",
+    "avg_1d_return",
+    "avg_5d_return",
+    "avg_20d_return",
+    "positive_1d_pct",
+    "positive_5d_pct",
+    "positive_20d_pct",
+    "whipsaw_pct",
+    "health_status",
+    "key_flags",
+]
+
+
+SIGNAL_HEALTH_DIVERGENCE_FIELDS = [
+    "bar_date",
+    "candidate_80_count",
+    "production_matching_80_count",
+    "divergence_count",
+    "divergence_rate",
+    "divergent_tickers",
+]
+
+
+def _signal_health_row(row: dict[str, Any], fields: list[str]) -> dict[str, Any]:
+    response = {key: row[key] for key in fields}
+    if "key_flags" in response:
+        response["key_flags"] = dict(response["key_flags"] or {})
+    if "divergent_tickers" in response:
+        response["divergent_tickers"] = list(response["divergent_tickers"] or [])
+    return response
+
+
+def _short_execution_id(execution_id: Any) -> str:
+    return str(execution_id)[:8]
+
+
+def _signal_health_awareness_alerts(
+    *,
+    active_promotions: list[dict[str, Any]],
+    at_risk_signals: list[dict[str, Any]],
+    latest_divergence: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    alerts: list[dict[str, Any]] = []
+    for row in active_promotions:
+        execution_id = row["execution_id"]
+        short_id = _short_execution_id(execution_id)
+        if row["drift_signal_count"] > 0:
+            alerts.append(
+                {
+                    "severity": "WARNING",
+                    "alert_type": "DRIFT",
+                    "execution_id": execution_id,
+                    "message": f"Drift detected in execution {short_id}",
+                    "non_blocking": True,
+                }
+            )
+        if row["whipsaw_signal_count"] > 0:
+            alerts.append(
+                {
+                    "severity": "WARNING",
+                    "alert_type": "WHIPSAW_AFTER_PROMOTION",
+                    "execution_id": execution_id,
+                    "message": (
+                        f"{row['whipsaw_signal_count']} signals entered whipsaw "
+                        f"after execution {short_id}"
+                    ),
+                    "non_blocking": True,
+                }
+            )
+        if row["decay_signal_count"] > 0:
+            alerts.append(
+                {
+                    "severity": "WARNING",
+                    "alert_type": "SIGNAL_DECAY",
+                    "execution_id": execution_id,
+                    "message": f"Signal decay detected in execution {short_id}",
+                    "non_blocking": True,
+                }
+            )
+        if row["avg_5d_return"] is not None and row["avg_5d_return"] < Decimal("-0.02"):
+            alerts.append(
+                {
+                    "severity": "WARNING",
+                    "alert_type": "PERFORMANCE_BAND",
+                    "execution_id": execution_id,
+                    "message": f"5d performance below expected band in execution {short_id}",
+                    "non_blocking": True,
+                }
+            )
+        if row["rollback_review_count"] > 0:
+            alerts.append(
+                {
+                    "severity": "WARNING",
+                    "alert_type": "ROLLBACK_RECOMMENDATION",
+                    "execution_id": execution_id,
+                    "message": f"Rollback review warning present in execution {short_id}",
+                    "non_blocking": True,
+                }
+            )
+
+    if latest_divergence and latest_divergence["divergence_count"] > 0:
+        alerts.append(
+            {
+                "severity": "INFO",
+                "alert_type": "MODEL_PRODUCTION_DIVERGENCE",
+                "execution_id": None,
+                "message": (
+                    f"{latest_divergence['divergence_count']} candidate +80 tickers "
+                    "diverge from production baseline"
+                ),
+                "non_blocking": True,
+            }
+        )
+
+    if not alerts and not at_risk_signals:
+        return [
+            {
+                "severity": "INFO",
+                "alert_type": "CLEAR",
+                "execution_id": None,
+                "message": "No active post-execution risk signals require attention.",
+                "non_blocking": True,
+            }
+        ]
+    return alerts[:10]
+
+
+def fetch_signal_health_dashboard(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    production_parameter_set: str = PRODUCTION_PARAMETER_SET,
+    execution_limit: int = 10,
+    risk_limit: int = 25,
+    divergence_lookback_bars: int = 30,
+) -> dict[str, Any]:
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            SELECT
+                execution_id,
+                acceptance_id,
+                candidate_id,
+                baseline_parameter_set,
+                executed_by,
+                executed_at,
+                rollback_status,
+                inserted_count,
+                live_signal_count,
+                warning_signal_count,
+                drift_signal_count,
+                whipsaw_signal_count,
+                decay_signal_count,
+                rollback_review_count,
+                avg_1d_return,
+                avg_5d_return,
+                avg_20d_return,
+                positive_1d_pct,
+                positive_5d_pct,
+                positive_20d_pct,
+                whipsaw_pct,
+                health_status,
+                key_flags,
+                explanation
+            FROM hedge_fund.v_signal_health_active_promotions
+            WHERE candidate_id = %(candidate_parameter_set)s
+            ORDER BY executed_at DESC
+            LIMIT %(limit)s
+            """,
+            {
+                "candidate_parameter_set": candidate_parameter_set,
+                "limit": execution_limit,
+            },
+        )
+        active_promotions = [
+            _signal_health_row(dict(row), SIGNAL_HEALTH_ACTIVE_PROMOTION_FIELDS)
+            for row in cur.fetchall()
+        ]
+
+        cur.execute(
+            """
+            SELECT
+                execution_id,
+                acceptance_id,
+                decision_record_id,
+                candidate_id,
+                market_signal_id,
+                ticker,
+                action,
+                candidate_bar_date,
+                candidate_score,
+                rollback_marker,
+                outcome_5d_directional_return,
+                outcome_20d_directional_return,
+                drift_status,
+                whipsaw_after_promotion_flag,
+                signal_decay_flag,
+                rollback_recommendation,
+                monitoring_status,
+                risk_score,
+                risk_reason,
+                explanation
+            FROM hedge_fund.v_signal_health_at_risk_signals
+            WHERE candidate_id = %(candidate_parameter_set)s
+            ORDER BY risk_score DESC, candidate_bar_date DESC, ticker
+            LIMIT %(limit)s
+            """,
+            {
+                "candidate_parameter_set": candidate_parameter_set,
+                "limit": risk_limit,
+            },
+        )
+        at_risk_signals = [
+            _signal_health_row(dict(row), SIGNAL_HEALTH_AT_RISK_FIELDS)
+            for row in cur.fetchall()
+        ]
+
+        cur.execute(
+            """
+            SELECT
+                execution_id,
+                acceptance_id,
+                candidate_id,
+                baseline_parameter_set,
+                executed_by,
+                executed_at,
+                rollback_status,
+                inserted_count,
+                avg_1d_return,
+                avg_5d_return,
+                avg_20d_return,
+                positive_1d_pct,
+                positive_5d_pct,
+                positive_20d_pct,
+                whipsaw_pct,
+                health_status,
+                key_flags
+            FROM hedge_fund.v_signal_health_execution_outcomes
+            WHERE candidate_id = %(candidate_parameter_set)s
+            ORDER BY executed_at DESC
+            LIMIT %(limit)s
+            """,
+            {
+                "candidate_parameter_set": candidate_parameter_set,
+                "limit": execution_limit,
+            },
+        )
+        execution_outcomes = [
+            _signal_health_row(dict(row), SIGNAL_HEALTH_EXECUTION_OUTCOME_FIELDS)
+            for row in cur.fetchall()
+        ]
+
+        cur.execute(
+            """
+            SELECT
+                bar_date,
+                candidate_80_count,
+                production_matching_80_count,
+                divergence_count,
+                divergence_rate,
+                divergent_tickers
+            FROM hedge_fund.signal_health_model_divergence(
+                %(candidate_parameter_set)s,
+                %(production_parameter_set)s,
+                %(lookback_bars)s
+            )
+            """,
+            {
+                "candidate_parameter_set": candidate_parameter_set,
+                "production_parameter_set": production_parameter_set,
+                "lookback_bars": divergence_lookback_bars,
+            },
+        )
+        divergence_trend = [
+            _signal_health_row(dict(row), SIGNAL_HEALTH_DIVERGENCE_FIELDS)
+            for row in cur.fetchall()
+        ]
+
+    latest_divergence = divergence_trend[0] if divergence_trend else None
+    return {
+        "generated_at": dt.datetime.now(dt.UTC),
+        "candidate_parameter_set": candidate_parameter_set,
+        "production_parameter_set": production_parameter_set,
+        "summary": {
+            "active_execution_count": len(active_promotions),
+            "degraded_execution_count": sum(
+                1 for row in active_promotions if row["health_status"] == "DEGRADED"
+            ),
+            "warning_execution_count": sum(
+                1 for row in active_promotions if row["health_status"] == "WARNING"
+            ),
+            "at_risk_signal_count": len(at_risk_signals),
+            "divergence_count": latest_divergence["divergence_count"]
+            if latest_divergence
+            else 0,
+            "latest_divergence_bar_date": latest_divergence["bar_date"]
+            if latest_divergence
+            else None,
+            "rollback_review_count": sum(
+                row["rollback_review_count"] for row in active_promotions
+            ),
+        },
+        "active_promotions": active_promotions,
+        "at_risk_signals": at_risk_signals,
+        "model_divergence": {
+            "latest_bar_date": latest_divergence["bar_date"] if latest_divergence else None,
+            "current_candidate_80_count": latest_divergence["candidate_80_count"]
+            if latest_divergence
+            else 0,
+            "current_divergence_count": latest_divergence["divergence_count"]
+            if latest_divergence
+            else 0,
+            "current_divergence_rate": latest_divergence["divergence_rate"]
+            if latest_divergence
+            else None,
+            "trend": divergence_trend,
+        },
+        "execution_outcomes": execution_outcomes,
+        "awareness_alerts": _signal_health_awareness_alerts(
+            active_promotions=active_promotions,
+            at_risk_signals=at_risk_signals,
+            latest_divergence=latest_divergence,
+        ),
+    }
+
+
 PROMOTION_POST_EXECUTION_ALERT_ACK_FIELDS = [
     "id",
     "alert_id",
@@ -2983,6 +3379,26 @@ class PostgresSignalDataStore:
                 conn,
                 promotion_id=promotion_id,
                 limit=limit,
+            )
+
+    def signal_health_dashboard(
+        self,
+        *,
+        candidate_parameter_set: str,
+        production_parameter_set: str = PRODUCTION_PARAMETER_SET,
+        execution_limit: int = 10,
+        risk_limit: int = 25,
+        divergence_lookback_bars: int = 30,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_signal_health_dashboard(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                production_parameter_set=production_parameter_set,
+                execution_limit=execution_limit,
+                risk_limit=risk_limit,
+                divergence_lookback_bars=divergence_lookback_bars,
             )
 
     def acknowledge_promotion_post_execution_alert(

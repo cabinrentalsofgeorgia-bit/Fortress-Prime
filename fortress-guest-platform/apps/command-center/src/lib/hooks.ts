@@ -27,6 +27,7 @@ import type {
   FinancialPromotionPostExecutionMonitoringResponse,
   FinancialPromotionReconciliation,
   FinancialPromotionRollbackDrill,
+  FinancialSignalHealthDashboardResponse,
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunResponse,
   FinancialPromotionGateResponse,
@@ -390,6 +391,21 @@ export function useFinancialPromotionPostExecutionAlerts(
         params,
       ),
     enabled: Boolean(promotionId),
+    refetchInterval: 60_000,
+    staleTime: 60_000,
+  });
+}
+
+export function useFinancialSignalHealthDashboard(params?: {
+  candidate_parameter_set?: string;
+  production_parameter_set?: string;
+  execution_limit?: number;
+  risk_limit?: number;
+  divergence_lookback_bars?: number;
+}) {
+  return useQuery<FinancialSignalHealthDashboardResponse>({
+    queryKey: ["financial", "signals", "health-dashboard", params],
+    queryFn: () => api.get("/api/financial/signals/health-dashboard", params),
     refetchInterval: 60_000,
     staleTime: 60_000,
   });

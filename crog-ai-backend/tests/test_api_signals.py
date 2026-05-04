@@ -1113,6 +1113,150 @@ class FakeSignalStore:
             "alerts": alerts,
         }
 
+    def signal_health_dashboard(
+        self,
+        *,
+        candidate_parameter_set: str,
+        production_parameter_set: str = "dochia_v0_estimated",
+        execution_limit: int = 10,
+        risk_limit: int = 25,
+        divergence_lookback_bars: int = 30,
+    ) -> dict[str, Any]:
+        return {
+            "generated_at": dt.datetime(2026, 5, 4, 14, 15, tzinfo=dt.UTC),
+            "candidate_parameter_set": candidate_parameter_set,
+            "production_parameter_set": production_parameter_set,
+            "summary": {
+                "active_execution_count": 1,
+                "degraded_execution_count": 1,
+                "warning_execution_count": 0,
+                "at_risk_signal_count": 1,
+                "divergence_count": 3,
+                "latest_divergence_bar_date": dt.date(2026, 5, 1),
+                "rollback_review_count": 1,
+            },
+            "active_promotions": [
+                {
+                    "execution_id": EXECUTION_ID,
+                    "acceptance_id": ACCEPTANCE_ID,
+                    "candidate_id": candidate_parameter_set,
+                    "baseline_parameter_set": production_parameter_set,
+                    "executed_by": "MarketClub Operator",
+                    "executed_at": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
+                    "rollback_status": "active",
+                    "inserted_count": 4,
+                    "live_signal_count": 4,
+                    "warning_signal_count": 2,
+                    "drift_signal_count": 1,
+                    "whipsaw_signal_count": 1,
+                    "decay_signal_count": 1,
+                    "rollback_review_count": 1,
+                    "avg_1d_return": Decimal("0.0075"),
+                    "avg_5d_return": Decimal("-0.0310"),
+                    "avg_20d_return": None,
+                    "positive_1d_pct": Decimal("0.7500"),
+                    "positive_5d_pct": Decimal("0.2500"),
+                    "positive_20d_pct": None,
+                    "whipsaw_pct": Decimal("0.2500"),
+                    "health_status": "DEGRADED",
+                    "key_flags": {"drift": True, "whipsaw": True, "decay": True},
+                    "explanation": "Rollback review warning is present; operator review only.",
+                }
+            ][:execution_limit],
+            "at_risk_signals": [
+                {
+                    "execution_id": EXECUTION_ID,
+                    "acceptance_id": ACCEPTANCE_ID,
+                    "decision_record_id": DECISION_ID,
+                    "candidate_id": candidate_parameter_set,
+                    "market_signal_id": 1201,
+                    "ticker": "AA",
+                    "action": "BUY",
+                    "candidate_bar_date": dt.date(2026, 4, 24),
+                    "candidate_score": 80,
+                    "rollback_marker": "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+                    "outcome_5d_directional_return": Decimal("-0.043478"),
+                    "outcome_20d_directional_return": None,
+                    "drift_status": "PRICE_AND_SCORE_DRIFT",
+                    "whipsaw_after_promotion_flag": True,
+                    "signal_decay_flag": True,
+                    "rollback_recommendation": "REVIEW_ROLLBACK_WARNING",
+                    "monitoring_status": "WARNING",
+                    "risk_score": 105,
+                    "risk_reason": "whipsaw-after-promotion",
+                    "explanation": "Candidate state whipsawed after promotion; warning only.",
+                }
+            ][:risk_limit],
+            "model_divergence": {
+                "latest_bar_date": dt.date(2026, 5, 1),
+                "current_candidate_80_count": 12,
+                "current_divergence_count": 3,
+                "current_divergence_rate": Decimal("0.2500"),
+                "trend": [
+                    {
+                        "bar_date": dt.date(2026, 5, 1),
+                        "candidate_80_count": 12,
+                        "production_matching_80_count": 9,
+                        "divergence_count": 3,
+                        "divergence_rate": Decimal("0.2500"),
+                        "divergent_tickers": ["AA", "ACLX", "AEP"],
+                    },
+                    {
+                        "bar_date": dt.date(2026, 4, 30),
+                        "candidate_80_count": 10,
+                        "production_matching_80_count": 8,
+                        "divergence_count": 2,
+                        "divergence_rate": Decimal("0.2000"),
+                        "divergent_tickers": ["ACLX", "AEP"],
+                    },
+                ][:divergence_lookback_bars],
+            },
+            "execution_outcomes": [
+                {
+                    "execution_id": EXECUTION_ID,
+                    "acceptance_id": ACCEPTANCE_ID,
+                    "candidate_id": candidate_parameter_set,
+                    "baseline_parameter_set": production_parameter_set,
+                    "executed_by": "MarketClub Operator",
+                    "executed_at": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
+                    "rollback_status": "active",
+                    "inserted_count": 4,
+                    "avg_1d_return": Decimal("0.0075"),
+                    "avg_5d_return": Decimal("-0.0310"),
+                    "avg_20d_return": None,
+                    "positive_1d_pct": Decimal("0.7500"),
+                    "positive_5d_pct": Decimal("0.2500"),
+                    "positive_20d_pct": None,
+                    "whipsaw_pct": Decimal("0.2500"),
+                    "health_status": "DEGRADED",
+                    "key_flags": {"drift": True, "whipsaw": True, "decay": True},
+                }
+            ][:execution_limit],
+            "awareness_alerts": [
+                {
+                    "severity": "WARNING",
+                    "alert_type": "DRIFT",
+                    "execution_id": EXECUTION_ID,
+                    "message": "Drift detected in execution 55555555",
+                    "non_blocking": True,
+                },
+                {
+                    "severity": "WARNING",
+                    "alert_type": "WHIPSAW_AFTER_PROMOTION",
+                    "execution_id": EXECUTION_ID,
+                    "message": "1 signals entered whipsaw after execution 55555555",
+                    "non_blocking": True,
+                },
+                {
+                    "severity": "WARNING",
+                    "alert_type": "PERFORMANCE_BAND",
+                    "execution_id": EXECUTION_ID,
+                    "message": "5d performance below expected band in execution 55555555",
+                    "non_blocking": True,
+                },
+            ],
+        }
+
     def acknowledge_promotion_post_execution_alert(
         self,
         *,
@@ -1809,6 +1953,50 @@ def test_promotion_post_execution_alerts_endpoint_returns_warning_only_alerts() 
     assert "no automated rollback is performed" in guidance
     assert "no automatic trade or signal change is made" in guidance
     assert "no automatic trade, signal, or rollback action is made" in guidance
+
+
+def test_signal_health_dashboard_endpoint_returns_operator_awareness_layer() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/health-dashboard"
+        "?candidate_parameter_set=dochia_v0_2_range_daily"
+        "&production_parameter_set=dochia_v0_estimated"
+        "&execution_limit=10"
+        "&risk_limit=25"
+        "&divergence_lookback_bars=2"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["candidate_parameter_set"] == "dochia_v0_2_range_daily"
+    assert payload["production_parameter_set"] == "dochia_v0_estimated"
+    assert payload["summary"]["active_execution_count"] == 1
+    assert payload["summary"]["degraded_execution_count"] == 1
+    assert payload["summary"]["at_risk_signal_count"] == 1
+    assert payload["active_promotions"][0]["health_status"] == "DEGRADED"
+    assert payload["active_promotions"][0]["key_flags"] == {
+        "drift": True,
+        "whipsaw": True,
+        "decay": True,
+    }
+    assert payload["at_risk_signals"][0]["risk_reason"] == "whipsaw-after-promotion"
+    assert payload["model_divergence"]["current_divergence_count"] == 3
+    assert payload["model_divergence"]["trend"][0]["divergent_tickers"] == [
+        "AA",
+        "ACLX",
+        "AEP",
+    ]
+    assert payload["execution_outcomes"][0]["inserted_count"] == 4
+    assert payload["execution_outcomes"][0]["avg_5d_return"] == "-0.0310"
+    assert all(alert["non_blocking"] is True for alert in payload["awareness_alerts"])
+    assert [alert["message"] for alert in payload["awareness_alerts"]] == [
+        "Drift detected in execution 55555555",
+        "1 signals entered whipsaw after execution 55555555",
+        "5d performance below expected band in execution 55555555",
+    ]
 
 
 def test_promotion_post_execution_alert_acknowledgement_endpoint_creates_audit_row() -> None:
