@@ -58,6 +58,25 @@ type CleanupTarget = {
   record: QuoteBookingRecord;
   action: CleanupAction;
 };
+type ExceptionSeverity = "stop" | "attention" | "watch";
+type ExceptionAction =
+  | "approve_payment"
+  | "send_confirmation"
+  | "close_ops"
+  | "expire_hold"
+  | "cancel_proof"
+  | "open_audit"
+  | "inspect";
+type ActivationExceptionItem = {
+  id: string;
+  record: QuoteBookingRecord;
+  severity: ExceptionSeverity;
+  label: string;
+  detail: string;
+  ageAt: string | null;
+  primaryAction: ExceptionAction;
+  secondaryAction?: ExceptionAction;
+};
 
 type ActivationTimelineEvent = {
   id: string;
@@ -223,6 +242,18 @@ function formatTimestamp(value: string | null | undefined): string {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
 }
 
+function formatAge(value: string | null | undefined): string {
+  if (!value) return "--";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return formatTimestamp(value);
+  const diffMs = Math.max(0, Date.now() - parsed.getTime());
+  const diffMinutes = Math.floor(diffMs / 60_000);
+  if (diffMinutes < 60) return `${Math.max(1, diffMinutes)}m`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 48) return `${diffHours}h`;
+  return `${Math.floor(diffHours / 24)}d`;
+}
+
 function metric(summary: Record<string, number> | undefined, key: string): number {
   return summary?.[key] ?? 0;
 }
@@ -382,6 +413,176 @@ function canCancelProofReservation(record: QuoteBookingRecord): boolean {
   return record.kind === "reservation" && record.metadata?.cleanup_eligible === true;
 }
 
+function hasTimelineAction(record: QuoteBookingRecord, action: string): boolean {
+  return metadataTimeline(record, "activation_timeline").some((event) => event.action === action);
+}
+
+function pushException(
+  items: ActivationExceptionItem[],
+  item: ActivationExceptionItem,
+): void {
+  if (items.some((existing) => existing.id === item.id)) return;
+  items.push(item);
+}
+
+function buildActivationExceptions(records: QuoteBookingRecord[]): ActivationExceptionItem[] {
+  const items: ActivationExceptionItem[] = [];
+
+  records.forEach((record) => {
+    if (record.kind === "hold" && canExpireLocalHold(record)) {
+      pushException(items, {
+        id: `hold-cleanup-${record.id}`,
+        record,
+        severity: "attention",
+        label: "Expired Hold Cleanup",
+        detail: metadataString(record, "cleanup_reason") || "Expired local hold can be cleared from availability.",
+        ageAt: metadataString(record, "expires_at") || record.updated_at || record.created_at,
+        primaryAction: "expire_hold",
+        secondaryAction: "inspect",
+      });
+      return;
+    }
+
+    if (record.kind !== "reservation") return;
+
+    const reconciliationState = metadataString(record, "payment_reconciliation_state");
+    const activationState = metadataString(record, "activation_state");
+    const draftStatus = metadataString(record, "guest_confirmation_draft_status");
+    const opsStatus = metadataString(record, "ops_handoff_status");
+    const timeline = metadataTimeline(record, "activation_timeline");
+
+    if (canApprovePayment(record)) {
+      pushException(items, {
+        id: `payment-proof-${record.id}`,
+        record,
+        severity: "attention",
+        label: "Payment Proof Approval",
+        detail:
+          metadataString(record, "payment_reconciliation_detail") ||
+          "Stripe payment signal is waiting for staff approval before local posting.",
+        ageAt: metadataString(record, "payment_reconciled_at") || record.updated_at || record.created_at,
+        primaryAction: "approve_payment",
+        secondaryAction: "open_audit",
+      });
+    }
+
+    if (reconciliationState?.endsWith("_needs_staff_review")) {
+      pushException(items, {
+        id: `payment-stop-${record.id}`,
+        record,
+        severity: "stop",
+        label: reconciliationLabel(reconciliationState) || "Payment Review Stop",
+        detail:
+          metadataString(record, "payment_reconciliation_detail") ||
+          "Payment reconciliation needs staff inspection before activation can continue.",
+        ageAt: metadataString(record, "payment_reconciled_at") || record.updated_at || record.created_at,
+        primaryAction: "open_audit",
+        secondaryAction: "inspect",
+      });
+    }
+
+    if (draftStatus === "send_failed") {
+      pushException(items, {
+        id: `confirmation-failed-${record.id}`,
+        record,
+        severity: "stop",
+        label: "Confirmation Send Failed",
+        detail: "Guest confirmation send failed and needs staff retry or inspection.",
+        ageAt: record.updated_at || record.created_at,
+        primaryAction: "send_confirmation",
+        secondaryAction: "open_audit",
+      });
+    } else if (canSendGuestConfirmation(record)) {
+      pushException(items, {
+        id: `confirmation-pending-${record.id}`,
+        record,
+        severity: "attention",
+        label: "Confirmation Approval",
+        detail: "Guest confirmation draft is waiting for staff approval and send.",
+        ageAt: metadataString(record, "activation_created_at") || record.updated_at || record.created_at,
+        primaryAction: "send_confirmation",
+        secondaryAction: "open_audit",
+      });
+    }
+
+    if (canCloseOpsHandoff(record)) {
+      pushException(items, {
+        id: `ops-open-${record.id}`,
+        record,
+        severity: activationState === "confirmation_sent_ops_open" ? "attention" : "watch",
+        label: "Ops Handoff Open",
+        detail: "Internal activation work orders still need closure; housekeeping remains separately scheduled.",
+        ageAt: metadataString(record, "activation_created_at") || record.updated_at || record.created_at,
+        primaryAction: "close_ops",
+        secondaryAction: "open_audit",
+      });
+    }
+
+    if (canCancelProofReservation(record)) {
+      pushException(items, {
+        id: `proof-cleanup-${record.id}`,
+        record,
+        severity: "attention",
+        label: "Proof Reservation Cleanup",
+        detail: metadataString(record, "cleanup_reason") || "Proof-lane reservation can be cancelled to release availability.",
+        ageAt: record.updated_at || record.created_at,
+        primaryAction: "cancel_proof",
+        secondaryAction: "open_audit",
+      });
+    }
+
+    if (activationState && timeline.length === 0) {
+      pushException(items, {
+        id: `missing-audit-${record.id}`,
+        record,
+        severity: "stop",
+        label: "Missing Audit Evidence",
+        detail: "Activation state exists but no activation timeline is available for staff review.",
+        ageAt: record.updated_at || record.created_at,
+        primaryAction: "open_audit",
+        secondaryAction: "inspect",
+      });
+    }
+
+    if (
+      activationState === "completed" &&
+      timeline.length > 0 &&
+      (!hasTimelineAction(record, "send_guest_confirmation") || !hasTimelineAction(record, "close_ops_handoff"))
+    ) {
+      pushException(items, {
+        id: `incomplete-audit-${record.id}`,
+        record,
+        severity: "stop",
+        label: "Incomplete Completion Audit",
+        detail: "Activation is marked complete but expected confirmation or ops audit evidence is missing.",
+        ageAt: record.updated_at || record.created_at,
+        primaryAction: "open_audit",
+        secondaryAction: "inspect",
+      });
+    }
+
+    if (opsStatus === "closed" && draftStatus !== "sent" && activationState === "ops_closed_pending_confirmation") {
+      pushException(items, {
+        id: `ops-closed-confirmation-pending-${record.id}`,
+        record,
+        severity: "attention",
+        label: "Ops Closed, Confirmation Pending",
+        detail: "Ops handoff is closed; the guest confirmation still needs staff send approval.",
+        ageAt: metadataString(record, "ops_handoff_closed_at") || record.updated_at || record.created_at,
+        primaryAction: "send_confirmation",
+        secondaryAction: "open_audit",
+      });
+    }
+  });
+
+  const severityRank: Record<ExceptionSeverity, number> = { stop: 0, attention: 1, watch: 2 };
+  return items.sort((left, right) => {
+    const severityDelta = severityRank[left.severity] - severityRank[right.severity];
+    if (severityDelta !== 0) return severityDelta;
+    return new Date(left.ageAt || 0).getTime() - new Date(right.ageAt || 0).getTime();
+  });
+}
+
 function cleanupLabel(action: CleanupAction): string {
   switch (action) {
     case "expire_hold":
@@ -476,6 +677,36 @@ function timelineStageTone(stage: string): string {
       return "border-zinc-600 bg-zinc-800 text-zinc-200";
     default:
       return "border-zinc-700 bg-zinc-950 text-zinc-300";
+  }
+}
+
+function exceptionSeverityTone(severity: ExceptionSeverity): string {
+  switch (severity) {
+    case "stop":
+      return "border-rose-500/30 bg-rose-500/10 text-rose-100";
+    case "attention":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-100";
+    case "watch":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+  }
+}
+
+function exceptionActionLabel(action: ExceptionAction): string {
+  switch (action) {
+    case "approve_payment":
+      return "Approve Pay";
+    case "send_confirmation":
+      return "Send Confirm";
+    case "close_ops":
+      return "Close Ops";
+    case "expire_hold":
+      return "Expire Hold";
+    case "cancel_proof":
+      return "Cancel Proof";
+    case "open_audit":
+      return "Open Audit";
+    case "inspect":
+      return "Inspect";
   }
 }
 
@@ -604,6 +835,149 @@ function SafeguardRow({ safeguard }: { safeguard: QuoteBookingSafeguard }) {
         </Button>
       ) : null}
     </div>
+  );
+}
+
+function ExceptionActionButton({
+  item,
+  action,
+  onRun,
+  primary = false,
+}: {
+  item: ActivationExceptionItem;
+  action: ExceptionAction;
+  onRun: (item: ActivationExceptionItem, action: ExceptionAction) => void;
+  primary?: boolean;
+}) {
+  const Icon =
+    action === "approve_payment"
+      ? CreditCard
+      : action === "send_confirmation"
+        ? Send
+        : action === "close_ops"
+          ? CheckCircle2
+          : action === "expire_hold"
+            ? Timer
+            : action === "cancel_proof"
+              ? XCircle
+              : action === "open_audit"
+                ? History
+                : ArrowRight;
+  const className = primary
+    ? "bg-cyan-700 text-white hover:bg-cyan-600"
+    : "border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900";
+
+  if (action === "inspect") {
+    return (
+      <Button asChild size="sm" variant={primary ? "default" : "outline"} className={className}>
+        <Link href={item.record.href}>
+          <Icon className="mr-2 h-4 w-4" />
+          {exceptionActionLabel(action)}
+        </Link>
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      onClick={() => onRun(item, action)}
+      size="sm"
+      variant={primary ? "default" : "outline"}
+      className={className}
+    >
+      <Icon className="mr-2 h-4 w-4" />
+      {exceptionActionLabel(action)}
+    </Button>
+  );
+}
+
+function ActivationExceptionQueue({
+  items,
+  onRun,
+}: {
+  items: ActivationExceptionItem[];
+  onRun: (item: ActivationExceptionItem, action: ExceptionAction) => void;
+}) {
+  const stopCount = items.filter((item) => item.severity === "stop").length;
+  const attentionCount = items.filter((item) => item.severity === "attention").length;
+
+  return (
+    <Card className="border-amber-500/20 bg-zinc-950/90">
+      <CardHeader className="border-b border-zinc-800/80">
+        <CardTitle className="flex items-center gap-2 text-zinc-50">
+          <Siren className="h-5 w-5 text-amber-300" />
+          Activation Exception Queue
+        </CardTitle>
+        <CardDescription>
+          {stopCount.toLocaleString()} stop{stopCount === 1 ? "" : "s"}, {attentionCount.toLocaleString()} attention item
+          {attentionCount === 1 ? "" : "s"}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-6">
+        {items.length === 0 ? (
+          <div className="flex flex-col gap-2 rounded-lg border border-emerald-500/20 bg-emerald-950/10 px-4 py-6 text-sm text-emerald-100 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              <span>No activation exceptions in the current window.</span>
+            </div>
+            <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-200">clear</Badge>
+          </div>
+        ) : (
+          items.slice(0, 12).map((item) => {
+            const record = item.record;
+            return (
+              <div
+                key={item.id}
+                className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4 xl:flex-row xl:items-start xl:justify-between"
+              >
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={exceptionSeverityTone(item.severity)}>{item.severity}</Badge>
+                    <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">{kindLabel(record.kind)}</Badge>
+                    {metadataString(record, "activation_state") ? (
+                      <Badge className={activationTone(metadataString(record, "activation_state"))}>
+                        {activationLabel(metadataString(record, "activation_state"))}
+                      </Badge>
+                    ) : null}
+                    <span className="text-xs text-zinc-500">Age {formatAge(item.ageAt)}</span>
+                  </div>
+                  <div>
+                    <p className="break-words text-sm font-semibold text-zinc-50">{item.label}</p>
+                    <p className="mt-1 break-words text-sm text-zinc-400">{item.detail}</p>
+                  </div>
+                  <div className="grid gap-2 text-xs text-zinc-400 md:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                      <p className="uppercase text-zinc-500">Reservation</p>
+                      <p className="truncate">{record.title || "--"}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase text-zinc-500">Cabin</p>
+                      <p className="truncate">{record.property_name || "--"}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase text-zinc-500">Guest</p>
+                      <p className="truncate">{record.guest_label || "--"}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase text-zinc-500">Stay</p>
+                      <p>
+                        {formatDate(record.check_in)} to {formatDate(record.check_out)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 xl:justify-end">
+                  <ExceptionActionButton item={item} action={item.primaryAction} onRun={onRun} primary />
+                  {item.secondaryAction ? (
+                    <ExceptionActionButton item={item} action={item.secondaryAction} onRun={onRun} />
+                  ) : null}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1301,6 +1675,7 @@ export default function QuoteControlPage() {
     const stopMatches = stopFilter === "all" || record.stop_level === stopFilter;
     return kindMatches && stopMatches;
   });
+  const exceptionItems = useMemo(() => buildActivationExceptions(allRecords), [allRecords]);
 
   if (isLoading && !data) {
     return (
@@ -1397,6 +1772,30 @@ export default function QuoteControlPage() {
   };
   const openAudit = (record: QuoteBookingRecord) => {
     setAuditTarget(record);
+  };
+  const runExceptionAction = (item: ActivationExceptionItem, action: ExceptionAction) => {
+    switch (action) {
+      case "approve_payment":
+        openApprovePayment(item.record);
+        break;
+      case "send_confirmation":
+        openSendConfirmation(item.record);
+        break;
+      case "close_ops":
+        openCloseOps(item.record);
+        break;
+      case "expire_hold":
+        openCleanup(item.record, "expire_hold");
+        break;
+      case "cancel_proof":
+        openCleanup(item.record, "cancel_proof");
+        break;
+      case "open_audit":
+        openAudit(item.record);
+        break;
+      case "inspect":
+        break;
+    }
   };
   const submitAction = () => {
     if (!actionTarget) return;
@@ -1726,6 +2125,8 @@ export default function QuoteControlPage() {
           }
         />
       </div>
+
+      <ActivationExceptionQueue items={exceptionItems} onRun={runExceptionAction} />
 
       <Card className="border-emerald-500/20 bg-zinc-950/90">
         <CardHeader className="border-b border-zinc-800/80">
