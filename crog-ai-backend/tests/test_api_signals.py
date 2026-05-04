@@ -518,6 +518,48 @@ class FakeSignalStore:
             ][:limit],
         }
 
+    def promotion_dry_run_verification(
+        self,
+        *,
+        candidate_parameter_set: str,
+        production_parameter_set: str = "dochia_v0_estimated",
+        decision_id: str | None = None,
+        limit: int = 500,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]:
+        checked = min(limit, 2)
+        return {
+            "generated_at": dt.datetime(2026, 5, 3, 20, 31, tzinfo=dt.UTC),
+            "candidate_parameter_set": candidate_parameter_set,
+            "production_parameter_set": production_parameter_set,
+            "overall_status": "PASS",
+            "proposed_rows_checked": checked,
+            "passed_rows": checked,
+            "failed_rows": 0,
+            "inconclusive_rows": 0,
+            "cross_model_diagnostic_only_rows": 1,
+            "rows": [
+                {
+                    "row_status": "PASS",
+                    "ticker": "ACLX",
+                    "candidate_bar_date": dt.date(2026, 4, 24),
+                    "candidate_score": 80,
+                    "candidate_action": "BUY",
+                    "candidate_monthly_triangle": 1,
+                    "candidate_weekly_triangle": 1,
+                    "candidate_daily_triangle": 1,
+                    "latest_candidate_transition_date": dt.date(2026, 4, 23),
+                    "latest_candidate_transition_type": "breakout_bullish",
+                    "prior_score": 50,
+                    "new_score": 80,
+                    "production_score": 50,
+                    "production_daily_triangle": -1,
+                    "conflict_type": "CROSS_MODEL_DIAGNOSTIC_ONLY",
+                    "explanation": "Production baseline differs from candidate, but candidate lineage is clean.",
+                }
+            ][:checked],
+        }
+
     def promotion_dry_run_acceptances(
         self,
         *,
@@ -926,6 +968,27 @@ def test_promotion_dry_run_endpoint_returns_read_only_market_signal_plan() -> No
     assert payload["proposed_rows"][1]["action"] == "SELL"
     assert payload["proposed_rows"][0]["lineage"]["source_pipeline"] == "dochia_signal_scores"
     assert "rollback_marker" in payload["proposed_rows"][0]["lineage"]
+
+
+def test_promotion_dry_run_verification_endpoint_returns_gate_summary() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/promotion-dry-run/verification"
+        "?candidate_parameter_set=dochia_v0_2_range_daily"
+        "&production_parameter_set=dochia_v0_estimated"
+        "&limit=2"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["overall_status"] == "PASS"
+    assert payload["proposed_rows_checked"] == 2
+    assert payload["cross_model_diagnostic_only_rows"] == 1
+    assert payload["rows"][0]["ticker"] == "ACLX"
+    assert payload["rows"][0]["conflict_type"] == "CROSS_MODEL_DIAGNOSTIC_ONLY"
 
 
 def test_promotion_dry_run_acceptances_endpoint_returns_audit_rows() -> None:

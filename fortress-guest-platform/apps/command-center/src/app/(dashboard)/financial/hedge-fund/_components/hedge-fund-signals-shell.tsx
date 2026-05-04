@@ -46,6 +46,7 @@ import {
   useFinancialPromotionGate,
   useFinancialPromotionDryRun,
   useFinancialPromotionDryRunAcceptances,
+  useFinancialPromotionDryRunVerification,
   useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
   useFinancialSignalDetail,
@@ -62,6 +63,8 @@ import type {
   FinancialPromotionDryRunApprovalStatus,
   FinancialPromotionDryRunMarketSignalRow,
   FinancialPromotionDryRunResponse,
+  FinancialPromotionDryRunVerificationResponse,
+  FinancialPromotionDryRunVerificationStatus,
   FinancialPromotionGateGuardrailStatus,
   FinancialPromotionGateRecommendationStatus,
   FinancialPromotionGateResponse,
@@ -251,6 +254,23 @@ function promotionDryRunApprovalLabel(status: FinancialPromotionDryRunApprovalSt
   if (status === "ready_for_dry_run") return "Ready for dry-run";
   if (status === "blocked_by_review") return "Blocked by review";
   return "Promote decision missing";
+}
+
+function promotionDryRunVerificationClasses(
+  status: FinancialPromotionDryRunVerificationStatus,
+): string {
+  if (status === "PASS") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (status === "FAIL") return "border-red-500/40 bg-red-500/10 text-red-600";
+  return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+}
+
+function promotionDryRunVerificationMessage(
+  status: FinancialPromotionDryRunVerificationStatus | null,
+): string {
+  if (status === "PASS") return "Eligible for operator dry-run acceptance review";
+  if (status === "FAIL") return "Dry-run acceptance blocked";
+  if (status === "INCONCLUSIVE") return "Source lineage unclear; acceptance blocked";
+  return "Verification pending";
 }
 
 function formatSignedNumber(value: number | null | undefined, digits = 0): string {
@@ -1457,6 +1477,9 @@ function PromotionDryRunPanel({
   dryRun,
   loading,
   error,
+  verification,
+  verificationLoading,
+  verificationError,
   acceptances,
   acceptancesLoading,
   onSubmitAcceptance,
@@ -1465,6 +1488,9 @@ function PromotionDryRunPanel({
   dryRun: FinancialPromotionDryRunResponse | null;
   loading: boolean;
   error: boolean;
+  verification: FinancialPromotionDryRunVerificationResponse | null;
+  verificationLoading: boolean;
+  verificationError: boolean;
   acceptances: FinancialPromotionDryRunAcceptance[];
   acceptancesLoading: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
@@ -1497,8 +1523,12 @@ function PromotionDryRunPanel({
   const activeDryRun = dryRun;
   const summary = activeDryRun.summary;
   const previewRows = activeDryRun.proposed_rows.slice(0, 8);
+  const verificationStatus = verification?.overall_status ?? null;
+  const flaggedVerificationRows =
+    verification?.rows.filter((row) => row.conflict_type !== "NONE" || row.row_status !== "PASS") ?? [];
   const canAccept =
     activeDryRun.approval.status === "ready_for_dry_run" &&
+    verificationStatus === "PASS" &&
     summary.proposed_insert_count > 0 &&
     acceptedBy.trim().length >= 2 &&
     acceptanceRationale.trim().length >= 12;
@@ -1609,6 +1639,92 @@ function PromotionDryRunPanel({
           </div>
 
           <form className="border border-border p-3" onSubmit={(event) => void handleAcceptanceSubmit(event)}>
+            <div className="mb-3 border border-border/80 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold">Dry-Run Verification Gate</h2>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "font-medium",
+                    verificationStatus
+                      ? promotionDryRunVerificationClasses(verificationStatus)
+                      : "border-border bg-muted/30 text-muted-foreground",
+                  )}
+                >
+                  {verificationLoading ? "Checking" : verificationStatus ?? "Pending"}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {verificationError
+                  ? "Source lineage unclear; acceptance blocked"
+                  : promotionDryRunVerificationMessage(verificationStatus)}
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+                <div className="bg-muted/40 p-2">
+                  <span className="text-muted-foreground">Checked</span>
+                  <p className="mt-1 font-mono font-semibold">
+                    {verification?.proposed_rows_checked ?? 0}
+                  </p>
+                </div>
+                <div className="bg-muted/40 p-2">
+                  <span className="text-muted-foreground">Passed</span>
+                  <p className="mt-1 font-mono font-semibold text-emerald-500">
+                    {verification?.passed_rows ?? 0}
+                  </p>
+                </div>
+                <div className="bg-muted/40 p-2">
+                  <span className="text-muted-foreground">Failed</span>
+                  <p className="mt-1 font-mono font-semibold text-red-500">
+                    {verification?.failed_rows ?? 0}
+                  </p>
+                </div>
+                <div className="bg-muted/40 p-2">
+                  <span className="text-muted-foreground">Unclear</span>
+                  <p className="mt-1 font-mono font-semibold text-amber-500">
+                    {verification?.inconclusive_rows ?? 0}
+                  </p>
+                </div>
+                <div className="bg-muted/40 p-2">
+                  <span className="text-muted-foreground">X-Model</span>
+                  <p className="mt-1 font-mono font-semibold">
+                    {verification?.cross_model_diagnostic_only_rows ?? 0}
+                  </p>
+                </div>
+              </div>
+              {flaggedVerificationRows.length ? (
+                <div className="mt-3 space-y-2">
+                  {flaggedVerificationRows.slice(0, 4).map((row) => (
+                    <div
+                      key={`${row.ticker}-${row.candidate_bar_date}-${row.conflict_type}`}
+                      className="border border-border/70 p-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-semibold">{row.ticker}</span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "max-w-[180px] truncate text-[10px]",
+                            promotionDryRunVerificationClasses(row.row_status),
+                          )}
+                        >
+                          {row.conflict_type}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 font-mono text-[11px] text-muted-foreground">
+                        <span>
+                          C {row.candidate_score ?? "—"} / D{row.candidate_daily_triangle ?? "—"}
+                        </span>
+                        <span>
+                          P {row.production_score ?? "—"} / D{row.production_daily_triangle ?? "—"}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-muted-foreground">{row.explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold">Dry-Run Acceptance</h2>
               <Badge variant="outline">
@@ -1827,6 +1943,12 @@ export function HedgeFundSignalsShell() {
     limit: 25,
     min_abs_score: 50,
   });
+  const promotionDryRunVerification = useFinancialPromotionDryRunVerification({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    production_parameter_set: "dochia_v0_estimated",
+    limit: 500,
+    min_abs_score: 50,
+  });
   const promotionDryRunAcceptances = useFinancialPromotionDryRunAcceptances({
     candidate_parameter_set: "dochia_v0_2_range_daily",
     limit: 3,
@@ -1879,6 +2001,7 @@ export function HedgeFundSignalsShell() {
     shadowReview.isFetching ||
     shadowDecisionRecords.isFetching ||
     promotionDryRun.isFetching ||
+    promotionDryRunVerification.isFetching ||
     promotionDryRunAcceptances.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
@@ -1944,6 +2067,7 @@ export function HedgeFundSignalsShell() {
               void shadowReview.refetch();
               void shadowDecisionRecords.refetch();
               void promotionDryRun.refetch();
+              void promotionDryRunVerification.refetch();
               void promotionDryRunAcceptances.refetch();
             }}
             disabled={isRefreshing}
@@ -2080,6 +2204,9 @@ export function HedgeFundSignalsShell() {
             dryRun={promotionDryRun.data ?? null}
             loading={promotionDryRun.isLoading}
             error={promotionDryRun.isError}
+            verification={promotionDryRunVerification.data ?? null}
+            verificationLoading={promotionDryRunVerification.isLoading}
+            verificationError={promotionDryRunVerification.isError}
             acceptances={promotionDryRunAcceptances.data ?? []}
             acceptancesLoading={promotionDryRunAcceptances.isLoading}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
