@@ -15,13 +15,17 @@ any evidence ingestion.
 The source-drop planner:
 
 - Parses `.eml` files from an explicit operator source directory.
-- Inventories `.msg` files as hash-only native review candidates when a full
-  Outlook parser is not configured.
+- Parses `.msg` files with `extract-msg` when the optional Outlook parser is
+  installed.
+- Preserves `.msg` files as hash-only native review candidates when the parser
+  is unavailable or a native file cannot be parsed.
 - Extracts message identity, sender/recipient metadata, dates, thread headers,
   normalized subject, body preview, and attachment metadata for `.eml` files.
+- Extracts the same manifest-facing metadata from parseable `.msg` files,
+  including attachment hashes.
 - Preserves `.msg` source path, relative path, SHA-256, filename-derived subject,
-  case/privilege guesses, and `native_review_required` decision without parsing
-  message bodies or attachments.
+  case/privilege guesses, and `native_review_required` decision for fallback
+  candidates without parsing message bodies or attachments.
 - Computes SHA-256 hashes for the raw email and each attachment.
 - Makes conservative case-slug and privilege-risk guesses.
 - Writes a JSON manifest.
@@ -63,9 +67,23 @@ Each candidate includes:
 - `intake_decision=manifest_only`
 - `source_format`, `parser_status`, and `parser_reason`
 
-For `.msg` files, `intake_decision` is `native_review_required`,
-`parser_status` is `native_inventory_only`, and attachment/message-body fields
-remain empty until a controlled Outlook parser is added.
+For parsed `.msg` files, `source_format` is `msg`, `parser_status` is `parsed`,
+and `parser_reason` identifies the `extract_msg` parser version. If the parser
+is unavailable or fails for a particular native file, `intake_decision` becomes
+`native_review_required`, `parser_status` is `native_inventory_only` or
+`native_parse_error`, and attachment/message-body fields remain empty.
+
+## Dependency Review
+
+The controlled `.msg` parser is `extract-msg==0.55.0`.
+
+- It is purpose-built for Microsoft Outlook `.msg` extraction and has recent
+  releases.
+- It is preferred over `msg-parser`, whose PyPI classifier is pre-alpha and
+  whose latest release is from 2019.
+- It is still treated as an optional parser: Fortress Legal imports and runs
+  safely without it, falling back to hash-only native review.
+- Installing the dependency does not authorize ingestion or evidence promotion.
 
 ## Next Gate
 

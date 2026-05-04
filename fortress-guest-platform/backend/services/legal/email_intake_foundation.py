@@ -1,9 +1,9 @@
 """Manifest-only Fortress Legal email source-drop planning.
 
 This module is the safety gate before historical email evidence ingestion. It
-parses operator-controlled ``.eml`` source drops, inventories hash-only
-``.msg`` source drops, makes conservative case/privilege guesses, and emits a
-manifest.
+parses operator-controlled ``.eml`` and ``.msg`` source drops, preserves
+hash-only ``.msg`` inventory fallback when the optional Outlook parser is not
+available, makes conservative case/privilege guesses, and emits a manifest.
 
 It deliberately does not touch IMAP flags, Postgres, Qdrant, the NAS vault, or
 ``process_vault_upload``. Real ingestion stays behind a later operator gate.
@@ -14,6 +14,7 @@ import email
 import email.policy
 import email.utils
 import hashlib
+import importlib
 import json
 import re
 from dataclasses import asdict, dataclass, field
@@ -174,7 +175,13 @@ def parse_email_file(path: Path, *, source_root: Path | None = None) -> EmailInt
     return parse_email_bytes(raw_bytes, source_path=path, source_root=source_root)
 
 
-def inventory_native_email_file(path: Path, *, source_root: Path | None = None) -> EmailIntakeCandidate:
+def inventory_native_email_file(
+    path: Path,
+    *,
+    source_root: Path | None = None,
+    parser_status: str = "native_inventory_only",
+    parser_reason: str = "outlook_msg_parser_not_configured",
+) -> EmailIntakeCandidate:
     """Create a chain-of-custody candidate for native formats we do not parse yet."""
     raw_bytes = path.read_bytes()
     root = source_root.expanduser().resolve(strict=False) if source_root else None
@@ -228,9 +235,105 @@ def inventory_native_email_file(path: Path, *, source_root: Path | None = None) 
         privilege_reason=privilege_reason,
         intake_decision="native_review_required",
         source_format=path.suffix.lower().lstrip("."),
-        parser_status="native_inventory_only",
-        parser_reason="outlook_msg_parser_not_configured",
+        parser_status=parser_status,
+        parser_reason=parser_reason,
     )
+
+
+def parse_msg_file(path: Path, *, source_root: Path | None = None) -> EmailIntakeCandidate:
+    """Parse Outlook MSG files when extract-msg is installed, else preserve hash-only inventory."""
+    extract_msg = _load_extract_msg()
+    if extract_msg is None:
+        return inventory_native_email_file(path, source_root=source_root)
+
+    raw_bytes = path.read_bytes()
+    root = source_root.expanduser().resolve(strict=False) if source_root else None
+    resolved_path = path.expanduser().resolve(strict=False)
+    relative_path = _relative_path(resolved_path, root)
+    source_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+
+    msg_obj: Any | None = None
+    try:
+        msg_obj = extract_msg.Message(str(path))
+        subject = _header(getattr(msg_obj, "subject", "") or _filename_subject(path))
+        normalized_subject = normalize_subject(subject)
+        sender_header = _header(getattr(msg_obj, "sender", "") or "")
+        sender_name, sender_email = _first_address(sender_header)
+        sender_email = _header(getattr(msg_obj, "senderEmail", "") or sender_email).lower()
+        to_addresses = _addresses_from_msg_value(getattr(msg_obj, "to", None))
+        cc_addresses = _addresses_from_msg_value(getattr(msg_obj, "cc", None))
+        bcc_addresses = _addresses_from_msg_value(getattr(msg_obj, "bcc", None))
+        participant_domains = sorted(
+            {
+                _domain(addr)
+                for addr in [sender_email, *to_addresses, *cc_addresses, *bcc_addresses]
+                if _domain(addr)
+            }
+        )
+        body_preview = _msg_body_preview(getattr(msg_obj, "body", ""))
+        attachments = _msg_attachments(getattr(msg_obj, "attachments", []) or [])
+        message_id = _header(getattr(msg_obj, "messageId", "") or "").strip()
+        in_reply_to = _header(getattr(msg_obj, "inReplyToId", "") or "").strip()
+        references = _message_ids(_header(getattr(msg_obj, "references", "") or ""))
+        sent_at = _datetime_to_utc_iso(getattr(msg_obj, "date", None))
+        participants = [sender_email, *to_addresses, *cc_addresses, *bcc_addresses]
+        case_slug, case_reason = classify_case_slug(
+            subject=subject,
+            body_preview=body_preview,
+            participants=participants,
+            sent_at=sent_at,
+        )
+        privilege_risk, privilege_reason = classify_privilege_risk(
+            subject=subject,
+            body_preview=body_preview,
+            participant_domains=participant_domains,
+            participants=participants,
+        )
+
+        return EmailIntakeCandidate(
+            source_path=str(resolved_path),
+            source_relative_path=relative_path,
+            source_sha256=source_sha256,
+            message_id=message_id,
+            in_reply_to=in_reply_to,
+            references=references,
+            thread_key=thread_key(
+                message_id=message_id,
+                in_reply_to=in_reply_to,
+                references=references,
+                normalized_subject=normalized_subject,
+                sender_email=sender_email,
+                source_sha256=source_sha256,
+            ),
+            subject=subject,
+            normalized_subject=normalized_subject,
+            sent_at=sent_at,
+            sender=sender_name or sender_email,
+            sender_email=sender_email,
+            to_addresses=to_addresses,
+            cc_addresses=cc_addresses,
+            bcc_addresses=bcc_addresses,
+            participant_domains=participant_domains,
+            body_preview=body_preview,
+            attachments=attachments,
+            case_slug_guess=case_slug,
+            case_guess_reason=case_reason,
+            privilege_risk=privilege_risk,
+            privilege_reason=privilege_reason,
+            source_format="msg",
+            parser_status="parsed",
+            parser_reason=f"extract_msg:{getattr(extract_msg, '__version__', 'unknown')}",
+        )
+    except Exception as exc:  # pragma: no cover - exact MSG parser failures vary
+        return inventory_native_email_file(
+            path,
+            source_root=source_root,
+            parser_status="native_parse_error",
+            parser_reason=f"{type(exc).__name__}: {_header(exc)}",
+        )
+    finally:
+        if msg_obj is not None and hasattr(msg_obj, "close"):
+            msg_obj.close()
 
 
 def parse_email_bytes(
@@ -338,7 +441,7 @@ def build_source_drop_plan(
             continue
         try:
             if suffix in NATIVE_INVENTORY_SUFFIXES:
-                candidates.append(inventory_native_email_file(path, source_root=root))
+                candidates.append(parse_msg_file(path, source_root=root))
             else:
                 candidates.append(parse_email_file(path, source_root=root))
         except Exception as exc:  # pragma: no cover - exact parser errors vary
@@ -457,6 +560,16 @@ def _addresses(headers: Iterable[str]) -> list[str]:
     return [addr.lower().strip() for _name, addr in email.utils.getaddresses(list(headers)) if addr]
 
 
+def _addresses_from_msg_value(value: Any) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        headers = [_header(item) for item in value]
+    else:
+        headers = [_header(value).replace(";", ",")]
+    return _addresses(headers)
+
+
 def _domain(address: str) -> str:
     if "@" not in address:
         return ""
@@ -492,6 +605,18 @@ def _sent_at(value: str | None) -> str | None:
     return parsed.astimezone(timezone.utc).isoformat()
 
 
+def _datetime_to_utc_iso(value: Any) -> str | None:
+    if isinstance(value, datetime):
+        parsed = value
+    elif value:
+        return _sent_at(str(value))
+    else:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
 def _body_preview(msg: email.message.EmailMessage, *, max_chars: int = 1000) -> str:
     bodies: list[str] = []
     if msg.is_multipart():
@@ -517,6 +642,12 @@ def _part_text(part: email.message.EmailMessage) -> str:
     return payload.decode(charset, errors="replace")
 
 
+def _msg_body_preview(value: Any, *, max_chars: int = 1000) -> str:
+    text = _header(value)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:max_chars]
+
+
 def _attachments(msg: email.message.EmailMessage) -> list[AttachmentManifest]:
     out: list[AttachmentManifest] = []
     for part in msg.walk():
@@ -537,3 +668,43 @@ def _attachments(msg: email.message.EmailMessage) -> list[AttachmentManifest]:
             )
         )
     return out
+
+
+def _msg_attachments(attachments: Iterable[Any]) -> list[AttachmentManifest]:
+    out: list[AttachmentManifest] = []
+    for attachment in attachments:
+        payload = getattr(attachment, "data", None) or b""
+        if isinstance(payload, str):
+            payload_bytes = payload.encode()
+        elif isinstance(payload, bytes):
+            payload_bytes = payload
+        else:
+            payload_bytes = b""
+        file_name = (
+            getattr(attachment, "longFilename", None)
+            or getattr(attachment, "shortFilename", None)
+            or getattr(attachment, "name", None)
+            or "attachment"
+        )
+        content_type = (
+            getattr(attachment, "mimetype", None)
+            or getattr(attachment, "contentType", None)
+            or "application/octet-stream"
+        )
+        out.append(
+            AttachmentManifest(
+                file_name=_header(file_name),
+                content_type=_header(content_type),
+                size_bytes=len(payload_bytes),
+                sha256=hashlib.sha256(payload_bytes).hexdigest(),
+                content_id=_header(getattr(attachment, "cid", None) or ""),
+            )
+        )
+    return out
+
+
+def _load_extract_msg() -> Any | None:
+    try:
+        return importlib.import_module("extract_msg")
+    except ImportError:
+        return None

@@ -33,7 +33,10 @@ google-auth-oauthlib==1.2.4
 cryptography==42.0.5
 psutil==5.9.8
 
-# 6. Distributed Compute (AI Factory Integration)
+# 6. Legal Evidence Source Parsing
+extract-msg==0.55.0
+
+# 7. Distributed Compute (AI Factory Integration)
 # Note: Ensure these match your DGX CUDA environment exactly
 ray[default]==2.10.0
 ray[serve]==2.10.0
