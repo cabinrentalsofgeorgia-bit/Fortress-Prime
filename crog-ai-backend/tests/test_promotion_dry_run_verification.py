@@ -1,4 +1,5 @@
 import datetime as dt
+import inspect
 
 import pytest
 
@@ -93,6 +94,68 @@ def _verify(
         candidate_parameter_set="dochia_v0_2_range_daily",
         production_parameter_set="dochia_v0_estimated",
     )
+
+
+def test_verification_code_path_has_no_acceptance_or_market_signal_insert() -> None:
+    verification_source = "\n".join(
+        [
+            inspect.getsource(repository._fetch_source_rows_for_dry_run),
+            inspect.getsource(repository._fetch_candidate_transitions_for_dry_run),
+            inspect.getsource(repository._verify_promotion_dry_run_from_payload),
+            inspect.getsource(repository.fetch_promotion_dry_run_verification),
+            inspect.getsource(repository.PostgresSignalDataStore.promotion_dry_run_verification),
+        ]
+    )
+
+    assert "INSERT INTO hedge_fund.market_signals" not in verification_source
+    assert (
+        "INSERT INTO hedge_fund.signal_promotion_dry_run_acceptances"
+        not in verification_source
+    )
+    assert "SET default_transaction_read_only = on" in verification_source
+
+
+def test_store_verification_runs_in_read_only_transaction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executed: list[str] = []
+
+    class FakeConnection:
+        def __enter__(self) -> "FakeConnection":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def execute(self, sql: str, *args: object, **kwargs: object) -> None:
+            executed.append(sql)
+
+    monkeypatch.setattr(repository, "connect", lambda: FakeConnection())
+
+    def fake_fetch_verification(*args: object, **kwargs: object) -> dict[str, object]:
+        assert executed == ["SET default_transaction_read_only = on"]
+        return {
+            "overall_status": "PASS",
+            "proposed_rows_checked": 0,
+            "passed_rows": 0,
+            "failed_rows": 0,
+            "inconclusive_rows": 0,
+            "cross_model_diagnostic_only_rows": 0,
+            "rows": [],
+        }
+
+    monkeypatch.setattr(
+        repository,
+        "fetch_promotion_dry_run_verification",
+        fake_fetch_verification,
+    )
+
+    result = repository.PostgresSignalDataStore().promotion_dry_run_verification(
+        candidate_parameter_set="dochia_v0_2_range_daily"
+    )
+
+    assert result["overall_status"] == "PASS"
+    assert executed == ["SET default_transaction_read_only = on"]
 
 
 def test_verification_passes_cross_model_diagnostic_only_aclx_case() -> None:
