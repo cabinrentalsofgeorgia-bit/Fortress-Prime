@@ -1,6 +1,6 @@
 # Fortress Legal Runtime Map
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 Status: canonical runtime map, documentation-only foundation pass
 Scope: Fortress Legal runtime surfaces inside Fortress Prime
 
@@ -84,6 +84,16 @@ Current DB session contract from `backend/core/database.py`:
 - Direct imports of `async_engine` are legacy; callers should use `get_async_engine()` so they do not capture a stale `None` before lazy initialization.
 - Legal session targets use `backend/services/legal/db_targets.py`: `LEGAL_CANONICAL_DB=fortress_db` for `LegacySession`, and `LEGAL_PROD_DB=fortress_prod` for mirror `ProdSession`. This helper parses the configured DSN and replaces only the database path, preserving driver, credentials, host, port, and query options deliberately. Raw `psycopg` / `psycopg2` scripts, OCR layout lookup, and deliberation-vault writes use the same helper for connection kwargs where `POSTGRES_ADMIN_URI` is available.
 
+Live audit update 2026-05-04:
+
+- PR #405 merged the duplicate-implementation cleanup for `backend/core/database.py`; the runtime DB contract is now one lazy async engine/session contract with compatibility aliases.
+- `POSTGRES_API_URI` and `POSTGRES_ADMIN_URI` in the active spark-2 secret overlay both point at `fortress_shadow` by default, but legal helpers intentionally retarget the same host/role/port to `fortress_db` and `fortress_prod`.
+- `DATABASE_URL` still points at legacy `fortress_guest` with user `fgp_app`; that role does not have enough permission to inspect runtime Alembic metadata in `fortress_db`, `fortress_prod`, or `fortress_shadow`. Do not use it for Legal foundation audits.
+- `fortress_db` contains `legal.cases`, `legal.ingest_runs`, `legal.vault_documents`, and `legal.privilege_log`. The selected Case II ingest rows are present for `92 inspection.pdf`, `Inspection Comments(89340812.1).xlsx`, and `Inspection of 92 Fish Trap.pdf`; the selected ingest audit run is present with status `complete`, `files_processed=3`, `files_succeeded=3`, and `files_failed=0`.
+- `fortress_prod` contains `legal.cases`, `legal.ingest_runs`, `legal.vault_documents`, and `legal.privilege_log`. The selected Case II document rows are present in `legal.vault_documents`, while `legal.ingest_runs` is empty. This matches the tracker design: ingest-run lifecycle records are canonical in `fortress_db`.
+- `fortress_shadow` is not a Legal evidence runtime. It has legacy/minimal Legal tables and should be treated as app/session infrastructure unless a migration deliberately targets it.
+- Case I and Case II `legal.cases.nas_layout` rows in both `fortress_db` and `fortress_prod` point at the curated `Corporate_Legal/Business_Legal/<slug>` roots and do not point at the legacy mixed dump.
+
 CONFLICT: `deploy/fortress-prime-compose.yaml` still defines `DATABASE_URL` against `fortress_guest` with an old role. Treat that compose file as a legacy/dev baseline unless it is brought forward to the current contract.
 
 CONFLICT: Spark-1 current-state docs show `fortress_db`, `fortress_prod`, and `fortress_shadow_test` created on Spark-1, but `fortress_shadow` absent and no service wired to those DBs yet.
@@ -91,6 +101,8 @@ CONFLICT: Spark-1 current-state docs show `fortress_db`, `fortress_prod`, and `f
 ## 3. Qdrant Collections And Aliases
 
 Primary Qdrant URL in code defaults to `http://localhost:6333`. Docs identify this as Spark-2 legal Qdrant. VRS secondary defaults to `http://192.168.0.106:6333`.
+
+Live audit update 2026-05-04: spark-2 Qdrant is reachable. `legal_ediscovery_v2` reported 587,604 points and legacy `legal_ediscovery` reported 823,627 points. The selected Case II ingest slice still uses legacy `legal_ediscovery` for the three verified document ids.
 
 | Collection / alias | Vector size | Purpose | Current authority / conflict |
 |---|---:|---|---|
@@ -143,6 +155,8 @@ Case source-drop authority for Wave 7 / Case I and II:
 | `fish-trap-suv2026000013` | case-specific configured row | not locked in this map | Keep untouched until scoped. |
 
 Authoritative scoping rule: Case I and Case II ingest should walk the curated `Corporate_Legal/Business_Legal/<slug>` paths only. The legacy mixed dump `/mnt/fortress_nas/legal_vault/7il-v-knight-ndga/` must not be used as a source for rebuilding Case II.
+
+Live audit update 2026-05-04: the Case II curated tree exists and currently contains 56 `.eml` files and 82 PDFs. Wilson Pruitt / Argo native source-drop folders for pre-closing, post-closing, Terry Wilson production, and Argo native exports exist but contain zero `.eml`, zero `.msg`, and zero PDFs. Manifest-only intake is therefore ready, but new native exports still need to land before another source-drop planning pass.
 
 RESOLVED AFTER AUDIT: PR #410 added `backend/services/legal/nas_layout.py` and wired both `backend/api/legal_cases.py` and `backend/scripts/vault_ingest_legal_case.py` to the same normalizer. Both callers now support the legacy `{root, subdirs, recursive}` shape and the Wave 7 `{primary_root, include_subdirs, exclude_subdirs}` shape. The 2026-05-03 NAS layout audit still stands on live data: Case I/II DB rows use the newer shape, Case II `curated/` exists, Case I declared include folders are missing, and the legacy `/sectors/legal/<slug>` fallback is absent for both 7IL slugs.
 
