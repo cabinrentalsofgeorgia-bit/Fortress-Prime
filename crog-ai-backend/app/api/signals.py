@@ -390,6 +390,50 @@ class PromotionDryRunResponse(BaseModel):
     proposed_rows: list[PromotionDryRunMarketSignalRow]
 
 
+VerificationStatus = Literal["PASS", "FAIL", "INCONCLUSIVE"]
+VerificationConflictType = Literal[
+    "NONE",
+    "CROSS_MODEL_DIAGNOSTIC_ONLY",
+    "CANDIDATE_INTERNAL_CONFLICT",
+    "SOURCE_LINEAGE_MISSING",
+    "SOURCE_LINEAGE_DUPLICATE",
+    "SOURCE_LINEAGE_PARAMETER_MISMATCH",
+    "TRANSITION_UNSUPPORTED",
+]
+
+
+class PromotionDryRunVerificationRow(BaseModel):
+    row_status: VerificationStatus
+    ticker: str
+    candidate_bar_date: dt.date
+    candidate_score: int | None
+    candidate_action: Literal["BUY", "SELL"] | None
+    candidate_monthly_triangle: int | None
+    candidate_weekly_triangle: int | None
+    candidate_daily_triangle: int | None
+    latest_candidate_transition_date: dt.date | None
+    latest_candidate_transition_type: TransitionKind | None
+    prior_score: int | None
+    new_score: int | None
+    production_score: int | None
+    production_daily_triangle: int | None
+    conflict_type: VerificationConflictType
+    explanation: str
+
+
+class PromotionDryRunVerificationResponse(BaseModel):
+    generated_at: dt.datetime
+    candidate_parameter_set: str
+    production_parameter_set: str
+    overall_status: VerificationStatus
+    proposed_rows_checked: int
+    passed_rows: int
+    failed_rows: int
+    inconclusive_rows: int
+    cross_model_diagnostic_only_rows: int
+    rows: list[PromotionDryRunVerificationRow]
+
+
 class PromotionDryRunAcceptanceCreate(BaseModel):
     candidate_parameter_set: str = Field(
         default="dochia_v0_2_range_daily",
@@ -709,6 +753,31 @@ def promotion_dry_run_daily(
 ) -> dict[str, object]:
     return store.promotion_dry_run(
         candidate_parameter_set=candidate_parameter_set,
+        decision_id=str(decision_id) if decision_id else None,
+        limit=limit,
+        min_abs_score=min_abs_score,
+    )
+
+
+@router.get(
+    "/promotion-dry-run/verification",
+    response_model=PromotionDryRunVerificationResponse,
+)
+def promotion_dry_run_verification(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[
+        str, Query(min_length=1, max_length=100)
+    ] = "dochia_v0_2_range_daily",
+    production_parameter_set: Annotated[
+        str, Query(min_length=1, max_length=100)
+    ] = "dochia_v0_estimated",
+    decision_id: UUID | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 500,
+    min_abs_score: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> dict[str, object]:
+    return store.promotion_dry_run_verification(
+        candidate_parameter_set=candidate_parameter_set,
+        production_parameter_set=production_parameter_set,
         decision_id=str(decision_id) if decision_id else None,
         limit=limit,
         min_abs_score=min_abs_score,

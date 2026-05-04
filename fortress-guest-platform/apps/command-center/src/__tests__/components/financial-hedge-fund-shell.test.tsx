@@ -564,6 +564,38 @@ const promotionDryRunAcceptances = [
   },
 ];
 
+const promotionDryRunVerification = {
+  generated_at: "2026-05-03T20:31:00Z",
+  candidate_parameter_set: "dochia_v0_2_range_daily",
+  production_parameter_set: "dochia_v0_estimated",
+  overall_status: "PASS",
+  proposed_rows_checked: 2,
+  passed_rows: 2,
+  failed_rows: 0,
+  inconclusive_rows: 0,
+  cross_model_diagnostic_only_rows: 1,
+  rows: [
+    {
+      row_status: "PASS",
+      ticker: "ACLX",
+      candidate_bar_date: "2026-04-24",
+      candidate_score: 80,
+      candidate_action: "BUY",
+      candidate_monthly_triangle: 1,
+      candidate_weekly_triangle: 1,
+      candidate_daily_triangle: 1,
+      latest_candidate_transition_date: "2026-04-23",
+      latest_candidate_transition_type: "breakout_bullish",
+      prior_score: 50,
+      new_score: 80,
+      production_score: 50,
+      production_daily_triangle: -1,
+      conflict_type: "CROSS_MODEL_DIAGNOSTIC_ONLY",
+      explanation: "Production baseline differs from candidate, but candidate lineage is clean.",
+    },
+  ],
+};
+
 vi.mock("@/lib/hooks", () => ({
   useFinancialLatestSignals: () => ({
     data: latestSignals,
@@ -645,6 +677,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionDryRunVerification: () => ({
+    data: promotionDryRunVerification,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useFinancialPromotionDryRunAcceptances: () => ({
     data: promotionDryRunAcceptances,
     isError: false,
@@ -690,6 +729,9 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("market_signals Preview")).toBeInTheDocument();
     expect(screen.getByText("Ready for dry-run")).toBeInTheDocument();
     expect(screen.getByText("hedge_fund.market_signals")).toBeInTheDocument();
+    expect(screen.getByText("Dry-Run Verification Gate")).toBeInTheDocument();
+    expect(screen.getByText("Eligible for operator dry-run acceptance review")).toBeInTheDocument();
+    expect(screen.getByText("CROSS_MODEL_DIAGNOSTIC_ONLY")).toBeInTheDocument();
     expect(screen.getByText("Dry-Run Acceptance")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Accept Dry-Run" })).toBeInTheDocument();
     expect(screen.getByText("1 saved")).toBeInTheDocument();

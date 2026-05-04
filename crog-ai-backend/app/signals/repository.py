@@ -113,6 +113,16 @@ class SignalDataStore(Protocol):
         min_abs_score: int = 50,
     ) -> dict[str, Any]: ...
 
+    def promotion_dry_run_verification(
+        self,
+        *,
+        candidate_parameter_set: str,
+        production_parameter_set: str = PRODUCTION_PARAMETER_SET,
+        decision_id: str | None = None,
+        limit: int = 500,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]: ...
+
     def promotion_dry_run_acceptances(
         self,
         *,
@@ -1007,6 +1017,21 @@ PROMOTION_DRY_RUN_TARGET_COLUMNS = [
     "extracted_at",
 ]
 
+VERIFICATION_PASS = "PASS"
+VERIFICATION_FAIL = "FAIL"
+VERIFICATION_INCONCLUSIVE = "INCONCLUSIVE"
+
+CONFLICT_NONE = "NONE"
+CONFLICT_CROSS_MODEL_DIAGNOSTIC_ONLY = "CROSS_MODEL_DIAGNOSTIC_ONLY"
+CONFLICT_CANDIDATE_INTERNAL_CONFLICT = "CANDIDATE_INTERNAL_CONFLICT"
+CONFLICT_SOURCE_LINEAGE_MISSING = "SOURCE_LINEAGE_MISSING"
+CONFLICT_SOURCE_LINEAGE_DUPLICATE = "SOURCE_LINEAGE_DUPLICATE"
+CONFLICT_SOURCE_LINEAGE_PARAMETER_MISMATCH = "SOURCE_LINEAGE_PARAMETER_MISMATCH"
+CONFLICT_TRANSITION_UNSUPPORTED = "TRANSITION_UNSUPPORTED"
+
+BULLISH_TRANSITIONS = {"breakout_bullish", "exit_to_reentry", "full_reversal"}
+BEARISH_TRANSITIONS = {"breakout_bearish", "peak_to_exit", "full_reversal"}
+
 
 def _latest_promote_decision_record(
     conn: psycopg.Connection,
@@ -1231,6 +1256,383 @@ def fetch_promotion_dry_run(
     }
 
 
+def _verification_action(score: int) -> str:
+    return "BUY" if score >= 0 else "SELL"
+
+
+def _verification_key(row: dict[str, Any]) -> tuple[str, dt.date]:
+    bar_date = row.get("bar_date") or row.get("candidate_bar_date")
+    if not isinstance(bar_date, dt.date):
+        raise TypeError(f"verification row has non-date bar: {bar_date!r}")
+    return str(row["ticker"]), bar_date
+
+
+def _group_rows_by_key(rows: list[dict[str, Any]]) -> dict[tuple[str, dt.date], list[dict[str, Any]]]:
+    grouped: dict[tuple[str, dt.date], list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(_verification_key(row), []).append(row)
+    return grouped
+
+
+def _latest_transition_for(
+    transitions: list[dict[str, Any]],
+    *,
+    ticker: str,
+    bar_date: dt.date,
+) -> dict[str, Any] | None:
+    eligible = [
+        transition
+        for transition in transitions
+        if transition.get("ticker") == ticker and transition.get("to_bar_date") <= bar_date
+    ]
+    if not eligible:
+        return None
+    return sorted(
+        eligible,
+        key=lambda transition: (
+            transition.get("to_bar_date") or dt.date.min,
+            transition.get("detected_at") or dt.datetime.min.replace(tzinfo=dt.UTC),
+        ),
+        reverse=True,
+    )[0]
+
+
+def _transition_supports_state(
+    transition: dict[str, Any] | None,
+    *,
+    score: int,
+    candidate_monthly: int,
+    candidate_weekly: int,
+    candidate_daily: int,
+) -> tuple[bool, str]:
+    if score >= 50:
+        if candidate_monthly == 1 and candidate_weekly == 1 and candidate_daily == 1:
+            return True, "Candidate is fully aligned monthly/weekly/daily bullish."
+        if transition and str(transition.get("transition_type")) in BULLISH_TRANSITIONS:
+            to_states = transition.get("to_states") or {}
+            if int(transition.get("to_score") or 0) == score and int(to_states.get("daily", 0)) == 1:
+                return True, "Latest candidate transition supports bullish resolved state."
+        return False, "BUY row is not fully aligned and lacks a supporting bullish transition."
+
+    if score <= -50:
+        if candidate_monthly == -1 and candidate_weekly == -1 and candidate_daily == -1:
+            return True, "Candidate is fully aligned monthly/weekly/daily bearish."
+        if transition and str(transition.get("transition_type")) in BEARISH_TRANSITIONS:
+            to_states = transition.get("to_states") or {}
+            if int(transition.get("to_score") or 0) == score and int(to_states.get("daily", 0)) == -1:
+                return True, "Latest candidate transition supports bearish resolved state."
+        return False, "SELL row is not fully aligned and lacks a supporting bearish transition."
+
+    return True, "Dry-run row is below strong promotion threshold."
+
+
+def verify_promotion_dry_run_payload(
+    *,
+    dry_run: dict[str, Any],
+    candidate_source_rows: list[dict[str, Any]],
+    production_source_rows: list[dict[str, Any]],
+    candidate_transition_rows: list[dict[str, Any]],
+    candidate_parameter_set: str,
+    production_parameter_set: str = PRODUCTION_PARAMETER_SET,
+) -> dict[str, Any]:
+    candidate_by_key = _group_rows_by_key(candidate_source_rows)
+    production_by_key = _group_rows_by_key(production_source_rows)
+    verification_rows: list[dict[str, Any]] = []
+
+    for dry_row in dry_run["proposed_rows"]:
+        ticker = str(dry_row["ticker"])
+        bar_date = dry_row["candidate_bar_date"]
+        key = (ticker, bar_date)
+        candidate_rows = candidate_by_key.get(key, [])
+        production_rows = production_by_key.get(key, [])
+        latest_transition = _latest_transition_for(
+            candidate_transition_rows,
+            ticker=ticker,
+            bar_date=bar_date,
+        )
+
+        row_status = VERIFICATION_PASS
+        conflict_type = CONFLICT_NONE
+        explanation_parts: list[str] = []
+        candidate_source = candidate_rows[0] if len(candidate_rows) == 1 else None
+        production_source = production_rows[0] if production_rows else None
+
+        candidate_score: int | None = None
+        candidate_action = str(dry_row["action"])
+        candidate_monthly: int | None = None
+        candidate_weekly: int | None = None
+        candidate_daily: int | None = None
+
+        if not candidate_rows:
+            row_status = VERIFICATION_INCONCLUSIVE
+            conflict_type = CONFLICT_SOURCE_LINEAGE_MISSING
+            explanation_parts.append("No candidate source row traces to the dry-run ticker/bar.")
+        elif len(candidate_rows) > 1:
+            row_status = VERIFICATION_FAIL
+            conflict_type = CONFLICT_SOURCE_LINEAGE_DUPLICATE
+            explanation_parts.append("More than one candidate source row exists for the dry-run ticker/bar.")
+        elif str(candidate_source.get("parameter_set_name")) != candidate_parameter_set:
+            row_status = VERIFICATION_FAIL
+            conflict_type = CONFLICT_SOURCE_LINEAGE_PARAMETER_MISMATCH
+            explanation_parts.append("Candidate source row uses the wrong parameter set.")
+        else:
+            candidate_score = int(candidate_source["composite_score"])
+            candidate_action = _verification_action(candidate_score)
+            candidate_monthly = int(candidate_source["monthly_state"])
+            candidate_weekly = int(candidate_source["weekly_state"])
+            candidate_daily = int(candidate_source["daily_state"])
+            dry_score = int(dry_row["composite_score"])
+            dry_action = str(dry_row["action"])
+            lineage = dry_row.get("lineage") or {}
+            lineage_parameter = lineage.get("parameter_set")
+
+            if lineage_parameter != candidate_parameter_set:
+                row_status = VERIFICATION_FAIL
+                conflict_type = CONFLICT_SOURCE_LINEAGE_PARAMETER_MISMATCH
+                explanation_parts.append("Dry-run lineage parameter does not match the candidate parameter set.")
+            elif dry_score != candidate_score or dry_action != candidate_action:
+                row_status = VERIFICATION_FAIL
+                conflict_type = CONFLICT_CANDIDATE_INTERNAL_CONFLICT
+                explanation_parts.append("Dry-run row does not match the candidate source score/action.")
+            elif dry_action == "BUY" and candidate_daily < 0:
+                row_status = VERIFICATION_FAIL
+                conflict_type = CONFLICT_CANDIDATE_INTERNAL_CONFLICT
+                explanation_parts.append("Candidate proposes BUY while candidate daily triangle is bearish.")
+            elif dry_action == "SELL" and candidate_daily > 0:
+                row_status = VERIFICATION_FAIL
+                conflict_type = CONFLICT_CANDIDATE_INTERNAL_CONFLICT
+                explanation_parts.append("Candidate proposes SELL while candidate daily triangle is bullish.")
+            else:
+                supported, support_explanation = _transition_supports_state(
+                    latest_transition,
+                    score=candidate_score,
+                    candidate_monthly=candidate_monthly,
+                    candidate_weekly=candidate_weekly,
+                    candidate_daily=candidate_daily,
+                )
+                if not supported:
+                    row_status = VERIFICATION_INCONCLUSIVE
+                    conflict_type = CONFLICT_TRANSITION_UNSUPPORTED
+                explanation_parts.append(support_explanation)
+
+            if row_status == VERIFICATION_PASS and production_source:
+                production_score = int(production_source["composite_score"])
+                production_daily = int(production_source["daily_state"])
+                if production_score != candidate_score or production_daily != candidate_daily:
+                    conflict_type = CONFLICT_CROSS_MODEL_DIAGNOSTIC_ONLY
+                    explanation_parts.append(
+                        "Production baseline differs from candidate, but candidate lineage is clean."
+                    )
+
+        production_score = (
+            int(production_source["composite_score"]) if production_source else None
+        )
+        production_daily = int(production_source["daily_state"]) if production_source else None
+        verification_rows.append(
+            {
+                "row_status": row_status,
+                "ticker": ticker,
+                "candidate_bar_date": bar_date,
+                "candidate_score": candidate_score,
+                "candidate_action": candidate_action,
+                "candidate_monthly_triangle": candidate_monthly,
+                "candidate_weekly_triangle": candidate_weekly,
+                "candidate_daily_triangle": candidate_daily,
+                "latest_candidate_transition_date": (
+                    latest_transition.get("to_bar_date") if latest_transition else None
+                ),
+                "latest_candidate_transition_type": (
+                    latest_transition.get("transition_type") if latest_transition else None
+                ),
+                "prior_score": latest_transition.get("from_score") if latest_transition else None,
+                "new_score": latest_transition.get("to_score") if latest_transition else None,
+                "production_score": production_score,
+                "production_daily_triangle": production_daily,
+                "conflict_type": conflict_type,
+                "explanation": " ".join(explanation_parts),
+            }
+        )
+
+    if any(row["row_status"] == VERIFICATION_FAIL for row in verification_rows):
+        overall_status = VERIFICATION_FAIL
+    elif any(row["row_status"] == VERIFICATION_INCONCLUSIVE for row in verification_rows):
+        overall_status = VERIFICATION_INCONCLUSIVE
+    else:
+        overall_status = VERIFICATION_PASS
+
+    return {
+        "generated_at": dt.datetime.now(dt.UTC),
+        "candidate_parameter_set": candidate_parameter_set,
+        "production_parameter_set": production_parameter_set,
+        "overall_status": overall_status,
+        "proposed_rows_checked": len(verification_rows),
+        "passed_rows": sum(row["row_status"] == VERIFICATION_PASS for row in verification_rows),
+        "failed_rows": sum(row["row_status"] == VERIFICATION_FAIL for row in verification_rows),
+        "inconclusive_rows": sum(
+            row["row_status"] == VERIFICATION_INCONCLUSIVE for row in verification_rows
+        ),
+        "cross_model_diagnostic_only_rows": sum(
+            row["conflict_type"] == CONFLICT_CROSS_MODEL_DIAGNOSTIC_ONLY
+            for row in verification_rows
+        ),
+        "rows": verification_rows,
+    }
+
+
+def _fetch_source_rows_for_dry_run(
+    conn: psycopg.Connection,
+    *,
+    dry_run: dict[str, Any],
+    parameter_set: str,
+) -> list[dict[str, Any]]:
+    proposed_rows = dry_run["proposed_rows"]
+    if not proposed_rows:
+        return []
+    tickers = sorted({row["ticker"] for row in proposed_rows})
+    bar_dates = sorted({row["candidate_bar_date"] for row in proposed_rows})
+    sql = """
+        SELECT
+            v.ticker,
+            v.bar_date,
+            v.parameter_set_id,
+            v.parameter_set_name,
+            v.dochia_version,
+            v.monthly_state,
+            v.weekly_state,
+            v.daily_state,
+            v.momentum_state,
+            v.composite_score,
+            v.computed_at,
+            s.monthly_channel_high,
+            s.monthly_channel_low,
+            s.weekly_channel_high,
+            s.weekly_channel_low,
+            s.daily_channel_high,
+            s.daily_channel_low
+        FROM hedge_fund.v_signal_scores_composite v
+        JOIN hedge_fund.signal_scores s
+          ON s.ticker = v.ticker
+         AND s.bar_date = v.bar_date
+         AND s.parameter_set_id = v.parameter_set_id
+        WHERE v.parameter_set_name = %(parameter_set)s
+          AND v.ticker = ANY(%(tickers)s)
+          AND v.bar_date = ANY(%(bar_dates)s)
+        ORDER BY v.ticker, v.bar_date, v.computed_at DESC
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            sql,
+            {
+                "parameter_set": parameter_set,
+                "tickers": tickers,
+                "bar_dates": bar_dates,
+            },
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+
+def _fetch_candidate_transitions_for_dry_run(
+    conn: psycopg.Connection,
+    *,
+    dry_run: dict[str, Any],
+    candidate_parameter_set: str,
+) -> list[dict[str, Any]]:
+    proposed_rows = dry_run["proposed_rows"]
+    if not proposed_rows:
+        return []
+    tickers = sorted({row["ticker"] for row in proposed_rows})
+    latest_bar_date = max(row["candidate_bar_date"] for row in proposed_rows)
+    sql = """
+        SELECT
+            t.id,
+            t.ticker,
+            p.name AS parameter_set_name,
+            t.transition_type,
+            t.from_score,
+            t.to_score,
+            t.from_bar_date,
+            t.to_bar_date,
+            t.from_states,
+            t.to_states,
+            t.detected_at,
+            t.acknowledged_by_user_id,
+            t.acknowledged_at,
+            t.notes
+        FROM hedge_fund.signal_transitions t
+        JOIN hedge_fund.scoring_parameters p ON p.id = t.parameter_set_id
+        WHERE p.name = %(candidate_parameter_set)s
+          AND t.ticker = ANY(%(tickers)s)
+          AND t.to_bar_date <= %(latest_bar_date)s
+        ORDER BY t.ticker, t.to_bar_date DESC, t.detected_at DESC
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            sql,
+            {
+                "candidate_parameter_set": candidate_parameter_set,
+                "tickers": tickers,
+                "latest_bar_date": latest_bar_date,
+            },
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+
+def _verify_promotion_dry_run_from_payload(
+    conn: psycopg.Connection,
+    *,
+    dry_run: dict[str, Any],
+    candidate_parameter_set: str,
+    production_parameter_set: str,
+) -> dict[str, Any]:
+    candidate_source_rows = _fetch_source_rows_for_dry_run(
+        conn,
+        dry_run=dry_run,
+        parameter_set=candidate_parameter_set,
+    )
+    production_source_rows = _fetch_source_rows_for_dry_run(
+        conn,
+        dry_run=dry_run,
+        parameter_set=production_parameter_set,
+    )
+    candidate_transition_rows = _fetch_candidate_transitions_for_dry_run(
+        conn,
+        dry_run=dry_run,
+        candidate_parameter_set=candidate_parameter_set,
+    )
+    return verify_promotion_dry_run_payload(
+        dry_run=dry_run,
+        candidate_source_rows=candidate_source_rows,
+        production_source_rows=production_source_rows,
+        candidate_transition_rows=candidate_transition_rows,
+        candidate_parameter_set=candidate_parameter_set,
+        production_parameter_set=production_parameter_set,
+    )
+
+
+def fetch_promotion_dry_run_verification(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str,
+    production_parameter_set: str = PRODUCTION_PARAMETER_SET,
+    decision_id: str | None = None,
+    limit: int = 500,
+    min_abs_score: int = 50,
+) -> dict[str, Any]:
+    dry_run = fetch_promotion_dry_run(
+        conn,
+        candidate_parameter_set=candidate_parameter_set,
+        decision_id=decision_id,
+        limit=limit,
+        min_abs_score=min_abs_score,
+    )
+    return _verify_promotion_dry_run_from_payload(
+        conn,
+        dry_run=dry_run,
+        candidate_parameter_set=candidate_parameter_set,
+        production_parameter_set=production_parameter_set,
+    )
+
+
 PROMOTION_DRY_RUN_ACCEPTANCE_SELECT = """
     SELECT
         id,
@@ -1298,6 +1700,17 @@ def create_promotion_dry_run_acceptance(
         raise ValueError("Cannot accept dry-run output without a ready promote decision record.")
     if dry_run["summary"]["proposed_insert_count"] == 0:
         raise ValueError("Cannot accept dry-run output with no proposed market_signals rows.")
+    verification = _verify_promotion_dry_run_from_payload(
+        conn,
+        dry_run=dry_run,
+        candidate_parameter_set=candidate_parameter_set,
+        production_parameter_set=PRODUCTION_PARAMETER_SET,
+    )
+    if verification["overall_status"] != VERIFICATION_PASS:
+        raise ValueError(
+            "Dry-run verification gate blocked acceptance: "
+            f"{verification['overall_status']}."
+        )
 
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
@@ -1695,6 +2108,26 @@ class PostgresSignalDataStore:
             return fetch_promotion_dry_run(
                 conn,
                 candidate_parameter_set=candidate_parameter_set,
+                decision_id=decision_id,
+                limit=limit,
+                min_abs_score=min_abs_score,
+            )
+
+    def promotion_dry_run_verification(
+        self,
+        *,
+        candidate_parameter_set: str,
+        production_parameter_set: str = PRODUCTION_PARAMETER_SET,
+        decision_id: str | None = None,
+        limit: int = 500,
+        min_abs_score: int = 50,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_dry_run_verification(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                production_parameter_set=production_parameter_set,
                 decision_id=decision_id,
                 limit=limit,
                 min_abs_score=min_abs_score,

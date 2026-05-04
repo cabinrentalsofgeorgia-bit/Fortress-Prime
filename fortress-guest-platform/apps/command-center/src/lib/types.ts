@@ -504,6 +504,49 @@ export interface FinancialPromotionDryRunResponse {
   proposed_rows: FinancialPromotionDryRunMarketSignalRow[];
 }
 
+export type FinancialPromotionDryRunVerificationStatus = "PASS" | "FAIL" | "INCONCLUSIVE";
+
+export type FinancialPromotionDryRunVerificationConflictType =
+  | "NONE"
+  | "CROSS_MODEL_DIAGNOSTIC_ONLY"
+  | "CANDIDATE_INTERNAL_CONFLICT"
+  | "SOURCE_LINEAGE_MISSING"
+  | "SOURCE_LINEAGE_DUPLICATE"
+  | "SOURCE_LINEAGE_PARAMETER_MISMATCH"
+  | "TRANSITION_UNSUPPORTED";
+
+export interface FinancialPromotionDryRunVerificationRow {
+  row_status: FinancialPromotionDryRunVerificationStatus;
+  ticker: string;
+  candidate_bar_date: string;
+  candidate_score: number | null;
+  candidate_action: "BUY" | "SELL" | null;
+  candidate_monthly_triangle: number | null;
+  candidate_weekly_triangle: number | null;
+  candidate_daily_triangle: number | null;
+  latest_candidate_transition_date: string | null;
+  latest_candidate_transition_type: FinancialTransitionType | null;
+  prior_score: number | null;
+  new_score: number | null;
+  production_score: number | null;
+  production_daily_triangle: number | null;
+  conflict_type: FinancialPromotionDryRunVerificationConflictType;
+  explanation: string;
+}
+
+export interface FinancialPromotionDryRunVerificationResponse {
+  generated_at: string;
+  candidate_parameter_set: string;
+  production_parameter_set: string;
+  overall_status: FinancialPromotionDryRunVerificationStatus;
+  proposed_rows_checked: number;
+  passed_rows: number;
+  failed_rows: number;
+  inconclusive_rows: number;
+  cross_model_diagnostic_only_rows: number;
+  rows: FinancialPromotionDryRunVerificationRow[];
+}
+
 export interface FinancialPromotionDryRunAcceptanceCreate {
   candidate_parameter_set: string;
   decision_id?: string | null;
