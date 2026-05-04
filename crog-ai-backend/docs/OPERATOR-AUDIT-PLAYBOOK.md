@@ -50,6 +50,20 @@ The monitor is read-only and evaluates only audited execution rows:
 
 Rollback recommendations are warnings only. The monitoring endpoint does not call rollback functions, delete `market_signals`, create rollback audit rows, or auto-heal promotion records.
 
+## Post-Execution Alerts
+
+Use `GET /api/financial/signals/promotion/{id}/alerts` with a candidate parameter set, dry-run acceptance id, or execution id. The alert view is `hedge_fund.v_signal_promotion_post_execution_alerts`.
+
+The alert layer is read-only and derives from post-execution monitoring rows:
+
+- `SIGNAL_DECAY`
+- `WHIPSAW_AFTER_PROMOTION`
+- `DRIFT`
+- `STALE_EXECUTION_MONITORING`
+- `ROLLBACK_RECOMMENDATION`
+
+Alerts are operator warnings only. They do not call rollback functions, write or delete `market_signals`, create acceptance records, create execution records, change trades, or change signal state. Rollback recommendation alerts mean “review this audited execution,” not “rollback automatically.”
+
 ## Snapshots
 
 Acceptance records persist:

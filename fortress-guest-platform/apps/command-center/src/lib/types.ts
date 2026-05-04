@@ -770,6 +770,57 @@ export interface FinancialPromotionPostExecutionMonitoringResponse {
   rows: FinancialPromotionPostExecutionMonitoringRow[];
 }
 
+export type FinancialPromotionPostExecutionAlertType =
+  | "SIGNAL_DECAY"
+  | "WHIPSAW_AFTER_PROMOTION"
+  | "DRIFT"
+  | "STALE_EXECUTION_MONITORING"
+  | "ROLLBACK_RECOMMENDATION";
+
+export type FinancialPromotionPostExecutionAlertSeverity = "LOW" | "MEDIUM" | "HIGH";
+
+export interface FinancialPromotionPostExecutionAlertSummary {
+  total_alerts: number;
+  high_alerts: number;
+  medium_alerts: number;
+  low_alerts: number;
+  signal_decay_alerts: number;
+  whipsaw_after_promotion_alerts: number;
+  drift_alerts: number;
+  stale_execution_monitoring_alerts: number;
+  rollback_recommendation_alerts: number;
+}
+
+export interface FinancialPromotionPostExecutionAlert {
+  alert_id: string;
+  execution_id: string;
+  acceptance_id: string;
+  decision_record_id: string;
+  candidate_id: string;
+  market_signal_id: number;
+  ticker: string;
+  action: "BUY" | "SELL";
+  candidate_bar_date: string;
+  alert_type: FinancialPromotionPostExecutionAlertType;
+  severity: FinancialPromotionPostExecutionAlertSeverity;
+  alert_status: "ACTIVE";
+  alert_date: string | null;
+  metric_value: string | number | null;
+  rollback_recommendation: FinancialPromotionRollbackRecommendation;
+  monitoring_status: FinancialPromotionMonitoringStatus;
+  drift_status: FinancialPromotionMonitoringDriftStatus;
+  evidence: Record<string, unknown>;
+  explanation: string;
+  operator_guidance: string;
+}
+
+export interface FinancialPromotionPostExecutionAlertsResponse {
+  generated_at: string;
+  promotion_id: string;
+  summary: FinancialPromotionPostExecutionAlertSummary;
+  alerts: FinancialPromotionPostExecutionAlert[];
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

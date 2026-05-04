@@ -650,6 +650,65 @@ class PromotionPostExecutionMonitoringResponse(BaseModel):
     rows: list[PromotionPostExecutionMonitoringRow]
 
 
+class PromotionPostExecutionAlertSummary(BaseModel):
+    total_alerts: int
+    high_alerts: int
+    medium_alerts: int
+    low_alerts: int
+    signal_decay_alerts: int
+    whipsaw_after_promotion_alerts: int
+    drift_alerts: int
+    stale_execution_monitoring_alerts: int
+    rollback_recommendation_alerts: int
+
+
+class PromotionPostExecutionAlert(BaseModel):
+    alert_id: str
+    execution_id: UUID
+    acceptance_id: UUID
+    decision_record_id: UUID
+    candidate_id: str
+    market_signal_id: int
+    ticker: str
+    action: Literal["BUY", "SELL"]
+    candidate_bar_date: dt.date
+    alert_type: Literal[
+        "SIGNAL_DECAY",
+        "WHIPSAW_AFTER_PROMOTION",
+        "DRIFT",
+        "STALE_EXECUTION_MONITORING",
+        "ROLLBACK_RECOMMENDATION",
+    ]
+    severity: Literal["LOW", "MEDIUM", "HIGH"]
+    alert_status: Literal["ACTIVE"]
+    alert_date: dt.date | None
+    metric_value: Decimal | None
+    rollback_recommendation: Literal[
+        "NO_WARNING",
+        "WATCH_WARNING",
+        "REVIEW_ROLLBACK_WARNING",
+        "NO_ACTION_ROLLED_BACK",
+    ]
+    monitoring_status: Literal["PENDING", "HEALTHY", "WARNING", "ROLLED_BACK"]
+    drift_status: Literal[
+        "PENDING",
+        "IN_LINE",
+        "PRICE_DRIFT",
+        "SCORE_DRIFT",
+        "PRICE_AND_SCORE_DRIFT",
+    ]
+    evidence: dict[str, object]
+    explanation: str
+    operator_guidance: str
+
+
+class PromotionPostExecutionAlertsResponse(BaseModel):
+    generated_at: dt.datetime
+    promotion_id: str
+    summary: PromotionPostExecutionAlertSummary
+    alerts: list[PromotionPostExecutionAlert]
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -1074,6 +1133,21 @@ def promotion_post_execution_monitoring(
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> dict[str, object]:
     return store.promotion_post_execution_monitoring(
+        promotion_id=promotion_id,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/promotion/{promotion_id}/alerts",
+    response_model=PromotionPostExecutionAlertsResponse,
+)
+def promotion_post_execution_alerts(
+    promotion_id: Annotated[str, Path(min_length=1, max_length=120)],
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> dict[str, object]:
+    return store.promotion_post_execution_alerts(
         promotion_id=promotion_id,
         limit=limit,
     )
