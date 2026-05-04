@@ -171,6 +171,13 @@ class SignalDataStore(Protocol):
         limit: int = 10,
     ) -> list[dict[str, Any]]: ...
 
+    def promotion_post_execution_monitoring(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 100,
+    ) -> dict[str, Any]: ...
+
     def execute_guarded_promotion(
         self,
         *,
@@ -2112,6 +2119,170 @@ def fetch_promotion_reconciliation(
         ]
 
 
+PROMOTION_POST_EXECUTION_MONITORING_FIELDS = [
+    "execution_id",
+    "acceptance_id",
+    "decision_record_id",
+    "candidate_id",
+    "baseline_parameter_set",
+    "executed_by",
+    "executed_at",
+    "rollback_status",
+    "market_signal_id",
+    "market_signal_live",
+    "ticker",
+    "action",
+    "confidence_score",
+    "candidate_bar_date",
+    "rollback_marker",
+    "candidate_score",
+    "candidate_monthly_triangle",
+    "candidate_weekly_triangle",
+    "candidate_daily_triangle",
+    "entry_close",
+    "outcome_1d_bar_date",
+    "outcome_1d_close",
+    "outcome_1d_directional_return",
+    "outcome_5d_bar_date",
+    "outcome_5d_close",
+    "outcome_5d_directional_return",
+    "outcome_20d_bar_date",
+    "outcome_20d_close",
+    "outcome_20d_directional_return",
+    "latest_candidate_bar_date",
+    "latest_candidate_score",
+    "latest_monthly_triangle",
+    "latest_weekly_triangle",
+    "latest_daily_triangle",
+    "score_delta",
+    "signal_decay_flag",
+    "signal_decay_date",
+    "signal_decay_score",
+    "signal_decay_daily_triangle",
+    "whipsaw_after_promotion_flag",
+    "whipsaw_transition_date",
+    "whipsaw_transition_type",
+    "whipsaw_to_score",
+    "drift_status",
+    "rollback_recommendation",
+    "monitoring_status",
+    "explanation",
+]
+
+
+def fetch_promotion_post_execution_monitoring(
+    conn: psycopg.Connection,
+    *,
+    promotion_id: str,
+    limit: int = 100,
+) -> dict[str, Any]:
+    sql = """
+        SELECT
+            execution_id,
+            acceptance_id,
+            decision_record_id,
+            candidate_id,
+            baseline_parameter_set,
+            executed_by,
+            executed_at,
+            rollback_status,
+            market_signal_id,
+            market_signal_live,
+            ticker,
+            action,
+            confidence_score,
+            candidate_bar_date,
+            rollback_marker,
+            candidate_score,
+            candidate_monthly_triangle,
+            candidate_weekly_triangle,
+            candidate_daily_triangle,
+            entry_close,
+            outcome_1d_bar_date,
+            outcome_1d_close,
+            outcome_1d_directional_return,
+            outcome_5d_bar_date,
+            outcome_5d_close,
+            outcome_5d_directional_return,
+            outcome_20d_bar_date,
+            outcome_20d_close,
+            outcome_20d_directional_return,
+            latest_candidate_bar_date,
+            latest_candidate_score,
+            latest_monthly_triangle,
+            latest_weekly_triangle,
+            latest_daily_triangle,
+            score_delta,
+            signal_decay_flag,
+            signal_decay_date,
+            signal_decay_score,
+            signal_decay_daily_triangle,
+            whipsaw_after_promotion_flag,
+            whipsaw_transition_date,
+            whipsaw_transition_type,
+            whipsaw_to_score,
+            drift_status,
+            rollback_recommendation,
+            monitoring_status,
+            explanation
+        FROM hedge_fund.v_signal_promotion_post_execution_monitoring
+        WHERE candidate_id = %(promotion_id)s
+           OR acceptance_id::TEXT = %(promotion_id)s
+           OR execution_id::TEXT = %(promotion_id)s
+        ORDER BY
+            CASE monitoring_status
+                WHEN 'WARNING' THEN 0
+                WHEN 'PENDING' THEN 1
+                WHEN 'HEALTHY' THEN 2
+                ELSE 3
+            END,
+            ABS(COALESCE(outcome_20d_directional_return, outcome_5d_directional_return, 0)) DESC,
+            ticker
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, {"promotion_id": promotion_id, "limit": limit})
+        rows = [
+            {key: row[key] for key in PROMOTION_POST_EXECUTION_MONITORING_FIELDS}
+            for row in cur.fetchall()
+        ]
+    warning_rows = [
+        row for row in rows if row["monitoring_status"] == "WARNING"
+    ]
+    rollback_warning_rows = [
+        row for row in rows if row["rollback_recommendation"] == "REVIEW_ROLLBACK_WARNING"
+    ]
+    return {
+        "generated_at": dt.datetime.now(dt.UTC),
+        "promotion_id": promotion_id,
+        "summary": {
+            "rows_checked": len(rows),
+            "live_rows": sum(1 for row in rows if row["market_signal_live"]),
+            "pending_rows": sum(1 for row in rows if row["monitoring_status"] == "PENDING"),
+            "healthy_rows": sum(1 for row in rows if row["monitoring_status"] == "HEALTHY"),
+            "warning_rows": len(warning_rows),
+            "rollback_warning_rows": len(rollback_warning_rows),
+            "whipsaw_after_promotion_rows": sum(
+                1 for row in rows if row["whipsaw_after_promotion_flag"]
+            ),
+            "signal_decay_rows": sum(1 for row in rows if row["signal_decay_flag"]),
+            "adverse_5d_rows": sum(
+                1
+                for row in rows
+                if row["outcome_5d_directional_return"] is not None
+                and row["outcome_5d_directional_return"] < 0
+            ),
+            "adverse_20d_rows": sum(
+                1
+                for row in rows
+                if row["outcome_20d_directional_return"] is not None
+                and row["outcome_20d_directional_return"] < 0
+            ),
+        },
+        "rows": rows,
+    }
+
+
 def execute_guarded_promotion(
     conn: psycopg.Connection,
     *,
@@ -2600,6 +2771,20 @@ class PostgresSignalDataStore:
         with connect() as conn:
             conn.execute("SET default_transaction_read_only = on")
             return fetch_promotion_reconciliation(
+                conn,
+                promotion_id=promotion_id,
+                limit=limit,
+            )
+
+    def promotion_post_execution_monitoring(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_post_execution_monitoring(
                 conn,
                 promotion_id=promotion_id,
                 limit=limit,

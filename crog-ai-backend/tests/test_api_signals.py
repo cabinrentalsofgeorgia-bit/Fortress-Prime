@@ -805,6 +805,139 @@ class FakeSignalStore:
             }
         ][:limit]
 
+    def promotion_post_execution_monitoring(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        rows = [
+            {
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "baseline_parameter_set": "dochia_v0_estimated",
+                "executed_by": "MarketClub Operator",
+                "executed_at": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
+                "rollback_status": "active",
+                "market_signal_id": 1201,
+                "market_signal_live": True,
+                "ticker": "AA",
+                "action": "BUY",
+                "confidence_score": 80,
+                "candidate_bar_date": dt.date(2026, 4, 24),
+                "rollback_marker": "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+                "candidate_score": 80,
+                "candidate_monthly_triangle": 1,
+                "candidate_weekly_triangle": 1,
+                "candidate_daily_triangle": 1,
+                "entry_close": Decimal("69.00"),
+                "outcome_1d_bar_date": dt.date(2026, 4, 27),
+                "outcome_1d_close": Decimal("70.00"),
+                "outcome_1d_directional_return": Decimal("0.014493"),
+                "outcome_5d_bar_date": dt.date(2026, 5, 1),
+                "outcome_5d_close": Decimal("66.00"),
+                "outcome_5d_directional_return": Decimal("-0.043478"),
+                "outcome_20d_bar_date": None,
+                "outcome_20d_close": None,
+                "outcome_20d_directional_return": None,
+                "latest_candidate_bar_date": dt.date(2026, 5, 1),
+                "latest_candidate_score": 20,
+                "latest_monthly_triangle": 1,
+                "latest_weekly_triangle": 1,
+                "latest_daily_triangle": -1,
+                "score_delta": -60,
+                "signal_decay_flag": True,
+                "signal_decay_date": dt.date(2026, 4, 30),
+                "signal_decay_score": 20,
+                "signal_decay_daily_triangle": -1,
+                "whipsaw_after_promotion_flag": True,
+                "whipsaw_transition_date": dt.date(2026, 4, 30),
+                "whipsaw_transition_type": "breakout_bearish",
+                "whipsaw_to_score": -50,
+                "drift_status": "PRICE_AND_SCORE_DRIFT",
+                "rollback_recommendation": "REVIEW_ROLLBACK_WARNING",
+                "monitoring_status": "WARNING",
+                "explanation": "Candidate state whipsawed after promotion; warning only.",
+            },
+            {
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "decision_record_id": DECISION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "baseline_parameter_set": "dochia_v0_estimated",
+                "executed_by": "MarketClub Operator",
+                "executed_at": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
+                "rollback_status": "active",
+                "market_signal_id": 1202,
+                "market_signal_live": True,
+                "ticker": "AGIO",
+                "action": "BUY",
+                "confidence_score": 80,
+                "candidate_bar_date": dt.date(2026, 4, 24),
+                "rollback_marker": "dochia-dry-run:dochia_v0_2_range_daily:AGIO:2026-04-24",
+                "candidate_score": 80,
+                "candidate_monthly_triangle": 1,
+                "candidate_weekly_triangle": 1,
+                "candidate_daily_triangle": 1,
+                "entry_close": Decimal("32.00"),
+                "outcome_1d_bar_date": dt.date(2026, 4, 27),
+                "outcome_1d_close": Decimal("32.50"),
+                "outcome_1d_directional_return": Decimal("0.015625"),
+                "outcome_5d_bar_date": None,
+                "outcome_5d_close": None,
+                "outcome_5d_directional_return": None,
+                "outcome_20d_bar_date": None,
+                "outcome_20d_close": None,
+                "outcome_20d_directional_return": None,
+                "latest_candidate_bar_date": dt.date(2026, 4, 27),
+                "latest_candidate_score": 80,
+                "latest_monthly_triangle": 1,
+                "latest_weekly_triangle": 1,
+                "latest_daily_triangle": 1,
+                "score_delta": 0,
+                "signal_decay_flag": False,
+                "signal_decay_date": None,
+                "signal_decay_score": None,
+                "signal_decay_daily_triangle": None,
+                "whipsaw_after_promotion_flag": False,
+                "whipsaw_transition_date": None,
+                "whipsaw_transition_type": None,
+                "whipsaw_to_score": None,
+                "drift_status": "PENDING",
+                "rollback_recommendation": "NO_WARNING",
+                "monitoring_status": "PENDING",
+                "explanation": "Outcome windows are still pending.",
+            },
+        ][:limit]
+        return {
+            "generated_at": dt.datetime(2026, 5, 4, 13, 0, tzinfo=dt.UTC),
+            "promotion_id": promotion_id,
+            "summary": {
+                "rows_checked": len(rows),
+                "live_rows": sum(1 for row in rows if row["market_signal_live"]),
+                "pending_rows": sum(1 for row in rows if row["monitoring_status"] == "PENDING"),
+                "healthy_rows": sum(1 for row in rows if row["monitoring_status"] == "HEALTHY"),
+                "warning_rows": sum(1 for row in rows if row["monitoring_status"] == "WARNING"),
+                "rollback_warning_rows": sum(
+                    1 for row in rows if row["rollback_recommendation"] == "REVIEW_ROLLBACK_WARNING"
+                ),
+                "whipsaw_after_promotion_rows": sum(
+                    1 for row in rows if row["whipsaw_after_promotion_flag"]
+                ),
+                "signal_decay_rows": sum(1 for row in rows if row["signal_decay_flag"]),
+                "adverse_5d_rows": sum(
+                    1
+                    for row in rows
+                    if row["outcome_5d_directional_return"] is not None
+                    and row["outcome_5d_directional_return"] < 0
+                ),
+                "adverse_20d_rows": 0,
+            },
+            "rows": rows,
+        }
+
     def execute_guarded_promotion(
         self,
         *,
@@ -1396,6 +1529,35 @@ def test_promotion_reconciliation_endpoint_returns_invariant_checks() -> None:
     assert payload[0]["checks"]["verification_gate"] == "PASS"
     assert payload[0]["checks"]["idempotency"] == "PASS"
     assert payload[0]["drilldown"]["audited_market_signal_ids"] == [1201, 1202]
+
+
+def test_promotion_post_execution_monitoring_endpoint_returns_warning_only_tracking() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        f"/api/financial/signals/promotion/{EXECUTION_ID}/monitoring?limit=10"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["promotion_id"] == str(EXECUTION_ID)
+    assert payload["summary"]["rows_checked"] == 2
+    assert payload["summary"]["warning_rows"] == 1
+    assert payload["summary"]["rollback_warning_rows"] == 1
+    assert payload["summary"]["whipsaw_after_promotion_rows"] == 1
+    assert payload["summary"]["signal_decay_rows"] == 1
+    warning = payload["rows"][0]
+    assert warning["ticker"] == "AA"
+    assert warning["outcome_1d_directional_return"] == "0.014493"
+    assert warning["outcome_5d_directional_return"] == "-0.043478"
+    assert warning["outcome_20d_directional_return"] is None
+    assert warning["whipsaw_after_promotion_flag"] is True
+    assert warning["signal_decay_flag"] is True
+    assert warning["drift_status"] == "PRICE_AND_SCORE_DRIFT"
+    assert warning["rollback_recommendation"] == "REVIEW_ROLLBACK_WARNING"
+    assert "warning" in warning["explanation"].lower()
 
 
 def test_execute_guarded_promotion_endpoint_returns_execution_record() -> None:

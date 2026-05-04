@@ -569,6 +569,87 @@ class PromotionReconciliation(BaseModel):
     explanation: str
 
 
+class PromotionPostExecutionMonitoringSummary(BaseModel):
+    rows_checked: int
+    live_rows: int
+    pending_rows: int
+    healthy_rows: int
+    warning_rows: int
+    rollback_warning_rows: int
+    whipsaw_after_promotion_rows: int
+    signal_decay_rows: int
+    adverse_5d_rows: int
+    adverse_20d_rows: int
+
+
+class PromotionPostExecutionMonitoringRow(BaseModel):
+    execution_id: UUID
+    acceptance_id: UUID
+    decision_record_id: UUID
+    candidate_id: str
+    baseline_parameter_set: str
+    executed_by: str
+    executed_at: dt.datetime
+    rollback_status: Literal["active", "rolled_back"]
+    market_signal_id: int
+    market_signal_live: bool
+    ticker: str
+    action: Literal["BUY", "SELL"]
+    confidence_score: int
+    candidate_bar_date: dt.date
+    rollback_marker: str
+    candidate_score: int
+    candidate_monthly_triangle: int | None
+    candidate_weekly_triangle: int | None
+    candidate_daily_triangle: int | None
+    entry_close: Decimal | None
+    outcome_1d_bar_date: dt.date | None
+    outcome_1d_close: Decimal | None
+    outcome_1d_directional_return: Decimal | None
+    outcome_5d_bar_date: dt.date | None
+    outcome_5d_close: Decimal | None
+    outcome_5d_directional_return: Decimal | None
+    outcome_20d_bar_date: dt.date | None
+    outcome_20d_close: Decimal | None
+    outcome_20d_directional_return: Decimal | None
+    latest_candidate_bar_date: dt.date | None
+    latest_candidate_score: int | None
+    latest_monthly_triangle: int | None
+    latest_weekly_triangle: int | None
+    latest_daily_triangle: int | None
+    score_delta: int | None
+    signal_decay_flag: bool
+    signal_decay_date: dt.date | None
+    signal_decay_score: int | None
+    signal_decay_daily_triangle: int | None
+    whipsaw_after_promotion_flag: bool
+    whipsaw_transition_date: dt.date | None
+    whipsaw_transition_type: TransitionKind | None
+    whipsaw_to_score: int | None
+    drift_status: Literal[
+        "PENDING",
+        "IN_LINE",
+        "PRICE_DRIFT",
+        "SCORE_DRIFT",
+        "PRICE_AND_SCORE_DRIFT",
+    ]
+    rollback_recommendation: Literal[
+        "NO_WARNING",
+        "WATCH_WARNING",
+        "REVIEW_ROLLBACK_WARNING",
+        "NO_ACTION_ROLLED_BACK",
+    ]
+    monitoring_status: Literal["PENDING", "HEALTHY", "WARNING", "ROLLED_BACK"]
+    explanation: str
+
+
+class PromotionPostExecutionMonitoringResponse(BaseModel):
+    generated_at: dt.datetime
+    promotion_id: str
+    summary: PromotionPostExecutionMonitoringSummary
+    rows: list[PromotionPostExecutionMonitoringRow]
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -978,6 +1059,21 @@ def promotion_reconciliation(
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ) -> list[dict[str, object]]:
     return store.promotion_reconciliation(
+        promotion_id=promotion_id,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/promotion/{promotion_id}/monitoring",
+    response_model=PromotionPostExecutionMonitoringResponse,
+)
+def promotion_post_execution_monitoring(
+    promotion_id: Annotated[str, Path(min_length=1, max_length=120)],
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> dict[str, object]:
+    return store.promotion_post_execution_monitoring(
         promotion_id=promotion_id,
         limit=limit,
     )

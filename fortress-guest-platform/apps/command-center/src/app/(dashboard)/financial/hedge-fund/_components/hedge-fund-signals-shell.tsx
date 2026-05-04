@@ -52,6 +52,7 @@ import {
   useFinancialPromotionDryRunVerification,
   useFinancialPromotionExecutions,
   useFinancialPromotionLifecycleTimeline,
+  useFinancialPromotionPostExecutionMonitoring,
   useFinancialPromotionReconciliation,
   useFinancialPromotionRollbackDrills,
   useRollbackFinancialPromotionExecution,
@@ -77,6 +78,8 @@ import type {
   FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionLifecycleEvent,
+  FinancialPromotionPostExecutionMonitoringResponse,
+  FinancialPromotionPostExecutionMonitoringRow,
   FinancialPromotionReconciliation,
   FinancialPromotionRollbackDrill,
   FinancialPromotionRollbackEligibility,
@@ -360,6 +363,27 @@ function promotionLifecycleEventLabel(type: FinancialPromotionLifecycleEvent["ty
     .split("_")
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function promotionMonitoringStatusClasses(status: string): string {
+  if (status === "HEALTHY") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (status === "WARNING") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  if (status === "ROLLED_BACK") return "border-sky-500/40 bg-sky-500/10 text-sky-600";
+  return "border-border bg-muted/30 text-muted-foreground";
+}
+
+function promotionMonitoringLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function numericPercent(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 function formatIdList(values: number[]): string {
@@ -1759,6 +1783,196 @@ function ReconciliationPanel({
   );
 }
 
+function MonitoringReturnCell({
+  row,
+  windowKey,
+}: {
+  row: FinancialPromotionPostExecutionMonitoringRow;
+  windowKey: "1d" | "5d" | "20d";
+}) {
+  const value =
+    windowKey === "1d"
+      ? numericPercent(row.outcome_1d_directional_return)
+      : windowKey === "5d"
+        ? numericPercent(row.outcome_5d_directional_return)
+        : numericPercent(row.outcome_20d_directional_return);
+  const barDate =
+    windowKey === "1d"
+      ? row.outcome_1d_bar_date
+      : windowKey === "5d"
+        ? row.outcome_5d_bar_date
+        : row.outcome_20d_bar_date;
+  return (
+    <div>
+      <span className={cn("font-mono", value !== null && value < 0 ? "text-red-500" : "text-emerald-500")}>
+        {formatSignedPercent(value)}
+      </span>
+      <p className="mt-0.5 text-[11px] text-muted-foreground">{formatDate(barDate)}</p>
+    </div>
+  );
+}
+
+function PostExecutionMonitoringPanel({
+  monitoring,
+  loading,
+  error,
+}: {
+  monitoring: FinancialPromotionPostExecutionMonitoringResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  const summary = monitoring?.summary ?? null;
+  const rows = monitoring?.rows.slice(0, 8) ?? [];
+
+  return (
+    <div className="border border-border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Post-Execution Monitoring</h2>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn(
+            "font-medium",
+            summary && summary.warning_rows > 0
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+              : summary
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600"
+                : "border-border bg-muted/30 text-muted-foreground",
+          )}
+        >
+          {loading && !monitoring ? "Checking" : summary ? `${summary.warning_rows} warnings` : "No audit"}
+        </Badge>
+      </div>
+
+      {error ? (
+        <p className="mt-3 text-xs text-destructive">Post-execution monitoring unavailable.</p>
+      ) : loading && !monitoring ? (
+        <p className="mt-3 text-xs text-muted-foreground">Loading post-execution monitoring…</p>
+      ) : summary ? (
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-2 sm:grid-cols-5">
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Tracked</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.rows_checked}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Pending</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.pending_rows}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Whipsaw</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.whipsaw_after_promotion_rows}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Decay</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.signal_decay_rows}</p>
+            </div>
+            <div className="bg-muted/40 p-2 text-xs">
+              <span className="text-muted-foreground">Rollback review</span>
+              <p className="mt-1 font-mono text-lg font-semibold">{summary.rollback_warning_rows}</p>
+            </div>
+          </div>
+
+          {rows.length ? (
+            <div className="overflow-x-auto border border-border/70">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ticker</TableHead>
+                    <TableHead>1d</TableHead>
+                    <TableHead>5d</TableHead>
+                    <TableHead>20d</TableHead>
+                    <TableHead>Candidate Drift</TableHead>
+                    <TableHead>Warnings</TableHead>
+                    <TableHead>Rollback</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={`${row.execution_id}-${row.market_signal_id}`}>
+                      <TableCell>
+                        <div>
+                          <span className="font-mono font-semibold">{row.ticker}</span>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {row.action} {formatSignedNumber(row.candidate_score)}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <MonitoringReturnCell row={row} windowKey="1d" />
+                      </TableCell>
+                      <TableCell>
+                        <MonitoringReturnCell row={row} windowKey="5d" />
+                      </TableCell>
+                      <TableCell>
+                        <MonitoringReturnCell row={row} windowKey="20d" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-xs">
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px]", promotionMonitoringStatusClasses(row.monitoring_status))}
+                          >
+                            {promotionMonitoringLabel(row.drift_status)}
+                          </Badge>
+                          <p className="font-mono text-[11px] text-muted-foreground">
+                            {formatSignedNumber(row.score_delta)} score
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {row.whipsaw_after_promotion_flag ? (
+                            <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-600">
+                              Whipsaw
+                            </Badge>
+                          ) : null}
+                          {row.signal_decay_flag ? (
+                            <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-600">
+                              Decay
+                            </Badge>
+                          ) : null}
+                          {!row.whipsaw_after_promotion_flag && !row.signal_decay_flag ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px]",
+                              row.rollback_recommendation === "REVIEW_ROLLBACK_WARNING"
+                                ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                                : promotionMonitoringStatusClasses(row.monitoring_status),
+                            )}
+                          >
+                            {promotionMonitoringLabel(row.rollback_recommendation)}
+                          </Badge>
+                          <p className="line-clamp-2 max-w-64 text-[11px] text-muted-foreground">
+                            {row.explanation}
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No promoted signal rows to monitor yet.</p>
+          )}
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">No post-execution monitoring rows yet.</p>
+      )}
+    </div>
+  );
+}
+
 function PromotionDryRunPanel({
   dryRun,
   loading,
@@ -1778,6 +1992,9 @@ function PromotionDryRunPanel({
   reconciliations,
   reconciliationLoading,
   reconciliationError,
+  postExecutionMonitoring,
+  postExecutionMonitoringLoading,
+  postExecutionMonitoringError,
   onSubmitAcceptance,
   submittingAcceptance,
   onSubmitExecution,
@@ -1803,6 +2020,9 @@ function PromotionDryRunPanel({
   reconciliations: FinancialPromotionReconciliation[];
   reconciliationLoading: boolean;
   reconciliationError: boolean;
+  postExecutionMonitoring: FinancialPromotionPostExecutionMonitoringResponse | null;
+  postExecutionMonitoringLoading: boolean;
+  postExecutionMonitoringError: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
   onSubmitExecution: (payload: FinancialPromotionExecutionCreate) => Promise<void>;
@@ -1980,6 +2200,12 @@ function PromotionDryRunPanel({
           error={reconciliationError}
         />
       </div>
+
+      <PostExecutionMonitoringPanel
+        monitoring={postExecutionMonitoring}
+        loading={postExecutionMonitoringLoading}
+        error={postExecutionMonitoringError}
+      />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="overflow-hidden border border-border">
@@ -2566,6 +2792,9 @@ export function HedgeFundSignalsShell() {
   const promotionReconciliation = useFinancialPromotionReconciliation(promotionAuditId, {
     limit: 5,
   });
+  const promotionPostExecutionMonitoring = useFinancialPromotionPostExecutionMonitoring(promotionAuditId, {
+    limit: 100,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
   const executePromotionDryRunAcceptance = useExecuteFinancialPromotionDryRunAcceptance();
@@ -2621,7 +2850,8 @@ export function HedgeFundSignalsShell() {
     promotionExecutions.isFetching ||
     promotionRollbackDrills.isFetching ||
     promotionLifecycleTimeline.isFetching ||
-    promotionReconciliation.isFetching;
+    promotionReconciliation.isFetching ||
+    promotionPostExecutionMonitoring.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
@@ -2635,6 +2865,7 @@ export function HedgeFundSignalsShell() {
     void promotionDryRunAcceptances.refetch();
     void promotionLifecycleTimeline.refetch();
     void promotionReconciliation.refetch();
+    void promotionPostExecutionMonitoring.refetch();
   }
 
   async function handlePromotionExecutionSubmit(payload: FinancialPromotionExecutionCreate) {
@@ -2643,6 +2874,7 @@ export function HedgeFundSignalsShell() {
     void promotionRollbackDrills.refetch();
     void promotionLifecycleTimeline.refetch();
     void promotionReconciliation.refetch();
+    void promotionPostExecutionMonitoring.refetch();
   }
 
   async function handlePromotionRollbackSubmit(payload: FinancialPromotionExecutionRollbackCreate) {
@@ -2651,6 +2883,7 @@ export function HedgeFundSignalsShell() {
     void promotionRollbackDrills.refetch();
     void promotionLifecycleTimeline.refetch();
     void promotionReconciliation.refetch();
+    void promotionPostExecutionMonitoring.refetch();
   }
 
   return (
@@ -2710,6 +2943,7 @@ export function HedgeFundSignalsShell() {
               void promotionRollbackDrills.refetch();
               void promotionLifecycleTimeline.refetch();
               void promotionReconciliation.refetch();
+              void promotionPostExecutionMonitoring.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -2860,6 +3094,9 @@ export function HedgeFundSignalsShell() {
             reconciliations={promotionReconciliation.data ?? []}
             reconciliationLoading={promotionReconciliation.isLoading}
             reconciliationError={promotionReconciliation.isError}
+            postExecutionMonitoring={promotionPostExecutionMonitoring.data ?? null}
+            postExecutionMonitoringLoading={promotionPostExecutionMonitoring.isLoading}
+            postExecutionMonitoringError={promotionPostExecutionMonitoring.isError}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
             onSubmitExecution={handlePromotionExecutionSubmit}
