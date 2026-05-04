@@ -74,6 +74,7 @@ type ActivationTimelineEvent = {
   activation_state: string | null;
   payment_link_id: string | null;
   safeguards: string[];
+  references: Record<string, string | string[]>;
   audit_hash: string | null;
 };
 
@@ -258,6 +259,26 @@ function metadataStrings(record: QuoteBookingRecord, key: string): string[] {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
+function auditReferences(value: unknown): Record<string, string | string[]> {
+  const references: Record<string, string | string[]> = {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) return references;
+
+  Object.entries(value as Record<string, unknown>).forEach(([key, refValue]) => {
+    if (typeof refValue === "string" && refValue.trim()) {
+      references[key] = refValue;
+      return;
+    }
+    if (Array.isArray(refValue)) {
+      const refs = refValue.filter(
+        (ref): ref is string => typeof ref === "string" && ref.trim().length > 0,
+      );
+      if (refs.length > 0) references[key] = refs;
+    }
+  });
+
+  return references;
+}
+
 function metadataTimeline(record: QuoteBookingRecord, key: string): ActivationTimelineEvent[] {
   const value = record.metadata?.[key];
   if (!Array.isArray(value)) return [];
@@ -291,6 +312,7 @@ function metadataTimeline(record: QuoteBookingRecord, key: string): ActivationTi
       safeguards: Array.isArray(item.safeguards)
         ? item.safeguards.filter((safe): safe is string => typeof safe === "string" && safe.trim().length > 0)
         : [],
+      references: auditReferences(item.references),
       audit_hash: typeof item.audit_hash === "string" && item.audit_hash.trim() ? item.audit_hash : null,
     }));
 }
@@ -457,6 +479,22 @@ function timelineStageTone(stage: string): string {
   }
 }
 
+function auditReferenceLabel(key: string): string {
+  return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function shortAuditValue(value: string): string {
+  if (value.length <= 24) return value;
+  return `${value.slice(0, 10)}...${value.slice(-8)}`;
+}
+
+function auditReferenceEntries(event: ActivationTimelineEvent): [string, string[]][] {
+  return Object.entries(event.references).map(([key, value]) => [
+    key,
+    Array.isArray(value) ? value : [value],
+  ]);
+}
+
 function reconciliationTone(state: string | null): string {
   switch (state) {
     case "stripe_paid_pending_staff_approval":
@@ -580,6 +618,7 @@ function RecordRow({
   onSendConfirmation,
   onCloseOps,
   onCleanup,
+  onOpenAudit,
   isActionPending,
   isSendPending,
   isHoldPending,
@@ -600,6 +639,7 @@ function RecordRow({
   onSendConfirmation: (record: QuoteBookingRecord) => void;
   onCloseOps: (record: QuoteBookingRecord) => void;
   onCleanup: (record: QuoteBookingRecord, action: CleanupAction) => void;
+  onOpenAudit: (record: QuoteBookingRecord) => void;
   isActionPending: boolean;
   isSendPending: boolean;
   isHoldPending: boolean;
@@ -791,7 +831,7 @@ function RecordRow({
                     Activation Timeline
                   </div>
                   <div className="space-y-3">
-                    {activationTimeline.map((event) => (
+                    {activationTimeline.slice(-3).map((event) => (
                       <div
                         key={event.id}
                         className="relative border-l border-zinc-700 pl-4 text-xs text-zinc-300"
@@ -811,27 +851,18 @@ function RecordRow({
                           {event.actor_email ? <span>{event.actor_email}</span> : null}
                           {event.resource_kind ? <span>{event.resource_kind}</span> : null}
                         </div>
-                        {event.detail ? (
-                          <p className="mt-1 break-words leading-5 text-zinc-300">{event.detail}</p>
-                        ) : null}
-                        {event.note ? (
-                          <p className="mt-1 break-words leading-5 text-cyan-100">Note: {event.note}</p>
-                        ) : null}
-                        {event.safeguards.length > 0 ? (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {event.safeguards.slice(0, 4).map((safeguard) => (
-                              <span
-                                key={`${event.id}-${safeguard}`}
-                                className="rounded-full border border-zinc-800 bg-zinc-950 px-2 py-0.5 text-zinc-400"
-                              >
-                                {safeguard}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
                       </div>
                     ))}
                   </div>
+                  <Button
+                    onClick={() => onOpenAudit(record)}
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 border-cyan-500/40 bg-cyan-950/20 text-cyan-100 hover:bg-cyan-950/40"
+                  >
+                    <History className="mr-2 h-4 w-4" />
+                    Open Audit
+                  </Button>
                 </div>
               ) : null}
             </div>
@@ -979,6 +1010,17 @@ function RecordRow({
               Cancel Proof
             </Button>
           ) : null}
+          {activationTimeline.length > 0 ? (
+            <Button
+              onClick={() => onOpenAudit(record)}
+              variant="outline"
+              size="sm"
+              className="border-cyan-500/40 bg-cyan-950/20 text-cyan-100 hover:bg-cyan-950/40"
+            >
+              Audit
+              <History className="ml-2 h-4 w-4" />
+            </Button>
+          ) : null}
           <Button
             onClick={() => onAction(record, "claim")}
             disabled={isActionPending}
@@ -1048,6 +1090,168 @@ function RecordRow({
   );
 }
 
+function ActivationAuditDialog({
+  record,
+  onClose,
+}: {
+  record: QuoteBookingRecord | null;
+  onClose: () => void;
+}) {
+  const timeline = record ? metadataTimeline(record, "activation_timeline") : [];
+  const activationState = record ? metadataString(record, "activation_state") : null;
+  const summaryReferences = record
+    ? [
+        ["Reservation", record.id],
+        ["Confirmation", record.title],
+        ["Quote", metadataString(record, "quote_ref")],
+        ["Hold", metadataString(record, "hold_ref")],
+        ["Payment Link", metadataString(record, "payment_link_id")],
+        ["Activation", metadataString(record, "activation_id")],
+      ].filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim().length > 0)
+    : [];
+
+  return (
+    <Dialog open={Boolean(record)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-hidden border-zinc-800 bg-zinc-950 text-zinc-50 sm:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-5 w-5 text-cyan-300" />
+            Activation Audit
+          </DialogTitle>
+          <DialogDescription>
+            {record?.title || "Reservation"} audit chain, staff actions, references, and immutable hashes.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[68vh] space-y-4 overflow-y-auto pr-2">
+          <div className="rounded-lg border border-cyan-500/20 bg-cyan-950/10 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">internal only</Badge>
+              {activationState ? (
+                <Badge className={activationTone(activationState)}>{activationLabel(activationState)}</Badge>
+              ) : null}
+              <Badge className="border-rose-500/30 bg-rose-500/10 text-rose-100">
+                legacy untouched
+              </Badge>
+              <Badge className="border-rose-500/30 bg-rose-500/10 text-rose-100">
+                Streamline blocked
+              </Badge>
+            </div>
+            {summaryReferences.length > 0 ? (
+              <div className="mt-3 grid gap-2 text-xs md:grid-cols-2 xl:grid-cols-3">
+                {summaryReferences.map(([label, value]) => (
+                  <div key={label} className="rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2">
+                    <p className="uppercase text-zinc-500">{label}</p>
+                    <p className="mt-1 break-all font-mono text-zinc-200">{shortAuditValue(value)}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          {timeline.length === 0 ? (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-8 text-center text-sm text-zinc-400">
+              No audit events are available for this reservation.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {timeline.map((event) => {
+                const references = auditReferenceEntries(event);
+                return (
+                  <div key={event.id} className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-4 py-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge className={timelineStageTone(event.stage)}>{event.stage}</Badge>
+                          {event.outcome ? (
+                            <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">
+                              {event.outcome}
+                            </Badge>
+                          ) : null}
+                          {event.activation_state ? (
+                            <Badge className={activationTone(event.activation_state)}>
+                              {activationLabel(event.activation_state)}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-sm font-semibold text-zinc-50">{event.label}</p>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
+                          <span>{formatTimestamp(event.at)}</span>
+                          {event.actor_email ? <span>{event.actor_email}</span> : null}
+                          {event.resource_kind ? <span>{event.resource_kind}</span> : null}
+                        </div>
+                      </div>
+                      {event.audit_hash ? (
+                        <div className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs">
+                          <p className="uppercase text-zinc-500">Audit Hash</p>
+                          <p className="mt-1 break-all font-mono text-zinc-300">{event.audit_hash}</p>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {event.detail ? (
+                      <p className="mt-3 break-words text-sm leading-6 text-zinc-300">{event.detail}</p>
+                    ) : null}
+                    {event.note ? (
+                      <div className="mt-3 rounded-md border border-cyan-500/20 bg-cyan-950/20 px-3 py-2 text-sm text-cyan-100">
+                        {event.note}
+                      </div>
+                    ) : null}
+
+                    {references.length > 0 ? (
+                      <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+                        {references.map(([key, values]) => (
+                          <div key={`${event.id}-${key}`} className="rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2">
+                            <p className="uppercase text-zinc-500">{auditReferenceLabel(key)}</p>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {values.map((value) => (
+                                <span
+                                  key={`${event.id}-${key}-${value}`}
+                                  className="rounded-full border border-zinc-700 px-2 py-0.5 font-mono text-zinc-200"
+                                  title={value}
+                                >
+                                  {shortAuditValue(value)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {event.safeguards.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {event.safeguards.map((safeguard) => (
+                          <span
+                            key={`${event.id}-${safeguard}`}
+                            className="rounded-full border border-rose-500/20 bg-rose-950/20 px-2 py-0.5 text-xs text-rose-100"
+                          >
+                            {safeguard}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function QuoteControlPage() {
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [stopFilter, setStopFilter] = useState<StopFilter>("all");
@@ -1077,6 +1281,7 @@ export default function QuoteControlPage() {
   const [cleanupTarget, setCleanupTarget] = useState<CleanupTarget | null>(null);
   const [cleanupNote, setCleanupNote] = useState("");
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [auditTarget, setAuditTarget] = useState<QuoteBookingRecord | null>(null);
   const [isCreatingProofQuote, setIsCreatingProofQuote] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useQuoteBookingControlTower(25);
   const actionMutation = useQuoteBookingControlAction();
@@ -1189,6 +1394,9 @@ export default function QuoteControlPage() {
   const openCleanup = (record: QuoteBookingRecord, action: CleanupAction) => {
     setCleanupTarget({ record, action });
     setCleanupNote("");
+  };
+  const openAudit = (record: QuoteBookingRecord) => {
+    setAuditTarget(record);
   };
   const submitAction = () => {
     if (!actionTarget) return;
@@ -1641,6 +1849,7 @@ export default function QuoteControlPage() {
                   onSendConfirmation={openSendConfirmation}
                   onCloseOps={openCloseOps}
                   onCleanup={openCleanup}
+                  onOpenAudit={openAudit}
                   isActionPending={actionMutation.isPending}
                   isSendPending={isSendingQuote}
                   isHoldPending={isCreatingHold}
@@ -1656,6 +1865,8 @@ export default function QuoteControlPage() {
           )}
         </CardContent>
       </Card>
+
+      <ActivationAuditDialog record={auditTarget} onClose={() => setAuditTarget(null)} />
 
       <Dialog open={Boolean(actionTarget)} onOpenChange={(open) => !open && setActionTarget(null)}>
         <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-50">

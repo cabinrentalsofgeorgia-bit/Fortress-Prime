@@ -838,6 +838,42 @@ def _timeline_safeguards(metadata: dict[str, Any]) -> list[str]:
     return safeguards
 
 
+def _timeline_references(
+    metadata: dict[str, Any],
+    *,
+    resource_kind: str | None = None,
+    resource_item_id: str | None = None,
+) -> dict[str, Any]:
+    references: dict[str, Any] = {}
+    if resource_kind and resource_item_id:
+        references[f"{resource_kind}_resource_id"] = resource_item_id
+
+    for key in (
+        "quote_id",
+        "hold_id",
+        "reservation_id",
+        "confirmation_code",
+        "activation_id",
+        "guest_confirmation_draft_id",
+        "payment_link_id",
+        "checkout_session_id",
+        "payment_intent_id",
+        "housekeeping_task_id",
+    ):
+        value = metadata.get(key)
+        if value:
+            references[key] = value
+
+    for key in ("work_order_ids", "completed_work_order_ids"):
+        value = metadata.get(key)
+        if isinstance(value, list):
+            references[key] = [str(item) for item in value if item]
+        elif value:
+            references[key] = str(value)
+
+    return references
+
+
 def _control_audit_timeline_event(audit: OpenShellAuditLog) -> dict[str, Any]:
     metadata = audit.metadata_json if isinstance(audit.metadata_json, dict) else {}
     action = (audit.action or "").removeprefix("quote_booking.")
@@ -859,6 +895,11 @@ def _control_audit_timeline_event(audit: OpenShellAuditLog) -> dict[str, Any]:
         "activation_state": metadata.get("activation_state"),
         "payment_link_id": metadata.get("payment_link_id"),
         "safeguards": _timeline_safeguards(metadata),
+        "references": _timeline_references(
+            metadata,
+            resource_kind=resource_kind,
+            resource_item_id=resource_item_id,
+        ),
         "audit_hash": audit.entry_hash,
     }
 
@@ -1080,6 +1121,19 @@ async def _apply_activation_timelines(db: AsyncSession, reservations: list[Quote
                     "activation_state": record.metadata.get("activation_state"),
                     "payment_link_id": record.metadata.get("payment_link_id"),
                     "safeguards": ["staff approval required before local posting"],
+                    "references": _timeline_references(
+                        {
+                            "reservation_id": record.id,
+                            "confirmation_code": record.title,
+                            "quote_id": record.metadata.get("quote_ref"),
+                            "hold_id": record.metadata.get("hold_ref"),
+                            "payment_link_id": record.metadata.get("payment_link_id"),
+                            "checkout_session_id": record.metadata.get("payment_reconciliation_session_id"),
+                            "payment_intent_id": record.metadata.get("payment_intent_id"),
+                        },
+                        resource_kind="reservation",
+                        resource_item_id=record.id,
+                    ),
                     "audit_hash": None,
                 },
             )
@@ -1110,6 +1164,22 @@ async def _apply_activation_timelines(db: AsyncSession, reservations: list[Quote
                         "legacy storefront: untouched",
                         "dns or tunnel change: blocked",
                     ],
+                    "references": _timeline_references(
+                        {
+                            "reservation_id": record.id,
+                            "confirmation_code": record.title,
+                            "quote_id": record.metadata.get("quote_ref"),
+                            "hold_id": record.metadata.get("hold_ref"),
+                            "activation_id": record.metadata.get("activation_id"),
+                            "guest_confirmation_draft_id": record.metadata.get(
+                                "guest_confirmation_draft_id"
+                            ),
+                            "work_order_ids": record.metadata.get("ops_work_order_ids"),
+                            "housekeeping_task_id": record.metadata.get("housekeeping_task_id"),
+                        },
+                        resource_kind="reservation",
+                        resource_item_id=record.id,
+                    ),
                     "audit_hash": None,
                 },
             )
@@ -1134,6 +1204,18 @@ async def _apply_activation_timelines(db: AsyncSession, reservations: list[Quote
                     f"streamline write: {record.metadata.get('streamline_write') or 'blocked'}",
                     f"legacy storefront: {record.metadata.get('legacy_storefront') or 'untouched'}",
                 ],
+                "references": _timeline_references(
+                    {
+                        "reservation_id": record.id,
+                        "confirmation_code": record.title,
+                        "quote_id": record.metadata.get("quote_ref"),
+                        "hold_id": record.metadata.get("hold_ref"),
+                        "activation_id": record.metadata.get("activation_id"),
+                        "payment_link_id": record.metadata.get("payment_link_id"),
+                    },
+                    resource_kind="reservation",
+                    resource_item_id=record.id,
+                ),
                 "audit_hash": None,
             },
         )
