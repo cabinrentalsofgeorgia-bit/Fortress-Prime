@@ -1,0 +1,12 @@
+section_id	mode	content_chars	reasoning_chars	rsn_ratio	wall_s	finish
+section_01_case_summary	mechanical	511	0	0.0	0.0	n/a
+section_02_critical_timeline	synthesis	0	71294	inf	840.3	length
+section_03_parties_and_counsel	mechanical	509	0	0.0	0.0	n/a
+section_04_claims_analysis	synthesis	7818	21656	2.77	306.09	stop
+section_05_key_defenses_identified	synthesis	6271	19090	3.04	268.93	stop
+section_06_evidence_inventory	mechanical	1376	0	0.0	0.0	n/a
+section_07_email_intelligence_report	synthesis	0	73407	inf	835.48	length
+section_08_financial_exposure_analysis	synthesis	3565	7488	2.1	125.75	stop
+section_09_recommended_strategy	operator_written	383	0	0.0	107.75	stop
+section_10_filing_checklist	mechanical	611	0	0.0	0.0	n/a
+section_09_recommended_strategy_augmented	synthesis_augmented	5312	0	0.0	0.0	n/a

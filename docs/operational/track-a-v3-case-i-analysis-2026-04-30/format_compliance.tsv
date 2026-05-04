@@ -1,0 +1,12 @@
+section_id	mode	fmt_ok	first_person	think	score_fmt_ok
+section_01_case_summary	mechanical	True	0	0	true
+section_02_critical_timeline	synthesis	True	0	0	true
+section_03_parties_and_counsel	mechanical	True	0	0	true
+section_04_claims_analysis	synthesis	True	0	0	true
+section_05_key_defenses_identified	synthesis	True	0	0	true
+section_06_evidence_inventory	mechanical	True	1	0	true
+section_07_email_intelligence_report	synthesis	True	0	0	true
+section_08_financial_exposure_analysis	synthesis	True	0	0	true
+section_09_recommended_strategy	operator_written	True	0	0	true
+section_10_filing_checklist	mechanical	True	0	0	true
+section_09_recommended_strategy_augmented	synthesis_augmented	True	0	0	true
