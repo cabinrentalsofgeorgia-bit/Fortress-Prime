@@ -1,8 +1,9 @@
 """Manifest-only Fortress Legal email source-drop planning.
 
 This module is the safety gate before historical email evidence ingestion. It
-parses operator-controlled ``.eml`` source drops, extracts chain-of-custody
-metadata, makes conservative case/privilege guesses, and emits a manifest.
+parses operator-controlled ``.eml`` source drops, inventories hash-only
+``.msg`` source drops, makes conservative case/privilege guesses, and emits a
+manifest.
 
 It deliberately does not touch IMAP flags, Postgres, Qdrant, the NAS vault, or
 ``process_vault_upload``. Real ingestion stays behind a later operator gate.
@@ -20,7 +21,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-SUPPORTED_EMAIL_SUFFIXES = frozenset({".eml"})
+PARSED_EMAIL_SUFFIXES = frozenset({".eml"})
+NATIVE_INVENTORY_SUFFIXES = frozenset({".msg"})
+SUPPORTED_EMAIL_SUFFIXES = PARSED_EMAIL_SUFFIXES | NATIVE_INVENTORY_SUFFIXES
 LEGACY_7IL_MIXED_DUMP = Path("/mnt/fortress_nas/legal_vault/7il-v-knight-ndga")
 
 PRIVILEGED_COUNSEL_DOMAINS = frozenset(
@@ -114,6 +117,9 @@ class EmailIntakeCandidate:
     privilege_risk: str
     privilege_reason: str
     intake_decision: str = "manifest_only"
+    source_format: str = "eml"
+    parser_status: str = "parsed"
+    parser_reason: str = "rfc822_message"
 
 
 @dataclass(frozen=True)
@@ -166,6 +172,65 @@ def validate_source_root(source_root: Path, *, allow_legacy_mixed_dump: bool = F
 def parse_email_file(path: Path, *, source_root: Path | None = None) -> EmailIntakeCandidate:
     raw_bytes = path.read_bytes()
     return parse_email_bytes(raw_bytes, source_path=path, source_root=source_root)
+
+
+def inventory_native_email_file(path: Path, *, source_root: Path | None = None) -> EmailIntakeCandidate:
+    """Create a chain-of-custody candidate for native formats we do not parse yet."""
+    raw_bytes = path.read_bytes()
+    root = source_root.expanduser().resolve(strict=False) if source_root else None
+    resolved_path = path.expanduser().resolve(strict=False)
+    relative_path = _relative_path(resolved_path, root)
+    source_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+    subject = _filename_subject(path)
+    normalized_subject = normalize_subject(subject)
+    case_slug, case_reason = classify_case_slug(
+        subject=subject,
+        body_preview="",
+        participants=[],
+        sent_at=None,
+    )
+    privilege_risk, privilege_reason = classify_privilege_risk(
+        subject=subject,
+        body_preview="",
+        participant_domains=[],
+        participants=[],
+    )
+
+    return EmailIntakeCandidate(
+        source_path=str(resolved_path),
+        source_relative_path=relative_path,
+        source_sha256=source_sha256,
+        message_id="",
+        in_reply_to="",
+        references=[],
+        thread_key=thread_key(
+            message_id="",
+            in_reply_to="",
+            references=[],
+            normalized_subject=normalized_subject,
+            sender_email="",
+            source_sha256=source_sha256,
+        ),
+        subject=subject,
+        normalized_subject=normalized_subject,
+        sent_at=None,
+        sender="",
+        sender_email="",
+        to_addresses=[],
+        cc_addresses=[],
+        bcc_addresses=[],
+        participant_domains=[],
+        body_preview="",
+        attachments=[],
+        case_slug_guess=case_slug,
+        case_guess_reason=case_reason,
+        privilege_risk=privilege_risk,
+        privilege_reason=privilege_reason,
+        intake_decision="native_review_required",
+        source_format=path.suffix.lower().lstrip("."),
+        parser_status="native_inventory_only",
+        parser_reason="outlook_msg_parser_not_configured",
+    )
 
 
 def parse_email_bytes(
@@ -264,14 +329,18 @@ def build_source_drop_plan(
 
     for path in _walk_files(root):
         total_seen += 1
-        if path.suffix.lower() not in SUPPORTED_EMAIL_SUFFIXES:
+        suffix = path.suffix.lower()
+        if suffix not in SUPPORTED_EMAIL_SUFFIXES:
             skipped.append(SkippedSourceFile(str(path), "unsupported_suffix"))
             continue
         if limit is not None and len(candidates) >= limit:
             skipped.append(SkippedSourceFile(str(path), "limit_reached"))
             continue
         try:
-            candidates.append(parse_email_file(path, source_root=root))
+            if suffix in NATIVE_INVENTORY_SUFFIXES:
+                candidates.append(inventory_native_email_file(path, source_root=root))
+            else:
+                candidates.append(parse_email_file(path, source_root=root))
         except Exception as exc:  # pragma: no cover - exact parser errors vary
             errors.append(SkippedSourceFile(str(path), f"{type(exc).__name__}: {exc}"))
 
@@ -401,6 +470,10 @@ def _relative_path(path: Path, root: Path | None) -> str:
         return str(path.relative_to(root))
     except ValueError:
         return path.name
+
+
+def _filename_subject(path: Path) -> str:
+    return re.sub(r"\s+", " ", path.stem.replace("_", " ")).strip()
 
 
 def _message_ids(value: str) -> list[str]:

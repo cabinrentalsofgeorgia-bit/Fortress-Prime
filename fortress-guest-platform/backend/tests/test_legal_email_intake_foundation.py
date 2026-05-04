@@ -97,6 +97,25 @@ def test_build_source_drop_plan_is_manifest_only(tmp_path):
     assert plan.candidates[0].case_slug_guess == "7il-v-knight-ndga-i"
 
 
+def test_build_source_drop_plan_inventories_msg_without_parsing(tmp_path):
+    (tmp_path / "Fwd_ 21-0510 1031_92 Fish Trap Road_7 IL Properties_ LLC_Knight.msg").write_bytes(
+        b"\xd0\xcf\x11\xe0 native outlook bytes"
+    )
+
+    plan = build_source_drop_plan(tmp_path)
+
+    assert plan.candidate_count == 1
+    assert plan.skipped == []
+    candidate = plan.candidates[0]
+    assert candidate.source_format == "msg"
+    assert candidate.parser_status == "native_inventory_only"
+    assert candidate.parser_reason == "outlook_msg_parser_not_configured"
+    assert candidate.intake_decision == "native_review_required"
+    assert candidate.case_slug_guess == "fish-trap-suv2026000013"
+    assert candidate.source_sha256
+    assert candidate.attachments == []
+
+
 def test_write_manifest_includes_summary_counts(tmp_path):
     (tmp_path / "a.eml").write_bytes(_raw_email(subject="Vanderburge easement thread"))
     plan = build_source_drop_plan(tmp_path)

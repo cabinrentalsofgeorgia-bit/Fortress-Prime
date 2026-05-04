@@ -1,21 +1,27 @@
 # Fortress Legal Email Intake Foundation
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 Status: PR foundation gate, manifest-only
 
 ## Purpose
 
 This pass gives Fortress Legal a safe first step for Wilson Pruitt, Argo,
 closing, and post-closing email source drops. It inventories operator-supplied
-`.eml` files and produces a reviewable manifest before any evidence ingestion.
+`.eml` files and Outlook `.msg` files and produces a reviewable manifest before
+any evidence ingestion.
 
 ## Contract
 
 The source-drop planner:
 
 - Parses `.eml` files from an explicit operator source directory.
+- Inventories `.msg` files as hash-only native review candidates when a full
+  Outlook parser is not configured.
 - Extracts message identity, sender/recipient metadata, dates, thread headers,
-  normalized subject, body preview, and attachment metadata.
+  normalized subject, body preview, and attachment metadata for `.eml` files.
+- Preserves `.msg` source path, relative path, SHA-256, filename-derived subject,
+  case/privilege guesses, and `native_review_required` decision without parsing
+  message bodies or attachments.
 - Computes SHA-256 hashes for the raw email and each attachment.
 - Makes conservative case-slug and privilege-risk guesses.
 - Writes a JSON manifest.
@@ -55,6 +61,11 @@ Each candidate includes:
 - `case_slug_guess` and `case_guess_reason`
 - `privilege_risk` and `privilege_reason`
 - `intake_decision=manifest_only`
+- `source_format`, `parser_status`, and `parser_reason`
+
+For `.msg` files, `intake_decision` is `native_review_required`,
+`parser_status` is `native_inventory_only`, and attachment/message-body fields
+remain empty until a controlled Outlook parser is added.
 
 ## Next Gate
 
