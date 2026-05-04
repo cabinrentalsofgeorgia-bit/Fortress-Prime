@@ -9,19 +9,27 @@ from typing import Any, AsyncIterator
 import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base
 
 from backend.core.config import settings
 
 logger = structlog.get_logger()
 
 
-class Base(DeclarativeBase):
-    """Shared declarative base for Fortress Prime models."""
+Base = declarative_base()
 
 
 async_engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
+def _async_url(url: str) -> str:
+    """Ensure runtime database URLs use the asyncpg driver."""
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    return url
 
 
 def get_async_engine() -> AsyncEngine:
@@ -30,7 +38,7 @@ def get_async_engine() -> AsyncEngine:
 
     if async_engine is None:
         async_engine = create_async_engine(
-            settings.database_url,
+            _async_url(settings.database_url),
             echo=False,
             pool_pre_ping=True,
             pool_size=20,
