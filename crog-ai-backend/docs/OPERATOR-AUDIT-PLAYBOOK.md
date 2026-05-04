@@ -2,6 +2,18 @@
 
 This playbook describes the read-only audit surface for Hedge Fund Signals promotions.
 
+## Release Hardening Lock
+
+Before any new product mechanics are added, the release owner must complete:
+
+- `MARKETCLUB-SIGNALS-PRODUCTION-RUNBOOK.md`
+- `MARKETCLUB-SIGNALS-INCIDENT-RESPONSE-CHECKLIST.md`
+- `MARKETCLUB-SIGNALS-ROLLBACK-DRILL-CHECKLIST.md`
+- `MARKETCLUB-SIGNALS-STAGING-SMOKE-TEST.md`
+- `deploy/sql/marketclub_release_hardening_verification.sql`
+
+No release is ready until an operator can trace decision -> execution -> outcome -> rollback, explain why a signal was promoted, verify observed behavior, identify degradation quickly, and act manually without automation.
+
 ## Lifecycle Timeline
 
 Use `GET /api/financial/signals/promotion/{id}/timeline` with a candidate parameter set, decision id, dry-run acceptance id, or execution id. The timeline only emits events backed by audited rows:
