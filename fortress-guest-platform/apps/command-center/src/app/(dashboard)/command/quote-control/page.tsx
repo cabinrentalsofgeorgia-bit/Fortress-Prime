@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   CreditCard,
   FlaskConical,
+  History,
   Loader2,
   LockKeyhole,
   PauseCircle,
@@ -56,6 +57,24 @@ type CleanupAction = "expire_hold" | "cancel_proof";
 type CleanupTarget = {
   record: QuoteBookingRecord;
   action: CleanupAction;
+};
+
+type ActivationTimelineEvent = {
+  id: string;
+  at: string | null;
+  stage: string;
+  label: string;
+  action: string;
+  outcome: string | null;
+  actor_email: string | null;
+  resource_kind: string | null;
+  resource_item_id: string | null;
+  detail: string | null;
+  note: string | null;
+  activation_state: string | null;
+  payment_link_id: string | null;
+  safeguards: string[];
+  audit_hash: string | null;
 };
 
 type QuoteBookingSendResponse = {
@@ -239,6 +258,43 @@ function metadataStrings(record: QuoteBookingRecord, key: string): string[] {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
+function metadataTimeline(record: QuoteBookingRecord, key: string): ActivationTimelineEvent[] {
+  const value = record.metadata?.[key];
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item, index) => ({
+      id: typeof item.id === "string" && item.id.trim() ? item.id : `${key}-${index}`,
+      at: typeof item.at === "string" && item.at.trim() ? item.at : null,
+      stage: typeof item.stage === "string" && item.stage.trim() ? item.stage : "audit",
+      label: typeof item.label === "string" && item.label.trim() ? item.label : "Audit Event",
+      action: typeof item.action === "string" && item.action.trim() ? item.action : "audit_event",
+      outcome: typeof item.outcome === "string" && item.outcome.trim() ? item.outcome : null,
+      actor_email:
+        typeof item.actor_email === "string" && item.actor_email.trim() ? item.actor_email : null,
+      resource_kind:
+        typeof item.resource_kind === "string" && item.resource_kind.trim() ? item.resource_kind : null,
+      resource_item_id:
+        typeof item.resource_item_id === "string" && item.resource_item_id.trim()
+          ? item.resource_item_id
+          : null,
+      detail: typeof item.detail === "string" && item.detail.trim() ? item.detail : null,
+      note: typeof item.note === "string" && item.note.trim() ? item.note : null,
+      activation_state:
+        typeof item.activation_state === "string" && item.activation_state.trim()
+          ? item.activation_state
+          : null,
+      payment_link_id:
+        typeof item.payment_link_id === "string" && item.payment_link_id.trim()
+          ? item.payment_link_id
+          : null,
+      safeguards: Array.isArray(item.safeguards)
+        ? item.safeguards.filter((safe): safe is string => typeof safe === "string" && safe.trim().length > 0)
+        : [],
+      audit_hash: typeof item.audit_hash === "string" && item.audit_hash.trim() ? item.audit_hash : null,
+    }));
+}
+
 function canSendGuestQuote(record: QuoteBookingRecord): boolean {
   return (
     record.kind === "quote" &&
@@ -379,6 +435,23 @@ function activationTone(state: string | null): string {
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
     case "completed":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+    default:
+      return "border-zinc-700 bg-zinc-950 text-zinc-300";
+  }
+}
+
+function timelineStageTone(stage: string): string {
+  switch (stage) {
+    case "quote":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-100";
+    case "payment":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+    case "activation":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-100";
+    case "safeguard":
+      return "border-rose-500/30 bg-rose-500/10 text-rose-100";
+    case "cleanup":
+      return "border-zinc-600 bg-zinc-800 text-zinc-200";
     default:
       return "border-zinc-700 bg-zinc-950 text-zinc-300";
   }
@@ -557,6 +630,8 @@ function RecordRow({
   const opsClosedAt = record.kind === "reservation" ? metadataString(record, "ops_handoff_closed_at") : null;
   const opsWorkOrderIds = record.kind === "reservation" ? metadataStrings(record, "ops_work_order_ids") : [];
   const housekeepingTaskId = record.kind === "reservation" ? metadataString(record, "housekeeping_task_id") : null;
+  const activationTimeline =
+    record.kind === "reservation" ? metadataTimeline(record, "activation_timeline") : [];
   const cleanupReason = metadataString(record, "cleanup_reason");
   const paymentReceivedCents =
     record.kind === "reservation" ? metadataNumber(record, "payment_reconciliation_amount_received_cents") : null;
@@ -709,6 +784,56 @@ function RecordRow({
                 {opsClosedAt ? <span>Ops closed: {formatTimestamp(opsClosedAt)}</span> : null}
                 {housekeepingTaskId ? <span>Housekeeping task: ready</span> : null}
               </div>
+              {activationTimeline.length > 0 ? (
+                <div className="mt-4 border-t border-cyan-500/15 pt-3">
+                  <div className="mb-3 flex items-center gap-2 text-xs uppercase text-cyan-200/80">
+                    <History className="h-3.5 w-3.5" />
+                    Activation Timeline
+                  </div>
+                  <div className="space-y-3">
+                    {activationTimeline.map((event) => (
+                      <div
+                        key={event.id}
+                        className="relative border-l border-zinc-700 pl-4 text-xs text-zinc-300"
+                      >
+                        <span className="absolute -left-1.5 top-1.5 h-2.5 w-2.5 rounded-full border border-cyan-400 bg-zinc-950" />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-zinc-50">{event.label}</span>
+                          <Badge className={timelineStageTone(event.stage)}>{event.stage}</Badge>
+                          {event.outcome ? (
+                            <Badge className="border-zinc-700 bg-zinc-950 text-zinc-300">
+                              {event.outcome}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-zinc-500">
+                          <span>{formatTimestamp(event.at)}</span>
+                          {event.actor_email ? <span>{event.actor_email}</span> : null}
+                          {event.resource_kind ? <span>{event.resource_kind}</span> : null}
+                        </div>
+                        {event.detail ? (
+                          <p className="mt-1 break-words leading-5 text-zinc-300">{event.detail}</p>
+                        ) : null}
+                        {event.note ? (
+                          <p className="mt-1 break-words leading-5 text-cyan-100">Note: {event.note}</p>
+                        ) : null}
+                        {event.safeguards.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {event.safeguards.slice(0, 4).map((safeguard) => (
+                              <span
+                                key={`${event.id}-${safeguard}`}
+                                className="rounded-full border border-zinc-800 bg-zinc-950 px-2 py-0.5 text-zinc-400"
+                              >
+                                {safeguard}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
           {cleanupReason && (canCleanupHold || canCleanupReservation) ? (

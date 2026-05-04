@@ -784,6 +784,92 @@ def _control_resource_id(kind: str, item_id: str) -> str:
     return f"{kind}:{item_id}"
 
 
+def _control_resource_parts(resource_id: str | None) -> tuple[str | None, str | None]:
+    if not resource_id or ":" not in resource_id:
+        return None, None
+    kind, item_id = resource_id.split(":", 1)
+    return kind or None, item_id or None
+
+
+def _timeline_action_label(action: str) -> str:
+    labels = {
+        "claim": "Claimed",
+        "mark_reviewed": "Safeguard Reviewed",
+        "escalate": "Escalated",
+        "dismiss": "Dismissed",
+        "note": "Staff Note",
+        "send_guest_quote": "Guest Quote Sent",
+        "create_local_hold": "Local Hold Created",
+        "convert_local_reservation": "Local Reservation Created",
+        "send_reservation_payment_link": "Payment Link Sent",
+        "approve_reservation_payment_reconciliation": "Payment Proof Approved",
+        "activate_paid_reservation": "Activation Package Created",
+        "send_guest_confirmation": "Guest Confirmation Sent",
+        "close_ops_handoff": "Ops Handoff Closed",
+        "expire_local_hold": "Expired Hold Cleanup",
+        "cancel_proof_reservation": "Proof Reservation Cleanup",
+    }
+    return labels.get(action, action.replace("_", " ").title())
+
+
+def _timeline_action_stage(action: str) -> str:
+    if action in {"send_guest_quote", "create_local_hold", "convert_local_reservation"}:
+        return "quote"
+    if action in {"send_reservation_payment_link", "approve_reservation_payment_reconciliation"}:
+        return "payment"
+    if action in {"activate_paid_reservation", "send_guest_confirmation", "close_ops_handoff"}:
+        return "activation"
+    if action in {"claim", "mark_reviewed", "escalate", "dismiss", "note"}:
+        return "safeguard"
+    if action in {"expire_local_hold", "cancel_proof_reservation"}:
+        return "cleanup"
+    return "audit"
+
+
+def _timeline_safeguards(metadata: dict[str, Any]) -> list[str]:
+    safeguards: list[str] = []
+    for key in ("streamline_write", "legacy_storefront", "guest_facing_send", "housekeeping_schedule"):
+        value = metadata.get(key)
+        if value:
+            safeguards.append(f"{key.replace('_', ' ')}: {value}")
+    blocked = metadata.get("blocked_capabilities")
+    if isinstance(blocked, list) and blocked:
+        safeguards.append(f"{len(blocked)} blocked capabilities")
+    return safeguards
+
+
+def _control_audit_timeline_event(audit: OpenShellAuditLog) -> dict[str, Any]:
+    metadata = audit.metadata_json if isinstance(audit.metadata_json, dict) else {}
+    action = (audit.action or "").removeprefix("quote_booking.")
+    resource_kind, resource_item_id = _control_resource_parts(audit.resource_id)
+    note = metadata.get("note")
+    detail = metadata.get("detail") or audit.purpose
+    return {
+        "id": str(audit.id),
+        "at": _iso(audit.created_at),
+        "stage": _timeline_action_stage(action),
+        "label": _timeline_action_label(action),
+        "action": action,
+        "outcome": audit.outcome,
+        "actor_email": audit.actor_email,
+        "resource_kind": resource_kind,
+        "resource_item_id": resource_item_id,
+        "detail": str(detail) if detail else None,
+        "note": note.strip() if isinstance(note, str) and note.strip() else None,
+        "activation_state": metadata.get("activation_state"),
+        "payment_link_id": metadata.get("payment_link_id"),
+        "safeguards": _timeline_safeguards(metadata),
+        "audit_hash": audit.entry_hash,
+    }
+
+
+def _append_timeline_event(timeline: list[dict[str, Any]], event: dict[str, Any]) -> None:
+    event_id = str(event.get("id") or "")
+    if event_id and any(str(existing.get("id") or "") == event_id for existing in timeline):
+        return
+    timeline.append(event)
+
+
 def _is_quote_control_hold(hold: ReservationHold) -> bool:
     snapshot = hold.quote_snapshot if isinstance(hold.quote_snapshot, dict) else {}
     return (
@@ -940,6 +1026,144 @@ async def _apply_control_audits(db: AsyncSession, records: list[QuoteBookingReco
         record.last_action = action
         record.last_action_by = audit.actor_email
         record.last_action_at = _iso(audit.created_at)
+
+
+async def _apply_activation_timelines(db: AsyncSession, reservations: list[QuoteBookingRecord]) -> None:
+    activation_records = [
+        record
+        for record in reservations
+        if record.kind == "reservation"
+        and (
+            record.metadata.get("activation_id")
+            or record.metadata.get("quote_ref")
+            or record.metadata.get("hold_ref")
+            or record.metadata.get("payment_reconciliation_state")
+            or record.metadata.get("payment_link_id")
+        )
+    ]
+    if not activation_records:
+        return
+
+    records_by_resource_id: dict[str, list[QuoteBookingRecord]] = {}
+    for record in activation_records:
+        resource_ids = {_control_resource_id("reservation", record.id)}
+        quote_ref = record.metadata.get("quote_ref")
+        hold_ref = record.metadata.get("hold_ref")
+        if isinstance(quote_ref, str) and quote_ref:
+            resource_ids.add(_control_resource_id("quote", quote_ref))
+        if isinstance(hold_ref, str) and hold_ref:
+            resource_ids.add(_control_resource_id("hold", hold_ref))
+        for resource_id in resource_ids:
+            records_by_resource_id.setdefault(resource_id, []).append(record)
+
+        timeline: list[dict[str, Any]] = []
+        payment_reconciled_at = record.metadata.get("payment_reconciled_at")
+        payment_state = record.metadata.get("payment_reconciliation_state")
+        if payment_reconciled_at or payment_state:
+            _append_timeline_event(
+                timeline,
+                {
+                    "id": f"payment-proof:{record.id}",
+                    "at": payment_reconciled_at,
+                    "stage": "payment",
+                    "label": "Stripe Payment Proof",
+                    "action": "stripe_payment_proof",
+                    "outcome": "pending_staff_review"
+                    if payment_state == "stripe_paid_pending_staff_approval"
+                    else "recorded",
+                    "actor_email": None,
+                    "resource_kind": "reservation",
+                    "resource_item_id": record.id,
+                    "detail": record.metadata.get("payment_reconciliation_detail")
+                    or "Stripe payment signal is recorded on the local reservation.",
+                    "note": None,
+                    "activation_state": record.metadata.get("activation_state"),
+                    "payment_link_id": record.metadata.get("payment_link_id"),
+                    "safeguards": ["staff approval required before local posting"],
+                    "audit_hash": None,
+                },
+            )
+
+        if record.metadata.get("activation_id"):
+            _append_timeline_event(
+                timeline,
+                {
+                    "id": f"activation-safeguards:{record.id}",
+                    "at": record.metadata.get("activation_created_at") or record.created_at,
+                    "stage": "safeguard",
+                    "label": "Activation Safeguards Locked",
+                    "action": "activation_safeguards_locked",
+                    "outcome": "locked",
+                    "actor_email": None,
+                    "resource_kind": "reservation",
+                    "resource_item_id": record.id,
+                    "detail": (
+                        "Guest confirmation requires staff review; Streamline write, public storefront, "
+                        "DNS, tunnels, Drupal, and AWS remain blocked."
+                    ),
+                    "note": None,
+                    "activation_state": record.metadata.get("activation_state"),
+                    "payment_link_id": record.metadata.get("payment_link_id"),
+                    "safeguards": [
+                        "guest confirmation: staff review required",
+                        "streamline write: blocked",
+                        "legacy storefront: untouched",
+                        "dns or tunnel change: blocked",
+                    ],
+                    "audit_hash": None,
+                },
+            )
+
+        _append_timeline_event(
+            timeline,
+            {
+                "id": f"current-gate:{record.id}",
+                "at": record.updated_at or record.created_at,
+                "stage": "safeguard",
+                "label": "Current Safeguard Gate",
+                "action": "current_safeguard_gate",
+                "outcome": record.stop_level,
+                "actor_email": None,
+                "resource_kind": "reservation",
+                "resource_item_id": record.id,
+                "detail": record.stop_reason,
+                "note": None,
+                "activation_state": record.metadata.get("activation_state"),
+                "payment_link_id": record.metadata.get("payment_link_id"),
+                "safeguards": [
+                    f"streamline write: {record.metadata.get('streamline_write') or 'blocked'}",
+                    f"legacy storefront: {record.metadata.get('legacy_storefront') or 'untouched'}",
+                ],
+                "audit_hash": None,
+            },
+        )
+        record.metadata["activation_timeline"] = timeline
+
+    result = await db.execute(
+        select(OpenShellAuditLog)
+        .where(
+            OpenShellAuditLog.resource_type == "quote_booking_control_item",
+            OpenShellAuditLog.tool_name == "quote_booking_control_tower",
+            OpenShellAuditLog.resource_id.in_(list(records_by_resource_id)),
+        )
+        .order_by(OpenShellAuditLog.created_at.asc())
+        .limit(4000)
+    )
+
+    for audit in result.scalars().all():
+        event = _control_audit_timeline_event(audit)
+        for record in records_by_resource_id.get(audit.resource_id or "", []):
+            timeline = record.metadata.get("activation_timeline")
+            if not isinstance(timeline, list):
+                timeline = []
+                record.metadata["activation_timeline"] = timeline
+            _append_timeline_event(timeline, event)
+
+    for record in activation_records:
+        timeline = record.metadata.get("activation_timeline")
+        if isinstance(timeline, list):
+            timeline.sort(key=lambda event: str(event.get("at") or ""))
+            record.metadata["activation_timeline"] = timeline[-20:]
 
 
 def _parse_uuid(item_id: str) -> UUID:
@@ -2232,6 +2456,7 @@ async def quote_booking_control_tower(
 
     all_records = [*quotes, *holds, *reservations, *parity_audits]
     await _apply_control_audits(db, all_records)
+    await _apply_activation_timelines(db, reservations)
     readiness_summary = _finalize_quote_readiness(quotes)
     hard_stops = sum(1 for row in all_records if row.stop_level == "stop")
     inspection_items = sum(1 for row in all_records if row.stop_level == "inspect")
