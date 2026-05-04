@@ -57,6 +57,7 @@ import {
   useFinancialPromotionPostExecutionMonitoring,
   useFinancialPromotionReconciliation,
   useFinancialPromotionRollbackDrills,
+  useFinancialSignalHealthDashboard,
   useRollbackFinancialPromotionExecution,
   useFinancialShadowDecisionRecords,
   useFinancialShadowReview,
@@ -89,6 +90,8 @@ import type {
   FinancialPromotionReconciliation,
   FinancialPromotionRollbackDrill,
   FinancialPromotionRollbackEligibility,
+  FinancialSignalHealthDashboardResponse,
+  FinancialSignalHealthStatus,
   FinancialPromotionGateGuardrailStatus,
   FinancialPromotionGateRecommendationStatus,
   FinancialPromotionGateResponse,
@@ -390,6 +393,12 @@ function promotionAlertSeverityClasses(severity: FinancialPromotionPostExecution
   if (severity === "HIGH") return "border-red-500/40 bg-red-500/10 text-red-600";
   if (severity === "MEDIUM") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
   return "border-border bg-muted/30 text-muted-foreground";
+}
+
+function signalHealthStatusClasses(status: FinancialSignalHealthStatus): string {
+  if (status === "HEALTHY") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (status === "WARNING") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-red-500/40 bg-red-500/10 text-red-600";
 }
 
 function promotionAlertTypeLabel(type: FinancialPromotionPostExecutionAlert["alert_type"]): string {
@@ -2257,6 +2266,317 @@ function PostExecutionAlertsPanel({
   );
 }
 
+function SignalHealthDashboardPanel({
+  dashboard,
+  loading,
+  error,
+}: {
+  dashboard: FinancialSignalHealthDashboardResponse | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+        <AlertTriangle className="h-4 w-4" />
+        Signal health dashboard unavailable.
+      </div>
+    );
+  }
+
+  if (loading && !dashboard) {
+    return <div className="py-8 text-sm text-muted-foreground">Loading signal health...</div>;
+  }
+
+  if (!dashboard) {
+    return (
+      <div className="border border-dashed border-border p-5 text-sm text-muted-foreground">
+        No signal health rows yet.
+      </div>
+    );
+  }
+
+  const activeRows = dashboard.active_promotions.slice(0, 10);
+  const riskRows = dashboard.at_risk_signals.slice(0, 8);
+  const outcomeRows = dashboard.execution_outcomes.slice(0, 10);
+  const divergenceTrend = dashboard.model_divergence.trend.slice(0, 6);
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Active Executions</p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {dashboard.summary.active_execution_count}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Degraded</p>
+          <p className="mt-1 font-mono text-2xl font-bold text-red-500">
+            {dashboard.summary.degraded_execution_count}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">At-Risk Signals</p>
+          <p className="mt-1 font-mono text-2xl font-bold text-amber-500">
+            {dashboard.summary.at_risk_signal_count}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Candidate Divergence</p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {dashboard.summary.divergence_count}
+          </p>
+        </div>
+        <div className="border border-border p-3">
+          <p className="text-xs text-muted-foreground">Rollback Review</p>
+          <p className="mt-1 font-mono text-2xl font-bold">
+            {dashboard.summary.rollback_review_count}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Awareness Alerts</h2>
+          <Badge variant="outline">Warning only</Badge>
+        </div>
+        <div className="grid gap-2 md:grid-cols-2">
+          {dashboard.awareness_alerts.map((alert) => (
+            <div
+              key={`${alert.alert_type}-${alert.execution_id ?? "global"}-${alert.message}`}
+              className={cn(
+                "flex items-start gap-2 border p-3 text-sm",
+                alert.severity === "WARNING"
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                  : "border-border bg-muted/20 text-muted-foreground",
+              )}
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0">
+                <p>{alert.message}</p>
+                <p className="text-xs text-muted-foreground">Non-blocking, no automated action.</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Active Promotions Health</h2>
+            <Badge variant="outline">Last 10 executions</Badge>
+          </div>
+          <div className="overflow-hidden border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Execution</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Rows</TableHead>
+                  <TableHead>Flags</TableHead>
+                  <TableHead>5d Avg</TableHead>
+                  <TableHead>Rollback</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activeRows.length ? (
+                  activeRows.map((row) => (
+                    <TableRow key={row.execution_id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-mono text-xs">{row.execution_id.slice(0, 8)}</p>
+                          <p className="text-xs text-muted-foreground">{formatDateTime(row.executed_at)}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={signalHealthStatusClasses(row.health_status)}>
+                          {row.health_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{row.inserted_count}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {row.key_flags.drift ? <Badge variant="outline">drift</Badge> : null}
+                          {row.key_flags.whipsaw ? <Badge variant="outline">whipsaw</Badge> : null}
+                          {row.key_flags.decay ? <Badge variant="outline">decay</Badge> : null}
+                          {!row.key_flags.drift && !row.key_flags.whipsaw && !row.key_flags.decay ? (
+                            <span className="text-xs text-muted-foreground">Clear</span>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatSignedPercent(numericPercent(row.avg_5d_return))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={promotionExecutionRollbackClasses(row.rollback_status)}>
+                          {row.rollback_status === "rolled_back" ? "Rolled back" : "Active"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-6 text-sm text-muted-foreground">
+                      No executed promotions yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <div className="space-y-3 border border-border p-3">
+          <div>
+            <h2 className="text-sm font-semibold">Model vs Production Divergence</h2>
+            <p className="text-xs text-muted-foreground">
+              Candidate +80 while production is not +80.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="border border-border p-3">
+              <p className="text-xs text-muted-foreground">Current</p>
+              <p className="mt-1 font-mono text-2xl font-bold">
+                {dashboard.model_divergence.current_divergence_count}
+              </p>
+            </div>
+            <div className="border border-border p-3">
+              <p className="text-xs text-muted-foreground">Rate</p>
+              <p className="mt-1 font-mono text-2xl font-bold">
+                {formatPercent(numericPercent(dashboard.model_divergence.current_divergence_rate))}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {divergenceTrend.length ? (
+              divergenceTrend.map((row) => (
+                <div key={row.bar_date} className="flex items-center justify-between gap-3 text-xs">
+                  <span>{formatDate(row.bar_date)}</span>
+                  <span className="font-mono">
+                    {row.divergence_count}/{row.candidate_80_count}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {formatPercent(numericPercent(row.divergence_rate))}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No divergence trend rows yet.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">At-Risk Signals</h2>
+            <Badge variant="outline">Actionable risk only</Badge>
+          </div>
+          <div className="overflow-hidden border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ticker</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>5d</TableHead>
+                  <TableHead>Drift</TableHead>
+                  <TableHead>Risk</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {riskRows.length ? (
+                  riskRows.map((row) => (
+                    <TableRow key={`${row.execution_id}-${row.market_signal_id}`}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-mono font-semibold">{row.ticker}</p>
+                          <p className="text-xs text-muted-foreground">{row.action} {row.candidate_score}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{row.risk_reason}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatSignedPercent(numericPercent(row.outcome_5d_directional_return))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={promotionMonitoringStatusClasses(row.drift_status)}>
+                          {promotionMonitoringLabel(row.drift_status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{row.risk_score}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-6 text-sm text-muted-foreground">
+                      No actionable at-risk signals.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Execution Outcome Summary</h2>
+            <Badge variant="outline">Read-only</Badge>
+          </div>
+          <div className="overflow-hidden border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Execution</TableHead>
+                  <TableHead>Rows</TableHead>
+                  <TableHead>1d</TableHead>
+                  <TableHead>5d</TableHead>
+                  <TableHead>20d</TableHead>
+                  <TableHead>+%</TableHead>
+                  <TableHead>Whipsaw</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {outcomeRows.length ? (
+                  outcomeRows.map((row) => (
+                    <TableRow key={row.execution_id}>
+                      <TableCell className="font-mono text-xs">{row.execution_id.slice(0, 8)}</TableCell>
+                      <TableCell className="font-mono text-sm">{row.inserted_count}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatSignedPercent(numericPercent(row.avg_1d_return))}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatSignedPercent(numericPercent(row.avg_5d_return))}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatSignedPercent(numericPercent(row.avg_20d_return))}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatPercent(numericPercent(row.positive_5d_pct))}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatPercent(numericPercent(row.whipsaw_pct))}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-6 text-sm text-muted-foreground">
+                      No execution outcomes yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PromotionDryRunPanel({
   dryRun,
   loading,
@@ -3102,6 +3422,13 @@ export function HedgeFundSignalsShell() {
   const promotionPostExecutionAlerts = useFinancialPromotionPostExecutionAlerts(promotionAuditId, {
     limit: 100,
   });
+  const signalHealthDashboard = useFinancialSignalHealthDashboard({
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    production_parameter_set: "dochia_v0_estimated",
+    execution_limit: 10,
+    risk_limit: 25,
+    divergence_lookback_bars: 30,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
   const acknowledgePromotionPostExecutionAlert = useAcknowledgeFinancialPromotionPostExecutionAlert();
@@ -3160,7 +3487,8 @@ export function HedgeFundSignalsShell() {
     promotionLifecycleTimeline.isFetching ||
     promotionReconciliation.isFetching ||
     promotionPostExecutionMonitoring.isFetching ||
-    promotionPostExecutionAlerts.isFetching;
+    promotionPostExecutionAlerts.isFetching ||
+    signalHealthDashboard.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
@@ -3176,6 +3504,7 @@ export function HedgeFundSignalsShell() {
     void promotionReconciliation.refetch();
     void promotionPostExecutionMonitoring.refetch();
     void promotionPostExecutionAlerts.refetch();
+    void signalHealthDashboard.refetch();
   }
 
   async function handlePromotionExecutionSubmit(payload: FinancialPromotionExecutionCreate) {
@@ -3186,6 +3515,7 @@ export function HedgeFundSignalsShell() {
     void promotionReconciliation.refetch();
     void promotionPostExecutionMonitoring.refetch();
     void promotionPostExecutionAlerts.refetch();
+    void signalHealthDashboard.refetch();
   }
 
   async function handlePromotionRollbackSubmit(payload: FinancialPromotionExecutionRollbackCreate) {
@@ -3196,6 +3526,7 @@ export function HedgeFundSignalsShell() {
     void promotionReconciliation.refetch();
     void promotionPostExecutionMonitoring.refetch();
     void promotionPostExecutionAlerts.refetch();
+    void signalHealthDashboard.refetch();
   }
 
   async function handlePromotionAlertAcknowledgementSubmit(
@@ -3203,6 +3534,7 @@ export function HedgeFundSignalsShell() {
   ) {
     await acknowledgePromotionPostExecutionAlert.mutateAsync(payload);
     void promotionPostExecutionAlerts.refetch();
+    void signalHealthDashboard.refetch();
   }
 
   return (
@@ -3264,6 +3596,7 @@ export function HedgeFundSignalsShell() {
               void promotionReconciliation.refetch();
               void promotionPostExecutionMonitoring.refetch();
               void promotionPostExecutionAlerts.refetch();
+              void signalHealthDashboard.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -3380,6 +3713,25 @@ export function HedgeFundSignalsShell() {
             decisionRecordsLoading={shadowDecisionRecords.isLoading}
             onSubmitDecision={handleShadowDecisionSubmit}
             submittingDecision={createShadowDecisionRecord.isPending}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            <CardTitle>Signal Health Dashboard</CardTitle>
+          </div>
+          <Badge variant="outline">
+            {signalHealthDashboard.data ? formatDate(signalHealthDashboard.data.generated_at) : "—"}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <SignalHealthDashboardPanel
+            dashboard={signalHealthDashboard.data ?? null}
+            loading={signalHealthDashboard.isLoading}
+            error={signalHealthDashboard.isError}
           />
         </CardContent>
       </Card>

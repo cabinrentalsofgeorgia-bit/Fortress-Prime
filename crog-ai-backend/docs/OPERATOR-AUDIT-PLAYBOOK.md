@@ -76,6 +76,27 @@ Use `POST /api/financial/signals/promotion-alerts/{alert_id}/acknowledgements` t
 
 Acknowledgement status values are `ACKNOWLEDGED`, `WATCHING`, and `NO_ACTION_NEEDED`. The alerts endpoint surfaces latest acknowledgement status and whether review is still open.
 
+## Signal Health Dashboard
+
+Use `GET /api/financial/signals/health-dashboard` for the read-only operator awareness layer. It answers: what changed, what is degrading, and what should be watched right now.
+
+The dashboard uses these read-only objects:
+
+- `hedge_fund.v_signal_health_active_promotions`
+- `hedge_fund.v_signal_health_at_risk_signals`
+- `hedge_fund.v_signal_health_execution_outcomes`
+- `hedge_fund.signal_health_model_divergence(...)`
+
+The dashboard surfaces:
+
+- last 10 promotion executions with `HEALTHY`, `WARNING`, or `DEGRADED` status
+- drift, whipsaw, and decay flags
+- at-risk signals only when whipsaw, adverse 5-day return, or drift conditions exist
+- candidate +80 vs production non-+80 divergence trend
+- execution outcome summaries for 1-session, 5-session, and 20-session windows
+
+Awareness alerts are non-blocking and warning-only. They do not write `market_signals`, create acceptances, create executions, call rollback, or attach any automated action.
+
 ## Snapshots
 
 Acceptance records persist:

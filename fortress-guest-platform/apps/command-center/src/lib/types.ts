@@ -859,6 +859,146 @@ export interface FinancialPromotionPostExecutionAlertAcknowledgement {
   created_at: string;
 }
 
+export type FinancialSignalHealthStatus = "HEALTHY" | "WARNING" | "DEGRADED";
+export type FinancialSignalHealthAwarenessAlertType =
+  | "CLEAR"
+  | "DRIFT"
+  | "WHIPSAW_AFTER_PROMOTION"
+  | "SIGNAL_DECAY"
+  | "PERFORMANCE_BAND"
+  | "ROLLBACK_RECOMMENDATION"
+  | "MODEL_PRODUCTION_DIVERGENCE";
+
+export interface FinancialSignalHealthSummary {
+  active_execution_count: number;
+  degraded_execution_count: number;
+  warning_execution_count: number;
+  at_risk_signal_count: number;
+  divergence_count: number;
+  latest_divergence_bar_date: string | null;
+  rollback_review_count: number;
+}
+
+export interface FinancialSignalHealthActivePromotion {
+  execution_id: string;
+  acceptance_id: string;
+  candidate_id: string;
+  baseline_parameter_set: string;
+  executed_by: string;
+  executed_at: string;
+  rollback_status: FinancialPromotionExecutionRollbackStatus;
+  inserted_count: number;
+  live_signal_count: number;
+  warning_signal_count: number;
+  drift_signal_count: number;
+  whipsaw_signal_count: number;
+  decay_signal_count: number;
+  rollback_review_count: number;
+  avg_1d_return: string | number | null;
+  avg_5d_return: string | number | null;
+  avg_20d_return: string | number | null;
+  positive_1d_pct: string | number | null;
+  positive_5d_pct: string | number | null;
+  positive_20d_pct: string | number | null;
+  whipsaw_pct: string | number | null;
+  health_status: FinancialSignalHealthStatus;
+  key_flags: {
+    drift?: boolean;
+    whipsaw?: boolean;
+    decay?: boolean;
+    [key: string]: boolean | undefined;
+  };
+  explanation: string;
+}
+
+export interface FinancialSignalHealthAtRiskSignal {
+  execution_id: string;
+  acceptance_id: string;
+  decision_record_id: string;
+  candidate_id: string;
+  market_signal_id: number;
+  ticker: string;
+  action: "BUY" | "SELL";
+  candidate_bar_date: string;
+  candidate_score: number;
+  rollback_marker: string;
+  outcome_5d_directional_return: string | number | null;
+  outcome_20d_directional_return: string | number | null;
+  drift_status: FinancialPromotionMonitoringDriftStatus;
+  whipsaw_after_promotion_flag: boolean;
+  signal_decay_flag: boolean;
+  rollback_recommendation: FinancialPromotionRollbackRecommendation;
+  monitoring_status: FinancialPromotionMonitoringStatus;
+  risk_score: number;
+  risk_reason:
+    | "whipsaw-after-promotion"
+    | "5d return below threshold"
+    | "drift vs expected range";
+  explanation: string;
+}
+
+export interface FinancialSignalHealthModelDivergenceTrend {
+  bar_date: string;
+  candidate_80_count: number;
+  production_matching_80_count: number;
+  divergence_count: number;
+  divergence_rate: string | number | null;
+  divergent_tickers: string[];
+}
+
+export interface FinancialSignalHealthModelDivergence {
+  latest_bar_date: string | null;
+  current_candidate_80_count: number;
+  current_divergence_count: number;
+  current_divergence_rate: string | number | null;
+  trend: FinancialSignalHealthModelDivergenceTrend[];
+}
+
+export interface FinancialSignalHealthExecutionOutcome {
+  execution_id: string;
+  acceptance_id: string;
+  candidate_id: string;
+  baseline_parameter_set: string;
+  executed_by: string;
+  executed_at: string;
+  rollback_status: FinancialPromotionExecutionRollbackStatus;
+  inserted_count: number;
+  avg_1d_return: string | number | null;
+  avg_5d_return: string | number | null;
+  avg_20d_return: string | number | null;
+  positive_1d_pct: string | number | null;
+  positive_5d_pct: string | number | null;
+  positive_20d_pct: string | number | null;
+  whipsaw_pct: string | number | null;
+  health_status: FinancialSignalHealthStatus;
+  key_flags: {
+    drift?: boolean;
+    whipsaw?: boolean;
+    decay?: boolean;
+    [key: string]: boolean | undefined;
+  };
+}
+
+export interface FinancialSignalHealthAwarenessAlert {
+  severity: "INFO" | "WARNING";
+  alert_type: FinancialSignalHealthAwarenessAlertType;
+  execution_id: string | null;
+  message: string;
+  non_blocking: boolean;
+}
+
+export interface FinancialSignalHealthDashboardResponse {
+  generated_at: string;
+  candidate_parameter_set: string;
+  production_parameter_set: string;
+  summary: FinancialSignalHealthSummary;
+  active_promotions: FinancialSignalHealthActivePromotion[];
+  at_risk_signals: FinancialSignalHealthAtRiskSignal[];
+  model_divergence: FinancialSignalHealthModelDivergence;
+  execution_outcomes: FinancialSignalHealthExecutionOutcome[];
+  awareness_alerts: FinancialSignalHealthAwarenessAlert[];
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;
