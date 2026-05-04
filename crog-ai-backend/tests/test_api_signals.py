@@ -2415,3 +2415,14 @@ def test_symbol_signal_detail_404_when_no_latest_score() -> None:
     response = client.get("/api/financial/signals/missing")
 
     assert response.status_code == 404
+
+def test_json_safe_serializes_uuid_values() -> None:
+    import uuid
+
+    from app.signals.repository import _json_safe
+
+    value = uuid.UUID("53c4e3db-a111-4500-a34d-0bcecb398a77")
+    assert _json_safe({"decision_id": value}) == {
+        "decision_id": "53c4e3db-a111-4500-a34d-0bcecb398a77"
+    }
+
