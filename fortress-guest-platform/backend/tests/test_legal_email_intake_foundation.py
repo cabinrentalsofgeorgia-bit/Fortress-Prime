@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
+from backend.services.legal import email_intake_foundation as intake
 from backend.services.legal.email_intake_foundation import (
     EmailSourceDropSafetyError,
     build_source_drop_plan,
@@ -97,7 +99,8 @@ def test_build_source_drop_plan_is_manifest_only(tmp_path):
     assert plan.candidates[0].case_slug_guess == "7il-v-knight-ndga-i"
 
 
-def test_build_source_drop_plan_inventories_msg_without_parsing(tmp_path):
+def test_build_source_drop_plan_inventories_msg_without_parsing(tmp_path, monkeypatch):
+    monkeypatch.setattr(intake, "_load_extract_msg", lambda: None)
     (tmp_path / "Fwd_ 21-0510 1031_92 Fish Trap Road_7 IL Properties_ LLC_Knight.msg").write_bytes(
         b"\xd0\xcf\x11\xe0 native outlook bytes"
     )
@@ -114,6 +117,62 @@ def test_build_source_drop_plan_inventories_msg_without_parsing(tmp_path):
     assert candidate.case_slug_guess == "fish-trap-suv2026000013"
     assert candidate.source_sha256
     assert candidate.attachments == []
+
+
+def test_build_source_drop_plan_parses_msg_when_extract_msg_is_available(tmp_path, monkeypatch):
+    class FakeAttachment:
+        longFilename = "inspection.pdf"
+        shortFilename = "inspect.pdf"
+        name = "inspection.pdf"
+        mimetype = "application/pdf"
+        data = b"PDFBYTES"
+        cid = "cid-1"
+
+    class FakeMessage:
+        subject = "Fwd: 2:26-cv-00113 Alicia Argo inspection follow-up"
+        sender = "Alicia Argo <alicia@dralaw.com>"
+        senderEmail = None
+        to = "Gary Knight <gary@cabin-rentals-of-georgia.com>; Terry Wilson <twilson@wilsonpruittlaw.com>"
+        cc = ""
+        bcc = ""
+        messageId = "<msg-2@example.com>"
+        inReplyToId = "<root-2@example.com>"
+        references = "<root-2@example.com>"
+        date = datetime(2026, 4, 17, 18, 30, tzinfo=timezone.utc)
+        body = "Please review the inspection follow-up and 2:26-cv-00113 strategy."
+        attachments = [FakeAttachment()]
+
+        def __init__(self, _path: str):
+            pass
+
+        def close(self):
+            pass
+
+    class FakeExtractMsg:
+        __version__ = "test"
+        Message = FakeMessage
+
+    monkeypatch.setattr(intake, "_load_extract_msg", lambda: FakeExtractMsg)
+    (tmp_path / "argo-inspection.msg").write_bytes(b"native outlook bytes")
+
+    plan = build_source_drop_plan(tmp_path)
+
+    assert plan.candidate_count == 1
+    candidate = plan.candidates[0]
+    assert candidate.source_format == "msg"
+    assert candidate.parser_status == "parsed"
+    assert candidate.parser_reason == "extract_msg:test"
+    assert candidate.intake_decision == "manifest_only"
+    assert candidate.subject == "Fwd: 2:26-cv-00113 Alicia Argo inspection follow-up"
+    assert candidate.normalized_subject == "2:26-cv-00113 Alicia Argo inspection follow-up"
+    assert candidate.message_id == "<msg-2@example.com>"
+    assert candidate.thread_key == "ref:<root-2@example.com>"
+    assert candidate.sender_email == "alicia@dralaw.com"
+    assert "wilsonpruittlaw.com" in candidate.participant_domains
+    assert candidate.case_slug_guess == "7il-v-knight-ndga-ii"
+    assert candidate.privilege_risk == "likely_privileged"
+    assert candidate.attachments[0].file_name == "inspection.pdf"
+    assert candidate.attachments[0].sha256
 
 
 def test_write_manifest_includes_summary_counts(tmp_path):
