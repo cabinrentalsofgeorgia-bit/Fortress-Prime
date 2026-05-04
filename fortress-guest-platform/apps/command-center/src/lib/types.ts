@@ -576,6 +576,31 @@ export interface FinancialPromotionDryRunAcceptance {
   created_at: string;
 }
 
+export type FinancialPromotionExecutionRollbackStatus = "active" | "rolled_back";
+
+export interface FinancialPromotionExecution {
+  id: string;
+  acceptance_id: string;
+  decision_record_id: string;
+  candidate_parameter_set: string;
+  baseline_parameter_set: string;
+  operator_membership_id: string;
+  executed_by: string;
+  execution_rationale: string;
+  idempotency_key: string;
+  dry_run_generated_at: string;
+  dry_run_proposed_insert_count: number;
+  verification_status: FinancialPromotionDryRunVerificationStatus;
+  inserted_market_signal_ids: number[];
+  rollback_markers: string[];
+  rollback_status: FinancialPromotionExecutionRollbackStatus;
+  rollback_operator_membership_id: string | null;
+  rollback_by: string | null;
+  rollback_reason: string | null;
+  rolled_back_at: string | null;
+  created_at: string;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

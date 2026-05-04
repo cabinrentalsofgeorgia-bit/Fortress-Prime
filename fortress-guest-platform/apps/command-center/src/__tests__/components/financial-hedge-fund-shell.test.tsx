@@ -564,6 +564,31 @@ const promotionDryRunAcceptances = [
   },
 ];
 
+const promotionExecutions = [
+  {
+    id: "55555555-5555-5555-5555-555555555555",
+    acceptance_id: "44444444-4444-4444-4444-444444444444",
+    decision_record_id: "33333333-3333-3333-3333-333333333333",
+    candidate_parameter_set: "dochia_v0_2_range_daily",
+    baseline_parameter_set: "dochia_v0_estimated",
+    operator_membership_id: "66666666-6666-6666-6666-666666666666",
+    executed_by: "MarketClub Operator",
+    execution_rationale: "Operator accepted the verified dry-run output.",
+    idempotency_key: "operator-accepted-dry-run-20260504",
+    dry_run_generated_at: "2026-05-03T20:30:00Z",
+    dry_run_proposed_insert_count: 2,
+    verification_status: "PASS",
+    inserted_market_signal_ids: [1201, 1202],
+    rollback_markers: ["dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24"],
+    rollback_status: "active",
+    rollback_operator_membership_id: null,
+    rollback_by: null,
+    rollback_reason: null,
+    rolled_back_at: null,
+    created_at: "2026-05-04T12:52:00Z",
+  },
+];
+
 const promotionDryRunVerification = {
   generated_at: "2026-05-03T20:31:00Z",
   candidate_parameter_set: "dochia_v0_2_range_daily",
@@ -691,6 +716,13 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionExecutions: () => ({
+    data: promotionExecutions,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -735,7 +767,16 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Dry-Run Acceptance")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Accept Dry-Run" })).toBeInTheDocument();
     expect(screen.getByText("1 saved")).toBeInTheDocument();
-    expect(screen.getByText("MarketClub Operator")).toBeInTheDocument();
+    expect(screen.getByText("Execution Records")).toBeInTheDocument();
+    expect(screen.getByText("1 recorded")).toBeInTheDocument();
+    expect(screen.getByText("Inserted rows")).toBeInTheDocument();
+    expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /execute/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /rollback/i })).not.toBeInTheDocument();
+    expect(screen.getAllByText("MarketClub Operator").length).toBeGreaterThan(0);
     expect(screen.getByText("Chart Overlay")).toBeInTheDocument();
     expect(screen.getByText("1 triangle events")).toBeInTheDocument();
     expect(screen.getByText("Whipsaw Risk / Backtest")).toBeInTheDocument();
