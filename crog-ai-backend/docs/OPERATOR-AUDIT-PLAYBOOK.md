@@ -64,6 +64,18 @@ The alert layer is read-only and derives from post-execution monitoring rows:
 
 Alerts are operator warnings only. They do not call rollback functions, write or delete `market_signals`, create acceptance records, create execution records, change trades, or change signal state. Rollback recommendation alerts mean “review this audited execution,” not “rollback automatically.”
 
+## Alert Acknowledgements
+
+Use `POST /api/financial/signals/promotion-alerts/{alert_id}/acknowledgements` to record operator review notes for an active post-execution alert. The acknowledgement write is audit-only:
+
+- it only accepts an `alert_id`, never ticker/date
+- it requires an active `signal_operator` or `signal_admin` token
+- it snapshots the alert evidence at acknowledgement time
+- it writes only to `hedge_fund.signal_promotion_alert_acknowledgements`
+- it does not call rollback, update trades, or change signal rows
+
+Acknowledgement status values are `ACKNOWLEDGED`, `WATCHING`, and `NO_ACTION_NEEDED`. The alerts endpoint surfaces latest acknowledgement status and whether review is still open.
+
 ## Snapshots
 
 Acceptance records persist:

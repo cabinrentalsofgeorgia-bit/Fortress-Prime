@@ -1068,6 +1068,30 @@ class FakeSignalStore:
                 ),
             },
         ][:limit]
+        for alert in alerts:
+            alert.update(
+                {
+                    "acknowledgement_count": 0,
+                    "acknowledged": False,
+                    "latest_acknowledgement_status": None,
+                    "latest_acknowledged_by": None,
+                    "latest_acknowledged_at": None,
+                    "latest_acknowledgement_note": None,
+                    "acknowledgement_required": alert["severity"] in {"HIGH", "MEDIUM"},
+                }
+            )
+        if alerts:
+            alerts[0].update(
+                {
+                    "acknowledgement_count": 1,
+                    "acknowledged": True,
+                    "latest_acknowledgement_status": "WATCHING",
+                    "latest_acknowledged_by": "MarketClub Operator",
+                    "latest_acknowledged_at": dt.datetime(2026, 5, 4, 13, 45, tzinfo=dt.UTC),
+                    "latest_acknowledgement_note": "Operator reviewed decay context.",
+                    "acknowledgement_required": False,
+                }
+            )
         alert_counts = Counter(alert["alert_type"] for alert in alerts)
         severity_counts = Counter(alert["severity"] for alert in alerts)
         return {
@@ -1087,6 +1111,43 @@ class FakeSignalStore:
                 "rollback_recommendation_alerts": alert_counts["ROLLBACK_RECOMMENDATION"],
             },
             "alerts": alerts,
+        }
+
+    def acknowledge_promotion_post_execution_alert(
+        self,
+        *,
+        alert_id: str,
+        operator_token_sha256: str,
+        acknowledgement_note: str,
+        acknowledgement_status: str = "ACKNOWLEDGED",
+    ) -> dict[str, Any]:
+        if operator_token_sha256 != OPERATOR_TOKEN_SHA256:
+            raise ValueError("Active signal operator membership is required for alert acknowledgement")
+        alerts = self.promotion_post_execution_alerts(
+            promotion_id=str(EXECUTION_ID),
+            limit=10,
+        )["alerts"]
+        alert = next((item for item in alerts if item["alert_id"] == alert_id), None)
+        if alert is None:
+            raise ValueError("No active post-execution alert found for alert_id")
+        return {
+            "id": UUID("88888888-8888-8888-8888-888888888888"),
+            "alert_id": alert["alert_id"],
+            "execution_id": alert["execution_id"],
+            "acceptance_id": alert["acceptance_id"],
+            "decision_record_id": alert["decision_record_id"],
+            "market_signal_id": alert["market_signal_id"],
+            "ticker": alert["ticker"],
+            "action": alert["action"],
+            "candidate_bar_date": alert["candidate_bar_date"],
+            "alert_type": alert["alert_type"],
+            "severity": alert["severity"],
+            "operator_membership_id": OPERATOR_MEMBERSHIP_ID,
+            "acknowledged_by": "MarketClub Operator",
+            "acknowledgement_status": acknowledgement_status,
+            "acknowledgement_note": acknowledgement_note,
+            "alert_evidence_snapshot": alert,
+            "created_at": dt.datetime(2026, 5, 4, 13, 46, tzinfo=dt.UTC),
         }
 
     def execute_guarded_promotion(
@@ -1741,10 +1802,74 @@ def test_promotion_post_execution_alerts_endpoint_returns_warning_only_alerts() 
     }
     assert all(alert["alert_status"] == "ACTIVE" for alert in payload["alerts"])
     assert all("Warning only" in alert["operator_guidance"] for alert in payload["alerts"])
+    assert payload["alerts"][0]["acknowledged"] is True
+    assert payload["alerts"][0]["latest_acknowledgement_status"] == "WATCHING"
+    assert payload["alerts"][1]["acknowledgement_required"] is True
     guidance = " ".join(alert["operator_guidance"] for alert in payload["alerts"])
     assert "no automated rollback is performed" in guidance
     assert "no automatic trade or signal change is made" in guidance
     assert "no automatic trade, signal, or rollback action is made" in guidance
+
+
+def test_promotion_post_execution_alert_acknowledgement_endpoint_creates_audit_row() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-alerts/whipsaw-aa/acknowledgements",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acknowledgement_status": "WATCHING",
+            "acknowledgement_note": "Operator reviewed whipsaw context.",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["alert_id"] == "whipsaw-aa"
+    assert payload["execution_id"] == str(EXECUTION_ID)
+    assert payload["operator_membership_id"] == str(OPERATOR_MEMBERSHIP_ID)
+    assert payload["acknowledged_by"] == "MarketClub Operator"
+    assert payload["acknowledgement_status"] == "WATCHING"
+    assert payload["acknowledgement_note"] == "Operator reviewed whipsaw context."
+    assert payload["alert_evidence_snapshot"]["market_signal_id"] == 1201
+
+
+def test_promotion_post_execution_alert_acknowledgement_rejects_unauthorized_operator() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-alerts/whipsaw-aa/acknowledgements",
+        headers={"X-MarketClub-Operator-Token": "bad-marketclub-token"},
+        json={
+            "acknowledgement_status": "ACKNOWLEDGED",
+            "acknowledgement_note": "Operator reviewed whipsaw context.",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Active signal operator membership is required" in response.json()["detail"]
+
+
+def test_promotion_post_execution_alert_acknowledgement_rejects_nonexistent_alert() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-alerts/not-real/acknowledgements",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acknowledgement_status": "ACKNOWLEDGED",
+            "acknowledgement_note": "Operator reviewed whipsaw context.",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "No active post-execution alert found for alert_id" in response.json()["detail"]
 
 
 def test_execute_guarded_promotion_endpoint_returns_execution_record() -> None:

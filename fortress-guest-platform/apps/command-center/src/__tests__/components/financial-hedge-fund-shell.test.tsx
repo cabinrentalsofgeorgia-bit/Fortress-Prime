@@ -990,6 +990,17 @@ const promotionPostExecutionAlerts = {
   ],
 };
 
+promotionPostExecutionAlerts.alerts = promotionPostExecutionAlerts.alerts.map((alert, index) => ({
+  ...alert,
+  acknowledgement_count: index === 0 ? 1 : 0,
+  acknowledged: index === 0,
+  latest_acknowledgement_status: index === 0 ? "WATCHING" : null,
+  latest_acknowledged_by: index === 0 ? "MarketClub Operator" : null,
+  latest_acknowledged_at: index === 0 ? "2026-05-04T13:45:00Z" : null,
+  latest_acknowledgement_note: index === 0 ? "Operator reviewed decay context." : null,
+  acknowledgement_required: index !== 0,
+}));
+
 let promotionDryRunAcceptancesMock = promotionDryRunAcceptances;
 let promotionExecutionsMock = promotionExecutions;
 let promotionDryRunVerificationMock = promotionDryRunVerification;
@@ -1131,6 +1142,10 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useAcknowledgeFinancialPromotionPostExecutionAlert: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -1203,12 +1218,18 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getAllByText("Decay").length).toBeGreaterThan(0);
     expect(screen.getByText("Post-Execution Alerts")).toBeInTheDocument();
     expect(screen.getByText("No automated rollback")).toBeInTheDocument();
+    expect(screen.getByText("No signal changes")).toBeInTheDocument();
     expect(screen.getByText("5 alerts")).toBeInTheDocument();
+    expect(screen.getByLabelText("Alert Operator Token")).toBeInTheDocument();
+    expect(screen.getByLabelText("Acknowledgement Note")).toBeInTheDocument();
     expect(screen.getByText("Signal Decay")).toBeInTheDocument();
     expect(screen.getByText("Whipsaw After Promotion")).toBeInTheDocument();
     expect(screen.getAllByText("Drift").length).toBeGreaterThan(0);
     expect(screen.getByText("Stale Execution Monitoring")).toBeInTheDocument();
     expect(screen.getByText("Rollback Recommendation")).toBeInTheDocument();
+    expect(screen.getByText("Operator reviewed decay context.")).toBeInTheDocument();
+    expect(screen.getAllByText("Review open").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Acknowledge" }).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/no automatic trade or signal change is made/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/no automatic trade, signal, or rollback action is made/i)).toBeInTheDocument();
     expect(screen.getByText("Dry-Run Verification Gate")).toBeInTheDocument();

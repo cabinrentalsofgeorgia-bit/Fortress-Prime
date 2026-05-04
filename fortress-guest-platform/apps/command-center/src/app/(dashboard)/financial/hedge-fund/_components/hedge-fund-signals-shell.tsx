@@ -41,6 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  useAcknowledgeFinancialPromotionPostExecutionAlert,
   useCreateFinancialShadowDecisionRecord,
   useCreateFinancialPromotionDryRunAcceptance,
   useExecuteFinancialPromotionDryRunAcceptance,
@@ -80,6 +81,8 @@ import type {
   FinancialPromotionExecutionRollbackCreate,
   FinancialPromotionLifecycleEvent,
   FinancialPromotionPostExecutionAlert,
+  FinancialPromotionPostExecutionAlertAcknowledgementCreate,
+  FinancialPromotionPostExecutionAlertAcknowledgementStatus,
   FinancialPromotionPostExecutionAlertsResponse,
   FinancialPromotionPostExecutionMonitoringResponse,
   FinancialPromotionPostExecutionMonitoringRow,
@@ -1994,13 +1997,40 @@ function PostExecutionAlertsPanel({
   alerts,
   loading,
   error,
+  onAcknowledge,
+  submittingAcknowledgement,
 }: {
   alerts: FinancialPromotionPostExecutionAlertsResponse | null;
   loading: boolean;
   error: boolean;
+  onAcknowledge: (payload: FinancialPromotionPostExecutionAlertAcknowledgementCreate) => Promise<void>;
+  submittingAcknowledgement: boolean;
 }) {
+  const [acknowledgementOperatorToken, setAcknowledgementOperatorToken] = useState("");
+  const [acknowledgementNote, setAcknowledgementNote] = useState("");
+  const [acknowledgementStatus, setAcknowledgementStatus] =
+    useState<FinancialPromotionPostExecutionAlertAcknowledgementStatus>("ACKNOWLEDGED");
   const summary = alerts?.summary ?? null;
   const rows = alerts?.alerts.slice(0, 10) ?? [];
+  const canAcknowledge =
+    acknowledgementOperatorToken.trim().length >= 16 &&
+    acknowledgementNote.trim().length >= 8 &&
+    !submittingAcknowledgement;
+
+  async function handleAcknowledge(alertId: string) {
+    if (!canAcknowledge) return;
+    try {
+      await onAcknowledge({
+        alert_id: alertId,
+        operator_token: acknowledgementOperatorToken.trim(),
+        acknowledgement_status: acknowledgementStatus,
+        acknowledgement_note: acknowledgementNote.trim(),
+      });
+      setAcknowledgementNote("");
+    } catch {
+      // The mutation hook owns the operator-facing error toast.
+    }
+  }
 
   return (
     <div className="border border-border p-3">
@@ -2012,6 +2042,9 @@ function PostExecutionAlertsPanel({
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-600">
             No automated rollback
+          </Badge>
+          <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-600">
+            No signal changes
           </Badge>
           <Badge
             variant="outline"
@@ -2037,6 +2070,44 @@ function PostExecutionAlertsPanel({
         <p className="mt-3 text-xs text-muted-foreground">Loading post-execution alerts…</p>
       ) : summary ? (
         <div className="mt-3 space-y-3">
+          {rows.length ? (
+            <div className="grid gap-2 border border-border/70 bg-muted/20 p-3 text-xs md:grid-cols-[minmax(180px,0.7fr)_minmax(220px,1fr)_170px]">
+              <label className="space-y-1">
+                <span className="font-medium">Alert Operator Token</span>
+                <Input
+                  type="password"
+                  value={acknowledgementOperatorToken}
+                  onChange={(event) => setAcknowledgementOperatorToken(event.target.value)}
+                  placeholder="Operator token"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="font-medium">Acknowledgement Note</span>
+                <Input
+                  value={acknowledgementNote}
+                  onChange={(event) => setAcknowledgementNote(event.target.value)}
+                  placeholder="Reviewed context and next watch point"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="font-medium">Status</span>
+                <select
+                  className="h-10 w-full border border-input bg-background px-3 text-sm"
+                  value={acknowledgementStatus}
+                  onChange={(event) =>
+                    setAcknowledgementStatus(
+                      event.target.value as FinancialPromotionPostExecutionAlertAcknowledgementStatus,
+                    )
+                  }
+                >
+                  <option value="ACKNOWLEDGED">Acknowledged</option>
+                  <option value="WATCHING">Watching</option>
+                  <option value="NO_ACTION_NEEDED">No action needed</option>
+                </select>
+              </label>
+            </div>
+          ) : null}
+
           <div className="grid gap-2 sm:grid-cols-5">
             <div className="bg-muted/40 p-2 text-xs">
               <span className="text-muted-foreground">High</span>
@@ -2071,6 +2142,7 @@ function PostExecutionAlertsPanel({
                     <TableHead>Metric</TableHead>
                     <TableHead>Rollback Review</TableHead>
                     <TableHead>Operator Note</TableHead>
+                    <TableHead>Acknowledgement</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2129,6 +2201,46 @@ function PostExecutionAlertsPanel({
                           <p className="line-clamp-2 text-muted-foreground">{alert.operator_guidance}</p>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <div className="space-y-2 text-xs">
+                          {alert.acknowledged ? (
+                            <div className="space-y-1">
+                              <Badge
+                                variant="outline"
+                                className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600"
+                              >
+                                {promotionMonitoringLabel(alert.latest_acknowledgement_status ?? "ACKNOWLEDGED")}
+                              </Badge>
+                              <p className="text-muted-foreground">
+                                {alert.latest_acknowledged_by ?? "Operator"} · {formatDate(alert.latest_acknowledged_at)}
+                              </p>
+                              <p className="line-clamp-2 max-w-52">{alert.latest_acknowledgement_note}</p>
+                            </div>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                alert.acknowledgement_required
+                                  ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                                  : "border-border bg-muted/30 text-muted-foreground",
+                              )}
+                            >
+                              Review open
+                            </Badge>
+                          )}
+                          {!alert.acknowledged ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={!canAcknowledge}
+                              onClick={() => void handleAcknowledge(alert.alert_id)}
+                            >
+                              {submittingAcknowledgement ? "Recording…" : "Acknowledge"}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -2170,6 +2282,8 @@ function PromotionDryRunPanel({
   postExecutionAlerts,
   postExecutionAlertsLoading,
   postExecutionAlertsError,
+  onSubmitAlertAcknowledgement,
+  submittingAlertAcknowledgement,
   onSubmitAcceptance,
   submittingAcceptance,
   onSubmitExecution,
@@ -2201,6 +2315,10 @@ function PromotionDryRunPanel({
   postExecutionAlerts: FinancialPromotionPostExecutionAlertsResponse | null;
   postExecutionAlertsLoading: boolean;
   postExecutionAlertsError: boolean;
+  onSubmitAlertAcknowledgement: (
+    payload: FinancialPromotionPostExecutionAlertAcknowledgementCreate,
+  ) => Promise<void>;
+  submittingAlertAcknowledgement: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
   onSubmitExecution: (payload: FinancialPromotionExecutionCreate) => Promise<void>;
@@ -2389,6 +2507,8 @@ function PromotionDryRunPanel({
         alerts={postExecutionAlerts}
         loading={postExecutionAlertsLoading}
         error={postExecutionAlertsError}
+        onAcknowledge={onSubmitAlertAcknowledgement}
+        submittingAcknowledgement={submittingAlertAcknowledgement}
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -2984,6 +3104,7 @@ export function HedgeFundSignalsShell() {
   });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
+  const acknowledgePromotionPostExecutionAlert = useAcknowledgeFinancialPromotionPostExecutionAlert();
   const executePromotionDryRunAcceptance = useExecuteFinancialPromotionDryRunAcceptance();
   const rollbackPromotionExecution = useRollbackFinancialPromotionExecution();
   const signals = latest.data ?? EMPTY_SIGNALS;
@@ -3074,6 +3195,13 @@ export function HedgeFundSignalsShell() {
     void promotionLifecycleTimeline.refetch();
     void promotionReconciliation.refetch();
     void promotionPostExecutionMonitoring.refetch();
+    void promotionPostExecutionAlerts.refetch();
+  }
+
+  async function handlePromotionAlertAcknowledgementSubmit(
+    payload: FinancialPromotionPostExecutionAlertAcknowledgementCreate,
+  ) {
+    await acknowledgePromotionPostExecutionAlert.mutateAsync(payload);
     void promotionPostExecutionAlerts.refetch();
   }
 
@@ -3292,6 +3420,8 @@ export function HedgeFundSignalsShell() {
             postExecutionAlerts={promotionPostExecutionAlerts.data ?? null}
             postExecutionAlertsLoading={promotionPostExecutionAlerts.isLoading}
             postExecutionAlertsError={promotionPostExecutionAlerts.isError}
+            onSubmitAlertAcknowledgement={handlePromotionAlertAcknowledgementSubmit}
+            submittingAlertAcknowledgement={acknowledgePromotionPostExecutionAlert.isPending}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
             onSubmitExecution={handlePromotionExecutionSubmit}

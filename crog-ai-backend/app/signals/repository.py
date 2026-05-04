@@ -185,6 +185,15 @@ class SignalDataStore(Protocol):
         limit: int = 100,
     ) -> dict[str, Any]: ...
 
+    def acknowledge_promotion_post_execution_alert(
+        self,
+        *,
+        alert_id: str,
+        operator_token_sha256: str,
+        acknowledgement_note: str,
+        acknowledgement_status: str = "ACKNOWLEDGED",
+    ) -> dict[str, Any]: ...
+
     def execute_guarded_promotion(
         self,
         *,
@@ -2311,6 +2320,13 @@ PROMOTION_POST_EXECUTION_ALERT_FIELDS = [
     "evidence",
     "explanation",
     "operator_guidance",
+    "acknowledgement_count",
+    "acknowledged",
+    "latest_acknowledgement_status",
+    "latest_acknowledged_by",
+    "latest_acknowledged_at",
+    "latest_acknowledgement_note",
+    "acknowledgement_required",
 ]
 
 
@@ -2341,7 +2357,14 @@ def fetch_promotion_post_execution_alerts(
             drift_status,
             evidence,
             explanation,
-            operator_guidance
+            operator_guidance,
+            acknowledgement_count,
+            acknowledged,
+            latest_acknowledgement_status,
+            latest_acknowledged_by,
+            latest_acknowledged_at,
+            latest_acknowledgement_note,
+            acknowledgement_required
         FROM hedge_fund.v_signal_promotion_post_execution_alerts
         WHERE candidate_id = %(promotion_id)s
            OR acceptance_id::TEXT = %(promotion_id)s
@@ -2383,6 +2406,62 @@ def fetch_promotion_post_execution_alerts(
         },
         "alerts": rows,
     }
+
+
+PROMOTION_POST_EXECUTION_ALERT_ACK_FIELDS = [
+    "id",
+    "alert_id",
+    "execution_id",
+    "acceptance_id",
+    "decision_record_id",
+    "market_signal_id",
+    "ticker",
+    "action",
+    "candidate_bar_date",
+    "alert_type",
+    "severity",
+    "operator_membership_id",
+    "acknowledged_by",
+    "acknowledgement_status",
+    "acknowledgement_note",
+    "alert_evidence_snapshot",
+    "created_at",
+]
+
+
+def acknowledge_promotion_post_execution_alert(
+    conn: psycopg.Connection,
+    *,
+    alert_id: str,
+    operator_token_sha256: str,
+    acknowledgement_note: str,
+    acknowledgement_status: str = "ACKNOWLEDGED",
+) -> dict[str, Any]:
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM hedge_fund.acknowledge_signal_promotion_alert(
+                    %(alert_id)s,
+                    %(operator_token_sha256)s,
+                    %(acknowledgement_note)s,
+                    %(acknowledgement_status)s
+                )
+                """,
+                {
+                    "alert_id": alert_id,
+                    "operator_token_sha256": operator_token_sha256,
+                    "acknowledgement_note": acknowledgement_note,
+                    "acknowledgement_status": acknowledgement_status,
+                },
+            )
+            row = cur.fetchone()
+    except psycopg.Error as exc:
+        raise ValueError(str(exc).splitlines()[0]) from exc
+    if row is None:
+        raise RuntimeError("alert acknowledgement returned no row")
+    return {key: row[key] for key in PROMOTION_POST_EXECUTION_ALERT_ACK_FIELDS}
 
 
 def execute_guarded_promotion(
@@ -2904,6 +2983,23 @@ class PostgresSignalDataStore:
                 conn,
                 promotion_id=promotion_id,
                 limit=limit,
+            )
+
+    def acknowledge_promotion_post_execution_alert(
+        self,
+        *,
+        alert_id: str,
+        operator_token_sha256: str,
+        acknowledgement_note: str,
+        acknowledgement_status: str = "ACKNOWLEDGED",
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            return acknowledge_promotion_post_execution_alert(
+                conn,
+                alert_id=alert_id,
+                operator_token_sha256=operator_token_sha256,
+                acknowledgement_note=acknowledgement_note,
+                acknowledgement_status=acknowledgement_status,
             )
 
     def execute_guarded_promotion(
