@@ -717,6 +717,94 @@ class FakeSignalStore:
             ),
         ][:limit]
 
+    def promotion_lifecycle_timeline(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "ts": dt.datetime(2026, 5, 3, 19, 0, tzinfo=dt.UTC),
+                "type": "DECISION_CREATED",
+                "decision_id": DECISION_ID,
+                "acceptance_id": None,
+                "execution_id": None,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "actor": "Gary Knight",
+                "meta": {
+                    "rationale": "Keep watching lane churn and whipsaw pressure.",
+                    "risk_flags": ["churn", "whipsaw"],
+                },
+            },
+            {
+                "ts": dt.datetime(2026, 5, 3, 20, 45, tzinfo=dt.UTC),
+                "type": "ACCEPTANCE_CREATED",
+                "decision_id": DECISION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "execution_id": None,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "actor": "Gary Knight",
+                "meta": {"proposed_rows": 2},
+            },
+            {
+                "ts": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
+                "type": "EXECUTION_COMPLETED",
+                "decision_id": DECISION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "execution_id": EXECUTION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "actor": "MarketClub Operator",
+                "meta": {"inserted_count": 2, "idempotency_key": f"acceptance:{ACCEPTANCE_ID}"},
+            },
+            {
+                "ts": dt.datetime(2026, 5, 3, 21, 30, tzinfo=dt.UTC),
+                "type": "ROLLBACK_COMPLETED",
+                "decision_id": DECISION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "execution_id": EXECUTION_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "actor": "MarketClub Operator",
+                "meta": {"removed_count": 2},
+            },
+        ][:limit]
+
+    def promotion_reconciliation(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "execution_id": EXECUTION_ID,
+                "acceptance_id": ACCEPTANCE_ID,
+                "candidate_id": "dochia_v0_2_range_daily",
+                "status": "HEALTHY",
+                "checks": {
+                    "decision_link": "PASS",
+                    "verification_gate": "PASS",
+                    "execution_count_match": "PASS",
+                    "write_integrity": "PASS",
+                    "extraneous_writes": "PASS",
+                    "rollback_integrity": "NA",
+                    "idempotency": "PASS",
+                },
+                "warnings": {
+                    "cross_model_diagnostic_only": 0,
+                    "high_churn_flag": False,
+                    "whipsaw_flag": False,
+                },
+                "drilldown": {
+                    "audited_market_signal_ids": [1201, 1202],
+                    "live_audited_market_signal_ids": [1201, 1202],
+                    "removed_market_signal_ids": [],
+                    "removed_ids_hash": None,
+                },
+                "explanation": "Promotion audit is healthy across audited invariants.",
+            }
+        ][:limit]
+
     def execute_guarded_promotion(
         self,
         *,
@@ -1268,6 +1356,46 @@ def test_promotion_rollback_drill_endpoint_returns_read_only_scope() -> None:
     assert payload[1]["rollback_eligible"] is False
     assert payload[1]["already_rolled_back"] is True
     assert payload[1]["rolled_back_at"] == "2026-05-03T21:30:00Z"
+
+
+def test_promotion_lifecycle_timeline_endpoint_returns_audited_events() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        f"/api/financial/signals/promotion/{EXECUTION_ID}/timeline?limit=10"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [event["type"] for event in payload] == [
+        "DECISION_CREATED",
+        "ACCEPTANCE_CREATED",
+        "EXECUTION_COMPLETED",
+        "ROLLBACK_COMPLETED",
+    ]
+    assert payload[2]["execution_id"] == str(EXECUTION_ID)
+    assert payload[2]["meta"]["inserted_count"] == 2
+    assert payload[3]["meta"]["removed_count"] == 2
+
+
+def test_promotion_reconciliation_endpoint_returns_invariant_checks() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        f"/api/financial/signals/promotion/{EXECUTION_ID}/reconciliation?limit=1"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["status"] == "HEALTHY"
+    assert payload[0]["checks"]["decision_link"] == "PASS"
+    assert payload[0]["checks"]["verification_gate"] == "PASS"
+    assert payload[0]["checks"]["idempotency"] == "PASS"
+    assert payload[0]["drilldown"]["audited_market_signal_ids"] == [1201, 1202]
 
 
 def test_execute_guarded_promotion_endpoint_returns_execution_record() -> None:

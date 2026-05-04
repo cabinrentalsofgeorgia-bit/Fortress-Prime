@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
+import json
 from collections import Counter
 from decimal import Decimal
 from typing import Any, Protocol
@@ -152,6 +154,20 @@ class SignalDataStore(Protocol):
         self,
         *,
         candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]: ...
+
+    def promotion_lifecycle_timeline(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]: ...
+
+    def promotion_reconciliation(
+        self,
+        *,
+        promotion_id: str,
         limit: int = 10,
     ) -> list[dict[str, Any]]: ...
 
@@ -892,6 +908,15 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, list):
         return [_json_safe(item) for item in value]
     return value
+
+
+def _stable_json_hash(value: Any) -> str:
+    encoded = json.dumps(
+        _json_safe(value),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 SHADOW_DECISION_RECORD_SELECT = """
@@ -1762,7 +1787,10 @@ def create_promotion_dry_run_acceptance(
                 min_abs_score,
                 target_table,
                 target_columns,
-                dry_run_payload
+                dry_run_payload,
+                verification_status_snapshot,
+                verification_payload_snapshot,
+                candidate_set_hash
             ) VALUES (
                 %(decision_record_id)s,
                 %(candidate_parameter_set)s,
@@ -1779,7 +1807,10 @@ def create_promotion_dry_run_acceptance(
                 %(min_abs_score)s,
                 %(target_table)s,
                 %(target_columns)s,
-                %(dry_run_payload)s
+                %(dry_run_payload)s,
+                %(verification_status_snapshot)s,
+                %(verification_payload_snapshot)s,
+                %(candidate_set_hash)s
             )
             RETURNING *
             """,
@@ -1800,6 +1831,9 @@ def create_promotion_dry_run_acceptance(
                 "target_table": dry_run["summary"]["target_table"],
                 "target_columns": dry_run["summary"]["target_columns"],
                 "dry_run_payload": Jsonb(_json_safe(dry_run)),
+                "verification_status_snapshot": verification["overall_status"],
+                "verification_payload_snapshot": Jsonb(_json_safe(verification)),
+                "candidate_set_hash": _stable_json_hash(dry_run["proposed_rows"]),
             },
         )
         row = cur.fetchone()
@@ -1985,6 +2019,97 @@ def fetch_promotion_rollback_drills(
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(sql, params)
         return [_promotion_rollback_drill_response(dict(row)) for row in cur.fetchall()]
+
+
+PROMOTION_LIFECYCLE_TIMELINE_FIELDS = [
+    "ts",
+    "event_type",
+    "decision_id",
+    "acceptance_id",
+    "execution_id",
+    "candidate_id",
+    "actor",
+    "meta",
+]
+
+
+def fetch_promotion_lifecycle_timeline(
+    conn: psycopg.Connection,
+    *,
+    promotion_id: str,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT
+            ts,
+            event_type,
+            decision_id,
+            acceptance_id,
+            execution_id,
+            candidate_id,
+            actor,
+            meta
+        FROM hedge_fund.v_signal_promotion_lifecycle_timeline
+        WHERE candidate_id = %(promotion_id)s
+           OR decision_id::TEXT = %(promotion_id)s
+           OR acceptance_id::TEXT = %(promotion_id)s
+           OR execution_id::TEXT = %(promotion_id)s
+        ORDER BY ts DESC, event_type DESC
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, {"promotion_id": promotion_id, "limit": limit})
+        rows: list[dict[str, Any]] = []
+        for row in cur.fetchall():
+            payload = {key: row[key] for key in PROMOTION_LIFECYCLE_TIMELINE_FIELDS}
+            payload["type"] = payload.pop("event_type")
+            rows.append(payload)
+        return rows
+
+
+PROMOTION_RECONCILIATION_FIELDS = [
+    "execution_id",
+    "acceptance_id",
+    "candidate_id",
+    "status",
+    "checks",
+    "warnings",
+    "drilldown",
+    "explanation",
+]
+
+
+def fetch_promotion_reconciliation(
+    conn: psycopg.Connection,
+    *,
+    promotion_id: str,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    sql = """
+        SELECT
+            execution_id,
+            acceptance_id,
+            candidate_id,
+            status,
+            checks,
+            warnings,
+            drilldown,
+            explanation
+        FROM hedge_fund.v_signal_promotion_reconciliation
+        WHERE candidate_id = %(promotion_id)s
+           OR acceptance_id::TEXT = %(promotion_id)s
+           OR execution_id::TEXT = %(promotion_id)s
+        ORDER BY
+            CASE status WHEN 'ERROR' THEN 0 WHEN 'WARNING' THEN 1 ELSE 2 END,
+            execution_id DESC NULLS LAST
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, {"promotion_id": promotion_id, "limit": limit})
+        return [
+            {key: row[key] for key in PROMOTION_RECONCILIATION_FIELDS}
+            for row in cur.fetchall()
+        ]
 
 
 def execute_guarded_promotion(
@@ -2449,6 +2574,34 @@ class PostgresSignalDataStore:
             return fetch_promotion_rollback_drills(
                 conn,
                 candidate_parameter_set=candidate_parameter_set,
+                limit=limit,
+            )
+
+    def promotion_lifecycle_timeline(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_lifecycle_timeline(
+                conn,
+                promotion_id=promotion_id,
+                limit=limit,
+            )
+
+    def promotion_reconciliation(
+        self,
+        *,
+        promotion_id: str,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_reconciliation(
+                conn,
+                promotion_id=promotion_id,
                 limit=limit,
             )
 

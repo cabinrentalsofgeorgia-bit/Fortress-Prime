@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS hedge_fund.signal_promotion_executions (
     verification_payload JSONB NOT NULL,
     dry_run_payload JSONB NOT NULL,
     inserted_market_signal_ids INTEGER[] NOT NULL DEFAULT ARRAY[]::INTEGER[],
+    inserted_market_signal_ids_hash TEXT,
     rollback_markers TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     rollback_status TEXT NOT NULL DEFAULT 'active',
     rollback_operator_membership_id UUID
@@ -293,6 +294,7 @@ BEGIN
         verification_payload,
         dry_run_payload,
         inserted_market_signal_ids,
+        inserted_market_signal_ids_hash,
         rollback_markers
     ) VALUES (
         v_acceptance.id,
@@ -309,6 +311,7 @@ BEGIN
         v_verification_payload,
         v_acceptance.dry_run_payload,
         v_inserted_market_signal_ids,
+        md5(array_to_string(v_inserted_market_signal_ids, ',')),
         v_rollback_markers
     )
     RETURNING * INTO v_execution;

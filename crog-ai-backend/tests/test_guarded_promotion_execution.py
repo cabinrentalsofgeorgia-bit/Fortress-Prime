@@ -393,6 +393,7 @@ def test_rollback_drill_preview_only_includes_audited_market_signal_ids() -> Non
     sql = _rollback_drill_sql()
 
     assert "CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_rollback_drill" in sql
+    assert "WITH (security_invoker = true) AS" in sql
     assert "LEFT JOIN hedge_fund.signal_promotion_execution_rows r" in sql
     assert "LEFT JOIN hedge_fund.market_signals ms" in sql
     assert "ON ms.id = r.market_signal_id" in sql

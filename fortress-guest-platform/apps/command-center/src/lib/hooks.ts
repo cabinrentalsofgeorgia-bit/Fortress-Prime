@@ -20,6 +20,8 @@ import type {
   FinancialPromotionExecution,
   FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
+  FinancialPromotionLifecycleEvent,
+  FinancialPromotionReconciliation,
   FinancialPromotionRollbackDrill,
   FinancialPromotionDryRunVerificationResponse,
   FinancialPromotionDryRunResponse,
@@ -319,6 +321,38 @@ export function useFinancialPromotionRollbackDrills(params?: {
     queryKey: ["financial", "signals", "promotion-dry-run", "rollback-drill", params],
     queryFn: () =>
       api.get("/api/financial/signals/promotion-dry-run/executions/rollback-drill", params),
+    staleTime: 60_000,
+  });
+}
+
+export function useFinancialPromotionLifecycleTimeline(
+  promotionId: string | null,
+  params?: { limit?: number },
+) {
+  return useQuery<FinancialPromotionLifecycleEvent[]>({
+    queryKey: ["financial", "signals", "promotion", promotionId, "timeline", params],
+    queryFn: () =>
+      api.get(
+        `/api/financial/signals/promotion/${encodeURIComponent(promotionId ?? "")}/timeline`,
+        params,
+      ),
+    enabled: Boolean(promotionId),
+    staleTime: 60_000,
+  });
+}
+
+export function useFinancialPromotionReconciliation(
+  promotionId: string | null,
+  params?: { limit?: number },
+) {
+  return useQuery<FinancialPromotionReconciliation[]>({
+    queryKey: ["financial", "signals", "promotion", promotionId, "reconciliation", params],
+    queryFn: () =>
+      api.get(
+        `/api/financial/signals/promotion/${encodeURIComponent(promotionId ?? "")}/reconciliation`,
+        params,
+      ),
+    enabled: Boolean(promotionId),
     staleTime: 60_000,
   });
 }

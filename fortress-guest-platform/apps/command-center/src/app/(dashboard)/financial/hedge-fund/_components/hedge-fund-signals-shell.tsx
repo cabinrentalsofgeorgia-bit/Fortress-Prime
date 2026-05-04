@@ -7,10 +7,12 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   BriefcaseBusiness,
+  CircleDot,
   ClipboardCheck,
   FileSearch,
   Gauge,
   Info,
+  ListChecks,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -49,6 +51,8 @@ import {
   useFinancialPromotionDryRunAcceptances,
   useFinancialPromotionDryRunVerification,
   useFinancialPromotionExecutions,
+  useFinancialPromotionLifecycleTimeline,
+  useFinancialPromotionReconciliation,
   useFinancialPromotionRollbackDrills,
   useRollbackFinancialPromotionExecution,
   useFinancialShadowDecisionRecords,
@@ -72,6 +76,8 @@ import type {
   FinancialPromotionExecution,
   FinancialPromotionExecutionCreate,
   FinancialPromotionExecutionRollbackCreate,
+  FinancialPromotionLifecycleEvent,
+  FinancialPromotionReconciliation,
   FinancialPromotionRollbackDrill,
   FinancialPromotionRollbackEligibility,
   FinancialPromotionGateGuardrailStatus,
@@ -324,6 +330,36 @@ function promotionRollbackEligibilityClasses(status: FinancialPromotionRollbackE
     return "border-sky-500/40 bg-sky-500/10 text-sky-600";
   }
   return "border-red-500/40 bg-red-500/10 text-red-600";
+}
+
+function promotionAuditStatusClasses(status: FinancialPromotionReconciliation["status"]): string {
+  if (status === "HEALTHY") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (status === "WARNING") return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  return "border-red-500/40 bg-red-500/10 text-red-600";
+}
+
+function promotionAuditCheckClasses(status: string): string {
+  if (status === "PASS") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  if (status === "NA") return "border-border bg-muted/30 text-muted-foreground";
+  return "border-red-500/40 bg-red-500/10 text-red-600";
+}
+
+function promotionLifecycleEventClasses(type: FinancialPromotionLifecycleEvent["type"]): string {
+  if (type === "ROLLBACK_COMPLETED" || type === "VERIFICATION_RESULT") {
+    return "border-amber-500/40 bg-amber-500/10 text-amber-600";
+  }
+  if (type === "EXECUTION_COMPLETED" || type === "ACCEPTANCE_CREATED" || type === "ROLLBACK_ELIGIBLE") {
+    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  }
+  return "border-sky-500/40 bg-sky-500/10 text-sky-600";
+}
+
+function promotionLifecycleEventLabel(type: FinancialPromotionLifecycleEvent["type"]): string {
+  return type
+    .toLowerCase()
+    .split("_")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function formatIdList(values: number[]): string {
@@ -1530,6 +1566,199 @@ function PromotionDryRunRow({ row }: { row: FinancialPromotionDryRunMarketSignal
   );
 }
 
+function LifecycleTimeline({
+  events,
+  loading,
+  error,
+}: {
+  events: FinancialPromotionLifecycleEvent[];
+  loading: boolean;
+  error: boolean;
+}) {
+  const [latestFirst, setLatestFirst] = useState(true);
+  const orderedEvents = [...events].sort((a, b) => {
+    const delta = new Date(a.ts).getTime() - new Date(b.ts).getTime();
+    return latestFirst ? -delta : delta;
+  });
+
+  return (
+    <div className="border border-border p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <CircleDot className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Lifecycle Timeline</h2>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8"
+          onClick={() => setLatestFirst((value) => !value)}
+        >
+          {latestFirst ? "Latest first" : "Oldest first"}
+        </Button>
+      </div>
+
+      {error ? (
+        <p className="mt-3 text-xs text-destructive">Lifecycle audit unavailable.</p>
+      ) : loading && !events.length ? (
+        <p className="mt-3 text-xs text-muted-foreground">Loading lifecycle audit…</p>
+      ) : orderedEvents.length ? (
+        <div className="mt-3 space-y-2">
+          {orderedEvents.map((event) => (
+            <details
+              key={`${event.type}-${event.ts}-${event.execution_id ?? event.acceptance_id ?? event.decision_id}`}
+              className="border border-border/70 p-2 text-xs"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn("shrink-0 text-[10px]", promotionLifecycleEventClasses(event.type))}
+                  >
+                    {promotionLifecycleEventLabel(event.type)}
+                  </Badge>
+                  <span className="truncate text-muted-foreground">{event.actor ?? "system"}</span>
+                </span>
+                <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                  {formatDateTime(event.ts)}
+                </span>
+              </summary>
+              <div className="mt-3 grid gap-2">
+                <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                  <span className="text-muted-foreground">Candidate</span>
+                  <span className="truncate font-mono">{event.candidate_id}</span>
+                </div>
+                <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                  <span className="text-muted-foreground">Decision</span>
+                  <span className="truncate font-mono">{event.decision_id ?? "—"}</span>
+                </div>
+                <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                  <span className="text-muted-foreground">Acceptance</span>
+                  <span className="truncate font-mono">{event.acceptance_id ?? "—"}</span>
+                </div>
+                <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                  <span className="text-muted-foreground">Execution</span>
+                  <span className="truncate font-mono">{event.execution_id ?? "—"}</span>
+                </div>
+                <pre className="max-h-40 overflow-auto bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                  {JSON.stringify(event.meta, null, 2)}
+                </pre>
+              </div>
+            </details>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">No audited lifecycle events yet.</p>
+      )}
+    </div>
+  );
+}
+
+function ReconciliationPanel({
+  reconciliations,
+  loading,
+  error,
+}: {
+  reconciliations: FinancialPromotionReconciliation[];
+  loading: boolean;
+  error: boolean;
+}) {
+  const reconciliation = reconciliations[0] ?? null;
+  const checkRows = reconciliation ? Object.entries(reconciliation.checks) : [];
+  const warnings = reconciliation?.warnings ?? {};
+  const warningRows = [
+    ["Cross-model diagnostic", warnings.cross_model_diagnostic_only ?? 0],
+    ["High churn flag", warnings.high_churn_flag ? "Yes" : "No"],
+    ["Whipsaw flag", warnings.whipsaw_flag ? "Yes" : "No"],
+  ];
+  const auditedIds = Array.isArray(reconciliation?.drilldown.audited_market_signal_ids)
+    ? reconciliation.drilldown.audited_market_signal_ids.filter(
+        (value): value is number => typeof value === "number",
+      )
+    : [];
+  const removedIds = Array.isArray(reconciliation?.drilldown.removed_market_signal_ids)
+    ? reconciliation.drilldown.removed_market_signal_ids.filter(
+        (value): value is number => typeof value === "number",
+      )
+    : [];
+
+  return (
+    <div className="border border-border p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ListChecks className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Reconciliation</h2>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn(
+            "font-medium",
+            reconciliation
+              ? promotionAuditStatusClasses(reconciliation.status)
+              : "border-border bg-muted/30 text-muted-foreground",
+          )}
+        >
+          {loading && !reconciliation ? "Checking" : reconciliation?.status ?? "No audit"}
+        </Badge>
+      </div>
+
+      {error ? (
+        <p className="mt-3 text-xs text-destructive">Reconciliation audit unavailable.</p>
+      ) : loading && !reconciliation ? (
+        <p className="mt-3 text-xs text-muted-foreground">Loading reconciliation…</p>
+      ) : reconciliation ? (
+        <div className="mt-3 space-y-3 text-xs">
+          <p className="text-muted-foreground">{reconciliation.explanation}</p>
+          <div className="grid gap-2">
+            {checkRows.map(([label, status]) => (
+              <div key={label} className="flex items-center justify-between gap-3 border border-border/70 p-2">
+                <span className="capitalize">{label.replaceAll("_", " ")}</span>
+                <Badge variant="outline" className={cn("text-[10px]", promotionAuditCheckClasses(status))}>
+                  {status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {warningRows.map(([label, value]) => (
+              <div key={label} className="bg-muted/40 p-2">
+                <span className="text-muted-foreground">{label}</span>
+                <p className="mt-1 font-mono font-semibold">{String(value)}</p>
+              </div>
+            ))}
+          </div>
+          <details className="border border-border/70 p-2">
+            <summary className="cursor-pointer list-none font-medium">Execution Drilldown</summary>
+            <div className="mt-2 space-y-2">
+              <div>
+                <span className="text-muted-foreground">Inserted / audited IDs</span>
+                <p className="mt-1 max-h-16 overflow-auto font-mono text-[11px]">
+                  {formatIdList(auditedIds)}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Removed IDs</span>
+                <p className="mt-1 max-h-16 overflow-auto font-mono text-[11px]">
+                  {formatIdList(removedIds)}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Removed IDs hash</span>
+                <p className="mt-1 truncate font-mono text-[11px]">
+                  {reconciliation.drilldown.removed_ids_hash ?? "—"}
+                </p>
+              </div>
+            </div>
+          </details>
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">No execution reconciliation rows yet.</p>
+      )}
+    </div>
+  );
+}
+
 function PromotionDryRunPanel({
   dryRun,
   loading,
@@ -1543,6 +1772,12 @@ function PromotionDryRunPanel({
   executionsLoading,
   rollbackDrills,
   rollbackDrillsLoading,
+  lifecycleEvents,
+  lifecycleLoading,
+  lifecycleError,
+  reconciliations,
+  reconciliationLoading,
+  reconciliationError,
   onSubmitAcceptance,
   submittingAcceptance,
   onSubmitExecution,
@@ -1562,6 +1797,12 @@ function PromotionDryRunPanel({
   executionsLoading: boolean;
   rollbackDrills: FinancialPromotionRollbackDrill[];
   rollbackDrillsLoading: boolean;
+  lifecycleEvents: FinancialPromotionLifecycleEvent[];
+  lifecycleLoading: boolean;
+  lifecycleError: boolean;
+  reconciliations: FinancialPromotionReconciliation[];
+  reconciliationLoading: boolean;
+  reconciliationError: boolean;
   onSubmitAcceptance: (payload: FinancialPromotionDryRunAcceptanceCreate) => Promise<void>;
   submittingAcceptance: boolean;
   onSubmitExecution: (payload: FinancialPromotionExecutionCreate) => Promise<void>;
@@ -1725,6 +1966,19 @@ function PromotionDryRunPanel({
           <p className="text-xs text-muted-foreground">Target</p>
           <p className="mt-1 truncate font-mono text-sm font-semibold">{summary.target_table}</p>
         </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <LifecycleTimeline
+          events={lifecycleEvents}
+          loading={lifecycleLoading}
+          error={lifecycleError}
+        />
+        <ReconciliationPanel
+          reconciliations={reconciliations}
+          loading={reconciliationLoading}
+          error={reconciliationError}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -2302,6 +2556,16 @@ export function HedgeFundSignalsShell() {
     candidate_parameter_set: "dochia_v0_2_range_daily",
     limit: 5,
   });
+  const promotionAuditId =
+    promotionExecutions.data?.[0]?.id ??
+    promotionDryRunAcceptances.data?.[0]?.id ??
+    "dochia_v0_2_range_daily";
+  const promotionLifecycleTimeline = useFinancialPromotionLifecycleTimeline(promotionAuditId, {
+    limit: 50,
+  });
+  const promotionReconciliation = useFinancialPromotionReconciliation(promotionAuditId, {
+    limit: 5,
+  });
   const createShadowDecisionRecord = useCreateFinancialShadowDecisionRecord();
   const createPromotionDryRunAcceptance = useCreateFinancialPromotionDryRunAcceptance();
   const executePromotionDryRunAcceptance = useExecuteFinancialPromotionDryRunAcceptance();
@@ -2355,7 +2619,9 @@ export function HedgeFundSignalsShell() {
     promotionDryRunVerification.isFetching ||
     promotionDryRunAcceptances.isFetching ||
     promotionExecutions.isFetching ||
-    promotionRollbackDrills.isFetching;
+    promotionRollbackDrills.isFetching ||
+    promotionLifecycleTimeline.isFetching ||
+    promotionReconciliation.isFetching;
 
   async function handleShadowDecisionSubmit(payload: FinancialShadowReviewDecisionRecordCreate) {
     await createShadowDecisionRecord.mutateAsync(payload);
@@ -2367,18 +2633,24 @@ export function HedgeFundSignalsShell() {
   ) {
     await createPromotionDryRunAcceptance.mutateAsync(payload);
     void promotionDryRunAcceptances.refetch();
+    void promotionLifecycleTimeline.refetch();
+    void promotionReconciliation.refetch();
   }
 
   async function handlePromotionExecutionSubmit(payload: FinancialPromotionExecutionCreate) {
     await executePromotionDryRunAcceptance.mutateAsync(payload);
     void promotionExecutions.refetch();
     void promotionRollbackDrills.refetch();
+    void promotionLifecycleTimeline.refetch();
+    void promotionReconciliation.refetch();
   }
 
   async function handlePromotionRollbackSubmit(payload: FinancialPromotionExecutionRollbackCreate) {
     await rollbackPromotionExecution.mutateAsync(payload);
     void promotionExecutions.refetch();
     void promotionRollbackDrills.refetch();
+    void promotionLifecycleTimeline.refetch();
+    void promotionReconciliation.refetch();
   }
 
   return (
@@ -2436,6 +2708,8 @@ export function HedgeFundSignalsShell() {
               void promotionDryRunAcceptances.refetch();
               void promotionExecutions.refetch();
               void promotionRollbackDrills.refetch();
+              void promotionLifecycleTimeline.refetch();
+              void promotionReconciliation.refetch();
             }}
             disabled={isRefreshing}
             aria-label="Refresh hedge fund signals"
@@ -2580,6 +2854,12 @@ export function HedgeFundSignalsShell() {
             executionsLoading={promotionExecutions.isLoading}
             rollbackDrills={promotionRollbackDrills.data ?? []}
             rollbackDrillsLoading={promotionRollbackDrills.isLoading}
+            lifecycleEvents={promotionLifecycleTimeline.data ?? []}
+            lifecycleLoading={promotionLifecycleTimeline.isLoading}
+            lifecycleError={promotionLifecycleTimeline.isError}
+            reconciliations={promotionReconciliation.data ?? []}
+            reconciliationLoading={promotionReconciliation.isLoading}
+            reconciliationError={promotionReconciliation.isError}
             onSubmitAcceptance={handlePromotionDryRunAcceptanceSubmit}
             submittingAcceptance={createPromotionDryRunAcceptance.isPending}
             onSubmitExecution={handlePromotionExecutionSubmit}

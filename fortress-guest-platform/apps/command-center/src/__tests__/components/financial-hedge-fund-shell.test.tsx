@@ -674,6 +674,77 @@ const promotionDryRunVerification = {
   ],
 };
 
+const promotionLifecycleTimeline = [
+  {
+    ts: "2026-05-03T21:30:00Z",
+    type: "ROLLBACK_COMPLETED",
+    decision_id: "33333333-3333-3333-3333-333333333333",
+    acceptance_id: "44444444-4444-4444-4444-444444444444",
+    execution_id: "55555555-5555-5555-5555-555555555555",
+    candidate_id: "dochia_v0_2_range_daily",
+    actor: "MarketClub Operator",
+    meta: {
+      removed_count: 2,
+      removed_market_signal_ids: [1201, 1202],
+    },
+  },
+  {
+    ts: "2026-05-03T21:00:00Z",
+    type: "EXECUTION_COMPLETED",
+    decision_id: "33333333-3333-3333-3333-333333333333",
+    acceptance_id: "44444444-4444-4444-4444-444444444444",
+    execution_id: "55555555-5555-5555-5555-555555555555",
+    candidate_id: "dochia_v0_2_range_daily",
+    actor: "MarketClub Operator",
+    meta: {
+      inserted_count: 2,
+      idempotency_key: "operator-accepted-dry-run-20260504",
+    },
+  },
+  {
+    ts: "2026-05-03T20:45:00Z",
+    type: "ACCEPTANCE_CREATED",
+    decision_id: "33333333-3333-3333-3333-333333333333",
+    acceptance_id: "44444444-4444-4444-4444-444444444444",
+    execution_id: null,
+    candidate_id: "dochia_v0_2_range_daily",
+    actor: "Gary Knight",
+    meta: {
+      proposed_rows: 2,
+    },
+  },
+];
+
+const promotionReconciliation = [
+  {
+    execution_id: "55555555-5555-5555-5555-555555555555",
+    acceptance_id: "44444444-4444-4444-4444-444444444444",
+    candidate_id: "dochia_v0_2_range_daily",
+    status: "HEALTHY",
+    checks: {
+      decision_link: "PASS",
+      verification_gate: "PASS",
+      execution_count_match: "PASS",
+      write_integrity: "PASS",
+      extraneous_writes: "PASS",
+      rollback_integrity: "NA",
+      idempotency: "PASS",
+    },
+    warnings: {
+      cross_model_diagnostic_only: 1,
+      high_churn_flag: true,
+      whipsaw_flag: true,
+    },
+    drilldown: {
+      audited_market_signal_ids: [1201, 1202],
+      live_audited_market_signal_ids: [1201, 1202],
+      removed_market_signal_ids: [1201, 1202],
+      removed_ids_hash: "audit-hash",
+    },
+    explanation: "Promotion audit is healthy across audited invariants.",
+  },
+];
+
 let promotionDryRunAcceptancesMock = promotionDryRunAcceptances;
 let promotionExecutionsMock = promotionExecutions;
 let promotionDryRunVerificationMock = promotionDryRunVerification;
@@ -787,6 +858,20 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     refetch: vi.fn(),
   }),
+  useFinancialPromotionLifecycleTimeline: () => ({
+    data: promotionLifecycleTimeline,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+  useFinancialPromotionReconciliation: () => ({
+    data: promotionReconciliation,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
   useCreateFinancialShadowDecisionRecord: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -839,6 +924,16 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("market_signals Preview")).toBeInTheDocument();
     expect(screen.getByText("Ready for dry-run")).toBeInTheDocument();
     expect(screen.getByText("hedge_fund.market_signals")).toBeInTheDocument();
+    expect(screen.getByText("Lifecycle Timeline")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Latest first" })).toBeInTheDocument();
+    expect(screen.getByText("Rollback Completed")).toBeInTheDocument();
+    expect(screen.getByText("Execution Completed")).toBeInTheDocument();
+    expect(screen.getByText("Acceptance Created")).toBeInTheDocument();
+    expect(screen.getByText("Reconciliation")).toBeInTheDocument();
+    expect(screen.getByText("HEALTHY")).toBeInTheDocument();
+    expect(screen.getByText("decision link")).toBeInTheDocument();
+    expect(screen.getByText("Cross-model diagnostic")).toBeInTheDocument();
+    expect(screen.getByText("Execution Drilldown")).toBeInTheDocument();
     expect(screen.getByText("Dry-Run Verification Gate")).toBeInTheDocument();
     expect(screen.getByText("Eligible for operator dry-run acceptance review")).toBeInTheDocument();
     expect(screen.getByText("CROSS_MODEL_DIAGNOSTIC_ONLY")).toBeInTheDocument();
@@ -858,7 +953,7 @@ describe("HedgeFundSignalsShell", () => {
     expect(screen.getByText("Dry-run acceptance ID")).toBeInTheDocument();
     expect(screen.getByText("Rollback preview count")).toBeInTheDocument();
     expect(screen.getByText("Inserted market_signal IDs")).toBeInTheDocument();
-    expect(screen.getByText("1201, 1202")).toBeInTheDocument();
+    expect(screen.getAllByText("1201, 1202").length).toBeGreaterThan(0);
     expect(screen.getByText("Already rolled back")).toBeInTheDocument();
     expect(screen.getByText("No")).toBeInTheDocument();
     expect(screen.getByLabelText("Operator Token")).toBeInTheDocument();
@@ -882,7 +977,7 @@ describe("HedgeFundSignalsShell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "v0.2 Range" }));
 
-    expect(screen.getByText("dochia_v0_2_range_daily")).toBeInTheDocument();
+    expect(screen.getAllByText("dochia_v0_2_range_daily").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "v0.2 Range" })).toHaveAttribute(
       "aria-pressed",
       "true",

@@ -642,6 +642,51 @@ export interface FinancialPromotionExecutionCreate {
   idempotency_key: string;
 }
 
+export type FinancialPromotionLifecycleEventType =
+  | "DECISION_CREATED"
+  | "DRY_RUN_GENERATED"
+  | "VERIFICATION_RESULT"
+  | "ACCEPTANCE_CREATED"
+  | "EXECUTION_COMPLETED"
+  | "ROLLBACK_ELIGIBLE"
+  | "ROLLBACK_COMPLETED";
+
+export interface FinancialPromotionLifecycleEvent {
+  ts: string;
+  type: FinancialPromotionLifecycleEventType;
+  decision_id: string | null;
+  acceptance_id: string | null;
+  execution_id: string | null;
+  candidate_id: string;
+  actor: string | null;
+  meta: Record<string, unknown>;
+}
+
+export type FinancialPromotionReconciliationStatus = "HEALTHY" | "WARNING" | "ERROR";
+export type FinancialPromotionReconciliationCheck = "PASS" | "FAIL" | "NA";
+
+export interface FinancialPromotionReconciliation {
+  execution_id: string | null;
+  acceptance_id: string;
+  candidate_id: string;
+  status: FinancialPromotionReconciliationStatus;
+  checks: Record<string, FinancialPromotionReconciliationCheck>;
+  warnings: {
+    cross_model_diagnostic_only?: number;
+    high_churn_flag?: boolean;
+    whipsaw_flag?: boolean;
+    [key: string]: unknown;
+  };
+  drilldown: {
+    audited_market_signal_ids?: number[];
+    live_audited_market_signal_ids?: number[];
+    removed_market_signal_ids?: number[];
+    removed_ids_hash?: string | null;
+    [key: string]: unknown;
+  };
+  explanation: string;
+}
+
 export interface FinancialWatchlistCandidate {
   ticker: string;
   bar_date: string;

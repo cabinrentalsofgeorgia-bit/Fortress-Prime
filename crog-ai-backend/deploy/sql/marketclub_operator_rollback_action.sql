@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS hedge_fund.signal_promotion_rollback_audits (
     rollback_reason TEXT NOT NULL,
     rollback_status TEXT NOT NULL,
     deleted_market_signal_ids INTEGER[] NOT NULL DEFAULT ARRAY[]::INTEGER[],
+    deleted_market_signal_ids_hash TEXT,
     rollback_marker_count INTEGER NOT NULL DEFAULT 0,
     attempted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     completed_at TIMESTAMPTZ,
@@ -86,6 +87,7 @@ BEGIN
             rollback_reason,
             rollback_status,
             deleted_market_signal_ids,
+            deleted_market_signal_ids_hash,
             rollback_marker_count,
             completed_at
         ) VALUES (
@@ -95,6 +97,7 @@ BEGIN
             trim(p_rollback_reason),
             'already_rolled_back',
             ARRAY[]::INTEGER[],
+            md5(''),
             cardinality(v_execution.rollback_markers),
             now()
         );
@@ -132,6 +135,7 @@ BEGIN
         rollback_reason,
         rollback_status,
         deleted_market_signal_ids,
+        deleted_market_signal_ids_hash,
         rollback_marker_count,
         completed_at
     ) VALUES (
@@ -141,6 +145,7 @@ BEGIN
         trim(p_rollback_reason),
         'rolled_back',
         v_deleted_market_signal_ids,
+        md5(array_to_string(v_deleted_market_signal_ids, ',')),
         cardinality(v_execution.rollback_markers),
         v_execution.rolled_back_at
     );
@@ -149,7 +154,8 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_rollback_drill AS
+CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_rollback_drill
+WITH (security_invoker = true) AS
 WITH latest_rollback_audit AS (
     SELECT DISTINCT ON (a.execution_id)
         a.execution_id,
@@ -263,5 +269,8 @@ REVOKE ALL ON FUNCTION hedge_fund.rollback_guarded_signal_promotion(UUID, TEXT, 
 REVOKE ALL ON TABLE hedge_fund.signal_promotion_rollback_audits FROM PUBLIC;
 REVOKE ALL ON TABLE hedge_fund.v_signal_promotion_rollback_drill FROM PUBLIC;
 
-GRANT SELECT ON TABLE hedge_fund.v_signal_promotion_rollback_drill TO crog_ai_app;
+GRANT SELECT ON TABLE
+    hedge_fund.signal_promotion_rollback_audits,
+    hedge_fund.v_signal_promotion_rollback_drill
+TO crog_ai_app;
 GRANT EXECUTE ON FUNCTION hedge_fund.rollback_guarded_signal_promotion(UUID, TEXT, TEXT) TO crog_ai_app;
