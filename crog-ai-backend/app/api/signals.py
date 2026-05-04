@@ -3,17 +3,25 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.signals.repository import PostgresSignalDataStore, SignalDataStore
 
 router = APIRouter(prefix="/api/financial/signals", tags=["financial-signals"])
+
+
+OperatorToken = Annotated[str, Header(alias="X-MarketClub-Operator-Token", min_length=16)]
+
+
+def _operator_token_sha256(operator_token: str) -> str:
+    return hashlib.sha256(operator_token.strip().encode("utf-8")).hexdigest()
 
 
 class TransitionKind(StrEnum):
@@ -467,6 +475,43 @@ class PromotionDryRunAcceptance(BaseModel):
     created_at: dt.datetime
 
 
+class PromotionExecutionCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    acceptance_id: UUID
+    execution_rationale: str = Field(min_length=12, max_length=2000)
+    idempotency_key: str | None = Field(default=None, min_length=8, max_length=160)
+
+
+class PromotionExecutionRollbackCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rollback_reason: str = Field(min_length=12, max_length=2000)
+
+
+class PromotionExecution(BaseModel):
+    id: UUID
+    acceptance_id: UUID
+    decision_record_id: UUID
+    candidate_parameter_set: str
+    baseline_parameter_set: str
+    operator_membership_id: UUID
+    executed_by: str
+    execution_rationale: str
+    idempotency_key: str
+    dry_run_generated_at: dt.datetime
+    dry_run_proposed_insert_count: int
+    verification_status: VerificationStatus
+    inserted_market_signal_ids: list[int]
+    rollback_markers: list[str]
+    rollback_status: Literal["active", "rolled_back"]
+    rollback_operator_membership_id: UUID | None
+    rollback_by: str | None
+    rollback_reason: str | None
+    rolled_back_at: dt.datetime | None
+    created_at: dt.datetime
+
+
 class SymbolChartBar(BaseModel):
     ticker: str
     bar_date: dt.date
@@ -816,6 +861,62 @@ def create_promotion_dry_run_acceptance_endpoint(
             decision_id=str(payload.decision_id) if payload.decision_id else None,
             limit=payload.limit,
             min_abs_score=payload.min_abs_score,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get(
+    "/promotion-dry-run/executions",
+    response_model=list[PromotionExecution],
+)
+def promotion_executions(
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    candidate_parameter_set: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+) -> list[dict[str, object]]:
+    return store.promotion_executions(
+        candidate_parameter_set=candidate_parameter_set,
+        limit=limit,
+    )
+
+
+@router.post(
+    "/promotion-dry-run/executions",
+    response_model=PromotionExecution,
+    status_code=201,
+)
+def execute_guarded_promotion(
+    payload: PromotionExecutionCreate,
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    operator_token: OperatorToken,
+) -> dict[str, object]:
+    try:
+        return store.execute_guarded_promotion(
+            acceptance_id=str(payload.acceptance_id),
+            operator_token_sha256=_operator_token_sha256(operator_token),
+            execution_rationale=payload.execution_rationale.strip(),
+            idempotency_key=payload.idempotency_key.strip() if payload.idempotency_key else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post(
+    "/promotion-dry-run/executions/{execution_id}/rollback",
+    response_model=PromotionExecution,
+)
+def rollback_promotion_execution(
+    execution_id: UUID,
+    payload: PromotionExecutionRollbackCreate,
+    store: Annotated[SignalDataStore, Depends(get_signal_store)],
+    operator_token: OperatorToken,
+) -> dict[str, object]:
+    try:
+        return store.rollback_promotion_execution(
+            execution_id=str(execution_id),
+            operator_token_sha256=_operator_token_sha256(operator_token),
+            rollback_reason=payload.rollback_reason.strip(),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

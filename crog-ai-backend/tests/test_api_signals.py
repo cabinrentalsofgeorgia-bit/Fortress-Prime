@@ -1,4 +1,5 @@
 import datetime as dt
+import hashlib
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -12,6 +13,10 @@ PARAMETER_SET_ID = UUID("11111111-1111-1111-1111-111111111111")
 TRANSITION_ID = UUID("22222222-2222-2222-2222-222222222222")
 DECISION_ID = UUID("33333333-3333-3333-3333-333333333333")
 ACCEPTANCE_ID = UUID("44444444-4444-4444-4444-444444444444")
+EXECUTION_ID = UUID("55555555-5555-5555-5555-555555555555")
+OPERATOR_MEMBERSHIP_ID = UUID("66666666-6666-6666-6666-666666666666")
+OPERATOR_TOKEN = "marketclub-operator-token"
+OPERATOR_TOKEN_SHA256 = hashlib.sha256(OPERATOR_TOKEN.encode("utf-8")).hexdigest()
 
 
 class FakeSignalStore:
@@ -623,6 +628,81 @@ class FakeSignalStore:
             "dry_run_proposed_insert_count": min(limit, 2),
         }
 
+    def _promotion_execution(
+        self,
+        *,
+        rollback_status: str = "active",
+        rollback_by: str | None = None,
+        rollback_reason: str | None = None,
+        rolled_back_at: dt.datetime | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "id": EXECUTION_ID,
+            "acceptance_id": ACCEPTANCE_ID,
+            "decision_record_id": DECISION_ID,
+            "candidate_parameter_set": "dochia_v0_2_range_daily",
+            "baseline_parameter_set": "dochia_v0_estimated",
+            "operator_membership_id": OPERATOR_MEMBERSHIP_ID,
+            "executed_by": "MarketClub Operator",
+            "execution_rationale": "Operator accepted the verified dry-run output.",
+            "idempotency_key": f"acceptance:{ACCEPTANCE_ID}",
+            "dry_run_generated_at": dt.datetime(2026, 5, 3, 20, 30, tzinfo=dt.UTC),
+            "dry_run_proposed_insert_count": 2,
+            "verification_status": "PASS",
+            "inserted_market_signal_ids": [1201, 1202],
+            "rollback_markers": [
+                "dochia-dry-run:dochia_v0_2_range_daily:AA:2026-04-24",
+                "dochia-dry-run:dochia_v0_2_range_daily:AGIO:2026-04-24",
+            ],
+            "rollback_status": rollback_status,
+            "rollback_operator_membership_id": OPERATOR_MEMBERSHIP_ID if rollback_by else None,
+            "rollback_by": rollback_by,
+            "rollback_reason": rollback_reason,
+            "rolled_back_at": rolled_back_at,
+            "created_at": dt.datetime(2026, 5, 3, 21, 0, tzinfo=dt.UTC),
+        }
+
+    def promotion_executions(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        return [self._promotion_execution()][:limit]
+
+    def execute_guarded_promotion(
+        self,
+        *,
+        acceptance_id: str,
+        operator_token_sha256: str,
+        execution_rationale: str,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        if operator_token_sha256 != OPERATOR_TOKEN_SHA256:
+            raise ValueError("Promotion verification gate blocked execution: FAIL")
+        return {
+            **self._promotion_execution(),
+            "acceptance_id": UUID(acceptance_id),
+            "execution_rationale": execution_rationale,
+            "idempotency_key": idempotency_key or f"acceptance:{acceptance_id}",
+        }
+
+    def rollback_promotion_execution(
+        self,
+        *,
+        execution_id: str,
+        operator_token_sha256: str,
+        rollback_reason: str,
+    ) -> dict[str, Any]:
+        if operator_token_sha256 != OPERATOR_TOKEN_SHA256:
+            raise ValueError("Active signal admin membership is required")
+        return self._promotion_execution(
+            rollback_status="rolled_back",
+            rollback_by="MarketClub Operator",
+            rollback_reason=rollback_reason,
+            rolled_back_at=dt.datetime(2026, 5, 3, 21, 30, tzinfo=dt.UTC),
+        ) | {"id": UUID(execution_id)}
+
     def symbol_chart(
         self,
         *,
@@ -1050,6 +1130,124 @@ def test_promotion_dry_run_acceptances_endpoint_rejects_without_ready_decision()
 
     assert response.status_code == 400
     assert "ready promote decision" in response.json()["detail"]
+
+
+def test_promotion_executions_endpoint_returns_audit_rows() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/financial/signals/promotion-dry-run/executions"
+        "?candidate_parameter_set=dochia_v0_2_range_daily&limit=3"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["id"] == str(EXECUTION_ID)
+    assert payload[0]["acceptance_id"] == str(ACCEPTANCE_ID)
+    assert payload[0]["verification_status"] == "PASS"
+    assert payload[0]["inserted_market_signal_ids"] == [1201, 1202]
+    assert payload[0]["rollback_status"] == "active"
+
+
+def test_execute_guarded_promotion_endpoint_returns_execution_record() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "execution_rationale": "Operator accepted the verified dry-run output.",
+            "idempotency_key": "operator-accepted-dry-run-20260504",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["acceptance_id"] == str(ACCEPTANCE_ID)
+    assert payload["operator_membership_id"] == str(OPERATOR_MEMBERSHIP_ID)
+    assert payload["executed_by"] == "MarketClub Operator"
+    assert payload["idempotency_key"] == "operator-accepted-dry-run-20260504"
+    assert payload["verification_status"] == "PASS"
+    assert payload["rollback_markers"][0].startswith("dochia-dry-run:")
+
+
+def test_execute_guarded_promotion_endpoint_requires_operator_token() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "execution_rationale": "Operator attempted execution without authentication.",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_execute_guarded_promotion_endpoint_rejects_spoofed_operator_body() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "executed_by": "Spoofed Operator",
+            "execution_rationale": "Operator attempted execution with spoofed body.",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_execute_guarded_promotion_endpoint_rejects_failed_gate() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/financial/signals/promotion-dry-run/executions",
+        headers={"X-MarketClub-Operator-Token": "wrong-operator-token"},
+        json={
+            "acceptance_id": str(ACCEPTANCE_ID),
+            "execution_rationale": "Operator attempted execution after verification failed.",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "verification gate blocked execution" in response.json()["detail"]
+
+
+def test_rollback_promotion_execution_endpoint_returns_rolled_back_record() -> None:
+    app = create_app()
+    app.dependency_overrides[get_signal_store] = FakeSignalStore
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/financial/signals/promotion-dry-run/executions/{EXECUTION_ID}/rollback",
+        headers={"X-MarketClub-Operator-Token": OPERATOR_TOKEN},
+        json={
+            "rollback_reason": "Operator rollback after post-promotion review.",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == str(EXECUTION_ID)
+    assert payload["rollback_status"] == "rolled_back"
+    assert payload["rollback_operator_membership_id"] == str(OPERATOR_MEMBERSHIP_ID)
+    assert payload["rollback_by"] == "MarketClub Operator"
+    assert payload["rollback_reason"] == "Operator rollback after post-promotion review."
 
 
 def test_symbol_chart_endpoint_returns_overlay_data() -> None:

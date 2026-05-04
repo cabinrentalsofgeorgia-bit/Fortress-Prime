@@ -141,6 +141,30 @@ class SignalDataStore(Protocol):
         min_abs_score: int = 50,
     ) -> dict[str, Any]: ...
 
+    def promotion_executions(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]: ...
+
+    def execute_guarded_promotion(
+        self,
+        *,
+        acceptance_id: str,
+        operator_token_sha256: str,
+        execution_rationale: str,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]: ...
+
+    def rollback_promotion_execution(
+        self,
+        *,
+        execution_id: str,
+        operator_token_sha256: str,
+        rollback_reason: str,
+    ) -> dict[str, Any]: ...
+
     def symbol_chart(
         self,
         *,
@@ -1798,6 +1822,152 @@ def create_promotion_dry_run_acceptance(
     }
 
 
+PROMOTION_EXECUTION_SELECT = """
+    SELECT
+        id,
+        acceptance_id,
+        decision_record_id,
+        candidate_parameter_set,
+        baseline_parameter_set,
+        operator_membership_id,
+        executed_by,
+        execution_rationale,
+        idempotency_key,
+        dry_run_generated_at,
+        dry_run_proposed_insert_count,
+        verification_status,
+        inserted_market_signal_ids,
+        rollback_markers,
+        rollback_status,
+        rollback_operator_membership_id,
+        rollback_by,
+        rollback_reason,
+        rolled_back_at,
+        created_at
+    FROM hedge_fund.signal_promotion_executions
+"""
+
+
+PROMOTION_EXECUTION_FIELDS = [
+    "id",
+    "acceptance_id",
+    "decision_record_id",
+    "candidate_parameter_set",
+    "baseline_parameter_set",
+    "operator_membership_id",
+    "executed_by",
+    "execution_rationale",
+    "idempotency_key",
+    "dry_run_generated_at",
+    "dry_run_proposed_insert_count",
+    "verification_status",
+    "inserted_market_signal_ids",
+    "rollback_markers",
+    "rollback_status",
+    "rollback_operator_membership_id",
+    "rollback_by",
+    "rollback_reason",
+    "rolled_back_at",
+    "created_at",
+]
+
+
+def _promotion_execution_response(row: dict[str, Any]) -> dict[str, Any]:
+    response = {key: row[key] for key in PROMOTION_EXECUTION_FIELDS}
+    response["inserted_market_signal_ids"] = list(response["inserted_market_signal_ids"] or [])
+    response["rollback_markers"] = list(response["rollback_markers"] or [])
+    return response
+
+
+def fetch_promotion_executions(
+    conn: psycopg.Connection,
+    *,
+    candidate_parameter_set: str | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {"limit": limit}
+    where = ""
+    if candidate_parameter_set:
+        where = "WHERE candidate_parameter_set = %(candidate_parameter_set)s"
+        params["candidate_parameter_set"] = candidate_parameter_set
+    sql = f"""
+        {PROMOTION_EXECUTION_SELECT}
+        {where}
+        ORDER BY created_at DESC
+        LIMIT %(limit)s
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(sql, params)
+        return [_promotion_execution_response(dict(row)) for row in cur.fetchall()]
+
+
+def execute_guarded_promotion(
+    conn: psycopg.Connection,
+    *,
+    acceptance_id: str,
+    operator_token_sha256: str,
+    execution_rationale: str,
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM hedge_fund.execute_guarded_signal_promotion(
+                    %(acceptance_id)s::uuid,
+                    %(operator_token_sha256)s,
+                    %(execution_rationale)s,
+                    %(idempotency_key)s
+                )
+                """,
+                {
+                    "acceptance_id": acceptance_id,
+                    "operator_token_sha256": operator_token_sha256,
+                    "execution_rationale": execution_rationale,
+                    "idempotency_key": idempotency_key,
+                },
+            )
+            row = cur.fetchone()
+    except psycopg.Error as exc:
+        raise ValueError(str(exc).splitlines()[0]) from exc
+    if row is None:
+        raise RuntimeError("guarded promotion execution returned no row")
+    return _promotion_execution_response(dict(row))
+
+
+def rollback_promotion_execution(
+    conn: psycopg.Connection,
+    *,
+    execution_id: str,
+    operator_token_sha256: str,
+    rollback_reason: str,
+) -> dict[str, Any]:
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM hedge_fund.rollback_guarded_signal_promotion(
+                    %(execution_id)s::uuid,
+                    %(operator_token_sha256)s,
+                    %(rollback_reason)s
+                )
+                """,
+                {
+                    "execution_id": execution_id,
+                    "operator_token_sha256": operator_token_sha256,
+                    "rollback_reason": rollback_reason,
+                },
+            )
+            row = cur.fetchone()
+    except psycopg.Error as exc:
+        raise ValueError(str(exc).splitlines()[0]) from exc
+    if row is None:
+        raise RuntimeError("guarded promotion rollback returned no row")
+    return _promotion_execution_response(dict(row))
+
+
 WATCHLIST_CANDIDATE_BASE_SQL = """
     WITH latest_scores AS (
         SELECT
@@ -2166,6 +2336,52 @@ class PostgresSignalDataStore:
                 decision_id=decision_id,
                 limit=limit,
                 min_abs_score=min_abs_score,
+            )
+
+    def promotion_executions(
+        self,
+        *,
+        candidate_parameter_set: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        with connect() as conn:
+            conn.execute("SET default_transaction_read_only = on")
+            return fetch_promotion_executions(
+                conn,
+                candidate_parameter_set=candidate_parameter_set,
+                limit=limit,
+            )
+
+    def execute_guarded_promotion(
+        self,
+        *,
+        acceptance_id: str,
+        operator_token_sha256: str,
+        execution_rationale: str,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            return execute_guarded_promotion(
+                conn,
+                acceptance_id=acceptance_id,
+                operator_token_sha256=operator_token_sha256,
+                execution_rationale=execution_rationale,
+                idempotency_key=idempotency_key,
+            )
+
+    def rollback_promotion_execution(
+        self,
+        *,
+        execution_id: str,
+        operator_token_sha256: str,
+        rollback_reason: str,
+    ) -> dict[str, Any]:
+        with connect() as conn:
+            return rollback_promotion_execution(
+                conn,
+                execution_id=execution_id,
+                operator_token_sha256=operator_token_sha256,
+                rollback_reason=rollback_reason,
             )
 
     def symbol_chart(
