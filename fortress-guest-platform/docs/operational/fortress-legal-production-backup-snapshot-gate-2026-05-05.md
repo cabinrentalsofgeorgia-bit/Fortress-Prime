@@ -52,6 +52,22 @@ An additional backup-gate rerun was performed from commit `63373212a`.
 
 Because no production backup authorization flag or production DB/Supabase target material was present, no production backup command was run.
 
+## 2026-05-05 Env Validation Rerun
+
+A subsequent rerun found `/tmp/fortress-production-backup.env` present with mode `600`, but the file did not validate for backup execution.
+
+Validation result:
+
+- `FORTRESS_ALLOW_PRODUCTION_BACKUP`: present.
+- `FORTRESS_PRODUCTION_SUPABASE_REF`: present but invalid shape.
+- `FORTRESS_PRODUCTION_DB_URL`: present but invalid shape.
+- `FORTRESS_PRODUCTION_DOMAIN`: present but invalid shape.
+- `FORTRESS_PRODUCTION_DB_URL`: invalid Postgres URL shape.
+- `FORTRESS_PRODUCTION_BACKUP_DIR`: safe non-repo path shape.
+- Final validator result: `ENV_NOT_VALID_FOR_BACKUP`.
+
+No secret values were printed. No backup command was run. A secure helper was installed at `/tmp/create-fortress-production-backup-env.sh` so the operator can recreate the env file with real production values without writing secrets into the repository.
+
 ## Backup Tooling Discovery
 
 Read-only tooling discovery found:
@@ -136,9 +152,9 @@ Do not place dump files in the git repository. Do not print database URLs, passw
 ## Current Gate Result
 
 - Production backup/snapshot evidence: `BLOCKED`.
-- Backup creation authorization flag: `ABSENT`.
+- Backup creation authorization flag: `PRESENT_BUT_ENV_INVALID`.
 - Production backup creation attempted: `NO`.
-- Backup env handoff file: `ABSENT`.
+- Backup env handoff file: `PRESENT_BUT_INVALID`.
 - Production Supabase/DB target recorded: `NO`.
 - Restore path documented against concrete snapshot: `NO`.
 - Production DB mutation: `NO`.
@@ -155,5 +171,7 @@ Provide current production backup/snapshot evidence matching the verified produc
 2. approved backup storage location,
 3. `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`,
 4. production operations approval for backup creation only.
+
+If using the temp env handoff, run `/tmp/create-fortress-production-backup-env.sh` in an operator terminal and enter only the real production Supabase ref, production domain, and production Postgres DB URL. Do not paste shell commands or placeholder text into the prompts.
 
 Do not deploy until the backup/snapshot evidence matches the verified production target and the restore path is documented.
