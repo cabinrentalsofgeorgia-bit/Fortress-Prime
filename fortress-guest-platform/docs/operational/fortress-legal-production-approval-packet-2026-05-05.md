@@ -1,7 +1,7 @@
 # Fortress Legal Production Approval Packet
 
 Date: 2026-05-05
-Status: BLOCKED PENDING EXPLICIT PRODUCTION AUTHORIZATION
+Status: TARGET VERIFIED BY OPERATOR; DEPLOY BLOCKED PENDING BACKUP / ROLLBACK / ADVISORY / LEGAL GATES
 
 ## Current Certified State
 
@@ -17,33 +17,34 @@ Status: BLOCKED PENDING EXPLICIT PRODUCTION AUTHORIZATION
 
 Production approval must identify all production targets before any deploy or mutation:
 
-- Production domain:
-- Deployment provider/target:
-- Production app URL:
-- Production API URL:
-- Production Supabase project ref:
-- Production database host/ref:
-- Production Qdrant endpoint and collection names:
-- Production NAS/evidence mount or storage target:
-- Production environment variable source:
-- Production branch/tag/commit:
+- Production domain: OPERATOR-VERIFIED; exact value not recorded in this packet.
+- Deployment provider/target: Vercel project `crog-ai-command-center` observed in read-only local project metadata.
+- Production app URL: UNKNOWN in this packet.
+- Production API URL: `FORTRESS_BACKEND_BASE_URL` key observed in Vercel production env metadata; value redacted and not recorded.
+- Production Supabase project ref: UNKNOWN in this packet.
+- Production database host/ref: UNKNOWN in this packet.
+- Production Qdrant endpoint and collection names: UNKNOWN in this packet.
+- Production NAS/evidence mount or storage target: UNKNOWN in this packet.
+- Production environment variable source: Vercel production env metadata observed locally; secret values redacted.
+- Production branch/tag/commit: expected release branch `safety/foundation-audit-snapshot`, commit `2dfc51ef8` or later gate-closure commit.
 
+Operator standing classification: `PRODUCTION_TARGET_VERIFIED_DEPLOY_BLOCKED_PENDING_BACKUP_ROLLBACK_ADVISORY_LEGAL_GATES`.
 Staging targets must not be reused or inferred as production targets.
 
 ## Required Operator Authorization
 
 Production approval must be explicit and scoped:
 
-- Operator name:
-- Operator role/authority:
-- Approval timestamp:
-- Authorized deployment scope:
-- Authorized mutation scope, if any:
-- Explicit deploy authorization: `YES/NO`
-- Explicit DB migration authorization: `YES/NO`
-- Explicit legal evidence mutation authorization: `YES/NO`
-- Explicit Qdrant mutation authorization: `YES/NO`
-- Explicit NAS/evidence mutation authorization: `YES/NO`
+- Operator name: not recorded in this packet.
+- Operator role/authority: production target verification acknowledged by operator in thread; deploy authorization not granted.
+- Approval timestamp: 2026-05-05 thread acknowledgement.
+- Authorized deployment scope: NONE YET.
+- Authorized mutation scope, if any: NONE.
+- Explicit deploy authorization: `NO`
+- Explicit DB migration authorization: `NO`
+- Explicit legal evidence mutation authorization: `NO`
+- Explicit Qdrant mutation authorization: `NO`
+- Explicit NAS/evidence mutation authorization: `NO`
 
 Default scope is UI/backend deployment only. Legal evidence ingest, promotion, privilege clearance, Qdrant vector movement, and resolution application require separate legal/operator authorization.
 
