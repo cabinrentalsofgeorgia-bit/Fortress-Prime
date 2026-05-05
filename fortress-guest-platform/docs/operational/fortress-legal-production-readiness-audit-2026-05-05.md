@@ -1,7 +1,7 @@
 # Fortress Legal Production Readiness Audit
 
 Date: 2026-05-05
-Classification: PRODUCTION_DEPLOY_FAILED
+Classification: PRODUCTION_SMOKE_FAILED_ROLLED_BACK
 
 ## Executive Summary
 
@@ -109,11 +109,30 @@ Results:
 - Rollback: NOT_EXECUTED; `https://crog-ai.com` still resolves to previous ready deployment `dpl_14JfuBDB1j14HTf2fdMdMjGUU5sE`.
 - Legal/data mutation: NO.
 
+
+## Fixed Production Deployment Attempt - 2026-05-05
+
+- Build-root/script fix commit: `885002186`.
+- Fix summary: `apps/command-center/package.json` now calls `node scripts/sync-next-standalone-assets.mjs`, and the script is tracked inside the app build root.
+- Local proof: high-severity audit PASS, typecheck PASS, focused tests PASS, build PASS, focused lint PASS, source/static secret scan PASS.
+- Cloud-build proof: Vercel build ran `next build && node scripts/sync-next-standalone-assets.mjs` and completed successfully.
+- Deploy command: `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1 npx vercel --prod --yes`.
+- Deploy working directory: clean detached `885002186` checkout, `apps/command-center`.
+- Vercel project: `crog-ai-command-center`.
+- Deployment ID: `dpl_A6BbRNxgg3MnXCzBhjvA6fprTZNT`.
+- Deployment URL: `https://crog-ai-command-center-j4zbkar4e-cabin-rentals-of-georgia.vercel.app`.
+- Deployment result: READY.
+- Production smoke result: FAILED because browser/static requests to `_next/static` returned HTTP 500 on `https://crog-ai.com`.
+- Rollback command: `npx vercel rollback dpl_14JfuBDB1j14HTf2fdMdMjGUU5sE --yes`.
+- Rollback result: SUCCESS; `https://crog-ai.com` resolved back to previous ready deployment `dpl_14JfuBDB1j14HTf2fdMdMjGUU5sE`.
+- Post-rollback smoke: root/login/protected guards were safe, but `_next/static` HTTP 500 failures persisted.
+- Legal/data mutation: NO.
+
 ## Production Deploy Authorization
 
-- `FORTRESS_ALLOW_PRODUCTION_DEPLOY`: present for the 2026-05-05 deploy attempt by operator prompt.
-- Production deploy: attempted and failed during Vercel cloud build.
-- Production smoke: not attempted because deploy failed.
+- `FORTRESS_ALLOW_PRODUCTION_DEPLOY`: present for the 2026-05-05 fixed deploy attempt by operator prompt.
+- Production deploy: fixed build deployed successfully to Vercel, then rolled back after smoke failure.
+- Production smoke: failed because `_next/static` assets returned HTTP 500 on the production domain.
 
 ## Mutation Invariants
 
@@ -135,4 +154,4 @@ Results:
 
 ## Exact Next Action
 
-Fix the Vercel production build root/script mismatch for `scripts/sync-next-standalone-assets.mjs`, rerun all pre-deploy gates, and redeploy only under the same UI/backend-only production authorization model. Do not claim legal-data readiness while legal/operator blockers remain unresolved.
+Fix the production static asset serving/proxy/hosting issue causing `_next/static` HTTP 500 responses on `https://crog-ai.com`, then rerun deploy and smoke under the same UI/backend-only authorization model. Do not claim legal-data readiness while legal/operator blockers remain unresolved.
