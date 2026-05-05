@@ -5,7 +5,7 @@ Classification: PRODUCTION_BLOCKED_TARGET_APPROVAL
 
 ## Executive Summary
 
-Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, and legal operations remain `NOT_READY_BY_DESIGN`. Production deploy was not attempted because production backup/snapshot evidence is missing and the production DB URL cannot be safely tied to the declared production Supabase/project ref.
+Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, and legal operations remain `NOT_READY_BY_DESIGN`. Production deploy was not attempted because automated production env discovery did not find a Postgres connection string that can be tied to the declared production Supabase/project ref.
 
 ## Production Target Identity
 
@@ -15,25 +15,24 @@ Fortress Legal staging UI is certified, dependency high/critical advisories have
 - Vercel org/team id observed: `team_yGxCOcECYMqhFKB3Yve2wRVi`.
 - Vercel target environment observed: `production`.
 - Production backend/API target: `FORTRESS_BACKEND_BASE_URL` key observed, value redacted.
-- Production app URL: not recorded in local evidence; `VERCEL_URL` is empty in the local production env snapshot.
-- Production Supabase ref: not recorded in local evidence.
-- Production database host/ref: not recorded in local evidence.
+- Production app URL/domain: present in production runtime env, value redacted and not printed.
+- Production Supabase ref: present in production runtime env, value redacted; it does not match known staging ref `ktppvqkiinlsmpsfiscr`.
+- Production database host/ref: unresolved; discovered Postgres-family values do not prove a Supabase production target by hostname or username.
 - Production Qdrant target: not recorded in local evidence.
 - Production NAS/evidence target: not recorded in local evidence.
 - Production deploy ID and previous deploy ID: not recorded in local evidence.
 
 ## Backup / Snapshot Gate
 
-- Result: `BLOCKED`.
+- Result: `BLOCKED_TARGET_APPROVAL`.
 - Evidence file: `docs/operational/fortress-legal-production-backup-snapshot-gate-2026-05-05.md`.
 - Production backup/snapshot evidence: missing.
-- Backup creation authorization: present in `/tmp/fortress-production-backup.env`.
-- Backup env handoff file: present at `/tmp/fortress-production-backup.env` with mode `600`.
-- Production Supabase/DB backup target: present in env with values redacted, but target identity remains ambiguous.
-- Backup target validation: local validator reported `ENV_VALID_FOR_BACKUP`, then `pg_dump` rejected the connection string because the port value was not a valid integer.
-- Automatic port repair guard: refused to rewrite the DB URL because the redacted DB URL did not reference the declared production Supabase ref.
-- Strict target validator rerun: failed with `FORTRESS_PRODUCTION_DB_URL: INVALID_PLACEHOLDER_OR_COMMAND_TEXT`; no backup was run.
-- Backup tooling discovery: Vercel CLI absent; Supabase CLI absent; `pg_dump` present at `/usr/bin/pg_dump`.
+- Vercel production env pull: PASS to `/tmp/fortress-vercel-production.env`; values redacted and not committed.
+- Selected DB variable from Vercel production env: NONE.
+- Production runtime Supabase identity: present in `/home/admin/.config/fortress-legal/production.env`, value redacted, not staging.
+- Server-side Postgres candidates: present in `/home/admin/Fortress-Prime/.env.security`, but none can be tied to the production Supabase ref by hostname or pooler username.
+- Supabase CLI/access token: unavailable on the runner.
+- `pg_dump`: present at `/usr/bin/pg_dump`, but not run because target proof failed.
 - Existing backup script reviewed: `backend/scripts/g1_5_backup_fortress_shadow.sh`, rejected for this gate because it is a narrow legacy table backup and writes into the repo script directory.
 - Restore path: not documented against a concrete snapshot.
 
@@ -85,9 +84,9 @@ Results:
 - Browser/static NAS paths: NO.
 - Browser/static localhost calls: NO.
 - Production deploy authorization: ABSENT.
-- Production backup creation authorization: PRESENT.
-- Production backup env handoff: PRESENT.
-- Production backup creation attempted: YES, failed before backup creation because `pg_dump` rejected the DB URL port.
+- Production backup creation authorization: not used by auto-discovery; backup target proof failed before backup execution.
+- Production backup env handoff: previous hand-edited temp env moved aside and not trusted.
+- Production backup creation attempted: NO during auto-discovery rerun.
 
 ## Staging Certification References
 
@@ -113,13 +112,12 @@ Results:
 
 ## Remaining Blockers
 
-1. Recreate `/tmp/fortress-production-backup.env` on spark-2 with a real production Postgres URL that contains a numeric port, no placeholder/pasted command text, and a target link to the declared production Supabase/project ref.
-2. Record the exact production Supabase/project ref or production DB target.
-3. Provide current production backup/snapshot evidence matching that target, or authorize backup creation with `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`.
-4. Add previous deployment ID/artifact and concrete rollback command before deploy.
-5. Provide explicit production deploy authorization with `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1` and a completed approval packet.
-6. Resolve or explicitly scope legal/operator blockers before claiming full legal-data production readiness.
+1. Provide an approved production DB target proof: direct Supabase host/ref match, Supabase pooler username/ref match, provider-native backup evidence, or explicit approved target attestation binding the DB host to the production Supabase/project ref.
+2. Provide current production backup/snapshot evidence matching that target, or rerun backup creation only after the target proof exists.
+3. Add previous deployment ID/artifact and concrete rollback command before deploy.
+4. Provide explicit production deploy authorization with `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1` and a completed approval packet.
+5. Resolve or explicitly scope legal/operator blockers before claiming full legal-data production readiness.
 
 ## Exact Next Action
 
-Attach current production backup/snapshot evidence matching the verified production target, or rerun with an explicit production Supabase/DB target and `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`. Do not deploy until that evidence is present and the restore path is documented.
+Attach provider-native backup evidence for the redacted production Supabase ref, or provide an approved Postgres target whose hostname/username proves the same ref. Do not run `pg_dump` or deploy until that target proof and restore path are documented.

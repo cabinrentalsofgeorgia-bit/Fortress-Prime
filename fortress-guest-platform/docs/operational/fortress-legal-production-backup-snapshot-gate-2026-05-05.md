@@ -25,14 +25,17 @@ Read-only target discovery on spark-2 captured the following local deployment me
 
 Fields still missing from local evidence:
 
-- Production domain exact value.
-- Production Supabase project ref or production DB target.
-- Production database host/ref.
+- Production database URL/host that is tied to the production Supabase/project ref.
 - Production Qdrant endpoint and collection names.
 - Production NAS/evidence target.
 - Current production deploy ID.
 - Previous deploy ID/artifact for rollback.
 - Redacted production environment snapshot artifact reference.
+
+Fields discovered after the initial packet:
+
+- Production Supabase identity exists in `/home/admin/.config/fortress-legal/production.env`; value redacted and not printed.
+- Production domain exists in the production runtime env; value redacted and not printed.
 
 The operator standing state treats the production target identity as verified, but backup creation cannot safely proceed until the production database/Supabase target is explicitly recorded and matched to the approved production target.
 
@@ -106,6 +109,30 @@ Validator result:
 - Production backup run: `NO`.
 
 Required correction: recreate `/tmp/fortress-production-backup.env` with a real production Postgres URL containing a numeric port and no placeholder or pasted command text. The DB URL must also be tied to the production Supabase/project ref by hostname match, username match, or explicit target attestation.
+
+
+## 2026-05-05 Production Env Auto-Discovery Rerun
+
+A backup-target auto-discovery rerun was performed from commit `ae2929f9a`. The previous hand-edited `/tmp/fortress-production-backup.env` was moved aside before discovery and was not used as source of truth.
+
+Discovery results:
+
+- Vercel project metadata: `crog-ai-command-center`, project id `prj_u90XAUhroRxPGIXKYCowt0uqULDg`, team id `team_yGxCOcECYMqhFKB3Yve2wRVi`.
+- Vercel CLI path: `npx vercel` succeeded and reported version `53.1.1`.
+- Vercel production env pull: `PASS`; values were written only to `/tmp/fortress-vercel-production.env` with mode `600` and were not committed.
+- Vercel production env DB candidates: `NONE` among the approved Postgres URL variable names.
+- Vercel production env Supabase ref candidates: `NONE` among the approved Supabase identity variable names.
+- Production runtime env file discovered from `fortress-legal-production.service`: `/home/admin/.config/fortress-legal/production.env`.
+- Production runtime Supabase identity: `PRESENT_REDACTED`; it does not match known staging ref `ktppvqkiinlsmpsfiscr` and matches the historical production-ref candidate noted in the operator prompt.
+- Server-side Postgres candidates in `/home/admin/Fortress-Prime/.env.security`: `DATABASE_URL`, `TEST_DATABASE_URL`, `POSTGRES_ADMIN_URI`, and `POSTGRES_API_URI` were present with valid Postgres-family shape, but their host/user metadata did not contain the production Supabase ref and their host did not prove a Supabase production target.
+- `FORTRESS_DB_HOST`, `FORTRESS_DB_PORT`, `FORTRESS_DB_USER`, `FORTRESS_DB_NAME`, and `FORTRESS_DB_PASS` were present in the server-wide env, but the host/user metadata did not contain the production Supabase ref.
+- Supabase CLI: absent on the spark-2 runner.
+- Supabase access token files checked in approved local locations: absent.
+- `pg_dump`: present at `/usr/bin/pg_dump`, PostgreSQL `16.13`.
+
+Result: `PRODUCTION_BLOCKED_TARGET_APPROVAL`.
+
+No DB URL, password, service-role key, or production secret was printed. No production backup env was regenerated because no Postgres URL discovered from deployment/runtime env could be tied to the declared production Supabase/project ref by hostname match, pooler username match, or explicit approved target attestation. No backup command was run.
 
 ## Backup Tooling Discovery
 
@@ -191,10 +218,13 @@ Do not place dump files in the git repository. Do not print database URLs, passw
 ## Current Gate Result
 
 - Production backup/snapshot evidence: `BLOCKED`.
-- Backup creation authorization flag: `PRESENT`.
+- Backup creation authorization flag: `NOT_USED_IN_AUTO_DISCOVERY`; previous hand-edited temp env was moved aside.
 - Production backup creation attempted: `NO`.
-- Backup env handoff file: `PRESENT`.
-- Production Supabase/DB target recorded: `PRESENT_BUT_AMBIGUOUS`.
+- Vercel production env pull: `PASS`.
+- Selected production DB variable: `NONE`.
+- Production Supabase ref recorded: `PRESENT_REDACTED` from production runtime env.
+- Production DB URL to Supabase ref proof: `MISSING`.
+- Production Supabase/DB target recorded: `PARTIAL_SUPABASE_REF_PRESENT_DB_TARGET_UNPROVEN`.
 - Restore path documented against concrete snapshot: `NO`.
 - Production DB mutation: `NO`.
 - Legal DB mutation: `NO`.
@@ -204,13 +234,11 @@ Do not place dump files in the git repository. Do not print database URLs, passw
 
 ## Required Next Action
 
-Provide current production backup/snapshot evidence matching the verified production target, or rerun with all of the following present:
+Provide one approved production database backup target proof path:
 
-1. explicit production database/Supabase target,
-2. approved backup storage location,
-3. `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`,
-4. production operations approval for backup creation only.
+1. a production Postgres URL whose hostname contains the production Supabase ref,
+2. a Supabase pooler URL whose username contains the production Supabase ref,
+3. provider-native Supabase backup/snapshot evidence for the redacted production ref, or
+4. a committed/approved production target attestation that explicitly binds the redacted production DB host to the production Supabase/project ref.
 
-If using the temp env handoff, run `/tmp/create-fortress-production-backup-env.sh` in an operator terminal and enter only the real production Supabase ref, production domain, and production Postgres DB URL. Do not paste shell commands or placeholder text into the prompts.
-
-Do not deploy until the backup/snapshot evidence matches the verified production target and the restore path is documented.
+After that proof exists, rerun backup creation with an approved backup storage location and `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`. Do not deploy until the backup/snapshot evidence matches the verified production target and the restore path is documented.
