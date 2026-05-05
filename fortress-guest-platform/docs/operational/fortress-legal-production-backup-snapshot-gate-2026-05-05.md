@@ -84,6 +84,14 @@ Sanitized failure:
 
 Required correction: recreate `/tmp/fortress-production-backup.env` with a production Postgres URL whose port is a real numeric port, not placeholder text. Then rerun `/tmp/validate-fortress-production-backup-env.sh` and the backup gate.
 
+## 2026-05-05 Automatic Port Repair Guard
+
+A follow-up rerun attempted the narrowest safe repair: replace an exact `PORT` placeholder only if the DB URL also referenced the declared production Supabase ref. The guard refused the repair because the redacted DB URL did not reference the declared production Supabase ref.
+
+Result: `PRODUCTION_BLOCKED_TARGET_APPROVAL`.
+
+No DB URL, password, or credential was printed. No backup command was rerun after the guard refusal. The production DB target remains ambiguous until `/tmp/fortress-production-backup.env` contains a numeric-port production Postgres URL that can be tied to the declared production Supabase/project ref.
+
 ## Backup Tooling Discovery
 
 Read-only tooling discovery found:
@@ -171,7 +179,7 @@ Do not place dump files in the git repository. Do not print database URLs, passw
 - Backup creation authorization flag: `PRESENT`.
 - Production backup creation attempted: `NO`.
 - Backup env handoff file: `PRESENT`.
-- Production Supabase/DB target recorded: `PRESENT_BUT_DB_URL_UNUSABLE`.
+- Production Supabase/DB target recorded: `PRESENT_BUT_AMBIGUOUS`.
 - Restore path documented against concrete snapshot: `NO`.
 - Production DB mutation: `NO`.
 - Legal DB mutation: `NO`.

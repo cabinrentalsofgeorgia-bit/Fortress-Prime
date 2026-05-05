@@ -1,11 +1,11 @@
 # Fortress Legal Production Readiness Audit
 
 Date: 2026-05-05
-Classification: PRODUCTION_BLOCKED_BACKUP_SNAPSHOT
+Classification: PRODUCTION_BLOCKED_TARGET_APPROVAL
 
 ## Executive Summary
 
-Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, and legal operations remain `NOT_READY_BY_DESIGN`. Production deploy was not attempted because production backup/snapshot evidence is missing, the production Supabase/DB backup target is not recorded in local evidence, production backup creation authorization is absent, and production deploy authorization is absent.
+Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, and legal operations remain `NOT_READY_BY_DESIGN`. Production deploy was not attempted because production backup/snapshot evidence is missing and the production DB URL cannot be safely tied to the declared production Supabase/project ref.
 
 ## Production Target Identity
 
@@ -29,8 +29,9 @@ Fortress Legal staging UI is certified, dependency high/critical advisories have
 - Production backup/snapshot evidence: missing.
 - Backup creation authorization: present in `/tmp/fortress-production-backup.env`.
 - Backup env handoff file: present at `/tmp/fortress-production-backup.env` with mode `600`.
-- Production Supabase/DB backup target: present in env with values redacted, but the DB URL was unusable by `pg_dump`.
+- Production Supabase/DB backup target: present in env with values redacted, but target identity remains ambiguous.
 - Backup target validation: local validator reported `ENV_VALID_FOR_BACKUP`, then `pg_dump` rejected the connection string because the port value was not a valid integer.
+- Automatic port repair guard: refused to rewrite the DB URL because the redacted DB URL did not reference the declared production Supabase ref.
 - Backup tooling discovery: Vercel CLI absent; Supabase CLI absent; `pg_dump` present at `/usr/bin/pg_dump`.
 - Existing backup script reviewed: `backend/scripts/g1_5_backup_fortress_shadow.sh`, rejected for this gate because it is a narrow legacy table backup and writes into the repo script directory.
 - Restore path: not documented against a concrete snapshot.
@@ -111,7 +112,7 @@ Results:
 
 ## Remaining Blockers
 
-1. Recreate `/tmp/fortress-production-backup.env` on spark-2 with a production Postgres URL whose port is numeric, by running `/tmp/create-fortress-production-backup-env.sh`.
+1. Recreate `/tmp/fortress-production-backup.env` on spark-2 with a production Postgres URL whose port is numeric and whose target can be tied to the declared production Supabase/project ref.
 2. Record the exact production Supabase/project ref or production DB target.
 3. Provide current production backup/snapshot evidence matching that target, or authorize backup creation with `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`.
 4. Add previous deployment ID/artifact and concrete rollback command before deploy.
