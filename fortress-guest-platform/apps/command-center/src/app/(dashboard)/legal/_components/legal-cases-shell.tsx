@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Scale, ChevronRight, Clock, Mail } from "lucide-react";
+import { AlertTriangle, Scale, ChevronRight, Clock, Mail, ShieldCheck } from "lucide-react";
 import { useLegalCases } from "@/lib/legal-hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +65,50 @@ export function LegalCasesShell() {
           </Link>
         </div>
       </div>
+
+      <Card className="border-amber-500/30 bg-amber-500/5">
+        <CardContent className="space-y-4 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-amber-300" />
+                <h2 className="text-sm font-semibold">Legal Readiness Status</h2>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Fortress Legal remains fail-closed while operator/legal blocker decisions are pending.
+              </p>
+            </div>
+            <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-200">
+              Readiness: NOT_READY
+            </Badge>
+          </div>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-md border border-border bg-background/50 p-3">
+              <p className="text-xs uppercase text-muted-foreground">Backend Safety</p>
+              <p className="mt-1 text-sm font-medium text-emerald-300">PASS</p>
+            </div>
+            <div className="rounded-md border border-border bg-background/50 p-3">
+              <p className="text-xs uppercase text-muted-foreground">Production</p>
+              <p className="mt-1 text-sm font-medium text-amber-300">BLOCKED</p>
+            </div>
+            <div className="rounded-md border border-border bg-background/50 p-3">
+              <p className="text-xs uppercase text-muted-foreground">Known Blockers</p>
+              <p className="mt-1 text-sm font-medium">36 drift · 2 duplicate</p>
+            </div>
+            <div className="rounded-md border border-border bg-background/50 p-3">
+              <p className="text-xs uppercase text-muted-foreground">UI Scope</p>
+              <p className="mt-1 text-sm font-medium">Read-only</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+            <p>
+              This staging UI must not imply production readiness, trigger ingest,
+              promote evidence, or clear privilege while unresolved legal blockers remain.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading && (
         <div className="space-y-3">

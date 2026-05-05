@@ -1491,7 +1491,7 @@ function OnboardOwnerPanel({
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="/mnt/fortress_nas/sectors/legal/..."
+              placeholder="case-slug/path"
               value={contractPath}
               onChange={(e) => setContractPath(e.target.value)}
               className="font-mono text-xs"

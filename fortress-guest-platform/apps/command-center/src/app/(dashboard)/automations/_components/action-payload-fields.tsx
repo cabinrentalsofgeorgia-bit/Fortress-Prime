@@ -387,7 +387,7 @@ function LegalMotionExtensionFields({
       <div>
         <Label className="text-xs text-muted-foreground">Target Vault Path</Label>
         <Input
-          placeholder="/mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013/filings/outgoing"
+          placeholder="case-slug/filings/outgoing"
           {...register("action_payload.target_vault_path")}
         />
       </div>
@@ -459,7 +459,7 @@ function LegalOpposingFilingFields({
       <div>
         <Label className="text-xs text-muted-foreground">Target Vault Path</Label>
         <Input
-          placeholder="/mnt/fortress_nas/sectors/legal/fish-trap-suv2026000013/filings/outgoing"
+          placeholder="case-slug/filings/outgoing"
           {...register("action_payload.target_vault_path")}
         />
       </div>
