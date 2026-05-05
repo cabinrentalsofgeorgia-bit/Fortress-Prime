@@ -63,6 +63,18 @@ ROLLBACK_COMMAND=<required-before-deploy>
 ROLLBACK_OPERATOR=<required-before-deploy>
 ```
 
+
+## Backup Evidence Reference
+
+Current production DB backup/snapshot evidence is recorded in `docs/operational/fortress-legal-production-backup-snapshot-gate-2026-05-05.md`.
+
+- Evidence method: provider-native Supabase backup listing.
+- Production project: `Fortress Legal Production`.
+- Production ref: `hms...liap` partial-safe.
+- Latest completed physical backup timestamp: `2026-05-05T11:09:03.536Z`.
+- Restore path: provider-native Supabase restore for the verified production project, requiring explicit production restore approval.
+- Restore verification checklist: documented in the backup/snapshot gate and mirrored by this rollback plan's post-rollback verification steps.
+
 ## Data Rollback Policy
 
 For this UI/backend-only scope:
@@ -92,6 +104,6 @@ After rollback:
 
 ## Current Gate Result
 
-Rollback plan: `PASS_AS_PLAN`.
+Rollback plan: `PASS_AS_PLAN`. Backup evidence reference: `PRESENT`.
 
 Execution remains blocked until production deploy authorization and required deployment IDs are present.

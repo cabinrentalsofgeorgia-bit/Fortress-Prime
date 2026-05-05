@@ -1,7 +1,7 @@
 # Fortress Legal Production Backup / Snapshot Gate
 
 Date: 2026-05-05
-Status: BLOCKED
+Status: PASS
 
 ## Scope
 
@@ -134,6 +134,50 @@ Result: `PRODUCTION_BLOCKED_TARGET_APPROVAL`.
 
 No DB URL, password, service-role key, or production secret was printed. No production backup env was regenerated because no Postgres URL discovered from deployment/runtime env could be tied to the declared production Supabase/project ref by hostname match, pooler username match, or explicit approved target attestation. No backup command was run.
 
+
+## 2026-05-05 Provider-Native Supabase Backup Evidence
+
+A provider-backed backup discovery rerun was performed after the manual DB URL handoff was discarded as source of truth. The Supabase CLI was not installed on the spark-2 runner, but local secured Supabase CLI access was available through the existing Fortress Legal access-token file. Secret values were not printed.
+
+Production target proof:
+
+- Supabase projects list: `PASS`.
+- Production project selected by provider metadata: `Fortress Legal Production`.
+- Production project ref: `hms...liap` (partial-safe; full value not recorded in this doc).
+- Known staging ref separation: production ref is distinct from `ktppvqkiinlsmpsfiscr`.
+- Production region: `us-east-1`.
+
+Provider-native backup evidence:
+
+- Backup source: Supabase provider backup listing for the verified production project.
+- Backup evidence method: `supabase backups list --project-ref <production_ref> -o json`.
+- Backup type: provider-native physical backup.
+- Latest completed backup timestamp: `2026-05-05T11:09:03.536Z`.
+- Previous completed backup timestamp: `2026-05-05T02:29:26.703Z`.
+- Completed provider backups observed: `2`.
+- Latest backup status: `COMPLETED`.
+- Latest backup physical flag: `true`.
+- WAL-G enabled: `true`.
+- PITR enabled: `false`.
+- Dump file created by this run: `NO`; provider-native backup evidence was sufficient and safer than manual DB URL construction.
+- Backup file committed to repo: `NO`.
+
+Restore path:
+
+1. Verify the Supabase project is `Fortress Legal Production` with production ref `hms...liap`.
+2. In Supabase provider tooling, select the completed physical backup timestamp `2026-05-05T11:09:03.536Z` or a newer verified completed physical backup for the same production project.
+3. Require explicit production restore approval before any restore action.
+4. Restore only through provider-native Supabase restore tooling for the verified production project; do not restore by guessing against a copied DB URL.
+5. After restore, run the production smoke and legal safety checks: root/login shell, protected-route guard, legal readiness not falsely ready, legal API guarded/read-only state, and no legal DB/Qdrant/NAS/evidence/ingest/promotion/privilege/resolution mutation.
+
+Mutation statement:
+
+- Production DB app mutation: `NO`; provider backup listing only.
+- Legal DB mutation: `NO`.
+- Qdrant mutation: `NO`.
+- NAS/evidence mutation: `NO`.
+- Ingest/promotion/privilege/resolution action: `NO`.
+
 ## Backup Tooling Discovery
 
 Read-only tooling discovery found:
@@ -217,15 +261,16 @@ Do not place dump files in the git repository. Do not print database URLs, passw
 
 ## Current Gate Result
 
-- Production backup/snapshot evidence: `BLOCKED`.
-- Backup creation authorization flag: `NOT_USED_IN_AUTO_DISCOVERY`; previous hand-edited temp env was moved aside.
-- Production backup creation attempted: `NO`.
-- Vercel production env pull: `PASS`.
+- Production backup/snapshot evidence: `PASS`.
+- Backup evidence method: `PROVIDER_NATIVE_SUPABASE_BACKUP_LISTING`.
+- Production backup creation attempted: `NO`; provider-native completed backup evidence was used.
+- Vercel production env pull: `PASS`, but no DB URL candidate was selected.
 - Selected production DB variable: `NONE`.
-- Production Supabase ref recorded: `PRESENT_REDACTED` from production runtime env.
-- Production DB URL to Supabase ref proof: `MISSING`.
-- Production Supabase/DB target recorded: `PARTIAL_SUPABASE_REF_PRESENT_DB_TARGET_UNPROVEN`.
-- Restore path documented against concrete snapshot: `NO`.
+- Production Supabase ref recorded: `hms...liap` partial-safe.
+- Production DB URL to Supabase ref proof: `NOT_REQUIRED_FOR_PROVIDER_NATIVE_BACKUP_EVIDENCE`.
+- Production Supabase/DB target recorded: `PASS_PROVIDER_PROJECT_METADATA`.
+- Latest completed backup timestamp: `2026-05-05T11:09:03.536Z`.
+- Restore path documented against concrete snapshot: `YES`.
 - Production DB mutation: `NO`.
 - Legal DB mutation: `NO`.
 - Qdrant mutation: `NO`.
@@ -234,11 +279,4 @@ Do not place dump files in the git repository. Do not print database URLs, passw
 
 ## Required Next Action
 
-Provide one approved production database backup target proof path:
-
-1. a production Postgres URL whose hostname contains the production Supabase ref,
-2. a Supabase pooler URL whose username contains the production Supabase ref,
-3. provider-native Supabase backup/snapshot evidence for the redacted production ref, or
-4. a committed/approved production target attestation that explicitly binds the redacted production DB host to the production Supabase/project ref.
-
-After that proof exists, rerun backup creation with an approved backup storage location and `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`. Do not deploy until the backup/snapshot evidence matches the verified production target and the restore path is documented.
+The backup/snapshot gate is now closed for UI/backend deploy readiness by provider-native Supabase backup evidence. Before production deploy, record deploy authorization, previous/current deployment IDs, and production smoke scope. Full legal-data operations remain blocked until operator/legal decisions explicitly resolve or scope the legal readiness blockers.
