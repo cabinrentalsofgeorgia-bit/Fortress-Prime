@@ -1,5 +1,5 @@
 {
-  "source_dump": "/mnt/vol1_source/Backups/CPanel_Extracted/cabinre_legacy_migration_cut.sql",
+  "source_dump": "redacted-internal-source-dump",
   "insert_statements_processed": 6,
   "inserted_row_counts": {
     "menu_links": 580,
