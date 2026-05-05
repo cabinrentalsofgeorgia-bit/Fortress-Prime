@@ -1,7 +1,7 @@
 # Fortress Legal Production Readiness Audit
 
 Date: 2026-05-05
-Classification: PRODUCTION_DEPLOY_READY_LEGAL_OPS_BLOCKED
+Classification: PRODUCTION_DEPLOY_FAILED
 
 ## Executive Summary
 
@@ -94,11 +94,26 @@ Results:
 - `cb3d1a202` - authenticated-session UI certification.
 - `74806ee7c` - password-login E2E certification and browser path redaction.
 
+
+## Production Deployment Attempt - 2026-05-05
+
+- Deployment authorization: PRESENT from operator prompt for UI/backend deploy and read-only smoke only.
+- Deploy command: `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1 npx vercel --prod --yes`.
+- Deploy working directory: clean detached `d354339f6` checkout, `apps/command-center`.
+- Vercel project: `crog-ai-command-center`.
+- Deployment ID: `dpl_AqraMLyUH2FMD5sperEGLnWToMXV`.
+- Deployment URL: `https://crog-ai-command-center-k0dj2um4y-cabin-rentals-of-georgia.vercel.app`.
+- Deployment result: `FAILED`.
+- Failure summary: Vercel cloud build completed `next build` but failed because the app-root build environment could not resolve `../../scripts/sync-next-standalone-assets.mjs`, yielding `MODULE_NOT_FOUND` at `/scripts/sync-next-standalone-assets.mjs`.
+- Production smoke: NOT_RUN because deployment failed.
+- Rollback: NOT_EXECUTED; `https://crog-ai.com` still resolves to previous ready deployment `dpl_14JfuBDB1j14HTf2fdMdMjGUU5sE`.
+- Legal/data mutation: NO.
+
 ## Production Deploy Authorization
 
-- `FORTRESS_ALLOW_PRODUCTION_DEPLOY`: absent during this audit.
-- Production deploy: not attempted.
-- Production smoke: not attempted.
+- `FORTRESS_ALLOW_PRODUCTION_DEPLOY`: present for the 2026-05-05 deploy attempt by operator prompt.
+- Production deploy: attempted and failed during Vercel cloud build.
+- Production smoke: not attempted because deploy failed.
 
 ## Mutation Invariants
 
@@ -120,4 +135,4 @@ Results:
 
 ## Exact Next Action
 
-Production UI/backend deploy is ready for explicit deploy authorization from the backup, rollback, dependency, legal/compliance, and build/security gates. Do not deploy until `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1`, previous/current deployment IDs, and production smoke scope are recorded.
+Fix the Vercel production build root/script mismatch for `scripts/sync-next-standalone-assets.mjs`, rerun all pre-deploy gates, and redeploy only under the same UI/backend-only production authorization model. Do not claim legal-data readiness while legal/operator blockers remain unresolved.
