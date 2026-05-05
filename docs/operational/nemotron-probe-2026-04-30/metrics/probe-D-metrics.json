@@ -1,0 +1,15 @@
+{
+  "probe": "D",
+  "http_status": 200,
+  "wall_seconds": 94.53,
+  "content_chars": 5156,
+  "content_is_null": false,
+  "reasoning_chars": 4778,
+  "reasoning_is_null": false,
+  "finish_reason": "stop",
+  "prompt_tokens": 736,
+  "completion_tokens": 2255,
+  "total_tokens": 2991,
+  "first_50_content": "\n\n**Breach of Contract**\n\n| (a) Claim element | (b",
+  "first_50_reasoning": "We need to list each cause of action: breach of co"
+}

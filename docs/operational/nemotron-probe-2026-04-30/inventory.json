@@ -1,0 +1,30 @@
+{
+  "frontier_endpoint": "http://10.10.10.3:8000",
+  "frontier_host": "10.10.10.3 (spark-3 per ssh hostname)",
+  "vllm_version": "0.20.1rc1.dev96+gefdc95674.d20260430.cu132",
+  "container_name": "vllm_node",
+  "served_model": "nemotron-3-super",
+  "model_path": "/root/.cache/huggingface/nemotron-3-super-120b-nvfp4",
+  "max_model_len": 262144,
+  "max_num_seqs": 10,
+  "tensor_parallel_size": 2,
+  "distributed_executor_backend": "ray",
+  "accelerator_type": "GB10",
+  "kv_cache_dtype": "fp8",
+  "moe_backend": "cutlass",
+  "quantization": "nvfp4",
+  "reasoning_parser": "nemotron_v3",
+  "reasoning_config_flag_present": false,
+  "speculative_config_present": false,
+  "mtp_enabled": false,
+  "tool_call_parser": "qwen3_coder",
+  "enable_auto_tool_choice": true,
+  "enable_prefix_caching": true,
+  "attention_backend": "TRITON_ATTN",
+  "gpu_memory_utilization": 0.7,
+  "vllm_bug_exposure": {
+    "39103_reasoning_config_bricks_parser": "NOT EXPOSED — flag absent",
+    "39573_mtp_drops_thinking_budget": "NOT EXPOSED — speculative decoding disabled",
+    "25714_pre_0_18_0_no_budget_honor": "NOT EXPOSED — on 0.20.1rc1"
+  }
+}

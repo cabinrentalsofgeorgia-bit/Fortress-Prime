@@ -1,0 +1,15 @@
+{
+  "probe": "E",
+  "http_status": 200,
+  "wall_seconds": 144.11,
+  "content_chars": 5263,
+  "content_is_null": false,
+  "reasoning_chars": 10215,
+  "reasoning_is_null": false,
+  "finish_reason": "stop",
+  "prompt_tokens": 736,
+  "completion_tokens": 3445,
+  "total_tokens": 4181,
+  "first_50_content": "\n\n**Breach of Contract (92 Fish Trap Road Purchase",
+  "first_50_reasoning": "We need to identify the three causes of action fro"
+}
