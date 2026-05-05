@@ -5,16 +5,22 @@ Classification: PRODUCTION_BLOCKED_BACKUP_SNAPSHOT
 
 ## Executive Summary
 
-Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, and legal operations remain `NOT_READY_BY_DESIGN`. Production deploy was not attempted because production backup/snapshot evidence is missing and production deploy authorization is absent.
+Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, and legal operations remain `NOT_READY_BY_DESIGN`. Production deploy was not attempted because production backup/snapshot evidence is missing, the production Supabase/DB backup target is not recorded in local evidence, production backup creation authorization is absent, and production deploy authorization is absent.
 
 ## Production Target Identity
 
 - Operator standing classification: `PRODUCTION_TARGET_VERIFIED_DEPLOY_BLOCKED_PENDING_BACKUP_ROLLBACK_ADVISORY_LEGAL_GATES`.
 - Deployment provider/target observed: Vercel project `crog-ai-command-center`.
+- Vercel project id observed: `prj_u90XAUhroRxPGIXKYCowt0uqULDg`.
+- Vercel org/team id observed: `team_yGxCOcECYMqhFKB3Yve2wRVi`.
+- Vercel target environment observed: `production`.
 - Production backend/API target: `FORTRESS_BACKEND_BASE_URL` key observed, value redacted.
+- Production app URL: not recorded in local evidence; `VERCEL_URL` is empty in the local production env snapshot.
 - Production Supabase ref: not recorded in local evidence.
+- Production database host/ref: not recorded in local evidence.
 - Production Qdrant target: not recorded in local evidence.
 - Production NAS/evidence target: not recorded in local evidence.
+- Production deploy ID and previous deploy ID: not recorded in local evidence.
 
 ## Backup / Snapshot Gate
 
@@ -22,6 +28,9 @@ Fortress Legal staging UI is certified, dependency high/critical advisories have
 - Evidence file: `docs/operational/fortress-legal-production-backup-snapshot-gate-2026-05-05.md`.
 - Production backup/snapshot evidence: missing.
 - Backup creation authorization: absent.
+- Production Supabase/DB backup target: not recorded in local evidence.
+- Backup tooling discovery: Supabase CLI absent; `pg_dump` present at `/usr/bin/pg_dump`.
+- Existing backup script reviewed: `backend/scripts/g1_5_backup_fortress_shadow.sh`, rejected for this gate because it is a narrow legacy table backup and writes into the repo script directory.
 - Restore path: not documented against a concrete snapshot.
 
 ## Rollback Plan Gate
@@ -73,6 +82,7 @@ Results:
 - Browser/static localhost calls: NO.
 - Production deploy authorization: ABSENT.
 - Production backup creation authorization: ABSENT.
+- Production backup creation attempted: NO.
 
 ## Staging Certification References
 
@@ -98,11 +108,12 @@ Results:
 
 ## Remaining Blockers
 
-1. Provide current production backup/snapshot evidence or authorize backup creation with `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`.
-2. Add previous deployment ID/artifact and concrete rollback command before deploy.
-3. Provide explicit production deploy authorization with `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1` and a completed approval packet.
-4. Resolve or explicitly scope legal/operator blockers before claiming full legal-data production readiness.
+1. Record the exact production Supabase/project ref or production DB target.
+2. Provide current production backup/snapshot evidence matching that target, or authorize backup creation with `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`.
+3. Add previous deployment ID/artifact and concrete rollback command before deploy.
+4. Provide explicit production deploy authorization with `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1` and a completed approval packet.
+5. Resolve or explicitly scope legal/operator blockers before claiming full legal-data production readiness.
 
 ## Exact Next Action
 
-Attach current production backup/snapshot evidence matching the verified production target, or explicitly authorize backup creation. Do not deploy until that evidence is present.
+Attach current production backup/snapshot evidence matching the verified production target, or rerun with an explicit production Supabase/DB target and `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`. Do not deploy until that evidence is present and the restore path is documented.

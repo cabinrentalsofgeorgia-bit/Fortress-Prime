@@ -17,16 +17,18 @@ Status: TARGET VERIFIED BY OPERATOR; DEPLOY BLOCKED PENDING BACKUP / ROLLBACK / 
 
 Production approval must identify all production targets before any deploy or mutation:
 
-- Production domain: OPERATOR-VERIFIED; exact value not recorded in this packet.
+- Production domain: OPERATOR-VERIFIED; exact value not recorded in local evidence.
 - Deployment provider/target: Vercel project `crog-ai-command-center` observed in read-only local project metadata.
-- Production app URL: UNKNOWN in this packet.
+- Vercel project id: `prj_u90XAUhroRxPGIXKYCowt0uqULDg`.
+- Vercel org/team id: `team_yGxCOcECYMqhFKB3Yve2wRVi`.
+- Production app URL: not recorded in local evidence; `VERCEL_URL` is empty in the local production env snapshot.
 - Production API URL: `FORTRESS_BACKEND_BASE_URL` key observed in Vercel production env metadata; value redacted and not recorded.
 - Production Supabase project ref: UNKNOWN in this packet.
 - Production database host/ref: UNKNOWN in this packet.
 - Production Qdrant endpoint and collection names: UNKNOWN in this packet.
 - Production NAS/evidence mount or storage target: UNKNOWN in this packet.
-- Production environment variable source: Vercel production env metadata observed locally; secret values redacted.
-- Production branch/tag/commit: expected release branch `safety/foundation-audit-snapshot`, commit `2dfc51ef8` or later gate-closure commit.
+- Production environment variable source: Vercel production env metadata observed locally at `apps/command-center/.vercel/.env.production.local`; values redacted and not printed.
+- Production branch/tag/commit: expected release branch `safety/foundation-audit-snapshot`, commit `e8b1bd358` or later gate-closure commit.
 
 Operator standing classification: `PRODUCTION_TARGET_VERIFIED_DEPLOY_BLOCKED_PENDING_BACKUP_ROLLBACK_ADVISORY_LEGAL_GATES`.
 Staging targets must not be reused or inferred as production targets.
@@ -62,7 +64,7 @@ Before production deploy or mutation, attach evidence for:
 - Current production environment snapshot reference, secrets redacted:
 - Current production image/static artifact reference:
 
-If this evidence is missing, production remains blocked.
+If this evidence is missing, production remains blocked. The backup gate also requires the production Supabase/project ref or production DB target to be recorded before any backup command may run.
 
 ## Dependency Advisory Disposition
 
