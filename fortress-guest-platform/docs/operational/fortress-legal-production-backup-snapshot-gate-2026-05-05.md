@@ -92,6 +92,21 @@ Result: `PRODUCTION_BLOCKED_TARGET_APPROVAL`.
 
 No DB URL, password, or credential was printed. No backup command was rerun after the guard refusal. The production DB target remains ambiguous until `/tmp/fortress-production-backup.env` contains a numeric-port production Postgres URL that can be tied to the declared production Supabase/project ref.
 
+## 2026-05-05 Strict Target Validator Rerun
+
+The strict production target validator was run from commit `3041d4118`. Required env fields were present, but the redacted DB URL failed validation before target proof because it still contained placeholder or pasted command text.
+
+Result: `PRODUCTION_BLOCKED_TARGET_APPROVAL`.
+
+Validator result:
+
+- `FORTRESS_PRODUCTION_DB_URL`: `INVALID_PLACEHOLDER_OR_COMMAND_TEXT`.
+- Target proof was not evaluated because URL shape validation failed first.
+- Secret values printed: `NO`.
+- Production backup run: `NO`.
+
+Required correction: recreate `/tmp/fortress-production-backup.env` with a real production Postgres URL containing a numeric port and no placeholder or pasted command text. The DB URL must also be tied to the production Supabase/project ref by hostname match, username match, or explicit target attestation.
+
 ## Backup Tooling Discovery
 
 Read-only tooling discovery found:
