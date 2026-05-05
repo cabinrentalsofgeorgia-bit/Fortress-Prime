@@ -1,7 +1,7 @@
 # Fortress Legal Production Readiness Audit
 
 Date: 2026-05-05
-Classification: PRODUCTION_SMOKE_FAILED_ROLLED_BACK
+Classification: PRODUCTION_DEPLOYED_STATIC_ASSETS_SMOKE_PASSED_LEGAL_OPS_BLOCKED
 
 ## Executive Summary
 
@@ -155,3 +155,31 @@ Results:
 ## Exact Next Action
 
 Fix the production static asset serving/proxy/hosting issue causing `_next/static` HTTP 500 responses on `https://crog-ai.com`, then rerun deploy and smoke under the same UI/backend-only authorization model. Do not claim legal-data readiness while legal/operator blockers remain unresolved.
+
+
+## Static Asset Production Fix - 2026-05-05
+
+- Final classification: `PRODUCTION_DEPLOYED_STATIC_ASSETS_SMOKE_PASSED_LEGAL_OPS_BLOCKED`.
+- Root cause classification: `STALE_OR_BAD_DEPLOYMENT_ARTIFACT` on the custom-domain Cloudflare tunnel path.
+- Evidence: `crog-ai.com` routes through Cloudflare to `http://127.0.0.1:3005`; the prior port-3005 `next-server` process was running from a deleted standalone directory and rendered chunk hashes that no longer existed on disk.
+- Fix commit: `2cedcc16c` (`fix(deploy): restore production Next static asset serving`).
+- Fix summary: added a static-asset smoke guard, removed client-side localhost-only WebSocket fallback from production chunks, rebuilt from a clean checkout, redeployed Vercel production, replaced the Cloudflare-served local `.next` artifact with the matching clean build, and restarted `crog-ai-frontend.service`.
+- Vercel deployment ID: `dpl_9PFbhnbh51vYtz3C4L7zDcZbwVsM`.
+- Vercel deployment URL: `https://crog-ai-command-center-ngsa52jch-cabin-rentals-of-georgia.vercel.app`.
+- Custom-domain static smoke: PASS; root HTML HTTP 200, JS `/_next/static/chunks/02gvxgpfmpv-d.js` HTTP 200, CSS `/_next/static/chunks/08.6u19scv9s_.css` HTTP 200.
+- Production app smoke: PASS for authorized unauthenticated/read-only scope; root/login loaded, dashboard/legal guarded, no critical API failures, no localhost calls, no secret exposure.
+- Rollback executed: NO; smoke passed.
+- Legal/data mutation: NO.
+
+## Updated Production Standing
+
+- Production deploy: PASS for UI/backend/static asset scope.
+- Production smoke: PASS for authorized unauthenticated/read-only scope.
+- Authenticated production smoke: NOT_RUN; no authorized production-safe credentials/session supplied.
+- Legal readiness: `LEGAL_READINESS_NOT_READY_BY_DESIGN`.
+- Legal operations: `LEGAL_OPS_BLOCKED_PENDING_OPERATOR_LEGAL_DECISIONS`.
+- Real legal data status: `BLOCKED`.
+
+## Exact Next Action After Static Asset Fix
+
+Resolve the remaining operator/legal blockers before any full legal-data production readiness claim: production legal data remains blocked, production matter/user setup remains blocked, approved filenames and numeric document count remain pending, and legal/operator decisions are still required. Authenticated production smoke can be scheduled only with an authorized production-safe smoke account/session.
