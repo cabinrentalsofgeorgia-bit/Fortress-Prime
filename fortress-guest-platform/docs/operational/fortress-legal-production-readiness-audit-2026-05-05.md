@@ -5,7 +5,7 @@ Classification: PRODUCTION_DEPLOYED_STATIC_ASSETS_SMOKE_PASSED_LEGAL_OPS_BLOCKED
 
 ## Executive Summary
 
-Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, and provider-native Supabase backup evidence is now present. Production deploy was not attempted because deploy authorization is absent, and legal operations remain `NOT_READY_BY_DESIGN`.
+Fortress Legal staging UI is certified, dependency high/critical advisories have been remediated, rollback and legal/compliance gates are documented, provider-native Supabase backup evidence is present, and production UI/backend/static asset smoke has passed for the authorized read-only scope. Legal operations remain `NOT_READY_BY_DESIGN` and production legal-data activation is blocked pending explicit operator/legal approval evidence.
 
 ## Production Target Identity
 
@@ -183,3 +183,21 @@ Fix the production static asset serving/proxy/hosting issue causing `_next/stati
 ## Exact Next Action After Static Asset Fix
 
 Resolve the remaining operator/legal blockers before any full legal-data production readiness claim: production legal data remains blocked, production matter/user setup remains blocked, approved filenames and numeric document count remain pending, and legal/operator decisions are still required. Authenticated production smoke can be scheduled only with an authorized production-safe smoke account/session.
+
+## Final Legal Data Readiness Gate - 2026-05-05
+
+- Execution path: `PATH_B_BLOCKED_GATE_CLOSED`.
+- Evidence file: `docs/operational/fortress-legal-final-legal-data-readiness-gate-2026-05-05.md`.
+- Final legal-data classification: `BLOCKED_PENDING_APPROVAL_EVIDENCE`.
+- Reason: production UI/backend/static smoke is passed, but existing evidence does not explicitly authorize production legal-data upload, ingest, matter/user setup, exact filenames, numeric document count, data classification, retention, operation-specific rollback/delete, audit logging, or Qdrant/NAS write scope.
+- Production Supabase read-only preflight: project `hms...liap` active/healthy; auth users `0`, profiles `0`, matters `0`, storage objects `0`, `matter-documents` bucket present/private, RLS enabled on observed app tables.
+- Candidate legal-data inventory: metadata-only discovery found `83` candidate files under the curated 7IL Case II NAS directory; candidates are not approved files.
+- Production legal-data mutation: NO.
+- User creation: NO.
+- Matter creation: NO.
+- Document upload: NO.
+- Ingest: NO.
+- Qdrant/vector writes: NO.
+- NAS/evidence writes: NO, except operational git documentation.
+- Final standing production status remains: `PRODUCTION_DEPLOYED_STATIC_ASSETS_SMOKE_PASSED_LEGAL_OPS_BLOCKED`.
+- Production legal-data status: `BLOCKED_PENDING_APPROVAL_EVIDENCE`.
