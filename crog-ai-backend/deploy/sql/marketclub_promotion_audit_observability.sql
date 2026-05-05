@@ -56,7 +56,7 @@ SET (security_invoker = true);
 
 CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_lifecycle_timeline
 WITH (security_invoker = true) AS
-WITH latest_rollback_audit AS (
+WITH successful_rollback_audit AS (
     SELECT DISTINCT ON (a.execution_id)
         a.execution_id,
         a.rollback_status,
@@ -66,7 +66,8 @@ WITH latest_rollback_audit AS (
         a.attempted_at,
         a.completed_at
     FROM hedge_fund.signal_promotion_rollback_audits a
-    ORDER BY a.execution_id, a.attempted_at DESC
+    WHERE a.rollback_status = 'rolled_back'
+    ORDER BY a.execution_id, COALESCE(a.completed_at, a.attempted_at) DESC
 ),
 rollback_eligible AS (
     SELECT
@@ -207,9 +208,8 @@ SELECT
         'ids_hash', a.deleted_market_signal_ids_hash,
         'rollback_status', a.rollback_status
     ) AS meta
-FROM latest_rollback_audit a
-JOIN hedge_fund.signal_promotion_executions e ON e.id = a.execution_id
-WHERE a.rollback_status = 'rolled_back';
+FROM successful_rollback_audit a
+JOIN hedge_fund.signal_promotion_executions e ON e.id = a.execution_id;
 
 CREATE OR REPLACE VIEW hedge_fund.v_signal_promotion_reconciliation
 WITH (security_invoker = true) AS
@@ -224,7 +224,7 @@ WITH execution_base AS (
         COUNT(*) OVER (PARTITION BY e.acceptance_id, e.idempotency_key) AS executions_for_acceptance_key
     FROM hedge_fund.signal_promotion_executions e
 ),
-latest_rollback_audit AS (
+successful_rollback_audit AS (
     SELECT DISTINCT ON (a.execution_id)
         a.execution_id,
         a.rollback_status,
@@ -233,7 +233,8 @@ latest_rollback_audit AS (
         a.attempted_at,
         a.completed_at
     FROM hedge_fund.signal_promotion_rollback_audits a
-    ORDER BY a.execution_id, a.attempted_at DESC
+    WHERE a.rollback_status = 'rolled_back'
+    ORDER BY a.execution_id, COALESCE(a.completed_at, a.attempted_at) DESC
 ),
 row_rollup AS (
     SELECT
@@ -333,7 +334,7 @@ checks AS (
     LEFT JOIN execution_base e ON e.acceptance_id = a.id
     LEFT JOIN hedge_fund.signal_shadow_review_decisions d ON d.id = a.decision_record_id
     LEFT JOIN row_rollup r ON r.execution_id = e.id
-    LEFT JOIN latest_rollback_audit ra ON ra.execution_id = e.id
+    LEFT JOIN successful_rollback_audit ra ON ra.execution_id = e.id
     LEFT JOIN evidence_flags flags ON flags.decision_id = d.id
 ),
 classified AS (
