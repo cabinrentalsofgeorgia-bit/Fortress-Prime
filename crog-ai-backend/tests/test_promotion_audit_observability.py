@@ -98,6 +98,20 @@ def test_reconciliation_partial_rollback_returns_error() -> None:
     assert "END AS rollback_integrity" in sql
 
 
+def test_reconciliation_uses_successful_rollback_audit_after_repeat_noop() -> None:
+    sql = _audit_sql()
+
+    assert "successful_rollback_audit AS" in sql
+    assert "latest_rollback_audit" not in sql
+    assert "WHERE a.rollback_status = 'rolled_back'" in sql
+    assert (
+        "ORDER BY a.execution_id, COALESCE(a.completed_at, a.attempted_at) DESC"
+        in sql
+    )
+    assert "FROM successful_rollback_audit a" in sql
+    assert "LEFT JOIN successful_rollback_audit ra ON ra.execution_id = e.id" in sql
+
+
 def test_reconciliation_double_execute_attempt_keeps_idempotency_explicit() -> None:
     sql = _audit_sql()
 
