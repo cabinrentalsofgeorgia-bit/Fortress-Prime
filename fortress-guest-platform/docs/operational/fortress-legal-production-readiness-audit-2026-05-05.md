@@ -28,8 +28,10 @@ Fortress Legal staging UI is certified, dependency high/critical advisories have
 - Evidence file: `docs/operational/fortress-legal-production-backup-snapshot-gate-2026-05-05.md`.
 - Production backup/snapshot evidence: missing.
 - Backup creation authorization: absent.
+- Backup env handoff file: absent at `/tmp/fortress-production-backup.env` during the `63373212a` rerun.
 - Production Supabase/DB backup target: not recorded in local evidence.
-- Backup tooling discovery: Supabase CLI absent; `pg_dump` present at `/usr/bin/pg_dump`.
+- Backup target variables: `FORTRESS_PRODUCTION_SUPABASE_REF`, `FORTRESS_PRODUCTION_DB_HOST`, `FORTRESS_PRODUCTION_DB_URL`, `FORTRESS_PRODUCTION_BACKUP_DIR`, `FORTRESS_PRODUCTION_DOMAIN`, and `FORTRESS_PRODUCTION_DEPLOY_TARGET` absent.
+- Backup tooling discovery: Vercel CLI absent; Supabase CLI absent; `pg_dump` present at `/usr/bin/pg_dump`.
 - Existing backup script reviewed: `backend/scripts/g1_5_backup_fortress_shadow.sh`, rejected for this gate because it is a narrow legacy table backup and writes into the repo script directory.
 - Restore path: not documented against a concrete snapshot.
 
@@ -82,6 +84,7 @@ Results:
 - Browser/static localhost calls: NO.
 - Production deploy authorization: ABSENT.
 - Production backup creation authorization: ABSENT.
+- Production backup env handoff: ABSENT.
 - Production backup creation attempted: NO.
 
 ## Staging Certification References
@@ -108,11 +111,12 @@ Results:
 
 ## Remaining Blockers
 
-1. Record the exact production Supabase/project ref or production DB target.
-2. Provide current production backup/snapshot evidence matching that target, or authorize backup creation with `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`.
-3. Add previous deployment ID/artifact and concrete rollback command before deploy.
-4. Provide explicit production deploy authorization with `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1` and a completed approval packet.
-5. Resolve or explicitly scope legal/operator blockers before claiming full legal-data production readiness.
+1. Create `/tmp/fortress-production-backup.env` on spark-2 or otherwise provide the same values in the runner environment, with `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`.
+2. Record the exact production Supabase/project ref or production DB target.
+3. Provide current production backup/snapshot evidence matching that target, or authorize backup creation with `FORTRESS_ALLOW_PRODUCTION_BACKUP=1`.
+4. Add previous deployment ID/artifact and concrete rollback command before deploy.
+5. Provide explicit production deploy authorization with `FORTRESS_ALLOW_PRODUCTION_DEPLOY=1` and a completed approval packet.
+6. Resolve or explicitly scope legal/operator blockers before claiming full legal-data production readiness.
 
 ## Exact Next Action
 

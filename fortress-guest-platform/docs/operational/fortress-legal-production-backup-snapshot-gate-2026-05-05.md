@@ -36,10 +36,27 @@ Fields still missing from local evidence:
 
 The operator standing state treats the production target identity as verified, but backup creation cannot safely proceed until the production database/Supabase target is explicitly recorded and matched to the approved production target.
 
+## 2026-05-05 Backup Rerun Evidence
+
+An additional backup-gate rerun was performed from commit `63373212a`.
+
+- `/tmp/fortress-production-backup.env`: absent on spark-2.
+- `FORTRESS_ALLOW_PRODUCTION_BACKUP`: absent.
+- `FORTRESS_PRODUCTION_SUPABASE_REF`: absent.
+- `FORTRESS_PRODUCTION_DB_HOST`: absent.
+- `FORTRESS_PRODUCTION_DB_URL`: absent.
+- `FORTRESS_PRODUCTION_BACKUP_DIR`: absent.
+- `FORTRESS_PRODUCTION_DOMAIN`: absent.
+- `FORTRESS_PRODUCTION_DEPLOY_TARGET`: absent.
+- `FORTRESS_ALLOW_PRODUCTION_DEPLOY`: absent.
+
+Because no production backup authorization flag or production DB/Supabase target material was present, no production backup command was run.
+
 ## Backup Tooling Discovery
 
 Read-only tooling discovery found:
 
+- Vercel CLI: absent on the spark-2 runner.
 - Supabase CLI: absent on the spark-2 runner.
 - `pg_dump`: present at `/usr/bin/pg_dump`, PostgreSQL `16.13`.
 - Existing project backup script: `backend/scripts/g1_5_backup_fortress_shadow.sh`.
@@ -121,6 +138,7 @@ Do not place dump files in the git repository. Do not print database URLs, passw
 - Production backup/snapshot evidence: `BLOCKED`.
 - Backup creation authorization flag: `ABSENT`.
 - Production backup creation attempted: `NO`.
+- Backup env handoff file: `ABSENT`.
 - Production Supabase/DB target recorded: `NO`.
 - Restore path documented against concrete snapshot: `NO`.
 - Production DB mutation: `NO`.
