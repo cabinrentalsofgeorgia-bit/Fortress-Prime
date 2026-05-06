@@ -976,3 +976,32 @@ Final source-integrity visibility standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_INTEGRITY_VALIDATED`.
 - Product status: `SOURCE_INTEGRITY_VALIDATION_COMPLETE_WITH_UNRESOLVED_ITEMS`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Source Remediation Runtime Visibility Update
+
+Timestamp: `2026-05-06T09:28:49-04:00`
+
+- Source-remediation execution ID: `fortress-source-remediation-20260506-092630`.
+- Source-remediation manifest: `/mnt/fortress_nas/audits/fortress-source-remediation-20260506-092630.json`.
+- Source Remediation panel/API deployed: YES.
+- Verified Subset panel deployed: YES.
+- Refined Blocker Register deployed: YES.
+- Signoff Readiness Addendum deployed: YES.
+- Source blockers processed: `297`.
+- Verified subset item count: `0`.
+- Remaining blockers: `297`.
+- Unresolved unsupported/source-missing: `230`.
+- Unresolved page/chunk review: `65`.
+- Locked/privilege-limited: `2`.
+- `DRAFT / COUNSEL REVIEW REQUIRED` preserved: YES.
+- `COUNSEL_SIGNOFF_PENDING` preserved: YES.
+- Explicit signoff recorded: NO.
+- Public exposure check: unauthenticated source-remediation API returned HTTP `401`.
+- Locked/restricted handling: metadata-only; locked content not analyzed or exposed.
+- Authenticated Gary/operator source-remediation UI confirmation: PENDING.
+
+Current remediation visibility standing:
+
+- Production status: `PRODUCTION_SOURCE_REMEDIATION_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `SOURCE_REMEDIATION_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

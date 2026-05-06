@@ -342,3 +342,42 @@ Final source-integrity standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_INTEGRITY_VALIDATED`.
 - Product status: `SOURCE_INTEGRITY_VALIDATION_COMPLETE_WITH_UNRESOLVED_ITEMS`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Source Blocker Remediation Result - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T09:28:49-04:00`.
+- Source-remediation execution ID: `fortress-source-remediation-20260506-092630`.
+- Manifest path: `/mnt/fortress_nas/audits/fortress-source-remediation-20260506-092630.json`.
+- Signoff packet addendum attached: YES.
+- Updated signoff packet readiness: `FULL_PACKET_NOT_READY_DUE_TO_UNRESOLVED_BLOCKERS`.
+- Signoff status: `COUNSEL_SIGNOFF_PENDING`.
+- Explicit signoff recorded: NO.
+- Source blockers processed: `297`.
+- Resolved source verified: `0`.
+- Resolved corrected for review use: `0`.
+- Unresolved unsupported/source-missing: `230`.
+- Unresolved needs page/chunk review: `65`.
+- Unresolved locked/privilege-limited: `2`.
+- Remaining blockers: `297`.
+- Verified subset item count: `0`.
+- Limited signoff subset available: NO.
+- Authenticated source-remediation UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate source-validation records: NO.
+- Duplicate signoff packet records: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Schema/RLS/policy changes: NO.
+- Locked/restricted content analyzed or exposed: NO.
+
+Current remediation standing:
+
+- Production status: `PRODUCTION_SOURCE_REMEDIATION_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `SOURCE_REMEDIATION_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

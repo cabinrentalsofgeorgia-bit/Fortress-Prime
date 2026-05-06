@@ -214,3 +214,28 @@ Final standing state:
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
 
 Remaining blocker: all `297` source blockers remain open for source remediation and counsel/source review before any signoff decision. This confirmation proves production UI visibility only; it does not mark the packet source-verified for signoff use and does not complete counsel signoff.
+
+## Source Blocker Remediation Addendum - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T09:28:49-04:00`.
+- Source-remediation execution ID: `fortress-source-remediation-20260506-092630`.
+- Source-remediation manifest: `/mnt/fortress_nas/audits/fortress-source-remediation-20260506-092630.json`.
+- Source blockers processed: `297`.
+- Resolved source verified: `0`.
+- Resolved corrected for review use: `0`.
+- Unresolved unsupported/source-missing: `230`.
+- Unresolved needs page/chunk review: `65`.
+- Unresolved locked/privilege-limited: `2`.
+- Remaining blockers: `297`.
+- Verified subset item count: `0`.
+- Limited signoff subset available: NO.
+- Signoff packet readiness after remediation: `FULL_PACKET_NOT_READY_DUE_TO_UNRESOLVED_BLOCKERS`.
+- `COUNSEL_SIGNOFF_PENDING` preserved: YES.
+- Explicit signoff recorded: NO.
+- Authenticated remediation UI confirmation: PENDING.
+
+Current remediation standing:
+
+- Production status: `PRODUCTION_SOURCE_REMEDIATION_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `SOURCE_REMEDIATION_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
