@@ -9,6 +9,7 @@ import {
   useCounselSignoffPacket,
   useCounselSignoffReopen,
 } from "@/lib/legal-hooks";
+import { SourceIntegrityValidationPanel } from "./source-integrity-validation-panel";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -98,6 +99,8 @@ export function CounselSignoffStrategyPacket({ slug }: { slug: string }) {
           </Badge>
         </div>
       </div>
+
+      <SourceIntegrityValidationPanel slug={slug} />
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Packet Sections" value={data.sections.length} />

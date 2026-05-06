@@ -106,6 +106,36 @@ vi.mock("@/lib/legal-hooks", () => ({
   }),
   useCounselSignoffAction: () => ({ mutate: signoffMutate, isPending: false }),
   useCounselSignoffReopen: () => ({ mutate: reopenMutate, isPending: false }),
+  useSourceIntegrity: () => ({
+    isLoading: false,
+    error: null,
+    data: {
+      execution_id: "fortress-source-integrity-test",
+      signoff_packet_execution_id: "fortress-signoff-packet-test",
+      source_integrity_summary: {
+        total_material_items: 297,
+        checked: 297,
+        source_verified_for_review_use: 0,
+        partially_supported: 0,
+        unsupported: 0,
+        conflicting_sources: 0,
+        wrong_source: 0,
+        source_missing: 230,
+        needs_page_or_chunk_review: 67,
+        locked_or_privilege_limited: 0,
+        needs_counsel_review: 0,
+        signoff_blockers: 297,
+        source_validation_complete_percent: 100,
+        verified_subset_count: 0,
+        signoff_readiness_recommendation: "READY_FOR_COUNSEL_SOURCE_REVIEW",
+        counsel_signoff_pending: true,
+      },
+      correction_queue: [],
+      signoff_blockers: [],
+      verified_subset: [],
+      batch_results: [],
+    },
+  }),
 }));
 
 import { CounselSignoffStrategyPacket } from "@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet";
@@ -115,7 +145,7 @@ describe("CounselSignoffStrategyPacket", () => {
     render(<CounselSignoffStrategyPacket slug="fortress-legal-production-review" />);
 
     expect(screen.getByText("Strategy Packet / Counsel Signoff")).toBeInTheDocument();
-    expect(screen.getByText("DRAFT / COUNSEL REVIEW REQUIRED")).toBeInTheDocument();
+    expect(screen.getAllByText("DRAFT / COUNSEL REVIEW REQUIRED").length).toBeGreaterThan(0);
     expect(screen.getByText("NOT FINAL LEGAL CONCLUSION")).toBeInTheDocument();
     expect(screen.getByText("Validated / Unvalidated Issue Matrix")).toBeInTheDocument();
     expect(screen.getByText("Source Integrity Matrix")).toBeInTheDocument();

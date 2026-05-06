@@ -20,6 +20,7 @@ from backend.services.legal_counsel_signoff_packet import (
     reopen_signoff_packet,
 )
 from backend.services.legal_counsel_workbench import load_latest_workbench
+from backend.services.legal_source_integrity_validation import load_latest_source_integrity
 
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
@@ -135,3 +136,11 @@ async def post_counsel_signoff_reopen(
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Counsel signoff packet not found.") from None
+
+
+@router.get("/cases/{slug}/source-integrity", summary="Get source integrity validation results")
+async def get_source_integrity(slug: str):
+    packet = load_latest_source_integrity(slug)
+    if packet is None:
+        raise HTTPException(status_code=404, detail="Source integrity validation not found.")
+    return packet

@@ -170,6 +170,74 @@ async def test_counsel_signoff_packet_endpoint_returns_manifest(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_source_integrity_endpoint_returns_manifest_without_body_text(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_source_integrity",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-source-integrity-test",
+            "status": "SOURCE_INTEGRITY_VALIDATION_COMPLETE_WITH_UNRESOLVED_ITEMS",
+            "source_integrity_summary": {
+                "total_material_items": 297,
+                "checked": 297,
+                "source_verified_for_review_use": 0,
+                "source_missing": 230,
+                "needs_page_or_chunk_review": 67,
+                "signoff_blockers": 297,
+                "counsel_signoff_pending": True,
+            },
+            "records": [
+                {
+                    "item_id": "issue-01",
+                    "source_support_status": "source_missing",
+                    "source_refs_claimed": [{"document_id": "d1", "file_name": "safe-metadata.pdf"}],
+                    "source_notes": "No safe source reference is attached.",
+                }
+            ],
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/source-integrity")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_id"] == "fortress-source-integrity-test"
+    assert body["source_integrity_summary"]["counsel_signoff_pending"] is True
+    assert "document_body" not in response.text
+    assert "final_legal_conclusion" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_source_integrity_endpoint_returns_404_when_missing(monkeypatch):
+    monkeypatch.setattr(legal_workbench_api, "load_latest_source_integrity", lambda slug: None)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/missing/source-integrity")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     def fake_capture_signoff_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"

@@ -537,3 +537,111 @@ export interface CounselSignoffActionBody {
   scope_confirmed: boolean;
   notes?: string;
 }
+
+export type SourceSupportStatus =
+  | "source_verified_for_review_use"
+  | "partially_supported"
+  | "unsupported"
+  | "conflicting_sources"
+  | "wrong_source"
+  | "source_missing"
+  | "needs_page_or_chunk_review"
+  | "needs_more_evidence"
+  | "locked_or_privilege_limited"
+  | "duplicate_or_superseded"
+  | "not_applicable"
+  | "needs_counsel_review";
+
+export interface SourceIntegritySummary {
+  total_material_items: number;
+  checked: number;
+  source_verified_for_review_use: number;
+  partially_supported: number;
+  unsupported: number;
+  conflicting_sources: number;
+  wrong_source: number;
+  source_missing: number;
+  needs_page_or_chunk_review: number;
+  locked_or_privilege_limited: number;
+  needs_counsel_review: number;
+  signoff_blockers: number;
+  source_validation_complete_percent: number;
+  verified_subset_count: number;
+  signoff_readiness_recommendation: string;
+  counsel_signoff_pending: boolean;
+}
+
+export interface SourceIntegrityRecord {
+  source_validation_id: string;
+  item_id: string;
+  item_type: string;
+  item_title: string;
+  packet_section: string;
+  source_support_status: SourceSupportStatus;
+  source_check_status: string;
+  support_strength: string;
+  source_refs_claimed: unknown[];
+  source_refs_checked: unknown[];
+  locked_restricted_involved: boolean;
+  source_notes: string;
+  correction_needed: boolean;
+  correction_summary?: string | null;
+  unresolved_reason?: string | null;
+  counsel_review_required: boolean;
+  signoff_blocker: boolean;
+}
+
+export interface SourceIntegrityBatchResult {
+  item_type: string;
+  items_total: number;
+  checked: number;
+  verified: number;
+  partial: number;
+  unsupported: number;
+  conflicting: number;
+  locked_or_privilege_limited: number;
+  needs_page_or_chunk_review: number;
+  needs_counsel_review: number;
+  signoff_blockers: number;
+}
+
+export interface SourceIntegrityCorrectionQueueItem {
+  queue_id: string;
+  source_validation_id: string;
+  item_id: string;
+  item_type: string;
+  issue_category: string;
+  source_support_status: SourceSupportStatus;
+  reason: string;
+  suggested_correction?: string | null;
+  required_next_action: string;
+  priority: string;
+  signoff_blocker: boolean;
+  counsel_review_required: boolean;
+  linked_source_refs: unknown[];
+  locked_restricted_flag: boolean;
+}
+
+export interface SourceIntegrityResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  signoff_packet_execution_id: string;
+  validation_execution_id: string;
+  workbench_execution_id: string;
+  status: string;
+  source_validation_store: string;
+  records: SourceIntegrityRecord[];
+  batch_results: SourceIntegrityBatchResult[];
+  source_integrity_summary: SourceIntegritySummary;
+  correction_queue: SourceIntegrityCorrectionQueueItem[];
+  signoff_blockers: SourceIntegrityRecord[];
+  verified_subset: SourceIntegrityRecord[];
+  signoff_packet_readiness_update: {
+    previous_readiness_status: string;
+    new_readiness_status: string;
+    counsel_signoff_pending: boolean;
+    explicit_signoff_recorded: boolean;
+  };
+  manifest_path?: string;
+}
