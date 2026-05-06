@@ -29,6 +29,7 @@ import type {
   SourceIntegrityResponse,
   SourceLinkRepairResponse,
   SourceRemediationResponse,
+  TargetedSourceCompletionResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -51,6 +52,7 @@ const KEYS = {
   sourceIntegrity: (slug: string) => ["legal", "source-integrity", slug] as const,
   sourceRemediation: (slug: string) => ["legal", "source-remediation", slug] as const,
   sourceLinkRepair: (slug: string) => ["legal", "source-link-repair", slug] as const,
+  targetedSourceCompletion: (slug: string) => ["legal", "targeted-source-completion", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -164,6 +166,17 @@ export function useSourceLinkRepair(slug: string) {
     queryFn: () =>
       api.get<SourceLinkRepairResponse>(
         `/api/internal/legal/cases/${slug}/source-link-repair`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useTargetedSourceCompletion(slug: string) {
+  return useQuery({
+    queryKey: KEYS.targetedSourceCompletion(slug),
+    queryFn: () =>
+      api.get<TargetedSourceCompletionResponse>(
+        `/api/internal/legal/cases/${slug}/targeted-source-completion`,
       ),
     enabled: !!slug,
   });

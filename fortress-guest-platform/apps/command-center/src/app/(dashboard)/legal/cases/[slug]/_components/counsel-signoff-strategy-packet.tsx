@@ -12,6 +12,7 @@ import {
 import { SourceIntegrityValidationPanel } from "./source-integrity-validation-panel";
 import { SourceLinkRepairPanel } from "./source-link-repair-panel";
 import { SourceRemediationPanel } from "./source-remediation-panel";
+import { TargetedSourceCompletionPanel } from "./targeted-source-completion-panel";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -105,6 +106,7 @@ export function CounselSignoffStrategyPacket({ slug }: { slug: string }) {
       <SourceIntegrityValidationPanel slug={slug} />
       <SourceRemediationPanel slug={slug} />
       <SourceLinkRepairPanel slug={slug} />
+      <TargetedSourceCompletionPanel slug={slug} />
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Packet Sections" value={data.sections.length} />

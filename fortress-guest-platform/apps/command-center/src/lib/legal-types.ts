@@ -843,3 +843,118 @@ export interface SourceLinkRepairResponse {
   };
   manifest_path?: string;
 }
+
+export interface TargetedSourceCompletionRecord {
+  targeted_source_completion_id: string;
+  targeted_source_completion_execution_id: string;
+  source_link_repair_id: string;
+  source_remediation_id: string;
+  source_validation_id: string;
+  matter_slug: string;
+  item_id: string;
+  item_type: string;
+  track: string;
+  prior_state: SourceLinkRepairState;
+  final_state: SourceLinkRepairState;
+  completion_outcome: string;
+  verified_for_review_use: boolean;
+  signoff_blocker_after: boolean;
+  corrected_claim_summary?: string | null;
+  source_refs_before: unknown[];
+  source_refs_after: unknown[];
+  verification_method: string;
+  locked_restricted_involved: boolean;
+  counsel_review_required: boolean;
+  source_notes_safe: string;
+  required_next_action: string;
+  reviewer_safe_label: string;
+  version: number;
+  rollback_ref: string;
+  audit_hash?: string;
+}
+
+export interface TargetedSourceCompletionSummary {
+  starting_unresolved: number;
+  items_processed: number;
+  prior_verified_subset_count: number;
+  new_items_verified: number;
+  new_verified_subset_count: number;
+  verified_subset_delta: number;
+  remaining_unresolved: number;
+  verified_for_review_use: number;
+  corrected_verified_for_review_use: number;
+  partially_supported: number;
+  unsupported: number;
+  conflicting_sources: number;
+  needs_page_or_chunk_review: number;
+  needs_more_evidence: number;
+  needs_counsel_review: number;
+  locked_or_privilege_limited: number;
+  unable_to_check_safely: number;
+  track_results: {
+    track_a_page_chunk_review: {
+      items: number;
+      verified: number;
+      corrected: number;
+      partial: number;
+      unresolved: number;
+    };
+    track_b_unsupported_recheck: {
+      items: number;
+      verified: number;
+      corrected: number;
+      partial: number;
+      still_unsupported: number;
+    };
+    track_c_locked_privilege_limited: {
+      items: number;
+      preserved_metadata_only: number;
+    };
+  };
+  counsel_signoff_pending: boolean;
+}
+
+export interface TargetedSourceCompletionResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  source_link_repair_execution_id: string;
+  source_remediation_execution_id: string;
+  source_integrity_execution_id: string;
+  signoff_packet_execution_id: string;
+  status: string;
+  targeted_source_completion_store: string;
+  records: TargetedSourceCompletionRecord[];
+  completion_summary: TargetedSourceCompletionSummary;
+  packet_section_summary: Array<{
+    item_type: string;
+    item_count: number;
+    verified_subset_delta: number;
+    unresolved_count: number;
+  }>;
+  expanded_verified_subset: {
+    verified_subset_id: string;
+    prior_item_count: number;
+    new_item_count: number;
+    delta: number;
+    item_ids: string[];
+    new_item_ids: string[];
+    packet_sections_covered: string[];
+    excluded_item_count: number;
+    signoff_scope_recommendation: string;
+    prior_items: SourceLinkRepairRecord[];
+    new_items: TargetedSourceCompletionRecord[];
+  };
+  refined_unresolved_register: TargetedSourceCompletionRecord[];
+  signoff_readiness_addendum: {
+    targeted_source_completion_execution_id: string;
+    status: string;
+    verified_subset_status: string;
+    full_packet_ready: boolean;
+    limited_signoff_subset_available: boolean;
+    readiness_recommendation: string;
+    counsel_signoff_pending: boolean;
+    explicit_signoff_recorded: boolean;
+  };
+  manifest_path?: string;
+}
