@@ -620,3 +620,36 @@ Final standing state:
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
 
 Governance note: this confirms the AI-assisted litigation-intelligence review layer is production-visible and ready for Gary/operator review. It does not remove counsel-review requirements, does not convert AI outputs into final legal conclusions, and does not authorize unrestricted production legal operations beyond this approved review scope.
+
+## Counsel Review Workbench Visibility Status
+
+Timestamp: `2026-05-06T07:33:30-04:00`
+
+- Workbench execution ID: `fortress-counsel-review-20260506-073330`.
+- Source intelligence execution ID: `fortress-intel-20260506-041839`.
+- Evidence file: `docs/operational/fortress-legal-counsel-review-workbench-2026-05-06.md`.
+- Counsel workbench generation: COMPLETE.
+- Issue matrix records: `20`.
+- Evidence binder records: `17`.
+- Chronology review packet: COMPLETE over `180` events.
+- Contradiction triage records: `14`.
+- Entity dossier records: `40`.
+- Counsel questions/actions: `24`.
+- Consolidated review queue items: `18`.
+- Locked/restricted documents: `2`, preserved metadata-only.
+- Workbench manifest: `/mnt/fortress_nas/audits/fortress-counsel-review-20260506-073330.json`.
+- Backend API: `GET /api/internal/legal/cases/{slug}/counsel-workbench`.
+- Frontend panel: Counsel Review Workbench in the Deliberation tab.
+- Production restart: `fortress-backend.service` and `crog-ai-frontend.service` restarted and active.
+- Public exposure check: unauthenticated workbench API returned HTTP `401`.
+- Production matter route smoke: HTTP `200`.
+- Authenticated Gary UI confirmation of counsel workbench panel: PENDING.
+
+Current workbench-layer standing:
+
+- Production status: `PRODUCTION_COUNSEL_WORKBENCH_BACKEND_COMPLETE_UI_PENDING`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_REVIEW_WORKBENCH`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
+- Product status: `COUNSEL_WORKBENCH_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.
