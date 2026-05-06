@@ -303,6 +303,65 @@ async def test_source_remediation_endpoint_returns_404_when_missing(monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_source_link_repair_endpoint_returns_manifest_without_body_text(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_source_link_repair",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-source-link-repair-test",
+            "status": "SOURCE_LINK_REPAIR_COMPLETE_VERIFIED_SUBSET_READY",
+            "repair_summary": {
+                "total_blockers_processed": 297,
+                "verified_subset_count": 65,
+                "remaining_unresolved": 232,
+                "counsel_signoff_pending": True,
+            },
+            "verified_subset": {"item_count": 65, "items": []},
+            "refined_unresolved_register": [],
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/source-link-repair")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_id"] == "fortress-source-link-repair-test"
+    assert body["repair_summary"]["counsel_signoff_pending"] is True
+    assert "document_body" not in response.text
+    assert "final_legal_conclusion" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_source_link_repair_endpoint_returns_404_when_missing(monkeypatch):
+    monkeypatch.setattr(legal_workbench_api, "load_latest_source_link_repair", lambda slug: None)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/missing/source-link-repair")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     def fake_capture_signoff_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"

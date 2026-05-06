@@ -749,3 +749,97 @@ export interface SourceRemediationResponse {
   };
   manifest_path?: string;
 }
+
+export type SourceLinkRepairState =
+  | "verified_for_review_use"
+  | "corrected_verified_for_review_use"
+  | "partially_supported"
+  | "unsupported"
+  | "conflicting_sources"
+  | "wrong_source_unresolved"
+  | "needs_page_or_chunk_review"
+  | "needs_more_evidence"
+  | "needs_counsel_review"
+  | "locked_or_privilege_limited"
+  | "unable_to_check_safely";
+
+export interface SourceLinkRepairRecord {
+  source_link_repair_id: string;
+  source_link_repair_execution_id: string;
+  source_remediation_id: string;
+  source_validation_id: string;
+  matter_slug: string;
+  item_id: string;
+  item_type: string;
+  prior_remediation_outcome: SourceRemediationOutcome;
+  final_remediation_state: SourceLinkRepairState;
+  repair_outcome: string;
+  verified_for_review_use: boolean;
+  signoff_blocker_after: boolean;
+  corrected_claim_summary?: string | null;
+  source_refs_before: unknown[];
+  source_refs_after: unknown[];
+  verification_method: string;
+  locked_restricted_involved: boolean;
+  counsel_review_required: boolean;
+  source_notes_safe: string;
+  required_next_action: string;
+  reviewer_safe_label: string;
+  version: number;
+  rollback_ref: string;
+  audit_hash?: string;
+}
+
+export interface SourceLinkRepairSummary {
+  total_blockers_processed: number;
+  verified_for_review_use: number;
+  corrected_verified_for_review_use: number;
+  partially_supported: number;
+  unsupported: number;
+  conflicting_sources: number;
+  needs_page_or_chunk_review: number;
+  needs_more_evidence: number;
+  needs_counsel_review: number;
+  locked_or_privilege_limited: number;
+  unable_to_check_safely: number;
+  remaining_unresolved: number;
+  verified_subset_count: number;
+  counsel_signoff_pending: boolean;
+}
+
+export interface SourceLinkRepairResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  source_remediation_execution_id: string;
+  source_integrity_execution_id: string;
+  signoff_packet_execution_id: string;
+  status: string;
+  source_link_repair_store: string;
+  records: SourceLinkRepairRecord[];
+  repair_summary: SourceLinkRepairSummary;
+  packet_section_summary: Array<{
+    item_type: string;
+    item_count: number;
+    verified_subset_count: number;
+    unresolved_count: number;
+  }>;
+  verified_subset: {
+    verified_subset_id: string;
+    item_count: number;
+    item_ids: string[];
+    packet_sections_covered: string[];
+    excluded_item_count: number;
+    signoff_scope_recommendation: string;
+    items: SourceLinkRepairRecord[];
+  };
+  refined_unresolved_register: SourceLinkRepairRecord[];
+  signoff_readiness_addendum: {
+    source_link_repair_execution_id: string;
+    readiness_recommendation: string;
+    full_packet_ready: boolean;
+    counsel_signoff_pending: boolean;
+    explicit_signoff_recorded: boolean;
+  };
+  manifest_path?: string;
+}

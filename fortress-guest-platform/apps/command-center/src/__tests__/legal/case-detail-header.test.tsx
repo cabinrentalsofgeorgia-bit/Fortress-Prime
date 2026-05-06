@@ -32,6 +32,7 @@ vi.mock("@/lib/legal-hooks", () => ({
   useCounselSignoffReopen: () => ({ mutate: vi.fn(), isPending: false }),
   useSourceIntegrity: () => ({ data: null, isLoading: false, error: null }),
   useSourceRemediation: () => ({ data: null, isLoading: false, error: null }),
+  useSourceLinkRepair: () => ({ data: null, isLoading: false, error: null }),
   downloadKillSheetMarkdown: vi.fn(),
 }));
 vi.mock("@/lib/store", () => ({
