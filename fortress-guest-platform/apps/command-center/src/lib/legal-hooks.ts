@@ -19,6 +19,7 @@ import type {
   DiscoveryDraftPackDetail,
   CaseGraphSnapshot,
   LegalDeadline,
+  LimitedSignoffCandidateResponse,
   SanctionsAlertsResponse,
   DepositionKillSheetsResponse,
   CounselWorkbenchResponse,
@@ -53,6 +54,7 @@ const KEYS = {
   sourceRemediation: (slug: string) => ["legal", "source-remediation", slug] as const,
   sourceLinkRepair: (slug: string) => ["legal", "source-link-repair", slug] as const,
   targetedSourceCompletion: (slug: string) => ["legal", "targeted-source-completion", slug] as const,
+  limitedSignoffCandidate: (slug: string) => ["legal", "limited-signoff-candidate", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -177,6 +179,17 @@ export function useTargetedSourceCompletion(slug: string) {
     queryFn: () =>
       api.get<TargetedSourceCompletionResponse>(
         `/api/internal/legal/cases/${slug}/targeted-source-completion`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useLimitedSignoffCandidate(slug: string) {
+  return useQuery({
+    queryKey: KEYS.limitedSignoffCandidate(slug),
+    queryFn: () =>
+      api.get<LimitedSignoffCandidateResponse>(
+        `/api/internal/legal/cases/${slug}/limited-signoff-candidate`,
       ),
     enabled: !!slug,
   });

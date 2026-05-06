@@ -424,6 +424,69 @@ async def test_targeted_source_completion_endpoint_returns_404_when_missing(monk
 
 
 @pytest.mark.asyncio
+async def test_limited_signoff_candidate_endpoint_returns_manifest_without_body_text(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_limited_signoff_candidate",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-limited-signoff-candidate-test",
+            "status": "LIMITED_SIGNOFF_CANDIDATE_PACKET_READY",
+            "verified_subset_used": {"item_count": 65},
+            "tier_summary": {
+                "tier_1_count": 21,
+                "tier_2_count": 81,
+                "tier_3_count": 130,
+            },
+            "limited_signoff_candidate_packet": {
+                "included_item_count": 65,
+                "excluded_item_count": 232,
+                "counsel_signoff_pending": True,
+                "explicit_signoff_recorded": False,
+            },
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/limited-signoff-candidate")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_id"] == "fortress-limited-signoff-candidate-test"
+    assert body["limited_signoff_candidate_packet"]["explicit_signoff_recorded"] is False
+    assert "document_body" not in response.text
+    assert "final_legal_conclusion" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_limited_signoff_candidate_endpoint_returns_404_when_missing(monkeypatch):
+    monkeypatch.setattr(legal_workbench_api, "load_latest_limited_signoff_candidate", lambda slug: None)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/missing/limited-signoff-candidate")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     def fake_capture_signoff_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"

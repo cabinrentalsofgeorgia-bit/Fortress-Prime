@@ -958,3 +958,107 @@ export interface TargetedSourceCompletionResponse {
   };
   manifest_path?: string;
 }
+
+export interface LimitedSignoffExcludedItem {
+  limited_signoff_review_id: string;
+  source_record_id: string;
+  source_validation_id: string;
+  item_id: string;
+  item_type: string;
+  item_title: string;
+  materiality?: number | null;
+  confidence?: number | null;
+  materiality_tier: string;
+  blocker_type: string;
+  source_status: string;
+  candidate_outcome: string;
+  reason_excluded: string;
+  required_next_action: string;
+  owner_placeholder: string;
+  counsel_review_required: boolean;
+  evidence_needed: boolean;
+  can_proceed_without_this_item: boolean;
+  signoff_impact: string;
+  locked_restricted_involved: boolean;
+  audit_hash?: string;
+}
+
+export interface LimitedSignoffIncludedItem {
+  limited_signoff_item_id: string;
+  source_record_id: string;
+  item_id: string;
+  item_type: string;
+  source_status: string;
+  candidate_outcome: string;
+  source_refs_count: number;
+  counsel_review_required: boolean;
+  signoff_status: string;
+  legal_conclusion_status: string;
+  locked_restricted_involved: boolean;
+  safe_note: string;
+  audit_hash?: string;
+}
+
+export interface LimitedSignoffCandidateResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  targeted_source_completion_execution_id: string;
+  source_link_repair_execution_id: string;
+  signoff_packet_execution_id: string;
+  status: string;
+  packet_label: string;
+  governance_labels: string[];
+  packet_store: string;
+  verified_subset_used: {
+    item_count: number;
+    source: string;
+  };
+  high_materiality_source_review: {
+    items_reviewed: number;
+    items: LimitedSignoffExcludedItem[];
+  };
+  limited_signoff_candidate_packet: {
+    candidate_packet_id: string;
+    included_item_count: number;
+    excluded_item_count: number;
+    included_items: LimitedSignoffIncludedItem[];
+    packet_sections: Array<{
+      section_id: string;
+      title: string;
+      item_count: number;
+      counsel_review_required: boolean;
+      signoff_status: string;
+    }>;
+    section_summary: Array<{
+      item_type: string;
+      included: number;
+      excluded: number;
+    }>;
+    signoff_scope_recommendation: string;
+    counsel_signoff_pending: boolean;
+    explicit_signoff_recorded: boolean;
+  };
+  unresolved_blocker_register_v2: LimitedSignoffExcludedItem[];
+  tier_summary: {
+    tier_1_count: number;
+    tier_2_count: number;
+    tier_3_count: number;
+    excluded_from_packet: number;
+    requires_counsel_interpretation: number;
+    requires_more_evidence: number;
+    locked_privilege_limited: number;
+    unsupported: number;
+    hypothesis_context_only: number;
+  };
+  signoff_readiness_addendum: {
+    limited_signoff_candidate_execution_id: string;
+    limited_packet_available: boolean;
+    full_packet_ready: boolean;
+    remaining_unresolved: number;
+    readiness_recommendation: string;
+    counsel_signoff_pending: boolean;
+    explicit_signoff_recorded: boolean;
+  };
+  manifest_path?: string;
+}
