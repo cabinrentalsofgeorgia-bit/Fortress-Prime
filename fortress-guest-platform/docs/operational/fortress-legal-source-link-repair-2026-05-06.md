@@ -149,3 +149,52 @@ Backend test note: the local test runner warned that `TEST_DATABASE_URL` was not
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
 
 Governance note: source-link repair did not complete counsel signoff and did not create final legal conclusions. The verified subset is limited to review-use source-link routing and remains subject to counsel review.
+
+## Final Authenticated Source Link Repair UI Confirmation
+
+- Confirmation timestamp: `2026-05-06T10:48:37-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Source Link Repair panel visible: YES.
+- Verified Subset panel visible: YES.
+- Verified subset shows `15` corrected/source-link-verified items or UI-equivalent: YES.
+- Refined Unresolved Register visible: YES.
+- Unresolved register shows `282` unresolved source issues or UI-equivalent: YES.
+- Signoff Readiness Addendum visible: YES.
+- `COUNSEL_SIGNOFF_PENDING` visible or preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` visible or preserved: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Confidential document contents publicly exposed: NO.
+- Blocking UI/API errors preventing review: NO.
+
+Final confirmation-step mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant vectors: NO.
+- Duplicate source-link repair records: NO.
+- Duplicate source-remediation records: NO.
+- Duplicate signoff packet records: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Production deploy/restart: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final standing state:
+
+- Production status: `PRODUCTION_SOURCE_LINK_REPAIR_COMPLETE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_VERIFIED_STRATEGY_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_SOURCE_LINK_REPAIRED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_LINK_REPAIR_COMPLETE`.
+- Product status: `SOURCE_LINK_REPAIR_COMPLETE_VERIFIED_SUBSET_READY`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+Remaining blocker: `282` source issues remain unresolved. The 15-item verified subset is ready for counsel review routing only; broader packet signoff remains blocked.
