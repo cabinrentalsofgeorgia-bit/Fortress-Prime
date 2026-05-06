@@ -30,6 +30,7 @@ vi.mock("@/lib/legal-hooks", () => ({
   useCounselSignoffPacket: () => ({ data: null, isLoading: false, error: null }),
   useCounselSignoffAction: () => ({ mutate: vi.fn(), isPending: false }),
   useCounselSignoffReopen: () => ({ mutate: vi.fn(), isPending: false }),
+  useSourceIntegrity: () => ({ data: null, isLoading: false, error: null }),
   downloadKillSheetMarkdown: vi.fn(),
 }));
 vi.mock("@/lib/store", () => ({
