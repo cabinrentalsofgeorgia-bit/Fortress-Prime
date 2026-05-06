@@ -350,3 +350,46 @@ Updated standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_AND_VALIDATION_COMPLETE`.
 - Product status: `COUNSEL_VALIDATION_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+## Final Counsel Validation Workflow UI Confirmation - 2026-05-06
+
+- Confirmation timestamp: `2026-05-06T08:25:31-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Counsel Validation default tab visible: YES.
+- Validation summary visible: YES.
+- Validation queues visible: YES.
+- Accept / reject / correct controls visible: YES.
+- Source-check controls visible: YES.
+- Notes capability visible or available through validation action payload: YES.
+- Audit/history visible or accessible: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` posture preserved: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Unauthenticated validation API remains guarded: YES.
+- Blocking UI/API errors preventing review: NO.
+
+Final confirmation-step mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate workbench records: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Production deploy/restart: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final standing state:
+
+- Production status: `PRODUCTION_COUNSEL_VALIDATION_WORKFLOW_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_VALIDATION_WORKFLOW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_AND_VALIDATION_COMPLETE`.
+- Product status: `COUNSEL_VALIDATION_WORKFLOW_READY_FOR_GARY_AND_COUNSEL`.
+- Counsel status: `COUNSEL_REVIEW_IN_PROGRESS`.
