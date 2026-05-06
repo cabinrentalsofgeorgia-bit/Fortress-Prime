@@ -1350,3 +1350,64 @@ Current limited signoff candidate standing:
 - Production status: `PRODUCTION_LIMITED_SIGNOFF_PACKET_BACKEND_COMPLETE_UI_PENDING`.
 - Product status: `LIMITED_SIGNOFF_PACKET_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Limited Signoff Candidate Packet UI Confirmation - 2026-05-06
+
+- Confirmation timestamp: `2026-05-06T12:08:05-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Limited Signoff Candidate Packet panel visible: YES.
+- High-Materiality Source Review visible: YES.
+- Excluded Items Register visible: YES.
+- Remaining Blockers by tier visible: YES.
+- Signoff Scope Recommendation visible or reviewable: YES.
+- `COUNSEL_SIGNOFF_PENDING` visible or preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` visible or preserved: YES.
+- Locked/restricted metadata-only handling preserved: YES.
+- Public confidential document contents exposure: NO.
+- New raw upload/ingest/document rows/Qdrant vectors/schema/RLS/policy/privilege changes: NO.
+- Explicit signoff recorded: NO.
+- Counsel signoff complete: NO.
+
+Final limited signoff candidate standing:
+
+- Production status: `PRODUCTION_LIMITED_SIGNOFF_PACKET_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_LIMITED_SIGNOFF_PACKET_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_LIMITED_SIGNOFF_PACKET_READY_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_LIMITED_SIGNOFF_CANDIDATE_COMPLETE`.
+- Product status: `LIMITED_SIGNOFF_CANDIDATE_PACKET_READY_FOR_COUNSEL_REVIEW`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Counsel Signoff Decision Workflow - 2026-05-06
+
+Timestamp: `2026-05-06T12:23:16-04:00`
+
+- Decision execution ID: `fortress-signoff-decision-20260506-162035`.
+- Decision manifest: `/mnt/fortress_nas/audits/fortress-signoff-decision-20260506-162035.json`.
+- Limited packet execution ID: `fortress-limited-signoff-candidate-20260506-153336`.
+- Packet version: 1.
+- Packet hash/checksum: `ddb458db65e461dd07101197057293eb23b42a58ac2d79b0a9f41484adb6905a`.
+- Included verified subset: 65.
+- Excluded unresolved items: 232.
+- Decision paths available: 7.
+- UI/API change deployed by runtime restart: YES, `fortress-backend.service` and `crog-ai-frontend.service`.
+- Production smoke `/`: 200.
+- Production smoke matter route: 200.
+- Unauthenticated decision API: 401.
+- Explicit decision recorded: NO.
+- Counsel signoff recorded: NO.
+- External submission authority: NOT_AUTHORIZED.
+- Final legal conclusions created: NO.
+- Locked/restricted documents remain metadata-only: YES.
+- New raw document upload, ingest, document rows, Qdrant vectors, schema changes, RLS/policy changes, or privilege changes: NO.
+
+Final labels:
+
+- Production status: `PRODUCTION_COUNSEL_SIGNOFF_DECISION_WORKFLOW_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_SIGNOFF_DECISION_WORKFLOW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_LIMITED_SIGNOFF_PACKET_READY_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_DECISION_WORKFLOW_COMPLETE`.
+- Product status: `COUNSEL_SIGNOFF_DECISION_WORKFLOW_READY`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

@@ -1094,3 +1094,29 @@ Final targeted source completion visibility standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_TARGETED_SOURCE_COMPLETION_COMPLETE`.
 - Product status: `TARGETED_SOURCE_COMPLETION_VERIFIED_SUBSET_EXPANDED`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Counsel Signoff Decision Workflow Visibility Update
+
+Timestamp: `2026-05-06T12:23:16-04:00`
+
+- Decision execution ID: `fortress-signoff-decision-20260506-162035`.
+- Counsel Signoff Decision panel deployed: YES.
+- Decision readiness summary deployed: YES.
+- Packet checksum display deployed: YES.
+- Decision path selector deployed: YES.
+- Explicit confirmation checklist deployed: YES.
+- Revision request / partial signoff / return-to-source-remediation controls deployed: YES.
+- `COUNSEL_SIGNOFF_PENDING` label preserved: YES.
+- No external submission authority banner deployed: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` and `NOT FINAL LEGAL CONCLUSION` labels preserved: YES.
+- Unauthenticated decision API blocked: YES, 401.
+- Production smoke `/`: 200.
+- Production smoke matter route: 200.
+- Confidential document contents publicly exposed: NO.
+- Explicit counsel signoff recorded: NO.
+
+Final visibility standing:
+
+- Production status: `PRODUCTION_COUNSEL_SIGNOFF_DECISION_WORKFLOW_ACTIVE`.
+- Product status: `COUNSEL_SIGNOFF_DECISION_WORKFLOW_READY`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

@@ -540,3 +540,50 @@ Current limited signoff candidate standing:
 - Production status: `PRODUCTION_LIMITED_SIGNOFF_PACKET_BACKEND_COMPLETE_UI_PENDING`.
 - Product status: `LIMITED_SIGNOFF_PACKET_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Final Limited Signoff Candidate Packet UI Confirmation - 2026-05-06
+
+- Confirmation timestamp: `2026-05-06T12:08:05-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Limited Signoff Candidate Packet panel visible: YES.
+- High-Materiality Source Review visible: YES.
+- Excluded Items Register visible: YES.
+- Remaining Blockers by tier visible: YES.
+- Signoff Scope Recommendation visible or reviewable: YES.
+- `COUNSEL_SIGNOFF_PENDING` visible or preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` visible or preserved: YES.
+- Locked/restricted metadata-only handling preserved: YES.
+- Public confidential document contents exposure: NO.
+- Explicit signoff recorded: NO.
+- Final legal conclusion recorded: NO.
+
+Final limited signoff candidate standing:
+
+- Production status: `PRODUCTION_LIMITED_SIGNOFF_PACKET_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_LIMITED_SIGNOFF_PACKET_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_LIMITED_SIGNOFF_PACKET_READY_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_LIMITED_SIGNOFF_CANDIDATE_COMPLETE`.
+- Product status: `LIMITED_SIGNOFF_CANDIDATE_PACKET_READY_FOR_COUNSEL_REVIEW`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Limited Packet Decision Workflow Update
+
+Timestamp: `2026-05-06T12:23:16-04:00`
+
+- Decision execution ID: `fortress-signoff-decision-20260506-162035`.
+- Decision workflow store: file-backed manifest under `/mnt/fortress_nas/audits`.
+- Packet hash/checksum display: implemented for the limited signoff candidate packet.
+- Explicit decision paths: implemented for operator acknowledgment, counsel approval, partial approval, rejection, revision request, source-remediation return, and deferral.
+- Signoff auto-created: NO.
+- Explicit counsel signoff recorded: NO.
+- External submission authority: NOT_AUTHORIZED.
+- Final legal conclusions created: NO.
+- Counsel status remains: `COUNSEL_SIGNOFF_PENDING`.
+
+Final decision workflow standing:
+
+- Production status: `PRODUCTION_COUNSEL_SIGNOFF_DECISION_WORKFLOW_ACTIVE`.
+- Product status: `COUNSEL_SIGNOFF_DECISION_WORKFLOW_READY`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
