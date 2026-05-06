@@ -330,3 +330,75 @@ Updated standing state:
 Exact next action:
 
 - Run the Gary-only reset command from a real production operator terminal so the new password can be entered at the hidden prompt, then verify Gary login and Fortress Legal UI visibility.
+
+## Production Staff Login Diagnosis Without Reset - 2026-05-05
+
+- Continuation timestamp: `2026-05-05T23:20:41-04:00`.
+- Current operator instruction: diagnose Gary's known valid `crog-ai.com` login without resetting the password.
+- Password reset: NOT_PERFORMED.
+- Password/token/cookie/hash/DB URL output: NO.
+
+Login path diagnosis:
+
+- Login screen route: `/login`.
+- Login form endpoint: same-origin `/api/auth/login`.
+- Command Center BFF route: `apps/command-center/src/app/api/auth/login/route.ts`.
+- Direct backend route: FastAPI `/api/auth/login`.
+- Staff model/table: `backend.models.staff.StaffUser` / `public.staff_users`.
+- Email normalization: lower-case email lookup.
+- Password field: `password_hash`.
+- Password verifier: `backend.core.security.verify_password()`.
+- Expected hash family: bcrypt.
+- Session creation: RS256 JWT returned by FastAPI and stored by BFF in `fortress_session`.
+- Generic failed login response: `Invalid email or password`.
+
+Read-only production auth checks:
+
+- Gary exact email lookup: FOUND.
+- Gary normalized email lookup: FOUND.
+- Gary active: YES.
+- Gary role: `super_admin`.
+- Gary password hash field: PRESENT, not printed.
+- Gary hash family: bcrypt-compatible.
+- Lockout/failed-login columns: NOT_PRESENT.
+- Login endpoint and DB check point to the same model/table: YES.
+
+Classification:
+
+- `LOGIN_ENDPOINT_EXPECTED`.
+- `UNKNOWN_LOGIN_FAILURE_PENDING_PASSWORD_MATCH_VERIFY`.
+
+Verify-only tooling:
+
+- Added `backend/scripts/verify_gary_staff_password.py`.
+- Required flag: `FORTRESS_ALLOW_STAFF_PASSWORD_VERIFY=1`.
+- Scope: Gary-only, read-only.
+- Input: hidden no-echo prompt.
+- Output: safe metadata only; no password/hash/token/session data.
+- Uses exact production `verify_password()` helper.
+- Writes/sessions: NO.
+
+Focused verification:
+
+- Python compile: PASS.
+- Help output: PASS.
+- Non-Gary email refusal: PASS.
+- Missing authorization flag refusal: PASS.
+- Static output scan: PASS.
+
+Password match verification:
+
+- NOT_RUN_IN_CODEX_CHAT because Gary must enter the password manually in a real hidden terminal prompt.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_AUTONOMOUS_INTAKE_BACKEND_COMPLETE`
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`
+- Legal operations status: `LEGAL_OPS_BACKEND_INTAKE_COMPLETE_APP_VISIBILITY_PENDING`
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBILITY_UNVERIFIED`
+- Pilot status: `BLOCKED_BY_PRODUCTION_OPERATOR_PASSWORD_VERIFY`
+
+Exact next action:
+
+- Run the verify-only script from a real production operator terminal. If `PASSWORD_MATCH yes`, continue diagnosing BFF gateway/direct-backend/session-cookie behavior. If `PASSWORD_MATCH no`, stop and require Gary's explicit decision before reset or backend switch.

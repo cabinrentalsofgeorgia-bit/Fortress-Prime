@@ -151,6 +151,102 @@ Checks still pending after successful login:
 
 Use the normal Command Center staff password-reset path with a non-printed password/secret for `gary@cabin-rentals-of-georgia.com`, then have Gary log into `https://crog-ai.com` and verify the Fortress Legal review workspace/document metadata in the production UI.
 
+## Staff Login Path Diagnosis
+
+Timestamp: 2026-05-05T23:20:41-04:00
+
+Runtime approval source:
+
+- Current operator instruction to diagnose Gary's known valid `crog-ai.com` credentials without resetting the password.
+
+Login path:
+
+- Frontend route: `/login`
+- Form submit endpoint: same-origin `/api/auth/login`
+- BFF route: `apps/command-center/src/app/api/auth/login/route.ts`
+- BFF behavior: tries configured gateway SSO first, then direct FGP FastAPI login fallback.
+- Direct backend endpoint: FastAPI `/api/auth/login`
+- Staff table/model: `public.staff_users` / `backend.models.staff.StaffUser`
+- Email normalization: lower-case email lookup.
+- Password field: `password_hash`
+- Verifier: `backend.core.security.verify_password()`
+- Hash family expected: bcrypt `$2a$`, `$2b$`, or `$2y$`
+- Session issuance: RS256 JWT from FastAPI; BFF stores it in `fortress_session`.
+- Generic failure path: missing user or password mismatch returns `Invalid email or password`.
+
+Read-only production auth checks:
+
+- Exact Gary email lookup: FOUND
+- Normalized Gary email lookup: FOUND
+- Gary active: YES
+- Gary role: `super_admin`
+- Password hash field: PRESENT, not printed
+- Hash algorithm family: bcrypt-compatible
+- Lockout/failed-login columns: NOT_PRESENT in `staff_users`
+- Login endpoint and read-only DB check use the same code model/table: YES
+
+Classification:
+
+- `LOGIN_ENDPOINT_EXPECTED`
+- `UNKNOWN_LOGIN_FAILURE_PENDING_PASSWORD_MATCH_VERIFY`
+
+No evidence found for:
+
+- `LOGIN_ENDPOINT_WRONG_ROUTE`
+- `LOGIN_BACKEND_WRONG_TABLE`
+- `EMAIL_LOOKUP_MISMATCH`
+- `PASSWORD_HASH_FIELD_MISMATCH`
+- `STAFF_USER_INACTIVE_OR_LOCKED`
+
+## Verify-Only Password Check Added
+
+Timestamp: 2026-05-05T23:20:41-04:00
+
+Reset policy for this continuation:
+
+- Password reset: PROHIBITED_BY_CURRENT_SCOPE
+- Password pasted into Codex: PROHIBITED
+
+Implementation:
+
+- Added `backend/scripts/verify_gary_staff_password.py`.
+- Exact target email: `gary@cabin-rentals-of-georgia.com`.
+- Required flag: `FORTRESS_ALLOW_STAFF_PASSWORD_VERIFY=1`.
+- Password input method: hidden `getpass` prompt.
+- Verification method: exact production `verify_password()` helper.
+- Database writes: NO.
+- Session creation: NO.
+- User creation: NO.
+- Printed output: only `USER_FOUND`, `ACTIVE`, `ROLE`, `PASSWORD_MATCH`, `HASH_ALGORITHM_MATCH`, `LOGIN_BACKEND_TABLE`, and `EMAIL_NORMALIZATION_USED`.
+
+Focused checks:
+
+- Python compile: PASS.
+- Help output: PASS.
+- Non-Gary email refusal: PASS.
+- Missing authorization flag refusal: PASS.
+- Static output scan: PASS.
+
+Password match verification:
+
+- NOT_RUN_IN_CODEX_CHAT.
+
+Reason:
+
+- Gary must enter the password manually at a real hidden terminal prompt. The password must not be pasted into Codex or passed through assistant/tool input.
+
+Current standing:
+
+- Production status: `PRODUCTION_AUTONOMOUS_INTAKE_BACKEND_COMPLETE`
+- Legal operations status: `LEGAL_OPS_BACKEND_INTAKE_COMPLETE_APP_VISIBILITY_PENDING`
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBILITY_UNVERIFIED`
+- Pilot status: `BLOCKED_BY_PRODUCTION_OPERATOR_PASSWORD_VERIFY`
+
+Next branch:
+
+- If `PASSWORD_MATCH yes`, diagnose BFF gateway/direct-backend/session-cookie behavior as the remaining login failure.
+- If `PASSWORD_MATCH no`, classify as `PASSWORD_HASH_DOES_NOT_MATCH_OPERATOR_KNOWN_PASSWORD` and require Gary's explicit decision before any reset or backend switch.
+
 ## Gary-Only Reset Command Added
 
 Timestamp: 2026-05-05T23:13:05-04:00
@@ -201,3 +297,9 @@ Current standing remains:
 Remaining operator action:
 
 - Run the Gary-only reset command from a real terminal attached to the production operator environment, enter the new password only at the hidden prompt, then verify Gary login and Fortress Legal UI visibility.
+
+Superseded by current operator instruction:
+
+- Do not reset Gary's password in this continuation unless a password hash mismatch is conclusively proven and Gary explicitly chooses that path later.
+- Current next action is the verify-only hidden-prompt password check recorded above, not a reset.
+- Current pilot status is `BLOCKED_BY_PRODUCTION_OPERATOR_PASSWORD_VERIFY`.
