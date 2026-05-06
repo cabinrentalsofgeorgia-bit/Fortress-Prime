@@ -740,3 +740,44 @@ Updated standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
 - Product status: `COUNSEL_WORKBENCH_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+## Counsel Workbench UI Mapping Repair - 2026-05-06
+
+- Prior authenticated UI observation: Document/Vault and litigation-intelligence panels visible; Counsel Review Workbench sections not visible.
+- Root cause classification: `COUNSEL_WORKBENCH_COMPONENT_EXISTS_NAV_HIDDEN`.
+- Workbench manifest: `/mnt/fortress_nas/audits/fortress-counsel-review-20260506-073330.json`.
+- Fix commit: `232055866` (`fix(legal): surface counsel review workbench in matter UI`).
+- Fix applied: first-class default `Workbench` tab added to the matter UI.
+- Fix applied: required workbench section labels exposed for Issue Matrix, Evidence Binders, Contradiction Triage, Entity Dossier, Theory / Counter-Theory, Counsel Questions / Actions, and Review Queue.
+- Workbench regeneration: NOT_PERFORMED.
+- Backend API change: NOT_REQUIRED.
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Production root smoke: HTTP `200`.
+- Production matter-route smoke: HTTP `200`.
+- Public exposure check: unauthenticated workbench API returned HTTP `401`.
+- Authenticated Gary/operator post-repair UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate derived records: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_REVIEW_WORKBENCH`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
+- Product status: `COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.

@@ -653,3 +653,27 @@ Current workbench-layer standing:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
 - Product status: `COUNSEL_WORKBENCH_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+## Counsel Workbench UI Mapping Repair
+
+Timestamp: `2026-05-06T07:51:36-04:00`
+
+- Prior authenticated UI observation: litigation intelligence was visible, but Counsel Review Workbench sections were not visible.
+- Root cause classification: `COUNSEL_WORKBENCH_COMPONENT_EXISTS_NAV_HIDDEN`.
+- Fix commit: `232055866`.
+- Fix applied: matter page now has a first-class default `Workbench` tab.
+- Visible workbench sections in deployed bundle: Issue Matrix, Evidence Binders, Contradiction Triage, Entity Dossier, Theory / Counter-Theory, Counsel Questions / Actions, Review Queue.
+- Draft/counsel-review labeling preserved: YES.
+- Locked/restricted metadata-only handling preserved: YES.
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Public exposure check: unauthenticated workbench API returned HTTP `401`.
+- Authenticated Gary/operator post-repair UI confirmation: PENDING.
+
+Current workbench visibility standing:
+
+- Production status: `PRODUCTION_COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_REVIEW_WORKBENCH`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
+- Product status: `COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.

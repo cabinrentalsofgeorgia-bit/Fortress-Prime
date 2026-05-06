@@ -162,3 +162,49 @@ Exact remaining action:
 
 - Gary/operator must refresh the authenticated production matter page and confirm the Counsel Review Workbench panel is visible with issue matrix, evidence binders, contradiction triage, theory/counter-theory packet indicators, counsel questions/actions, review queue, and `DRAFT / COUNSEL REVIEW REQUIRED` labeling.
 
+## Counsel Workbench UI Mapping Repair - 2026-05-06
+
+- Repair timestamp: `2026-05-06T07:51:36-04:00`.
+- Prior authenticated UI observation: Document/Vault and litigation-intelligence panels were visible, but the Counsel Review Workbench sections were not visible.
+- Root cause classification: `COUNSEL_WORKBENCH_COMPONENT_EXISTS_NAV_HIDDEN`.
+- Secondary UI gap: workbench overview did not explicitly expose Entity Dossier and Theory / Counter-Theory section labels.
+- Fix applied: added a first-class `Workbench` tab to the matter command deck and made it the default tab for the matter detail page.
+- Fix applied: expanded the Counsel Review Workbench panel to show Issue Matrix, Evidence Binders, Contradiction Triage, Entity Dossier, Theory / Counter-Theory, Counsel Questions / Actions, and Review Queue.
+- Fix applied: preserved `DRAFT / COUNSEL REVIEW REQUIRED` labeling and locked/restricted metadata-only handling copy.
+- Backend API change required: NO.
+- Workbench regeneration required: NO.
+- Manifest path retained: `/mnt/fortress_nas/audits/fortress-counsel-review-20260506-073330.json`.
+- Code commit: `232055866` (`fix(legal): surface counsel review workbench in matter UI`).
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Backend restart: NOT_REQUIRED.
+- Production root smoke: HTTP `200`.
+- Production matter route smoke: HTTP `200`.
+- Public exposure check: unauthenticated workbench API returned HTTP `401`.
+- Live bundle contains workbench labels: YES.
+- Authenticated Gary/operator post-repair UI confirmation: PENDING.
+
+Mutation invariants for mapping repair:
+
+- Workbench records regenerated: NO.
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate derived records: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_REVIEW_WORKBENCH`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
+- Product status: `COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.

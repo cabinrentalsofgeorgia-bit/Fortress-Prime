@@ -259,3 +259,25 @@ Updated standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
 - Product status: `COUNSEL_WORKBENCH_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+## Counsel Workbench UI Mapping Repair - 2026-05-06
+
+- Workbench execution ID: `fortress-counsel-review-20260506-073330`.
+- Prior authenticated UI observation: core intelligence was visible, but Counsel Review Workbench sections were not visible.
+- Root cause classification: `COUNSEL_WORKBENCH_COMPONENT_EXISTS_NAV_HIDDEN`.
+- Fix commit: `232055866` (`fix(legal): surface counsel review workbench in matter UI`).
+- Fix summary: added a first-class default `Workbench` tab and explicit UI sections for Issue Matrix, Evidence Binders, Contradiction Triage, Entity Dossier, Theory / Counter-Theory, Counsel Questions / Actions, and Review Queue.
+- Production restart: `crog-ai-frontend.service` restarted and active.
+- Backend restart: NOT_REQUIRED.
+- Public exposure check: unauthenticated workbench API returned HTTP `401`.
+- Authenticated Gary/operator post-repair confirmation: PENDING.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_REVIEW_WORKBENCH`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_DEPLOYED_PENDING_UI_CONFIRMATION`.
+- Product status: `COUNSEL_WORKBENCH_UI_MAPPING_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.
