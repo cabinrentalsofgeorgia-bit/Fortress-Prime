@@ -28,6 +28,7 @@ from backend.services.legal_autonomous_learning_loop import (
     record_feedback,
 )
 from backend.services.legal_counsel_workbench import load_latest_workbench
+from backend.services.legal_draft_work_product import load_latest_draft_work_product
 from backend.services.legal_limited_signoff_candidate_packet import load_latest_limited_signoff_candidate
 from backend.services.legal_source_integrity_validation import load_latest_source_integrity
 from backend.services.legal_source_link_repair import load_latest_source_link_repair
@@ -258,6 +259,14 @@ async def get_autonomous_learning(slug: str):
     packet = load_latest_learning_loop(slug)
     if packet is None:
         raise HTTPException(status_code=404, detail="Autonomous learning loop not found.")
+    return packet
+
+
+@router.get("/cases/{slug}/draft-work-product", summary="Get draft work product packet")
+async def get_draft_work_product(slug: str):
+    packet = load_latest_draft_work_product(slug)
+    if packet is None:
+        raise HTTPException(status_code=404, detail="Draft work product packet not found.")
     return packet
 
 
