@@ -30,6 +30,8 @@ import type {
   CounselSignoffDecisionActionBody,
   CounselSignoffDecisionResponse,
   CounselSignoffPacketResponse,
+  AutonomousLearningFeedbackBody,
+  AutonomousLearningResponse,
   SourceIntegrityResponse,
   SourceLinkRepairResponse,
   SourceRemediationResponse,
@@ -61,6 +63,7 @@ const KEYS = {
   targetedSourceCompletion: (slug: string) => ["legal", "targeted-source-completion", slug] as const,
   limitedSignoffCandidate: (slug: string) => ["legal", "limited-signoff-candidate", slug] as const,
   counselSignoffDecision: (slug: string) => ["legal", "counsel-signoff-decision", slug] as const,
+  autonomousLearning: (slug: string) => ["legal", "autonomous-learning", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -223,6 +226,17 @@ export function useCounselSignoffDecision(slug: string) {
   });
 }
 
+export function useAutonomousLearning(slug: string) {
+  return useQuery({
+    queryKey: KEYS.autonomousLearning(slug),
+    queryFn: () =>
+      api.get<AutonomousLearningResponse>(
+        `/api/internal/legal/cases/${slug}/autonomous-learning`,
+      ),
+    enabled: !!slug,
+  });
+}
+
 type DiscoveryPacksHydratedResponse = DiscoveryDraftPacksResponse & {
   latest_pack: DiscoveryDraftPackDetail | null;
 };
@@ -343,6 +357,22 @@ export function useCounselSignoffDecisionAction(slug: string) {
       qc.invalidateQueries({ queryKey: KEYS.counselSignoffDecision(slug) });
     },
     onError: (e) => toast.error(`Decision failed: ${e.message}`),
+  });
+}
+
+export function useAutonomousLearningFeedback(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AutonomousLearningFeedbackBody) =>
+      api.post<AutonomousLearningResponse>(
+        `/api/internal/legal/cases/${slug}/autonomous-learning/feedback`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Learning feedback captured");
+      qc.invalidateQueries({ queryKey: KEYS.autonomousLearning(slug) });
+    },
+    onError: (e) => toast.error(`Feedback failed: ${e.message}`),
   });
 }
 
