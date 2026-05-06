@@ -165,3 +165,52 @@ Backend test note: the local test runner warned that `TEST_DATABASE_URL` was not
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
 
 Governance note: this phase classifies source integrity for review use only. It does not complete counsel signoff, does not create final legal conclusions, and does not authorize filing, service, external submission, or unrestricted legal operations.
+
+## Final Authenticated Source Integrity UI Confirmation
+
+- Confirmation timestamp: `2026-05-06T09:14:01-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Source Integrity Validation panel visible: YES.
+- Source Integrity Matrix visible: YES.
+- Source-check summary visible: YES.
+- Correction Queue visible: YES.
+- Signoff Blockers visible: YES.
+- Source Integrity Addendum visible or reviewable: YES.
+- Material source-check items represented: `297`.
+- `COUNSEL_SIGNOFF_PENDING` visible or preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` visible or preserved: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Confidential document contents publicly exposed: NO.
+- Blocking UI/API errors preventing review: NO.
+
+Final confirmation-step mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate source-validation records: NO.
+- Duplicate signoff packet records: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Production deploy/restart: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final standing state:
+
+- Production status: `PRODUCTION_SOURCE_INTEGRITY_VALIDATION_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_INTEGRITY_VALIDATION`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_SOURCE_CHECKED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_INTEGRITY_VALIDATED`.
+- Product status: `SOURCE_INTEGRITY_VALIDATION_COMPLETE_WITH_UNRESOLVED_ITEMS`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+Remaining blocker: all `297` source blockers remain open for source remediation and counsel/source review before any signoff decision. This confirmation proves production UI visibility only; it does not mark the packet source-verified for signoff use and does not complete counsel signoff.

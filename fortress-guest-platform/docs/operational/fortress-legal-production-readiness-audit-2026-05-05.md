@@ -1096,3 +1096,35 @@ Current standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_INTEGRITY_VALIDATED`.
 - Product status: `SOURCE_INTEGRITY_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Source Integrity UI Confirmation - 2026-05-06
+
+Timestamp: `2026-05-06T09:14:01-04:00`
+
+Gary/operator authenticated production UI confirmation:
+
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Source Integrity Validation panel visible: YES.
+- Source Integrity Matrix visible: YES.
+- Source-check summary visible: YES.
+- Correction Queue visible: YES.
+- Signoff Blockers visible: YES.
+- Source Integrity Addendum visible/reviewable: YES.
+- Material source-check items represented: `297`.
+- Remaining source blockers: `297`.
+- `COUNSEL_SIGNOFF_PENDING` preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` preserved: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Public confidential document contents exposure: NO.
+- New upload/ingest/document rows/Qdrant vectors/schema/RLS/policy/privilege changes: NO.
+- Counsel signoff recorded: NO.
+
+Final source-integrity standing:
+
+- Production status: `PRODUCTION_SOURCE_INTEGRITY_VALIDATION_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_INTEGRITY_VALIDATION`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_SOURCE_CHECKED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_INTEGRITY_VALIDATED`.
+- Product status: `SOURCE_INTEGRITY_VALIDATION_COMPLETE_WITH_UNRESOLVED_ITEMS`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
