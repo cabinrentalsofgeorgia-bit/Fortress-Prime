@@ -137,3 +137,68 @@ async def test_counsel_validation_action_never_uses_final_legal_conclusion(monke
 
     assert response.status_code == 200
     assert response.json()["updated_record"]["validation_status"] == "accepted_for_review_use"
+
+
+@pytest.mark.asyncio
+async def test_counsel_signoff_packet_endpoint_returns_manifest(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_signoff_packet",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-signoff-packet-test",
+            "signoff_status": "COUNSEL_SIGNOFF_PENDING",
+            "packet_checksum": "abc123",
+            "sections": [],
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/counsel-signoff-packet")
+
+    assert response.status_code == 200
+    assert response.json()["signoff_status"] == "COUNSEL_SIGNOFF_PENDING"
+
+
+@pytest.mark.asyncio
+async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
+    def fake_capture_signoff_action(slug, **kwargs):
+        assert slug == "fortress-legal-production-review"
+        assert kwargs["signoff_type"] != "final_legal_conclusion"
+        if not kwargs["scope_confirmed"]:
+            raise ValueError("scope_confirmation_required")
+        return {"case_slug": slug, "signoff_status": "OPERATOR_REVIEW_ACKNOWLEDGMENT"}
+
+    monkeypatch.setattr(legal_workbench_api, "capture_signoff_action", fake_capture_signoff_action)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        blocked = await client.post(
+            "/api/internal/legal/cases/fortress-legal-production-review/counsel-signoff-packet/signoff",
+            json={"signoff_type": "operator_review_acknowledgment", "scope_confirmed": False},
+        )
+        allowed = await client.post(
+            "/api/internal/legal/cases/fortress-legal-production-review/counsel-signoff-packet/signoff",
+            json={"signoff_type": "operator_review_acknowledgment", "scope_confirmed": True},
+        )
+
+    assert blocked.status_code == 400
+    assert allowed.status_code == 200
+    assert allowed.json()["signoff_status"] == "OPERATOR_REVIEW_ACKNOWLEDGMENT"

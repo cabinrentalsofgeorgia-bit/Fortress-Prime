@@ -464,3 +464,93 @@ export interface CounselValidationActionBody {
   note?: string;
   correction_summary?: string;
 }
+
+export interface CounselSignoffPacketSection {
+  section_id: string;
+  title: string;
+  item_count: number;
+  readiness_status: string;
+  unresolved_count: number;
+  signoff_status: string;
+  counsel_review_required: boolean;
+  notes: string;
+  source_refs_summary: {
+    items: number;
+    with_source_refs: number;
+    without_source_refs: number;
+    total_source_refs: number;
+    locked_restricted_related: number;
+    source_check_status_counts: Record<string, number>;
+  };
+}
+
+export interface CounselSignoffReadinessCheck {
+  check_id: string;
+  title: string;
+  passed: boolean;
+}
+
+export interface CounselSignoffCaptureState {
+  signoff_recorded: boolean;
+  signoff_type?: string | null;
+  signer_safe_label?: string | null;
+  signer_role?: string | null;
+  signed_at?: string | null;
+  scope_confirmation_required: boolean;
+  scope_confirmed?: boolean;
+  notes?: string | null;
+}
+
+export interface CounselSignoffPacketResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  packet_version: number;
+  packet_checksum: string;
+  source_validation_execution_id: string;
+  source_workbench_execution_id: string;
+  source_intelligence_execution_id: string;
+  status: string;
+  signoff_status: string;
+  readiness_status: string;
+  packet_store: string;
+  baseline: CounselWorkbenchBaseline;
+  sections: CounselSignoffPacketSection[];
+  source_integrity_matrix: {
+    material_items: number;
+    items_with_source_refs: number;
+    items_missing_source_refs: number;
+    items_needing_source_check: number;
+    locked_restricted_source_involved: number;
+    unsupported_assertions_marked_final: boolean;
+    recommended_action: string;
+  };
+  signoff_readiness_checklist: CounselSignoffReadinessCheck[];
+  unresolved_items_register: Array<{
+    item_id: string;
+    item_type: string;
+    title: string;
+    validation_status: string;
+    source_check_status: string;
+    counsel_review_required: boolean;
+  }>;
+  export_snapshot: {
+    snapshot_id: string;
+    exportable: boolean;
+    format: string;
+    contains_document_body_text: boolean;
+    contains_locked_content: boolean;
+  };
+  signoff_capture: CounselSignoffCaptureState;
+  audit_history: CounselValidationAuditEntry[];
+  manifest_path?: string;
+}
+
+export interface CounselSignoffActionBody {
+  signoff_type:
+    | "operator_review_acknowledgment"
+    | "counsel_review_acknowledgment"
+    | "counsel_signoff_for_review_use";
+  scope_confirmed: boolean;
+  notes?: string;
+}
