@@ -723,3 +723,52 @@ Final standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_COMPLETE`.
 - Product status: `COUNSEL_REVIEW_WORKBENCH_READY_FOR_GARY_AND_COUNSEL`.
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+## Counsel Validation Workflow Deployment
+
+Timestamp: `2026-05-06T08:17:45-04:00`
+
+- Validation execution ID: `fortress-validation-20260506-081435`.
+- Validation manifest: `/mnt/fortress_nas/audits/fortress-validation-20260506-081435.json`.
+- Counsel Validation tab/section deployed in the production matter UI bundle: YES.
+- Validation records initialized: `299`.
+- Issue validation records: `20`.
+- Evidence binder validation records: `17`.
+- Contradiction validation records: `14`.
+- Entity dossier validation records: `40`.
+- Counsel question/action validation records: `24`.
+- Theory packet validation records: `2`.
+- Timeline validation records: `180`.
+- Locked metadata-only validation records: `2`.
+- Draft/counsel-review posture preserved: YES.
+- Accepted status wording: `accepted_for_review_use`.
+- Counsel signoff complete: NO.
+- Public exposure check: unauthenticated validation API returned HTTP `401`.
+- Production root smoke: HTTP `200`.
+- Production matter-route smoke: HTTP `200`.
+- Authenticated Gary/operator UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate workbench records: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Current validation standing:
+
+- Production status: `PRODUCTION_COUNSEL_VALIDATION_BACKEND_COMPLETE_UI_PENDING`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_VALIDATION_WORKFLOW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_AND_VALIDATION_COMPLETE`.
+- Product status: `COUNSEL_VALIDATION_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.

@@ -825,3 +825,58 @@ Final standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_AND_WORKBENCH_COMPLETE`.
 - Product status: `COUNSEL_REVIEW_WORKBENCH_READY_FOR_GARY_AND_COUNSEL`.
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+## Counsel Validation Workflow - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T08:17:45-04:00`.
+- Validation execution ID: `fortress-validation-20260506-081435`.
+- Validation manifest: `/mnt/fortress_nas/audits/fortress-validation-20260506-081435.json`.
+- Source workbench execution ID: `fortress-counsel-review-20260506-073330`.
+- Baseline reconciled:
+  - Documents: `80`.
+  - Completed/analyzed: `78`.
+  - Locked/restricted: `2`.
+  - Issues: `20`.
+  - Evidence binders: `17`.
+  - Contradiction candidates: `14`.
+  - Entity dossier: `40`.
+  - Counsel questions/actions: `24`.
+- Validation workflow records created: `299`.
+- Locked metadata-only validation records: `2`.
+- Validation store: file-backed manifest; no schema/RLS/policy change.
+- UI/API change: deployed protected counsel validation API and default matter-page Validation tab.
+- Controls exposed in deployed UI bundle: accept, reject, correct, needs source check, needs counsel review, note, reopen, audit/history.
+- Final legal conclusion/signoff state set: NO.
+- Production root smoke: HTTP `200`.
+- Production matter-route smoke: HTTP `200`.
+- Unauthenticated validation API: HTTP `401`.
+- Runtime-main cherry-pick: `5ad1ac35a`.
+- Backend restart: `fortress-backend.service` restarted and active.
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Authenticated Gary/operator UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate workbench records: NO.
+- New validation records: YES, file-backed validation manifest only.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Current standing state:
+
+- Production status: `PRODUCTION_COUNSEL_VALIDATION_BACKEND_COMPLETE_UI_PENDING`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_VALIDATION_WORKFLOW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_AND_VALIDATION_COMPLETE`.
+- Product status: `COUNSEL_VALIDATION_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.

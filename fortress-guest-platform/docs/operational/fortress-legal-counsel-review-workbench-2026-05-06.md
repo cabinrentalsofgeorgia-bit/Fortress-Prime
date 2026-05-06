@@ -275,3 +275,78 @@ Final standing state:
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
 
 Governance note: this confirmation makes the Counsel Review Workbench production-visible and ready for Gary/counsel review. It does not remove counsel-review requirements, does not make AI-assisted outputs final legal conclusions, and does not authorize unrestricted legal production operations beyond the approved review scope.
+
+## Counsel Validation Workflow Initialization - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T08:17:45-04:00`.
+- Validation execution ID: `fortress-validation-20260506-081435`.
+- Validation manifest: `/mnt/fortress_nas/audits/fortress-validation-20260506-081435.json`.
+- Source workbench execution ID: `fortress-counsel-review-20260506-073330`.
+- Purpose: enable Gary/operator and counsel to accept, reject, correct, source-check, annotate, and audit AI-generated workbench items.
+- Store mechanism: file-backed validation manifest; no schema/RLS/policy change.
+- Protected API deployed:
+  - `GET /api/internal/legal/cases/{slug}/counsel-validation`.
+  - `POST /api/internal/legal/cases/{slug}/counsel-validation/actions`.
+- UI deployed: default `Validation` tab added to the matter page with queues, status summaries, action controls, source-check state, notes pathway, and audit/history panel.
+- Accepted state wording: `accepted_for_review_use`.
+- Final legal conclusion/signoff states used: NO.
+
+Validation record summary:
+
+- Total validation records: `299`.
+- Issues: `20`.
+- Evidence binders: `17`.
+- Contradiction candidates: `14`.
+- Entity dossier: `40`.
+- Counsel questions/actions: `24`.
+- Theory packets: `2`.
+- Timeline events: `180`.
+- Locked metadata-only records: `2`.
+- Initial progress label: `VALIDATION_NOT_STARTED`.
+
+Checks:
+
+- Python syntax: PASS.
+- Backend focused tests: PASS (`4 passed`).
+- Frontend focused tests: PASS (`9 passed`).
+- Focused ESLint: PASS.
+- Frontend production build: PASS.
+- `git diff --check`: PASS.
+- Focused secret scan: PASS.
+
+Deploy/restart:
+
+- Code commit: `8b7874963` (`feat(legal): add counsel validation workflow`).
+- Runtime-main cherry-pick: `5ad1ac35a`.
+- Backend restart: `fortress-backend.service` restarted and active.
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Production root smoke: HTTP `200`.
+- Production matter-route smoke: HTTP `200`.
+- Unauthenticated validation API: HTTP `401`.
+- Authenticated Gary/operator UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate workbench records: NO.
+- New validation records: YES, file-backed validation manifest only.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Locked/restricted content analyzed: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Unrelated dirty files touched: NO.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_COUNSEL_VALIDATION_BACKEND_COMPLETE_UI_PENDING`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_VALIDATION_WORKFLOW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_AND_VALIDATION_COMPLETE`.
+- Product status: `COUNSEL_VALIDATION_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.
