@@ -201,3 +201,30 @@ Resolve the remaining operator/legal blockers before any full legal-data product
 - NAS/evidence writes: NO, except operational git documentation.
 - Final standing production status remains: `PRODUCTION_DEPLOYED_STATIC_ASSETS_SMOKE_PASSED_LEGAL_OPS_BLOCKED`.
 - Production legal-data status: `BLOCKED_PENDING_APPROVAL_EVIDENCE`.
+
+## Production Review Mode Activation - 2026-05-05
+
+- Final classification: `PRODUCTION_REVIEW_MODE_ACTIVE`.
+- Evidence file: `docs/operational/fortress-legal-production-review-mode-2026-05-05.md`.
+- Execution ID: `fortress-review-20260506-011528`.
+- Runtime approval timestamp: `2026-05-05T21:15:28-04:00`.
+- Operator: Gary Knight.
+- Production app/domain: `https://crog-ai.com`.
+- Production Supabase ref: `hms...liap` partial-safe.
+- Production app smoke: PASS; root/login/static assets and unauthenticated guarded shells passed.
+- Intake directory: `/home/admin/Fortress-Prime/fortress-guest-platform/production-legal-review-intake`.
+- Approved intake file count: `0`.
+- Real legal documents uploaded: NO.
+- Real legal documents ingested: NO.
+- Qdrant/vector writes: NO.
+- Storage writes: NO.
+- Review account/workspace: CREATED/CONFIRMED for Gary review mode.
+- Supabase review user/profile id: `ba06adc5-4421-448e-ad80-e0bf8caa1f29`.
+- Supabase review matter id: `497dfcfc-3f55-4fd8-9f34-92bf69c5f209`.
+- Backend UI-visible review case id: `26`, slug `fortress-legal-production-review`.
+- Authenticated production review smoke: PASS; `/api/internal/legal/cases` returned HTTP 200 and included `fortress-legal-production-review`.
+- Rollback/delete identifiers: captured in the production review-mode evidence doc.
+- Legal readiness: active for review-mode shell only; not active for real legal-data upload/ingest.
+- Legal operations: review-mode active with no real legal data.
+- Real legal data status: `BLOCKED_UNTIL_FILES_PLACED_IN_APPROVED_INTAKE`.
+- Production legal-data status: `NO_REAL_LEGAL_DATA_INGESTED`.
