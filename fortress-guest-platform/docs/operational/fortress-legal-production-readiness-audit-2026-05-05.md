@@ -1257,3 +1257,35 @@ Final source-link repair standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_LINK_REPAIR_COMPLETE`.
 - Product status: `SOURCE_LINK_REPAIR_COMPLETE_VERIFIED_SUBSET_READY`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Targeted Source Completion Readiness Update - 2026-05-06
+
+- Targeted source completion execution ID: `fortress-targeted-source-completion-20260506-151821`.
+- Manifest path: `/mnt/fortress_nas/audits/fortress-targeted-source-completion-20260506-151821.json`.
+- Starting unresolved source issues: `282`.
+- Items processed: `282`.
+- Prior verified subset: `15`.
+- New verified subset: `65`.
+- Verified subset delta: `50`.
+- Remaining unresolved: `232`.
+- Track A page/chunk results: `50` corrected for review-use source routing.
+- Track B unsupported results: `230` still unsupported.
+- Track C locked/privilege results: `2` preserved metadata-only.
+- Signoff readiness addendum: `LIMITED_SIGNOFF_SUBSET_AVAILABLE`.
+- Full packet signoff readiness: NO.
+- Counsel signoff pending: YES.
+- Explicit signoff recorded: NO.
+- Runtime code commit: `1a8e6c6d8`.
+- Backend restart: `fortress-backend.service` restarted and active.
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Production smoke: `/` HTTP `200`, matter route HTTP `200`, unauthenticated targeted-source API HTTP `401`.
+- Authenticated Targeted Source Completion UI confirmation: PENDING.
+- Raw document upload/ingest/document rows/Qdrant vectors/schema/RLS/policy/privilege changes: NO.
+- Locked content analyzed: NO.
+- Document contents exposed in evidence: NO.
+
+Current targeted source completion standing:
+
+- Production status: `PRODUCTION_TARGETED_SOURCE_COMPLETION_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `TARGETED_SOURCE_COMPLETION_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
