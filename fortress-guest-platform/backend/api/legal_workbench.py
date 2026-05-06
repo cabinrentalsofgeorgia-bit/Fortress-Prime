@@ -23,6 +23,7 @@ from backend.services.legal_counsel_workbench import load_latest_workbench
 from backend.services.legal_source_integrity_validation import load_latest_source_integrity
 from backend.services.legal_source_link_repair import load_latest_source_link_repair
 from backend.services.legal_source_remediation import load_latest_source_remediation
+from backend.services.legal_targeted_source_completion import load_latest_targeted_source_completion
 
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
@@ -161,4 +162,12 @@ async def get_source_link_repair(slug: str):
     packet = load_latest_source_link_repair(slug)
     if packet is None:
         raise HTTPException(status_code=404, detail="Source link repair not found.")
+    return packet
+
+
+@router.get("/cases/{slug}/targeted-source-completion", summary="Get targeted source completion results")
+async def get_targeted_source_completion(slug: str):
+    packet = load_latest_targeted_source_completion(slug)
+    if packet is None:
+        raise HTTPException(status_code=404, detail="Targeted source completion not found.")
     return packet
