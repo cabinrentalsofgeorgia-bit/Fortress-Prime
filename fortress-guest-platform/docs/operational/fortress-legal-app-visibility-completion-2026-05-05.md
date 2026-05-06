@@ -526,3 +526,28 @@ Final standing state:
 - Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBLE`
 - Pilot status: `PILOT_READY_FOR_GARY_REVIEW`
+
+## Litigation Intelligence Layer Visibility Status
+
+Timestamp: `2026-05-06T00:12:57-04:00`
+
+- Litigation intelligence execution ID: `fortress-intel-20260506-041839`.
+- Evidence file: `docs/operational/fortress-legal-litigation-intelligence-phase-2026-05-06.md`.
+- Backend intelligence extraction: COMPLETE.
+- Derived graph nodes: `448`.
+- Derived graph edges: `1,227`.
+- Draft chronology events: `180`.
+- Contradiction/tension candidates: `14`.
+- Review queue items: `20`.
+- Locked/restricted documents: still restricted and metadata-only.
+- Public exposure check: unauthenticated document, graph, chronology, and sanctions endpoints returned HTTP 401.
+- Authenticated Gary UI confirmation of populated intelligence panels: PENDING_OPERATOR_CONFIRMATION.
+
+Current intelligence-layer standing:
+
+- Production status: `PRODUCTION_INTELLIGENCE_EXTRACTION_COMPLETE_UI_PENDING`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_AI_ASSISTED_LITIGATION_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_ANALYZED_UI_CONFIRMATION_PENDING`.
+- Product status: `LITIGATION_INTELLIGENCE_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.

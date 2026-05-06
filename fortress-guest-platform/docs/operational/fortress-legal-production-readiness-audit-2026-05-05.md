@@ -576,3 +576,40 @@ Final standing state:
 - Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`.
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBLE`.
 - Pilot status: `PILOT_READY_FOR_GARY_REVIEW`.
+
+## Litigation Intelligence Review Layer - 2026-05-06
+
+- Evidence file: `docs/operational/fortress-legal-litigation-intelligence-phase-2026-05-06.md`.
+- Execution ID: `fortress-intel-20260506-041839`.
+- Authorization timestamp: `2026-05-06T00:12:57-04:00`.
+- Matter slug: `fortress-legal-production-review`.
+- Baseline document count: `80`.
+- Analysis eligible documents: `78`.
+- Locked/restricted documents preserved metadata-only: `2`.
+- Text extracted from non-locked documents: `78`.
+- Derived graph nodes: `448`.
+- Derived graph edges: `1,227`.
+- Draft chronology events: `180`.
+- Contradiction/tension candidates: `14`.
+- Review queue items: `20`.
+- Entity mentions counted: `11,252`.
+- Rollback manifest: `/mnt/fortress_nas/audits/fortress-intel-20260506-041839.json`.
+- Code commit: `65752cf43` (`feat(legal): add litigation intelligence review layer`).
+- Runtime-main cherry-pick: `5e39ca165`.
+- Production restart: `fortress-backend.service` restarted and active.
+- Frontend deploy/restart: NOT_REQUIRED.
+- Public exposure check: unauthenticated document, graph, chronology, and sanctions endpoints returned HTTP 401.
+- Locked-content-derived edges: `0`.
+- New raw documents/uploads/ingest/vector writes: NO.
+- Schema/RLS/policy changes: NO.
+- Authenticated Gary UI confirmation of populated intelligence panels: PENDING_OPERATOR_CONFIRMATION.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_INTELLIGENCE_EXTRACTION_COMPLETE_UI_PENDING`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_AI_ASSISTED_LITIGATION_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_ANALYZED_UI_CONFIRMATION_PENDING`.
+- Product status: `LITIGATION_INTELLIGENCE_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.
