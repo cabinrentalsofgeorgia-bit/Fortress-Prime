@@ -10,6 +10,7 @@ import {
   useCounselSignoffReopen,
 } from "@/lib/legal-hooks";
 import { SourceIntegrityValidationPanel } from "./source-integrity-validation-panel";
+import { SourceLinkRepairPanel } from "./source-link-repair-panel";
 import { SourceRemediationPanel } from "./source-remediation-panel";
 import {
   AlertTriangle,
@@ -103,6 +104,7 @@ export function CounselSignoffStrategyPacket({ slug }: { slug: string }) {
 
       <SourceIntegrityValidationPanel slug={slug} />
       <SourceRemediationPanel slug={slug} />
+      <SourceLinkRepairPanel slug={slug} />
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Packet Sections" value={data.sections.length} />

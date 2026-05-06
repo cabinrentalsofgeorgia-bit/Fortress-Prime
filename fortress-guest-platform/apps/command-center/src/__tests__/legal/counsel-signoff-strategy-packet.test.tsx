@@ -182,6 +182,50 @@ vi.mock("@/lib/legal-hooks", () => ({
       },
     },
   }),
+  useSourceLinkRepair: () => ({
+    isLoading: false,
+    error: null,
+    data: {
+      execution_id: "fortress-source-link-repair-test",
+      source_remediation_execution_id: "fortress-source-remediation-test",
+      source_integrity_execution_id: "fortress-source-integrity-test",
+      signoff_packet_execution_id: "fortress-signoff-packet-test",
+      status: "SOURCE_LINK_REPAIR_COMPLETE_VERIFIED_SUBSET_READY",
+      repair_summary: {
+        total_blockers_processed: 297,
+        verified_for_review_use: 0,
+        corrected_verified_for_review_use: 65,
+        partially_supported: 0,
+        unsupported: 230,
+        conflicting_sources: 0,
+        needs_page_or_chunk_review: 0,
+        needs_more_evidence: 0,
+        needs_counsel_review: 0,
+        locked_or_privilege_limited: 2,
+        unable_to_check_safely: 0,
+        remaining_unresolved: 232,
+        verified_subset_count: 65,
+        counsel_signoff_pending: true,
+      },
+      packet_section_summary: [],
+      verified_subset: {
+        verified_subset_id: "subset-2",
+        item_count: 65,
+        item_ids: ["issue-01"],
+        packet_sections_covered: ["issue_matrix"],
+        excluded_item_count: 232,
+        signoff_scope_recommendation: "LIMITED_SOURCE_LINK_SIGNOFF_REVIEW_SUBSET_AVAILABLE",
+        items: [],
+      },
+      refined_unresolved_register: [],
+      signoff_readiness_addendum: {
+        readiness_recommendation: "VERIFIED_SUBSET_READY_FOR_COUNSEL_SIGNOFF_REVIEW",
+        full_packet_ready: false,
+        counsel_signoff_pending: true,
+        explicit_signoff_recorded: false,
+      },
+    },
+  }),
 }));
 
 import { CounselSignoffStrategyPacket } from "@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet";
@@ -196,6 +240,7 @@ describe("CounselSignoffStrategyPacket", () => {
     expect(screen.getByText("Validated / Unvalidated Issue Matrix")).toBeInTheDocument();
     expect(screen.getByText("Source Integrity Matrix")).toBeInTheDocument();
     expect(screen.getByText("Source Blocker Remediation")).toBeInTheDocument();
+    expect(screen.getByText("Source Link Repair")).toBeInTheDocument();
     expect(screen.getByText(/Export snapshot contains no document body text and no locked content/)).toBeInTheDocument();
 
     const operatorButton = screen.getByText("Operator Acknowledge");

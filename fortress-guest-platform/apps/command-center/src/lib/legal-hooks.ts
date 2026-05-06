@@ -28,6 +28,7 @@ import type {
   CounselSignoffActionBody,
   CounselSignoffPacketResponse,
   SourceIntegrityResponse,
+  SourceLinkRepairResponse,
   SourceRemediationResponse,
 } from "./legal-types";
 
@@ -52,6 +53,7 @@ const KEYS = {
   counselSignoffPacket: (slug: string) => ["legal", "counsel-signoff-packet", slug] as const,
   sourceIntegrity: (slug: string) => ["legal", "source-integrity", slug] as const,
   sourceRemediation: (slug: string) => ["legal", "source-remediation", slug] as const,
+  sourceLinkRepair: (slug: string) => ["legal", "source-link-repair", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -165,6 +167,17 @@ export function useSourceRemediation(slug: string) {
     queryFn: () =>
       api.get<SourceRemediationResponse>(
         `/api/internal/legal/cases/${slug}/source-remediation`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useSourceLinkRepair(slug: string) {
+  return useQuery({
+    queryKey: KEYS.sourceLinkRepair(slug),
+    queryFn: () =>
+      api.get<SourceLinkRepairResponse>(
+        `/api/internal/legal/cases/${slug}/source-link-repair`,
       ),
     enabled: !!slug,
   });
