@@ -109,6 +109,23 @@ export interface CorrespondenceResponse {
   total?: number;
 }
 
+export interface LegalVaultDocument {
+  id: string;
+  file_name: string;
+  mime_type?: string | null;
+  file_size_bytes?: number | null;
+  chunk_count?: number | null;
+  processing_status: string;
+  error_detail?: string | null;
+  created_at?: string | null;
+}
+
+export interface LegalVaultDocumentsResponse {
+  case_slug: string;
+  documents: LegalVaultDocument[];
+  total: number;
+}
+
 export interface ExtractionQueuedResponse {
   queued?: boolean;
   status?: string;

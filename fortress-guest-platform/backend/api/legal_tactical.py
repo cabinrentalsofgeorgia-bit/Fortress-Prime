@@ -12,6 +12,7 @@ from backend.core.queue import get_arq_pool
 from backend.core.security import require_manager_or_admin
 from backend.services.ai_router import execute_resilient_inference
 from backend.services.legal_case_graph import get_case_graph_snapshot
+from backend.services.ediscovery_agent import LegacySession
 from backend.services.legal_search_engine import synthesize_historic_search
 from backend.services.legal_sanctions_tripwire import detect_material_contradictions
 from backend.services.legal_deposition_prep import generate_kill_sheet
@@ -198,7 +199,7 @@ async def upload_vault_file(
 
 @router.get("/cases/{slug}/vault/documents", summary="List vault documents for case")
 async def list_vault_documents(slug: str):
-    async with AsyncSessionLocal() as db:
+    async with LegacySession() as db:
         r = await db.execute(
             text("""
                 SELECT id, file_name, mime_type, file_size_bytes, chunk_count,

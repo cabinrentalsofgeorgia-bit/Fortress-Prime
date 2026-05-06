@@ -12,6 +12,7 @@ import type {
   CaseDetailResponse,
   DeadlinesResponse,
   CorrespondenceResponse,
+  LegalVaultDocumentsResponse,
   ExtractionQueuedResponse,
   GraphRefreshResponse,
   DiscoveryDraftResponse,
@@ -29,6 +30,8 @@ const KEYS = {
   deadlines: (slug: string) => ["legal", "deadlines", slug] as const,
   correspondence: (slug: string) =>
     ["legal", "correspondence", slug] as const,
+  vaultDocuments: (slug: string) =>
+    ["legal", "vault-documents", slug] as const,
   timeline: (slug: string) => ["legal", "timeline", slug] as const,
   graph: (slug: string) => ["legal", "graph", slug] as const,
   discoveryPacks: (slug: string) => ["legal", "discovery-packs", slug] as const,
@@ -70,6 +73,17 @@ export function useCaseCorrespondence(slug: string) {
       api.get<CorrespondenceResponse>(
         `/api/internal/legal/cases/${slug}/correspondence`,
       ),
+  });
+}
+
+export function useCaseVaultDocuments(slug: string) {
+  return useQuery({
+    queryKey: KEYS.vaultDocuments(slug),
+    queryFn: () =>
+      api.get<LegalVaultDocumentsResponse>(
+        `/api/internal/legal/cases/${slug}/vault/documents`,
+      ),
+    enabled: !!slug,
   });
 }
 

@@ -15,12 +15,13 @@ import {
 } from "@/components/ui/tooltip";
 import {
   useCaseCorrespondence,
+  useCaseVaultDocuments,
   useCaseTimeline,
   useUpdateCorrespondenceStatus,
   downloadCorrespondence,
   copyCorrespondenceContent,
 } from "@/lib/legal-hooks";
-import type { LegalCase, Correspondence, TimelineEvent } from "@/lib/legal-types";
+import type { LegalCase, Correspondence, LegalVaultDocument, TimelineEvent } from "@/lib/legal-types";
 import {
   FileText,
   Mail,
@@ -32,6 +33,8 @@ import {
   CheckCircle2,
   Loader2,
   Shield,
+  Lock,
+  Database,
 } from "lucide-react";
 
 function CaseNotesView({ legalCase }: { legalCase: LegalCase }) {
@@ -83,6 +86,131 @@ function StatusBadge({ status }: { status: string }) {
 function hasTextFile(filePath: string | null | undefined): boolean {
   if (!filePath) return false;
   return filePath.endsWith(".txt") || filePath.endsWith(".md") || filePath.endsWith(".csv");
+}
+
+function isLockedPrivileged(status: string | null | undefined): boolean {
+  return (status ?? "").toLowerCase() === "locked_privileged";
+}
+
+function formatBytes(bytes: number | null | undefined): string {
+  if (!bytes || bytes <= 0) return "size unavailable";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+function VaultDocumentStatusBadge({ status }: { status: string }) {
+  const locked = isLockedPrivileged(status);
+  const cls = locked
+    ? "bg-red-500/10 text-red-400 border-red-500/30"
+    : status === "completed"
+      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+      : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30";
+  return (
+    <Badge variant="outline" className={`text-[10px] uppercase tracking-wider ${cls}`}>
+      {locked ? "locked/restricted" : status}
+    </Badge>
+  );
+}
+
+function AutonomousVaultRow({ doc }: { doc: LegalVaultDocument }) {
+  const locked = isLockedPrivileged(doc.processing_status);
+  return (
+    <div className="rounded border bg-card p-3 space-y-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs min-w-0 flex-1">
+          {locked ? (
+            <Lock className="h-3.5 w-3.5 text-red-400 shrink-0" />
+          ) : (
+            <FileText className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+          )}
+          <span className="font-medium truncate">{doc.file_name}</span>
+        </div>
+        <VaultDocumentStatusBadge status={doc.processing_status} />
+      </div>
+      <div className="grid grid-cols-2 gap-2 pl-5 text-[11px] text-muted-foreground sm:grid-cols-4">
+        <span>{doc.mime_type || "type unavailable"}</span>
+        <span>{formatBytes(doc.file_size_bytes)}</span>
+        <span>{doc.chunk_count ?? 0} chunks</span>
+        <span>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : "date unavailable"}</span>
+      </div>
+      {locked && (
+        <p className="pl-5 text-[11px] text-red-400">
+          Privileged content remains restricted. Metadata only.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AutonomousVaultDocuments({ slug }: { slug: string }) {
+  const { data, isLoading, error } = useCaseVaultDocuments(slug);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Loading document metadata...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <p className="text-xs text-red-400 py-8 text-center">
+        Document metadata is unavailable.
+      </p>
+    );
+  }
+
+  const documents = data?.documents ?? [];
+
+  if (documents.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground py-8 text-center">
+        No autonomous intake document metadata linked to this matter.
+      </p>
+    );
+  }
+
+  const completed = documents.filter((doc) => doc.processing_status === "completed").length;
+  const locked = documents.filter((doc) => isLockedPrivileged(doc.processing_status)).length;
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded border bg-muted/20 p-2">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <Database className="h-3 w-3" />
+            Documents
+          </div>
+          <p className="mt-1 text-lg font-semibold">{data?.total ?? documents.length}</p>
+        </div>
+        <div className="rounded border bg-muted/20 p-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Completed
+          </div>
+          <p className="mt-1 text-lg font-semibold text-emerald-400">{completed}</p>
+        </div>
+        <div className="rounded border bg-muted/20 p-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Locked
+          </div>
+          <p className="mt-1 text-lg font-semibold text-red-400">{locked}</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {documents.map((doc) => (
+          <AutonomousVaultRow key={doc.id} doc={doc} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function CorrespondenceVaultRow({
@@ -329,7 +457,7 @@ export function DocumentViewer({ legalCase, slug }: { legalCase: LegalCase; slug
       <Tabs defaultValue="document">
         <TabsList className="w-full">
           <TabsTrigger value="document" className="flex items-center gap-1">
-            <FileText className="h-3 w-3" /> Document
+            <FileText className="h-3 w-3" /> Documents
           </TabsTrigger>
           <TabsTrigger value="correspondence" className="flex items-center gap-1">
             <Shield className="h-3 w-3" /> Vault
@@ -337,15 +465,21 @@ export function DocumentViewer({ legalCase, slug }: { legalCase: LegalCase; slug
           <TabsTrigger value="timeline" className="flex items-center gap-1">
             <Clock className="h-3 w-3" /> Timeline
           </TabsTrigger>
+          <TabsTrigger value="notes" className="flex items-center gap-1">
+            <Mail className="h-3 w-3" /> Notes
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="document" className="mt-3">
-          <CaseNotesView legalCase={legalCase} />
+          <AutonomousVaultDocuments slug={slug} />
         </TabsContent>
         <TabsContent value="correspondence" className="mt-3">
-        <CorrespondenceVault slug={slug} canOperate={canOperate} />
+          <CorrespondenceVault slug={slug} canOperate={canOperate} />
         </TabsContent>
         <TabsContent value="timeline" className="mt-3">
           <TimelineView slug={slug} />
+        </TabsContent>
+        <TabsContent value="notes" className="mt-3">
+          <CaseNotesView legalCase={legalCase} />
         </TabsContent>
       </Tabs>
     </div>
