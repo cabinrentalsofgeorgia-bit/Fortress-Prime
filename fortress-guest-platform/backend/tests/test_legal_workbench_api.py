@@ -238,6 +238,71 @@ async def test_source_integrity_endpoint_returns_404_when_missing(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_source_remediation_endpoint_returns_manifest_without_body_text(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_source_remediation",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-source-remediation-test",
+            "status": "SOURCE_REMEDIATION_COMPLETE_NO_SIGNOFF_SUBSET_READY",
+            "remediation_summary": {
+                "total_blockers_processed": 297,
+                "remaining_blockers": 297,
+                "verified_subset_count": 0,
+                "counsel_signoff_pending": True,
+            },
+            "verified_subset": {"item_count": 0, "items": []},
+            "refined_blocker_register": [
+                {
+                    "item_id": "issue-01",
+                    "remediation_outcome": "unresolved_unsupported",
+                    "source_notes_safe": "No claimed source reference is available.",
+                }
+            ],
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/source-remediation")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_id"] == "fortress-source-remediation-test"
+    assert body["remediation_summary"]["counsel_signoff_pending"] is True
+    assert "document_body" not in response.text
+    assert "final_legal_conclusion" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_source_remediation_endpoint_returns_404_when_missing(monkeypatch):
+    monkeypatch.setattr(legal_workbench_api, "load_latest_source_remediation", lambda slug: None)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/missing/source-remediation")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     def fake_capture_signoff_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"

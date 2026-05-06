@@ -136,6 +136,52 @@ vi.mock("@/lib/legal-hooks", () => ({
       batch_results: [],
     },
   }),
+  useSourceRemediation: () => ({
+    isLoading: false,
+    error: null,
+    data: {
+      execution_id: "fortress-source-remediation-test",
+      source_integrity_execution_id: "fortress-source-integrity-test",
+      signoff_packet_execution_id: "fortress-signoff-packet-test",
+      status: "SOURCE_REMEDIATION_COMPLETE_NO_SIGNOFF_SUBSET_READY",
+      remediation_summary: {
+        total_blockers_processed: 297,
+        resolved_source_verified: 0,
+        resolved_corrected_for_review_use: 0,
+        resolved_duplicate_or_superseded: 0,
+        unresolved_partially_supported: 0,
+        unresolved_unsupported: 230,
+        unresolved_conflicting_sources: 0,
+        unresolved_needs_page_or_chunk_review: 65,
+        unresolved_needs_more_evidence: 0,
+        unresolved_needs_counsel_review: 0,
+        unresolved_locked_or_privilege_limited: 2,
+        unresolved_wrong_source: 0,
+        unable_to_check_safely: 0,
+        remaining_blockers: 297,
+        verified_subset_count: 0,
+        limited_signoff_subset_available: false,
+        counsel_signoff_pending: true,
+      },
+      verified_subset: {
+        verified_subset_id: "subset-1",
+        item_count: 0,
+        item_ids: [],
+        packet_sections_covered: [],
+        excluded_item_count: 297,
+        signoff_scope_recommendation: "NO_LIMITED_SIGNOFF_SUBSET_READY",
+        items: [],
+      },
+      refined_blocker_register: [],
+      remediation_category_summary: [],
+      signoff_readiness_addendum: {
+        readiness_recommendation: "FULL_PACKET_NOT_READY_DUE_TO_UNRESOLVED_BLOCKERS",
+        verified_subset_status: "NO_VERIFIED_SUBSET_READY",
+        counsel_signoff_pending: true,
+        explicit_signoff_recorded: false,
+      },
+    },
+  }),
 }));
 
 import { CounselSignoffStrategyPacket } from "@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet";
@@ -149,6 +195,7 @@ describe("CounselSignoffStrategyPacket", () => {
     expect(screen.getByText("NOT FINAL LEGAL CONCLUSION")).toBeInTheDocument();
     expect(screen.getByText("Validated / Unvalidated Issue Matrix")).toBeInTheDocument();
     expect(screen.getByText("Source Integrity Matrix")).toBeInTheDocument();
+    expect(screen.getByText("Source Blocker Remediation")).toBeInTheDocument();
     expect(screen.getByText(/Export snapshot contains no document body text and no locked content/)).toBeInTheDocument();
 
     const operatorButton = screen.getByText("Operator Acknowledge");

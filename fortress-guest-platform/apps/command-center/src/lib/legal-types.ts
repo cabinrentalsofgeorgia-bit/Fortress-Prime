@@ -662,3 +662,107 @@ export interface SourceIntegrityResponse {
   };
   manifest_path?: string;
 }
+
+export type SourceRemediationOutcome =
+  | "resolved_source_verified"
+  | "resolved_corrected_for_review_use"
+  | "resolved_duplicate_or_superseded"
+  | "unresolved_partially_supported"
+  | "unresolved_unsupported"
+  | "unresolved_conflicting_sources"
+  | "unresolved_needs_page_or_chunk_review"
+  | "unresolved_needs_more_evidence"
+  | "unresolved_needs_counsel_review"
+  | "unresolved_locked_or_privilege_limited"
+  | "unresolved_wrong_source"
+  | "unable_to_check_safely";
+
+export interface SourceRemediationRecord {
+  remediation_id: string;
+  source_remediation_execution_id: string;
+  source_validation_id: string;
+  matter_slug: string;
+  item_id: string;
+  item_type: string;
+  blocker_type: string;
+  original_status: SourceSupportStatus;
+  remediation_outcome: SourceRemediationOutcome;
+  remediated_status: string;
+  support_status_after: SourceSupportStatus;
+  signoff_blocker_after: boolean;
+  correction_needed: boolean;
+  corrected_claim_summary?: string | null;
+  source_refs_before: unknown[];
+  source_refs_after: unknown[];
+  verification_method: string;
+  locked_restricted_involved: boolean;
+  counsel_review_required: boolean;
+  source_notes_safe: string;
+  required_next_action: string;
+  reviewer_safe_label: string;
+  version: number;
+  supersedes_record_id?: string | null;
+  rollback_ref: string;
+  audit_hash?: string;
+}
+
+export interface SourceRemediationSummary {
+  total_blockers_processed: number;
+  resolved_source_verified: number;
+  resolved_corrected_for_review_use: number;
+  resolved_duplicate_or_superseded: number;
+  unresolved_partially_supported: number;
+  unresolved_unsupported: number;
+  unresolved_conflicting_sources: number;
+  unresolved_needs_page_or_chunk_review: number;
+  unresolved_needs_more_evidence: number;
+  unresolved_needs_counsel_review: number;
+  unresolved_locked_or_privilege_limited: number;
+  unresolved_wrong_source: number;
+  unable_to_check_safely: number;
+  remaining_blockers: number;
+  verified_subset_count: number;
+  limited_signoff_subset_available: boolean;
+  counsel_signoff_pending: boolean;
+}
+
+export interface SourceRemediationCategorySummary {
+  blocker_type: string;
+  item_count: number;
+  high_materiality_count: number;
+  automated_remediation_safe: boolean;
+  counsel_review_required: boolean;
+  blocks_signoff: boolean;
+  remediation_strategy: string;
+}
+
+export interface SourceRemediationResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  source_integrity_execution_id: string;
+  signoff_packet_execution_id: string;
+  status: string;
+  source_remediation_store: string;
+  records: SourceRemediationRecord[];
+  remediation_category_summary: SourceRemediationCategorySummary[];
+  remediation_summary: SourceRemediationSummary;
+  verified_subset: {
+    verified_subset_id: string;
+    item_count: number;
+    item_ids: string[];
+    packet_sections_covered: string[];
+    excluded_item_count: number;
+    signoff_scope_recommendation: string;
+    items: SourceRemediationRecord[];
+  };
+  refined_blocker_register: SourceRemediationRecord[];
+  signoff_readiness_addendum: {
+    source_remediation_execution_id: string;
+    readiness_recommendation: string;
+    verified_subset_status: string;
+    counsel_signoff_pending: boolean;
+    explicit_signoff_recorded: boolean;
+  };
+  manifest_path?: string;
+}
