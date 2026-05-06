@@ -285,3 +285,38 @@ Final standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_VALIDATION_AND_SIGNOFF_PACKET_COMPLETE`.
 - Product status: `REVIEWED_STRATEGY_PACKET_READY_FOR_COUNSEL_SIGNOFF`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Source Integrity Validation Phase - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T09:08:17-04:00`.
+- Source-validation execution ID: `fortress-source-integrity-20260506-090537`.
+- Source-validation manifest: `/mnt/fortress_nas/audits/fortress-source-integrity-20260506-090537.json`.
+- Source validation checked all `297` material signoff-packet items.
+- Source verified for review use: `0`.
+- Source missing: `230`.
+- Needs page/chunk review: `65`.
+- Locked/privilege-limited: `2`.
+- Signoff blockers: `297`.
+- Correction queue items: `297`.
+- Signoff status remains: `COUNSEL_SIGNOFF_PENDING`.
+- Explicit signoff recorded: NO.
+- Counsel Validation Workflow remains the source review/control layer for corrections and follow-up.
+- Authenticated source-integrity UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate validation records: NO.
+- Schema/RLS/policy changes: NO.
+- Signoff auto-created: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+
+Current source-integrity standing:
+
+- Production status: `PRODUCTION_SOURCE_INTEGRITY_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `SOURCE_INTEGRITY_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

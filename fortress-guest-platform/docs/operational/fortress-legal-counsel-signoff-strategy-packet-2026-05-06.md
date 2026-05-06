@@ -259,3 +259,57 @@ Final standing state:
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
 
 Governance note: this confirms the reviewed strategy packet is production-visible and ready for counsel signoff review. It does not complete signoff, does not clear source-check obligations, does not convert AI outputs into final legal conclusions, and does not authorize filing or unrestricted production legal operations.
+
+## Source Integrity Validation Addendum - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T09:08:17-04:00`.
+- Source-validation execution ID: `fortress-source-integrity-20260506-090537`.
+- Source-validation manifest: `/mnt/fortress_nas/audits/fortress-source-integrity-20260506-090537.json`.
+- Signoff packet addendum attached: YES.
+- Updated signoff packet readiness: `SOURCE_INTEGRITY_VALIDATION_COMPLETE_WITH_UNRESOLVED_ITEMS`.
+- Signoff status: `COUNSEL_SIGNOFF_PENDING`.
+- Explicit signoff recorded: NO.
+- Material source-check items: `297`.
+- Items checked: `297`.
+- Source verified for review use: `0`.
+- Source missing: `230`.
+- Needs page/chunk review: `65`.
+- Locked/privilege-limited: `2`.
+- Signoff blockers: `297`.
+- Correction queue items: `297`.
+- Verified subset: `0`.
+- Updated packet checksum/hash: `08aadd396815460682f4f6c3cba2666b3a4e4dfc9c9d39632f187d177140fdd4`.
+
+Deployment and public exposure:
+
+- Code commit: `26018f5aa` (`feat(legal): add source integrity validation workflow`).
+- Runtime-main cherry-pick: `b6cfb73f7`.
+- Backend restart: YES.
+- Frontend restart: YES.
+- Production root smoke: HTTP `200`.
+- Production matter-route smoke: HTTP `200`.
+- Unauthenticated source-integrity API: HTTP `401`.
+- Authenticated Gary/operator source-integrity UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate signoff packet creation: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Current source-integrity standing:
+
+- Production status: `PRODUCTION_SOURCE_INTEGRITY_BACKEND_COMPLETE_UI_PENDING`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_INTEGRITY_VALIDATION`.
+- Product status: `SOURCE_INTEGRITY_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

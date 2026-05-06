@@ -918,3 +918,30 @@ Final signoff packet standing:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_VALIDATION_AND_SIGNOFF_PACKET_COMPLETE`.
 - Product status: `REVIEWED_STRATEGY_PACKET_READY_FOR_COUNSEL_SIGNOFF`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Source Integrity Validation Runtime Visibility Update
+
+Timestamp: `2026-05-06T09:08:17-04:00`
+
+- Source-validation execution ID: `fortress-source-integrity-20260506-090537`.
+- Source-validation manifest: `/mnt/fortress_nas/audits/fortress-source-integrity-20260506-090537.json`.
+- Source Integrity Validation panel/API deployed: YES.
+- Source Integrity Matrix classifications generated: YES.
+- Correction Queue generated: YES, `297` items.
+- Signoff Blockers generated: YES, `297` items.
+- Verified Subset generated: YES, `0` items.
+- Source missing: `230`.
+- Needs page/chunk review: `65`.
+- Locked/privilege-limited: `2`.
+- `DRAFT / COUNSEL REVIEW REQUIRED` preserved: YES.
+- `COUNSEL_SIGNOFF_PENDING` preserved: YES.
+- Explicit signoff recorded: NO.
+- Public exposure check: unauthenticated source-integrity API returned HTTP `401`.
+- Locked/restricted handling: metadata-only; locked content not analyzed or exposed.
+- Authenticated Gary/operator source-integrity UI confirmation: PENDING.
+
+Current source-integrity visibility standing:
+
+- Production status: `PRODUCTION_SOURCE_INTEGRITY_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `SOURCE_INTEGRITY_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

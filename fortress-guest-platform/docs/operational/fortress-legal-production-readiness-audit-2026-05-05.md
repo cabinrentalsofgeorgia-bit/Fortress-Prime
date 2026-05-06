@@ -1051,3 +1051,48 @@ Final standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_VALIDATION_AND_SIGNOFF_PACKET_COMPLETE`.
 - Product status: `REVIEWED_STRATEGY_PACKET_READY_FOR_COUNSEL_SIGNOFF`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Source Integrity Validation Readiness Update - 2026-05-06
+
+Timestamp: `2026-05-06T09:08:17-04:00`
+
+- Source-validation execution ID: `fortress-source-integrity-20260506-090537`.
+- Manifest path: `/mnt/fortress_nas/audits/fortress-source-integrity-20260506-090537.json`.
+- Source signoff packet: `fortress-signoff-packet-20260506-084028`.
+- Material source-check items: `297`.
+- Items checked: `297`.
+- Source verified for review use: `0`.
+- Source missing: `230`.
+- Needs page/chunk review: `65`.
+- Locked/privilege-limited: `2`.
+- Correction queue items: `297`.
+- Signoff blockers: `297`.
+- Updated signoff packet readiness: `SOURCE_INTEGRITY_VALIDATION_COMPLETE_WITH_UNRESOLVED_ITEMS`.
+- Signoff status: `COUNSEL_SIGNOFF_PENDING`.
+- Explicit signoff recorded: NO.
+- Unauthenticated source-integrity API: HTTP `401`.
+- Production root/legal/matter route smoke: HTTP `200`.
+- Runtime-main cherry-pick: `b6cfb73f7`.
+- Authenticated source-integrity UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate signoff packet creation: NO.
+- Schema/RLS/policy changes: NO.
+- Signoff auto-created: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+
+Current standing:
+
+- Production status: `PRODUCTION_SOURCE_INTEGRITY_BACKEND_COMPLETE_UI_PENDING`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_INTEGRITY_VALIDATION`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_SOURCE_CHECKED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_INTEGRITY_VALIDATED`.
+- Product status: `SOURCE_INTEGRITY_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
