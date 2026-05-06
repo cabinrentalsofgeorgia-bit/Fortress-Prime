@@ -324,3 +324,126 @@ export interface CounselWorkbenchResponse {
     handling: string;
   };
 }
+
+export type CounselValidationStatus =
+  | "unreviewed"
+  | "accepted_for_review_use"
+  | "rejected"
+  | "corrected"
+  | "needs_source_check"
+  | "needs_counsel_review"
+  | "needs_more_evidence"
+  | "privileged_locked_metadata_only"
+  | "duplicate_or_superseded"
+  | "unresolved"
+  | "final_counsel_signoff_pending";
+
+export type CounselSourceCheckStatus =
+  | "not_checked"
+  | "verified"
+  | "incomplete"
+  | "wrong_source"
+  | "needs_page_chunk_verification"
+  | "unsupported";
+
+export interface CounselValidationSummary {
+  total_workbench_items: number;
+  validation_complete_percent: number;
+  unreviewed_items: number;
+  accepted_for_review_use: number;
+  rejected: number;
+  corrected: number;
+  needs_source_check: number;
+  needs_counsel_review: number;
+  high_priority_unresolved: number;
+  privileged_locked_metadata_only: number;
+  counsel_signoff_pending: boolean;
+  last_reviewer?: string | null;
+  last_validation_timestamp?: string | null;
+  progress_label: string;
+}
+
+export interface CounselValidationQueue {
+  queue_id: string;
+  title: string;
+  item_count: number;
+  unreviewed_count: number;
+  accepted_count: number;
+  rejected_count: number;
+  corrected_count: number;
+  needs_source_check_count: number;
+  needs_counsel_review_count: number;
+  high_priority_count: number;
+}
+
+export interface CounselValidationRecord {
+  validation_id: string;
+  source_execution_id: string;
+  validation_execution_id: string;
+  matter_slug: string;
+  item_type: string;
+  item_id: string;
+  item_title: string;
+  current_status: string;
+  proposed_status?: string | null;
+  validation_status: CounselValidationStatus;
+  source_check_status: CounselSourceCheckStatus;
+  reviewer_type?: string | null;
+  reviewer_identity_safe_label?: string | null;
+  reviewer_role?: string | null;
+  reviewed_at?: string | null;
+  confidence_before?: number | null;
+  confidence_after?: number | null;
+  materiality?: number | null;
+  correction_summary?: string | null;
+  note?: string | null;
+  source_refs: unknown[];
+  locked_restricted_related: boolean;
+  counsel_review_required: boolean;
+  version: number;
+  supersedes_validation_id?: string | null;
+  audit_hash?: string;
+}
+
+export interface CounselValidationAuditEntry {
+  audit_id: string;
+  action: string;
+  created_at: string;
+  item_id?: string;
+  reviewer_identity_safe_label: string;
+  reviewer_role: string;
+  audit_hash?: string;
+}
+
+export interface CounselValidationResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  source_workbench_execution_id: string;
+  source_intelligence_execution_id: string;
+  status: string;
+  validation_store: string;
+  validation_status_policy: string;
+  baseline: CounselWorkbenchBaseline;
+  records: CounselValidationRecord[];
+  queues: CounselValidationQueue[];
+  summary: CounselValidationSummary;
+  audit_history: CounselValidationAuditEntry[];
+  manifest_path?: string;
+}
+
+export interface CounselValidationActionBody {
+  item_id: string;
+  action:
+    | "accept"
+    | "reject"
+    | "correct"
+    | "needs_source_check"
+    | "needs_more_evidence"
+    | "needs_counsel_review"
+    | "reopen";
+  validation_status?: CounselValidationStatus;
+  source_check_status?: CounselSourceCheckStatus;
+  note?: string;
+  correction_summary?: string;
+}
