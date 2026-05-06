@@ -212,3 +212,29 @@ Final standing state:
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
 
 Remaining blocker: all `297` source blockers remain unresolved and no verified subset exists. This is a successful remediation-workflow UI confirmation, not a signoff-readiness success.
+
+## Source Link Repair Addendum - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T09:54:59-04:00`.
+- Source-link repair execution ID: `fortress-source-link-repair-20260506-095253`.
+- Source-link repair manifest: `/mnt/fortress_nas/audits/fortress-source-link-repair-20260506-095253.json`.
+- Source blockers processed: `297`.
+- Corrected verified for review use: `15`.
+- Verified for review use: `0`.
+- Unsupported/source-missing: `230`.
+- Needs page/chunk review: `50`.
+- Locked/privilege-limited: `2`.
+- Remaining unresolved: `282`.
+- Verified subset item count: `15`.
+- Packet sections covered: `issue_matrix`.
+- Limited signoff subset available: YES, for source-link review routing only.
+- Signoff packet readiness after source-link repair: `VERIFIED_SUBSET_READY_FOR_COUNSEL_SIGNOFF_REVIEW`.
+- `COUNSEL_SIGNOFF_PENDING` preserved: YES.
+- Explicit signoff recorded: NO.
+- Authenticated source-link repair UI confirmation: PENDING.
+
+Current source-link repair standing:
+
+- Production status: `PRODUCTION_SOURCE_LINK_REPAIR_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `SOURCE_LINK_REPAIR_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
