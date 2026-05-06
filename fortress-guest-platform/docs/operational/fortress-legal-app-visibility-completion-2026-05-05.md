@@ -869,3 +869,52 @@ Current signoff packet standing:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_VALIDATION_AND_SIGNOFF_PACKET_COMPLETE`.
 - Product status: `REVIEWED_STRATEGY_PACKET_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Final Strategy Packet / Signoff UI Visibility Confirmation
+
+Timestamp: `2026-05-06T08:50:45-04:00`
+
+Gary/operator authenticated production UI confirmation:
+
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Strategy Packet / Signoff tab or section visible: YES.
+- Signoff Readiness Dashboard visible: YES.
+- Strategy Packet visible/reviewable: YES.
+- Source Integrity Matrix visible: YES.
+- Unresolved Items Register visible: YES.
+- Signoff Capture panel visible: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` posture preserved: YES.
+- `COUNSEL_SIGNOFF_PENDING` visible or preserved: YES.
+- Explicit signoff performed: NO.
+- Document/Vault, Litigation Intelligence, Counsel Workbench, and Counsel Validation remain available: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Confidential document contents publicly exposed: NO.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate validation records: NO.
+- Duplicate workbench records: NO.
+- Duplicate packet records: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final signoff packet standing:
+
+- Production status: `PRODUCTION_COUNSEL_SIGNOFF_PACKET_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_SIGNOFF_PACKET_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_REVIEW_PACKET_READY_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_VALIDATION_AND_SIGNOFF_PACKET_COMPLETE`.
+- Product status: `REVIEWED_STRATEGY_PACKET_READY_FOR_COUNSEL_SIGNOFF`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
