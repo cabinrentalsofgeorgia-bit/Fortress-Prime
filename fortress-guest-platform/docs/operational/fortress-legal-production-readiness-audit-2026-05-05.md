@@ -248,3 +248,44 @@ Resolve the remaining operator/legal blockers before any full legal-data product
 - Document records: `0`.
 - Storage objects in `matter-documents`: `0`.
 - Final production legal-data status: `WAITING_FOR_APPROVED_INTAKE_FILES`.
+
+## Production Operator Auth Blocker - 2026-05-05
+
+- Continuation timestamp: `2026-05-05T23:09:12-04:00`.
+- Evidence file: `docs/operational/fortress-legal-app-visibility-completion-2026-05-05.md`.
+- Observed login surface: `Fortress Prime` / `Command Center` password auth gate with `Port 3001 isolated` footer.
+- Gary observed error: `Invalid email or password`.
+- Email attempted: `gary@cabin-rentals-of-georgia.com`.
+- Root cause classification: `EXPECTED_COMMAND_CENTER_AUTH_GATE` plus `OPERATOR_PASSWORD_RESET_REQUIRED`.
+- Fortress Legal route: `/legal`.
+- Review matter route: `/legal/cases/fortress-legal-production-review`.
+- Staff auth backend: Fortress Prime sovereign Postgres `staff_users` through the Command Center BFF and FastAPI auth.
+- Production Supabase ref remains recorded as `hms...liap`, but the observed Command Center staff login is not Supabase Auth.
+- Gary staff user: EXISTS, active, `super_admin`, bcrypt password hash present.
+- Gary staff user id: `2bf81aa6-35b8-4fb6-89e4-70a4051b05f1`.
+- Password reset/invite action: NOT_PERFORMED; existing-user invite is not supported and no non-printed operator reset secret was available in this session.
+- Review matter: PRESENT, id `26`, slug `fortress-legal-production-review`.
+- Document metadata rows: `80`.
+- Completed documents: `78`.
+- Locked privileged documents: `2`.
+- Public legal cases API exposure check: PASS, unauthenticated request returned HTTP 401.
+- Public confidential content exposure: NOT_OBSERVED.
+- Production deploy: NO.
+- Production auth/data mutation: NO.
+
+Final classification for this continuation:
+
+- `PRODUCTION_OPERATOR_AUTH_BLOCKER_PRECISE_APP_VISIBILITY_PENDING`
+
+Updated standing state:
+
+- Production status: `PRODUCTION_AUTONOMOUS_INTAKE_BACKEND_COMPLETE`
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`
+- Legal operations status: `LEGAL_OPS_BACKEND_INTAKE_COMPLETE_APP_VISIBILITY_PENDING`
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBILITY_UNVERIFIED`
+- Pilot status: `BLOCKED_BY_PRODUCTION_OPERATOR_AUTH`
+
+Exact next action:
+
+- Complete a normal staff password reset for Gary without printing the password or reset link, then have Gary log into `https://crog-ai.com` and verify `/legal` plus the `fortress-legal-production-review` document metadata in the production UI.
