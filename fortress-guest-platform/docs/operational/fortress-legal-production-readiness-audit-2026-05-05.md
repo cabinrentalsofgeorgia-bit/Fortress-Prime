@@ -289,3 +289,44 @@ Updated standing state:
 Exact next action:
 
 - Complete a normal staff password reset for Gary without printing the password or reset link, then have Gary log into `https://crog-ai.com` and verify `/legal` plus the `fortress-legal-production-review` document metadata in the production UI.
+
+## Gary-Only Staff Password Reset Command - 2026-05-05
+
+- Continuation timestamp: `2026-05-05T23:13:05-04:00`.
+- Reset capability classification: `SAFE_LOCAL_RESET_SCRIPT_ADDED_OPERATOR_INPUT_REQUIRED`.
+- Script added: `backend/scripts/admin_reset_gary_staff_password.py`.
+- Target email: `gary@cabin-rentals-of-georgia.com`.
+- Target staff user id: `2bf81aa6-35b8-4fb6-89e4-70a4051b05f1`.
+- Target role: `super_admin`.
+- Required authorization flag: `FORTRESS_ALLOW_STAFF_PASSWORD_RESET=1`.
+- Password input method: hidden interactive prompt.
+- Hashing implementation: app `hash_password()` helper using the same bcrypt path as login verification.
+- User creation capability: NO.
+- Duplicate Gary user creation: NO.
+- Session revocation support: NO; no token-version/session-revocation column or staff session table was found in the current auth schema.
+- Reset executed in this Codex chat: NO.
+- Reason reset was not executed: this chat cannot safely supply a hidden operator password to the TTY without exposing it through assistant/tool input.
+- Production deploy: NO; script is local operator tooling, not runtime app code.
+- Legal data mutation: NO.
+- Document/Qdrant/ingest mutation: NO.
+
+Focused verification:
+
+- Python compile: PASS.
+- Help output check: PASS.
+- Non-Gary email refusal: PASS.
+- Missing authorization flag refusal: PASS.
+- Static output scan: PASS; no plaintext password/hash output path found.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_AUTONOMOUS_INTAKE_BACKEND_COMPLETE`
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`
+- Legal operations status: `LEGAL_OPS_BACKEND_INTAKE_COMPLETE_APP_VISIBILITY_PENDING`
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBILITY_UNVERIFIED`
+- Pilot status: `BLOCKED_BY_PRODUCTION_OPERATOR_PASSWORD_RESET`
+
+Exact next action:
+
+- Run the Gary-only reset command from a real production operator terminal so the new password can be entered at the hidden prompt, then verify Gary login and Fortress Legal UI visibility.

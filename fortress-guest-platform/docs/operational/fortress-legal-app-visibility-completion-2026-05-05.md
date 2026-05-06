@@ -150,3 +150,54 @@ Checks still pending after successful login:
 ## Exact Next Action
 
 Use the normal Command Center staff password-reset path with a non-printed password/secret for `gary@cabin-rentals-of-georgia.com`, then have Gary log into `https://crog-ai.com` and verify the Fortress Legal review workspace/document metadata in the production UI.
+
+## Gary-Only Reset Command Added
+
+Timestamp: 2026-05-05T23:13:05-04:00
+
+Runtime approval source:
+
+- Current operator instruction to finish Fortress Legal production access.
+
+Reset capability classification:
+
+- `SAFE_LOCAL_RESET_SCRIPT_ADDED_OPERATOR_INPUT_REQUIRED`
+
+Implementation:
+
+- Added `backend/scripts/admin_reset_gary_staff_password.py`.
+- Exact target email required: `gary@cabin-rentals-of-georgia.com`.
+- Explicit production authorization flag required: `FORTRESS_ALLOW_STAFF_PASSWORD_RESET=1`.
+- Password input method: hidden interactive `getpass` prompt only.
+- Hashing path: app `hash_password()` helper, same bcrypt verifier used by Command Center login.
+- User creation: impossible in this script.
+- Scope: existing Gary `staff_users` row only.
+- Metadata update: `updated_at` is updated with the password hash change.
+- Session revocation: not supported by the current schema; no session table/token-version column was found.
+
+Verification performed:
+
+- `python3 -m py_compile fortress-guest-platform/backend/scripts/admin_reset_gary_staff_password.py`: PASS.
+- Help output check: PASS.
+- Non-Gary email refusal check: PASS.
+- Missing authorization flag refusal check: PASS.
+- Static output scan: PASS; script prints only email, user id, role, updated_at, and sessions_revoked status on success.
+
+Password reset execution:
+
+- NOT_PERFORMED_IN_CODEX_CHAT.
+
+Reason:
+
+- The only available way to feed the interactive prompt from this chat would expose the password through assistant/tool input. That would violate the hidden-prompt and no-password-printing requirements.
+
+Current standing remains:
+
+- Production status: `PRODUCTION_AUTONOMOUS_INTAKE_BACKEND_COMPLETE`
+- Legal operations status: `LEGAL_OPS_BACKEND_INTAKE_COMPLETE_APP_VISIBILITY_PENDING`
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBILITY_UNVERIFIED`
+- Pilot status: `BLOCKED_BY_PRODUCTION_OPERATOR_PASSWORD_RESET`
+
+Remaining operator action:
+
+- Run the Gary-only reset command from a real terminal attached to the production operator environment, enter the new password only at the hidden prompt, then verify Gary login and Fortress Legal UI visibility.
