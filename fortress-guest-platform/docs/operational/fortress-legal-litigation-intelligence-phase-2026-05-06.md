@@ -155,3 +155,75 @@ Known test gap: full command-center lint remains affected by unrelated pre-exist
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
 
 Governance note: this phase produced AI-assisted draft litigation intelligence for Gary/operator and counsel review. It does not represent final legal conclusions and does not authorize unrestricted production legal operations beyond the approved review scope.
+
+## Final Authenticated Litigation Intelligence UI Confirmation
+
+- Confirmation timestamp: `2026-05-06T07:20:07-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Production route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Matter checked: `Fortress Legal Production Review`.
+- Draft posture banner: `DRAFT / COUNSEL REVIEW REQUIRED` visible.
+- Intelligence panels visible: Panopticon, Deliberation, Vanguard, and Graph Radar.
+- UI entity indicator: `448 Entities Mapped`.
+- UI contradiction indicator: `14 Contradiction Edges`.
+- Graph sync indicator: `Graph Synced: 448 Entities`.
+- Master Chronology indicator: `180 events`.
+- Entity Graph Pressure Map indicator: `448 Entities`, `1,227 Edges`.
+- Timeline/Master Chronology populated: YES.
+- Entity Graph, Graph Radar, and Panopticon populated: YES.
+- Contradiction candidates/edges visible: YES.
+- Counsel-review posture preserved: YES.
+
+Confirmed baseline retained from prior authenticated Document/Vault visibility check:
+
+- Document/Vault documents: `80`.
+- Completed documents: `78`.
+- Locked/restricted documents: `2`.
+- Locked/restricted handling: metadata-only; locked/restricted contents remain unavailable.
+
+Final product evidence aligned with UI:
+
+- Intelligence execution ID: `fortress-intel-20260506-041839`.
+- Documents analyzed: `78`.
+- Locked/restricted preserved: `2`.
+- Timeline events: `180`.
+- Normalized entities: `140`.
+- Entity mentions: `11,252`.
+- Graph nodes: `448`.
+- Graph edges: `1,227`.
+- Contradiction candidates: `14`.
+- Review queue items: `20`.
+- Qdrant/vector points unchanged: `3,785`.
+- Product code commit: `65752cf43`.
+- Product evidence commit: `609d4c504`.
+- Runtime-main cherry-pick: `5e39ca165`.
+- Document metadata visibility evidence commit: `52dc750a85eec60d2ddf168767aa2b0ce75f1e26`.
+
+Confirmation-step mutation invariants:
+
+- Intake rerun: NO.
+- Litigation-intelligence extraction rerun: NO.
+- New document upload: NO.
+- New document rows: NO.
+- Duplicate derived intelligence rows: NO.
+- New Qdrant/vector points: NO.
+- Locked/restricted documents unlocked: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Production deploy: NO.
+- Secrets printed/exposed: NO.
+- Confidential document contents printed/exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final standing state:
+
+- Production status: `PRODUCTION_LITIGATION_INTELLIGENCE_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_AI_ASSISTED_LITIGATION_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_AND_INTELLIGENCE_COMPLETE`.
+- Product status: `LITIGATION_INTELLIGENCE_READY_FOR_GARY_REVIEW`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+Governance note: this final confirmation means the AI-assisted litigation-intelligence review layer is production-visible and ready for Gary/operator review. It does not remove counsel-review requirements, does not convert AI outputs into final legal conclusions, and does not authorize unrestricted production legal operations beyond this approved review scope.

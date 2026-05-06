@@ -551,3 +551,72 @@ Current intelligence-layer standing:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_ANALYZED_UI_CONFIRMATION_PENDING`.
 - Product status: `LITIGATION_INTELLIGENCE_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+## Final Litigation Intelligence UI Visibility Confirmation
+
+Timestamp: `2026-05-06T07:20:07-04:00`
+
+Gary/operator authenticated production UI confirmation:
+
+- Production route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Matter checked: `Fortress Legal Production Review`.
+- Draft posture banner: `DRAFT / COUNSEL REVIEW REQUIRED` visible.
+- Panopticon / Deliberation / Vanguard / Graph Radar panels visible: YES.
+- UI entity count: `448 Entities Mapped`.
+- UI contradiction count: `14 Contradiction Edges`.
+- Graph sync indicator: `Graph Synced: 448 Entities`.
+- Master Chronology indicator: `180 events`.
+- Entity Graph Pressure Map indicator: `448 Entities`, `1,227 Edges`.
+- Timeline/Master Chronology populated: YES.
+- Entity Graph / Graph Radar / Panopticon populated: YES.
+- Contradiction candidates/edges visible: YES.
+- Counsel-review posture preserved: YES.
+
+Document/Vault baseline remains confirmed:
+
+- Documents: `80`.
+- Completed: `78`.
+- Locked/restricted: `2`.
+- Locked/restricted handling: metadata-only; restrictions preserved.
+
+Product evidence aligned with UI:
+
+- Litigation intelligence execution ID: `fortress-intel-20260506-041839`.
+- Documents analyzed: `78`.
+- Locked/restricted preserved: `2`.
+- Timeline events: `180`.
+- Normalized entities: `140`.
+- Entity mentions: `11,252`.
+- Graph nodes: `448`.
+- Graph edges: `1,227`.
+- Contradiction candidates: `14`.
+- Review queue items: `20`.
+- Qdrant/vector points unchanged: `3,785`.
+
+Confirmation-step mutation invariants:
+
+- Intake rerun: NO.
+- Litigation-intelligence extraction rerun: NO.
+- New document upload: NO.
+- New document rows: NO.
+- Duplicate derived intelligence rows: NO.
+- New Qdrant/vector points: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Production deploy: NO.
+- Secrets printed/exposed: NO.
+- Confidential document contents printed/exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final standing state:
+
+- Production status: `PRODUCTION_LITIGATION_INTELLIGENCE_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_AI_ASSISTED_LITIGATION_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_ANALYZED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_AND_INTELLIGENCE_COMPLETE`.
+- Product status: `LITIGATION_INTELLIGENCE_READY_FOR_GARY_REVIEW`.
+- Counsel status: `COUNSEL_REVIEW_REQUIRED`.
+
+Governance note: this confirms the AI-assisted litigation-intelligence review layer is production-visible and ready for Gary/operator review. It does not remove counsel-review requirements, does not convert AI outputs into final legal conclusions, and does not authorize unrestricted production legal operations beyond this approved review scope.
