@@ -20,6 +20,7 @@ from backend.services.legal_counsel_signoff_packet import (
     reopen_signoff_packet,
 )
 from backend.services.legal_counsel_workbench import load_latest_workbench
+from backend.services.legal_limited_signoff_candidate_packet import load_latest_limited_signoff_candidate
 from backend.services.legal_source_integrity_validation import load_latest_source_integrity
 from backend.services.legal_source_link_repair import load_latest_source_link_repair
 from backend.services.legal_source_remediation import load_latest_source_remediation
@@ -170,4 +171,12 @@ async def get_targeted_source_completion(slug: str):
     packet = load_latest_targeted_source_completion(slug)
     if packet is None:
         raise HTTPException(status_code=404, detail="Targeted source completion not found.")
+    return packet
+
+
+@router.get("/cases/{slug}/limited-signoff-candidate", summary="Get limited signoff candidate packet")
+async def get_limited_signoff_candidate(slug: str):
+    packet = load_latest_limited_signoff_candidate(slug)
+    if packet is None:
+        raise HTTPException(status_code=404, detail="Limited signoff candidate packet not found.")
     return packet

@@ -13,6 +13,7 @@ import { SourceIntegrityValidationPanel } from "./source-integrity-validation-pa
 import { SourceLinkRepairPanel } from "./source-link-repair-panel";
 import { SourceRemediationPanel } from "./source-remediation-panel";
 import { TargetedSourceCompletionPanel } from "./targeted-source-completion-panel";
+import { LimitedSignoffCandidatePanel } from "./limited-signoff-candidate-panel";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -107,6 +108,7 @@ export function CounselSignoffStrategyPacket({ slug }: { slug: string }) {
       <SourceRemediationPanel slug={slug} />
       <SourceLinkRepairPanel slug={slug} />
       <TargetedSourceCompletionPanel slug={slug} />
+      <LimitedSignoffCandidatePanel slug={slug} />
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <Metric label="Packet Sections" value={data.sections.length} />
