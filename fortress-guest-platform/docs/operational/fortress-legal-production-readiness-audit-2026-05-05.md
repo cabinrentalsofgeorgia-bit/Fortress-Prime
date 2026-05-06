@@ -1319,3 +1319,34 @@ Final targeted source completion standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_TARGETED_SOURCE_COMPLETION_COMPLETE`.
 - Product status: `TARGETED_SOURCE_COMPLETION_VERIFIED_SUBSET_EXPANDED`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Limited Signoff Candidate Packet Readiness Update - 2026-05-06
+
+- Limited signoff candidate execution ID: `fortress-limited-signoff-candidate-20260506-153336`.
+- Manifest path: `/mnt/fortress_nas/audits/fortress-limited-signoff-candidate-20260506-153336.json`.
+- Verified subset used: `65`.
+- Starting unresolved source issues: `232`.
+- Tier 1 count: `21`.
+- Tier 2 count: `81`.
+- Tier 3 count: `130`.
+- Included in limited signoff candidate packet: `65`.
+- Excluded from packet: `232`.
+- Requires counsel interpretation: `16`.
+- Requires more evidence/source repair: `214`.
+- Locked/privilege-limited: `2`.
+- Unsupported: `230`.
+- Runtime code commit: `366923f90`.
+- Backend restart: `fortress-backend.service` restarted and active.
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Production smoke: `/` HTTP `200`, matter route HTTP `200`, unauthenticated limited-signoff API HTTP `401`.
+- Authenticated Limited Signoff Candidate Packet UI confirmation: PENDING.
+- Raw document upload/ingest/document rows/Qdrant vectors/schema/RLS/policy/privilege changes: NO.
+- Locked content analyzed: NO.
+- Document contents exposed in evidence: NO.
+- Explicit signoff recorded: NO.
+
+Current limited signoff candidate standing:
+
+- Production status: `PRODUCTION_LIMITED_SIGNOFF_PACKET_BACKEND_COMPLETE_UI_PENDING`.
+- Product status: `LIMITED_SIGNOFF_PACKET_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

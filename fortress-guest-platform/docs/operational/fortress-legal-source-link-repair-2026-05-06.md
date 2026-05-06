@@ -252,3 +252,13 @@ Final targeted source completion standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_TARGETED_SOURCE_COMPLETION_COMPLETE`.
 - Product status: `TARGETED_SOURCE_COMPLETION_VERIFIED_SUBSET_EXPANDED`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Limited Signoff Candidate Packet Addendum - 2026-05-06
+
+- Limited signoff candidate execution ID: `fortress-limited-signoff-candidate-20260506-153336`.
+- Verified subset used: `65`.
+- Remaining unresolved reviewed and excluded: `232`.
+- Tier 1 / Tier 2 / Tier 3 counts: `21` / `81` / `130`.
+- Signoff scope recommendation: `LIMITED_SIGNOFF_CANDIDATE_PACKET_READY_FOR_COUNSEL_REVIEW`.
+- Counsel signoff recorded: NO.
+- Authenticated Limited Signoff Candidate Packet UI confirmation: PENDING.
