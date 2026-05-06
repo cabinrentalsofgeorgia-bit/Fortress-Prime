@@ -146,3 +146,52 @@ Track results:
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
 
 Remaining action: Gary/operator must hard refresh or open an authenticated session at `https://crog-ai.com/legal/cases/fortress-legal-production-review` and confirm the Targeted Source Completion panel, Expanded Verified Subset, Track A/B/C results, Refined Unresolved Register, Signoff Readiness Addendum, `DRAFT / COUNSEL REVIEW REQUIRED`, `COUNSEL_SIGNOFF_PENDING`, and locked metadata-only handling.
+
+## Final Authenticated Targeted Source Completion UI Confirmation
+
+- Confirmation timestamp: `2026-05-06T11:25:18-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Targeted Source Completion panel visible: YES.
+- Expanded Verified Subset visible: YES.
+- Refined Unresolved Register visible: YES.
+- Track A / B / C results visible or reviewable: YES.
+- Signoff Readiness Addendum visible: YES.
+- `COUNSEL_SIGNOFF_PENDING` visible or preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` visible or preserved: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Confidential document contents publicly exposed: NO.
+- Blocking UI/API errors preventing review: NO.
+
+Final confirmation-step mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant vectors: NO.
+- Duplicate targeted-source records: NO.
+- Duplicate source-link repair records: NO.
+- Duplicate source-remediation records: NO.
+- Duplicate signoff packet records: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Production deploy/restart: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final targeted source completion standing:
+
+- Production status: `PRODUCTION_TARGETED_SOURCE_COMPLETION_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_VERIFIED_STRATEGY_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_TARGETED_SOURCE_COMPLETED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_TARGETED_SOURCE_COMPLETION_COMPLETE`.
+- Product status: `TARGETED_SOURCE_COMPLETION_VERIFIED_SUBSET_EXPANDED`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+Remaining blocker: counsel signoff remains pending. The verified subset expanded to `65` review-use source-routed items, while `232` source issues remain unresolved for counsel/source review.
