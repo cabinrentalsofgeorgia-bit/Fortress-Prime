@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCounselWorkbench } from "@/lib/legal-hooks";
-import { AlertTriangle, Eye, Lock, Scale, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Eye, Lock, Scale, ShieldAlert, Swords } from "lucide-react";
 
 function WorkbenchMetric({ label, value }: { label: string; value: number | string }) {
   return (
@@ -40,6 +40,13 @@ export function CounselReviewWorkbench({ slug }: { slug: string }) {
     .slice(0, 6);
   const topBinders = data.evidence_binders.slice(0, 8);
   const topTriage = data.contradiction_triage.slice(0, 5);
+  const topEntities = data.entity_dossier.slice(0, 6);
+  const theoryPacket = data.theory_packets?.operator_gary_review_narrative as
+    | { status?: string; summary?: string }
+    | undefined;
+  const counterTheoryPacket = data.theory_packets?.opposing_party_likely_narrative as
+    | { status?: string; summary?: string }
+    | undefined;
 
   return (
     <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 space-y-4">
@@ -62,7 +69,7 @@ export function CounselReviewWorkbench({ slug }: { slug: string }) {
         <WorkbenchMetric label="Issues" value={data.issue_matrix.length} />
         <WorkbenchMetric label="Evidence Binders" value={data.evidence_binders.length} />
         <WorkbenchMetric label="Contradiction Triage" value={data.contradiction_triage.length} />
-        <WorkbenchMetric label="Review Queue" value={data.consolidated_review_queue.length} />
+        <WorkbenchMetric label="Entity Dossier" value={data.entity_dossier.length} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -146,6 +153,52 @@ export function CounselReviewWorkbench({ slug }: { slug: string }) {
                 <p className="text-[10px] text-zinc-500">{question.category} · {question.priority}</p>
               </div>
             ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+              <Eye className="h-3.5 w-3.5 text-purple-300" />
+              Entity Dossier
+            </p>
+            <Badge variant="outline" className="text-[10px]">{data.entity_dossier.length}</Badge>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {topEntities.map((entity) => (
+              <div key={entity.id} className="rounded border border-zinc-800 bg-zinc-900/70 p-2">
+                <p className="text-xs text-zinc-100">{entity.canonical_name}</p>
+                <p className="text-[10px] text-zinc-500">
+                  {entity.entity_type} · degree {entity.graph_degree}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+              <Swords className="h-3.5 w-3.5 text-red-300" />
+              Theory / Counter-Theory
+            </p>
+            <Badge variant="outline" className="text-[10px]">Draft</Badge>
+          </div>
+          <div className="grid gap-2">
+            <div className="rounded border border-zinc-800 bg-zinc-900/70 p-2">
+              <p className="text-xs text-zinc-100">Operator/Gary review narrative</p>
+              <p className="line-clamp-2 text-[10px] text-zinc-500">
+                {theoryPacket?.summary ?? "Draft theory packet available for counsel review."}
+              </p>
+            </div>
+            <div className="rounded border border-zinc-800 bg-zinc-900/70 p-2">
+              <p className="text-xs text-zinc-100">Opposing-party likely narrative</p>
+              <p className="line-clamp-2 text-[10px] text-zinc-500">
+                {counterTheoryPacket?.summary ?? "Draft counter-theory packet available for counsel review."}
+              </p>
+            </div>
           </div>
         </section>
       </div>

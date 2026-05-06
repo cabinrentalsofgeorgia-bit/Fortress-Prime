@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   AlertTriangle,
+  Briefcase,
   Clock,
   Eye,
   Loader2,
@@ -368,10 +369,14 @@ export function CaseDetailShell({ slug }: { slug: string }) {
         )}
       </div>
 
-      {/* ── Three-Tab Command Deck ── */}
-      <Tabs defaultValue="panopticon" className="flex-1 flex flex-col min-h-0">
+      {/* ── Command Deck ── */}
+      <Tabs defaultValue="workbench" className="flex-1 flex flex-col min-h-0">
         <div className="px-4 pt-3 pb-0 border-b shrink-0">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+            <TabsTrigger value="workbench" className="text-xs gap-1.5">
+              <Briefcase className="h-3 w-3" />
+              Workbench
+            </TabsTrigger>
             <TabsTrigger value="panopticon" className="text-xs gap-1.5">
               <Eye className="h-3 w-3" />
               Panopticon
@@ -386,6 +391,12 @@ export function CaseDetailShell({ slug }: { slug: string }) {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        {/* ── TAB 0: COUNSEL REVIEW WORKBENCH ── */}
+        <TabsContent value="workbench" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+          <CounselReviewWorkbench slug={slug} />
+          <DocumentViewer legalCase={c} slug={slug} />
+        </TabsContent>
 
         {/* ── TAB 1: THE PANOPTICON (Intelligence & Ground Truth) ── */}
         <TabsContent value="panopticon" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
@@ -445,7 +456,6 @@ export function CaseDetailShell({ slug }: { slug: string }) {
 
         {/* ── TAB 2: THE DELIBERATION CHAMBER (Strategy) ── */}
         <TabsContent value="deliberation" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
-          <CounselReviewWorkbench slug={slug} />
           <CounselThreatMatrix slug={slug} />
           <JurisprudenceRadar slug={slug} />
           <SanctionsAlertsPanel slug={slug} />
