@@ -24,6 +24,8 @@ import type {
   CounselWorkbenchResponse,
   CounselValidationActionBody,
   CounselValidationResponse,
+  CounselSignoffActionBody,
+  CounselSignoffPacketResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -42,6 +44,7 @@ const KEYS = {
     ["legal", "deposition-kill-sheets", slug] as const,
   counselWorkbench: (slug: string) => ["legal", "counsel-workbench", slug] as const,
   counselValidation: (slug: string) => ["legal", "counsel-validation", slug] as const,
+  counselSignoffPacket: (slug: string) => ["legal", "counsel-signoff-packet", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -111,6 +114,17 @@ export function useCounselValidation(slug: string) {
     queryFn: () =>
       api.get<CounselValidationResponse>(
         `/api/internal/legal/cases/${slug}/counsel-validation`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useCounselSignoffPacket(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselSignoffPacket(slug),
+    queryFn: () =>
+      api.get<CounselSignoffPacketResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-packet`,
       ),
     enabled: !!slug,
   });
@@ -188,6 +202,38 @@ export function useCounselValidationAction(slug: string) {
       qc.invalidateQueries({ queryKey: KEYS.counselValidation(slug) });
     },
     onError: (e) => toast.error(`Validation update failed: ${e.message}`),
+  });
+}
+
+export function useCounselSignoffAction(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CounselSignoffActionBody) =>
+      api.post<CounselSignoffPacketResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-packet/signoff`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Signoff action recorded");
+      qc.invalidateQueries({ queryKey: KEYS.counselSignoffPacket(slug) });
+    },
+    onError: (e) => toast.error(`Signoff failed: ${e.message}`),
+  });
+}
+
+export function useCounselSignoffReopen(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { notes?: string }) =>
+      api.post<CounselSignoffPacketResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-packet/reopen`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Signoff packet reopened");
+      qc.invalidateQueries({ queryKey: KEYS.counselSignoffPacket(slug) });
+    },
+    onError: (e) => toast.error(`Reopen failed: ${e.message}`),
   });
 }
 

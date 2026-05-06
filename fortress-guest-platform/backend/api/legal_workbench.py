@@ -14,6 +14,11 @@ from backend.services.legal_counsel_validation import (
     apply_validation_action,
     load_latest_validation,
 )
+from backend.services.legal_counsel_signoff_packet import (
+    capture_signoff_action,
+    load_latest_signoff_packet,
+    reopen_signoff_packet,
+)
 from backend.services.legal_counsel_workbench import load_latest_workbench
 
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
@@ -26,6 +31,16 @@ class CounselValidationActionRequest(BaseModel):
     source_check_status: str | None = Field(default=None, max_length=64)
     note: str | None = Field(default=None, max_length=1200)
     correction_summary: str | None = Field(default=None, max_length=1200)
+
+
+class CounselSignoffActionRequest(BaseModel):
+    signoff_type: str = Field(..., min_length=1, max_length=80)
+    scope_confirmed: bool = False
+    notes: str | None = Field(default=None, max_length=1200)
+
+
+class CounselSignoffReopenRequest(BaseModel):
+    notes: str | None = Field(default=None, max_length=1200)
 
 
 @router.get("/cases/{slug}/counsel-workbench", summary="Get counsel review workbench packet")
@@ -70,3 +85,53 @@ async def post_counsel_validation_action(
         raise HTTPException(status_code=404, detail="Validation item not found.") from None
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+@router.get("/cases/{slug}/counsel-signoff-packet", summary="Get counsel signoff strategy packet")
+async def get_counsel_signoff_packet(slug: str):
+    packet = load_latest_signoff_packet(slug)
+    if packet is None:
+        raise HTTPException(status_code=404, detail="Counsel signoff packet not found.")
+    return packet
+
+
+@router.post("/cases/{slug}/counsel-signoff-packet/signoff", summary="Capture explicit counsel signoff action")
+async def post_counsel_signoff_action(
+    slug: str,
+    body: CounselSignoffActionRequest,
+    user=Depends(require_manager_or_admin),
+):
+    role = str(getattr(user, "role", "staff") or "staff")
+    signer = f"staff:{role}"
+    try:
+        return capture_signoff_action(
+            slug,
+            signoff_type=body.signoff_type,
+            signer_safe_label=signer,
+            signer_role=role,
+            scope_confirmed=body.scope_confirmed,
+            notes=body.notes,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Counsel signoff packet not found.") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+@router.post("/cases/{slug}/counsel-signoff-packet/reopen", summary="Reopen or supersede counsel signoff packet")
+async def post_counsel_signoff_reopen(
+    slug: str,
+    body: CounselSignoffReopenRequest,
+    user=Depends(require_manager_or_admin),
+):
+    role = str(getattr(user, "role", "staff") or "staff")
+    reviewer = f"staff:{role}"
+    try:
+        return reopen_signoff_packet(
+            slug,
+            reviewer_safe_label=reviewer,
+            reviewer_role=role,
+            notes=body.notes,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Counsel signoff packet not found.") from None

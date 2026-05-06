@@ -27,6 +27,9 @@ vi.mock("@/lib/legal-hooks", () => ({
   useCounselWorkbench: () => ({ data: null, isLoading: false, error: null }),
   useCounselValidation: () => ({ data: null, isLoading: false, error: null }),
   useCounselValidationAction: () => ({ mutate: vi.fn(), isPending: false }),
+  useCounselSignoffPacket: () => ({ data: null, isLoading: false, error: null }),
+  useCounselSignoffAction: () => ({ mutate: vi.fn(), isPending: false }),
+  useCounselSignoffReopen: () => ({ mutate: vi.fn(), isPending: false }),
   downloadKillSheetMarkdown: vi.fn(),
 }));
 vi.mock("@/lib/store", () => ({
@@ -93,6 +96,9 @@ vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-review-workben
 }));
 vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-validation-workflow", () => ({
   CounselValidationWorkflow: () => <div data-testid="counsel-validation-workflow" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet", () => ({
+  CounselSignoffStrategyPacket: () => <div data-testid="counsel-signoff-strategy-packet" />,
 }));
 vi.mock("@/components/access/role-gated-action", () => ({
   RoleGatedAction: ({ children }: { children: React.ReactNode }) => <>{children}</>,
