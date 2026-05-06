@@ -1580,7 +1580,7 @@ async def build_case_chronology(slug: str, background_tasks: BackgroundTasks):
     from backend.services.legal_chronology import build_chronology
 
     async def _bg():
-        async with AsyncSessionLocal() as db:
+        async with LegacySession() as db:
             await build_chronology(db, slug)
 
     background_tasks.add_task(asyncio.coroutine(_bg) if False else _bg)
@@ -1598,7 +1598,7 @@ async def deliberate_case(slug: str):
     from backend.services.legal_chronology import get_chronology
     from backend.services.async_jobs import enqueue_async_job
 
-    async with AsyncSessionLocal() as graph_db:
+    async with LegacySession() as graph_db:
         snapshot = await get_case_graph_snapshot(graph_db, case_slug=slug)
         try:
             timeline = await get_chronology(graph_db, slug)
@@ -1656,7 +1656,7 @@ async def deliberate_case(slug: str):
 async def get_case_chronology(slug: str):
     """Return the chronological timeline for a case."""
     from backend.services.legal_chronology import get_chronology
-    async with AsyncSessionLocal() as db:
+    async with LegacySession() as db:
         events = await get_chronology(db, slug)
     return {"case_slug": slug, "events": events, "total": len(events)}
 

@@ -32,7 +32,7 @@ async def test_graph_snapshot_auto_builds_when_initial_snapshot_is_empty(
     session = AsyncMock()
 
     @asynccontextmanager
-    async def override_session_local():
+    async def override_legacy_session():
         yield session
 
     get_snapshot = AsyncMock(
@@ -56,7 +56,7 @@ async def test_graph_snapshot_auto_builds_when_initial_snapshot_is_empty(
     )
     build_graph = AsyncMock(return_value={"status": "graph_built", "case_slug": "demo-case", "nodes": 1, "edges": 0})
 
-    monkeypatch.setattr(legal_graph_api, "AsyncSessionLocal", override_session_local)
+    monkeypatch.setattr(legal_graph_api, "LegacySession", override_legacy_session)
     monkeypatch.setattr(legal_graph_api.LegalCaseGraphBuilder, "get_graph_snapshot", get_snapshot)
     monkeypatch.setattr(legal_graph_api.LegalCaseGraphBuilder, "build_baseline_graph", build_graph)
 

@@ -3,8 +3,8 @@ Legal Case Graph API (Phase 2 Hybrid MVP).
 """
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.core.database import AsyncSessionLocal
 from backend.core.security import require_manager_or_admin
+from backend.services.ediscovery_agent import LegacySession
 from backend.services.legal_case_graph import LegalCaseGraphBuilder
 
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
@@ -12,7 +12,7 @@ router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 @router.post("/cases/{case_slug}/graph/refresh", summary="Build legal case graph baseline")
 async def refresh_case_graph(case_slug: str):
-    async with AsyncSessionLocal() as session:
+    async with LegacySession() as session:
         try:
             result = await LegalCaseGraphBuilder.build_baseline_graph(case_slug=case_slug, db=session)
             return result
@@ -23,7 +23,7 @@ async def refresh_case_graph(case_slug: str):
 
 @router.get("/cases/{case_slug}/graph/snapshot", summary="Get legal case graph snapshot")
 async def get_graph_snapshot(case_slug: str):
-    async with AsyncSessionLocal() as session:
+    async with LegacySession() as session:
         try:
             snapshot = await LegalCaseGraphBuilder.get_graph_snapshot(case_slug=case_slug, db=session)
             if not snapshot or not snapshot.get("nodes"):
@@ -38,4 +38,3 @@ async def get_graph_snapshot(case_slug: str):
         except Exception as exc:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Graph snapshot failed: {str(exc)[:240]}") from exc
-

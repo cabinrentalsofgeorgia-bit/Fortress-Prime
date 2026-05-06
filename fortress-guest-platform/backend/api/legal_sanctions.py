@@ -4,8 +4,8 @@ Sanctions Tripwire API endpoints.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 
-from backend.core.database import AsyncSessionLocal
 from backend.core.security import require_admin, require_manager_or_admin
+from backend.services.ediscovery_agent import LegacySession
 from backend.services.legal_sanctions_tripwire import LegalSanctionsTripwire
 
 router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
@@ -13,7 +13,7 @@ router = APIRouter(dependencies=[Depends(require_manager_or_admin)])
 
 @router.post("/cases/{case_slug}/sanctions/sweep", summary="Run sanctions tripwire sweep")
 async def run_tripwire_sweep(case_slug: str):
-    async with AsyncSessionLocal() as db:
+    async with LegacySession() as db:
         try:
             return await LegalSanctionsTripwire.run_sweep(case_slug=case_slug, db=db, trigger_source="manual_api")
         except HTTPException:
@@ -26,7 +26,7 @@ async def run_tripwire_sweep(case_slug: str):
 
 @router.get("/cases/{case_slug}/sanctions/alerts", summary="List sanctions alerts")
 async def list_sanctions_alerts(case_slug: str):
-    async with AsyncSessionLocal() as db:
+    async with LegacySession() as db:
         try:
             rows = (
                 await db.execute(
@@ -69,7 +69,7 @@ async def run_tripwire_cron_batch(
     include_closed: bool = Query(default=False),
     _user=Depends(require_admin),
 ):
-    async with AsyncSessionLocal() as db:
+    async with LegacySession() as db:
         try:
             return await LegalSanctionsTripwire.run_cron_sweep(
                 db=db,
