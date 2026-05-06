@@ -1161,3 +1161,115 @@ export interface CounselSignoffDecisionActionBody {
   revision_requests?: string[];
   source_remediation_returns?: string[];
 }
+
+export interface AutonomousLearningSignal {
+  signal_id: string;
+  signal_type: string;
+  source_phase: string;
+  linked_item_id: string;
+  severity: string;
+  confidence: number;
+  suggested_improvement: string;
+  safe_auto_apply_eligible: boolean;
+  human_approval_required: boolean;
+  reason: string;
+  status: string;
+  created_at: string;
+}
+
+export interface AutonomousLearningEvalResult {
+  eval_id: string;
+  category: string;
+  assertion: string;
+  status: string;
+  evidence: string;
+}
+
+export interface AutonomousLearningProposal {
+  proposal_id: string;
+  proposal_type: string;
+  title: string;
+  description: string;
+  expected_benefit: string;
+  risk_level: string;
+  safe_auto_apply_eligible: boolean;
+  human_approval_required: boolean;
+  affected_files_or_routes: string[];
+  test_plan: string[];
+  rollback_plan: string;
+  status: string;
+}
+
+export interface AutonomousLearningNextAction {
+  rank: number;
+  action: string;
+  reason: string;
+  expected_impact: string;
+  required_authority: string;
+  safe_auto_apply: boolean;
+  rollback_plan: string;
+}
+
+export interface AutonomousLearningResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  status: string;
+  cycle_cap: number;
+  cycles_completed: number;
+  learning_registry: {
+    store: string;
+    signal_count: number;
+    signals: AutonomousLearningSignal[];
+  };
+  evaluation_suite: {
+    eval_count: number;
+    results: AutonomousLearningEvalResult[];
+    summary: Record<string, number>;
+  };
+  improvement_proposals: {
+    proposal_count: number;
+    proposals: AutonomousLearningProposal[];
+    gate_results: Array<{
+      proposal_id: string;
+      gate_result: string;
+      allowed: boolean;
+      blocked_reasons: string[];
+    }>;
+    safe_auto_apply_count: number;
+    human_approval_required_count: number;
+    blocked_count: number;
+  };
+  safe_auto_apply_gate: {
+    enabled: boolean;
+    auto_apply_runtime_mutations: boolean;
+    safe_auto_apply_proposal_ids: string[];
+    human_approval_required_proposal_ids: string[];
+  };
+  feedback_capture: {
+    enabled: boolean;
+    feedback_records: unknown[];
+    note_policy: string;
+  };
+  next_best_actions: AutonomousLearningNextAction[];
+  cycle_summaries: Array<{
+    cycle: number;
+    observed_signals: number;
+    evals_run: number;
+    proposals_generated: number;
+    safe_auto_apply_ready: number;
+    human_approval_required: number;
+    stop_reason?: string | null;
+  }>;
+  manifest_path?: string;
+}
+
+export interface AutonomousLearningFeedbackBody {
+  item_id: string;
+  item_type: string;
+  feedback_type: string;
+  note?: string;
+  severity: string;
+  linked_source_refs?: Array<Record<string, unknown>>;
+  action_requested?: string;
+}

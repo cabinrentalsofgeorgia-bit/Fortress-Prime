@@ -23,6 +23,10 @@ from backend.services.legal_counsel_signoff_decision import (
     load_latest_decision_workflow,
     record_decision,
 )
+from backend.services.legal_autonomous_learning_loop import (
+    load_latest_learning_loop,
+    record_feedback,
+)
 from backend.services.legal_counsel_workbench import load_latest_workbench
 from backend.services.legal_limited_signoff_candidate_packet import load_latest_limited_signoff_candidate
 from backend.services.legal_source_integrity_validation import load_latest_source_integrity
@@ -64,6 +68,16 @@ class CounselSignoffDecisionRequest(BaseModel):
     decision_notes: str | None = Field(default=None, max_length=1200)
     revision_requests: list[str] = Field(default_factory=list, max_length=300)
     source_remediation_returns: list[str] = Field(default_factory=list, max_length=300)
+
+
+class AutonomousLearningFeedbackRequest(BaseModel):
+    item_id: str = Field(..., min_length=1, max_length=160)
+    item_type: str = Field(..., min_length=1, max_length=80)
+    feedback_type: str = Field(..., min_length=1, max_length=80)
+    note: str | None = Field(default=None, max_length=1200)
+    severity: str = Field(default="medium", min_length=1, max_length=40)
+    linked_source_refs: list[dict[str, object]] = Field(default_factory=list, max_length=50)
+    action_requested: str | None = Field(default=None, max_length=240)
 
 
 @router.get("/cases/{slug}/counsel-workbench", summary="Get counsel review workbench packet")
@@ -235,5 +249,40 @@ async def post_counsel_signoff_decision(
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Counsel signoff decision workflow not found.") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+@router.get("/cases/{slug}/autonomous-learning", summary="Get autonomous learning loop state")
+async def get_autonomous_learning(slug: str):
+    packet = load_latest_learning_loop(slug)
+    if packet is None:
+        raise HTTPException(status_code=404, detail="Autonomous learning loop not found.")
+    return packet
+
+
+@router.post("/cases/{slug}/autonomous-learning/feedback", summary="Capture autonomous learning feedback")
+async def post_autonomous_learning_feedback(
+    slug: str,
+    body: AutonomousLearningFeedbackRequest,
+    user=Depends(require_manager_or_admin),
+):
+    role = str(getattr(user, "role", "staff") or "staff")
+    reviewer = f"staff:{role}"
+    try:
+        return record_feedback(
+            slug,
+            item_id=body.item_id,
+            item_type=body.item_type,
+            feedback_type=body.feedback_type,
+            note=body.note,
+            severity=body.severity,
+            reviewer_safe_label=reviewer,
+            reviewer_role=role,
+            linked_source_refs=body.linked_source_refs,
+            action_requested=body.action_requested,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Autonomous learning loop not found.") from None
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None

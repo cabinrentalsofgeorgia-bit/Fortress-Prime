@@ -591,6 +591,93 @@ async def test_counsel_signoff_decision_rejects_unconfirmed_signoff(monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_autonomous_learning_endpoint_returns_manifest_without_body_text(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_learning_loop",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-learning-loop-test",
+            "status": "AUTONOMOUS_LEARNING_LOOP_ACTIVE",
+            "learning_registry": {"signal_count": 1, "signals": []},
+            "evaluation_suite": {"eval_count": 1, "results": []},
+            "improvement_proposals": {
+                "proposal_count": 1,
+                "safe_auto_apply_count": 1,
+                "human_approval_required_count": 0,
+            },
+            "mutation_invariants": {
+                "signoff_auto_created": False,
+                "external_submission_authorized": False,
+                "final_legal_conclusions_created": False,
+            },
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/autonomous-learning")
+
+    assert response.status_code == 200
+    assert response.json()["execution_id"] == "fortress-learning-loop-test"
+    assert "document_body" not in response.text
+    assert "authorized_for_external_submission" not in response.text
+    assert "final_legal_conclusion" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_autonomous_learning_feedback_rejects_secret_like_notes(monkeypatch):
+    def fake_record_feedback(slug, **kwargs):
+        if "password" in (kwargs["note"] or "").lower():
+            raise ValueError("feedback_note_rejected_secret_like_content")
+        return {"case_slug": slug, "latest_feedback": {"feedback_id": "f1"}}
+
+    monkeypatch.setattr(legal_workbench_api, "record_feedback", fake_record_feedback)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        blocked = await client.post(
+            "/api/internal/legal/cases/fortress-legal-production-review/autonomous-learning/feedback",
+            json={
+                "item_id": "general",
+                "item_type": "learning_loop",
+                "feedback_type": "operator_feedback",
+                "severity": "medium",
+                "note": "pass" + "word=not-allowed",
+            },
+        )
+        allowed = await client.post(
+            "/api/internal/legal/cases/fortress-legal-production-review/autonomous-learning/feedback",
+            json={
+                "item_id": "general",
+                "item_type": "learning_loop",
+                "feedback_type": "operator_feedback",
+                "severity": "medium",
+                "note": "Review source blocker ranking.",
+            },
+        )
+
+    assert blocked.status_code == 400
+    assert allowed.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     def fake_capture_signoff_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"
