@@ -43,6 +43,16 @@ vi.mock("@/lib/legal-hooks", () => ({
         },
       ],
       entity_dossier: [],
+      theory_packets: {
+        operator_gary_review_narrative: {
+          status: "DRAFT / COUNSEL REVIEW REQUIRED",
+          summary: "Draft operator narrative.",
+        },
+        opposing_party_likely_narrative: {
+          status: "DRAFT / COUNSEL REVIEW REQUIRED",
+          summary: "Draft counter narrative.",
+        },
+      },
       counsel_questions: [
         {
           id: "question-01",
@@ -84,6 +94,8 @@ describe("CounselReviewWorkbench", () => {
     expect(screen.getByText("Claims / Defenses / Issues Matrix")).toBeInTheDocument();
     expect(screen.getAllByText("Evidence Binders").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Contradiction Triage").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Entity Dossier").length).toBeGreaterThan(0);
+    expect(screen.getByText("Theory / Counter-Theory")).toBeInTheDocument();
     expect(screen.getByText("Counsel Questions / Actions")).toBeInTheDocument();
     expect(screen.getByText(/Locked\/restricted documents remain metadata-only/)).toBeInTheDocument();
   });
