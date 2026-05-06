@@ -303,3 +303,66 @@ Superseded by current operator instruction:
 - Do not reset Gary's password in this continuation unless a password hash mismatch is conclusively proven and Gary explicitly chooses that path later.
 - Current next action is the verify-only hidden-prompt password check recorded above, not a reset.
 - Current pilot status is `BLOCKED_BY_PRODUCTION_OPERATOR_PASSWORD_VERIFY`.
+
+## Login Path Repair Attempt After Password Match
+
+Timestamp: 2026-05-05T23:40:46-04:00
+
+New verified operator evidence:
+
+- `PASSWORD_MATCH yes`
+- `USER_FOUND yes`
+- `ACTIVE yes`
+- `ROLE super_admin`
+- `HASH_ALGORITHM_MATCH yes`
+- Password reset: NOT_PERFORMED
+
+Runtime/config diagnosis:
+
+- Browser route: `https://crog-ai.com/login`.
+- Form endpoint: same-origin `/api/auth/login`.
+- BFF route: `apps/command-center/src/app/api/auth/login/route.ts`.
+- Direct backend route: FastAPI `/api/auth/login`.
+- Custom-domain production route: Cloudflare tunnel -> `http://127.0.0.1:3005`.
+- Runtime process before repair: `crog-ai-frontend.service`, Next.js standalone on port `3005`, cwd pointed at a deleted standalone directory.
+- Vercel project deployment completed but generated deployment URLs were protected by Vercel Authentication and `crog-ai.com` is served by the Cloudflare tunnel path, not directly by the protected generated URL.
+- Vercel production env metadata contains `FORTRESS_BACKEND_BASE_URL`; the BFF helper previously only read `FGP_BACKEND_URL`.
+
+Root cause classifications:
+
+- `LOGIN_BFF_USES_WRONG_ENV_VAR` for the Vercel runtime path.
+- `STALE_PRODUCTION_BUILD_OR_OLD_BFF` for the custom-domain `crog-ai.com` runtime path.
+- `PASSWORD_MATCH_CONFIRMED_LOGIN_RECHECK_PENDING` remains until Gary completes a post-restart login.
+
+Fix applied:
+
+- `apps/command-center/src/lib/server/backend-url.ts` now accepts `FGP_BACKEND_URL` first and falls back to `FORTRESS_BACKEND_BASE_URL`.
+- `apps/command-center/src/app/api/auth/login/route.ts` backend-unreachable hint now names both supported backend URL variables.
+- Focused test added for backend URL variable precedence/fallback.
+- Vercel production deploy completed: `dpl_4FjyAoySS7ea33dYj5QjZAH7Uk41`, URL `https://crog-ai-command-center-jy6uh35h2-cabin-rentals-of-georgia.vercel.app`.
+- Custom-domain runtime restart completed: `crog-ai-frontend.service`, active/running, new PID `3236455`, cwd `/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center`.
+
+Verification performed:
+
+- Targeted backend URL unit test: PASS.
+- Focused lint: PASS.
+- Command Center build: PASS.
+- `git diff --check`: PASS.
+- Static asset smoke on `https://crog-ai.com`: PASS, representative JS and CSS returned HTTP 200.
+- Login shell smoke on `https://crog-ai.com/login`: PASS, HTTP 200.
+- Unauthenticated legal review route: guarded; no document contents exposed.
+- Invalid-password probe: still returns HTTP 401 `Invalid email or password`, as expected.
+
+Authenticated Gary UI verification:
+
+- Gary login after restart: PENDING_OPERATOR_RECHECK.
+- Fortress Legal review matter visibility: PENDING_AUTHENTICATED_UI.
+- Document metadata visibility: PENDING_AUTHENTICATED_UI.
+- Locked privileged handling: PENDING_AUTHENTICATED_UI.
+
+Current standing:
+
+- Production status: `PRODUCTION_AUTONOMOUS_INTAKE_BACKEND_COMPLETE`
+- Legal operations status: `LEGAL_OPS_BACKEND_INTAKE_COMPLETE_APP_VISIBILITY_PENDING`
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBILITY_UNVERIFIED`
+- Pilot status: `BLOCKED_BY_GARY_MANUAL_LOGIN_RECHECK_AFTER_BFF_RESTART`
