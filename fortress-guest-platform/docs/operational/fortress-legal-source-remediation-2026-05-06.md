@@ -163,3 +163,52 @@ Backend test note: the local test runner warned that `TEST_DATABASE_URL` was not
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
 
 Governance note: source remediation did not create a signoff-ready verified subset. It made every source issue explicit, reviewable, auditable, and safe for counsel decision-making without completing counsel signoff or creating final legal conclusions.
+
+## Final Authenticated Source Remediation UI Confirmation
+
+- Confirmation timestamp: `2026-05-06T09:45:10-04:00`.
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Source Remediation panel visible: YES.
+- Refined Blocker Register visible: YES.
+- Correction Queue visible: YES.
+- Signoff Readiness Addendum visible: YES.
+- UI shows `297` unresolved source blockers or equivalent: YES.
+- UI shows no verified subset exists: YES.
+- `COUNSEL_SIGNOFF_PENDING` visible or preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` visible or preserved: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Confidential document contents publicly exposed: NO.
+- Blocking UI/API errors preventing review: NO.
+
+Final confirmation-step mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate source-remediation records: NO.
+- Duplicate source-validation records: NO.
+- Duplicate signoff packet records: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Production deploy/restart: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Final standing state:
+
+- Production status: `PRODUCTION_SOURCE_REMEDIATION_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_REMEDIATED_STRATEGY_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_SOURCE_REMEDIATED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_REMEDIATION_COMPLETE`.
+- Product status: `SOURCE_REMEDIATION_COMPLETE_NO_SIGNOFF_SUBSET_READY`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+Remaining blocker: all `297` source blockers remain unresolved and no verified subset exists. This is a successful remediation-workflow UI confirmation, not a signoff-readiness success.

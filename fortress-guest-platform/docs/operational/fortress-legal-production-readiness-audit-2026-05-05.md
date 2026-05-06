@@ -1163,3 +1163,33 @@ Current remediation standing:
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_REMEDIATION_COMPLETE`.
 - Product status: `SOURCE_REMEDIATION_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Source Remediation UI Confirmation - 2026-05-06
+
+Timestamp: `2026-05-06T09:45:10-04:00`
+
+Gary/operator authenticated production UI confirmation:
+
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Source Remediation panel visible: YES.
+- Refined Blocker Register visible: YES.
+- Correction Queue visible: YES.
+- Signoff Readiness Addendum visible: YES.
+- UI shows `297` unresolved source blockers or equivalent: YES.
+- UI shows no verified subset exists: YES.
+- `COUNSEL_SIGNOFF_PENDING` preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` preserved: YES.
+- Locked/restricted documents remain metadata-only: YES.
+- Public confidential document contents exposure: NO.
+- New upload/ingest/document rows/Qdrant vectors/schema/RLS/policy/privilege changes: NO.
+- Counsel signoff recorded: NO.
+
+Final remediation standing:
+
+- Production status: `PRODUCTION_SOURCE_REMEDIATION_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_SOURCE_REMEDIATED_STRATEGY_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_SOURCE_REMEDIATED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_REVIEW_PACKET_SOURCE_REMEDIATION_COMPLETE`.
+- Product status: `SOURCE_REMEDIATION_COMPLETE_NO_SIGNOFF_SUBSET_READY`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
