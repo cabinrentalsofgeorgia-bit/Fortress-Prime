@@ -49,6 +49,7 @@ import { JurisprudenceRadar } from "./jurisprudence-radar";
 import { DocumentViewer } from "./document-viewer";
 import { ExtractionPanel } from "./extraction-panel";
 import { HitlDeadlineQueue } from "./hitl-deadline-queue";
+import { CounselReviewWorkbench } from "./counsel-review-workbench";
 import type { ExtractionStatus } from "@/lib/legal-types";
 
 type GraphNode = {
@@ -444,6 +445,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
 
         {/* ── TAB 2: THE DELIBERATION CHAMBER (Strategy) ── */}
         <TabsContent value="deliberation" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+          <CounselReviewWorkbench slug={slug} />
           <CounselThreatMatrix slug={slug} />
           <JurisprudenceRadar slug={slug} />
           <SanctionsAlertsPanel slug={slug} />

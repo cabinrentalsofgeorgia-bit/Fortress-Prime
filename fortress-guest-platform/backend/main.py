@@ -85,6 +85,7 @@ from backend.api import legal_strategy as legal_strategy_api
 from backend.api import legal_counsel_dispatch as legal_counsel_dispatch_api
 from backend.api import legal_hold as legal_hold_api
 from backend.api import legal_tactical as legal_tactical_api
+from backend.api import legal_workbench as legal_workbench_api
 from backend.api import legal_sanctions as legal_sanctions_api
 from backend.api import legal_deposition as legal_deposition_api
 from backend.api import legal_agent as legal_agent_api
@@ -629,6 +630,7 @@ app.include_router(legal_strategy_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, 
 app.include_router(legal_counsel_dispatch_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Outside Counsel Dispatch"])
 app.include_router(legal_hold_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Hold"])
 app.include_router(legal_tactical_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Tactical"])
+app.include_router(legal_workbench_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Workbench"])
 app.include_router(legal_sanctions_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Sanctions"])
 app.include_router(legal_deposition_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Deposition"])
 app.include_router(legal_agent_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Agent"])

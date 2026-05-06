@@ -222,3 +222,105 @@ export interface DepositionKillSheetsResponse {
   kill_sheets: DepositionKillSheet[];
   total: number;
 }
+
+export interface CounselWorkbenchBaseline {
+  documents: number;
+  completed_analyzed: number;
+  locked_restricted: number;
+  timeline_events: number;
+  graph_nodes: number;
+  graph_edges: number;
+  contradiction_candidates: number;
+  qdrant_vector_points?: number;
+}
+
+export interface CounselWorkbenchIssue {
+  id: string;
+  title: string;
+  issue_type: string;
+  confidence_score: number;
+  materiality_score: number;
+  status: string;
+  counsel_review_required: boolean;
+  recommended_next_review_step: string;
+  supporting_documents?: unknown[];
+  relevant_timeline_events?: unknown[];
+  contradiction_candidates?: unknown[];
+}
+
+export interface CounselWorkbenchBinder {
+  id: string;
+  title: string;
+  purpose: string;
+  document_count: number;
+  review_priority: string;
+  locked_restricted_handling: string;
+}
+
+export interface CounselWorkbenchTriageItem {
+  id: string;
+  contradiction_id: string;
+  conflict_type: string;
+  materiality_score: number;
+  confidence_score: number | null;
+  status: string;
+  counsel_review_required: boolean;
+  suggested_counsel_question: string;
+}
+
+export interface CounselWorkbenchEntityDossier {
+  id: string;
+  canonical_name: string;
+  entity_type: string;
+  graph_degree: number;
+  confidence_score: number;
+  counsel_review_notes: string;
+}
+
+export interface CounselWorkbenchReviewItem {
+  id: string;
+  category: string;
+  title: string;
+  reason: string;
+  priority: string;
+  recommended_next_action: string;
+  counsel_review_required: boolean;
+}
+
+export interface CounselWorkbenchQuestion {
+  id: string;
+  category: string;
+  title: string;
+  priority: string;
+  counsel_review_required: boolean;
+}
+
+export interface CounselWorkbenchResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  source_intelligence_execution_id: string;
+  status: string;
+  manifest_path?: string;
+  baseline: CounselWorkbenchBaseline;
+  issue_matrix: CounselWorkbenchIssue[];
+  chronology_review_packet: {
+    status: string;
+    total_events: number;
+    critical_events: unknown[];
+    high_materiality_events: unknown[];
+    events_requiring_counsel_review: unknown[];
+  };
+  contradiction_triage: CounselWorkbenchTriageItem[];
+  evidence_binders: CounselWorkbenchBinder[];
+  entity_dossier: CounselWorkbenchEntityDossier[];
+  theory_packets: Record<string, unknown>;
+  counsel_questions: CounselWorkbenchQuestion[];
+  action_checklist: CounselWorkbenchQuestion[];
+  consolidated_review_queue: CounselWorkbenchReviewItem[];
+  privileged_locked_handling: {
+    locked_restricted_count: number;
+    content_analyzed: boolean;
+    handling: string;
+  };
+}
