@@ -469,3 +469,49 @@ Updated standing state:
 - Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBILITY_UNVERIFIED`
 - Pilot status: `BLOCKED_BY_GARY_MANUAL_LOGIN_RECHECK_AFTER_BFF_RESTART`
+
+## Autonomous Intake Document Metadata Linkage Repair - 2026-05-06
+
+- Continuation timestamp: `2026-05-06T00:01:33-04:00`.
+- Gary authenticated observation before repair: login succeeded, Legal Command Center loaded, Fortress Legal Production Review was visible, and `/legal/cases/fortress-legal-production-review` opened.
+- Observed blocker: the detail page still displayed the old synthetic review shell and message `Synthetic review shell only. No real legal documents uploaded or ingested.`
+- Synthetic execution id displayed: `fortress-review-20260506-011528`.
+- Expected autonomous intake execution id: `fortress-autointake-20260506-015341`.
+- Root cause classification: `FRONTEND_DOCUMENT_TAB_NOT_CONNECTED`, `DOCUMENTS_WRITTEN_TO_VAULT_TABLE_NOT_UI_DOCUMENT_TABLE`, and `DOCUMENT_API_QUERIES_WRONG_DATABASE`.
+- UI detail data source before fix: case detail/case notes/correspondence routes, with no autonomous vault-document hook in the Document tab.
+- Autonomous intake data source: `legal.vault_documents` in the legacy legal database and production mirror.
+- Case ID mapping: UI-visible legacy case id `26`; production mirror case id `13`; shared slug `fortress-legal-production-review`.
+- Read-only counts: `fortress_db` vault rows `80`, `completed=78`, `locked_privileged=2`; `fortress_prod` vault rows `80`, `completed=78`, `locked_privileged=2`; runtime `fortress_shadow` vault rows `0`.
+- Fix commit: `bcb54ba57` (`fix(legal): connect autonomous intake documents to review workspace`).
+- Runtime-main cherry-pick: `f07bc9526`.
+- Fix summary: the Document tab now consumes `/api/internal/legal/cases/{slug}/vault/documents`; the backend list route now reads from the legacy legal source used by the visible case detail; the response and UI remain metadata-only.
+- Locked privileged handling: `locked_privileged` rows are included in the metadata list and displayed as locked/restricted; content, NAS paths, file hashes, and vector IDs are not returned.
+- Production deploy/restart: `fortress-backend.service` and `crog-ai-frontend.service` restarted successfully; Vercel deploy not performed because the production custom domain is served by the local Cloudflare tunnel/runtime path.
+- Verification: frontend metadata rendering test PASS; backend vault-document route test PASS; typecheck PASS; targeted ESLint PASS; production build PASS; `git diff --check` PASS; focused secret scan PASS.
+- Full command-center lint: FAILS on pre-existing unrelated files outside this repair scope; unrelated dirty files were not touched.
+- Production smoke: root HTTP 200; representative `_next/static` asset HTTP 200; unauthenticated legal vault-documents API HTTP 401.
+- Runtime backend route direct metadata check: `total=80`, `completed=78`, `locked_privileged=2`, restricted fields exposed `NO`.
+- Authenticated Gary browser refresh after repair: PENDING_OPERATOR_CONFIRMATION.
+- Document metadata visibility in Gary's browser: PENDING_OPERATOR_CONFIRMATION.
+- Public exposure check: unauthenticated API remained guarded; no document contents exposed.
+- Legal/data mutation: NO.
+- New document rows: NO.
+- New storage writes: NO.
+- New Qdrant writes: NO.
+- New ingest: NO.
+- Metadata linkage writes: NO.
+- Schema/RLS/policy changes: NO.
+- Secrets or document contents printed: NO.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_OPERATOR_AUTH_REPAIRED_MATTER_VISIBLE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_DOCUMENT_METADATA_VISIBILITY_PENDING_OPERATOR_CONFIRMATION`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `AUTONOMOUS_INTAKE_BACKEND_COMPLETE_UI_DOCUMENTS_DEPLOYED_PENDING_OPERATOR_CONFIRMATION`.
+- Pilot status: `BLOCKED_BY_AUTHENTICATED_DOCUMENT_METADATA_UI_CONFIRMATION_PENDING`.
+
+Exact next action:
+
+- Gary/operator must refresh or reopen `/legal/cases/fortress-legal-production-review` in an authenticated production browser session and confirm that the Document tab shows 80 metadata rows or UI-equivalent count with 78 completed and 2 locked/restricted privileged rows.
