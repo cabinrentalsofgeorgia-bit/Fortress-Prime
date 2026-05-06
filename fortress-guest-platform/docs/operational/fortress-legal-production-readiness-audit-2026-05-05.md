@@ -515,3 +515,64 @@ Updated standing state:
 Exact next action:
 
 - Gary/operator must refresh or reopen `/legal/cases/fortress-legal-production-review` in an authenticated production browser session and confirm that the Document tab shows 80 metadata rows or UI-equivalent count with 78 completed and 2 locked/restricted privileged rows.
+
+## Final Authenticated Document Metadata Visibility Confirmation - 2026-05-06
+
+- Confirmation timestamp: `2026-05-06T00:08:07-04:00`.
+- Confirmation source: Gary/operator authenticated browser observation in the production UI.
+- Production domain: `https://crog-ai.com`.
+- Route checked: `/legal/cases/fortress-legal-production-review`.
+- Matter checked: `Fortress Legal Production Review`.
+- Login result: SUCCESS.
+- Review matter visible: YES.
+- Document/Vault metadata view visible: YES.
+- Document metadata list visible: YES.
+- UI document count: `80`.
+- UI completed count: `78`.
+- UI locked count: `2`.
+- Locked/restricted handling: `locked_privileged` documents remain restricted and display metadata only.
+- Locked/restricted contents exposed: NO.
+- Confidential document contents pasted into evidence: NO.
+- Public/unauthenticated exposure observed: NO.
+
+Backend evidence aligned with UI:
+
+- Execution ID: `fortress-autointake-20260506-015341`.
+- PDFs selected/ingested: `80`.
+- Completed: `78`.
+- Locked privileged: `2`.
+- Qdrant/vector points: `3,785`.
+- Document UI repair commit: `bcb54ba57`.
+- Document visibility evidence commit before final confirmation: `209167f95`.
+- Runtime-main backend cherry-pick: `f07bc9526`.
+- Auth/BFF repair commits: `ca7db58d4`, `9437e618a`.
+
+Mutation invariants:
+
+- New document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- Duplicate document rows: NO.
+- New Qdrant writes: NO.
+- Duplicate vectors: NO.
+- Password reset: NO.
+- Production data mutation: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Production deploy: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Governance note:
+
+- `PILOT_READY_FOR_GARY_REVIEW` means the autonomous intake pilot is app-visible and ready for Gary review. It does not remove broader counsel/legal-governance review requirements or authorize unrestricted production legal operations beyond this approved review scope.
+
+Final standing state:
+
+- Production status: `PRODUCTION_AUTONOMOUS_INTAKE_APP_VISIBLE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_AI_ASSISTED_DOCUMENT_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_INGESTED_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_COMPLETE_APP_VISIBLE`.
+- Pilot status: `PILOT_READY_FOR_GARY_REVIEW`.
