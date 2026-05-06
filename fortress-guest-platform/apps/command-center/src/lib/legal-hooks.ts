@@ -22,6 +22,7 @@ import type {
   LegalDeadline,
   SanctionsAlertsResponse,
   DepositionKillSheetsResponse,
+  CounselWorkbenchResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -40,6 +41,7 @@ const KEYS = {
   sanctionsAlerts: (slug: string) => ["legal", "sanctions", slug] as const,
   depositionKillSheets: (slug: string) =>
     ["legal", "deposition-kill-sheets", slug] as const,
+  counselWorkbench: (slug: string) => ["legal", "counsel-workbench", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -99,6 +101,17 @@ export function useCaseGraph(slug: string) {
   return useQuery({
     queryKey: KEYS.graph(slug),
     queryFn: () => api.get<CaseGraphSnapshot>(`/api/internal/legal/cases/${slug}/graph/snapshot`),
+    enabled: !!slug,
+  });
+}
+
+export function useCounselWorkbench(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselWorkbench(slug),
+    queryFn: () =>
+      api.get<CounselWorkbenchResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-workbench`,
+      ),
     enabled: !!slug,
   });
 }

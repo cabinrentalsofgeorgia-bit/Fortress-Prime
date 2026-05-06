@@ -24,6 +24,7 @@ vi.mock("@/lib/legal-hooks", () => ({
   useGenerateDiscoveryDraftPack: () => ({ mutate: vi.fn(), isPending: false }),
   useDepositionKillSheets: () => ({ data: [], isLoading: false }),
   useSanctionsAlerts: () => ({ data: [], isLoading: false }),
+  useCounselWorkbench: () => ({ data: null, isLoading: false, error: null }),
   downloadKillSheetMarkdown: vi.fn(),
 }));
 vi.mock("@/lib/store", () => ({
@@ -84,6 +85,9 @@ vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/extraction-panel", () 
 }));
 vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/hitl-deadline-queue", () => ({
   HitlDeadlineQueue: () => <div data-testid="hitl-deadline-queue" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-review-workbench", () => ({
+  CounselReviewWorkbench: () => <div data-testid="counsel-review-workbench" />,
 }));
 vi.mock("@/components/access/role-gated-action", () => ({
   RoleGatedAction: ({ children }: { children: React.ReactNode }) => <>{children}</>,
