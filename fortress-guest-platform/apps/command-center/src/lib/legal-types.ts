@@ -1062,3 +1062,102 @@ export interface LimitedSignoffCandidateResponse {
   };
   manifest_path?: string;
 }
+
+export type CounselSignoffDecisionType =
+  | "operator_review_acknowledgment"
+  | "counsel_review_acknowledgment"
+  | "counsel_approved_for_internal_review_use"
+  | "counsel_approved_limited_subset_for_review_use"
+  | "counsel_approved_specific_sections_for_review_use"
+  | "counsel_rejected_packet"
+  | "counsel_requested_revisions"
+  | "counsel_returned_items_to_source_remediation"
+  | "signoff_deferred"
+  | "decision_recorded_no_signoff";
+
+export interface CounselSignoffDecisionRecord {
+  decision_id: string;
+  decision_execution_id: string;
+  matter_slug: string;
+  packet_execution_id: string;
+  packet_version: number;
+  packet_hash: string;
+  decision_type: CounselSignoffDecisionType;
+  decision_scope: string;
+  item_ids_or_section_ids: string[];
+  signer_safe_label: string;
+  signer_role: string;
+  signer_affiliation?: string | null;
+  signed_or_decided_at: string;
+  explicit_scope_confirmed: boolean;
+  unresolved_exclusions_acknowledged: boolean;
+  privilege_handling_acknowledged: boolean;
+  no_external_submission_authority_acknowledged: boolean;
+  counsel_review_required: boolean;
+  decision_notes?: string | null;
+  revision_requests: string[];
+  source_remediation_returns: string[];
+  status_before: string;
+  status_after: string;
+  audit_hash?: string;
+}
+
+export interface CounselSignoffDecisionPath {
+  decision_type: CounselSignoffDecisionType;
+  label: string;
+  records_counsel_signoff: boolean;
+  resulting_counsel_status: string;
+}
+
+export interface CounselSignoffDecisionResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  decision_store: string;
+  status: string;
+  counsel_status: string;
+  product_status: string;
+  packet: {
+    packet_execution_id: string;
+    packet_version: number;
+    packet_hash: string;
+    included_verified_subset: number;
+    excluded_unresolved_items: number;
+    source_verified_subset_count: number;
+    unresolved_source_issue_count: number;
+    locked_restricted_count: number;
+    manifest_path?: string;
+  };
+  decision_readiness: {
+    decision_panel_visible: boolean;
+    packet_checksum_required: boolean;
+    explicit_scope_confirmation_required: boolean;
+    unresolved_exclusions_acknowledgment_required: boolean;
+    privilege_handling_acknowledgment_required: boolean;
+    no_external_submission_authority_acknowledgment_required: boolean;
+    auto_signoff_prevented: boolean;
+    external_submission_authority_available: boolean;
+    final_legal_conclusion_available: boolean;
+  };
+  decision_paths: CounselSignoffDecisionPath[];
+  explicit_confirmation_checklist: string[];
+  decision_records: CounselSignoffDecisionRecord[];
+  revision_requests: unknown[];
+  source_remediation_returns: unknown[];
+  audit_history: CounselValidationAuditEntry[];
+  manifest_path?: string;
+}
+
+export interface CounselSignoffDecisionActionBody {
+  decision_type: CounselSignoffDecisionType;
+  decision_scope: string;
+  item_ids_or_section_ids?: string[];
+  signer_affiliation?: string;
+  explicit_scope_confirmed: boolean;
+  unresolved_exclusions_acknowledged: boolean;
+  privilege_handling_acknowledged: boolean;
+  no_external_submission_authority_acknowledged: boolean;
+  decision_notes?: string;
+  revision_requests?: string[];
+  source_remediation_returns?: string[];
+}

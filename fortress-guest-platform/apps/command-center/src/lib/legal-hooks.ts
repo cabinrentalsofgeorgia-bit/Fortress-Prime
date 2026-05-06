@@ -26,6 +26,8 @@ import type {
   CounselValidationActionBody,
   CounselValidationResponse,
   CounselSignoffActionBody,
+  CounselSignoffDecisionActionBody,
+  CounselSignoffDecisionResponse,
   CounselSignoffPacketResponse,
   SourceIntegrityResponse,
   SourceLinkRepairResponse,
@@ -55,6 +57,7 @@ const KEYS = {
   sourceLinkRepair: (slug: string) => ["legal", "source-link-repair", slug] as const,
   targetedSourceCompletion: (slug: string) => ["legal", "targeted-source-completion", slug] as const,
   limitedSignoffCandidate: (slug: string) => ["legal", "limited-signoff-candidate", slug] as const,
+  counselSignoffDecision: (slug: string) => ["legal", "counsel-signoff-decision", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -195,6 +198,17 @@ export function useLimitedSignoffCandidate(slug: string) {
   });
 }
 
+export function useCounselSignoffDecision(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselSignoffDecision(slug),
+    queryFn: () =>
+      api.get<CounselSignoffDecisionResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-decision`,
+      ),
+    enabled: !!slug,
+  });
+}
+
 type DiscoveryPacksHydratedResponse = DiscoveryDraftPacksResponse & {
   latest_pack: DiscoveryDraftPackDetail | null;
 };
@@ -299,6 +313,22 @@ export function useCounselSignoffReopen(slug: string) {
       qc.invalidateQueries({ queryKey: KEYS.counselSignoffPacket(slug) });
     },
     onError: (e) => toast.error(`Reopen failed: ${e.message}`),
+  });
+}
+
+export function useCounselSignoffDecisionAction(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CounselSignoffDecisionActionBody) =>
+      api.post<CounselSignoffDecisionResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-decision/decisions`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Decision recorded");
+      qc.invalidateQueries({ queryKey: KEYS.counselSignoffDecision(slug) });
+    },
+    onError: (e) => toast.error(`Decision failed: ${e.message}`),
   });
 }
 

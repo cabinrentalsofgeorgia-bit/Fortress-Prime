@@ -487,6 +487,110 @@ async def test_limited_signoff_candidate_endpoint_returns_404_when_missing(monke
 
 
 @pytest.mark.asyncio
+async def test_counsel_signoff_decision_endpoint_returns_manifest_without_body_text(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_decision_workflow",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-signoff-decision-test",
+            "status": "COUNSEL_SIGNOFF_DECISION_WORKFLOW_READY",
+            "counsel_status": "COUNSEL_SIGNOFF_PENDING",
+            "packet": {
+                "packet_execution_id": "fortress-limited-signoff-candidate-test",
+                "packet_version": 1,
+                "packet_hash": "abc123",
+                "included_verified_subset": 65,
+                "excluded_unresolved_items": 232,
+            },
+            "decision_readiness": {
+                "auto_signoff_prevented": True,
+                "external_submission_authority_available": False,
+                "final_legal_conclusion_available": False,
+            },
+            "decision_paths": [],
+            "decision_records": [],
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/counsel-signoff-decision")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_id"] == "fortress-signoff-decision-test"
+    assert body["counsel_status"] == "COUNSEL_SIGNOFF_PENDING"
+    assert body["decision_readiness"]["auto_signoff_prevented"] is True
+    assert "document_body" not in response.text
+    assert "authorized_for_external_submission" not in response.text
+    assert "final_legal_conclusion" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_counsel_signoff_decision_rejects_unconfirmed_signoff(monkeypatch):
+    def fake_record_decision(slug, **kwargs):
+        assert slug == "fortress-legal-production-review"
+        assert kwargs["decision_type"] != "final_legal_conclusion"
+        if kwargs["decision_type"] == "counsel_approved_for_internal_review_use":
+            if not kwargs["explicit_scope_confirmed"]:
+                raise ValueError("explicit_scope_confirmation_required")
+        return {
+            "case_slug": slug,
+            "status": "COUNSEL_SIGNOFF_DECISION_WORKFLOW_READY",
+            "counsel_status": "COUNSEL_SIGNOFF_PENDING",
+            "decision_records": [],
+        }
+
+    monkeypatch.setattr(legal_workbench_api, "record_decision", fake_record_decision)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        blocked = await client.post(
+            "/api/internal/legal/cases/fortress-legal-production-review/counsel-signoff-decision/decisions",
+            json={
+                "decision_type": "counsel_approved_for_internal_review_use",
+                "decision_scope": "limited_packet",
+                "explicit_scope_confirmed": False,
+                "unresolved_exclusions_acknowledged": True,
+                "privilege_handling_acknowledged": True,
+                "no_external_submission_authority_acknowledged": True,
+            },
+        )
+        deferred = await client.post(
+            "/api/internal/legal/cases/fortress-legal-production-review/counsel-signoff-decision/decisions",
+            json={
+                "decision_type": "signoff_deferred",
+                "decision_scope": "limited_packet",
+                "explicit_scope_confirmed": False,
+                "unresolved_exclusions_acknowledged": False,
+                "privilege_handling_acknowledged": False,
+                "no_external_submission_authority_acknowledged": False,
+            },
+        )
+
+    assert blocked.status_code == 400
+    assert deferred.status_code == 200
+    assert deferred.json()["counsel_status"] == "COUNSEL_SIGNOFF_PENDING"
+
+
+@pytest.mark.asyncio
 async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     def fake_capture_signoff_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"
