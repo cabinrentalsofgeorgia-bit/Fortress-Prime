@@ -216,3 +216,44 @@ Final standing state:
 - Counsel status: `COUNSEL_REVIEW_IN_PROGRESS`.
 
 Governance note: this confirms the validation workflow is production-visible and ready for Gary/counsel use. It does not mean counsel review is complete, does not mark counsel signoff complete, and does not convert AI outputs into final legal conclusions.
+
+## Counsel Signoff + Reviewed Strategy Packet - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T08:42:21-04:00`.
+- Signoff packet execution ID: `fortress-signoff-packet-20260506-084028`.
+- Signoff packet manifest: `/mnt/fortress_nas/audits/fortress-signoff-packet-20260506-084028.json`.
+- Source validation execution ID: `fortress-validation-20260506-081435`.
+- Packet version: `1`.
+- Packet checksum/hash: `34e942c10aed757ae31491b3d05c9c3ee951834dc2f50c0a40741d3bf0d8f892`.
+- Packet sections: `18`.
+- Readiness status: `SIGNOFF_PACKET_READY_WITH_UNRESOLVED_ITEMS`.
+- Signoff status: `COUNSEL_SIGNOFF_PENDING`.
+- Explicit signoff recorded: NO.
+- Automatic signoff created: NO.
+- Strategy Packet UI/API deployed: YES.
+- Authenticated Gary/operator UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- Duplicate validation records: NO.
+- Duplicate workbench records: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Locked/restricted content analyzed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Counsel signoff complete: NO.
+
+Updated standing state:
+
+- Production status: `PRODUCTION_COUNSEL_SIGNOFF_PACKET_BACKEND_COMPLETE_UI_PENDING`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_SIGNOFF_PACKET_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_REVIEW_PACKET_READY_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_VALIDATION_AND_SIGNOFF_PACKET_COMPLETE`.
+- Product status: `REVIEWED_STRATEGY_PACKET_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

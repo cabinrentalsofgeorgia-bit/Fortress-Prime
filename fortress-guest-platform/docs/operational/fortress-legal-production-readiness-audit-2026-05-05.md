@@ -925,3 +925,65 @@ Final standing state:
 - Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_AND_VALIDATION_COMPLETE`.
 - Product status: `COUNSEL_VALIDATION_WORKFLOW_READY_FOR_GARY_AND_COUNSEL`.
 - Counsel status: `COUNSEL_REVIEW_IN_PROGRESS`.
+
+## Counsel Signoff + Reviewed Strategy Packet - 2026-05-06
+
+- Evidence timestamp: `2026-05-06T08:42:21-04:00`.
+- Signoff packet execution ID: `fortress-signoff-packet-20260506-084028`.
+- Signoff packet manifest: `/mnt/fortress_nas/audits/fortress-signoff-packet-20260506-084028.json`.
+- Source validation execution ID: `fortress-validation-20260506-081435`.
+- Source workbench execution ID: `fortress-counsel-review-20260506-073330`.
+- Baseline reconciled:
+  - Documents: `80`.
+  - Completed/analyzed: `78`.
+  - Locked/restricted: `2`.
+  - Issues: `20`.
+  - Evidence binders: `17`.
+  - Contradiction candidates: `14`.
+  - Entity dossier: `40`.
+  - Counsel questions/actions: `24`.
+- Packet sections: `18`.
+- Packet checksum/hash: `34e942c10aed757ae31491b3d05c9c3ee951834dc2f50c0a40741d3bf0d8f892`.
+- Source integrity items needing source check: `297`.
+- Unresolved item register count: `297`.
+- Readiness status: `SIGNOFF_PACKET_READY_WITH_UNRESOLVED_ITEMS`.
+- Signoff status: `COUNSEL_SIGNOFF_PENDING`.
+- Explicit signoff recorded: NO.
+- Automatic signoff created: NO.
+- Strategy Packet UI/API deployed: YES.
+- Runtime-main cherry-pick: `b371a2722`.
+- Backend restart: `fortress-backend.service` restarted and active.
+- Frontend restart: `crog-ai-frontend.service` restarted and active.
+- Production root smoke: HTTP `200`.
+- Production matter-route smoke: HTTP `200`.
+- Unauthenticated signoff packet API: HTTP `401`.
+- Authenticated Gary/operator UI confirmation: PENDING.
+
+Mutation invariants:
+
+- New raw document upload: NO.
+- New ingest: NO.
+- New document rows: NO.
+- New Qdrant document vectors: NO.
+- New packet records: YES, file-backed signoff packet manifest only.
+- Duplicate validation records: NO.
+- Duplicate workbench records: NO.
+- Signoff auto-created: NO.
+- Explicit signoff recorded: NO.
+- Schema changes: NO.
+- RLS/policy changes: NO.
+- Privilege changes: NO.
+- Secrets printed/exposed: NO.
+- Document contents printed/exposed in evidence: NO.
+- Locked/restricted content analyzed or exposed: NO.
+- Unrelated dirty files touched: NO.
+
+Current standing state:
+
+- Production status: `PRODUCTION_COUNSEL_SIGNOFF_PACKET_BACKEND_COMPLETE_UI_PENDING`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_COUNSEL_SIGNOFF_PACKET_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_REVIEW_PACKET_READY_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_AUTONOMOUS_INTAKE_INTELLIGENCE_WORKBENCH_VALIDATION_AND_SIGNOFF_PACKET_COMPLETE`.
+- Product status: `REVIEWED_STRATEGY_PACKET_BACKEND_READY_UI_PENDING`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
