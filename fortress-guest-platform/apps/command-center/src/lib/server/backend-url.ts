@@ -3,7 +3,9 @@ import "server-only";
 const DEFAULT_BACKEND_BASE_URL = "http://127.0.0.1:8000";
 
 export function getBackendBaseUrl(): string {
-  const backendUrl = process.env.FGP_BACKEND_URL?.trim();
+  const backendUrl =
+    process.env.FGP_BACKEND_URL?.trim() ||
+    process.env.FORTRESS_BACKEND_BASE_URL?.trim();
   if (!backendUrl) {
     return DEFAULT_BACKEND_BASE_URL;
   }

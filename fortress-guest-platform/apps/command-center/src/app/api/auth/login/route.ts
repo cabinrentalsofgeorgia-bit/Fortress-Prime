@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
   }
 
   const backendHint =
-    "Next.js cannot reach FastAPI. On the app host, set FGP_BACKEND_URL to the backend base URL (e.g. http://127.0.0.1:8100) in the fortress-frontend systemd unit and restart. If the browser shows OpenAPI / JSON at https://crog-ai.com, Cloudflare ingress is pointing at :8100; it must target Next.js on :3001 (see fortress-guest-platform/infra/gateway/config.yml).";
+    "Next.js cannot reach FastAPI. On the app host, set FGP_BACKEND_URL or FORTRESS_BACKEND_BASE_URL to the backend base URL (e.g. http://127.0.0.1:8100 for systemd or the production HTTPS backend URL on Vercel) and restart/redeploy. If the browser shows OpenAPI / JSON at https://crog-ai.com, Cloudflare ingress is pointing at :8100; it must target Next.js on :3001 (see fortress-guest-platform/infra/gateway/config.yml).";
 
   // Both paths exhausted — return the best available error
   if (gatewayError) {
