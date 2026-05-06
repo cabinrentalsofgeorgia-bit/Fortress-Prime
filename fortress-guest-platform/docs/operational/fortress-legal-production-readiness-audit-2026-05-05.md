@@ -1507,3 +1507,31 @@ Current labels pending Gary/operator authenticated UI confirmation:
 - Production legal-data status: `PRODUCTION_DRAFT_WORK_PRODUCT_READY_FOR_COUNSEL_REVIEW`.
 - Product status: `DRAFT_WORK_PRODUCT_BACKEND_READY_UI_PENDING`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Draft Work Product UI Confirmation - 2026-05-06
+
+Timestamp: `2026-05-06T18:20:21-04:00`
+
+- Confirmation source: Gary/operator authenticated production UI observation.
+- Route checked: `https://crog-ai.com/legal/cases/fortress-legal-production-review`.
+- Draft Work Product panel visible: YES.
+- All draft sections visible/reviewable: YES.
+- Unresolved Appendix preserves 232 excluded unresolved source issues: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED`: visible/preserved.
+- `NOT FINAL LEGAL ADVICE`: visible/preserved.
+- Filing/service/sending/email/external submission authority: NOT_AUTHORIZED.
+- Counsel signoff recorded: NO.
+- Final legal conclusions created: NO.
+- Locked/restricted documents remain metadata-only: YES.
+- Confidential document contents publicly exposed: NO.
+- New raw document upload, ingest, document rows, Qdrant vectors, schema changes, RLS/policy changes, or privilege changes: NO.
+
+Final labels:
+
+- Production status: `PRODUCTION_DRAFT_WORK_PRODUCT_ACTIVE`.
+- Legal readiness status: `LEGAL_READINESS_ACTIVE_FOR_AUTONOMOUS_REVIEW_SCOPE`.
+- Legal operations status: `LEGAL_OPS_ACTIVE_FOR_DRAFT_WORK_PRODUCT_REVIEW`.
+- Real legal data status: `AUTONOMOUS_REVIEW_DATA_DRAFT_WORK_PRODUCT_READY_WITH_PRIVILEGED_LOCKS`.
+- Production legal-data status: `PRODUCTION_DRAFT_WORK_PRODUCT_READY_FOR_COUNSEL_REVIEW`.
+- Product status: `DRAFT_WORK_PRODUCT_READY_FOR_COUNSEL_REVIEW`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
