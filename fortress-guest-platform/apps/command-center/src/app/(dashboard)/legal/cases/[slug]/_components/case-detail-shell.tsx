@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import {
   AlertTriangle,
   Briefcase,
+  ClipboardCheck,
   Clock,
   Eye,
   Loader2,
@@ -51,6 +52,7 @@ import { DocumentViewer } from "./document-viewer";
 import { ExtractionPanel } from "./extraction-panel";
 import { HitlDeadlineQueue } from "./hitl-deadline-queue";
 import { CounselReviewWorkbench } from "./counsel-review-workbench";
+import { CounselValidationWorkflow } from "./counsel-validation-workflow";
 import type { ExtractionStatus } from "@/lib/legal-types";
 
 type GraphNode = {
@@ -370,9 +372,13 @@ export function CaseDetailShell({ slug }: { slug: string }) {
       </div>
 
       {/* ── Command Deck ── */}
-      <Tabs defaultValue="workbench" className="flex-1 flex flex-col min-h-0">
+      <Tabs defaultValue="validation" className="flex-1 flex flex-col min-h-0">
         <div className="px-4 pt-3 pb-0 border-b shrink-0">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+            <TabsTrigger value="validation" className="text-xs gap-1.5">
+              <ClipboardCheck className="h-3 w-3" />
+              Validation
+            </TabsTrigger>
             <TabsTrigger value="workbench" className="text-xs gap-1.5">
               <Briefcase className="h-3 w-3" />
               Workbench
@@ -392,13 +398,19 @@ export function CaseDetailShell({ slug }: { slug: string }) {
           </TabsList>
         </div>
 
-        {/* ── TAB 0: COUNSEL REVIEW WORKBENCH ── */}
+        {/* ── TAB 0: COUNSEL VALIDATION WORKFLOW ── */}
+        <TabsContent value="validation" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+          <CounselValidationWorkflow slug={slug} />
+          <CounselReviewWorkbench slug={slug} />
+        </TabsContent>
+
+        {/* ── TAB 1: COUNSEL REVIEW WORKBENCH ── */}
         <TabsContent value="workbench" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
           <CounselReviewWorkbench slug={slug} />
           <DocumentViewer legalCase={c} slug={slug} />
         </TabsContent>
 
-        {/* ── TAB 1: THE PANOPTICON (Intelligence & Ground Truth) ── */}
+        {/* ── TAB 2: THE PANOPTICON (Intelligence & Ground Truth) ── */}
         <TabsContent value="panopticon" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -454,7 +466,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
           <DocumentViewer legalCase={c} slug={slug} />
         </TabsContent>
 
-        {/* ── TAB 2: THE DELIBERATION CHAMBER (Strategy) ── */}
+        {/* ── TAB 3: THE DELIBERATION CHAMBER (Strategy) ── */}
         <TabsContent value="deliberation" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
           <CounselThreatMatrix slug={slug} />
           <JurisprudenceRadar slug={slug} />
@@ -463,7 +475,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
           <HitlDeadlineQueue slug={slug} />
         </TabsContent>
 
-        {/* ── TAB 3: THE VANGUARD ARSENAL (Offense & Output) ── */}
+        {/* ── TAB 4: THE VANGUARD ARSENAL (Offense & Output) ── */}
         <TabsContent value="vanguard" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-400 flex items-center gap-2">
             <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />

@@ -23,6 +23,8 @@ import type {
   SanctionsAlertsResponse,
   DepositionKillSheetsResponse,
   CounselWorkbenchResponse,
+  CounselValidationActionBody,
+  CounselValidationResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -42,6 +44,7 @@ const KEYS = {
   depositionKillSheets: (slug: string) =>
     ["legal", "deposition-kill-sheets", slug] as const,
   counselWorkbench: (slug: string) => ["legal", "counsel-workbench", slug] as const,
+  counselValidation: (slug: string) => ["legal", "counsel-validation", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -116,6 +119,17 @@ export function useCounselWorkbench(slug: string) {
   });
 }
 
+export function useCounselValidation(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselValidation(slug),
+    queryFn: () =>
+      api.get<CounselValidationResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-validation`,
+      ),
+    enabled: !!slug,
+  });
+}
+
 type DiscoveryPacksHydratedResponse = DiscoveryDraftPacksResponse & {
   latest_pack: DiscoveryDraftPackDetail | null;
 };
@@ -172,6 +186,22 @@ export function useTriggerExtraction(slug: string) {
       qc.invalidateQueries({ queryKey: KEYS.caseDetail(slug) });
     },
     onError: (e) => toast.error(`Extraction failed: ${e.message}`),
+  });
+}
+
+export function useCounselValidationAction(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CounselValidationActionBody) =>
+      api.post<CounselValidationResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-validation/actions`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Validation state updated");
+      qc.invalidateQueries({ queryKey: KEYS.counselValidation(slug) });
+    },
+    onError: (e) => toast.error(`Validation update failed: ${e.message}`),
   });
 }
 
