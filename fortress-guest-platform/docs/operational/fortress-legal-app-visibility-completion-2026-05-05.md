@@ -1120,3 +1120,32 @@ Final visibility standing:
 - Production status: `PRODUCTION_COUNSEL_SIGNOFF_DECISION_WORKFLOW_ACTIVE`.
 - Product status: `COUNSEL_SIGNOFF_DECISION_WORKFLOW_READY`.
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`.
+
+## Autonomous Learning Loop Visibility Update
+
+Timestamp: `2026-05-06T12:39:39-04:00`
+
+- Learning execution ID: `fortress-learning-loop-20260506-163734`.
+- Autonomous Learning panel deployed: YES.
+- Learning signals summary deployed: YES.
+- Evaluation suite status deployed: YES.
+- Improvement proposal queue deployed: YES.
+- Safe auto-apply and human approval queues deployed: YES.
+- Next-best actions deployed: YES.
+- Feedback capture deployed: YES.
+- `COUNSEL_SIGNOFF_PENDING` label preserved: YES.
+- `DRAFT / COUNSEL REVIEW REQUIRED` label preserved: YES.
+- No external model training label deployed: YES.
+- External submission not authorized label deployed: YES.
+- Unauthenticated autonomous-learning API blocked: YES, 401.
+- Production smoke `/`: 200.
+- Production smoke matter route: 200.
+- Confidential document contents publicly exposed: NO.
+- Locked/restricted content exposed: NO.
+- Explicit counsel signoff recorded: NO.
+
+Final visibility standing:
+
+- Production status: `PRODUCTION_AUTONOMOUS_LEARNING_LOOP_ACTIVE`.
+- Product status: `FORTRESS_LEGAL_CONTINUOUS_IMPROVEMENT_ACTIVE`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.

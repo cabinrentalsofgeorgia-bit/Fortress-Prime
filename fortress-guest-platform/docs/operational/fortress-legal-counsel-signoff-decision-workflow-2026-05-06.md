@@ -95,3 +95,25 @@ This phase does not mark final legal conclusions and does not authorize filing, 
 - Production legal-data status: `PRODUCTION_REVIEW_PACKET_DECISION_WORKFLOW_COMPLETE`
 - Product status: `COUNSEL_SIGNOFF_DECISION_WORKFLOW_READY`
 - Counsel status: `COUNSEL_SIGNOFF_PENDING`
+
+## Autonomous Learning Loop Attachment
+
+Timestamp: `2026-05-06T12:39:39-04:00`
+
+- Learning execution ID: `fortress-learning-loop-20260506-163734`.
+- Learning manifest: `/mnt/fortress_nas/audits/fortress-learning-loop-20260506-163734.json`.
+- Signals captured: 6.
+- Evals run: 11.
+- Proposals generated: 4.
+- Safe auto-apply proposals: 3.
+- Human approval required proposals: 1.
+- Cycles completed: 2 of maximum 3.
+- Counsel signoff recorded: NO.
+- External submission authority: NOT_AUTHORIZED.
+- Final legal conclusions created: NO.
+
+Updated standing:
+
+- Production status: `PRODUCTION_AUTONOMOUS_LEARNING_LOOP_ACTIVE`.
+- Product status: `FORTRESS_LEGAL_CONTINUOUS_IMPROVEMENT_ACTIVE`.
+- Counsel status: `COUNSEL_SIGNOFF_PENDING`.
