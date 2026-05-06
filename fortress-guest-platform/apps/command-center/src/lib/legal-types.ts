@@ -1273,3 +1273,87 @@ export interface AutonomousLearningFeedbackBody {
   linked_source_refs?: Array<Record<string, unknown>>;
   action_requested?: string;
 }
+
+export interface DraftWorkProductSourceRef {
+  document_id?: string | null;
+  file_name?: string | null;
+  processing_status?: string | null;
+  locked_restricted: boolean;
+  page_chunk_status?: string | null;
+  event_id?: string | null;
+  event_date?: string | null;
+}
+
+export interface DraftWorkProductItem {
+  draft_item_id?: string;
+  excluded_item_id?: string;
+  fact_id?: string;
+  source_record_id?: string | null;
+  item_id?: string | null;
+  item_type?: string | null;
+  source_status?: string | null;
+  corrected_claim_summary?: string;
+  fact_statement?: string;
+  source_refs?: DraftWorkProductSourceRef[];
+  source_refs_count?: number;
+  locked_restricted_involved?: boolean;
+  counsel_review_required?: boolean;
+  inclusion_status?: string;
+  reason?: string;
+}
+
+export interface DraftWorkProductSection {
+  section_id: string;
+  title: string;
+  status: string;
+  legal_advice_status: string;
+  external_use_status: string;
+  source_basis: string;
+  item_count: number;
+  items: DraftWorkProductItem[];
+  notes: string;
+  counsel_review_required: boolean;
+  section_hash: string;
+}
+
+export interface DraftWorkProductResponse {
+  execution_id: string;
+  created_at: string;
+  case_slug: string;
+  status: string;
+  draft_packet_store: string;
+  source_manifests: {
+    limited_signoff_candidate?: string | null;
+    targeted_source_completion?: string | null;
+    autonomous_learning?: string | null;
+  };
+  source_basis: {
+    included_verified_item_count: number;
+    excluded_unresolved_item_count: number;
+    source_refs_total: number;
+    item_type_counts: Record<string, number>;
+    locked_restricted_used_for_content: boolean;
+  };
+  governance_labels: string[];
+  draft_packet: {
+    packet_id: string;
+    sections_generated: number;
+    sections: DraftWorkProductSection[];
+    motion_response_outline_status: string;
+    counsel_signoff_pending: boolean;
+    final_legal_conclusions_created: boolean;
+    external_submission_authorized: boolean;
+  };
+  source_map: {
+    source_map_id: string;
+    included_item_ids: Array<string | null | undefined>;
+    excluded_item_ids: Array<string | null | undefined>;
+    source_ref_count: number;
+    contains_document_body_text: boolean;
+    contains_locked_content: boolean;
+  };
+  rollback: Record<string, unknown>;
+  mutation_invariants: Record<string, boolean>;
+  manifest_checksum: string;
+  manifest_path?: string;
+}

@@ -31,6 +31,7 @@ import type {
   CounselSignoffPacketResponse,
   AutonomousLearningFeedbackBody,
   AutonomousLearningResponse,
+  DraftWorkProductResponse,
   SourceIntegrityResponse,
   SourceLinkRepairResponse,
   SourceRemediationResponse,
@@ -61,6 +62,7 @@ const KEYS = {
   limitedSignoffCandidate: (slug: string) => ["legal", "limited-signoff-candidate", slug] as const,
   counselSignoffDecision: (slug: string) => ["legal", "counsel-signoff-decision", slug] as const,
   autonomousLearning: (slug: string) => ["legal", "autonomous-learning", slug] as const,
+  draftWorkProduct: (slug: string) => ["legal", "draft-work-product", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -218,6 +220,17 @@ export function useAutonomousLearning(slug: string) {
     queryFn: () =>
       api.get<AutonomousLearningResponse>(
         `/api/internal/legal/cases/${slug}/autonomous-learning`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useDraftWorkProduct(slug: string) {
+  return useQuery({
+    queryKey: KEYS.draftWorkProduct(slug),
+    queryFn: () =>
+      api.get<DraftWorkProductResponse>(
+        `/api/internal/legal/cases/${slug}/draft-work-product`,
       ),
     enabled: !!slug,
   });

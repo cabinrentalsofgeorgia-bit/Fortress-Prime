@@ -678,6 +678,75 @@ async def test_autonomous_learning_feedback_rejects_secret_like_notes(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_draft_work_product_endpoint_returns_manifest_without_body_text(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_latest_draft_work_product",
+        lambda slug: {
+            "case_slug": slug,
+            "execution_id": "fortress-draft-work-product-test",
+            "status": "DRAFT_WORK_PRODUCT_READY_FOR_COUNSEL_REVIEW",
+            "source_basis": {
+                "included_verified_item_count": 65,
+                "excluded_unresolved_item_count": 232,
+                "locked_restricted_used_for_content": False,
+            },
+            "draft_packet": {
+                "sections_generated": 15,
+                "counsel_signoff_pending": True,
+                "final_legal_conclusions_created": False,
+                "external_submission_authorized": False,
+                "sections": [],
+            },
+            "source_map": {
+                "contains_document_body_text": False,
+                "contains_locked_content": False,
+            },
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/draft-work-product")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["execution_id"] == "fortress-draft-work-product-test"
+    assert body["source_basis"]["included_verified_item_count"] == 65
+    assert body["draft_packet"]["counsel_signoff_pending"] is True
+    assert body["draft_packet"]["final_legal_conclusions_created"] is False
+    assert body["draft_packet"]["external_submission_authorized"] is False
+    assert "document_body" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_draft_work_product_endpoint_returns_404_when_missing(monkeypatch):
+    monkeypatch.setattr(legal_workbench_api, "load_latest_draft_work_product", lambda slug: None)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/missing/draft-work-product")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     def fake_capture_signoff_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"
