@@ -1,0 +1,9 @@
+
+ RUN  v4.1.1 /home/admin/Fortress-Prime-capability-audit/fortress-guest-platform/apps/command-center
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  23:45:16
+   Duration  1.64s (transform 1.09s, setup 98ms, import 1.66s, tests 601ms, environment 484ms)
+
