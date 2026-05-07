@@ -1,0 +1,1 @@
+BLOCKED: POSTGRES_API_URI is not set in local environment; backend pytest requiring hosted database remains blocked, consistent with prior evidence.

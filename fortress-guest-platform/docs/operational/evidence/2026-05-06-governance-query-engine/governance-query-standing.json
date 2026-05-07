@@ -1,0 +1,73 @@
+{
+  "ok": true,
+  "query": "standing",
+  "argument": null,
+  "generatedAt": "2026-05-07T11:09:52.812Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "standingLabels": {
+      "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
+      "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+      "externalSubmissionAuthority": "NOT_AUTHORIZED",
+      "finalLegalConclusions": "NOT_CREATED",
+      "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+      "schemaRlsPolicyMutation": "NOT_PERFORMED"
+    },
+    "validationStatus": {
+      "authenticatedChecker": "PASS",
+      "deploymentVerifier": "PASS",
+      "pilotSimulation": "PASS",
+      "featureAlignmentOk": true,
+      "internalPilot": true,
+      "humanOperations": true,
+      "operationalMemory": "PASS",
+      "operationalGraph": "PASS",
+      "governanceQueryEngine": "PASS"
+    },
+    "knownBlockers": [
+      "232_unresolved_source_issues_excluded",
+      "counsel_signoff_pending",
+      "public_launch_forbidden",
+      "external_legal_operations_forbidden",
+      "persistent_reviewer_assignment_writes_deferred",
+      "governance_query_engine_complete_pending_review"
+    ]
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}

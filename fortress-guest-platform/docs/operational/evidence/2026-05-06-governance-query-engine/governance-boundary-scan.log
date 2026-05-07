@@ -1,0 +1,2 @@
+Forbidden authority-state scan
+PASS: no forbidden authority states, source-promotion states, or schema/RLS mutation states found
