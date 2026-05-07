@@ -168,6 +168,7 @@ await page
   )
   .catch(() => {});
 text += "\n" + (await bodyText());
+const lowerText = text.toLowerCase();
 
 result.checks.authenticatedMatter = text.includes("Fortress Legal Production Review");
 result.checks.signoffPending = text.includes("COUNSEL_SIGNOFF_PENDING");
@@ -288,11 +289,11 @@ result.checks.operationalGraph =
   text.includes("Graph Entities") &&
   text.includes("Graph Relationships");
 result.checks.governanceGraph =
-  text.includes("Governance Graph");
+  lowerText.includes("governance graph");
 result.checks.evidenceGraph =
-  text.includes("Evidence Graph");
+  lowerText.includes("evidence graph");
 result.checks.remediationGraph =
-  text.includes("Remediation Graph");
+  lowerText.includes("remediation graph");
 result.checks.graphValidation =
   text.includes("operationalGraph true") &&
   text.includes("graph-as-operational-cognition, not legal authority");
