@@ -45,6 +45,7 @@ The checker reports two top-level outcomes:
 - Review operations visibility is included after the controlled-review-operations phase. It checks for Controlled Review Operations, Review Queue Operations, Contradiction Review, Evidence Navigator, Review Analytics, Controlled Pilot Readiness, and unresolved-source exclusion labels.
 - Review scaling visibility is included after the controlled-review-scaling phase. It checks for Reviewer Assignment, Workload Balancing, Queue Aging / SLA, Escalation & Incident Readiness, and explicit forbidden counsel-signoff/external-submission labels.
 - Operational certification visibility is included after the controlled-pilot certification phase. It checks for Operational Readiness Certification, Pilot Governance, Reviewer Onboarding Governance, Rollback Certification, Governance Enforcement Verification, Operational Safety Certification, and explicit no-public-launch / no-auto-signoff limits.
+- Internal pilot visibility is included after the controlled-internal-pilot phase. It checks for Controlled Internal Pilot Operations, allowed/forbidden pilot exercises, Pilot Throughput Metrics, Pilot Simulation / Drills, no production writes, and forbidden legal-signoff/external-submission labels.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -58,7 +59,8 @@ For Fortress Legal production feature alignment, expected target values are:
     "remediationMaturity": true,
     "reviewOperations": true,
     "reviewScaling": true,
-    "operationalCertification": true
+    "operationalCertification": true,
+    "internalPilot": true
   }
 }
 ```
@@ -113,3 +115,13 @@ Deployment evidence should include only non-sensitive fields:
 - error classifications
 
 Deployment evidence never records counsel signoff, final legal conclusions, or external submission authority.
+
+## Internal Reviewer Tabletop
+
+`run-internal-reviewer-tabletop.mjs` validates the controlled internal reviewer tabletop phase without using auth state or legal document content:
+
+```bash
+node scripts/verification/run-internal-reviewer-tabletop.mjs
+```
+
+It checks required pilot docs, prior sanitized pilot evidence, public route reachability, unauthenticated legal API guards, aggregate throughput counts, and standing governance labels. It does not inspect document body text, locked/restricted content, auth storage state, cookies, tokens, passwords, headers, or secrets.

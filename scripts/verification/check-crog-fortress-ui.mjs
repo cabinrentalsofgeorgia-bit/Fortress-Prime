@@ -154,7 +154,10 @@ await page
           body.includes("Queue Aging / SLA")) &&
         (body.includes("Operational Readiness Certification") ||
           body.includes("Governance Enforcement Verification") ||
-          body.includes("Operational Safety Certification"))
+          body.includes("Operational Safety Certification")) &&
+        (body.includes("Controlled Internal Pilot Operations") ||
+          body.includes("Pilot Throughput Metrics") ||
+          body.includes("Forbidden Pilot Actions"))
       );
     },
     { timeout: 20000 },
@@ -210,6 +213,15 @@ result.checks.operationalCertification =
   text.includes("Operational Safety Certification") &&
   text.includes("limit no public launch") &&
   text.includes("forbidden auto signoff");
+result.checks.internalPilot =
+  text.includes("Controlled Internal Pilot Operations") &&
+  text.includes("Allowed Pilot Exercises") &&
+  text.includes("Forbidden Pilot Actions") &&
+  text.includes("Pilot Throughput Metrics") &&
+  text.includes("Pilot Simulation / Drills") &&
+  text.includes("production writes none") &&
+  text.includes("forbidden legal signoff") &&
+  text.includes("forbidden external submission");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -241,7 +253,8 @@ result.featureAlignmentOk =
   result.checks.remediationMaturity &&
   result.checks.reviewOperations &&
   result.checks.reviewScaling &&
-  result.checks.operationalCertification;
+  result.checks.operationalCertification &&
+  result.checks.internalPilot;
 
 console.log(JSON.stringify(result, null, 2));
 

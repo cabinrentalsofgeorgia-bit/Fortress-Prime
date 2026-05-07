@@ -1,0 +1,12 @@
+
+> @fortress/command-center@0.1.0 test
+> vitest run --run src/__tests__/legal/review-operations-panel.test.tsx src/__tests__/legal/counsel-signoff-strategy-packet.test.tsx
+
+
+ RUN  v4.1.1 /home/admin/Fortress-Prime-internal-pilot/fortress-guest-platform/apps/command-center
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  23:20:24
+   Duration  750ms (transform 205ms, setup 61ms, import 502ms, tests 223ms, environment 462ms)

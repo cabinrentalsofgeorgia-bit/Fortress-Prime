@@ -1279,6 +1279,49 @@ export interface ReviewOperationsResponse {
       certification_limitations: string[];
     };
   };
+  internal_pilot: {
+    status: string;
+    pilot_mode: string;
+    execution_scope: string;
+    pilot_summary: {
+      review_queue_depth: number;
+      remediation_triage_items: number;
+      contradiction_review_items: number;
+      evidence_navigation_items: number;
+      escalation_items: number;
+      unresolved_source_issues: number;
+      excluded_source_issues: number;
+      locked_restricted_metadata_only: number;
+      pilot_completion_readiness: string;
+    };
+    allowed_exercises: string[];
+    forbidden_exercises: string[];
+    throughput_metrics: {
+      queue_depth: number;
+      queue_aging_bands: Array<{ sla_band: string; count: number }>;
+      review_traversal_sample: number;
+      remediation_triage_count: number;
+      contradiction_review_count: number;
+      evidence_navigation_count: number;
+      reviewer_handoff_count: number;
+      escalation_count: number;
+      unresolved_source_count: number;
+      excluded_source_count: number;
+      confidence_distribution: Array<{ state: string; count: number }>;
+    };
+    pilot_drills: Array<{ scenario: string; expected_response: string }>;
+    ergonomic_optimizations: string[];
+    governance: {
+      counsel_signoff: string;
+      external_submission_authority: string;
+      legal_advice_status: string;
+      final_legal_conclusions: string;
+      schema_rls_policy_mutation: string;
+      contains_document_body_text: boolean;
+      contains_locked_content: boolean;
+      production_writes: string;
+    };
+  };
   pilot_readiness: {
     controlled_internal_review_ready: boolean;
     public_or_external_use_enabled: boolean;

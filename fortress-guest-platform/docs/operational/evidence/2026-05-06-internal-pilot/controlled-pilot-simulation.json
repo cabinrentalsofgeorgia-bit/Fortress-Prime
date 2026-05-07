@@ -1,0 +1,107 @@
+{
+  "ok": true,
+  "checkedAt": "2026-05-07T03:14:11.213Z",
+  "baseUrl": "https://crog-ai.com",
+  "matterPath": "/legal/cases/fortress-legal-production-review",
+  "route": {
+    "path": "/legal/cases/fortress-legal-production-review",
+    "status": 200,
+    "ok": true,
+    "duration_ms": 94
+  },
+  "docs": [
+    {
+      "path": "fortress-guest-platform/docs/operational/controlled-internal-pilot-execution-plan-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/internal-pilot-workload-model.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/review-throughput-instrumentation-model.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/internal-pilot-incident-and-rollback-drill-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/review-throughput-optimization-report-2026-05-06.md",
+      "exists": true
+    }
+  ],
+  "unauthenticatedGuards": [
+    {
+      "path": "/api/internal/legal/cases/fortress-legal-production-review/review-operations",
+      "status": 401,
+      "ok": true,
+      "duration_ms": 45
+    },
+    {
+      "path": "/api/internal/legal/cases/fortress-legal-production-review/remediation-maturity",
+      "status": 401,
+      "ok": true,
+      "duration_ms": 24
+    },
+    {
+      "path": "/api/internal/legal/cases/fortress-legal-production-review/draft-work-product",
+      "status": 401,
+      "ok": true,
+      "duration_ms": 20
+    }
+  ],
+  "authenticatedChecker": {
+    "skipped": false,
+    "exitCode": 0,
+    "ok": true,
+    "featureAlignmentOk": true,
+    "checks": {
+      "httpStatus": 200,
+      "authenticatedMatter": true,
+      "signoffPending": true,
+      "validationVisible": true,
+      "lockedVisible": true,
+      "documents": true,
+      "completed": true,
+      "workbench": true,
+      "draftWorkProduct": true,
+      "learning": true,
+      "remediationMaturity": true,
+      "reviewOperations": true,
+      "reviewScaling": true,
+      "operationalCertification": true,
+      "internalPilot": true,
+      "noLoginError": true,
+      "noExternalSubmissionAuthority": true,
+      "noFinalLegalAdvice": true
+    },
+    "httpErrors": [],
+    "requestFailures": []
+  },
+  "simulation": {
+    "reviewQueueTraversal": true,
+    "remediationTriage": true,
+    "contradictionReview": true,
+    "evidenceNavigation": true,
+    "incidentRollbackDocs": true,
+    "governanceLabels": true,
+    "unauthenticatedAccessBlocked": true,
+    "signoffFinalExternalControlsExposed": false
+  },
+  "throughput": {
+    "unresolvedSourceIssues": 232,
+    "excludedSourceIssues": 232,
+    "limitedVerifiedSubset": 65,
+    "contradictionCandidates": 14,
+    "lockedRestrictedMetadataOnly": 2
+  },
+  "governance": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED",
+    "productionWrites": "none"
+  }
+}
