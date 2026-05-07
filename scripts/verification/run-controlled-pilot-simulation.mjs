@@ -38,6 +38,12 @@ const requiredDocs = [
   "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
   "fortress-guest-platform/operational-memory/agent-orchestration/registries/hard-stop-policies.json",
   "fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
+  "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+  "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
+  "fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs",
+  "fortress-guest-platform/scripts/agent-orchestration/replay-dry-run.mjs",
+  "fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -141,6 +147,12 @@ const simulation = {
   taskRiskClassifierVisible: Boolean(checks.taskRiskClassifier),
   agentPlanGenerationVisible: Boolean(checks.agentPlanGeneration),
   executionReportValidationVisible: Boolean(checks.executionReportValidation),
+  autonomousRehearsalVisible: Boolean(checks.autonomousRehearsal),
+  dryRunExecutionVisible: Boolean(checks.dryRunExecution),
+  hardStopEnforcementVisible: Boolean(checks.hardStopEnforcement),
+  replayValidationVisible: Boolean(checks.replayValidation),
+  blockedActionHandlingVisible: Boolean(checks.blockedActionHandling),
+  governanceAssertionVisibility: Boolean(checks.governanceAssertionVisibility),
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -188,6 +200,12 @@ const ok =
   Boolean(checks.taskRiskClassifier) &&
   Boolean(checks.agentPlanGeneration) &&
   Boolean(checks.executionReportValidation) &&
+  Boolean(checks.autonomousRehearsal) &&
+  Boolean(checks.dryRunExecution) &&
+  Boolean(checks.hardStopEnforcement) &&
+  Boolean(checks.replayValidation) &&
+  Boolean(checks.blockedActionHandling) &&
+  Boolean(checks.governanceAssertionVisibility) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -231,6 +249,12 @@ const result = {
     taskRiskClassifier: Boolean(checks.taskRiskClassifier),
     agentPlanGeneration: Boolean(checks.agentPlanGeneration),
     executionReportValidation: Boolean(checks.executionReportValidation),
+    autonomousRehearsal: Boolean(checks.autonomousRehearsal),
+    dryRunExecution: Boolean(checks.dryRunExecution),
+    hardStopEnforcement: Boolean(checks.hardStopEnforcement),
+    replayValidation: Boolean(checks.replayValidation),
+    blockedActionHandling: Boolean(checks.blockedActionHandling),
+    governanceAssertionVisibility: Boolean(checks.governanceAssertionVisibility),
   },
   negativeControls: {
     noDocumentBodyText: true,

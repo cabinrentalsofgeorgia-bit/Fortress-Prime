@@ -50,6 +50,8 @@ The checker reports two top-level outcomes:
 - Operational memory visibility is included after the machine-readable cognition phase. It checks for Operational Memory / Machine-Readable Cognition, Governance Registry, Remediation Registry, Evidence Registry, Capability Registry, Wiki / App / Evidence Knowledge Index, and Reviewer Feedback Ledger Foundation.
 - Operational graph visibility is included after the queryable-governance phase. It checks for Operational Knowledge Graph / Queryable Governance, graph entities, graph relationships, governance graph, evidence graph, remediation graph, and graph validation labels.
 - Governance query engine visibility is included after the agent-context phase. It checks for Governance Query Engine / Agent Operating Context, safe next actions, forbidden actions, signoff blockers, launch blockers, and agent context labels.
+- Agent orchestration visibility is included after the governed-execution phase. It checks for Agent Execution Governance / Safe Task Orchestration, hard stops, allowed actions, task risk classification, plan generation, and execution report validation.
+- Autonomous rehearsal visibility is included after the governed dry-run phase. It checks for Autonomous Operations Rehearsal / Governed Dry-Runs, dry-run execution traces, hard-stop enforcement, replay validation, blocked-action handling, and governance assertion visibility.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -93,7 +95,13 @@ For Fortress Legal production feature alignment, expected target values are:
     "allowedActionsVisible": true,
     "taskRiskClassifier": true,
     "agentPlanGeneration": true,
-    "executionReportValidation": true
+    "executionReportValidation": true,
+    "autonomousRehearsal": true,
+    "dryRunExecution": true,
+    "hardStopEnforcement": true,
+    "replayValidation": true,
+    "blockedActionHandling": true,
+    "governanceAssertionVisibility": true
   }
 }
 ```
