@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "validationGates": [
+    { "id": "validate_agent_orchestration", "purpose": "Validate schemas, registries, plans, reports, and boundaries.", "requiredFor": ["all"] },
+    { "id": "validate_operational_memory", "purpose": "Verify operational-memory registries remain safe.", "requiredFor": ["safe_governance_update", "safe_read_only_ui", "guarded_code_change"] },
+    { "id": "validate_knowledge_graph", "purpose": "Verify graph cognition remains safe.", "requiredFor": ["safe_governance_update", "safe_read_only_ui", "guarded_code_change"] },
+    { "id": "governance_query_smoke", "purpose": "Verify safe next actions and forbidden actions remain queryable.", "requiredFor": ["all"] },
+    { "id": "authenticated_checker", "purpose": "Verify authenticated UI visibility and governance labels.", "requiredFor": ["safe_read_only_ui", "guarded_code_change"] },
+    { "id": "deployment_verifier", "purpose": "Verify deployment/auth guards and service health.", "requiredFor": ["safe_read_only_ui", "guarded_code_change"] },
+    { "id": "pilot_simulation", "purpose": "Verify controlled pilot/read-only operational surfaces.", "requiredFor": ["safe_read_only_ui", "guarded_code_change"] },
+    { "id": "secret_auth_scan", "purpose": "Verify no secrets or auth material in outputs.", "requiredFor": ["all"] },
+    { "id": "authority_boundary_scan", "purpose": "Verify no legal authority or external authority states.", "requiredFor": ["all"] }
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}
