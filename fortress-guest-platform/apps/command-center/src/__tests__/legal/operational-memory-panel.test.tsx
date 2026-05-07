@@ -204,6 +204,52 @@ vi.mock("@/lib/legal-hooks", () => ({
           noSourcePromotion: true,
         },
       },
+      autonomousRehearsal: {
+        status: "AUTONOMOUS_REHEARSAL_VISIBLE_READ_ONLY",
+        allowedCategories: ["validation-only", "governance-query", "rollback-tabletop"],
+        forbiddenCategories: ["legal_signoff", "external_submission", "schema_mutation"],
+        summary: {
+          traceCount: 10,
+          replayCount: 10,
+          hardStopCount: 1,
+          blockedActionCount: 0,
+          validationGatePassCount: 40,
+          allReplaysValidated: true,
+        },
+        latestTraces: [
+          {
+            dryRunId: "dry-run-validation-only-test",
+            category: "validation-only",
+            status: "simulated",
+            hardStopsTriggered: [],
+            blockedActions: [],
+          },
+          {
+            dryRunId: "dry-run-external-submission-test",
+            category: "external_submission",
+            status: "hard_stop",
+            hardStopsTriggered: ["external_authority_forbidden"],
+            blockedActions: [],
+          },
+        ],
+        latestReplays: [
+          {
+            replayId: "replay-dry-run-validation-only-test",
+            dryRunId: "dry-run-validation-only-test",
+            ok: true,
+            governancePreserved: true,
+          },
+        ],
+        governanceAssertions: {
+          noSecrets: true,
+          noConfidentialText: true,
+          noLegalAuthority: true,
+          noExternalAuthority: true,
+          noSchemaMutation: true,
+          noSourcePromotion: true,
+          nonDestructiveDryRunOnly: true,
+        },
+      },
     },
   }),
 }));
@@ -243,6 +289,16 @@ describe("OperationalMemoryPanel", () => {
     expect(screen.getByText("Task Risk Classifier / Plan Validation")).toBeInTheDocument();
     expect(screen.getByText("Latest Agent Plans")).toBeInTheDocument();
     expect(screen.getByText("Execution Reports")).toBeInTheDocument();
+    expect(screen.getByText("Autonomous Operations Rehearsal / Governed Dry-Runs")).toBeInTheDocument();
+    expect(screen.getByText("autonomousRehearsal true")).toBeInTheDocument();
+    expect(screen.getByText("dryRunExecution true")).toBeInTheDocument();
+    expect(screen.getByText("dry-run-only, not legal authority")).toBeInTheDocument();
+    expect(screen.getByText("Allowed Dry-Run Categories")).toBeInTheDocument();
+    expect(screen.getByText("Forbidden Dry-Run Categories")).toBeInTheDocument();
+    expect(screen.getByText("hardStopEnforcement true")).toBeInTheDocument();
+    expect(screen.getByText("blockedActionHandling true")).toBeInTheDocument();
+    expect(screen.getByText("governanceAssertionVisibility true")).toBeInTheDocument();
+    expect(screen.getAllByText("Replay Validation").length).toBeGreaterThan(0);
     expect(screen.getByText("EXCLUDED FROM RELIED UPON SECTIONS / no auto resolution true.")).toBeInTheDocument();
     expect(screen.getByText(/ledger foundation \/ no freeform legal text true\./i)).toBeInTheDocument();
   });

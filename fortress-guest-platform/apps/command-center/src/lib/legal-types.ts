@@ -1537,6 +1537,33 @@ export interface OperationalMemoryResponse {
     } | null;
     governanceAssertions: Record<string, boolean>;
   };
+  autonomousRehearsal?: {
+    status: string;
+    allowedCategories: string[];
+    forbiddenCategories: string[];
+    summary: {
+      traceCount: number;
+      replayCount: number;
+      hardStopCount: number;
+      blockedActionCount: number;
+      validationGatePassCount: number;
+      allReplaysValidated: boolean;
+    };
+    latestTraces: Array<{
+      dryRunId?: string;
+      category?: string;
+      status?: string;
+      hardStopsTriggered: string[];
+      blockedActions: string[];
+    }>;
+    latestReplays: Array<{
+      replayId?: string;
+      dryRunId?: string;
+      ok?: boolean;
+      governancePreserved?: boolean;
+    }>;
+    governanceAssertions: Record<string, boolean>;
+  };
   negativeControls: Record<string, boolean>;
 }
 
