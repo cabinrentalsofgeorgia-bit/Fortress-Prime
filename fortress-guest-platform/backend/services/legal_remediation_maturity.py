@@ -560,6 +560,105 @@ def build_review_operations(case_slug: str) -> dict[str, Any] | None:
                 ],
             },
         },
+        "internal_pilot": {
+            "status": "CONTROLLED_INTERNAL_PILOT_READY",
+            "pilot_mode": "read_only_synthetic_and_metadata_safe",
+            "execution_scope": "controlled_internal_reviewer_operations",
+            "pilot_summary": {
+                "review_queue_depth": len(full_queue),
+                "remediation_triage_items": len(full_queue),
+                "contradiction_review_items": len(contradiction_queue),
+                "evidence_navigation_items": len(evidence_queue),
+                "escalation_items": sum(
+                    1 for item in full_queue if item.get("escalation_state") in {"escalate_if_unassigned", "queue_manager_review"}
+                ),
+                "unresolved_source_issues": len(full_queue),
+                "excluded_source_issues": len(full_queue),
+                "locked_restricted_metadata_only": sum(1 for item in full_queue if item.get("locked_restricted_involved")),
+                "pilot_completion_readiness": "READY_FOR_CONTROLLED_INTERNAL_USE_ONLY",
+            },
+            "allowed_exercises": [
+                "read_only_review_queue_traversal",
+                "remediation_queue_triage_simulation",
+                "contradiction_review_simulation",
+                "evidence_navigation_exercise",
+                "source_confidence_review_exercise",
+                "escalation_path_simulation",
+                "rollback_tabletop_drill",
+                "incident_response_tabletop_drill",
+                "deployment_verification_rehearsal",
+                "reviewer_onboarding_rehearsal",
+            ],
+            "forbidden_exercises": [
+                "legal_signoff",
+                "final_legal_conclusion",
+                "external_submission",
+                "filing_service_email",
+                "upload_ingestion_vector_write",
+                "schema_rls_policy_mutation",
+                "restricted_content_inspection",
+                "unresolved_source_promotion",
+                "public_user_enablement",
+            ],
+            "throughput_metrics": {
+                "queue_depth": len(full_queue),
+                "queue_aging_bands": [
+                    {"sla_band": key, "count": sla_counts[key]} for key in sorted(sla_counts)
+                ],
+                "review_traversal_sample": min(len(full_queue), 40),
+                "remediation_triage_count": len(full_queue),
+                "contradiction_review_count": len(contradiction_queue),
+                "evidence_navigation_count": len(evidence_queue),
+                "reviewer_handoff_count": len(owner_role_counts),
+                "escalation_count": sum(
+                    1 for item in full_queue if item.get("escalation_state") in {"escalate_if_unassigned", "queue_manager_review"}
+                ),
+                "unresolved_source_count": len(full_queue),
+                "excluded_source_count": len(full_queue),
+                "confidence_distribution": [
+                    {"state": key, "count": confidence_counts[key]} for key in sorted(confidence_counts)
+                ],
+            },
+            "pilot_drills": [
+                {
+                    "scenario": "unsupported_assertion_seen",
+                    "expected_response": "keep_excluded_and_route_to_source_reviewer",
+                },
+                {
+                    "scenario": "contradiction_severity_escalates",
+                    "expected_response": "human_contradiction_review_no_auto_resolution",
+                },
+                {
+                    "scenario": "unauthenticated_guard_failure",
+                    "expected_response": "hard_stop_and_rollback",
+                },
+                {
+                    "scenario": "restricted_content_boundary_warning",
+                    "expected_response": "hard_stop_metadata_only_review",
+                },
+                {
+                    "scenario": "bad_deploy_requires_rollback",
+                    "expected_response": "restore_runtime_artifact_and_verify",
+                },
+            ],
+            "ergonomic_optimizations": [
+                "single_pilot_summary",
+                "queue_health_metrics",
+                "throughput_metric_cards",
+                "incident_and_rollback_visibility",
+                "explicit_forbidden_action_labels",
+            ],
+            "governance": {
+                "counsel_signoff": "COUNSEL_SIGNOFF_PENDING",
+                "external_submission_authority": "NOT_AUTHORIZED",
+                "legal_advice_status": "NOT FINAL LEGAL ADVICE",
+                "final_legal_conclusions": "NOT_CREATED",
+                "schema_rls_policy_mutation": "NOT_PERFORMED",
+                "contains_document_body_text": False,
+                "contains_locked_content": False,
+                "production_writes": "none",
+            },
+        },
         "pilot_readiness": {
             "controlled_internal_review_ready": True,
             "public_or_external_use_enabled": False,
@@ -590,6 +689,9 @@ def build_review_operations(case_slug: str) -> dict[str, Any] | None:
                 "reviewer_onboarding_visible",
                 "rollback_certification_visible",
                 "governance_enforcement_visible",
+                "internal_pilot_visible",
+                "pilot_throughput_visible",
+                "pilot_simulation_visible",
                 "controlled_review_queues_visible",
                 "contradiction_review_visible",
                 "review_analytics_visible",
@@ -605,6 +707,8 @@ def build_review_operations(case_slug: str) -> dict[str, Any] | None:
                 "sla_distribution",
                 "escalation_distribution",
                 "operational_certification_status",
+                "internal_pilot_status",
+                "pilot_throughput_metrics",
             ],
         },
     }
