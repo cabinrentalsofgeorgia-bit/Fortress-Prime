@@ -1,0 +1,3 @@
+privileged_marker_file_count=2
+scripts/verification/check-crog-fortress-ui.mjs
+fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs
