@@ -45,6 +45,7 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
   const graphNodes = data.graph?.nodes.slice(0, 6) ?? [];
   const graphEdges = data.graph?.edges.slice(0, 6) ?? [];
   const queryEngine = data.governanceQueryEngine;
+  const orchestration = data.agentOrchestration;
 
   return (
     <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 space-y-4">
@@ -174,6 +175,83 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
                   </Badge>
                 ))}
               </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {orchestration ? (
+        <div className="rounded border border-fuchsia-500/30 bg-fuchsia-500/5 p-3 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold text-fuchsia-100">Agent Execution Governance / Safe Task Orchestration</p>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="bg-fuchsia-500/10 text-fuchsia-200 border-fuchsia-500/30 text-[10px]">
+                agentOrchestration true
+              </Badge>
+              <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                governed operations, not legal authority
+              </Badge>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+            <Metric label="Allowed Actions" value={orchestration.allowedActions.length} />
+            <Metric label="Forbidden Actions" value={orchestration.forbiddenActions.length} />
+            <Metric label="Hard Stops" value={orchestration.hardStops.length} />
+            <Metric label="Risk Classes" value={orchestration.riskClassifications.length} />
+            <Metric label="Plans" value={orchestration.latestPlans.length} />
+            <Metric label="Reports" value={orchestration.latestReports.length} />
+          </div>
+          <div className="grid gap-3 xl:grid-cols-3">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Allowed Agent Actions</p>
+              <div className="flex flex-wrap gap-1">
+                {orchestration.allowedActions.slice(0, 8).map((action) => (
+                  <Badge key={action.id} variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+                    {label(action.id)}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Hard Stop Policies</p>
+              <div className="flex flex-wrap gap-1">
+                {orchestration.hardStops.slice(0, 8).map((policy) => (
+                  <Badge key={policy.id} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                    {label(policy.id)}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Task Risk Classifier / Plan Validation</p>
+              <p className="text-[10px] text-zinc-500">
+                validation {orchestration.validation?.ok ? "PASS" : "REVIEW"} / human review required for governed writes.
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {orchestration.riskClassifications.slice(0, 6).map((risk) => (
+                  <Badge key={risk.id} variant="outline" className="bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/30 text-[10px]">
+                    {label(risk.id)}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Latest Agent Plans</p>
+              {orchestration.latestPlans.slice(0, 3).map((plan) => (
+                <div key={plan.planId} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  {label(plan.riskClass)} / human review {String(plan.humanReviewRequired)}
+                </div>
+              ))}
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Execution Reports</p>
+              {orchestration.latestReports.slice(0, 3).map((report) => (
+                <div key={report.reportId} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  hard stops {report.hardStopsEncountered.length} / human review {String(report.humanReviewRequired)}
+                </div>
+              ))}
             </section>
           </div>
         </div>

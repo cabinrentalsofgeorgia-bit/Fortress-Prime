@@ -18,6 +18,10 @@ GRAPH_DIR = ROOT / "operational-memory" / "graph"
 QUERY_DIR = ROOT / "operational-memory" / "queries"
 AGENT_CONTEXT_DIR = ROOT / "operational-memory" / "agent-context"
 CONTEXT_PACK_DIR = ROOT / "operational-memory" / "context-packs"
+AGENT_ORCHESTRATION_DIR = ROOT / "operational-memory" / "agent-orchestration"
+AGENT_ORCHESTRATION_REGISTRY_DIR = AGENT_ORCHESTRATION_DIR / "registries"
+AGENT_ORCHESTRATION_PLAN_DIR = AGENT_ORCHESTRATION_DIR / "plans"
+AGENT_ORCHESTRATION_REPORT_DIR = AGENT_ORCHESTRATION_DIR / "reports"
 
 REGISTRY_FILES = {
     "operational_state": "operational-state.json",
@@ -75,6 +79,33 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
     evidence_graph = _load_graph_json("evidence-graph-index.json")
     query_taxonomy = _load_optional_json(QUERY_DIR, "query-taxonomy.json")
     agent_context = _load_optional_json(AGENT_CONTEXT_DIR, "current-agent-context.json")
+    orchestration_registries = {}
+    for filename in [
+        "allowed-actions.json",
+        "forbidden-actions.json",
+        "hard-stop-policies.json",
+        "task-risk-classifications.json",
+        "validation-gates.json",
+        "evidence-requirements.json",
+    ]:
+        payload = _load_optional_json(AGENT_ORCHESTRATION_REGISTRY_DIR, filename)
+        if payload:
+            orchestration_registries[filename.removesuffix(".json").replace("-", "_")] = payload
+    orchestration_validation = _load_optional_json(
+        AGENT_ORCHESTRATION_DIR, "agent-orchestration-validation-report.json"
+    )
+    orchestration_plan_files = (
+        sorted(AGENT_ORCHESTRATION_PLAN_DIR.glob("*.json")) if AGENT_ORCHESTRATION_PLAN_DIR.exists() else []
+    )
+    orchestration_report_files = (
+        sorted(AGENT_ORCHESTRATION_REPORT_DIR.glob("*.json")) if AGENT_ORCHESTRATION_REPORT_DIR.exists() else []
+    )
+    latest_plans = [
+        _load_optional_json(AGENT_ORCHESTRATION_PLAN_DIR, path.name) for path in orchestration_plan_files[-5:]
+    ]
+    latest_reports = [
+        _load_optional_json(AGENT_ORCHESTRATION_REPORT_DIR, path.name) for path in orchestration_report_files[-5:]
+    ]
     context_pack_files = sorted(CONTEXT_PACK_DIR.glob("*.json")) if CONTEXT_PACK_DIR.exists() else []
     context_packs = []
     for path in context_pack_files:
@@ -122,6 +153,11 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "graphValidationOk": graph_validation.get("ok", False) if graph_validation else False,
             "governanceQueryCount": len(query_taxonomy.get("queries", [])) if query_taxonomy else 0,
             "contextPackCount": len(context_packs),
+            "agentAllowedActionCount": len(orchestration_registries.get("allowed_actions", {}).get("actions", [])),
+            "agentForbiddenActionCount": len(orchestration_registries.get("forbidden_actions", {}).get("actions", [])),
+            "agentHardStopCount": len(orchestration_registries.get("hard_stop_policies", {}).get("policies", [])),
+            "agentPlanCount": len(orchestration_plan_files),
+            "agentReportCount": len(orchestration_report_files),
         },
         "registries": registries,
         "graph": {
@@ -178,6 +214,34 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "agentContext": agent_context,
             "contextPacks": context_packs,
         },
+        "agentOrchestration": {
+            "status": (
+                "AGENT_ORCHESTRATION_VISIBLE_READ_ONLY"
+                if orchestration_registries
+                else "AGENT_ORCHESTRATION_NOT_AVAILABLE"
+            ),
+            "allowedActions": orchestration_registries.get("allowed_actions", {}).get("actions", []),
+            "forbiddenActions": orchestration_registries.get("forbidden_actions", {}).get("actions", []),
+            "hardStops": orchestration_registries.get("hard_stop_policies", {}).get("policies", []),
+            "riskClassifications": orchestration_registries.get("task_risk_classifications", {}).get(
+                "riskClasses", []
+            ),
+            "validationGates": orchestration_registries.get("validation_gates", {}).get("validationGates", []),
+            "evidenceRequirements": orchestration_registries.get("evidence_requirements", {}).get(
+                "evidenceRequirements", []
+            ),
+            "latestPlans": [plan for plan in latest_plans if plan],
+            "latestReports": [report for report in latest_reports if report],
+            "validation": orchestration_validation,
+            "governanceAssertions": {
+                "noSecrets": True,
+                "noConfidentialText": True,
+                "noLegalAuthority": True,
+                "noExternalAuthority": True,
+                "noSchemaMutation": True,
+                "noSourcePromotion": True,
+            },
+        },
         "negativeControls": {
             "noSecrets": all(registry.get("noSecrets") is True for registry in registries.values()),
             "noConfidentialText": all(registry.get("noConfidentialText") is True for registry in registries.values()),
@@ -188,6 +252,7 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "noSchemaRlsPolicyMutation": True,
             "noGraphLegalAuthority": True,
             "noQueryEngineLegalAuthority": True,
+            "noAgentExecutionLegalAuthority": True,
             "readOnly": True,
         },
     }

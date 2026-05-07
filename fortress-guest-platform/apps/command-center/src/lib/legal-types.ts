@@ -1395,6 +1395,11 @@ export interface OperationalMemoryResponse {
     graphValidationOk?: boolean;
     governanceQueryCount?: number;
     contextPackCount?: number;
+    agentAllowedActionCount?: number;
+    agentForbiddenActionCount?: number;
+    agentHardStopCount?: number;
+    agentPlanCount?: number;
+    agentReportCount?: number;
   };
   registries: {
     operational_state: Record<string, unknown>;
@@ -1501,6 +1506,36 @@ export interface OperationalMemoryResponse {
       noSecrets: boolean;
       noConfidentialText: boolean;
     }>;
+  };
+  agentOrchestration?: {
+    status: string;
+    allowedActions: Array<{ id: string; category: string; riskClass: string }>;
+    forbiddenActions: Array<{ id: string; category: string; riskClass: string }>;
+    hardStops: Array<{ id: string; trigger: string; requiredAction: string }>;
+    riskClassifications: Array<{ id: string; description: string; humanReviewRequired: boolean }>;
+    validationGates: Array<{ id: string; purpose: string; requiredFor: string[] }>;
+    evidenceRequirements: Array<{ id: string; description: string; prohibitedContent: string[] }>;
+    latestPlans: Array<{
+      planId: string;
+      taskId: string;
+      riskClass: string;
+      validationGates: string[];
+      humanReviewRequired: boolean;
+    }>;
+    latestReports: Array<{
+      reportId: string;
+      taskId: string;
+      planId: string;
+      hardStopsEncountered: string[];
+      humanReviewRequired: boolean;
+    }>;
+    validation?: {
+      ok: boolean;
+      errors: string[];
+      warnings: string[];
+      governancePreserved: boolean;
+    } | null;
+    governanceAssertions: Record<string, boolean>;
   };
   negativeControls: Record<string, boolean>;
 }
