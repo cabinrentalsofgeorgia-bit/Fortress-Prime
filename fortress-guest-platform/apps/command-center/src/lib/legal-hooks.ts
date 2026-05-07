@@ -19,8 +19,23 @@ import type {
   DiscoveryDraftPackDetail,
   CaseGraphSnapshot,
   LegalDeadline,
+  LimitedSignoffCandidateResponse,
   SanctionsAlertsResponse,
   DepositionKillSheetsResponse,
+  CounselWorkbenchResponse,
+  CounselValidationActionBody,
+  CounselValidationResponse,
+  CounselSignoffActionBody,
+  CounselSignoffDecisionActionBody,
+  CounselSignoffDecisionResponse,
+  CounselSignoffPacketResponse,
+  AutonomousLearningFeedbackBody,
+  AutonomousLearningResponse,
+  DraftWorkProductResponse,
+  SourceIntegrityResponse,
+  SourceLinkRepairResponse,
+  SourceRemediationResponse,
+  TargetedSourceCompletionResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -37,6 +52,17 @@ const KEYS = {
   sanctionsAlerts: (slug: string) => ["legal", "sanctions", slug] as const,
   depositionKillSheets: (slug: string) =>
     ["legal", "deposition-kill-sheets", slug] as const,
+  counselWorkbench: (slug: string) => ["legal", "counsel-workbench", slug] as const,
+  counselValidation: (slug: string) => ["legal", "counsel-validation", slug] as const,
+  counselSignoffPacket: (slug: string) => ["legal", "counsel-signoff-packet", slug] as const,
+  sourceIntegrity: (slug: string) => ["legal", "source-integrity", slug] as const,
+  sourceRemediation: (slug: string) => ["legal", "source-remediation", slug] as const,
+  sourceLinkRepair: (slug: string) => ["legal", "source-link-repair", slug] as const,
+  targetedSourceCompletion: (slug: string) => ["legal", "targeted-source-completion", slug] as const,
+  limitedSignoffCandidate: (slug: string) => ["legal", "limited-signoff-candidate", slug] as const,
+  counselSignoffDecision: (slug: string) => ["legal", "counsel-signoff-decision", slug] as const,
+  autonomousLearning: (slug: string) => ["legal", "autonomous-learning", slug] as const,
+  draftWorkProduct: (slug: string) => ["legal", "draft-work-product", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -85,6 +111,127 @@ export function useCaseGraph(slug: string) {
   return useQuery({
     queryKey: KEYS.graph(slug),
     queryFn: () => api.get<CaseGraphSnapshot>(`/api/internal/legal/cases/${slug}/graph/snapshot`),
+    enabled: !!slug,
+  });
+}
+
+export function useCounselWorkbench(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselWorkbench(slug),
+    queryFn: () =>
+      api.get<CounselWorkbenchResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-workbench`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useCounselValidation(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselValidation(slug),
+    queryFn: () =>
+      api.get<CounselValidationResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-validation`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useCounselSignoffPacket(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselSignoffPacket(slug),
+    queryFn: () =>
+      api.get<CounselSignoffPacketResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-packet`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useSourceIntegrity(slug: string) {
+  return useQuery({
+    queryKey: KEYS.sourceIntegrity(slug),
+    queryFn: () =>
+      api.get<SourceIntegrityResponse>(
+        `/api/internal/legal/cases/${slug}/source-integrity`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useSourceRemediation(slug: string) {
+  return useQuery({
+    queryKey: KEYS.sourceRemediation(slug),
+    queryFn: () =>
+      api.get<SourceRemediationResponse>(
+        `/api/internal/legal/cases/${slug}/source-remediation`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useSourceLinkRepair(slug: string) {
+  return useQuery({
+    queryKey: KEYS.sourceLinkRepair(slug),
+    queryFn: () =>
+      api.get<SourceLinkRepairResponse>(
+        `/api/internal/legal/cases/${slug}/source-link-repair`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useTargetedSourceCompletion(slug: string) {
+  return useQuery({
+    queryKey: KEYS.targetedSourceCompletion(slug),
+    queryFn: () =>
+      api.get<TargetedSourceCompletionResponse>(
+        `/api/internal/legal/cases/${slug}/targeted-source-completion`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useLimitedSignoffCandidate(slug: string) {
+  return useQuery({
+    queryKey: KEYS.limitedSignoffCandidate(slug),
+    queryFn: () =>
+      api.get<LimitedSignoffCandidateResponse>(
+        `/api/internal/legal/cases/${slug}/limited-signoff-candidate`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useCounselSignoffDecision(slug: string) {
+  return useQuery({
+    queryKey: KEYS.counselSignoffDecision(slug),
+    queryFn: () =>
+      api.get<CounselSignoffDecisionResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-decision`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useAutonomousLearning(slug: string) {
+  return useQuery({
+    queryKey: KEYS.autonomousLearning(slug),
+    queryFn: () =>
+      api.get<AutonomousLearningResponse>(
+        `/api/internal/legal/cases/${slug}/autonomous-learning`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useDraftWorkProduct(slug: string) {
+  return useQuery({
+    queryKey: KEYS.draftWorkProduct(slug),
+    queryFn: () =>
+      api.get<DraftWorkProductResponse>(
+        `/api/internal/legal/cases/${slug}/draft-work-product`,
+      ),
     enabled: !!slug,
   });
 }
@@ -145,6 +292,86 @@ export function useTriggerExtraction(slug: string) {
       qc.invalidateQueries({ queryKey: KEYS.caseDetail(slug) });
     },
     onError: (e) => toast.error(`Extraction failed: ${e.message}`),
+  });
+}
+
+export function useCounselValidationAction(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CounselValidationActionBody) =>
+      api.post<CounselValidationResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-validation/actions`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Validation state updated");
+      qc.invalidateQueries({ queryKey: KEYS.counselValidation(slug) });
+    },
+    onError: (e) => toast.error(`Validation update failed: ${e.message}`),
+  });
+}
+
+export function useCounselSignoffAction(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CounselSignoffActionBody) =>
+      api.post<CounselSignoffPacketResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-packet/signoff`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Signoff action recorded");
+      qc.invalidateQueries({ queryKey: KEYS.counselSignoffPacket(slug) });
+    },
+    onError: (e) => toast.error(`Signoff failed: ${e.message}`),
+  });
+}
+
+export function useCounselSignoffReopen(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { notes?: string }) =>
+      api.post<CounselSignoffPacketResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-packet/reopen`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Signoff packet reopened");
+      qc.invalidateQueries({ queryKey: KEYS.counselSignoffPacket(slug) });
+    },
+    onError: (e) => toast.error(`Reopen failed: ${e.message}`),
+  });
+}
+
+export function useCounselSignoffDecisionAction(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CounselSignoffDecisionActionBody) =>
+      api.post<CounselSignoffDecisionResponse>(
+        `/api/internal/legal/cases/${slug}/counsel-signoff-decision/decisions`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Decision recorded");
+      qc.invalidateQueries({ queryKey: KEYS.counselSignoffDecision(slug) });
+    },
+    onError: (e) => toast.error(`Decision failed: ${e.message}`),
+  });
+}
+
+export function useAutonomousLearningFeedback(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AutonomousLearningFeedbackBody) =>
+      api.post<AutonomousLearningResponse>(
+        `/api/internal/legal/cases/${slug}/autonomous-learning/feedback`,
+        body,
+      ),
+    onSuccess: () => {
+      toast.success("Learning feedback captured");
+      qc.invalidateQueries({ queryKey: KEYS.autonomousLearning(slug) });
+    },
+    onError: (e) => toast.error(`Feedback failed: ${e.message}`),
   });
 }
 
