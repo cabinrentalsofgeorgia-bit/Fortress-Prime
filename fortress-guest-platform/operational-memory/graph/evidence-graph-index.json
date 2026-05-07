@@ -1,0 +1,186 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T10:26:45.788Z",
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED"
+  },
+  "governanceBoundaries": [
+    "path_metadata_only",
+    "no_document_body_text",
+    "no_auth_material"
+  ],
+  "validationStatus": {
+    "status": "GENERATED_GRAPH_INDEX"
+  },
+  "rollbackRefs": [
+    "delete_generated_index",
+    "git_revert"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "sourceRefs": [
+    "fortress-guest-platform/operational-memory/registries/evidence-registry.json"
+  ],
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/architecture/wiki-evidence-graph-model-2026-05-06.md"
+  ],
+  "nodes": [
+    {
+      "id": "evidence:canonicalization",
+      "type": "evidence_bundle",
+      "phase": "canonicalization",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-canonicalization/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:feature_alignment",
+      "type": "evidence_bundle",
+      "phase": "feature_alignment",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-feature-alignment/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:operational_hardening",
+      "type": "evidence_bundle",
+      "phase": "operational_hardening",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-hardening/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:remediation_maturity",
+      "type": "evidence_bundle",
+      "phase": "remediation_maturity",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-remediation-maturity/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:review_operations",
+      "type": "evidence_bundle",
+      "phase": "review_operations",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-operations/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:review_scaling",
+      "type": "evidence_bundle",
+      "phase": "review_scaling",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-scaling/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:operational_certification",
+      "type": "evidence_bundle",
+      "phase": "operational_certification",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-certification/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:internal_pilot",
+      "type": "evidence_bundle",
+      "phase": "internal_pilot",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-internal-pilot/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:human_operations",
+      "type": "evidence_bundle",
+      "phase": "human_operations",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-human-operations/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:capability_audit",
+      "type": "evidence_bundle",
+      "phase": "capability_audit",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/",
+      "status": "present"
+    },
+    {
+      "id": "evidence:operational_memory",
+      "type": "evidence_bundle",
+      "phase": "operational_memory",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
+      "status": "present"
+    }
+  ],
+  "edges": [
+    {
+      "id": "evidence-edge:canonicalization",
+      "type": "supports",
+      "from": "evidence:canonicalization",
+      "to": "capability:canonicalization",
+      "phase": "canonicalization"
+    },
+    {
+      "id": "evidence-edge:feature_alignment",
+      "type": "supports",
+      "from": "evidence:feature_alignment",
+      "to": "capability:feature_alignment",
+      "phase": "feature_alignment"
+    },
+    {
+      "id": "evidence-edge:operational_hardening",
+      "type": "supports",
+      "from": "evidence:operational_hardening",
+      "to": "capability:operational_hardening",
+      "phase": "operational_hardening"
+    },
+    {
+      "id": "evidence-edge:remediation_maturity",
+      "type": "supports",
+      "from": "evidence:remediation_maturity",
+      "to": "capability:remediation_maturity",
+      "phase": "remediation_maturity"
+    },
+    {
+      "id": "evidence-edge:review_operations",
+      "type": "supports",
+      "from": "evidence:review_operations",
+      "to": "capability:review_operations",
+      "phase": "review_operations"
+    },
+    {
+      "id": "evidence-edge:review_scaling",
+      "type": "supports",
+      "from": "evidence:review_scaling",
+      "to": "capability:review_scaling",
+      "phase": "review_scaling"
+    },
+    {
+      "id": "evidence-edge:operational_certification",
+      "type": "supports",
+      "from": "evidence:operational_certification",
+      "to": "capability:operational_certification",
+      "phase": "operational_certification"
+    },
+    {
+      "id": "evidence-edge:internal_pilot",
+      "type": "supports",
+      "from": "evidence:internal_pilot",
+      "to": "capability:internal_pilot",
+      "phase": "internal_pilot"
+    },
+    {
+      "id": "evidence-edge:human_operations",
+      "type": "supports",
+      "from": "evidence:human_operations",
+      "to": "capability:human_operations",
+      "phase": "human_operations"
+    },
+    {
+      "id": "evidence-edge:capability_audit",
+      "type": "supports",
+      "from": "evidence:capability_audit",
+      "to": "capability:capability_audit",
+      "phase": "capability_audit"
+    },
+    {
+      "id": "evidence-edge:operational_memory",
+      "type": "supports",
+      "from": "evidence:operational_memory",
+      "to": "capability:operational_memory",
+      "phase": "operational_memory"
+    }
+  ]
+}
