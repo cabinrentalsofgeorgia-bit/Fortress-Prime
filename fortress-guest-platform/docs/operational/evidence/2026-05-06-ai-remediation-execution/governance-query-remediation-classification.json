@@ -1,0 +1,146 @@
+{
+  "ok": true,
+  "query": "remediation-classification",
+  "argument": null,
+  "generatedAt": "2026-05-07T18:32:41.637Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression",
+    "remediation_classification",
+    "remediation_clusters",
+    "safe_automation_candidates",
+    "disposition_packets",
+    "reviewer_work_queues",
+    "signoff_blocking_sources",
+    "counsel_review_required_items"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AI_REMEDIATION_EXECUTION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "summary": {
+      "byCategory": [
+        {
+          "category": "unsupported_assertion",
+          "count": 5
+        },
+        {
+          "category": "restricted_metadata_only",
+          "count": 2
+        },
+        {
+          "category": "incomplete_source_chain",
+          "count": 17
+        },
+        {
+          "category": "contradiction_candidate",
+          "count": 14
+        },
+        {
+          "category": "ambiguous_entity_mapping",
+          "count": 40
+        },
+        {
+          "category": "missing_source",
+          "count": 154
+        }
+      ],
+      "byItemType": [
+        {
+          "itemType": "issue_matrix",
+          "count": 5
+        },
+        {
+          "itemType": "evidence_binder",
+          "count": 17
+        },
+        {
+          "itemType": "contradiction_candidate",
+          "count": 14
+        },
+        {
+          "itemType": "entity_dossier",
+          "count": 40
+        },
+        {
+          "itemType": "theory_packet",
+          "count": 2
+        },
+        {
+          "itemType": "counsel_question",
+          "count": 12
+        },
+        {
+          "itemType": "action_item",
+          "count": 12
+        },
+        {
+          "itemType": "timeline_event",
+          "count": 130
+        }
+      ],
+      "byMaterialityTier": [
+        {
+          "materialityTier": "tier_1_high_materiality",
+          "count": 21
+        },
+        {
+          "materialityTier": "tier_2_supporting_packet_gap",
+          "count": 81
+        },
+        {
+          "materialityTier": "tier_3_low_materiality_or_optional",
+          "count": 130
+        }
+      ],
+      "counselReviewRequired": 232,
+      "restrictedMetadataOnly": 2
+    },
+    "issueCount": 232,
+    "sampleIssueIds": [
+      "issue-02",
+      "issue-10",
+      "issue-18",
+      "issue-19",
+      "issue-20",
+      "binder-01",
+      "binder-02",
+      "binder-03",
+      "binder-04",
+      "binder-05"
+    ],
+    "sourcePromotionAllowed": false,
+    "humanReviewRequired": true
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}

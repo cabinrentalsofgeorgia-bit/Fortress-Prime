@@ -1,0 +1,154 @@
+{
+  "ok": true,
+  "query": "reviewer-work-queues",
+  "argument": null,
+  "generatedAt": "2026-05-07T18:32:41.735Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression",
+    "remediation_classification",
+    "remediation_clusters",
+    "safe_automation_candidates",
+    "disposition_packets",
+    "reviewer_work_queues",
+    "signoff_blocking_sources",
+    "counsel_review_required_items"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AI_REMEDIATION_EXECUTION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "queueCount": 8,
+    "queues": [
+      {
+        "queueId": "automation_prepared_human_review",
+        "itemCount": 230,
+        "packetRefs": [
+          "missing-source-packet-01",
+          "evidence-chain-packet-03",
+          "contradiction-review-packet-04"
+        ],
+        "priority": "normal",
+        "reviewRole": "source_reviewer",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "queueId": "counsel_review_required",
+        "itemCount": 232,
+        "packetRefs": [
+          "missing-source-packet-01",
+          "restricted-metadata-only-packet-02",
+          "evidence-chain-packet-03",
+          "contradiction-review-packet-04"
+        ],
+        "priority": "high",
+        "reviewRole": "counsel",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "queueId": "contradiction_review_required",
+        "itemCount": 14,
+        "packetRefs": [
+          "contradiction-review-packet-04"
+        ],
+        "priority": "high",
+        "reviewRole": "counsel_or_senior_reviewer",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "queueId": "restricted_metadata_only",
+        "itemCount": 2,
+        "packetRefs": [
+          "restricted-metadata-only-packet-02"
+        ],
+        "priority": "normal",
+        "reviewRole": "counsel",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "queueId": "low_confidence_review",
+        "itemCount": 218,
+        "packetRefs": [
+          "missing-source-packet-01",
+          "restricted-metadata-only-packet-02",
+          "evidence-chain-packet-03"
+        ],
+        "priority": "normal",
+        "reviewRole": "source_reviewer",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "queueId": "duplicate_review",
+        "itemCount": 232,
+        "packetRefs": [
+          "missing-source-packet-01",
+          "restricted-metadata-only-packet-02",
+          "evidence-chain-packet-03",
+          "contradiction-review-packet-04"
+        ],
+        "priority": "normal",
+        "reviewRole": "source_reviewer",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "queueId": "source_link_review",
+        "itemCount": 199,
+        "packetRefs": [
+          "missing-source-packet-01"
+        ],
+        "priority": "normal",
+        "reviewRole": "source_reviewer",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "queueId": "evidence_chain_review",
+        "itemCount": 17,
+        "packetRefs": [
+          "evidence-chain-packet-03"
+        ],
+        "priority": "normal",
+        "reviewRole": "source_reviewer",
+        "humanReviewRequired": true,
+        "sourcePromotionAllowed": false
+      }
+    ]
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}

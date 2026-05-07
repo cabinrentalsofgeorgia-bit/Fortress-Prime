@@ -169,6 +169,19 @@ await page
     { timeout: 20000 },
   )
   .catch(() => {});
+await page
+  .waitForFunction(
+    () => {
+      const body = document.body?.innerText ?? "";
+      return (
+        body.includes("Operational Memory / Machine-Readable Cognition") ||
+        body.includes("AI Remediation Execution / Disposition Packets") ||
+        body.includes("Operational memory registries are not available yet.")
+      );
+    },
+    { timeout: 30000 },
+  )
+  .catch(() => {});
 text += "\n" + (await bodyText());
 const lowerText = text.toLowerCase();
 

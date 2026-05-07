@@ -1,0 +1,7 @@
+npm error Lifecycle script `typecheck` failed with error:
+npm error workspace @fortress/command-center@0.1.0
+npm error location /home/admin/Fortress-Prime-ai-remediation-execution/fortress-guest-platform/apps/command-center
+npm error Missing script: "typecheck"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run --workspace=@fortress/command-center@0.1.0

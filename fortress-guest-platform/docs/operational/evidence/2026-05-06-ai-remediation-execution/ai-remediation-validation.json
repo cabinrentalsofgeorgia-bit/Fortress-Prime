@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "checkedAt": "2026-05-07T18:32:41.524Z",
+  "filesChecked": 9,
+  "unresolvedIssueCount": 232,
+  "issueCount": 232,
+  "clusterCount": 17,
+  "candidateCount": 4,
+  "packetCount": 4,
+  "queueCount": 8,
+  "restrictedMetadataOnly": 2,
+  "counselReviewRequired": 232,
+  "sourcePromotionAllowed": false,
+  "legalConclusion": false,
+  "signoffAuthority": false,
+  "governance": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "warnings": [],
+  "errors": []
+}

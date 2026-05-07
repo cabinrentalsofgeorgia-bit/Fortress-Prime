@@ -1,0 +1,9 @@
+
+ RUN  v4.1.1 /home/admin/Fortress-Prime-ai-remediation-execution/fortress-guest-platform/apps/command-center
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  14:32:42
+   Duration  715ms (transform 91ms, setup 41ms, import 227ms, tests 124ms, environment 223ms)
+

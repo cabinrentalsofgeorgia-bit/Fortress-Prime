@@ -1,0 +1,92 @@
+{
+  "ok": true,
+  "query": "safe-automation-candidates",
+  "argument": null,
+  "generatedAt": "2026-05-07T18:32:41.681Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression",
+    "remediation_classification",
+    "remediation_clusters",
+    "safe_automation_candidates",
+    "disposition_packets",
+    "reviewer_work_queues",
+    "signoff_blocking_sources",
+    "counsel_review_required_items"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AI_REMEDIATION_EXECUTION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "candidateCount": 4,
+    "candidates": [
+      {
+        "candidateId": "candidate-01-source-link-repair-proposal",
+        "candidateType": "source-link repair proposal",
+        "issueCount": 176,
+        "requiredHumanApproval": true,
+        "sourcePromotionAllowed": false,
+        "legalConclusion": false,
+        "signoffAuthority": false
+      },
+      {
+        "candidateId": "candidate-02-duplicate-closure-recommendation",
+        "candidateType": "duplicate closure recommendation",
+        "issueCount": 230,
+        "requiredHumanApproval": true,
+        "sourcePromotionAllowed": false,
+        "legalConclusion": false,
+        "signoffAuthority": false
+      },
+      {
+        "candidateId": "candidate-03-contradiction-packet-generation",
+        "candidateType": "contradiction packet generation",
+        "issueCount": 14,
+        "requiredHumanApproval": true,
+        "sourcePromotionAllowed": false,
+        "legalConclusion": false,
+        "signoffAuthority": false
+      },
+      {
+        "candidateId": "candidate-04-restricted-metadata-only-routing",
+        "candidateType": "restricted metadata-only routing",
+        "issueCount": 2,
+        "requiredHumanApproval": true,
+        "sourcePromotionAllowed": false,
+        "legalConclusion": false,
+        "signoffAuthority": false
+      }
+    ]
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}

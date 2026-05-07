@@ -1,0 +1,95 @@
+{
+  "ok": true,
+  "query": "disposition-packets",
+  "argument": null,
+  "generatedAt": "2026-05-07T18:32:41.703Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression",
+    "remediation_classification",
+    "remediation_clusters",
+    "safe_automation_candidates",
+    "disposition_packets",
+    "reviewer_work_queues",
+    "signoff_blocking_sources",
+    "counsel_review_required_items"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AI_REMEDIATION_EXECUTION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "packetCount": 4,
+    "packets": [
+      {
+        "packetId": "missing-source-packet-01",
+        "packetType": "missing-source-packet",
+        "issueCount": 199,
+        "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/missing-source-packet-01.json",
+        "humanReviewRequired": true,
+        "counselReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "packetId": "restricted-metadata-only-packet-02",
+        "packetType": "restricted-metadata-only-packet",
+        "issueCount": 2,
+        "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/restricted-metadata-only-packet-02.json",
+        "humanReviewRequired": true,
+        "counselReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "packetId": "evidence-chain-packet-03",
+        "packetType": "evidence-chain-packet",
+        "issueCount": 17,
+        "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/evidence-chain-packet-03.json",
+        "humanReviewRequired": true,
+        "counselReviewRequired": true,
+        "sourcePromotionAllowed": false
+      },
+      {
+        "packetId": "contradiction-review-packet-04",
+        "packetType": "contradiction-review-packet",
+        "issueCount": 14,
+        "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/contradiction-review-packet-04.json",
+        "humanReviewRequired": true,
+        "counselReviewRequired": true,
+        "sourcePromotionAllowed": false
+      }
+    ],
+    "sourcePromotionAllowed": false,
+    "legalConclusion": false,
+    "signoffAuthority": false
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}
