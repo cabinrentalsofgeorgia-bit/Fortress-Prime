@@ -1,13 +1,16 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T04:13:17.275Z",
+  "generatedAt": "2026-05-07T04:18:31.615Z",
   "sourceRefs": [
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/authenticated-checker.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/deployment-verifier.json",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json"
   ],
   "standingLabels": {
-    "productionStatus": "PRODUCTION_CAPABILITY_AUDIT_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_OPERATIONAL_MEMORY_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -19,14 +22,15 @@
     "generated_state_never_infers_final_readiness"
   ],
   "evidenceRefs": [
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/"
   ],
   "validationStatus": {
     "authenticatedChecker": "PASS",
     "deploymentVerifier": "PASS",
     "pilotSimulation": "PASS",
     "featureAlignmentOk": true,
-    "humanOperations": true
+    "humanOperations": true,
+    "operationalMemory": true
   },
   "rollbackRefs": [
     "delete_generated_preview",

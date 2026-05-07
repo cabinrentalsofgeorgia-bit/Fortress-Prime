@@ -3,10 +3,11 @@
   "generatedAt": "2026-05-06T23:59:00-04:00",
   "sourceRefs": [
     "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md"
   ],
   "standingLabels": {
-    "productionStatus": "PRODUCTION_CAPABILITY_AUDIT_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_OPERATIONAL_MEMORY_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -22,7 +23,10 @@
   "evidenceRefs": [
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/authenticated-checker.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/deployment-verifier.json",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json"
   ],
   "validationStatus": {
     "authenticatedChecker": "PASS",
@@ -31,7 +35,7 @@
     "featureAlignmentOk": true,
     "internalPilot": true,
     "humanOperations": true,
-    "operationalMemory": "PENDING_THIS_PHASE"
+    "operationalMemory": "PASS"
   },
   "rollbackRefs": [
     "git_revert_operational_memory_commits",
@@ -45,7 +49,7 @@
     "public_launch_forbidden",
     "external_legal_operations_forbidden",
     "persistent_reviewer_assignment_writes_deferred",
-    "wiki_app_evidence_memory_not_unified"
+    "operational_memory_complete_pending_review"
   ],
   "hardStops": [
     "secret_exposure_risk",

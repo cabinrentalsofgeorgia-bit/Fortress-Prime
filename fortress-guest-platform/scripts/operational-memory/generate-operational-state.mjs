@@ -4,7 +4,7 @@ import { join } from "node:path";
 const root = process.cwd().endsWith("fortress-guest-platform")
   ? process.cwd()
   : join(process.cwd(), "fortress-guest-platform");
-const evidenceRoot = join(root, "docs", "operational", "evidence", "2026-05-06-capability-audit");
+const evidenceRoot = join(root, "docs", "operational", "evidence", "2026-05-06-operational-memory");
 const output = join(root, "operational-memory", "registries", "operational-state.generated.json");
 
 function readEvidence(name) {
@@ -28,9 +28,12 @@ const registry = {
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/authenticated-checker.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/deployment-verifier.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json",
   ],
   standingLabels: {
-    productionStatus: "PRODUCTION_CAPABILITY_AUDIT_COMPLETE_PENDING_REVIEW",
+    productionStatus: "PRODUCTION_OPERATIONAL_MEMORY_COMPLETE_PENDING_REVIEW",
     counselStatus: "COUNSEL_SIGNOFF_PENDING",
     externalSubmissionAuthority: "NOT_AUTHORIZED",
     finalLegalConclusions: "NOT_CREATED",
@@ -38,13 +41,14 @@ const registry = {
     schemaRlsPolicyMutation: "NOT_PERFORMED",
   },
   governanceBoundaries: ["generated_state_never_infers_signoff", "generated_state_never_infers_final_readiness"],
-  evidenceRefs: [`fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/`],
+  evidenceRefs: [`fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/`],
   validationStatus: {
     authenticatedChecker: checker?.ok === true ? "PASS" : "UNKNOWN",
     deploymentVerifier: deployment?.ok === true ? "PASS" : "UNKNOWN",
     pilotSimulation: simulation?.ok === true ? "PASS" : "UNKNOWN",
     featureAlignmentOk: checker?.featureAlignmentOk === true,
     humanOperations: checker?.checks?.humanOperations === true,
+    operationalMemory: checker?.checks?.operationalMemory === true,
   },
   rollbackRefs: ["delete_generated_preview", "git_revert"],
   noSecrets: true,
