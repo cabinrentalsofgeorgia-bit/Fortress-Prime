@@ -1,0 +1,12 @@
+deployment stamp: 20260506-212900-feature-alignment
+source artifact: /home/admin/Fortress-Prime-feature-alignment/fortress-guest-platform/apps/command-center/.next
+destination artifact: /home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next
+rollback artifact: /home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next.rollback-20260506-212900-feature-alignment
+pre-status:
+active
+post-status:
+active
+http-root:
+200
+http-matter-route:
+200

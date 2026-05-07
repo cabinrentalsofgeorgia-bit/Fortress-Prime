@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "featureAlignmentOk": false,
+  "route": "https://crog-ai.com/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "httpStatus": 200,
+    "authenticatedMatter": true,
+    "signoffPending": true,
+    "validationVisible": true,
+    "lockedVisible": true,
+    "documents": true,
+    "completed": true,
+    "workbench": true,
+    "draftWorkProduct": false,
+    "learning": false,
+    "noLoginError": true,
+    "noExternalSubmissionAuthority": true,
+    "noFinalLegalAdvice": true
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 500 ()"
+  ]
+}
