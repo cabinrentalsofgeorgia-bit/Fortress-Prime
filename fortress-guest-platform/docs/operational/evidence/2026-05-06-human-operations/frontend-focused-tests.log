@@ -1,0 +1,9 @@
+
+ RUN  v4.1.1 /home/admin/Fortress-Prime-human-operations/fortress-guest-platform/apps/command-center
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  23:28:15
+   Duration  1.12s (transform 337ms, setup 69ms, import 828ms, tests 480ms, environment 472ms)
+
