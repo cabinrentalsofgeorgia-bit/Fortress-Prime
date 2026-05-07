@@ -42,6 +42,8 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
   const evidence = data.registries.evidence.evidenceDirectories.slice(0, 8);
   const wikiEntries = data.registries.wiki_knowledge_index.entries.slice(0, 8);
   const feedbackTypes = data.registries.reviewer_feedback_ledger.allowedFeedbackTypes.slice(0, 8);
+  const graphNodes = data.graph?.nodes.slice(0, 6) ?? [];
+  const graphEdges = data.graph?.edges.slice(0, 6) ?? [];
 
   return (
     <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 space-y-4">
@@ -76,6 +78,48 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
         <Metric label="Unresolved Sources" value={data.summary.unresolvedSourceIssues} />
         <Metric label="Registry Valid" value={data.registries.validation_report.ok ? "PASS" : "REVIEW"} />
       </div>
+
+      {data.graph ? (
+        <div className="rounded border border-cyan-500/30 bg-cyan-500/5 p-3 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold text-cyan-100">Operational Knowledge Graph / Queryable Governance</p>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="bg-cyan-500/10 text-cyan-200 border-cyan-500/30 text-[10px]">
+                operationalGraph {data.graph.validation?.ok ? "true" : "review"}
+              </Badge>
+              <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                graph-as-operational-cognition, not legal authority
+              </Badge>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+            <Metric label="Graph Nodes" value={data.graph.summary.nodeCount} />
+            <Metric label="Graph Edges" value={data.graph.summary.edgeCount} />
+            <Metric label="Governance Graph" value={data.graph.summary.governanceNodes} />
+            <Metric label="Remediation Graph" value={data.graph.summary.remediationNodes} />
+            <Metric label="Evidence Graph" value={data.graph.summary.evidenceNodes} />
+            <Metric label="Deployment Graph" value={data.graph.summary.deploymentNodes} />
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Graph Entities</p>
+              {graphNodes.map((node) => (
+                <div key={node.id} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  {label(node.type)} / {node.label}
+                </div>
+              ))}
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Graph Relationships</p>
+              {graphEdges.map((edge) => (
+                <div key={edge.id} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  {label(edge.type)} / {edge.label}
+                </div>
+              ))}
+            </section>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 xl:grid-cols-3">
         <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">

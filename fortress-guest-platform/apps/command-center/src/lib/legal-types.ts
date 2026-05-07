@@ -1390,6 +1390,9 @@ export interface OperationalMemoryResponse {
     reviewerFeedbackEntries: number;
     unresolvedSourceIssues: number;
     reviewerLedgerMode: string;
+    graphNodeCount?: number;
+    graphEdgeCount?: number;
+    graphValidationOk?: boolean;
   };
   registries: {
     operational_state: Record<string, unknown>;
@@ -1431,6 +1434,47 @@ export interface OperationalMemoryResponse {
       errors: string[];
       warnings: string[];
     };
+  };
+  graph?: {
+    status: string;
+    summary: {
+      nodeCount: number;
+      edgeCount: number;
+      governanceNodes: number;
+      remediationNodes: number;
+      evidenceNodes: number;
+      deploymentNodes: number;
+      wikiGraphNodes: number;
+      evidenceGraphNodes: number;
+    };
+    nodes: Array<{
+      id: string;
+      type: string;
+      label: string;
+      governanceBoundaries?: string[];
+      evidenceRefs?: string[];
+      humanReviewRequired?: boolean;
+      unresolvedSourceBoundary?: string;
+    }>;
+    edges: Array<{
+      id: string;
+      type: string;
+      from: string;
+      to: string;
+      label: string;
+      governanceBoundaries?: string[];
+      unresolvedSourceBoundary?: string;
+    }>;
+    validation?: {
+      ok: boolean;
+      nodeCount: number;
+      edgeCount: number;
+      noSecrets: boolean;
+      noConfidentialText: boolean;
+      governancePreserved: boolean;
+    } | null;
+    wikiGraphIndex?: { nodes?: unknown[]; edges?: unknown[] } | null;
+    evidenceGraphIndex?: { nodes?: unknown[]; edges?: unknown[] } | null;
   };
   negativeControls: Record<string, boolean>;
 }

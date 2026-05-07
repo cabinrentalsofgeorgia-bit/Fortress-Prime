@@ -14,6 +14,7 @@ SUPPORTED_MATTER_SLUG = "fortress-legal-production-review"
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_DIR = ROOT / "operational-memory" / "registries"
+GRAPH_DIR = ROOT / "operational-memory" / "graph"
 
 REGISTRY_FILES = {
     "operational_state": "operational-state.json",
@@ -36,6 +37,17 @@ def _load_json(filename: str) -> dict[str, Any]:
     return payload
 
 
+def _load_graph_json(filename: str) -> dict[str, Any] | None:
+    path = GRAPH_DIR / filename
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"graph_not_object:{filename}")
+    return payload
+
+
 def load_operational_memory(slug: str) -> dict[str, Any] | None:
     if slug != SUPPORTED_MATTER_SLUG:
         raise ValueError("operational_memory_scope_refused")
@@ -43,11 +55,17 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
         return None
 
     registries = {name: _load_json(filename) for name, filename in REGISTRY_FILES.items()}
+    graph = _load_graph_json("graph.json")
+    graph_validation = _load_graph_json("graph-validation-report.json")
+    wiki_graph = _load_graph_json("wiki-graph-index.json")
+    evidence_graph = _load_graph_json("evidence-graph-index.json")
     state = registries["operational_state"]
     capabilities = registries["capabilities"].get("capabilities", [])
     evidence_dirs = registries["evidence"].get("evidenceDirectories", [])
     wiki_entries = registries["wiki_knowledge_index"].get("entries", [])
     ledger_entries = registries["reviewer_feedback_ledger"].get("entries", [])
+    graph_nodes = graph.get("nodes", []) if graph else []
+    graph_edges = graph.get("edges", []) if graph else []
 
     return {
         "schemaVersion": "1.0.0",
@@ -67,8 +85,37 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "reviewerFeedbackEntries": len(ledger_entries),
             "unresolvedSourceIssues": registries["remediation"].get("unresolvedSourceIssues"),
             "reviewerLedgerMode": registries["reviewer_feedback_ledger"].get("validationStatus", {}).get("status"),
+            "graphNodeCount": len(graph_nodes),
+            "graphEdgeCount": len(graph_edges),
+            "graphValidationOk": graph_validation.get("ok", False) if graph_validation else False,
         },
         "registries": registries,
+        "graph": {
+            "status": "OPERATIONAL_GRAPH_VISIBLE_READ_ONLY" if graph else "OPERATIONAL_GRAPH_NOT_AVAILABLE",
+            "summary": {
+                "nodeCount": len(graph_nodes),
+                "edgeCount": len(graph_edges),
+                "governanceNodes": len([node for node in graph_nodes if node.get("type") == "governance_boundary"]),
+                "remediationNodes": len(
+                    [
+                        node
+                        for node in graph_nodes
+                        if node.get("type") in {"remediation_issue", "contradiction_cluster", "review_queue"}
+                    ]
+                ),
+                "evidenceNodes": len([node for node in graph_nodes if node.get("type") == "evidence_bundle"]),
+                "deploymentNodes": len(
+                    [node for node in graph_nodes if node.get("type") in {"deployment", "rollback_event"}]
+                ),
+                "wikiGraphNodes": len(wiki_graph.get("nodes", [])) if wiki_graph else 0,
+                "evidenceGraphNodes": len(evidence_graph.get("nodes", [])) if evidence_graph else 0,
+            },
+            "nodes": graph_nodes[:20],
+            "edges": graph_edges[:30],
+            "validation": graph_validation,
+            "wikiGraphIndex": wiki_graph,
+            "evidenceGraphIndex": evidence_graph,
+        },
         "negativeControls": {
             "noSecrets": all(registry.get("noSecrets") is True for registry in registries.values()),
             "noConfidentialText": all(registry.get("noConfidentialText") is True for registry in registries.values()),
@@ -77,6 +124,7 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "noExternalSubmissionAuthority": True,
             "noSourcePromotion": True,
             "noSchemaRlsPolicyMutation": True,
+            "noGraphLegalAuthority": True,
             "readOnly": True,
         },
     }

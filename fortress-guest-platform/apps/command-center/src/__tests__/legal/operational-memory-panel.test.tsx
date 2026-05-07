@@ -23,6 +23,9 @@ vi.mock("@/lib/legal-hooks", () => ({
         reviewerFeedbackEntries: 0,
         unresolvedSourceIssues: 232,
         reviewerLedgerMode: "empty_ledger_foundation",
+        graphNodeCount: 16,
+        graphEdgeCount: 13,
+        graphValidationOk: true,
       },
       registries: {
         operational_state: {},
@@ -79,7 +82,42 @@ vi.mock("@/lib/legal-hooks", () => ({
         noExternalSubmissionAuthority: true,
         noSourcePromotion: true,
         noSchemaRlsPolicyMutation: true,
+        noGraphLegalAuthority: true,
         readOnly: true,
+      },
+      graph: {
+        status: "OPERATIONAL_GRAPH_VISIBLE_READ_ONLY",
+        summary: {
+          nodeCount: 16,
+          edgeCount: 13,
+          governanceNodes: 2,
+          remediationNodes: 3,
+          evidenceNodes: 1,
+          deploymentNodes: 2,
+          wikiGraphNodes: 8,
+          evidenceGraphNodes: 11,
+        },
+        nodes: [
+          { id: "governance:no_signoff", type: "governance_boundary", label: "No counsel signoff authority" },
+          { id: "remediation:unresolved_232", type: "remediation_issue", label: "232 unresolved source issues excluded" },
+        ],
+        edges: [
+          {
+            id: "edge:remediation_excluded_by_governance",
+            type: "excluded_by",
+            from: "remediation:unresolved_232",
+            to: "governance:no_signoff",
+            label: "unresolved sources excluded by governance",
+          },
+        ],
+        validation: {
+          ok: true,
+          nodeCount: 16,
+          edgeCount: 13,
+          noSecrets: true,
+          noConfidentialText: true,
+          governancePreserved: true,
+        },
       },
     },
   }),
@@ -101,6 +139,11 @@ describe("OperationalMemoryPanel", () => {
     expect(screen.getByText("Capability Registry")).toBeInTheDocument();
     expect(screen.getByText("Evidence Registry")).toBeInTheDocument();
     expect(screen.getByText("Wiki / App / Evidence Knowledge Index")).toBeInTheDocument();
+    expect(screen.getByText("Operational Knowledge Graph / Queryable Governance")).toBeInTheDocument();
+    expect(screen.getByText("operationalGraph true")).toBeInTheDocument();
+    expect(screen.getByText("graph-as-operational-cognition, not legal authority")).toBeInTheDocument();
+    expect(screen.getByText("Graph Entities")).toBeInTheDocument();
+    expect(screen.getByText("Graph Relationships")).toBeInTheDocument();
     expect(screen.getByText("EXCLUDED FROM RELIED UPON SECTIONS / no auto resolution true.")).toBeInTheDocument();
     expect(screen.getByText(/ledger foundation \/ no freeform legal text true\./i)).toBeInTheDocument();
   });
