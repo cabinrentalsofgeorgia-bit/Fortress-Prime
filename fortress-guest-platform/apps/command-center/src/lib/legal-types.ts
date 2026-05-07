@@ -1564,6 +1564,50 @@ export interface OperationalMemoryResponse {
     }>;
     governanceAssertions: Record<string, boolean>;
   };
+  aiRemediationExecution?: {
+    status: string;
+    classificationSummary: {
+      byCategory?: Array<{ category: string; count: number }>;
+      byItemType?: Array<{ itemType: string; count: number }>;
+      byMaterialityTier?: Array<{ materialityTier: string; count: number }>;
+      counselReviewRequired?: number;
+      restrictedMetadataOnly?: number;
+    };
+    unresolvedIssueCount: number;
+    clusterCount: number;
+    safeAutomationCandidates: Array<{
+      candidateId?: string;
+      candidateType?: string;
+      issueCount: number;
+      requiredHumanApproval: boolean;
+      sourcePromotionAllowed: boolean;
+    }>;
+    dispositionPackets: Array<{
+      packetId: string;
+      packetType: string;
+      issueCount: number;
+      packetPath: string;
+      humanReviewRequired: boolean;
+      counselReviewRequired: boolean;
+      sourcePromotionAllowed: boolean;
+    }>;
+    reviewerQueues: Array<{
+      queueId?: string;
+      itemCount: number;
+      packetRefs: string[];
+      priority?: string;
+      reviewRole?: string;
+      humanReviewRequired: boolean;
+      sourcePromotionAllowed: boolean;
+    }>;
+    signoffBlockingSources: {
+      count: number;
+      sourcePromotionAllowed: boolean;
+      signoffAuthority: boolean;
+      counselReviewRequired: boolean;
+    };
+    governanceAssertions: Record<string, boolean>;
+  };
   negativeControls: Record<string, boolean>;
 }
 
