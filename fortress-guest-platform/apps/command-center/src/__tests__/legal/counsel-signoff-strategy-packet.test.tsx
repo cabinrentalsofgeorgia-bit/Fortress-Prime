@@ -445,6 +445,46 @@ vi.mock("@/lib/legal-hooks", () => ({
           safe_auto_resolutions: 0,
           human_review_required: 232,
         },
+        reviewer_workload_distribution: [{ owner_role_hint: "source_reviewer", count: 214 }],
+        sla_distribution: [{ sla_band: "critical_24h", count: 21 }],
+        escalation_distribution: [{ escalation_state: "escalate_if_unassigned", count: 21 }],
+      },
+      reviewer_operations: {
+        status: "CONTROLLED_REVIEW_SCALING_READY",
+        assignment_model: {
+          mode: "derived_reviewer_role_hints_no_persistent_assignment",
+          authority_boundary: "queue_manager_may_assign_review_work_no_legal_signoff",
+          reviewer_groups: ["operator_reviewer", "source_reviewer", "counsel_or_senior_reviewer"],
+          forbidden_assignment_effects: ["source_auto_resolution", "counsel_signoff"],
+        },
+        workload_balancing: {
+          model: "metadata_only_weighted_queue_balancing",
+          summary: {
+            total_workload_weight: 400,
+            unassigned_items: 232,
+            counsel_or_senior_reviewer_items: 16,
+            source_reviewer_items: 214,
+            privilege_metadata_items: 2,
+            critical_sla_items: 21,
+          },
+          distribution: [{ owner_role_hint: "source_reviewer", count: 214 }],
+        },
+        queue_aging_sla: {
+          model: "sla_targets_for_review_attention_only",
+          baseline_age_source: "existing_manifest_backlog_no_state_mutation",
+          targets: [{ sla_band: "critical_24h", target: "review_owner_assigned_within_24h" }],
+          distribution: [{ sla_band: "critical_24h", count: 21 }],
+        },
+        escalation_governance: {
+          model: "human_escalation_only",
+          distribution: [{ escalation_state: "escalate_if_unassigned", count: 21 }],
+          incident_triggers: ["auth_boundary_failure"],
+        },
+        incident_readiness: {
+          status: "READY_FOR_CONTROLLED_INTERNAL_PILOT",
+          rollback_required: true,
+          stop_conditions: ["secret_exposure"],
+        },
       },
       pilot_readiness: {
         controlled_internal_review_ready: true,

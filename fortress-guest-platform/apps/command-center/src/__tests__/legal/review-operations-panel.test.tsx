@@ -56,8 +56,12 @@ vi.mock("@/lib/legal-hooks", () => ({
               required_next_action: "Attach source or exclude.",
               review_state: "human_review_required",
               owner_placeholder: "unassigned",
+              owner_role_hint: "counsel_or_senior_reviewer",
               age_band: "baseline_backlog",
               staleness_indicator: "needs_review_sla",
+              sla_band: "critical_24h",
+              escalation_state: "escalate_if_unassigned",
+              workload_weight: 4,
               audit_state: "lineage_preserved",
             },
             {
@@ -77,8 +81,12 @@ vi.mock("@/lib/legal-hooks", () => ({
               required_next_action: "Counsel metadata review.",
               review_state: "human_review_required",
               owner_placeholder: "unassigned",
+              owner_role_hint: "counsel_or_senior_reviewer",
               age_band: "baseline_backlog",
               staleness_indicator: "needs_review_sla",
+              sla_band: "critical_24h",
+              escalation_state: "escalate_if_unassigned",
+              workload_weight: 4,
               audit_state: "lineage_preserved",
             },
           ],
@@ -106,8 +114,12 @@ vi.mock("@/lib/legal-hooks", () => ({
               required_next_action: "Attach source or exclude.",
               review_state: "human_review_required",
               owner_placeholder: "unassigned",
+              owner_role_hint: "counsel_or_senior_reviewer",
               age_band: "baseline_backlog",
               staleness_indicator: "needs_review_sla",
+              sla_band: "critical_24h",
+              escalation_state: "escalate_if_unassigned",
+              workload_weight: 4,
               audit_state: "lineage_preserved",
             },
           ],
@@ -133,8 +145,12 @@ vi.mock("@/lib/legal-hooks", () => ({
               required_next_action: "Counsel metadata review.",
               review_state: "human_review_required",
               owner_placeholder: "unassigned",
+              owner_role_hint: "counsel_or_senior_reviewer",
               age_band: "baseline_backlog",
               staleness_indicator: "needs_review_sla",
+              sla_band: "critical_24h",
+              escalation_state: "escalate_if_unassigned",
+              workload_weight: 4,
               audit_state: "lineage_preserved",
             },
           ],
@@ -153,6 +169,57 @@ vi.mock("@/lib/legal-hooks", () => ({
           completed_this_phase: 0,
           safe_auto_resolutions: 0,
           human_review_required: 232,
+        },
+        reviewer_workload_distribution: [{ owner_role_hint: "counsel_or_senior_reviewer", count: 16 }],
+        sla_distribution: [{ sla_band: "critical_24h", count: 21 }],
+        escalation_distribution: [{ escalation_state: "escalate_if_unassigned", count: 21 }],
+      },
+      reviewer_operations: {
+        status: "CONTROLLED_REVIEW_SCALING_READY",
+        assignment_model: {
+          mode: "derived_reviewer_role_hints_no_persistent_assignment",
+          authority_boundary: "queue_manager_may_assign_review_work_no_legal_signoff",
+          reviewer_groups: [
+            "operator_reviewer",
+            "source_reviewer",
+            "counsel_or_senior_reviewer",
+            "privilege_counsel_metadata_review",
+          ],
+          forbidden_assignment_effects: [
+            "source_auto_resolution",
+            "relied_upon_promotion",
+            "counsel_signoff",
+            "final_legal_conclusion",
+            "external_submission_authority",
+          ],
+        },
+        workload_balancing: {
+          model: "metadata_only_weighted_queue_balancing",
+          summary: {
+            total_workload_weight: 400,
+            unassigned_items: 232,
+            counsel_or_senior_reviewer_items: 16,
+            source_reviewer_items: 214,
+            privilege_metadata_items: 2,
+            critical_sla_items: 21,
+          },
+          distribution: [{ owner_role_hint: "source_reviewer", count: 214 }],
+        },
+        queue_aging_sla: {
+          model: "sla_targets_for_review_attention_only",
+          baseline_age_source: "existing_manifest_backlog_no_state_mutation",
+          targets: [{ sla_band: "critical_24h", target: "review_owner_assigned_within_24h" }],
+          distribution: [{ sla_band: "critical_24h", count: 21 }],
+        },
+        escalation_governance: {
+          model: "human_escalation_only",
+          distribution: [{ escalation_state: "escalate_if_unassigned", count: 21 }],
+          incident_triggers: ["auth_boundary_failure"],
+        },
+        incident_readiness: {
+          status: "READY_FOR_CONTROLLED_INTERNAL_PILOT",
+          rollback_required: true,
+          stop_conditions: ["secret_exposure", "uncontrolled_legal_automation"],
         },
       },
       pilot_readiness: {
@@ -177,10 +244,14 @@ describe("ReviewOperationsPanel", () => {
 
     expect(screen.getByText("Controlled Review Operations")).toBeInTheDocument();
     expect(screen.getByText("Review Queue Operations")).toBeInTheDocument();
+    expect(screen.getByText("Reviewer Assignment")).toBeInTheDocument();
+    expect(screen.getByText("Workload Balancing")).toBeInTheDocument();
+    expect(screen.getByText("Queue Aging / SLA")).toBeInTheDocument();
     expect(screen.getByText("Contradiction Review")).toBeInTheDocument();
     expect(screen.getByText("Evidence Navigator")).toBeInTheDocument();
     expect(screen.getByText("Review Analytics")).toBeInTheDocument();
     expect(screen.getByText("Controlled Pilot Readiness")).toBeInTheDocument();
+    expect(screen.getByText("Escalation & Incident Readiness")).toBeInTheDocument();
     expect(screen.getByText("COUNSEL_SIGNOFF_PENDING")).toBeInTheDocument();
     expect(screen.getByText("NOT_AUTHORIZED")).toBeInTheDocument();
     expect(screen.getByText("NOT FINAL LEGAL ADVICE")).toBeInTheDocument();

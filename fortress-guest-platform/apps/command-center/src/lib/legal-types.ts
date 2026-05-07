@@ -1083,8 +1083,12 @@ export interface RemediationMaturityQueueItem {
 export interface ReviewOperationsQueueItem extends RemediationMaturityQueueItem {
   review_state: string;
   owner_placeholder: string;
+  owner_role_hint: string;
   age_band: string;
   staleness_indicator: string;
+  sla_band: string;
+  escalation_state: string;
+  workload_weight: number;
   audit_state: string;
 }
 
@@ -1192,6 +1196,46 @@ export interface ReviewOperationsResponse {
       completed_this_phase: number;
       safe_auto_resolutions: number;
       human_review_required: number;
+    };
+    reviewer_workload_distribution: Array<{ owner_role_hint: string; count: number }>;
+    sla_distribution: Array<{ sla_band: string; count: number }>;
+    escalation_distribution: Array<{ escalation_state: string; count: number }>;
+  };
+  reviewer_operations: {
+    status: string;
+    assignment_model: {
+      mode: string;
+      authority_boundary: string;
+      reviewer_groups: string[];
+      forbidden_assignment_effects: string[];
+    };
+    workload_balancing: {
+      model: string;
+      summary: {
+        total_workload_weight: number;
+        unassigned_items: number;
+        counsel_or_senior_reviewer_items: number;
+        source_reviewer_items: number;
+        privilege_metadata_items: number;
+        critical_sla_items: number;
+      };
+      distribution: Array<{ owner_role_hint: string; count: number }>;
+    };
+    queue_aging_sla: {
+      model: string;
+      baseline_age_source: string;
+      targets: Array<{ sla_band: string; target: string }>;
+      distribution: Array<{ sla_band: string; count: number }>;
+    };
+    escalation_governance: {
+      model: string;
+      distribution: Array<{ escalation_state: string; count: number }>;
+      incident_triggers: string[];
+    };
+    incident_readiness: {
+      status: string;
+      rollback_required: boolean;
+      stop_conditions: string[];
     };
   };
   pilot_readiness: {

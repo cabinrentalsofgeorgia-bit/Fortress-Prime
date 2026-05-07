@@ -43,6 +43,7 @@ The checker reports two top-level outcomes:
 - `featureAlignmentOk`: `ok` plus Source Integrity / Validation, Workbench, Draft Work Product, Autonomous Learning, Remediation Maturity, and Controlled Review Operations visibility.
 - Remediation maturity visibility is included in `featureAlignmentOk` after the review-maturity phase. It checks for Remediation Maturity, Review Confidence, Evidence Lineage, and unresolved-source exclusion labels.
 - Review operations visibility is included after the controlled-review-operations phase. It checks for Controlled Review Operations, Review Queue Operations, Contradiction Review, Evidence Navigator, Review Analytics, Controlled Pilot Readiness, and unresolved-source exclusion labels.
+- Review scaling visibility is included after the controlled-review-scaling phase. It checks for Reviewer Assignment, Workload Balancing, Queue Aging / SLA, Escalation & Incident Readiness, and explicit forbidden counsel-signoff/external-submission labels.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -54,7 +55,8 @@ For Fortress Legal production feature alignment, expected target values are:
     "draftWorkProduct": true,
     "learning": true,
     "remediationMaturity": true,
-    "reviewOperations": true
+    "reviewOperations": true,
+    "reviewScaling": true
   }
 }
 ```
