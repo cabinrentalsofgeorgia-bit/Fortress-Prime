@@ -4,7 +4,7 @@ import { join } from "node:path";
 const root = process.cwd().endsWith("fortress-guest-platform")
   ? process.cwd()
   : join(process.cwd(), "fortress-guest-platform");
-const evidenceRoot = join(root, "docs", "operational", "evidence", "2026-05-06-operational-graph");
+const evidenceRoot = join(root, "docs", "operational", "evidence", "2026-05-06-governance-query-engine");
 const output = join(root, "operational-memory", "registries", "operational-state.generated.json");
 
 function readEvidence(name) {
@@ -34,9 +34,12 @@ const registry = {
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/authenticated-checker-final.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/deployment-verifier-final.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/pilot-simulation-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/authenticated-checker-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/deployment-verifier-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/pilot-simulation-final.json",
   ],
   standingLabels: {
-    productionStatus: "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    productionStatus: "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
     counselStatus: "COUNSEL_SIGNOFF_PENDING",
     externalSubmissionAuthority: "NOT_AUTHORIZED",
     finalLegalConclusions: "NOT_CREATED",
@@ -44,7 +47,7 @@ const registry = {
     schemaRlsPolicyMutation: "NOT_PERFORMED",
   },
   governanceBoundaries: ["generated_state_never_infers_signoff", "generated_state_never_infers_final_readiness"],
-  evidenceRefs: [`fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/`],
+  evidenceRefs: [`fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/`],
   validationStatus: {
     authenticatedChecker: checker?.ok === true ? "PASS" : "UNKNOWN",
     deploymentVerifier: deployment?.ok === true ? "PASS" : "UNKNOWN",
@@ -53,6 +56,7 @@ const registry = {
     humanOperations: checker?.checks?.humanOperations === true,
     operationalMemory: checker?.checks?.operationalMemory === true,
     operationalGraph: checker?.checks?.operationalGraph === true,
+    governanceQueryEngine: checker?.checks?.governanceQueryEngine === true,
   },
   rollbackRefs: ["delete_generated_preview", "git_revert"],
   noSecrets: true,

@@ -5,10 +5,11 @@
     "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/summary.md"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/summary.md"
   ],
   "standingLabels": {
-    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -31,7 +32,9 @@
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/authenticated-checker-final.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/deployment-verifier-final.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/pilot-simulation-final.json",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/knowledge-graph-validation.json"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/knowledge-graph-validation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/authenticated-checker-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/governance-query-standing.json"
   ],
   "validationStatus": {
     "authenticatedChecker": "PASS",
@@ -41,7 +44,8 @@
     "internalPilot": true,
     "humanOperations": true,
     "operationalMemory": "PASS",
-    "operationalGraph": "PASS"
+    "operationalGraph": "PASS",
+    "governanceQueryEngine": "PASS"
   },
   "rollbackRefs": [
     "git_revert_operational_memory_commits",
@@ -55,7 +59,7 @@
     "public_launch_forbidden",
     "external_legal_operations_forbidden",
     "persistent_reviewer_assignment_writes_deferred",
-    "operational_graph_complete_pending_review"
+    "governance_query_engine_complete_pending_review"
   ],
   "hardStops": [
     "secret_exposure_risk",

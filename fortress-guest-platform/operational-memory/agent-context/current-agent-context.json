@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T11:01:53.516Z",
+  "generatedAt": "2026-05-07T11:04:54.110Z",
   "sourceRefs": [
     "fortress-guest-platform/scripts/operational-memory/query-governance.mjs",
     "fortress-guest-platform/operational-memory/queries/query-taxonomy.json"
   ],
   "standingLabels": {
-    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -45,7 +45,8 @@
     "human_operations",
     "capability_audit",
     "operational_memory",
-    "operational_graph"
+    "operational_graph",
+    "governance_query_engine"
   ],
   "knownBlockers": [
     "232_unresolved_source_issues_excluded",
@@ -53,7 +54,7 @@
     "public_launch_forbidden",
     "external_legal_operations_forbidden",
     "persistent_reviewer_assignment_writes_deferred",
-    "operational_graph_complete_pending_review"
+    "governance_query_engine_complete_pending_review"
   ],
   "safeOperatingMode": "read_only_governance_query_engine_and_agent_context",
   "hardStops": [
