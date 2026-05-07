@@ -115,3 +115,13 @@ Deployment evidence should include only non-sensitive fields:
 - error classifications
 
 Deployment evidence never records counsel signoff, final legal conclusions, or external submission authority.
+
+## Internal Reviewer Tabletop
+
+`run-internal-reviewer-tabletop.mjs` validates the controlled internal reviewer tabletop phase without using auth state or legal document content:
+
+```bash
+node scripts/verification/run-internal-reviewer-tabletop.mjs
+```
+
+It checks required pilot docs, prior sanitized pilot evidence, public route reachability, unauthenticated legal API guards, aggregate throughput counts, and standing governance labels. It does not inspect document body text, locked/restricted content, auth storage state, cookies, tokens, passwords, headers, or secrets.

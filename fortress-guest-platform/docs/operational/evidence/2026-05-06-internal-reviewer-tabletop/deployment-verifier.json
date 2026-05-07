@@ -1,0 +1,75 @@
+{
+  "ok": true,
+  "checkedAt": "2026-05-07T03:20:24.587Z",
+  "baseUrl": "https://crog-ai.com",
+  "matterPath": "/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "publicRoutes": [
+      {
+        "path": "/",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 99
+      },
+      {
+        "path": "/legal/cases/fortress-legal-production-review",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 53
+      }
+    ],
+    "unauthenticatedGuards": [
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/draft-work-product",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 20
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/autonomous-learning",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 25
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/remediation-maturity",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 24
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/review-operations",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 23
+      }
+    ],
+    "services": [
+      {
+        "unit": "crog-ai-frontend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "fortress-backend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "cloudflared.service",
+        "active": true,
+        "status": "active"
+      }
+    ]
+  },
+  "authenticatedChecker": {
+    "skipped": true,
+    "reason": "CROG_AUTH_STATE not set"
+  },
+  "governance": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  }
+}
