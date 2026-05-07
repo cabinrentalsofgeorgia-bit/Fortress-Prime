@@ -1,0 +1,170 @@
+{
+  "ok": true,
+  "featureAlignmentOk": false,
+  "checkedAt": "2026-05-07T18:33:17.184Z",
+  "route": "https://crog-ai.com/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "httpStatus": 200,
+    "authenticatedMatter": true,
+    "signoffPending": true,
+    "validationVisible": true,
+    "lockedVisible": true,
+    "documents": true,
+    "completed": true,
+    "workbench": true,
+    "draftWorkProduct": true,
+    "learning": true,
+    "remediationMaturity": false,
+    "reviewOperations": false,
+    "reviewScaling": false,
+    "operationalCertification": false,
+    "internalPilot": false,
+    "humanOperations": false,
+    "feedbackCapture": false,
+    "reviewerOnboarding": false,
+    "governanceExceptions": false,
+    "driftDetection": false,
+    "humanEscalation": false,
+    "operationalMemory": false,
+    "governanceRegistry": false,
+    "remediationRegistry": false,
+    "evidenceRegistry": false,
+    "wikiKnowledgeIndex": false,
+    "reviewerLedgerFoundation": false,
+    "operationalGraph": false,
+    "governanceGraph": false,
+    "evidenceGraph": false,
+    "remediationGraph": false,
+    "graphValidation": false,
+    "governanceQueryEngine": false,
+    "agentContext": false,
+    "safeNextActionsVisible": false,
+    "forbiddenActionsVisible": false,
+    "signoffBlockersVisible": true,
+    "launchBlockersVisible": false,
+    "agentOrchestration": false,
+    "hardStopsVisible": false,
+    "allowedActionsVisible": false,
+    "taskRiskClassifier": false,
+    "agentPlanGeneration": false,
+    "executionReportValidation": false,
+    "autonomousRehearsal": false,
+    "dryRunExecution": false,
+    "hardStopEnforcement": false,
+    "replayValidation": false,
+    "blockedActionHandling": false,
+    "governanceAssertionVisibility": false,
+    "aiRemediationExecution": false,
+    "remediationClassificationVisible": false,
+    "dispositionPacketsVisible": false,
+    "reviewerQueuesVisible": false,
+    "noSourcePromotion": false,
+    "counselReviewRequiredVisible": false,
+    "noLoginError": true,
+    "noExternalSubmissionAuthority": true,
+    "noFinalLegalAdvice": true
+  },
+  "errors": [],
+  "httpErrors": [],
+  "requestFailures": [
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/vrs/leads?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/vrs/hunter?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/messages?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/reservations?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/guests?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/analytics?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/command?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/vrs/hunter?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/vrs/leads?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/properties?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/work-orders?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/housekeeping?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/guests?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/messages?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/command?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/analytics?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    }
+  ],
+  "errorSummary": {},
+  "responseUrl": "https://crog-ai.com/legal/cases/fortress-legal-production-review",
+  "xRequestId": null
+}

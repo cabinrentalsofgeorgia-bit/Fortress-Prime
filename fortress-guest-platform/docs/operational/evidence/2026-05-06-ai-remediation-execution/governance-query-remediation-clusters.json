@@ -1,0 +1,175 @@
+{
+  "ok": true,
+  "query": "remediation-clusters",
+  "argument": null,
+  "generatedAt": "2026-05-07T18:32:41.660Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression",
+    "remediation_classification",
+    "remediation_clusters",
+    "safe_automation_candidates",
+    "disposition_packets",
+    "reviewer_work_queues",
+    "signoff_blocking_sources",
+    "counsel_review_required_items"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AI_REMEDIATION_EXECUTION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "clusterCount": 17,
+    "clusters": [
+      {
+        "clusterId": "cluster-category-unsupported_assertion",
+        "clusterType": "unsupported_assertion",
+        "issueCount": 5,
+        "automationSafety": "recommendation_only",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-category-restricted_metadata_only",
+        "clusterType": "restricted_metadata_only",
+        "issueCount": 2,
+        "automationSafety": "metadata_only_no_agent_content_access",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-category-incomplete_source_chain",
+        "clusterType": "incomplete_source_chain",
+        "issueCount": 17,
+        "automationSafety": "recommendation_only",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-category-contradiction_candidate",
+        "clusterType": "contradiction_candidate",
+        "issueCount": 14,
+        "automationSafety": "recommendation_only",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-category-ambiguous_entity_mapping",
+        "clusterType": "ambiguous_entity_mapping",
+        "issueCount": 40,
+        "automationSafety": "recommendation_only",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-category-missing_source",
+        "clusterType": "missing_source",
+        "issueCount": 154,
+        "automationSafety": "recommendation_only",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-issue_matrix",
+        "clusterType": "item_type_issue_matrix",
+        "issueCount": 5,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-evidence_binder",
+        "clusterType": "item_type_evidence_binder",
+        "issueCount": 17,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-contradiction_candidate",
+        "clusterType": "item_type_contradiction_candidate",
+        "issueCount": 14,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-entity_dossier",
+        "clusterType": "item_type_entity_dossier",
+        "issueCount": 40,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-theory_packet",
+        "clusterType": "item_type_theory_packet",
+        "issueCount": 2,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-counsel_question",
+        "clusterType": "item_type_counsel_question",
+        "issueCount": 12,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-action_item",
+        "clusterType": "item_type_action_item",
+        "issueCount": 12,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-item-type-timeline_event",
+        "clusterType": "item_type_timeline_event",
+        "issueCount": 130,
+        "automationSafety": "queue_grouping_only_no_resolution",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-tier-tier_1_high_materiality",
+        "clusterType": "materiality_tier_1_high_materiality",
+        "issueCount": 21,
+        "automationSafety": "priority_routing_only",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-tier-tier_2_supporting_packet_gap",
+        "clusterType": "materiality_tier_2_supporting_packet_gap",
+        "issueCount": 81,
+        "automationSafety": "priority_routing_only",
+        "humanReviewRequired": true
+      },
+      {
+        "clusterId": "cluster-tier-tier_3_low_materiality_or_optional",
+        "clusterType": "materiality_tier_3_low_materiality_or_optional",
+        "issueCount": 130,
+        "automationSafety": "priority_routing_only",
+        "humanReviewRequired": true
+      }
+    ]
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}

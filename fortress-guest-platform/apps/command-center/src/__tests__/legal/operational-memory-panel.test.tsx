@@ -250,6 +250,65 @@ vi.mock("@/lib/legal-hooks", () => ({
           nonDestructiveDryRunOnly: true,
         },
       },
+      aiRemediationExecution: {
+        status: "AI_REMEDIATION_EXECUTION_VISIBLE_READ_ONLY",
+        classificationSummary: {
+          byCategory: [{ category: "missing_source", count: 199 }],
+          byItemType: [{ itemType: "timeline_event", count: 130 }],
+          byMaterialityTier: [{ materialityTier: "tier_1_high_materiality", count: 21 }],
+          counselReviewRequired: 232,
+          restrictedMetadataOnly: 2,
+        },
+        unresolvedIssueCount: 232,
+        clusterCount: 17,
+        safeAutomationCandidates: [
+          {
+            candidateId: "candidate-01-source-link-repair-proposal",
+            candidateType: "source-link repair proposal",
+            issueCount: 176,
+            requiredHumanApproval: true,
+            sourcePromotionAllowed: false,
+          },
+        ],
+        dispositionPackets: [
+          {
+            packetId: "missing-source-packet-01",
+            packetType: "missing-source-packet",
+            issueCount: 199,
+            packetPath: "operational-memory/remediation/disposition-packets/missing-source-packet-01.json",
+            humanReviewRequired: true,
+            counselReviewRequired: true,
+            sourcePromotionAllowed: false,
+          },
+        ],
+        reviewerQueues: [
+          {
+            queueId: "counsel_review_required",
+            itemCount: 232,
+            packetRefs: ["missing-source-packet-01"],
+            priority: "high",
+            reviewRole: "counsel",
+            humanReviewRequired: true,
+            sourcePromotionAllowed: false,
+          },
+        ],
+        signoffBlockingSources: {
+          count: 232,
+          sourcePromotionAllowed: false,
+          signoffAuthority: false,
+          counselReviewRequired: true,
+        },
+        governanceAssertions: {
+          noSecrets: true,
+          noConfidentialText: true,
+          noLegalAuthority: true,
+          noExternalAuthority: true,
+          noSchemaMutation: true,
+          noSourcePromotion: true,
+          humanReviewRequired: true,
+          counselReviewRequired: true,
+        },
+      },
     },
   }),
 }));
@@ -299,6 +358,20 @@ describe("OperationalMemoryPanel", () => {
     expect(screen.getByText("blockedActionHandling true")).toBeInTheDocument();
     expect(screen.getByText("governanceAssertionVisibility true")).toBeInTheDocument();
     expect(screen.getAllByText("Replay Validation").length).toBeGreaterThan(0);
+    expect(screen.getByText("AI Remediation Execution / Disposition Packets")).toBeInTheDocument();
+    expect(screen.getByText("aiRemediationExecution true")).toBeInTheDocument();
+    expect(screen.getByText("remediationClassificationVisible true")).toBeInTheDocument();
+    expect(screen.getByText("no source promotion")).toBeInTheDocument();
+    expect(screen.getByText("Classification Summary")).toBeInTheDocument();
+    expect(screen.getByText("Disposition Packets")).toBeInTheDocument();
+    expect(screen.getAllByText("Reviewer Queues").length).toBeGreaterThan(0);
+    expect(screen.getByText("Safe Automation Candidates")).toBeInTheDocument();
+    expect(screen.getByText("Signoff Blocking Sources")).toBeInTheDocument();
+    expect(screen.getAllByText("noSourcePromotion true").length).toBeGreaterThan(0);
+    expect(screen.getByText("signoffAuthority false")).toBeInTheDocument();
+    expect(screen.getByText("dispositionPacketsVisible true")).toBeInTheDocument();
+    expect(screen.getByText("reviewerQueuesVisible true")).toBeInTheDocument();
+    expect(screen.getByText("counselReviewRequiredVisible true")).toBeInTheDocument();
     expect(screen.getByText("EXCLUDED FROM RELIED UPON SECTIONS / no auto resolution true.")).toBeInTheDocument();
     expect(screen.getByText(/ledger foundation \/ no freeform legal text true\./i)).toBeInTheDocument();
   });

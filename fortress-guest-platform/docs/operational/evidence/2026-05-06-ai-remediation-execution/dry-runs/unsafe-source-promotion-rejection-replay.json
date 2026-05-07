@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "replayId": "replay-dry-run-source_promotion-20260507T181517808Z",
+  "generatedAt": "2026-05-07T18:15:17.847Z",
+  "traceRef": "fortress-guest-platform/operational-memory/agent-orchestration/traces/dry-run-source_promotion-20260507T181517808Z.json",
+  "dryRunId": "dry-run-source_promotion-20260507T181517808Z",
+  "status": "REPLAY_VALIDATED",
+  "errors": [],
+  "hardStopsRechecked": true,
+  "governanceAssertionsRechecked": true,
+  "destructiveOperationsExecuted": false,
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AUTONOMOUS_REHEARSAL_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true,
+    "nonDestructiveDryRunOnly": true
+  }
+}

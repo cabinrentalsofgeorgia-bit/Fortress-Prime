@@ -24,6 +24,8 @@ AGENT_ORCHESTRATION_PLAN_DIR = AGENT_ORCHESTRATION_DIR / "plans"
 AGENT_ORCHESTRATION_REPORT_DIR = AGENT_ORCHESTRATION_DIR / "reports"
 AGENT_ORCHESTRATION_TRACE_DIR = AGENT_ORCHESTRATION_DIR / "traces"
 AGENT_ORCHESTRATION_REPLAY_DIR = AGENT_ORCHESTRATION_DIR / "replays"
+AI_REMEDIATION_DIR = ROOT / "operational-memory" / "remediation"
+AI_REMEDIATION_PACKET_DIR = AI_REMEDIATION_DIR / "disposition-packets"
 
 REGISTRY_FILES = {
     "operational_state": "operational-state.json",
@@ -81,6 +83,11 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
     evidence_graph = _load_graph_json("evidence-graph-index.json")
     query_taxonomy = _load_optional_json(QUERY_DIR, "query-taxonomy.json")
     agent_context = _load_optional_json(AGENT_CONTEXT_DIR, "current-agent-context.json")
+    ai_remediation_classification = _load_optional_json(AI_REMEDIATION_DIR, "ai-remediation-classification.json")
+    ai_remediation_clusters = _load_optional_json(AI_REMEDIATION_DIR, "remediation-clusters.json")
+    ai_remediation_candidates = _load_optional_json(AI_REMEDIATION_DIR, "safe-automation-candidates.json")
+    ai_remediation_packet_index = _load_optional_json(AI_REMEDIATION_DIR, "disposition-packet-index.json")
+    ai_remediation_queues = _load_optional_json(AI_REMEDIATION_DIR, "reviewer-work-queues.json")
     orchestration_registries = {}
     for filename in [
         "allowed-actions.json",
@@ -191,6 +198,17 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
                     if trace.get("status") in {"hard_stop", "DRY_RUN_BLOCKED"}
                     or trace.get("hardStopsTriggered")
                 ]
+            ),
+            "aiRemediationUnresolvedIssueCount": (
+                ai_remediation_classification.get("unresolvedIssueCount", 0)
+                if ai_remediation_classification
+                else 0
+            ),
+            "aiRemediationPacketCount": (
+                len(ai_remediation_packet_index.get("packets", [])) if ai_remediation_packet_index else 0
+            ),
+            "aiRemediationQueueCount": (
+                len(ai_remediation_queues.get("queues", [])) if ai_remediation_queues else 0
             ),
         },
         "registries": registries,
@@ -339,6 +357,75 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
                 "nonDestructiveDryRunOnly": True,
             },
         },
+        "aiRemediationExecution": {
+            "status": (
+                "AI_REMEDIATION_EXECUTION_VISIBLE_READ_ONLY"
+                if ai_remediation_classification
+                else "AI_REMEDIATION_EXECUTION_NOT_AVAILABLE"
+            ),
+            "classificationSummary": (
+                ai_remediation_classification.get("summary", {}) if ai_remediation_classification else {}
+            ),
+            "unresolvedIssueCount": (
+                ai_remediation_classification.get("unresolvedIssueCount", 0)
+                if ai_remediation_classification
+                else 0
+            ),
+            "clusterCount": len(ai_remediation_clusters.get("clusters", [])) if ai_remediation_clusters else 0,
+            "safeAutomationCandidates": (
+                [
+                    {
+                        "candidateId": candidate.get("candidateId"),
+                        "candidateType": candidate.get("candidateType"),
+                        "issueCount": len(candidate.get("issueIds", [])),
+                        "requiredHumanApproval": candidate.get("requiredHumanApproval") is True,
+                        "sourcePromotionAllowed": candidate.get("sourcePromotionAllowed") is True,
+                    }
+                    for candidate in ai_remediation_candidates.get("candidates", [])
+                ]
+                if ai_remediation_candidates
+                else []
+            ),
+            "dispositionPackets": ai_remediation_packet_index.get("packets", [])
+            if ai_remediation_packet_index
+            else [],
+            "reviewerQueues": (
+                [
+                    {
+                        "queueId": queue.get("queueId"),
+                        "itemCount": queue.get("itemCount", 0),
+                        "packetRefs": queue.get("packetRefs", []),
+                        "priority": queue.get("priority"),
+                        "reviewRole": queue.get("reviewRole"),
+                        "humanReviewRequired": queue.get("humanReviewRequired") is True,
+                        "sourcePromotionAllowed": queue.get("sourcePromotionAllowed") is True,
+                    }
+                    for queue in ai_remediation_queues.get("queues", [])
+                ]
+                if ai_remediation_queues
+                else []
+            ),
+            "signoffBlockingSources": {
+                "count": (
+                    ai_remediation_classification.get("unresolvedIssueCount", 0)
+                    if ai_remediation_classification
+                    else 0
+                ),
+                "sourcePromotionAllowed": False,
+                "signoffAuthority": False,
+                "counselReviewRequired": True,
+            },
+            "governanceAssertions": {
+                "noSecrets": True,
+                "noConfidentialText": True,
+                "noLegalAuthority": True,
+                "noExternalAuthority": True,
+                "noSchemaMutation": True,
+                "noSourcePromotion": True,
+                "humanReviewRequired": True,
+                "counselReviewRequired": True,
+            },
+        },
         "negativeControls": {
             "noSecrets": all(registry.get("noSecrets") is True for registry in registries.values()),
             "noConfidentialText": all(registry.get("noConfidentialText") is True for registry in registries.values()),
@@ -351,6 +438,7 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "noQueryEngineLegalAuthority": True,
             "noAgentExecutionLegalAuthority": True,
             "noAutonomousRehearsalLegalAuthority": True,
+            "noAiRemediationLegalAuthority": True,
             "readOnly": True,
         },
     }

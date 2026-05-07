@@ -47,6 +47,7 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
   const queryEngine = data.governanceQueryEngine;
   const orchestration = data.agentOrchestration;
   const rehearsal = data.autonomousRehearsal;
+  const aiRemediation = data.aiRemediationExecution;
 
   return (
     <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 space-y-4">
@@ -339,6 +340,105 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
                   replayValidation {String(replay.ok)} / governance preserved {String(replay.governancePreserved)}
                 </div>
               ))}
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {aiRemediation ? (
+        <div className="rounded border border-orange-500/30 bg-orange-500/5 p-3 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold text-orange-100">
+              AI Remediation Execution / Disposition Packets
+            </p>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="bg-orange-500/10 text-orange-200 border-orange-500/30 text-[10px]">
+                aiRemediationExecution true
+              </Badge>
+              <Badge variant="outline" className="bg-orange-500/10 text-orange-200 border-orange-500/30 text-[10px]">
+                remediationClassificationVisible true
+              </Badge>
+              <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                no source promotion
+              </Badge>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+            <Metric label="Unresolved" value={aiRemediation.unresolvedIssueCount} />
+            <Metric label="Clusters" value={aiRemediation.clusterCount} />
+            <Metric label="Candidates" value={aiRemediation.safeAutomationCandidates.length} />
+            <Metric label="Packets" value={aiRemediation.dispositionPackets.length} />
+            <Metric label="Reviewer Queues" value={aiRemediation.reviewerQueues.length} />
+            <Metric label="Counsel Review" value={aiRemediation.signoffBlockingSources.count} />
+          </div>
+          <div className="grid gap-3 xl:grid-cols-3">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Classification Summary</p>
+              <div className="flex flex-wrap gap-1">
+                {(aiRemediation.classificationSummary.byCategory ?? []).slice(0, 8).map((entry) => (
+                  <Badge key={entry.category} variant="outline" className="bg-orange-500/10 text-orange-300 border-orange-500/30 text-[10px]">
+                    {label(entry.category)} {entry.count}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Disposition Packets</p>
+              <div className="flex flex-wrap gap-1">
+                {aiRemediation.dispositionPackets.map((packet) => (
+                  <Badge key={packet.packetId} variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/30 text-[10px]">
+                    {label(packet.packetType)} {packet.issueCount}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Reviewer Queues</p>
+              <div className="flex flex-wrap gap-1">
+                {aiRemediation.reviewerQueues.slice(0, 8).map((queue) => (
+                  <Badge key={queue.queueId} variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+                    {label(queue.queueId ?? "review_queue")} {queue.itemCount}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-3">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Safe Automation Candidates</p>
+              {aiRemediation.safeAutomationCandidates.slice(0, 4).map((candidate) => (
+                <div key={candidate.candidateId} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  {label(candidate.candidateType ?? "candidate")} / human approval {String(candidate.requiredHumanApproval)}
+                </div>
+              ))}
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Signoff Blocking Sources</p>
+              <p className="text-[10px] text-zinc-500">
+                signoff blockers {aiRemediation.signoffBlockingSources.count} / counselReviewRequiredVisible {String(aiRemediation.signoffBlockingSources.counselReviewRequired)}.
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                  noSourcePromotion true
+                </Badge>
+                <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                  signoffAuthority false
+                </Badge>
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">AI Remediation Governance</p>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-300 border-orange-500/30 text-[10px]">
+                  dispositionPacketsVisible true
+                </Badge>
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-300 border-orange-500/30 text-[10px]">
+                  reviewerQueuesVisible true
+                </Badge>
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-300 border-orange-500/30 text-[10px]">
+                  counselReviewRequiredVisible true
+                </Badge>
+              </div>
             </section>
           </div>
         </div>

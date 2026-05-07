@@ -1,0 +1,464 @@
+{
+  "ok": false,
+  "checkedAt": "2026-05-07T18:36:20.533Z",
+  "baseUrl": "https://crog-ai.com",
+  "matterPath": "/legal/cases/fortress-legal-production-review",
+  "route": {
+    "path": "/legal/cases/fortress-legal-production-review",
+    "status": 200,
+    "ok": true,
+    "duration_ms": 98
+  },
+  "docs": [
+    {
+      "path": "fortress-guest-platform/docs/operational/controlled-internal-pilot-execution-plan-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/internal-pilot-workload-model.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/review-throughput-instrumentation-model.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/internal-pilot-incident-and-rollback-drill-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/review-throughput-optimization-report-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/human-operations-readiness-audit-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/reviewer-onboarding-governance-model.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/operational-feedback-capture-model.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/governance-exception-handling-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/operational-drift-detection-model.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/human-operations-incident-rehearsal-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/operational-memory-architecture-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/registries/operational-state.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/registries/governance-registry.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/registries/remediation-registry.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/registries/evidence-registry.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/operational-knowledge-graph-architecture-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/queryable-governance-model-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/wiki-evidence-graph-model-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/graph/graph.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/graph/graph-validation-report.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/context-packs/codex-session.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/agent-orchestration/registries/allowed-actions.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/agent-orchestration/registries/hard-stop-policies.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/scripts/agent-orchestration/replay-dry-run.mjs",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/remediation/remediation-clusters.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/remediation/safe-automation-candidates.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+      "exists": true
+    },
+    {
+      "path": "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+      "exists": true
+    }
+  ],
+  "unauthenticatedGuards": [
+    {
+      "path": "/api/internal/legal/cases/fortress-legal-production-review/review-operations",
+      "status": 401,
+      "ok": true,
+      "duration_ms": 45
+    },
+    {
+      "path": "/api/internal/legal/cases/fortress-legal-production-review/remediation-maturity",
+      "status": 401,
+      "ok": true,
+      "duration_ms": 22
+    },
+    {
+      "path": "/api/internal/legal/cases/fortress-legal-production-review/draft-work-product",
+      "status": 401,
+      "ok": true,
+      "duration_ms": 23
+    }
+  ],
+  "authenticatedChecker": {
+    "skipped": false,
+    "exitCode": 0,
+    "ok": true,
+    "featureAlignmentOk": false,
+    "checks": {
+      "httpStatus": 200,
+      "authenticatedMatter": true,
+      "signoffPending": true,
+      "validationVisible": true,
+      "lockedVisible": true,
+      "documents": true,
+      "completed": true,
+      "workbench": true,
+      "draftWorkProduct": true,
+      "learning": true,
+      "remediationMaturity": false,
+      "reviewOperations": false,
+      "reviewScaling": false,
+      "operationalCertification": false,
+      "internalPilot": false,
+      "humanOperations": false,
+      "feedbackCapture": false,
+      "reviewerOnboarding": false,
+      "governanceExceptions": false,
+      "driftDetection": false,
+      "humanEscalation": false,
+      "operationalMemory": false,
+      "governanceRegistry": false,
+      "remediationRegistry": false,
+      "evidenceRegistry": false,
+      "wikiKnowledgeIndex": false,
+      "reviewerLedgerFoundation": false,
+      "operationalGraph": false,
+      "governanceGraph": false,
+      "evidenceGraph": false,
+      "remediationGraph": false,
+      "graphValidation": false,
+      "governanceQueryEngine": false,
+      "agentContext": false,
+      "safeNextActionsVisible": false,
+      "forbiddenActionsVisible": false,
+      "signoffBlockersVisible": true,
+      "launchBlockersVisible": false,
+      "agentOrchestration": false,
+      "hardStopsVisible": false,
+      "allowedActionsVisible": false,
+      "taskRiskClassifier": false,
+      "agentPlanGeneration": false,
+      "executionReportValidation": false,
+      "autonomousRehearsal": false,
+      "dryRunExecution": false,
+      "hardStopEnforcement": false,
+      "replayValidation": false,
+      "blockedActionHandling": false,
+      "governanceAssertionVisibility": false,
+      "aiRemediationExecution": false,
+      "remediationClassificationVisible": false,
+      "dispositionPacketsVisible": false,
+      "reviewerQueuesVisible": false,
+      "noSourcePromotion": false,
+      "counselReviewRequiredVisible": false,
+      "noLoginError": true,
+      "noExternalSubmissionAuthority": true,
+      "noFinalLegalAdvice": true
+    },
+    "httpErrors": [],
+    "requestFailures": [
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/command/checkout-parity?_rsc=tww92",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/vrs/leads?_rsc=tww92",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/messages?_rsc=tww92",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/analytics?_rsc=tww92",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/vrs/hunter?_rsc=1qkjh",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/vrs/leads?_rsc=1qkjh",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/command/checkout-parity?_rsc=1qkjh",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/guests?_rsc=1qkjh",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/messages?_rsc=1qkjh",
+        "failure": "net::ERR_ABORTED"
+      },
+      {
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/housekeeping?_rsc=1qkjh",
+        "failure": "net::ERR_ABORTED"
+      }
+    ]
+  },
+  "simulation": {
+    "reviewQueueTraversal": false,
+    "remediationTriage": false,
+    "contradictionReview": false,
+    "evidenceNavigation": false,
+    "feedbackCaptureVisible": false,
+    "feedbackCaptureNonSensitive": false,
+    "reviewerOnboardingAcknowledgmentsVisible": false,
+    "roleScopeVisible": false,
+    "forbiddenOnboardingOutcomesVisible": false,
+    "governanceExceptionBoundariesVisible": false,
+    "driftDetectionVisible": false,
+    "rollbackVerificationVisible": false,
+    "humanEscalationOnlyVisible": false,
+    "escalationStopConditionsVisible": false,
+    "noPersistentReviewerAssignmentWrites": false,
+    "noSourcePromotion": true,
+    "noIngestionUploadVectorWrites": true,
+    "noLockedContentInspection": true,
+    "operationalMemoryVisible": false,
+    "governanceRegistryVisible": false,
+    "remediationRegistryVisible": false,
+    "evidenceRegistryVisible": false,
+    "wikiKnowledgeIndexVisible": false,
+    "reviewerLedgerFoundationVisible": false,
+    "noRegistryLegalAuthority": false,
+    "operationalGraphVisible": false,
+    "governanceGraphVisible": false,
+    "evidenceGraphVisible": false,
+    "remediationGraphVisible": false,
+    "graphValidationVisible": false,
+    "noGraphLegalAuthority": false,
+    "governanceQueryEngineVisible": false,
+    "agentContextVisible": false,
+    "safeNextActionsVisible": false,
+    "forbiddenActionsVisible": false,
+    "signoffBlockersVisible": true,
+    "launchBlockersVisible": false,
+    "agentOrchestrationVisible": false,
+    "hardStopsVisible": false,
+    "allowedActionsVisible": false,
+    "taskRiskClassifierVisible": false,
+    "agentPlanGenerationVisible": false,
+    "executionReportValidationVisible": false,
+    "autonomousRehearsalVisible": false,
+    "dryRunExecutionVisible": false,
+    "hardStopEnforcementVisible": false,
+    "replayValidationVisible": false,
+    "blockedActionHandlingVisible": false,
+    "governanceAssertionVisibility": false,
+    "aiRemediationExecutionVisible": false,
+    "remediationClassificationVisible": false,
+    "dispositionPacketsVisible": false,
+    "reviewerQueuesVisible": false,
+    "aiRemediationNoSourcePromotion": false,
+    "counselReviewRequiredVisible": false,
+    "incidentRollbackDocs": true,
+    "governanceLabels": false,
+    "unauthenticatedAccessBlocked": true,
+    "signoffFinalExternalControlsExposed": false
+  },
+  "humanOperations": {
+    "visibility": false,
+    "feedbackCapture": false,
+    "reviewerOnboarding": false,
+    "governanceExceptions": false,
+    "driftDetection": false,
+    "humanEscalationOnly": false,
+    "stopConditionsVisible": false,
+    "operationalMemory": false,
+    "governanceRegistry": false,
+    "remediationRegistry": false,
+    "evidenceRegistry": false,
+    "wikiKnowledgeIndex": false,
+    "reviewerLedgerFoundation": false,
+    "operationalGraph": false,
+    "governanceGraph": false,
+    "evidenceGraph": false,
+    "remediationGraph": false,
+    "graphValidation": false,
+    "governanceQueryEngine": false,
+    "agentContext": false,
+    "safeNextActionsVisible": false,
+    "forbiddenActionsVisible": false,
+    "signoffBlockersVisible": true,
+    "launchBlockersVisible": false,
+    "agentOrchestration": false,
+    "hardStopsVisible": false,
+    "allowedActionsVisible": false,
+    "taskRiskClassifier": false,
+    "agentPlanGeneration": false,
+    "executionReportValidation": false,
+    "autonomousRehearsal": false,
+    "dryRunExecution": false,
+    "hardStopEnforcement": false,
+    "replayValidation": false,
+    "blockedActionHandling": false,
+    "governanceAssertionVisibility": false,
+    "aiRemediationExecution": false,
+    "remediationClassificationVisible": false,
+    "dispositionPacketsVisible": false,
+    "reviewerQueuesVisible": false,
+    "noSourcePromotion": false,
+    "counselReviewRequiredVisible": false
+  },
+  "negativeControls": {
+    "noDocumentBodyText": true,
+    "noAuthMaterial": true,
+    "noPersistentReviewerAssignmentWrites": false,
+    "noSourcePromotion": true,
+    "noIngestionUploadVectorWrites": true,
+    "noLockedContentInspection": true
+  },
+  "throughput": {
+    "unresolvedSourceIssues": 232,
+    "excludedSourceIssues": 232,
+    "limitedVerifiedSubset": 65,
+    "contradictionCandidates": 14,
+    "lockedRestrictedMetadataOnly": 2
+  },
+  "governance": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED",
+    "productionWrites": "none"
+  }
+}

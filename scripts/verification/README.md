@@ -52,6 +52,7 @@ The checker reports two top-level outcomes:
 - Governance query engine visibility is included after the agent-context phase. It checks for Governance Query Engine / Agent Operating Context, safe next actions, forbidden actions, signoff blockers, launch blockers, and agent context labels.
 - Agent orchestration visibility is included after the governed-execution phase. It checks for Agent Execution Governance / Safe Task Orchestration, hard stops, allowed actions, task risk classification, plan generation, and execution report validation.
 - Autonomous rehearsal visibility is included after the governed dry-run phase. It checks for Autonomous Operations Rehearsal / Governed Dry-Runs, dry-run execution traces, hard-stop enforcement, replay validation, blocked-action handling, and governance assertion visibility.
+- AI remediation execution visibility is included after the disposition-packet phase. It checks for AI Remediation Execution / Disposition Packets, remediation classification, disposition packets, reviewer queues, no-source-promotion labels, and counsel-review-required labels.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -101,7 +102,13 @@ For Fortress Legal production feature alignment, expected target values are:
     "hardStopEnforcement": true,
     "replayValidation": true,
     "blockedActionHandling": true,
-    "governanceAssertionVisibility": true
+    "governanceAssertionVisibility": true,
+    "aiRemediationExecution": true,
+    "remediationClassificationVisible": true,
+    "dispositionPacketsVisible": true,
+    "reviewerQueuesVisible": true,
+    "noSourcePromotion": true,
+    "counselReviewRequiredVisible": true
   }
 }
 ```

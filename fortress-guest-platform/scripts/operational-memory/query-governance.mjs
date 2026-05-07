@@ -7,6 +7,7 @@ const root = process.cwd().endsWith("fortress-guest-platform")
 const registryDir = join(root, "operational-memory", "registries");
 const graphDir = join(root, "operational-memory", "graph");
 const queryDir = join(root, "operational-memory", "queries");
+const aiRemediationDir = join(root, "operational-memory", "remediation");
 const outDir = join(root, "operational-memory", "query-results");
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
@@ -20,6 +21,11 @@ const wiki = readJson(join(registryDir, "wiki-knowledge-index.json"));
 const graph = readJson(join(graphDir, "graph.json"));
 const graphValidation = readJson(join(graphDir, "graph-validation-report.json"));
 const taxonomy = readJson(join(queryDir, "query-taxonomy.json"));
+const aiRemediationClassification = readJson(join(aiRemediationDir, "ai-remediation-classification.json"));
+const aiRemediationClusters = readJson(join(aiRemediationDir, "remediation-clusters.json"));
+const safeAutomationCandidates = readJson(join(aiRemediationDir, "safe-automation-candidates.json"));
+const dispositionPacketIndex = readJson(join(aiRemediationDir, "disposition-packet-index.json"));
+const reviewerWorkQueues = readJson(join(aiRemediationDir, "reviewer-work-queues.json"));
 
 const command = process.argv[2] ?? "standing";
 const arg = process.argv[3] ?? null;
@@ -47,6 +53,17 @@ const negativeControls = {
 
 const safeNextActions = [
   {
+    action: "Review AI remediation disposition packets without source promotion",
+    reason: "232 unresolved source issues have metadata-only classifications, clusters, safe automation candidates, disposition packets, and reviewer queues.",
+    requiredAuthority: "counsel_or_source_review_lead",
+    evidenceRefs: [
+      "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+      "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+      "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+    ],
+    humanReviewRequired: true,
+  },
+  {
     action: "Review autonomous rehearsal dry-run traces and replay evidence",
     reason: "Governed dry-runs now exercise hard stops, replay validation, and evidence-backed orchestration without production mutation.",
     requiredAuthority: "senior_engineer_or_governance_reviewer",
@@ -62,13 +79,6 @@ const safeNextActions = [
     reason: "Query engine can now answer blockers, safe actions, forbidden actions, and read-first context.",
     requiredAuthority: "operator_or_engineering_lead",
     evidenceRefs: ["fortress-guest-platform/operational-memory/queries/query-taxonomy.json"],
-    humanReviewRequired: true,
-  },
-  {
-    action: "Plan structured remediation review without source promotion",
-    reason: "232 unresolved source issues remain excluded and require human review.",
-    requiredAuthority: "counsel_or_source_review_lead",
-    evidenceRefs: ["fortress-guest-platform/operational-memory/registries/remediation-registry.json"],
     humanReviewRequired: true,
   },
 ];
@@ -119,7 +129,7 @@ function validationFor(target) {
 function agentContext() {
   return {
     canonicalRepo: "/home/admin/Fortress-Prime",
-    currentWorktree: "/home/admin/Fortress-Prime-autonomous-rehearsal",
+    currentWorktree: "/home/admin/Fortress-Prime-ai-remediation-execution",
     recommendedBaseBranch: "release/fortress-legal-knowledge-graph",
     standingLabels,
     verifiedCapabilities: capabilityList().map((capability) => capability.id),
@@ -133,6 +143,7 @@ function agentContext() {
       "node fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
       "node fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs --category validation-only",
       "node fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
+      "node fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs",
       "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
       "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs",
     ],
@@ -142,8 +153,14 @@ function agentContext() {
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/",
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/",
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-ai-remediation-execution/",
     ],
     readFirst: [
+      "fortress-guest-platform/docs/operational/ai-remediation-source-inventory-2026-05-06.md",
+      "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+      "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+      "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+      "fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs",
       "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
       "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
       "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
@@ -159,7 +176,7 @@ function agentContext() {
       "fortress-guest-platform/operational-memory/registries/operational-state.json",
       "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
     ],
-    nextRecommendedPhase: "controlled_autonomous_rehearsal_review_and_dry_run_use",
+    nextRecommendedPhase: "controlled_ai_remediation_disposition_review_without_source_promotion",
     prBranchExpectations: {
       branchPrefix: "release/fortress-legal-",
       draftPrRequired: true,
@@ -181,11 +198,27 @@ function reviewerContext() {
   };
 }
 
+function aiRemediationSummary() {
+  return {
+    unresolvedIssueCount: aiRemediationClassification.unresolvedIssueCount,
+    classificationSummary: aiRemediationClassification.summary,
+    clusterCount: aiRemediationClusters.clusters.length,
+    safeAutomationCandidateCount: safeAutomationCandidates.candidates.length,
+    dispositionPacketCount: dispositionPacketIndex.packets.length,
+    reviewerQueueCount: reviewerWorkQueues.queues.length,
+    sourcePromotionAllowed: false,
+    legalConclusion: false,
+    signoffAuthority: false,
+    humanReviewRequired: true,
+    counselReviewRequired: true,
+  };
+}
+
 function phaseRecommendation() {
   return {
-    recommendedPhase: "controlled_autonomous_rehearsal_review_and_dry_run_use",
-    reason: "Agent orchestration can now be exercised through non-destructive dry-runs with hard-stop enforcement, replay validation, and evidence-backed traces.",
-    requiredAuthority: "operator_or_engineering_lead",
+    recommendedPhase: "controlled_ai_remediation_disposition_review_without_source_promotion",
+    reason: "AI remediation execution has produced metadata-only classifications, clusters, safe automation candidates, disposition packets, and reviewer queues for the 232 excluded source issues.",
+    requiredAuthority: "counsel_or_source_review_lead",
     humanReviewRequired: true,
     blockedHigherAuthorityActions: [
       "counsel_signoff",
@@ -221,6 +254,68 @@ const queryHandlers = {
     categories: remediation.categories,
     noAutoResolution: remediation.noAutoResolution,
     humanReviewRequired: true,
+    aiRemediationExecution: aiRemediationSummary(),
+  }),
+  "remediation-classification": () => ({
+    summary: aiRemediationClassification.summary,
+    issueCount: aiRemediationClassification.unresolvedIssueCount,
+    sampleIssueIds: aiRemediationClassification.issues.slice(0, 10).map((issue) => issue.issueId),
+    sourcePromotionAllowed: false,
+    humanReviewRequired: true,
+  }),
+  "remediation-clusters": () => ({
+    clusterCount: aiRemediationClusters.clusters.length,
+    clusters: aiRemediationClusters.clusters.map((cluster) => ({
+      clusterId: cluster.clusterId,
+      clusterType: cluster.clusterType,
+      issueCount: cluster.issueIds.length,
+      automationSafety: cluster.automationSafety,
+      humanReviewRequired: cluster.humanReviewRequired,
+    })),
+  }),
+  "safe-automation-candidates": () => ({
+    candidateCount: safeAutomationCandidates.candidates.length,
+    candidates: safeAutomationCandidates.candidates.map((candidate) => ({
+      candidateId: candidate.candidateId,
+      candidateType: candidate.candidateType,
+      issueCount: candidate.issueIds.length,
+      requiredHumanApproval: candidate.requiredHumanApproval,
+      sourcePromotionAllowed: candidate.sourcePromotionAllowed,
+      legalConclusion: candidate.legalConclusion,
+      signoffAuthority: candidate.signoffAuthority,
+    })),
+  }),
+  "disposition-packets": () => ({
+    packetCount: dispositionPacketIndex.packets.length,
+    packets: dispositionPacketIndex.packets,
+    sourcePromotionAllowed: false,
+    legalConclusion: false,
+    signoffAuthority: false,
+  }),
+  "reviewer-work-queues": () => ({
+    queueCount: reviewerWorkQueues.queues.length,
+    queues: reviewerWorkQueues.queues.map((queue) => ({
+      queueId: queue.queueId,
+      itemCount: queue.itemCount,
+      packetRefs: queue.packetRefs,
+      priority: queue.priority,
+      reviewRole: queue.reviewRole,
+      humanReviewRequired: queue.humanReviewRequired,
+      sourcePromotionAllowed: queue.sourcePromotionAllowed,
+    })),
+  }),
+  "signoff-blocking-sources": () => ({
+    unresolvedIssueCount: aiRemediationClassification.unresolvedIssueCount,
+    blockerCategories: aiRemediationClassification.summary.byCategory,
+    counselReviewRequired: aiRemediationClassification.summary.counselReviewRequired,
+    sourcePromotionAllowed: false,
+    signoffAuthority: false,
+  }),
+  "counsel-review-required-items": () => ({
+    count: aiRemediationClassification.issues.filter((issue) => issue.counselReviewRequired).length,
+    issueIds: aiRemediationClassification.issues.filter((issue) => issue.counselReviewRequired).map((issue) => issue.issueId),
+    humanReviewRequired: true,
+    signoffAuthority: false,
   }),
   "rollback-readiness": () => ({
     rollbackRefs: graph.rollbackRefs,

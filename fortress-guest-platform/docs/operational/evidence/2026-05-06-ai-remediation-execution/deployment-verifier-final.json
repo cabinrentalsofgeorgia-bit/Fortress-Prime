@@ -1,0 +1,190 @@
+{
+  "ok": false,
+  "checkedAt": "2026-05-07T18:35:19.124Z",
+  "baseUrl": "https://crog-ai.com",
+  "matterPath": "/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "publicRoutes": [
+      {
+        "path": "/",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 112
+      },
+      {
+        "path": "/legal/cases/fortress-legal-production-review",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 48
+      }
+    ],
+    "unauthenticatedGuards": [
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/draft-work-product",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 25
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/autonomous-learning",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 18
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/remediation-maturity",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 20
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/review-operations",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 19
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/operational-memory",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 22
+      }
+    ],
+    "services": [
+      {
+        "unit": "crog-ai-frontend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "fortress-backend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "cloudflared.service",
+        "active": true,
+        "status": "active"
+      }
+    ]
+  },
+  "authenticatedChecker": {
+    "skipped": false,
+    "exitCode": 0,
+    "ok": true,
+    "featureAlignmentOk": false,
+    "checks": {
+      "httpStatus": 200,
+      "authenticatedMatter": true,
+      "signoffPending": true,
+      "validationVisible": true,
+      "lockedVisible": true,
+      "documents": true,
+      "completed": true,
+      "workbench": true,
+      "draftWorkProduct": true,
+      "learning": true,
+      "remediationMaturity": false,
+      "reviewOperations": false,
+      "reviewScaling": false,
+      "operationalCertification": false,
+      "internalPilot": false,
+      "humanOperations": false,
+      "feedbackCapture": false,
+      "reviewerOnboarding": false,
+      "governanceExceptions": false,
+      "driftDetection": false,
+      "humanEscalation": false,
+      "operationalMemory": false,
+      "governanceRegistry": false,
+      "remediationRegistry": false,
+      "evidenceRegistry": false,
+      "wikiKnowledgeIndex": false,
+      "reviewerLedgerFoundation": false,
+      "operationalGraph": false,
+      "governanceGraph": false,
+      "evidenceGraph": false,
+      "remediationGraph": false,
+      "graphValidation": false,
+      "governanceQueryEngine": false,
+      "agentContext": false,
+      "safeNextActionsVisible": false,
+      "forbiddenActionsVisible": false,
+      "signoffBlockersVisible": true,
+      "launchBlockersVisible": false,
+      "agentOrchestration": false,
+      "hardStopsVisible": false,
+      "allowedActionsVisible": false,
+      "taskRiskClassifier": false,
+      "agentPlanGeneration": false,
+      "executionReportValidation": false,
+      "autonomousRehearsal": false,
+      "dryRunExecution": false,
+      "hardStopEnforcement": false,
+      "replayValidation": false,
+      "blockedActionHandling": false,
+      "governanceAssertionVisibility": false,
+      "aiRemediationExecution": false,
+      "remediationClassificationVisible": false,
+      "dispositionPacketsVisible": false,
+      "reviewerQueuesVisible": false,
+      "noSourcePromotion": false,
+      "counselReviewRequiredVisible": false,
+      "noLoginError": true,
+      "noExternalSubmissionAuthority": true,
+      "noFinalLegalAdvice": true
+    },
+    "errorSummary": {},
+    "httpErrors": [],
+    "stderr": ""
+  },
+  "humanOperations": {
+    "visibility": false,
+    "feedbackCapture": false,
+    "reviewerOnboarding": false,
+    "governanceExceptions": false,
+    "driftDetection": false,
+    "humanEscalationOnly": false,
+    "operationalMemory": false,
+    "governanceRegistry": false,
+    "remediationRegistry": false,
+    "evidenceRegistry": false,
+    "wikiKnowledgeIndex": false,
+    "reviewerLedgerFoundation": false,
+    "operationalGraph": false,
+    "governanceGraph": false,
+    "evidenceGraph": false,
+    "remediationGraph": false,
+    "graphValidation": false,
+    "governanceQueryEngine": false,
+    "agentContext": false,
+    "safeNextActionsVisible": false,
+    "forbiddenActionsVisible": false,
+    "signoffBlockersVisible": true,
+    "launchBlockersVisible": false,
+    "agentOrchestration": false,
+    "hardStopsVisible": false,
+    "allowedActionsVisible": false,
+    "taskRiskClassifier": false,
+    "agentPlanGeneration": false,
+    "executionReportValidation": false,
+    "autonomousRehearsal": false,
+    "dryRunExecution": false,
+    "hardStopEnforcement": false,
+    "replayValidation": false,
+    "blockedActionHandling": false,
+    "governanceAssertionVisibility": false,
+    "aiRemediationExecution": false,
+    "remediationClassificationVisible": false,
+    "dispositionPacketsVisible": false,
+    "reviewerQueuesVisible": false,
+    "noSourcePromotion": false,
+    "counselReviewRequiredVisible": false
+  },
+  "governance": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  }
+}

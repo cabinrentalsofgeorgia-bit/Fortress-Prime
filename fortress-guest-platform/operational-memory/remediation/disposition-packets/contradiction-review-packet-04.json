@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T18:14:45.500Z",
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": [
+    "no_source_promotion",
+    "no_signoff",
+    "no_final_legal_advice",
+    "no_external_authority",
+    "metadata_only_restricted_handling",
+    "human_review_required"
+  ],
+  "rollbackRefs": [
+    "git_revert_ai_remediation_execution_commits"
+  ],
+  "packetId": "contradiction-review-packet-04",
+  "packetType": "contradiction-review-packet",
+  "issueIds": [
+    "triage-01",
+    "triage-02",
+    "triage-03",
+    "triage-04",
+    "triage-05",
+    "triage-06",
+    "triage-07",
+    "triage-08",
+    "triage-09",
+    "triage-10",
+    "triage-11",
+    "triage-12",
+    "triage-13",
+    "triage-14"
+  ],
+  "category": "contradiction_candidate",
+  "summary": "14 metadata-only unresolved items prepared for contradiction-review-packet reviewer disposition.",
+  "evidenceRefs": [
+    "/mnt/fortress_nas/audits/fortress-limited-signoff-candidate-20260506-153336.json",
+    "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json"
+  ],
+  "recommendedDisposition": "review_required_continue_exclusion_until_approved",
+  "requiredReviewerAction": "Confirm source attachment, narrowing, duplicate disposition, counsel routing, or continued exclusion.",
+  "prohibitedActions": [
+    "source_promotion",
+    "mark_resolved",
+    "counsel_signoff",
+    "final_legal_conclusion",
+    "external_submission",
+    "restricted_content_inspection",
+    "schema_rls_policy_mutation"
+  ],
+  "confidence": 60,
+  "humanReviewRequired": true,
+  "counselReviewRequired": true,
+  "sourcePromotionAllowed": false,
+  "legalConclusion": false,
+  "signoffAuthority": false,
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "packetHash": "39b57753215af15a59eda3710f10d5c591401edc8da9a6cce583fcc0ceb5d425"
+}
