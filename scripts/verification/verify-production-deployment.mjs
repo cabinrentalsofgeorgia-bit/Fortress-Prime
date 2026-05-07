@@ -137,6 +137,12 @@ const humanOperations = {
   forbiddenActionsVisible: Boolean(checkerChecks.forbiddenActionsVisible),
   signoffBlockersVisible: Boolean(checkerChecks.signoffBlockersVisible),
   launchBlockersVisible: Boolean(checkerChecks.launchBlockersVisible),
+  agentOrchestration: Boolean(checkerChecks.agentOrchestration),
+  hardStopsVisible: Boolean(checkerChecks.hardStopsVisible),
+  allowedActionsVisible: Boolean(checkerChecks.allowedActionsVisible),
+  taskRiskClassifier: Boolean(checkerChecks.taskRiskClassifier),
+  agentPlanGeneration: Boolean(checkerChecks.agentPlanGeneration),
+  executionReportValidation: Boolean(checkerChecks.executionReportValidation),
 };
 const ok =
   checks.publicRoutes.every((item) => item.ok) &&

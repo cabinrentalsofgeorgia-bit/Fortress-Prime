@@ -28,6 +28,11 @@ vi.mock("@/lib/legal-hooks", () => ({
         graphValidationOk: true,
         governanceQueryCount: 18,
         contextPackCount: 7,
+        agentAllowedActionCount: 15,
+        agentForbiddenActionCount: 15,
+        agentHardStopCount: 8,
+        agentPlanCount: 1,
+        agentReportCount: 1,
       },
       registries: {
         operational_state: {},
@@ -147,6 +152,58 @@ vi.mock("@/lib/legal-hooks", () => ({
           },
         ],
       },
+      agentOrchestration: {
+        status: "AGENT_ORCHESTRATION_VISIBLE_READ_ONLY",
+        allowedActions: [
+          { id: "read_operational_state", category: "read_only", riskClass: "safe_read_only" },
+          { id: "run_checker", category: "validation", riskClass: "safe_validation_only" },
+        ],
+        forbiddenActions: [
+          { id: "legal_signoff", category: "legal_authority", riskClass: "hard_stop" },
+          { id: "external_submission", category: "external_authority", riskClass: "hard_stop" },
+        ],
+        hardStops: [
+          { id: "secrets_exposure", trigger: "secret_or_auth_material_requested", requiredAction: "stop_and_report" },
+          { id: "legal_authority", trigger: "signoff_final_advice_or_external_submission_requested", requiredAction: "stop_and_report" },
+        ],
+        riskClassifications: [
+          { id: "safe_read_only", description: "Reads metadata-only operational memory.", humanReviewRequired: false },
+          { id: "hard_stop", description: "Blocked by policy.", humanReviewRequired: true },
+        ],
+        validationGates: [
+          { id: "validate_agent_orchestration", purpose: "Validate boundaries.", requiredFor: ["all"] },
+        ],
+        evidenceRequirements: [
+          { id: "task_plan", description: "Task plan JSON.", prohibitedContent: ["secrets"] },
+        ],
+        latestPlans: [
+          {
+            planId: "agent-plan-test",
+            taskId: "agent-task-test",
+            riskClass: "safe_docs_only",
+            validationGates: ["validate_agent_orchestration"],
+            humanReviewRequired: true,
+          },
+        ],
+        latestReports: [
+          {
+            reportId: "agent-report-test",
+            taskId: "agent-task-test",
+            planId: "agent-plan-test",
+            hardStopsEncountered: [],
+            humanReviewRequired: true,
+          },
+        ],
+        validation: { ok: true, errors: [], warnings: [], governancePreserved: true },
+        governanceAssertions: {
+          noSecrets: true,
+          noConfidentialText: true,
+          noLegalAuthority: true,
+          noExternalAuthority: true,
+          noSchemaMutation: true,
+          noSourcePromotion: true,
+        },
+      },
     },
   }),
 }));
@@ -178,6 +235,14 @@ describe("OperationalMemoryPanel", () => {
     expect(screen.getAllByText("Safe Next Actions").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Forbidden Actions").length).toBeGreaterThan(0);
     expect(screen.getByText("Agent Operating Context")).toBeInTheDocument();
+    expect(screen.getByText("Agent Execution Governance / Safe Task Orchestration")).toBeInTheDocument();
+    expect(screen.getByText("agentOrchestration true")).toBeInTheDocument();
+    expect(screen.getByText("governed operations, not legal authority")).toBeInTheDocument();
+    expect(screen.getByText("Allowed Agent Actions")).toBeInTheDocument();
+    expect(screen.getByText("Hard Stop Policies")).toBeInTheDocument();
+    expect(screen.getByText("Task Risk Classifier / Plan Validation")).toBeInTheDocument();
+    expect(screen.getByText("Latest Agent Plans")).toBeInTheDocument();
+    expect(screen.getByText("Execution Reports")).toBeInTheDocument();
     expect(screen.getByText("EXCLUDED FROM RELIED UPON SECTIONS / no auto resolution true.")).toBeInTheDocument();
     expect(screen.getByText(/ledger foundation \/ no freeform legal text true\./i)).toBeInTheDocument();
   });

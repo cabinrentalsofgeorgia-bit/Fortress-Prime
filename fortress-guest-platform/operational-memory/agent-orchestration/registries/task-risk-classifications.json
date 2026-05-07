@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "riskClasses": [
+    { "id": "safe_read_only", "description": "Reads metadata-only operational memory or graph state.", "humanReviewRequired": false },
+    { "id": "safe_docs_only", "description": "Creates or updates governance docs/evidence without legal content.", "humanReviewRequired": true },
+    { "id": "safe_validation_only", "description": "Runs checkers, validators, scans, or simulations.", "humanReviewRequired": false },
+    { "id": "safe_governance_update", "description": "Updates nonlegal machine-readable governance state.", "humanReviewRequired": true },
+    { "id": "safe_read_only_ui", "description": "Adds authenticated read-only visibility over governed metadata.", "humanReviewRequired": true },
+    { "id": "guarded_code_change", "description": "Changes runtime code behind validation and rollback gates.", "humanReviewRequired": true },
+    { "id": "requires_human_approval", "description": "Needs explicit human review before execution.", "humanReviewRequired": true },
+    { "id": "hard_stop", "description": "Blocked by hard-stop policy.", "humanReviewRequired": true }
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

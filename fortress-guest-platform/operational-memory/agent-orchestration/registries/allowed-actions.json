@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "actions": [
+    { "id": "read_operational_state", "category": "read_only", "riskClass": "safe_read_only" },
+    { "id": "read_governance_registry", "category": "read_only", "riskClass": "safe_read_only" },
+    { "id": "read_knowledge_graph", "category": "read_only", "riskClass": "safe_read_only" },
+    { "id": "generate_context_pack", "category": "safe_generation", "riskClass": "safe_governance_update" },
+    { "id": "summarize_evidence_refs", "category": "safe_generation", "riskClass": "safe_read_only" },
+    { "id": "run_checker", "category": "validation", "riskClass": "safe_validation_only" },
+    { "id": "run_deployment_verifier", "category": "validation", "riskClass": "safe_validation_only" },
+    { "id": "run_pilot_simulation", "category": "validation", "riskClass": "safe_validation_only" },
+    { "id": "run_validation", "category": "validation", "riskClass": "safe_validation_only" },
+    { "id": "create_docs", "category": "safe_write", "riskClass": "safe_docs_only" },
+    { "id": "create_evidence_summary", "category": "safe_write", "riskClass": "safe_docs_only" },
+    { "id": "create_read_only_ui", "category": "guarded_code", "riskClass": "safe_read_only_ui" },
+    { "id": "generate_plan", "category": "safe_generation", "riskClass": "safe_governance_update" },
+    { "id": "propose_pr", "category": "governed_git", "riskClass": "requires_human_approval" },
+    { "id": "update_machine_readable_registry_with_nonlegal_status", "category": "safe_write", "riskClass": "safe_governance_update" }
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

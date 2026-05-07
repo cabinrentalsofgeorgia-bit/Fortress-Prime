@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evidence-requirement.schema.json",
+  "title": "Fortress Legal Agent Evidence Requirement",
+  "type": "object",
+  "required": ["schemaVersion", "evidenceRequirements", "standingLabels", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "evidenceRequirements": { "type": "array", "items": { "type": "object", "required": ["id", "description", "prohibitedContent"] } },
+    "standingLabels": { "type": "object" },
+    "governanceAssertions": { "$ref": "agent-task.schema.json#/$defs/governanceAssertions" }
+  }
+}

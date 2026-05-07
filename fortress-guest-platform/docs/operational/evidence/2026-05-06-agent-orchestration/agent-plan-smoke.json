@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T11:41:27.358Z",
+  "planId": "agent-plan-20260507T114127Z",
+  "taskId": "agent-task-20260507T114127Z",
+  "taskDescription": "create docs and run validation",
+  "riskClass": "safe_docs_only",
+  "plannedActions": [
+    {
+      "actionId": "create_docs",
+      "category": "safe_write",
+      "executionMode": "plan_or_safe_write_only"
+    }
+  ],
+  "skippedActions": [],
+  "blockedActions": [],
+  "validationGates": [
+    "validate_agent_orchestration",
+    "governance_query_smoke",
+    "secret_auth_scan",
+    "authority_boundary_scan"
+  ],
+  "requiredEvidence": [
+    "task_plan",
+    "execution_report",
+    "validation_summary",
+    "rollback_reference"
+  ],
+  "rollbackPlan": "git revert this phase commit or delete generated plan/report artifacts; no production legal data mutation is permitted.",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "humanReviewRequired": true,
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

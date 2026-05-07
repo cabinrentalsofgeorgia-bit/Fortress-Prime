@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "outputs": [
+    "operational-memory/context-packs/codex-session.json",
+    "operational-memory/context-packs/governance-review.json",
+    "operational-memory/context-packs/reviewer-onboarding.json",
+    "operational-memory/context-packs/deployment-verification.json",
+    "operational-memory/context-packs/remediation-review.json",
+    "operational-memory/context-packs/incident-response.json",
+    "operational-memory/context-packs/rollback-review.json"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "action-registry.schema.json",
+  "title": "Fortress Legal Agent Action Registry",
+  "type": "object",
+  "required": ["schemaVersion", "actions", "standingLabels", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "actions": { "type": "array", "items": { "type": "object", "required": ["id", "category", "riskClass"] } },
+    "standingLabels": { "type": "object" },
+    "governanceAssertions": { "$ref": "agent-task.schema.json#/$defs/governanceAssertions" }
+  }
+}

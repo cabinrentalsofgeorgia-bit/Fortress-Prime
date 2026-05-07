@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T11:41:27.385Z",
+  "reportId": "agent-execution-report-20260507T114127Z",
+  "taskId": "agent-task-20260507T113346Z",
+  "planId": "agent-plan-20260507T113346Z",
+  "actionsAttempted": [
+    {
+      "actionId": "create_docs",
+      "result": "not_executed_by_report_generator",
+      "note": "Execution reporter records outcomes only; it does not perform risky actions."
+    }
+  ],
+  "actionsSkipped": [],
+  "hardStopsEncountered": [],
+  "validationResults": [
+    {
+      "gate": "validate_agent_orchestration",
+      "status": "pending_or_recorded_externally"
+    },
+    {
+      "gate": "governance_query_smoke",
+      "status": "pending_or_recorded_externally"
+    },
+    {
+      "gate": "secret_auth_scan",
+      "status": "pending_or_recorded_externally"
+    },
+    {
+      "gate": "authority_boundary_scan",
+      "status": "pending_or_recorded_externally"
+    }
+  ],
+  "evidenceRefs": [
+    "task_plan",
+    "execution_report",
+    "validation_summary",
+    "rollback_reference"
+  ],
+  "rollbackRefs": [
+    "git revert this phase commit or delete generated plan/report artifacts; no production legal data mutation is permitted."
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "humanReviewRequired": true,
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

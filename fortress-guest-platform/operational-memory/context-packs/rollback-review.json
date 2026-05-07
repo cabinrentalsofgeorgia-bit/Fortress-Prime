@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T11:09:31.574Z",
+  "generatedAt": "2026-05-07T11:38:21.948Z",
   "contextPackType": "rollback-review",
   "standingLabels": {
-    "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -19,9 +19,15 @@
   "noConfidentialText": true,
   "evidenceRefs": [
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/"
   ],
   "readFirst": [
+    "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/agent-orchestration/registries/allowed-actions.json",
+    "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
+    "fortress-guest-platform/operational-memory/agent-orchestration/registries/hard-stop-policies.json",
     "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
     "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
     "fortress-guest-platform/operational-memory/graph/graph.json",
@@ -31,6 +37,7 @@
   "validationCommands": [
     "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
     "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
+    "node fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
     "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
     "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs"
   ],
@@ -117,7 +124,8 @@
     "public_launch_forbidden",
     "external_legal_operations_forbidden",
     "persistent_reviewer_assignment_writes_deferred",
-    "governance_query_engine_complete_pending_review"
+    "governance_query_engine_complete_pending_review",
+    "agent_orchestration_complete_pending_review"
   ],
   "remediationStatus": {
     "unresolvedSourceIssues": 232,

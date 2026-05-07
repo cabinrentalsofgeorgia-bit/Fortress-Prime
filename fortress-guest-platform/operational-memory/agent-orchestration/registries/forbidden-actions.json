@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "actions": [
+    { "id": "legal_signoff", "category": "legal_authority", "riskClass": "hard_stop" },
+    { "id": "final_legal_conclusion", "category": "legal_authority", "riskClass": "hard_stop" },
+    { "id": "external_submission", "category": "external_authority", "riskClass": "hard_stop" },
+    { "id": "public_launch", "category": "external_authority", "riskClass": "hard_stop" },
+    { "id": "document_upload", "category": "ingestion", "riskClass": "hard_stop" },
+    { "id": "ingestion_rerun", "category": "ingestion", "riskClass": "hard_stop" },
+    { "id": "vector_write", "category": "retrieval_mutation", "riskClass": "hard_stop" },
+    { "id": "schema_mutation", "category": "database_governance", "riskClass": "hard_stop" },
+    { "id": "rls_policy_mutation", "category": "database_governance", "riskClass": "hard_stop" },
+    { "id": "restricted_content_inspection", "category": "privacy_boundary", "riskClass": "hard_stop" },
+    { "id": "confidential_text_exposure", "category": "privacy_boundary", "riskClass": "hard_stop" },
+    { "id": "unresolved_source_promotion", "category": "evidence_boundary", "riskClass": "hard_stop" },
+    { "id": "auth_bypass", "category": "auth_boundary", "riskClass": "hard_stop" },
+    { "id": "secret_printing", "category": "security_boundary", "riskClass": "hard_stop" },
+    { "id": "reviewer_authority_escalation_without_approval", "category": "reviewer_governance", "riskClass": "hard_stop" }
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

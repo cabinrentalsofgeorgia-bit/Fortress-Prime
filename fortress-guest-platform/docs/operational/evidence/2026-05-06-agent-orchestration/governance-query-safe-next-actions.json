@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "query": "safe-next-actions",
+  "argument": null,
+  "generatedAt": "2026-05-07T11:41:27.414Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "safeNextActions": [
+      {
+        "action": "Review PRs for operational-memory and operational-graph governance scope",
+        "reason": "The current phase depends on graph and registry foundations remaining read-only and metadata-only.",
+        "requiredAuthority": "senior_engineer_or_governance_reviewer",
+        "evidenceRefs": [
+          "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
+          "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/"
+        ],
+        "humanReviewRequired": true
+      },
+      {
+        "action": "Use query outputs to scope the next controlled operational planning phase",
+        "reason": "Query engine can now answer blockers, safe actions, forbidden actions, and read-first context.",
+        "requiredAuthority": "operator_or_engineering_lead",
+        "evidenceRefs": [
+          "fortress-guest-platform/operational-memory/queries/query-taxonomy.json"
+        ],
+        "humanReviewRequired": true
+      },
+      {
+        "action": "Plan structured remediation review without source promotion",
+        "reason": "232 unresolved source issues remain excluded and require human review.",
+        "requiredAuthority": "counsel_or_source_review_lead",
+        "evidenceRefs": [
+          "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
+        ],
+        "humanReviewRequired": true
+      }
+    ]
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}

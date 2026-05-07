@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-task.schema.json",
+  "title": "Fortress Legal Agent Task",
+  "type": "object",
+  "required": ["schemaVersion", "taskId", "taskType", "actorType", "description", "standingLabels", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "taskId": { "type": "string" },
+    "taskType": { "type": "string" },
+    "actorType": { "type": "string" },
+    "description": { "type": "string" },
+    "requestedActions": { "type": "array", "items": { "type": "string" } },
+    "targetFiles": { "type": "array", "items": { "type": "string" } },
+    "authorityBoundary": { "type": "string" },
+    "allowedActions": { "type": "array", "items": { "type": "string" } },
+    "forbiddenActions": { "type": "array", "items": { "type": "string" } },
+    "hardStops": { "type": "array", "items": { "type": "string" } },
+    "requiredEvidence": { "type": "array", "items": { "type": "string" } },
+    "validationGates": { "type": "array", "items": { "type": "string" } },
+    "rollbackPlan": { "type": "string" },
+    "standingLabels": { "type": "object" },
+    "humanReviewRequired": { "type": "boolean" },
+    "governanceAssertions": { "$ref": "#/$defs/governanceAssertions" }
+  },
+  "$defs": {
+    "governanceAssertions": {
+      "type": "object",
+      "required": ["noSecrets", "noConfidentialText", "noLegalAuthority", "noExternalAuthority", "noSchemaMutation", "noSourcePromotion"],
+      "properties": {
+        "noSecrets": { "const": true },
+        "noConfidentialText": { "const": true },
+        "noLegalAuthority": { "const": true },
+        "noExternalAuthority": { "const": true },
+        "noSchemaMutation": { "const": true },
+        "noSourcePromotion": { "const": true }
+      }
+    }
+  }
+}

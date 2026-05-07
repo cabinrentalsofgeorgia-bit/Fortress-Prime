@@ -87,7 +87,13 @@ For Fortress Legal production feature alignment, expected target values are:
     "safeNextActionsVisible": true,
     "forbiddenActionsVisible": true,
     "signoffBlockersVisible": true,
-    "launchBlockersVisible": true
+    "launchBlockersVisible": true,
+    "agentOrchestration": true,
+    "hardStopsVisible": true,
+    "allowedActionsVisible": true,
+    "taskRiskClassifier": true,
+    "agentPlanGeneration": true,
+    "executionReportValidation": true
   }
 }
 ```
@@ -121,6 +127,12 @@ Error classifications are operational only:
 - `backend_or_bff_failure`
 - `runtime_failure`
 - `auth_guard`
+
+## Agent Orchestration Assertions
+
+Agent orchestration assertions are read-only. They verify that hard stops, allowed actions, forbidden actions, task risk classifications, generated plans, and execution report validation are visible as governed operational context.
+
+They do not prove or grant autonomous legal authority, counsel signoff, final legal advice, external submission authority, unresolved-source promotion, or schema/RLS/policy mutation.
 
 ## Deployment Verification
 

@@ -1,0 +1,12 @@
+
+> @fortress/command-center@0.1.0 test
+> vitest run src/__tests__/legal/operational-memory-panel.test.tsx src/__tests__/legal/draft-work-product-panel.test.tsx src/__tests__/legal/autonomous-learning-loop-panel.test.tsx
+
+
+ RUN  v4.1.1 /home/admin/Fortress-Prime-agent-orchestration/fortress-guest-platform/apps/command-center
+
+
+ Test Files  3 passed (3)
+      Tests  3 passed (3)
+   Start at  07:41:53
+   Duration  708ms (transform 345ms, setup 105ms, import 802ms, tests 151ms, environment 703ms)
