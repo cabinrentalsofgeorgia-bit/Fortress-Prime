@@ -4,6 +4,10 @@ import { getFortressIngressHeaders } from "@/lib/server/fortress-ingress-headers
 
 const HEALTH_BACKEND = process.env.HEALTH_BACKEND_URL || buildBackendUrl("/api/system/health");
 
+function logHealthError(event: string, details: Record<string, unknown>) {
+  console.error(JSON.stringify({ event, route: "system-health-bff", ...details }));
+}
+
 export async function GET(request: NextRequest) {
   const cookie = request.cookies.get("fortress_session")?.value;
   const authHeader = request.headers.get("authorization");
@@ -28,9 +32,10 @@ export async function GET(request: NextRequest) {
     });
 
     if (!upstream.ok) {
-      console.error(
-        `[BFF /api/system-health] Backend returned ${upstream.status} ${upstream.statusText}`
-      );
+      logHealthError("system_health_backend_error", {
+        status: upstream.status,
+        status_text: upstream.statusText,
+      });
       return NextResponse.json(
         { error: `Backend returned ${upstream.status}`, detail: upstream.statusText },
         { status: upstream.status }
@@ -43,7 +48,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`[BFF /api/system-health] Fetch failed: ${message}`);
+    logHealthError("system_health_fetch_failed", {
+      error: message.slice(0, 300),
+    });
     return NextResponse.json(
       { error: "Cluster unreachable", detail: message },
       { status: 502 }

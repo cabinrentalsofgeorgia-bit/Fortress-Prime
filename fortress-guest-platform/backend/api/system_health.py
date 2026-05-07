@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.command_c2 import PULSE_ACCESS, get_nvidia_vitals
 from backend.core.database import get_db
+from backend.core.deployment_fingerprint import deployment_fingerprint
 from backend.models.staff import StaffUser
 
 logger = structlog.get_logger()
@@ -695,6 +696,10 @@ async def build_system_health_payload(db: AsyncSession) -> dict[str, Any]:
     return {
         "status": status,
         "service": "fortress_system_health",
+        "deployment": deployment_fingerprint(
+            service="fortress-prime-backend",
+            version="1.0.0",
+        ),
         "uptime_seconds": int(_proc_uptime_seconds()),
         "timestamp": ts,
         "collected_in_ms": collected_ms,

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.core.config import settings
+from backend.core.deployment_fingerprint import deployment_fingerprint
 
 router = APIRouter()
 
@@ -22,6 +23,7 @@ class InternalHealthResponse(BaseModel):
     timestamp_utc: datetime
     ingress: Literal["command_center"] = "command_center"
     request_host: str = Field(min_length=1)
+    deployment: dict[str, object]
 
 
 def _secure_equals(presented: str | None, expected: str) -> bool:
@@ -82,4 +84,8 @@ async def internal_health(
         version=str(request.app.version or "unknown"),
         timestamp_utc=datetime.now(timezone.utc),
         request_host=request_host,
+        deployment=deployment_fingerprint(
+            service="fortress-prime-backend",
+            version=str(request.app.version or "unknown"),
+        ),
     )

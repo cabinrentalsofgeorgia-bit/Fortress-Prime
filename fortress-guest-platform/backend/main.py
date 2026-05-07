@@ -85,6 +85,7 @@ from backend.api import legal_strategy as legal_strategy_api
 from backend.api import legal_counsel_dispatch as legal_counsel_dispatch_api
 from backend.api import legal_hold as legal_hold_api
 from backend.api import legal_tactical as legal_tactical_api
+from backend.api import legal_workbench as legal_workbench_api
 from backend.api import legal_sanctions as legal_sanctions_api
 from backend.api import legal_deposition as legal_deposition_api
 from backend.api import legal_agent as legal_agent_api
@@ -361,6 +362,7 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("x-request-id", uuid.uuid4().hex[:12])
+        request.state.request_id = request_id
         start = time.perf_counter()
 
         try:
@@ -522,11 +524,17 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 @app.get("/health")
 async def health_check():
+    from backend.core.deployment_fingerprint import deployment_fingerprint
+
     return {
         "status": "healthy",
         "service": "Fortress Guest Platform",
         "version": "1.0.0",
         "environment": settings.environment,
+        "deployment": deployment_fingerprint(
+            service="fortress-prime-backend",
+            version=str(app.version or "unknown"),
+        ),
     }
 
 
@@ -629,6 +637,7 @@ app.include_router(legal_strategy_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, 
 app.include_router(legal_counsel_dispatch_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Outside Counsel Dispatch"])
 app.include_router(legal_hold_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Hold"])
 app.include_router(legal_tactical_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Tactical"])
+app.include_router(legal_workbench_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Workbench"])
 app.include_router(legal_sanctions_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Sanctions"])
 app.include_router(legal_deposition_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Deposition"])
 app.include_router(legal_agent_api.router, prefix=INTERNAL_LEGAL_API_PREFIX, tags=["Legal Agent"])

@@ -1,0 +1,151 @@
+{
+  "ok": true,
+  "featureAlignmentOk": true,
+  "checkedAt": "2026-05-07T01:44:37.463Z",
+  "route": "https://crog-ai.com/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "httpStatus": 200,
+    "authenticatedMatter": true,
+    "signoffPending": true,
+    "validationVisible": true,
+    "lockedVisible": true,
+    "documents": true,
+    "completed": true,
+    "workbench": true,
+    "draftWorkProduct": true,
+    "learning": true,
+    "noLoginError": true,
+    "noExternalSubmissionAuthority": true,
+    "noFinalLegalAdvice": true
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Failed to load resource: the server responded with a status of 500 ()"
+  ],
+  "httpErrors": [
+    {
+      "status": 404,
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/vrs/leads?_rsc=tww92",
+      "classification": "missing_route"
+    },
+    {
+      "status": 500,
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/api/properties/?limit=1000",
+      "classification": "backend_or_bff_failure"
+    }
+  ],
+  "requestFailures": [
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/command/checkout-parity?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/housekeeping?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/work-orders?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/properties?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/guests?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/reservations?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/command?_rsc=tww92",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/command/checkout-parity?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/damage-claims?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/vrs/hunter?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/housekeeping?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/payments?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/work-orders?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/messages?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/guests?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/reservations?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "method": "GET",
+      "resourceType": "fetch",
+      "url": "https://crog-ai.com/analytics?_rsc=1qkjh",
+      "failure": "net::ERR_ABORTED"
+    }
+  ],
+  "errorSummary": {
+    "missing_route": 1,
+    "backend_or_bff_failure": 1
+  },
+  "responseUrl": "https://crog-ai.com/legal/cases/fortress-legal-production-review",
+  "xRequestId": null
+}

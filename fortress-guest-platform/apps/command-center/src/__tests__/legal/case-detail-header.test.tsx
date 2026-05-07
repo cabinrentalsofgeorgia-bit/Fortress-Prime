@@ -24,6 +24,15 @@ vi.mock("@/lib/legal-hooks", () => ({
   useGenerateDiscoveryDraftPack: () => ({ mutate: vi.fn(), isPending: false }),
   useDepositionKillSheets: () => ({ data: [], isLoading: false }),
   useSanctionsAlerts: () => ({ data: [], isLoading: false }),
+  useCounselWorkbench: () => ({ data: null, isLoading: false, error: null }),
+  useCounselValidation: () => ({ data: null, isLoading: false, error: null }),
+  useCounselValidationAction: () => ({ mutate: vi.fn(), isPending: false }),
+  useCounselSignoffPacket: () => ({ data: null, isLoading: false, error: null }),
+  useCounselSignoffAction: () => ({ mutate: vi.fn(), isPending: false }),
+  useCounselSignoffReopen: () => ({ mutate: vi.fn(), isPending: false }),
+  useSourceIntegrity: () => ({ data: null, isLoading: false, error: null }),
+  useSourceRemediation: () => ({ data: null, isLoading: false, error: null }),
+  useSourceLinkRepair: () => ({ data: null, isLoading: false, error: null }),
   downloadKillSheetMarkdown: vi.fn(),
 }));
 vi.mock("@/lib/store", () => ({
@@ -84,6 +93,15 @@ vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/extraction-panel", () 
 }));
 vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/hitl-deadline-queue", () => ({
   HitlDeadlineQueue: () => <div data-testid="hitl-deadline-queue" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-review-workbench", () => ({
+  CounselReviewWorkbench: () => <div data-testid="counsel-review-workbench" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-validation-workflow", () => ({
+  CounselValidationWorkflow: () => <div data-testid="counsel-validation-workflow" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet", () => ({
+  CounselSignoffStrategyPacket: () => <div data-testid="counsel-signoff-strategy-packet" />,
 }));
 vi.mock("@/components/access/role-gated-action", () => ({
   RoleGatedAction: ({ children }: { children: React.ReactNode }) => <>{children}</>,
