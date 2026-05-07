@@ -10,10 +10,11 @@
     "packages/ui"
   ],
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=@fortress/command-center",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "test": "turbo run test"
+    "lint": "turbo run lint --filter=@fortress/command-center",
+    "test": "turbo run test --filter=@fortress/command-center",
+    "typecheck": "turbo run typecheck --filter=@fortress/command-center"
   },
   "devDependencies": {
     "turbo": "^2.5.4"
