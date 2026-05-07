@@ -44,6 +44,7 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
   const feedbackTypes = data.registries.reviewer_feedback_ledger.allowedFeedbackTypes.slice(0, 8);
   const graphNodes = data.graph?.nodes.slice(0, 6) ?? [];
   const graphEdges = data.graph?.edges.slice(0, 6) ?? [];
+  const queryEngine = data.governanceQueryEngine;
 
   return (
     <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 space-y-4">
@@ -116,6 +117,63 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
                   {label(edge.type)} / {edge.label}
                 </div>
               ))}
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {queryEngine ? (
+        <div className="rounded border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold text-emerald-100">Governance Query Engine / Agent Operating Context</p>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-200 border-emerald-500/30 text-[10px]">
+                governanceQueryEngine true
+              </Badge>
+              <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                query-engine-as-operational-guidance, not legal authority
+              </Badge>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+            <Metric label="Governance Queries" value={queryEngine.queryCount} />
+            <Metric label="Context Packs" value={queryEngine.contextPacks.length} />
+            <Metric label="Safe Next Actions" value={queryEngine.safeNextActions.length} />
+            <Metric label="Forbidden Actions" value={queryEngine.forbiddenOperations.length} />
+            <Metric label="Signoff Blockers" value={queryEngine.signoffBlockers.length} />
+            <Metric label="Launch Blockers" value={queryEngine.launchBlockers.length} />
+          </div>
+          <div className="grid gap-3 xl:grid-cols-3">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Safe Next Actions</p>
+              {queryEngine.safeNextActions.slice(0, 4).map((action) => (
+                <div key={action.action} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  {action.action}
+                </div>
+              ))}
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Forbidden Actions</p>
+              <div className="flex flex-wrap gap-1">
+                {queryEngine.forbiddenOperations.slice(0, 8).map((operation) => (
+                  <Badge key={operation} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                    {label(operation)}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Agent Operating Context</p>
+              <p className="text-[10px] text-zinc-500">
+                {label(queryEngine.agentContext?.safeOperatingMode ?? "agent_context_visible")} / {label(queryEngine.agentContext?.nextRecommendedPhase ?? "next_phase_requires_human_review")}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {queryEngine.contextPacks.slice(0, 6).map((pack) => (
+                  <Badge key={pack.contextPackType} variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+                    {label(pack.contextPackType ?? "context_pack")}
+                  </Badge>
+                ))}
+              </div>
             </section>
           </div>
         </div>

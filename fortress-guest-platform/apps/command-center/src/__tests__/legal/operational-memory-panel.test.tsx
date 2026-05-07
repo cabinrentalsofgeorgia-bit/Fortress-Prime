@@ -26,6 +26,8 @@ vi.mock("@/lib/legal-hooks", () => ({
         graphNodeCount: 16,
         graphEdgeCount: 13,
         graphValidationOk: true,
+        governanceQueryCount: 18,
+        contextPackCount: 7,
       },
       registries: {
         operational_state: {},
@@ -119,6 +121,32 @@ vi.mock("@/lib/legal-hooks", () => ({
           governancePreserved: true,
         },
       },
+      governanceQueryEngine: {
+        status: "GOVERNANCE_QUERY_ENGINE_VISIBLE_READ_ONLY",
+        queryCount: 18,
+        queries: ["standing_state", "safe_next_actions", "agent_operating_context"],
+        safeNextActions: [{ action: "Review operational graph and query engine evidence" }],
+        forbiddenOperations: ["auto_signoff", "final_legal_conclusion", "filing_service_email_external_submission"],
+        signoffBlockers: ["COUNSEL_SIGNOFF_PENDING", "232_unresolved_source_issues_excluded"],
+        launchBlockers: ["NOT_AUTHORIZED", "public_launch_forbidden"],
+        agentContext: {
+          safeOperatingMode: "read_only_governance_query_engine_and_agent_context",
+          nextRecommendedPhase: "controlled_governance_query_review_and_agent_context_use",
+          readFirst: ["docs/architecture/governance-query-engine-architecture-2026-05-06.md"],
+          validationCommands: ["node validate"],
+          knownBlockers: ["232_unresolved_source_issues_excluded"],
+        },
+        contextPacks: [
+          {
+            contextPackType: "codex-session",
+            readFirst: [],
+            safeNextActions: [],
+            forbiddenActionCount: 3,
+            noSecrets: true,
+            noConfidentialText: true,
+          },
+        ],
+      },
     },
   }),
 }));
@@ -144,6 +172,12 @@ describe("OperationalMemoryPanel", () => {
     expect(screen.getByText("graph-as-operational-cognition, not legal authority")).toBeInTheDocument();
     expect(screen.getByText("Graph Entities")).toBeInTheDocument();
     expect(screen.getByText("Graph Relationships")).toBeInTheDocument();
+    expect(screen.getByText("Governance Query Engine / Agent Operating Context")).toBeInTheDocument();
+    expect(screen.getByText("governanceQueryEngine true")).toBeInTheDocument();
+    expect(screen.getByText("query-engine-as-operational-guidance, not legal authority")).toBeInTheDocument();
+    expect(screen.getAllByText("Safe Next Actions").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Forbidden Actions").length).toBeGreaterThan(0);
+    expect(screen.getByText("Agent Operating Context")).toBeInTheDocument();
     expect(screen.getByText("EXCLUDED FROM RELIED UPON SECTIONS / no auto resolution true.")).toBeInTheDocument();
     expect(screen.getByText(/ledger foundation \/ no freeform legal text true\./i)).toBeInTheDocument();
   });

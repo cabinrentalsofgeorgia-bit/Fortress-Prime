@@ -15,6 +15,9 @@ SUPPORTED_MATTER_SLUG = "fortress-legal-production-review"
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_DIR = ROOT / "operational-memory" / "registries"
 GRAPH_DIR = ROOT / "operational-memory" / "graph"
+QUERY_DIR = ROOT / "operational-memory" / "queries"
+AGENT_CONTEXT_DIR = ROOT / "operational-memory" / "agent-context"
+CONTEXT_PACK_DIR = ROOT / "operational-memory" / "context-packs"
 
 REGISTRY_FILES = {
     "operational_state": "operational-state.json",
@@ -48,6 +51,17 @@ def _load_graph_json(filename: str) -> dict[str, Any] | None:
     return payload
 
 
+def _load_optional_json(directory: Path, filename: str) -> dict[str, Any] | None:
+    path = directory / filename
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"optional_json_not_object:{filename}")
+    return payload
+
+
 def load_operational_memory(slug: str) -> dict[str, Any] | None:
     if slug != SUPPORTED_MATTER_SLUG:
         raise ValueError("operational_memory_scope_refused")
@@ -59,6 +73,24 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
     graph_validation = _load_graph_json("graph-validation-report.json")
     wiki_graph = _load_graph_json("wiki-graph-index.json")
     evidence_graph = _load_graph_json("evidence-graph-index.json")
+    query_taxonomy = _load_optional_json(QUERY_DIR, "query-taxonomy.json")
+    agent_context = _load_optional_json(AGENT_CONTEXT_DIR, "current-agent-context.json")
+    context_pack_files = sorted(CONTEXT_PACK_DIR.glob("*.json")) if CONTEXT_PACK_DIR.exists() else []
+    context_packs = []
+    for path in context_pack_files:
+        payload = _load_optional_json(CONTEXT_PACK_DIR, path.name)
+        if payload:
+            context_packs.append(
+                {
+                    "contextPackType": payload.get("contextPackType"),
+                    "standingLabels": payload.get("standingLabels", {}),
+                    "readFirst": payload.get("readFirst", [])[:8],
+                    "safeNextActions": payload.get("safeNextActions", [])[:5],
+                    "forbiddenActionCount": len(payload.get("forbiddenActions", [])),
+                    "noSecrets": payload.get("noSecrets") is True,
+                    "noConfidentialText": payload.get("noConfidentialText") is True,
+                }
+            )
     state = registries["operational_state"]
     capabilities = registries["capabilities"].get("capabilities", [])
     evidence_dirs = registries["evidence"].get("evidenceDirectories", [])
@@ -88,6 +120,8 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "graphNodeCount": len(graph_nodes),
             "graphEdgeCount": len(graph_edges),
             "graphValidationOk": graph_validation.get("ok", False) if graph_validation else False,
+            "governanceQueryCount": len(query_taxonomy.get("queries", [])) if query_taxonomy else 0,
+            "contextPackCount": len(context_packs),
         },
         "registries": registries,
         "graph": {
@@ -116,6 +150,34 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "wikiGraphIndex": wiki_graph,
             "evidenceGraphIndex": evidence_graph,
         },
+        "governanceQueryEngine": {
+            "status": "GOVERNANCE_QUERY_ENGINE_VISIBLE_READ_ONLY" if query_taxonomy else "GOVERNANCE_QUERY_ENGINE_NOT_AVAILABLE",
+            "queryCount": len(query_taxonomy.get("queries", [])) if query_taxonomy else 0,
+            "queries": query_taxonomy.get("queries", []) if query_taxonomy else [],
+            "safeNextActions": (
+                agent_context.get("safeNextActions", [])[:5]
+                if agent_context
+                else [
+                    {
+                        "action": "Review operational graph and query engine evidence",
+                        "humanReviewRequired": True,
+                    }
+                ]
+            ),
+            "forbiddenOperations": governance.get("forbiddenOperations", []),
+            "signoffBlockers": [
+                "COUNSEL_SIGNOFF_PENDING",
+                "232_unresolved_source_issues_excluded",
+                "human_review_required",
+            ],
+            "launchBlockers": [
+                "NOT_AUTHORIZED",
+                "public_launch_forbidden",
+                "external_legal_operations_forbidden",
+            ],
+            "agentContext": agent_context,
+            "contextPacks": context_packs,
+        },
         "negativeControls": {
             "noSecrets": all(registry.get("noSecrets") is True for registry in registries.values()),
             "noConfidentialText": all(registry.get("noConfidentialText") is True for registry in registries.values()),
@@ -125,6 +187,7 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "noSourcePromotion": True,
             "noSchemaRlsPolicyMutation": True,
             "noGraphLegalAuthority": True,
+            "noQueryEngineLegalAuthority": True,
             "readOnly": True,
         },
     }
