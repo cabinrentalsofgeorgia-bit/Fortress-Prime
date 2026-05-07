@@ -1,6 +1,6 @@
 # Fortress Legal System Topology
 
-Status: read-only discovery snapshot on 2026-05-07.
+Status: runtime topology certification snapshot on 2026-05-07.
 
 This file is permanent operational memory. Future agents must update it when topology facts change, and must not rely on chat context as the source of truth.
 
@@ -26,12 +26,30 @@ The split repositories `fortress-legal-app` and `fortress-legal-wiki` exist loca
 
 ## Host And Network Topology
 
-Read-only repository evidence shows:
+Read-only live inspection on Spark-2 certifies:
 
-- `fortress-guest-platform/infra/gateway/config.yml` documents Cloudflare Tunnel ingress for `crog-ai.com`, `www.crog-ai.com`, and `console.crog-ai.com` to `http://127.0.0.1:3005`.
-- That same file states the active Cloudflare config lives outside the repo at `/etc/cloudflared/config.yml`; repo copy is documentation only.
-- Historical operational audit `docs/operational/flos-frontend-audit-2026-04-27.md` records command-center production as a self-hosted Next.js standalone server on port `3005`.
-- Historical docs also mention Vercel project metadata for `crog-ai-command-center`; this is treated as deployment metadata, not proof that the current live `crog-ai.com` path is Vercel.
+- Active Cloudflare config lives at `/etc/cloudflared/config.yml`.
+- `cloudflared.service` is active and reads `/etc/cloudflared/config.yml`.
+- Active ingress maps `crog-ai.com`, `www.crog-ai.com`, and `console.crog-ai.com` to `http://127.0.0.1:3005`.
+- Port `3005` is owned by `crog-ai-frontend.service`.
+- `crog-ai-frontend.service` runs `next-server (v16.1.6)` from `/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center`.
+- `fortress-guest-platform/infra/gateway/config.yml` is a documentation copy, not the loaded config.
+- Active `/etc/cloudflared/config.yml` also maps `fortress.crog-ai.com` and `api.crog-ai.com` to `http://127.0.0.1:9800`, and `api.cabin-rentals-of-georgia.com` to `http://127.0.0.1:8000`.
+- Active `/etc/cloudflared/config.yml` includes `staging-api.crog-ai.com -> http://127.0.0.1:8026`; the repo documentation copy currently lacks that active mapping.
+- Historical operational audit `docs/operational/flos-frontend-audit-2026-04-27.md` correctly records command-center production as a self-hosted Next.js standalone server on port `3005`.
+- Historical docs and dirty canonical worktree metadata mention Vercel project `crog-ai-command-center`; this is deployment/provider metadata, not proof that the live `crog-ai.com` path is Vercel.
+
+Certified runtime path:
+
+```text
+crog-ai.com
+  -> Cloudflare edge
+  -> cloudflared.service on Spark-2
+  -> /etc/cloudflared/config.yml
+  -> http://127.0.0.1:3005
+  -> crog-ai-frontend.service
+  -> Next.js standalone command-center
+```
 
 ## Data Plane
 
