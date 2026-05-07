@@ -1,14 +1,16 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T04:07:25.251Z",
+  "generatedAt": "2026-05-07T04:13:17.308Z",
   "ok": true,
   "registriesChecked": [
     "operational-memory/registries/capability-registry.json",
     "operational-memory/registries/evidence-registry.json",
     "operational-memory/registries/governance-registry.json",
+    "operational-memory/registries/operational-state.generated.json",
     "operational-memory/registries/operational-state.json",
     "operational-memory/registries/remediation-registry.json",
     "operational-memory/registries/reviewer-feedback-ledger.json",
+    "operational-memory/registries/wiki-knowledge-index.generated.json",
     "operational-memory/registries/wiki-knowledge-index.json"
   ],
   "errors": [],
