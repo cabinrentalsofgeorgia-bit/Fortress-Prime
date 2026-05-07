@@ -162,7 +162,8 @@ await page
           body.includes("Operational Feedback Capture") ||
           body.includes("Operational Memory / Machine-Readable Cognition") ||
           body.includes("Operational Knowledge Graph / Queryable Governance") ||
-          body.includes("Autonomous Operations Rehearsal / Governed Dry-Runs"))
+          body.includes("Autonomous Operations Rehearsal / Governed Dry-Runs") ||
+          body.includes("AI Remediation Execution / Disposition Packets"))
       );
     },
     { timeout: 20000 },
@@ -346,6 +347,25 @@ result.checks.blockedActionHandling =
 result.checks.governanceAssertionVisibility =
   text.includes("governanceAssertionVisibility true") &&
   text.includes("non destructive dry run only true");
+result.checks.aiRemediationExecution =
+  text.includes("AI Remediation Execution / Disposition Packets") &&
+  text.includes("aiRemediationExecution true") &&
+  text.includes("no source promotion");
+result.checks.remediationClassificationVisible =
+  text.includes("remediationClassificationVisible true") &&
+  text.includes("Classification Summary");
+result.checks.dispositionPacketsVisible =
+  text.includes("dispositionPacketsVisible true") &&
+  text.includes("Disposition Packets");
+result.checks.reviewerQueuesVisible =
+  text.includes("reviewerQueuesVisible true") &&
+  text.includes("Reviewer Queues");
+result.checks.noSourcePromotion =
+  text.includes("noSourcePromotion true") &&
+  text.includes("no source promotion");
+result.checks.counselReviewRequiredVisible =
+  text.includes("counselReviewRequiredVisible true") &&
+  text.includes("Signoff Blocking Sources");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -413,7 +433,13 @@ result.featureAlignmentOk =
   result.checks.hardStopEnforcement &&
   result.checks.replayValidation &&
   result.checks.blockedActionHandling &&
-  result.checks.governanceAssertionVisibility;
+  result.checks.governanceAssertionVisibility &&
+  result.checks.aiRemediationExecution &&
+  result.checks.remediationClassificationVisible &&
+  result.checks.dispositionPacketsVisible &&
+  result.checks.reviewerQueuesVisible &&
+  result.checks.noSourcePromotion &&
+  result.checks.counselReviewRequiredVisible;
 
 console.log(JSON.stringify(result, null, 2));
 

@@ -149,6 +149,12 @@ const humanOperations = {
   replayValidation: Boolean(checkerChecks.replayValidation),
   blockedActionHandling: Boolean(checkerChecks.blockedActionHandling),
   governanceAssertionVisibility: Boolean(checkerChecks.governanceAssertionVisibility),
+  aiRemediationExecution: Boolean(checkerChecks.aiRemediationExecution),
+  remediationClassificationVisible: Boolean(checkerChecks.remediationClassificationVisible),
+  dispositionPacketsVisible: Boolean(checkerChecks.dispositionPacketsVisible),
+  reviewerQueuesVisible: Boolean(checkerChecks.reviewerQueuesVisible),
+  noSourcePromotion: Boolean(checkerChecks.noSourcePromotion),
+  counselReviewRequiredVisible: Boolean(checkerChecks.counselReviewRequiredVisible),
 };
 const ok =
   checks.publicRoutes.every((item) => item.ok) &&

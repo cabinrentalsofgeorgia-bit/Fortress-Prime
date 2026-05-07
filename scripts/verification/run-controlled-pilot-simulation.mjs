@@ -44,6 +44,11 @@ const requiredDocs = [
   "fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs",
   "fortress-guest-platform/scripts/agent-orchestration/replay-dry-run.mjs",
   "fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
+  "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+  "fortress-guest-platform/operational-memory/remediation/remediation-clusters.json",
+  "fortress-guest-platform/operational-memory/remediation/safe-automation-candidates.json",
+  "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+  "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -153,6 +158,12 @@ const simulation = {
   replayValidationVisible: Boolean(checks.replayValidation),
   blockedActionHandlingVisible: Boolean(checks.blockedActionHandling),
   governanceAssertionVisibility: Boolean(checks.governanceAssertionVisibility),
+  aiRemediationExecutionVisible: Boolean(checks.aiRemediationExecution),
+  remediationClassificationVisible: Boolean(checks.remediationClassificationVisible),
+  dispositionPacketsVisible: Boolean(checks.dispositionPacketsVisible),
+  reviewerQueuesVisible: Boolean(checks.reviewerQueuesVisible),
+  aiRemediationNoSourcePromotion: Boolean(checks.noSourcePromotion),
+  counselReviewRequiredVisible: Boolean(checks.counselReviewRequiredVisible),
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -206,6 +217,12 @@ const ok =
   Boolean(checks.replayValidation) &&
   Boolean(checks.blockedActionHandling) &&
   Boolean(checks.governanceAssertionVisibility) &&
+  Boolean(checks.aiRemediationExecution) &&
+  Boolean(checks.remediationClassificationVisible) &&
+  Boolean(checks.dispositionPacketsVisible) &&
+  Boolean(checks.reviewerQueuesVisible) &&
+  Boolean(checks.noSourcePromotion) &&
+  Boolean(checks.counselReviewRequiredVisible) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -255,6 +272,12 @@ const result = {
     replayValidation: Boolean(checks.replayValidation),
     blockedActionHandling: Boolean(checks.blockedActionHandling),
     governanceAssertionVisibility: Boolean(checks.governanceAssertionVisibility),
+    aiRemediationExecution: Boolean(checks.aiRemediationExecution),
+    remediationClassificationVisible: Boolean(checks.remediationClassificationVisible),
+    dispositionPacketsVisible: Boolean(checks.dispositionPacketsVisible),
+    reviewerQueuesVisible: Boolean(checks.reviewerQueuesVisible),
+    noSourcePromotion: Boolean(checks.noSourcePromotion),
+    counselReviewRequiredVisible: Boolean(checks.counselReviewRequiredVisible),
   },
   negativeControls: {
     noDocumentBodyText: true,
