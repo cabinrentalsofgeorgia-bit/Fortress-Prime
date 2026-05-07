@@ -1393,6 +1393,8 @@ export interface OperationalMemoryResponse {
     graphNodeCount?: number;
     graphEdgeCount?: number;
     graphValidationOk?: boolean;
+    governanceQueryCount?: number;
+    contextPackCount?: number;
   };
   registries: {
     operational_state: Record<string, unknown>;
@@ -1475,6 +1477,30 @@ export interface OperationalMemoryResponse {
     } | null;
     wikiGraphIndex?: { nodes?: unknown[]; edges?: unknown[] } | null;
     evidenceGraphIndex?: { nodes?: unknown[]; edges?: unknown[] } | null;
+  };
+  governanceQueryEngine?: {
+    status: string;
+    queryCount: number;
+    queries: string[];
+    safeNextActions: Array<{ action: string; reason?: string; humanReviewRequired?: boolean }>;
+    forbiddenOperations: string[];
+    signoffBlockers: string[];
+    launchBlockers: string[];
+    agentContext?: {
+      safeOperatingMode?: string;
+      nextRecommendedPhase?: string;
+      readFirst?: string[];
+      validationCommands?: string[];
+      knownBlockers?: string[];
+    } | null;
+    contextPacks: Array<{
+      contextPackType?: string;
+      readFirst: string[];
+      safeNextActions: unknown[];
+      forbiddenActionCount: number;
+      noSecrets: boolean;
+      noConfidentialText: boolean;
+    }>;
   };
   negativeControls: Record<string, boolean>;
 }

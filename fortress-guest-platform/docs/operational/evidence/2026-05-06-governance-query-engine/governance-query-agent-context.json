@@ -1,0 +1,124 @@
+{
+  "ok": true,
+  "query": "agent-context",
+  "argument": null,
+  "generatedAt": "2026-05-07T11:09:52.914Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "canonicalRepo": "/home/admin/Fortress-Prime",
+    "currentWorktree": "/home/admin/Fortress-Prime-operational-memory",
+    "recommendedBaseBranch": "release/fortress-legal-knowledge-graph",
+    "standingLabels": {
+      "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
+      "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+      "externalSubmissionAuthority": "NOT_AUTHORIZED",
+      "finalLegalConclusions": "NOT_CREATED",
+      "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+      "schemaRlsPolicyMutation": "NOT_PERFORMED"
+    },
+    "verifiedCapabilities": [
+      "canonicalization",
+      "feature_alignment",
+      "operational_hardening",
+      "remediation_maturity",
+      "review_operations",
+      "review_scaling",
+      "operational_certification",
+      "internal_pilot",
+      "human_operations",
+      "capability_audit",
+      "operational_memory",
+      "operational_graph",
+      "governance_query_engine"
+    ],
+    "knownBlockers": [
+      "232_unresolved_source_issues_excluded",
+      "counsel_signoff_pending",
+      "public_launch_forbidden",
+      "external_legal_operations_forbidden",
+      "persistent_reviewer_assignment_writes_deferred",
+      "governance_query_engine_complete_pending_review"
+    ],
+    "safeOperatingMode": "read_only_governance_query_engine_and_agent_context",
+    "hardStops": [
+      "secrets_exposure",
+      "confidential_text_exposure",
+      "restricted_content_boundary_violation",
+      "schema_rls_policy_mutation",
+      "uncontrolled_reviewer_authority",
+      "external_public_access_required",
+      "registry_legal_authority_risk"
+    ],
+    "forbiddenOperations": [
+      "auto_signoff",
+      "final_legal_conclusion",
+      "filing_service_email_external_submission",
+      "restricted_content_review",
+      "unresolved_source_promotion",
+      "document_upload_or_ingestion",
+      "duplicate_vectors_or_document_rows",
+      "schema_rls_policy_mutation",
+      "secrets_or_auth_state_storage"
+    ],
+    "validationCommands": [
+      "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
+      "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
+      "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
+      "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs"
+    ],
+    "evidencePaths": [
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/"
+    ],
+    "readFirst": [
+      "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+      "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
+      "fortress-guest-platform/operational-memory/graph/graph.json",
+      "fortress-guest-platform/operational-memory/registries/operational-state.json",
+      "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json"
+    ],
+    "nextRecommendedPhase": "controlled_governance_query_review_and_agent_context_use",
+    "prBranchExpectations": {
+      "branchPrefix": "release/fortress-legal-",
+      "draftPrRequired": true,
+      "commitDiscipline": "small_focused_commits"
+    }
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}

@@ -131,6 +131,12 @@ const humanOperations = {
   evidenceGraph: Boolean(checkerChecks.evidenceGraph),
   remediationGraph: Boolean(checkerChecks.remediationGraph),
   graphValidation: Boolean(checkerChecks.graphValidation),
+  governanceQueryEngine: Boolean(checkerChecks.governanceQueryEngine),
+  agentContext: Boolean(checkerChecks.agentContext),
+  safeNextActionsVisible: Boolean(checkerChecks.safeNextActionsVisible),
+  forbiddenActionsVisible: Boolean(checkerChecks.forbiddenActionsVisible),
+  signoffBlockersVisible: Boolean(checkerChecks.signoffBlockersVisible),
+  launchBlockersVisible: Boolean(checkerChecks.launchBlockersVisible),
 };
 const ok =
   checks.publicRoutes.every((item) => item.ok) &&

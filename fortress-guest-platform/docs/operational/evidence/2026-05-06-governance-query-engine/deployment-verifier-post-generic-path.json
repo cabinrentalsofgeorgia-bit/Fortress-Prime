@@ -1,0 +1,154 @@
+{
+  "ok": true,
+  "checkedAt": "2026-05-07T11:10:12.381Z",
+  "baseUrl": "https://crog-ai.com",
+  "matterPath": "/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "publicRoutes": [
+      {
+        "path": "/",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 94
+      },
+      {
+        "path": "/legal/cases/fortress-legal-production-review",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 61
+      }
+    ],
+    "unauthenticatedGuards": [
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/draft-work-product",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 23
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/autonomous-learning",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 28
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/remediation-maturity",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 21
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/review-operations",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 22
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/operational-memory",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 24
+      }
+    ],
+    "services": [
+      {
+        "unit": "crog-ai-frontend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "fortress-backend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "cloudflared.service",
+        "active": true,
+        "status": "active"
+      }
+    ]
+  },
+  "authenticatedChecker": {
+    "skipped": false,
+    "exitCode": 0,
+    "ok": true,
+    "featureAlignmentOk": true,
+    "checks": {
+      "httpStatus": 200,
+      "authenticatedMatter": true,
+      "signoffPending": true,
+      "validationVisible": true,
+      "lockedVisible": true,
+      "documents": true,
+      "completed": true,
+      "workbench": true,
+      "draftWorkProduct": true,
+      "learning": true,
+      "remediationMaturity": true,
+      "reviewOperations": true,
+      "reviewScaling": true,
+      "operationalCertification": true,
+      "internalPilot": true,
+      "humanOperations": true,
+      "feedbackCapture": true,
+      "reviewerOnboarding": true,
+      "governanceExceptions": true,
+      "driftDetection": true,
+      "humanEscalation": true,
+      "operationalMemory": true,
+      "governanceRegistry": true,
+      "remediationRegistry": true,
+      "evidenceRegistry": true,
+      "wikiKnowledgeIndex": true,
+      "reviewerLedgerFoundation": true,
+      "operationalGraph": true,
+      "governanceGraph": true,
+      "evidenceGraph": true,
+      "remediationGraph": true,
+      "graphValidation": true,
+      "governanceQueryEngine": true,
+      "agentContext": true,
+      "safeNextActionsVisible": true,
+      "forbiddenActionsVisible": true,
+      "signoffBlockersVisible": true,
+      "launchBlockersVisible": true,
+      "noLoginError": true,
+      "noExternalSubmissionAuthority": true,
+      "noFinalLegalAdvice": true
+    },
+    "errorSummary": {},
+    "httpErrors": [],
+    "stderr": ""
+  },
+  "humanOperations": {
+    "visibility": true,
+    "feedbackCapture": true,
+    "reviewerOnboarding": true,
+    "governanceExceptions": true,
+    "driftDetection": true,
+    "humanEscalationOnly": true,
+    "operationalMemory": true,
+    "governanceRegistry": true,
+    "remediationRegistry": true,
+    "evidenceRegistry": true,
+    "wikiKnowledgeIndex": true,
+    "reviewerLedgerFoundation": true,
+    "operationalGraph": true,
+    "governanceGraph": true,
+    "evidenceGraph": true,
+    "remediationGraph": true,
+    "graphValidation": true,
+    "governanceQueryEngine": true,
+    "agentContext": true,
+    "safeNextActionsVisible": true,
+    "forbiddenActionsVisible": true,
+    "signoffBlockersVisible": true,
+    "launchBlockersVisible": true
+  },
+  "governance": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  }
+}

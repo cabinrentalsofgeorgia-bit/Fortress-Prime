@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T10:32:51.610Z",
+  "generatedAt": "2026-05-07T11:04:54.158Z",
   "standingLabels": {
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED"
@@ -109,6 +109,13 @@
       "phase": "operational_graph",
       "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
       "status": "present"
+    },
+    {
+      "id": "evidence:governance_query_engine",
+      "type": "evidence_bundle",
+      "phase": "governance_query_engine",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
+      "status": "present"
     }
   ],
   "edges": [
@@ -195,6 +202,13 @@
       "from": "evidence:operational_graph",
       "to": "capability:operational_graph",
       "phase": "operational_graph"
+    },
+    {
+      "id": "evidence-edge:governance_query_engine",
+      "type": "supports",
+      "from": "evidence:governance_query_engine",
+      "to": "capability:governance_query_engine",
+      "phase": "governance_query_engine"
     }
   ]
 }

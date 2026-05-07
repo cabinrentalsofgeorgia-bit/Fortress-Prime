@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T10:29:32.006Z",
+  "generatedAt": "2026-05-07T11:04:54.128Z",
   "sourceRefs": [
     "fortress-guest-platform/docs/architecture",
     "fortress-guest-platform/docs/operational",
@@ -77,6 +77,12 @@
     {
       "path": "fortress-guest-platform/docs/architecture/governance-maturity-audit-2026-05-06.md",
       "title": "Governance And Operational Maturity Audit - 2026-05-06",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+      "title": "Fortress Legal Governance Query Engine Architecture",
       "category": "architecture",
       "freshness": "current_or_recent"
     },
@@ -281,6 +287,12 @@
     {
       "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-certification/summary.md",
       "title": "Operational Certification Validation Evidence",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/summary.md",
+      "title": "Fortress Legal Operational Knowledge Graph Evidence",
       "category": "evidence_summary",
       "freshness": "current_or_recent"
     },
@@ -659,6 +671,12 @@
     {
       "path": "wiki/audits/2026-05-06-synthetic-retrieval-certification.md",
       "title": "Synthetic Retrieval Certification - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-07-advanced-synthetic-legal-operations-expansion.md",
+      "title": "Advanced Synthetic Legal Operations Expansion - 2026-05-07",
       "category": "wiki_audit",
       "freshness": "current_or_recent"
     },
