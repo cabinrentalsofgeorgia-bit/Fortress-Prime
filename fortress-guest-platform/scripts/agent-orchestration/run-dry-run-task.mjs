@@ -16,7 +16,9 @@ const args = process.argv.slice(2);
 const category = args.includes("--category") ? args[args.indexOf("--category") + 1] : "validation-only";
 const planPath = args.includes("--plan") ? args[args.indexOf("--plan") + 1] : null;
 const shouldWrite = args.includes("--write");
-const dryRunId = `dry-run-${new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "Z")}`;
+const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(".", "").replace("Z", "Z");
+const safeCategory = category.replace(/[^a-z0-9_-]/gi, "-");
+const dryRunId = `dry-run-${safeCategory}-${timestamp}`;
 const plan = planPath ? readJson(planPath) : {
   planId: "synthetic-plan",
   taskId: `synthetic-task-${category}`,

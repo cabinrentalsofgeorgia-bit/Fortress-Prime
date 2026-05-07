@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "replayId": "replay-dry-run-20260507T122635Z",
-  "generatedAt": "2026-05-07T12:26:35.246Z",
-  "traceRef": "fortress-guest-platform/operational-memory/agent-orchestration/traces/dry-run-20260507T122635Z.json",
-  "dryRunId": "dry-run-20260507T122635Z",
+  "replayId": "replay-dry-run-evidence-summary-20260507T122712462Z",
+  "generatedAt": "2026-05-07T12:27:12.507Z",
+  "traceRef": "fortress-guest-platform/operational-memory/agent-orchestration/traces/dry-run-evidence-summary-20260507T122712462Z.json",
+  "dryRunId": "dry-run-evidence-summary-20260507T122712462Z",
   "status": "REPLAY_VALIDATED",
   "errors": [],
   "hardStopsRechecked": true,

@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1.0.0",
-  "dryRunId": "dry-run-20260507T122635Z",
-  "generatedAt": "2026-05-07T12:26:35.204Z",
-  "category": "validation-only",
+  "dryRunId": "dry-run-registry-update-simulation-20260507T122712585Z",
+  "generatedAt": "2026-05-07T12:27:12.586Z",
+  "category": "registry-update-simulation",
   "status": "DRY_RUN_SIMULATED_SUCCESS",
   "planId": "synthetic-plan",
-  "taskId": "synthetic-task-validation-only",
+  "taskId": "synthetic-task-registry-update-simulation",
   "executionPath": [
     "load_plan",
     "load_dry_run_categories",
