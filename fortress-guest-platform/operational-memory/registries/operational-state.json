@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "generatedAt": "2026-05-07T18:24:27.915Z",
   "sourceRefs": [
     "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
@@ -9,10 +9,17 @@
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/summary.md",
     "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
     "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
-    "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md"
+    "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+    "fortress-guest-platform/docs/operational/ai-remediation-source-inventory-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+    "fortress-guest-platform/operational-memory/remediation/remediation-clusters.json",
+    "fortress-guest-platform/operational-memory/remediation/safe-automation-candidates.json",
+    "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+    "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+    "fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs"
   ],
   "standingLabels": {
-    "productionStatus": "PRODUCTION_AUTONOMOUS_REHEARSAL_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_AI_REMEDIATION_EXECUTION_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -39,7 +46,8 @@
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/authenticated-checker-final.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/governance-query-standing.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/summary.md",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/summary.md"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-ai-remediation-execution/summary.md"
   ],
   "validationStatus": {
     "authenticatedChecker": "PASS",
@@ -55,7 +63,13 @@
     "autonomousRehearsal": "PASS",
     "dryRunExecution": "PASS",
     "hardStopEnforcement": "PASS",
-    "replayValidation": "PASS"
+    "replayValidation": "PASS",
+    "aiRemediationExecution": "PASS_PENDING_FINAL_PRODUCTION_CHECKER",
+    "remediationClassification": "PASS",
+    "dispositionPackets": "PASS",
+    "reviewerQueues": "PASS",
+    "noSourcePromotion": true,
+    "counselReviewRequiredVisible": true
   },
   "rollbackRefs": [
     "git_revert_operational_memory_commits",
@@ -71,7 +85,9 @@
     "persistent_reviewer_assignment_writes_deferred",
     "governance_query_engine_complete_pending_review",
     "agent_orchestration_complete_pending_review",
-    "autonomous_rehearsal_complete_pending_review"
+    "autonomous_rehearsal_complete_pending_review",
+    "ai_remediation_execution_complete_pending_review",
+    "232_unresolved_source_issues_remain_excluded_pending_human_review"
   ],
   "hardStops": [
     "secret_exposure_risk",
@@ -82,6 +98,7 @@
     "registry_would_become_legal_authority",
     "agent_task_runner_would_become_legal_authority",
     "autonomous_rehearsal_would_execute_forbidden_action",
-    "dry_run_trace_would_expose_confidential_text"
+    "dry_run_trace_would_expose_confidential_text",
+    "ai_remediation_would_promote_source_without_approval"
   ]
 }

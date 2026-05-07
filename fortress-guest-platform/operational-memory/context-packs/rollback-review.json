@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T12:33:47.936Z",
+  "generatedAt": "2026-05-07T18:25:01.197Z",
   "contextPackType": "rollback-review",
   "standingLabels": {
-    "productionStatus": "PRODUCTION_AUTONOMOUS_REHEARSAL_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_AI_REMEDIATION_EXECUTION_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -22,9 +22,15 @@
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-ai-remediation-execution/"
   ],
   "readFirst": [
+    "fortress-guest-platform/docs/operational/ai-remediation-source-inventory-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+    "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+    "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+    "fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs",
     "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
     "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
     "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
@@ -46,10 +52,22 @@
     "node fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
     "node fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs --category validation-only",
     "node fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
+    "node fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs",
     "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
     "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs"
   ],
   "safeNextActions": [
+    {
+      "action": "Review AI remediation disposition packets without source promotion",
+      "reason": "232 unresolved source issues have metadata-only classifications, clusters, safe automation candidates, disposition packets, and reviewer queues.",
+      "requiredAuthority": "counsel_or_source_review_lead",
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+        "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+        "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json"
+      ],
+      "humanReviewRequired": true
+    },
     {
       "action": "Review autonomous rehearsal dry-run traces and replay evidence",
       "reason": "Governed dry-runs now exercise hard stops, replay validation, and evidence-backed orchestration without production mutation.",
@@ -67,15 +85,6 @@
       "requiredAuthority": "operator_or_engineering_lead",
       "evidenceRefs": [
         "fortress-guest-platform/operational-memory/queries/query-taxonomy.json"
-      ],
-      "humanReviewRequired": true
-    },
-    {
-      "action": "Plan structured remediation review without source promotion",
-      "reason": "232 unresolved source issues remain excluded and require human review.",
-      "requiredAuthority": "counsel_or_source_review_lead",
-      "evidenceRefs": [
-        "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
       ],
       "humanReviewRequired": true
     }
@@ -135,7 +144,9 @@
     "persistent_reviewer_assignment_writes_deferred",
     "governance_query_engine_complete_pending_review",
     "agent_orchestration_complete_pending_review",
-    "autonomous_rehearsal_complete_pending_review"
+    "autonomous_rehearsal_complete_pending_review",
+    "ai_remediation_execution_complete_pending_review",
+    "232_unresolved_source_issues_remain_excluded_pending_human_review"
   ],
   "remediationStatus": {
     "unresolvedSourceIssues": 232,
@@ -150,7 +161,97 @@
       "metadata_only_limitation"
     ],
     "noAutoResolution": true,
-    "humanReviewRequired": true
+    "humanReviewRequired": true,
+    "aiRemediationExecution": {
+      "unresolvedIssueCount": 232,
+      "classificationSummary": {
+        "byCategory": [
+          {
+            "category": "unsupported_assertion",
+            "count": 5
+          },
+          {
+            "category": "restricted_metadata_only",
+            "count": 2
+          },
+          {
+            "category": "incomplete_source_chain",
+            "count": 17
+          },
+          {
+            "category": "contradiction_candidate",
+            "count": 14
+          },
+          {
+            "category": "ambiguous_entity_mapping",
+            "count": 40
+          },
+          {
+            "category": "missing_source",
+            "count": 154
+          }
+        ],
+        "byItemType": [
+          {
+            "itemType": "issue_matrix",
+            "count": 5
+          },
+          {
+            "itemType": "evidence_binder",
+            "count": 17
+          },
+          {
+            "itemType": "contradiction_candidate",
+            "count": 14
+          },
+          {
+            "itemType": "entity_dossier",
+            "count": 40
+          },
+          {
+            "itemType": "theory_packet",
+            "count": 2
+          },
+          {
+            "itemType": "counsel_question",
+            "count": 12
+          },
+          {
+            "itemType": "action_item",
+            "count": 12
+          },
+          {
+            "itemType": "timeline_event",
+            "count": 130
+          }
+        ],
+        "byMaterialityTier": [
+          {
+            "materialityTier": "tier_1_high_materiality",
+            "count": 21
+          },
+          {
+            "materialityTier": "tier_2_supporting_packet_gap",
+            "count": 81
+          },
+          {
+            "materialityTier": "tier_3_low_materiality_or_optional",
+            "count": 130
+          }
+        ],
+        "counselReviewRequired": 232,
+        "restrictedMetadataOnly": 2
+      },
+      "clusterCount": 17,
+      "safeAutomationCandidateCount": 4,
+      "dispositionPacketCount": 4,
+      "reviewerQueueCount": 8,
+      "sourcePromotionAllowed": false,
+      "legalConclusion": false,
+      "signoffAuthority": false,
+      "humanReviewRequired": true,
+      "counselReviewRequired": true
+    }
   },
   "rollbackReadiness": {
     "rollbackRefs": [

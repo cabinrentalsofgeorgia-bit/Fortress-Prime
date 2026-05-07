@@ -53,6 +53,17 @@ const negativeControls = {
 
 const safeNextActions = [
   {
+    action: "Review AI remediation disposition packets without source promotion",
+    reason: "232 unresolved source issues have metadata-only classifications, clusters, safe automation candidates, disposition packets, and reviewer queues.",
+    requiredAuthority: "counsel_or_source_review_lead",
+    evidenceRefs: [
+      "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+      "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+      "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+    ],
+    humanReviewRequired: true,
+  },
+  {
     action: "Review autonomous rehearsal dry-run traces and replay evidence",
     reason: "Governed dry-runs now exercise hard stops, replay validation, and evidence-backed orchestration without production mutation.",
     requiredAuthority: "senior_engineer_or_governance_reviewer",
@@ -68,17 +79,6 @@ const safeNextActions = [
     reason: "Query engine can now answer blockers, safe actions, forbidden actions, and read-first context.",
     requiredAuthority: "operator_or_engineering_lead",
     evidenceRefs: ["fortress-guest-platform/operational-memory/queries/query-taxonomy.json"],
-    humanReviewRequired: true,
-  },
-  {
-    action: "Review AI remediation disposition packets without source promotion",
-    reason: "232 unresolved source issues have metadata-only classifications, clusters, safe automation candidates, disposition packets, and reviewer queues.",
-    requiredAuthority: "counsel_or_source_review_lead",
-    evidenceRefs: [
-      "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
-      "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
-      "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
-    ],
     humanReviewRequired: true,
   },
 ];
@@ -129,7 +129,7 @@ function validationFor(target) {
 function agentContext() {
   return {
     canonicalRepo: "/home/admin/Fortress-Prime",
-    currentWorktree: "/home/admin/Fortress-Prime-autonomous-rehearsal",
+    currentWorktree: "/home/admin/Fortress-Prime-ai-remediation-execution",
     recommendedBaseBranch: "release/fortress-legal-knowledge-graph",
     standingLabels,
     verifiedCapabilities: capabilityList().map((capability) => capability.id),
@@ -143,6 +143,7 @@ function agentContext() {
       "node fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
       "node fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs --category validation-only",
       "node fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
+      "node fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs",
       "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
       "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs",
     ],
@@ -152,8 +153,14 @@ function agentContext() {
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/",
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/",
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-ai-remediation-execution/",
     ],
     readFirst: [
+      "fortress-guest-platform/docs/operational/ai-remediation-source-inventory-2026-05-06.md",
+      "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+      "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+      "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+      "fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs",
       "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
       "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
       "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
@@ -169,7 +176,7 @@ function agentContext() {
       "fortress-guest-platform/operational-memory/registries/operational-state.json",
       "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
     ],
-    nextRecommendedPhase: "controlled_autonomous_rehearsal_review_and_dry_run_use",
+    nextRecommendedPhase: "controlled_ai_remediation_disposition_review_without_source_promotion",
     prBranchExpectations: {
       branchPrefix: "release/fortress-legal-",
       draftPrRequired: true,
@@ -209,9 +216,9 @@ function aiRemediationSummary() {
 
 function phaseRecommendation() {
   return {
-    recommendedPhase: "controlled_autonomous_rehearsal_review_and_dry_run_use",
-    reason: "Agent orchestration can now be exercised through non-destructive dry-runs with hard-stop enforcement, replay validation, and evidence-backed traces.",
-    requiredAuthority: "operator_or_engineering_lead",
+    recommendedPhase: "controlled_ai_remediation_disposition_review_without_source_promotion",
+    reason: "AI remediation execution has produced metadata-only classifications, clusters, safe automation candidates, disposition packets, and reviewer queues for the 232 excluded source issues.",
+    requiredAuthority: "counsel_or_source_review_lead",
     humanReviewRequired: true,
     blockedHigherAuthorityActions: [
       "counsel_signoff",

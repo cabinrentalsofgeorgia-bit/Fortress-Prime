@@ -1,33 +1,210 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-06T23:59:00-04:00",
-  "sourceRefs": ["fortress-guest-platform/docs/architecture/full-platform-capability-audit-2026-05-06.md"],
+  "generatedAt": "2026-05-07T18:24:27.915Z",
+  "sourceRefs": [
+    "fortress-guest-platform/docs/architecture/full-platform-capability-audit-2026-05-06.md",
+    "fortress-guest-platform/docs/operational/ai-remediation-source-inventory-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+    "fortress-guest-platform/operational-memory/remediation/remediation-clusters.json",
+    "fortress-guest-platform/operational-memory/remediation/safe-automation-candidates.json",
+    "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+    "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+    "fortress-guest-platform/scripts/remediation/validate-ai-remediation-execution.mjs"
+  ],
   "standingLabels": {
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "legalAdviceStatus": "NOT FINAL LEGAL ADVICE"
   },
-  "governanceBoundaries": ["no_signoff", "no_final_conclusions", "no_external_authority", "no_source_promotion"],
-  "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md"],
-  "validationStatus": { "status": "CURATED_INITIAL_REGISTRY" },
-  "rollbackRefs": ["git_revert"],
+  "governanceBoundaries": [
+    "no_signoff",
+    "no_final_conclusions",
+    "no_external_authority",
+    "no_source_promotion"
+  ],
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-ai-remediation-execution/summary.md"
+  ],
+  "validationStatus": {
+    "status": "CURATED_INITIAL_REGISTRY"
+  },
+  "rollbackRefs": [
+    "git_revert"
+  ],
   "noSecrets": true,
   "noConfidentialText": true,
   "capabilities": [
-    { "id": "canonicalization", "status": "complete", "checkerFlag": "source_of_truth", "maturityLevel": "governed", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-canonicalization/", "limitations": ["wiki_app_split_remains"] },
-    { "id": "feature_alignment", "status": "complete_pending_review", "checkerFlag": "featureAlignmentOk", "maturityLevel": "production_visible", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-feature-alignment/", "limitations": ["text_selector_checker_fragility"] },
-    { "id": "operational_hardening", "status": "complete_pending_review", "checkerFlag": "deploymentVerifier", "maturityLevel": "stabilized", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-hardening/", "limitations": ["central_metrics_store_deferred"] },
-    { "id": "remediation_maturity", "status": "complete_pending_review", "checkerFlag": "remediationMaturity", "maturityLevel": "review_governed", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-remediation-maturity/", "limitations": ["232_unresolved_sources_remain"] },
-    { "id": "review_operations", "status": "complete_pending_review", "checkerFlag": "reviewOperations", "maturityLevel": "controlled_internal", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-operations/", "limitations": ["reviewer_disposition_writes_deferred"] },
-    { "id": "review_scaling", "status": "complete_pending_review", "checkerFlag": "reviewScaling", "maturityLevel": "modeled", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-scaling/", "limitations": ["persistent_assignment_writes_deferred"] },
-    { "id": "operational_certification", "status": "complete_pending_review", "checkerFlag": "operationalCertification", "maturityLevel": "certified_for_internal_pilot", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-certification/", "limitations": ["not_public_launch"] },
-    { "id": "internal_pilot", "status": "complete_pending_review", "checkerFlag": "internalPilot", "maturityLevel": "read_only_synthetic", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-internal-pilot/", "limitations": ["simulation_not_full_live_load"] },
-    { "id": "human_operations", "status": "complete_pending_review", "checkerFlag": "humanOperations", "maturityLevel": "feedback_maturity_read_only", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-human-operations/", "limitations": ["durable_feedback_ledger_foundation_only"] },
-    { "id": "capability_audit", "status": "complete_pending_review", "checkerFlag": "capability_audit_docs", "maturityLevel": "cognition_audited", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/", "limitations": ["future_world_class_architecture_not_implemented"] },
-    { "id": "operational_memory", "status": "complete_pending_review", "checkerFlag": "operationalMemory", "maturityLevel": "machine_readable_cognition_visible", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/", "limitations": ["registries_are_operational_memory_not_legal_authority", "reviewer_feedback_entries_empty_foundation"] },
-    { "id": "operational_graph", "status": "complete_pending_review", "checkerFlag": "operationalGraph", "maturityLevel": "queryable_governance_cognition_visible", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/", "limitations": ["graph_is_operational_cognition_not_legal_authority", "graph_is_file_backed_read_only"] },
-    { "id": "governance_query_engine", "status": "complete_pending_review", "checkerFlag": "governanceQueryEngine", "maturityLevel": "agent_context_guidance_visible", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/", "limitations": ["query_engine_is_operational_guidance_not_legal_authority", "context_packs_are_metadata_only"] },
-    { "id": "agent_orchestration", "status": "complete_pending_review", "checkerFlag": "agentOrchestration", "maturityLevel": "governed_execution_context_visible", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/", "limitations": ["agent_orchestration_is_governed_operations_not_legal_authority", "runner_framework_is_validation_gated", "no_unrestricted_agent_writes"] },
-    { "id": "autonomous_rehearsal", "status": "complete_pending_review", "checkerFlag": "autonomousRehearsal", "maturityLevel": "governed_dry_run_orchestration_visible", "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/", "limitations": ["dry_run_only_not_legal_authority", "no_production_data_mutation", "hard_stops_block_forbidden_categories"] }
+    {
+      "id": "canonicalization",
+      "status": "complete",
+      "checkerFlag": "source_of_truth",
+      "maturityLevel": "governed",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-canonicalization/",
+      "limitations": [
+        "wiki_app_split_remains"
+      ]
+    },
+    {
+      "id": "feature_alignment",
+      "status": "complete_pending_review",
+      "checkerFlag": "featureAlignmentOk",
+      "maturityLevel": "production_visible",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-feature-alignment/",
+      "limitations": [
+        "text_selector_checker_fragility"
+      ]
+    },
+    {
+      "id": "operational_hardening",
+      "status": "complete_pending_review",
+      "checkerFlag": "deploymentVerifier",
+      "maturityLevel": "stabilized",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-hardening/",
+      "limitations": [
+        "central_metrics_store_deferred"
+      ]
+    },
+    {
+      "id": "remediation_maturity",
+      "status": "complete_pending_review",
+      "checkerFlag": "remediationMaturity",
+      "maturityLevel": "review_governed",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-remediation-maturity/",
+      "limitations": [
+        "232_unresolved_sources_remain"
+      ]
+    },
+    {
+      "id": "review_operations",
+      "status": "complete_pending_review",
+      "checkerFlag": "reviewOperations",
+      "maturityLevel": "controlled_internal",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-operations/",
+      "limitations": [
+        "reviewer_disposition_writes_deferred"
+      ]
+    },
+    {
+      "id": "review_scaling",
+      "status": "complete_pending_review",
+      "checkerFlag": "reviewScaling",
+      "maturityLevel": "modeled",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-scaling/",
+      "limitations": [
+        "persistent_assignment_writes_deferred"
+      ]
+    },
+    {
+      "id": "operational_certification",
+      "status": "complete_pending_review",
+      "checkerFlag": "operationalCertification",
+      "maturityLevel": "certified_for_internal_pilot",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-certification/",
+      "limitations": [
+        "not_public_launch"
+      ]
+    },
+    {
+      "id": "internal_pilot",
+      "status": "complete_pending_review",
+      "checkerFlag": "internalPilot",
+      "maturityLevel": "read_only_synthetic",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-internal-pilot/",
+      "limitations": [
+        "simulation_not_full_live_load"
+      ]
+    },
+    {
+      "id": "human_operations",
+      "status": "complete_pending_review",
+      "checkerFlag": "humanOperations",
+      "maturityLevel": "feedback_maturity_read_only",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-human-operations/",
+      "limitations": [
+        "durable_feedback_ledger_foundation_only"
+      ]
+    },
+    {
+      "id": "capability_audit",
+      "status": "complete_pending_review",
+      "checkerFlag": "capability_audit_docs",
+      "maturityLevel": "cognition_audited",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/",
+      "limitations": [
+        "future_world_class_architecture_not_implemented"
+      ]
+    },
+    {
+      "id": "operational_memory",
+      "status": "complete_pending_review",
+      "checkerFlag": "operationalMemory",
+      "maturityLevel": "machine_readable_cognition_visible",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
+      "limitations": [
+        "registries_are_operational_memory_not_legal_authority",
+        "reviewer_feedback_entries_empty_foundation"
+      ]
+    },
+    {
+      "id": "operational_graph",
+      "status": "complete_pending_review",
+      "checkerFlag": "operationalGraph",
+      "maturityLevel": "queryable_governance_cognition_visible",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
+      "limitations": [
+        "graph_is_operational_cognition_not_legal_authority",
+        "graph_is_file_backed_read_only"
+      ]
+    },
+    {
+      "id": "governance_query_engine",
+      "status": "complete_pending_review",
+      "checkerFlag": "governanceQueryEngine",
+      "maturityLevel": "agent_context_guidance_visible",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
+      "limitations": [
+        "query_engine_is_operational_guidance_not_legal_authority",
+        "context_packs_are_metadata_only"
+      ]
+    },
+    {
+      "id": "agent_orchestration",
+      "status": "complete_pending_review",
+      "checkerFlag": "agentOrchestration",
+      "maturityLevel": "governed_execution_context_visible",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/",
+      "limitations": [
+        "agent_orchestration_is_governed_operations_not_legal_authority",
+        "runner_framework_is_validation_gated",
+        "no_unrestricted_agent_writes"
+      ]
+    },
+    {
+      "id": "autonomous_rehearsal",
+      "status": "complete_pending_review",
+      "checkerFlag": "autonomousRehearsal",
+      "maturityLevel": "governed_dry_run_orchestration_visible",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/",
+      "limitations": [
+        "dry_run_only_not_legal_authority",
+        "no_production_data_mutation",
+        "hard_stops_block_forbidden_categories"
+      ]
+    },
+    {
+      "id": "ai_remediation_execution",
+      "status": "complete_pending_review",
+      "checkerFlag": "aiRemediationExecution",
+      "maturityLevel": "ai_orchestrated_metadata_only_disposition_packets",
+      "evidencePath": "fortress-guest-platform/docs/operational/evidence/2026-05-06-ai-remediation-execution/",
+      "limitations": [
+        "232_unresolved_sources_remain_excluded_until_human_approval",
+        "recommendation_packets_only_not_legal_authority",
+        "no_source_promotion",
+        "no_counsel_signoff",
+        "no_final_legal_advice"
+      ]
+    }
   ]
 }
