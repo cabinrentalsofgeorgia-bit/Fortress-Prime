@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "evidenceRequirements": [
+    { "id": "task_plan", "description": "Task plan JSON with risk class and gates.", "prohibitedContent": ["secrets", "auth_state", "confidential_text", "restricted_content"] },
+    { "id": "execution_report", "description": "Execution report JSON with actions and validation results.", "prohibitedContent": ["secrets", "auth_state", "confidential_text", "restricted_content"] },
+    { "id": "validation_summary", "description": "Validator/checker/test summaries.", "prohibitedContent": ["secrets", "auth_state", "confidential_text", "restricted_content"] },
+    { "id": "rollback_reference", "description": "Git-revertable rollback reference.", "prohibitedContent": ["secrets", "auth_state", "confidential_text", "restricted_content"] }
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

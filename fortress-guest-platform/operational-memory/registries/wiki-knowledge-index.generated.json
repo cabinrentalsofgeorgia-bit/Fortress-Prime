@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T04:18:31.583Z",
+  "generatedAt": "2026-05-07T11:04:54.128Z",
   "sourceRefs": [
     "fortress-guest-platform/docs/architecture",
     "fortress-guest-platform/docs/operational",
@@ -81,6 +81,12 @@
       "freshness": "current_or_recent"
     },
     {
+      "path": "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+      "title": "Fortress Legal Governance Query Engine Architecture",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
       "path": "fortress-guest-platform/docs/architecture/internal-pilot-workload-model.md",
       "title": "Fortress Legal Internal Pilot Workload Model",
       "category": "architecture",
@@ -99,6 +105,12 @@
       "freshness": "historical_or_needs_review"
     },
     {
+      "path": "fortress-guest-platform/docs/architecture/operational-knowledge-graph-architecture-2026-05-06.md",
+      "title": "Fortress Legal Operational Knowledge Graph Architecture",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
       "path": "fortress-guest-platform/docs/architecture/operational-memory-architecture-2026-05-06.md",
       "title": "Operational Memory Architecture - 2026-05-06",
       "category": "architecture",
@@ -109,6 +121,12 @@
       "title": "Fortress Legal Pilot Governance Certification Framework",
       "category": "architecture",
       "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/queryable-governance-model-2026-05-06.md",
+      "title": "Fortress Legal Queryable Governance Model",
+      "category": "architecture",
+      "freshness": "current_or_recent"
     },
     {
       "path": "fortress-guest-platform/docs/architecture/queue-aging-sla-model.md",
@@ -159,6 +177,12 @@
       "freshness": "historical_or_needs_review"
     },
     {
+      "path": "fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md",
+      "title": "Fortress Legal Reviewer and Remediation Lineage Model",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
       "path": "fortress-guest-platform/docs/architecture/reviewer-workload-balancing-model.md",
       "title": "Fortress Legal Reviewer Workload Balancing Model",
       "category": "architecture",
@@ -175,6 +199,12 @@
       "title": "Source Remediation Priority Model",
       "category": "architecture",
       "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/wiki-evidence-graph-model-2026-05-06.md",
+      "title": "Fortress Legal Wiki and Evidence Graph Model",
+      "category": "architecture",
+      "freshness": "current_or_recent"
     },
     {
       "path": "fortress-guest-platform/docs/architecture/wiki-knowledge-plane-audit-2026-05-06.md",
@@ -261,8 +291,20 @@
       "freshness": "current_or_recent"
     },
     {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/summary.md",
+      "title": "Fortress Legal Operational Knowledge Graph Evidence",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
       "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-hardening/validation-summary.md",
       "title": "Operational Hardening Validation Summary",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md",
+      "title": "Fortress Legal Operational Memory Evidence",
       "category": "evidence_summary",
       "freshness": "current_or_recent"
     },
@@ -629,6 +671,12 @@
     {
       "path": "wiki/audits/2026-05-06-synthetic-retrieval-certification.md",
       "title": "Synthetic Retrieval Certification - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-07-advanced-synthetic-legal-operations-expansion.md",
+      "title": "Advanced Synthetic Legal Operations Expansion - 2026-05-07",
       "category": "wiki_audit",
       "freshness": "current_or_recent"
     },

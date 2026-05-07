@@ -4,10 +4,15 @@
   "sourceRefs": [
     "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/summary.md",
+    "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
+    "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+    "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md"
   ],
   "standingLabels": {
-    "productionStatus": "PRODUCTION_OPERATIONAL_MEMORY_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_AUTONOMOUS_REHEARSAL_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -26,7 +31,15 @@
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier.json",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/authenticated-checker-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/deployment-verifier-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/pilot-simulation-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/knowledge-graph-validation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/authenticated-checker-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/governance-query-standing.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/summary.md"
   ],
   "validationStatus": {
     "authenticatedChecker": "PASS",
@@ -35,7 +48,14 @@
     "featureAlignmentOk": true,
     "internalPilot": true,
     "humanOperations": true,
-    "operationalMemory": "PASS"
+    "operationalMemory": "PASS",
+    "operationalGraph": "PASS",
+    "governanceQueryEngine": "PASS",
+    "agentOrchestration": "PASS",
+    "autonomousRehearsal": "PASS",
+    "dryRunExecution": "PASS",
+    "hardStopEnforcement": "PASS",
+    "replayValidation": "PASS"
   },
   "rollbackRefs": [
     "git_revert_operational_memory_commits",
@@ -49,7 +69,9 @@
     "public_launch_forbidden",
     "external_legal_operations_forbidden",
     "persistent_reviewer_assignment_writes_deferred",
-    "operational_memory_complete_pending_review"
+    "governance_query_engine_complete_pending_review",
+    "agent_orchestration_complete_pending_review",
+    "autonomous_rehearsal_complete_pending_review"
   ],
   "hardStops": [
     "secret_exposure_risk",
@@ -57,6 +79,9 @@
     "restricted_content_boundary_violation",
     "schema_rls_policy_mutation_required",
     "uncontrolled_legal_automation_risk",
-    "registry_would_become_legal_authority"
+    "registry_would_become_legal_authority",
+    "agent_task_runner_would_become_legal_authority",
+    "autonomous_rehearsal_would_execute_forbidden_action",
+    "dry_run_trace_would_expose_confidential_text"
   ]
 }

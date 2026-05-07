@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "task-validation-gate.schema.json",
+  "title": "Fortress Legal Task Validation Gate",
+  "type": "object",
+  "required": ["schemaVersion", "validationGates", "standingLabels", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "validationGates": { "type": "array", "items": { "type": "object", "required": ["id", "purpose", "requiredFor"] } },
+    "standingLabels": { "type": "object" },
+    "governanceAssertions": { "$ref": "agent-task.schema.json#/$defs/governanceAssertions" }
+  }
+}

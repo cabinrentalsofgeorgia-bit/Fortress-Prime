@@ -1,0 +1,1 @@
+PASS: dry-run artifacts are metadata-only orchestration traces/replays; no confidential document text or restricted document contents were included.

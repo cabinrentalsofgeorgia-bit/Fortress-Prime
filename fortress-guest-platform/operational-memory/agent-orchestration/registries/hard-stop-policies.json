@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "policies": [
+    { "id": "secrets_exposure", "trigger": "secret_or_auth_material_requested", "requiredAction": "stop_and_report" },
+    { "id": "confidential_text_exposure", "trigger": "confidential_or_privileged_text_requested", "requiredAction": "stop_and_report" },
+    { "id": "restricted_boundary", "trigger": "locked_or_restricted_content_requested", "requiredAction": "stop_and_report" },
+    { "id": "schema_rls_policy_mutation", "trigger": "schema_rls_or_policy_change_requested", "requiredAction": "stop_and_report" },
+    { "id": "legal_authority", "trigger": "signoff_final_advice_or_external_submission_requested", "requiredAction": "stop_and_report" },
+    { "id": "source_promotion", "trigger": "unresolved_source_promotion_requested", "requiredAction": "stop_and_report" },
+    { "id": "ingestion_or_vector_write", "trigger": "upload_ingestion_or_vector_write_requested", "requiredAction": "stop_and_report" },
+    { "id": "rollback_impossible", "trigger": "rollback_plan_missing_or_impossible", "requiredAction": "stop_and_report" }
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

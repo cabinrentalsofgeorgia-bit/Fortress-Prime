@@ -1,0 +1,87 @@
+{
+  "ok": true,
+  "query": "deployment",
+  "generatedAt": "2026-05-07T10:32:51.379Z",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "nodes": [
+    {
+      "id": "deployment:canonical_runtime",
+      "type": "deployment",
+      "label": "Canonical runtime deployment",
+      "governanceBoundaries": [
+        "deployment_metadata_only",
+        "no_schema_mutation"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier-final.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "rollback:operational_memory_runtime",
+      "type": "rollback_event",
+      "label": "Operational memory runtime rollback artifacts",
+      "governanceBoundaries": [
+        "rollback_git_revertable",
+        "runtime_artifact_restore"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/rollback-artifacts.log"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:deployment_validated_by_checker",
+      "type": "validated_by",
+      "from": "deployment:canonical_runtime",
+      "to": "checker:production_ui",
+      "fromType": "deployment",
+      "toType": "checker_run",
+      "label": "deployment validated by authenticated checker",
+      "governanceBoundaries": [
+        "authenticated_internal_only"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker-final.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:deployment_mitigated_by_rollback",
+      "type": "mitigated_by",
+      "from": "deployment:canonical_runtime",
+      "to": "rollback:operational_memory_runtime",
+      "fromType": "deployment",
+      "toType": "rollback_event",
+      "label": "runtime deployment has rollback artifacts",
+      "governanceBoundaries": [
+        "rollback_ready"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/rollback-artifacts.log"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true
+  }
+}

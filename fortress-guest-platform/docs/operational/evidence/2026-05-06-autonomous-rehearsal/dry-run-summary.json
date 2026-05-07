@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T12:37:14.754Z",
+  "traceCount": 10,
+  "replayCount": 10,
+  "blockedActionCount": 0,
+  "hardStopCount": 1,
+  "categories": [
+    "contradiction-review-simulation",
+    "deployment-verification-simulation",
+    "evidence-summary",
+    "external_submission",
+    "governance-query",
+    "incident-tabletop",
+    "registry-update-simulation",
+    "remediation-triage-simulation",
+    "reviewer-guidance-simulation",
+    "rollback-tabletop"
+  ],
+  "allReplaysValidated": true,
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "noLegalAuthority": true,
+  "noExternalAuthority": true,
+  "nonDestructiveDryRunOnly": true
+}

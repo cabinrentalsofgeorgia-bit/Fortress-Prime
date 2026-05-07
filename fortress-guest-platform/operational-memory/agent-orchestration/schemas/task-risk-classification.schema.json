@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "task-risk-classification.schema.json",
+  "title": "Fortress Legal Task Risk Classification",
+  "type": "object",
+  "required": ["schemaVersion", "riskClasses", "standingLabels", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "riskClasses": { "type": "array", "items": { "type": "object", "required": ["id", "description", "humanReviewRequired"] } },
+    "standingLabels": { "type": "object" },
+    "governanceAssertions": { "$ref": "agent-task.schema.json#/$defs/governanceAssertions" }
+  }
+}

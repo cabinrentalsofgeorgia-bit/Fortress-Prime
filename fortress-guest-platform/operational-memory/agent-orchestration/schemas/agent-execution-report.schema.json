@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-execution-report.schema.json",
+  "title": "Fortress Legal Agent Execution Report",
+  "type": "object",
+  "required": ["schemaVersion", "reportId", "taskId", "planId", "actionsAttempted", "actionsSkipped", "hardStopsEncountered", "validationResults", "evidenceRefs", "rollbackRefs", "standingLabels", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "reportId": { "type": "string" },
+    "taskId": { "type": "string" },
+    "planId": { "type": "string" },
+    "actionsAttempted": { "type": "array", "items": { "type": "object" } },
+    "actionsSkipped": { "type": "array", "items": { "type": "object" } },
+    "hardStopsEncountered": { "type": "array", "items": { "type": "string" } },
+    "validationResults": { "type": "array", "items": { "type": "object" } },
+    "evidenceRefs": { "type": "array", "items": { "type": "string" } },
+    "rollbackRefs": { "type": "array", "items": { "type": "string" } },
+    "standingLabels": { "type": "object" },
+    "humanReviewRequired": { "type": "boolean" },
+    "governanceAssertions": { "$ref": "agent-task.schema.json#/$defs/governanceAssertions" }
+  }
+}

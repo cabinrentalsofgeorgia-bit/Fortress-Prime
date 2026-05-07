@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T12:33:47.936Z",
+  "contextPackType": "deployment-verification",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AUTONOMOUS_REHEARSAL_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": [
+    "context_pack_metadata_only",
+    "not_legal_authority",
+    "human_review_required"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/"
+  ],
+  "readFirst": [
+    "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+    "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
+    "fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs",
+    "fortress-guest-platform/scripts/agent-orchestration/replay-dry-run.mjs",
+    "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/agent-orchestration/registries/allowed-actions.json",
+    "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
+    "fortress-guest-platform/operational-memory/agent-orchestration/registries/hard-stop-policies.json",
+    "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
+    "fortress-guest-platform/operational-memory/graph/graph.json",
+    "fortress-guest-platform/operational-memory/registries/operational-state.json",
+    "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json"
+  ],
+  "validationCommands": [
+    "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
+    "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
+    "node fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
+    "node fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs --category validation-only",
+    "node fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
+    "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
+    "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs"
+  ],
+  "safeNextActions": [
+    {
+      "action": "Review autonomous rehearsal dry-run traces and replay evidence",
+      "reason": "Governed dry-runs now exercise hard stops, replay validation, and evidence-backed orchestration without production mutation.",
+      "requiredAuthority": "senior_engineer_or_governance_reviewer",
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+        "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/"
+      ],
+      "humanReviewRequired": true
+    },
+    {
+      "action": "Use query outputs to scope the next controlled operational planning phase",
+      "reason": "Query engine can now answer blockers, safe actions, forbidden actions, and read-first context.",
+      "requiredAuthority": "operator_or_engineering_lead",
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/queries/query-taxonomy.json"
+      ],
+      "humanReviewRequired": true
+    },
+    {
+      "action": "Plan structured remediation review without source promotion",
+      "reason": "232 unresolved source issues remain excluded and require human review.",
+      "requiredAuthority": "counsel_or_source_review_lead",
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
+      ],
+      "humanReviewRequired": true
+    }
+  ],
+  "forbiddenActions": [
+    {
+      "action": "auto_signoff",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "final_legal_conclusion",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "filing_service_email_external_submission",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "restricted_content_review",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "unresolved_source_promotion",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "document_upload_or_ingestion",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "duplicate_vectors_or_document_rows",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "schema_rls_policy_mutation",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    },
+    {
+      "action": "secrets_or_auth_state_storage",
+      "reason": "Forbidden by governance registry and standing labels.",
+      "hardStopIfAttempted": true
+    }
+  ],
+  "blockers": [
+    "232_unresolved_source_issues_excluded",
+    "counsel_signoff_pending",
+    "public_launch_forbidden",
+    "external_legal_operations_forbidden",
+    "persistent_reviewer_assignment_writes_deferred",
+    "governance_query_engine_complete_pending_review",
+    "agent_orchestration_complete_pending_review",
+    "autonomous_rehearsal_complete_pending_review"
+  ],
+  "remediationStatus": {
+    "unresolvedSourceIssues": 232,
+    "unresolvedSourceExclusionStatus": "EXCLUDED_FROM_RELIED_UPON_SECTIONS",
+    "categories": [
+      "missing_source",
+      "broken_source_link",
+      "low_confidence_source",
+      "contradictory_source",
+      "unsupported_assertion",
+      "privileged_restricted_exclusion",
+      "metadata_only_limitation"
+    ],
+    "noAutoResolution": true,
+    "humanReviewRequired": true
+  },
+  "rollbackReadiness": {
+    "rollbackRefs": [
+      "git_revert_operational_graph_commits",
+      "delete_graph_runtime_visibility",
+      "no_runtime_data_mutation"
+    ],
+    "deploymentRollbackNodes": [
+      {
+        "id": "rollback:operational_memory_runtime",
+        "label": "Operational memory runtime rollback artifacts",
+        "evidenceRefs": [
+          "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/rollback-artifacts.log"
+        ]
+      }
+    ],
+    "gitRevertable": true
+  },
+  "negativeControls": {
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "readOnly": true
+  }
+}

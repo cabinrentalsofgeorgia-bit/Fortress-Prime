@@ -1,0 +1,262 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": [
+    "fortress-guest-platform/operational-memory/registries/operational-state.json",
+    "fortress-guest-platform/operational-memory/registries/capability-registry.json",
+    "fortress-guest-platform/operational-memory/registries/governance-registry.json",
+    "fortress-guest-platform/operational-memory/registries/evidence-registry.json",
+    "fortress-guest-platform/operational-memory/registries/remediation-registry.json",
+    "fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json",
+    "fortress-guest-platform/operational-memory/registries/wiki-knowledge-index.json"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": [
+    "graph_as_operational_cognition_not_legal_authority",
+    "unresolved_sources_excluded",
+    "metadata_only_restricted_handling",
+    "human_review_required",
+    "read_only_graph_visibility"
+  ],
+  "validationStatus": {
+    "status": "INITIAL_GRAPH_READY",
+    "graphValidation": "PENDING_VALIDATION_TOOL",
+    "queryableGovernance": true,
+    "queryableEvidenceLineage": true,
+    "queryableRemediationLineage": true
+  },
+  "rollbackRefs": [
+    "git_revert_operational_graph_commits",
+    "delete_graph_runtime_visibility",
+    "no_runtime_data_mutation"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "nodes": [
+    {
+      "id": "state:production",
+      "type": "operational_state",
+      "label": "Production operational standing",
+      "standingLabels": {
+        "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+        "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+        "externalSubmissionAuthority": "NOT_AUTHORIZED"
+      },
+      "governanceBoundaries": ["graph_not_legal_authority", "human_review_required"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/operational-state.json"],
+      "validationRefs": ["fortress-guest-platform/operational-memory/registries/validation-report.json"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "capability:operational_memory",
+      "type": "capability",
+      "label": "Machine-readable operational memory",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["registry_not_legal_authority"],
+      "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/"],
+      "validationRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/operational-memory-validation.json"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "capability:operational_graph",
+      "type": "capability",
+      "label": "Operational knowledge graph",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["graph_not_legal_authority", "read_only_graph_visibility"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/graph/graph.json"],
+      "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "governance:no_signoff",
+      "type": "governance_boundary",
+      "label": "No counsel signoff authority",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["no_signoff", "human_review_required"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/governance-registry.json"],
+      "validationRefs": ["scripts/verification/check-crog-fortress-ui.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "governance:no_external_authority",
+      "type": "governance_boundary",
+      "label": "No external submission authority",
+      "standingLabels": { "externalSubmissionAuthority": "NOT_AUTHORIZED" },
+      "governanceBoundaries": ["no_external_submission", "no_filing_service_email"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/governance-registry.json"],
+      "validationRefs": ["scripts/verification/check-crog-fortress-ui.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "remediation:unresolved_232",
+      "type": "remediation_issue",
+      "label": "232 unresolved source issues excluded",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["unresolved_sources_excluded", "no_auto_resolution", "human_review_required"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/remediation-registry.json"],
+      "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true,
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": "EXCLUDED_FROM_RELIED_UPON_SECTIONS"
+    },
+    {
+      "id": "contradiction:cluster_14",
+      "type": "contradiction_cluster",
+      "label": "14 contradiction candidates require human review",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["contradictions_not_final_findings", "human_review_required"],
+      "evidenceRefs": ["fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md"],
+      "validationRefs": ["scripts/verification/run-controlled-pilot-simulation.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "review_queue:remediation",
+      "type": "review_queue",
+      "label": "Remediation review queue",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["review_queue_read_only_summary", "no_source_promotion"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/remediation-registry.json"],
+      "validationRefs": ["scripts/verification/check-crog-fortress-ui.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "reviewer_feedback:foundation",
+      "type": "reviewer_feedback",
+      "label": "Reviewer feedback ledger foundation",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["no_freeform_legal_text", "empty_ledger_foundation"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json"],
+      "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true,
+      "humanReviewRequired": true
+    },
+    {
+      "id": "evidence:operational_memory",
+      "type": "evidence_bundle",
+      "label": "Operational memory validation evidence",
+      "standingLabels": { "externalSubmissionAuthority": "NOT_AUTHORIZED" },
+      "governanceBoundaries": ["evidence_metadata_only", "no_confidential_text"],
+      "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/"],
+      "validationRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "deployment:canonical_runtime",
+      "type": "deployment",
+      "label": "Canonical runtime deployment",
+      "standingLabels": { "schemaRlsPolicyMutation": "NOT_PERFORMED" },
+      "governanceBoundaries": ["deployment_metadata_only", "no_schema_mutation"],
+      "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier-final.json"],
+      "validationRefs": ["scripts/verification/verify-production-deployment.mjs"],
+      "rollbackRefs": ["rollback:operational_memory_runtime"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "rollback:operational_memory_runtime",
+      "type": "rollback_event",
+      "label": "Operational memory runtime rollback artifacts",
+      "standingLabels": { "schemaRlsPolicyMutation": "NOT_PERFORMED" },
+      "governanceBoundaries": ["rollback_git_revertable", "runtime_artifact_restore"],
+      "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/rollback-artifacts.log"],
+      "validationRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/service-status-after-restart.log"],
+      "rollbackRefs": ["restore_recorded_runtime_artifacts"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "checker:production_ui",
+      "type": "checker_run",
+      "label": "Authenticated production UI checker",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["authenticated_checker_no_text_sample", "no_auth_state_printing"],
+      "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker-final.json"],
+      "validationRefs": ["scripts/verification/check-crog-fortress-ui.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "validation:operational_memory",
+      "type": "validation_run",
+      "label": "Operational memory validation",
+      "standingLabels": { "externalSubmissionAuthority": "NOT_AUTHORIZED" },
+      "governanceBoundaries": ["validator_blocks_forbidden_authority", "validator_blocks_secret_patterns"],
+      "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/operational-memory-validation.json"],
+      "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "wiki:operational_index",
+      "type": "wiki_knowledge_node",
+      "label": "Canonical operational knowledge index",
+      "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+      "governanceBoundaries": ["wiki_index_path_metadata_only"],
+      "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/wiki-knowledge-index.json"],
+      "validationRefs": ["fortress-guest-platform/scripts/operational-memory/build-wiki-knowledge-index.mjs"],
+      "rollbackRefs": ["git_revert"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    },
+    {
+      "id": "phase:operational_graph",
+      "type": "operational_phase",
+      "label": "Operational knowledge graph and queryable governance",
+      "standingLabels": { "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW" },
+      "governanceBoundaries": ["phase_preserves_governance", "graph_read_only"],
+      "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/"],
+      "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs"],
+      "rollbackRefs": ["git_revert_operational_graph_commits"],
+      "noSecrets": true,
+      "noConfidentialText": true
+    }
+  ],
+  "edges": [
+    { "id": "edge:phase_supports_graph", "type": "supports", "from": "phase:operational_graph", "to": "capability:operational_graph", "label": "phase creates graph capability", "governanceBoundaries": ["graph_read_only"], "evidenceRefs": ["fortress-guest-platform/operational-memory/graph/graph.json"], "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:graph_derives_memory", "type": "derives_from", "from": "capability:operational_graph", "to": "capability:operational_memory", "label": "graph derives from operational memory registries", "governanceBoundaries": ["registry_as_source"], "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/"], "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:state_governed_no_signoff", "type": "governed_by", "from": "state:production", "to": "governance:no_signoff", "label": "state preserves counsel signoff pending", "governanceBoundaries": ["no_signoff"], "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/operational-state.json"], "validationRefs": ["scripts/verification/check-crog-fortress-ui.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:state_governed_no_external", "type": "governed_by", "from": "state:production", "to": "governance:no_external_authority", "label": "state preserves no external authority", "governanceBoundaries": ["no_external_submission"], "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/operational-state.json"], "validationRefs": ["scripts/verification/check-crog-fortress-ui.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:remediation_blocks_full_expansion", "type": "blocks", "from": "remediation:unresolved_232", "to": "capability:operational_graph", "label": "unresolved issues remain excluded and block relied-upon expansion", "governanceBoundaries": ["unresolved_sources_excluded"], "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/remediation-registry.json"], "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true, "humanReviewRequired": true, "unresolvedSourceBoundary": "EXCLUDED_FROM_RELIED_UPON_SECTIONS" },
+    { "id": "edge:remediation_excluded_by_governance", "type": "excluded_by", "from": "remediation:unresolved_232", "to": "governance:no_signoff", "label": "unresolved sources excluded by governance", "governanceBoundaries": ["no_source_promotion"], "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/remediation-registry.json"], "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true, "humanReviewRequired": true, "unresolvedSourceBoundary": "EXCLUDED_FROM_RELIED_UPON_SECTIONS" },
+    { "id": "edge:contradictions_escalate_review", "type": "escalated_to", "from": "contradiction:cluster_14", "to": "review_queue:remediation", "label": "contradictions require human remediation review", "governanceBoundaries": ["human_review_required"], "evidenceRefs": ["fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md"], "validationRefs": ["scripts/verification/run-controlled-pilot-simulation.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true, "humanReviewRequired": true },
+    { "id": "edge:feedback_governed_no_freeform", "type": "governed_by", "from": "reviewer_feedback:foundation", "to": "governance:no_external_authority", "label": "feedback ledger prohibits external instructions and freeform legal text", "governanceBoundaries": ["no_freeform_legal_text"], "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json"], "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:evidence_validates_memory", "type": "validated_by", "from": "capability:operational_memory", "to": "evidence:operational_memory", "label": "evidence validates operational memory", "governanceBoundaries": ["evidence_metadata_only"], "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/"], "validationRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:deployment_validated_by_checker", "type": "validated_by", "from": "deployment:canonical_runtime", "to": "checker:production_ui", "label": "deployment validated by authenticated checker", "governanceBoundaries": ["authenticated_internal_only"], "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker-final.json"], "validationRefs": ["scripts/verification/check-crog-fortress-ui.mjs"], "rollbackRefs": ["rollback:operational_memory_runtime"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:deployment_mitigated_by_rollback", "type": "mitigated_by", "from": "deployment:canonical_runtime", "to": "rollback:operational_memory_runtime", "label": "runtime deployment has rollback artifacts", "governanceBoundaries": ["rollback_ready"], "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/rollback-artifacts.log"], "validationRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/service-status-after-restart.log"], "rollbackRefs": ["restore_recorded_runtime_artifacts"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:wiki_references_graph", "type": "references", "from": "wiki:operational_index", "to": "capability:operational_graph", "label": "wiki index references graph capability", "governanceBoundaries": ["path_metadata_only"], "evidenceRefs": ["fortress-guest-platform/operational-memory/registries/wiki-knowledge-index.json"], "validationRefs": ["fortress-guest-platform/scripts/operational-memory/build-wiki-knowledge-index.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true },
+    { "id": "edge:graph_validated_by_validator", "type": "validated_by", "from": "capability:operational_graph", "to": "validation:operational_memory", "label": "graph validation extends operational memory validation", "governanceBoundaries": ["validator_blocks_forbidden_authority"], "evidenceRefs": ["fortress-guest-platform/operational-memory/graph/graph.json"], "validationRefs": ["fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs"], "rollbackRefs": ["git_revert"], "noSecrets": true, "noConfidentialText": true }
+  ]
+}

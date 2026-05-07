@@ -1390,6 +1390,16 @@ export interface OperationalMemoryResponse {
     reviewerFeedbackEntries: number;
     unresolvedSourceIssues: number;
     reviewerLedgerMode: string;
+    graphNodeCount?: number;
+    graphEdgeCount?: number;
+    graphValidationOk?: boolean;
+    governanceQueryCount?: number;
+    contextPackCount?: number;
+    agentAllowedActionCount?: number;
+    agentForbiddenActionCount?: number;
+    agentHardStopCount?: number;
+    agentPlanCount?: number;
+    agentReportCount?: number;
   };
   registries: {
     operational_state: Record<string, unknown>;
@@ -1431,6 +1441,128 @@ export interface OperationalMemoryResponse {
       errors: string[];
       warnings: string[];
     };
+  };
+  graph?: {
+    status: string;
+    summary: {
+      nodeCount: number;
+      edgeCount: number;
+      governanceNodes: number;
+      remediationNodes: number;
+      evidenceNodes: number;
+      deploymentNodes: number;
+      wikiGraphNodes: number;
+      evidenceGraphNodes: number;
+    };
+    nodes: Array<{
+      id: string;
+      type: string;
+      label: string;
+      governanceBoundaries?: string[];
+      evidenceRefs?: string[];
+      humanReviewRequired?: boolean;
+      unresolvedSourceBoundary?: string;
+    }>;
+    edges: Array<{
+      id: string;
+      type: string;
+      from: string;
+      to: string;
+      label: string;
+      governanceBoundaries?: string[];
+      unresolvedSourceBoundary?: string;
+    }>;
+    validation?: {
+      ok: boolean;
+      nodeCount: number;
+      edgeCount: number;
+      noSecrets: boolean;
+      noConfidentialText: boolean;
+      governancePreserved: boolean;
+    } | null;
+    wikiGraphIndex?: { nodes?: unknown[]; edges?: unknown[] } | null;
+    evidenceGraphIndex?: { nodes?: unknown[]; edges?: unknown[] } | null;
+  };
+  governanceQueryEngine?: {
+    status: string;
+    queryCount: number;
+    queries: string[];
+    safeNextActions: Array<{ action: string; reason?: string; humanReviewRequired?: boolean }>;
+    forbiddenOperations: string[];
+    signoffBlockers: string[];
+    launchBlockers: string[];
+    agentContext?: {
+      safeOperatingMode?: string;
+      nextRecommendedPhase?: string;
+      readFirst?: string[];
+      validationCommands?: string[];
+      knownBlockers?: string[];
+    } | null;
+    contextPacks: Array<{
+      contextPackType?: string;
+      readFirst: string[];
+      safeNextActions: unknown[];
+      forbiddenActionCount: number;
+      noSecrets: boolean;
+      noConfidentialText: boolean;
+    }>;
+  };
+  agentOrchestration?: {
+    status: string;
+    allowedActions: Array<{ id: string; category: string; riskClass: string }>;
+    forbiddenActions: Array<{ id: string; category: string; riskClass: string }>;
+    hardStops: Array<{ id: string; trigger: string; requiredAction: string }>;
+    riskClassifications: Array<{ id: string; description: string; humanReviewRequired: boolean }>;
+    validationGates: Array<{ id: string; purpose: string; requiredFor: string[] }>;
+    evidenceRequirements: Array<{ id: string; description: string; prohibitedContent: string[] }>;
+    latestPlans: Array<{
+      planId: string;
+      taskId: string;
+      riskClass: string;
+      validationGates: string[];
+      humanReviewRequired: boolean;
+    }>;
+    latestReports: Array<{
+      reportId: string;
+      taskId: string;
+      planId: string;
+      hardStopsEncountered: string[];
+      humanReviewRequired: boolean;
+    }>;
+    validation?: {
+      ok: boolean;
+      errors: string[];
+      warnings: string[];
+      governancePreserved: boolean;
+    } | null;
+    governanceAssertions: Record<string, boolean>;
+  };
+  autonomousRehearsal?: {
+    status: string;
+    allowedCategories: string[];
+    forbiddenCategories: string[];
+    summary: {
+      traceCount: number;
+      replayCount: number;
+      hardStopCount: number;
+      blockedActionCount: number;
+      validationGatePassCount: number;
+      allReplaysValidated: boolean;
+    };
+    latestTraces: Array<{
+      dryRunId?: string;
+      category?: string;
+      status?: string;
+      hardStopsTriggered: string[];
+      blockedActions: string[];
+    }>;
+    latestReplays: Array<{
+      replayId?: string;
+      dryRunId?: string;
+      ok?: boolean;
+      governancePreserved?: boolean;
+    }>;
+    governanceAssertions: Record<string, boolean>;
   };
   negativeControls: Record<string, boolean>;
 }

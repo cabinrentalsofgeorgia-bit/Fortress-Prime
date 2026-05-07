@@ -160,13 +160,16 @@ await page
           body.includes("Forbidden Pilot Actions") ||
           body.includes("Controlled Human Operations") ||
           body.includes("Operational Feedback Capture") ||
-          body.includes("Operational Memory / Machine-Readable Cognition"))
+          body.includes("Operational Memory / Machine-Readable Cognition") ||
+          body.includes("Operational Knowledge Graph / Queryable Governance") ||
+          body.includes("Autonomous Operations Rehearsal / Governed Dry-Runs"))
       );
     },
     { timeout: 20000 },
   )
   .catch(() => {});
 text += "\n" + (await bodyText());
+const lowerText = text.toLowerCase();
 
 result.checks.authenticatedMatter = text.includes("Fortress Legal Production Review");
 result.checks.signoffPending = text.includes("COUNSEL_SIGNOFF_PENDING");
@@ -280,6 +283,69 @@ result.checks.reviewerLedgerFoundation =
   text.includes("Reviewer Feedback Ledger Foundation") &&
   text.includes("EMPTY LEDGER FOUNDATION") &&
   text.includes("no freeform legal text true");
+result.checks.operationalGraph =
+  text.includes("Operational Knowledge Graph / Queryable Governance") &&
+  text.includes("operationalGraph true") &&
+  text.includes("graph-as-operational-cognition, not legal authority") &&
+  text.includes("Graph Entities") &&
+  text.includes("Graph Relationships");
+result.checks.governanceGraph =
+  lowerText.includes("governance graph");
+result.checks.evidenceGraph =
+  lowerText.includes("evidence graph");
+result.checks.remediationGraph =
+  lowerText.includes("remediation graph");
+result.checks.graphValidation =
+  text.includes("operationalGraph true") &&
+  text.includes("graph-as-operational-cognition, not legal authority");
+result.checks.governanceQueryEngine =
+  text.includes("Governance Query Engine / Agent Operating Context") &&
+  text.includes("governanceQueryEngine true") &&
+  text.includes("query-engine-as-operational-guidance, not legal authority");
+result.checks.agentContext =
+  text.includes("Agent Operating Context") &&
+  (text.includes("read only governance query engine and agent context") ||
+    text.includes("governed agent orchestration with validation gates"));
+result.checks.safeNextActionsVisible = text.includes("Safe Next Actions");
+result.checks.forbiddenActionsVisible = text.includes("Forbidden Actions");
+result.checks.signoffBlockersVisible = lowerText.includes("signoff blockers");
+result.checks.launchBlockersVisible = lowerText.includes("launch blockers");
+result.checks.agentOrchestration =
+  text.includes("Agent Execution Governance / Safe Task Orchestration") &&
+  text.includes("agentOrchestration true") &&
+  text.includes("governed operations, not legal authority");
+result.checks.hardStopsVisible =
+  text.includes("Hard Stop Policies") &&
+  lowerText.includes("secrets exposure") &&
+  lowerText.includes("legal authority");
+result.checks.allowedActionsVisible =
+  text.includes("Allowed Agent Actions") &&
+  lowerText.includes("read operational state");
+result.checks.taskRiskClassifier =
+  text.includes("Task Risk Classifier / Plan Validation") &&
+  lowerText.includes("safe read only");
+result.checks.agentPlanGeneration = text.includes("Latest Agent Plans");
+result.checks.executionReportValidation = text.includes("Execution Reports");
+result.checks.autonomousRehearsal =
+  text.includes("Autonomous Operations Rehearsal / Governed Dry-Runs") &&
+  text.includes("autonomousRehearsal true") &&
+  text.includes("dry-run-only, not legal authority");
+result.checks.dryRunExecution =
+  text.includes("dryRunExecution true") &&
+  text.includes("Execution Traces") &&
+  text.includes("Allowed Dry-Run Categories");
+result.checks.hardStopEnforcement =
+  text.includes("hardStopEnforcement true") ||
+  (text.includes("Hard Stops") && text.includes("Forbidden Dry-Run Categories"));
+result.checks.replayValidation =
+  text.includes("Replay Validation") &&
+  (text.includes("replayValidation true") || text.includes("PASS"));
+result.checks.blockedActionHandling =
+  text.includes("blockedActionHandling true") ||
+  text.includes("Blocked Actions");
+result.checks.governanceAssertionVisibility =
+  text.includes("governanceAssertionVisibility true") &&
+  text.includes("non destructive dry run only true");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -324,7 +390,30 @@ result.featureAlignmentOk =
   result.checks.remediationRegistry &&
   result.checks.evidenceRegistry &&
   result.checks.wikiKnowledgeIndex &&
-  result.checks.reviewerLedgerFoundation;
+  result.checks.reviewerLedgerFoundation &&
+  result.checks.operationalGraph &&
+  result.checks.governanceGraph &&
+  result.checks.evidenceGraph &&
+  result.checks.remediationGraph &&
+  result.checks.graphValidation &&
+  result.checks.governanceQueryEngine &&
+  result.checks.agentContext &&
+  result.checks.safeNextActionsVisible &&
+  result.checks.forbiddenActionsVisible &&
+  result.checks.signoffBlockersVisible &&
+  result.checks.launchBlockersVisible &&
+  result.checks.agentOrchestration &&
+  result.checks.hardStopsVisible &&
+  result.checks.allowedActionsVisible &&
+  result.checks.taskRiskClassifier &&
+  result.checks.agentPlanGeneration &&
+  result.checks.executionReportValidation &&
+  result.checks.autonomousRehearsal &&
+  result.checks.dryRunExecution &&
+  result.checks.hardStopEnforcement &&
+  result.checks.replayValidation &&
+  result.checks.blockedActionHandling &&
+  result.checks.governanceAssertionVisibility;
 
 console.log(JSON.stringify(result, null, 2));
 

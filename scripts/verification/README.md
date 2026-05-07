@@ -48,6 +48,10 @@ The checker reports two top-level outcomes:
 - Internal pilot visibility is included after the controlled-internal-pilot phase. It checks for Controlled Internal Pilot Operations, allowed/forbidden pilot exercises, Pilot Throughput Metrics, Pilot Simulation / Drills, no production writes, and forbidden legal-signoff/external-submission labels.
 - Human operations visibility is included after the controlled-human-operations phase. It checks for Controlled Human Operations, Reviewer Onboarding Governance, Operational Feedback Capture, Governance Exception Handling, Operational Drift Detection, Human Incident Rehearsal, and explicit halt/no-write/no-source-promotion boundaries.
 - Operational memory visibility is included after the machine-readable cognition phase. It checks for Operational Memory / Machine-Readable Cognition, Governance Registry, Remediation Registry, Evidence Registry, Capability Registry, Wiki / App / Evidence Knowledge Index, and Reviewer Feedback Ledger Foundation.
+- Operational graph visibility is included after the queryable-governance phase. It checks for Operational Knowledge Graph / Queryable Governance, graph entities, graph relationships, governance graph, evidence graph, remediation graph, and graph validation labels.
+- Governance query engine visibility is included after the agent-context phase. It checks for Governance Query Engine / Agent Operating Context, safe next actions, forbidden actions, signoff blockers, launch blockers, and agent context labels.
+- Agent orchestration visibility is included after the governed-execution phase. It checks for Agent Execution Governance / Safe Task Orchestration, hard stops, allowed actions, task risk classification, plan generation, and execution report validation.
+- Autonomous rehearsal visibility is included after the governed dry-run phase. It checks for Autonomous Operations Rehearsal / Governed Dry-Runs, dry-run execution traces, hard-stop enforcement, replay validation, blocked-action handling, and governance assertion visibility.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -74,7 +78,30 @@ For Fortress Legal production feature alignment, expected target values are:
     "remediationRegistry": true,
     "evidenceRegistry": true,
     "wikiKnowledgeIndex": true,
-    "reviewerLedgerFoundation": true
+    "reviewerLedgerFoundation": true,
+    "operationalGraph": true,
+    "governanceGraph": true,
+    "evidenceGraph": true,
+    "remediationGraph": true,
+    "graphValidation": true,
+    "governanceQueryEngine": true,
+    "agentContext": true,
+    "safeNextActionsVisible": true,
+    "forbiddenActionsVisible": true,
+    "signoffBlockersVisible": true,
+    "launchBlockersVisible": true,
+    "agentOrchestration": true,
+    "hardStopsVisible": true,
+    "allowedActionsVisible": true,
+    "taskRiskClassifier": true,
+    "agentPlanGeneration": true,
+    "executionReportValidation": true,
+    "autonomousRehearsal": true,
+    "dryRunExecution": true,
+    "hardStopEnforcement": true,
+    "replayValidation": true,
+    "blockedActionHandling": true,
+    "governanceAssertionVisibility": true
   }
 }
 ```
@@ -108,6 +135,12 @@ Error classifications are operational only:
 - `backend_or_bff_failure`
 - `runtime_failure`
 - `auth_guard`
+
+## Agent Orchestration Assertions
+
+Agent orchestration assertions are read-only. They verify that hard stops, allowed actions, forbidden actions, task risk classifications, generated plans, and execution report validation are visible as governed operational context.
+
+They do not prove or grant autonomous legal authority, counsel signoff, final legal advice, external submission authority, unresolved-source promotion, or schema/RLS/policy mutation.
 
 ## Deployment Verification
 

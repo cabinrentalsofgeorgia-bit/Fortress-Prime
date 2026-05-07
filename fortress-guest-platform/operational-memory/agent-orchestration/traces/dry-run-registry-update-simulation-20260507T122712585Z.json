@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0.0",
+  "dryRunId": "dry-run-registry-update-simulation-20260507T122712585Z",
+  "generatedAt": "2026-05-07T12:27:12.586Z",
+  "category": "registry-update-simulation",
+  "status": "DRY_RUN_SIMULATED_SUCCESS",
+  "planId": "synthetic-plan",
+  "taskId": "synthetic-task-registry-update-simulation",
+  "executionPath": [
+    "load_plan",
+    "load_dry_run_categories",
+    "validate_allowed_category",
+    "validate_forbidden_actions",
+    "simulate_execution",
+    "record_governance_assertions"
+  ],
+  "decisionsTaken": [
+    {
+      "decision": "category_allowed",
+      "result": true
+    },
+    {
+      "decision": "category_forbidden",
+      "result": false
+    },
+    {
+      "decision": "production_mutation",
+      "result": false
+    },
+    {
+      "decision": "legal_authority",
+      "result": false
+    }
+  ],
+  "simulatedStates": [
+    {
+      "actionId": "run_validation",
+      "simulatedOnly": true,
+      "result": "simulated_pass"
+    }
+  ],
+  "blockedActions": [],
+  "hardStopsTriggered": [],
+  "hardStopPolicies": [
+    "secrets_exposure",
+    "confidential_text_exposure",
+    "restricted_boundary",
+    "schema_rls_policy_mutation",
+    "legal_authority",
+    "source_promotion",
+    "ingestion_or_vector_write",
+    "rollback_impossible"
+  ],
+  "validationGates": [
+    "validate_agent_orchestration",
+    "governance_query_smoke"
+  ],
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/"
+  ],
+  "rollbackRefs": [
+    "delete dry-run trace and replay artifacts; no production mutation performed."
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "humanReviewRequired": true,
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true,
+    "nonDestructiveDryRunOnly": true
+  }
+}

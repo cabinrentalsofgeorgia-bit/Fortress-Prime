@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": ["fortress-guest-platform/docs/architecture/operational-knowledge-graph-architecture-2026-05-06.md"],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED"
+  },
+  "governanceBoundaries": ["graph_edge_metadata_only", "graph_not_signoff_authority"],
+  "evidenceRefs": [],
+  "validationStatus": { "status": "SCHEMA_DEFINED" },
+  "rollbackRefs": ["git_revert"],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "allowedEdgeTypes": [
+    "supports",
+    "blocks",
+    "derives_from",
+    "validated_by",
+    "governed_by",
+    "escalated_to",
+    "linked_to",
+    "supersedes",
+    "references",
+    "generated_from",
+    "excluded_by",
+    "observed_in",
+    "mitigated_by"
+  ],
+  "forbiddenEdgeTypes": [
+    "signs_off",
+    "finalizes_legal_conclusion",
+    "authorizes_external_submission",
+    "promotes_unresolved_source",
+    "bypasses_restricted_content"
+  ],
+  "requiredFields": [
+    "id",
+    "type",
+    "from",
+    "to",
+    "label",
+    "governanceBoundaries",
+    "evidenceRefs",
+    "validationRefs",
+    "rollbackRefs",
+    "noSecrets",
+    "noConfidentialText"
+  ]
+}

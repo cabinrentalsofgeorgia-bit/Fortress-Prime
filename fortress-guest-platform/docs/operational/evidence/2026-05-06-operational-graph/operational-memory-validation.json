@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T10:32:51.217Z",
+  "ok": true,
+  "registriesChecked": [
+    "operational-memory/registries/capability-registry.json",
+    "operational-memory/registries/evidence-registry.json",
+    "operational-memory/registries/governance-registry.json",
+    "operational-memory/registries/operational-state.generated.json",
+    "operational-memory/registries/operational-state.json",
+    "operational-memory/registries/remediation-registry.json",
+    "operational-memory/registries/reviewer-feedback-ledger.json",
+    "operational-memory/registries/wiki-knowledge-index.generated.json",
+    "operational-memory/registries/wiki-knowledge-index.json"
+  ],
+  "errors": [],
+  "warnings": [],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "noSecrets": true,
+  "noConfidentialText": true
+}

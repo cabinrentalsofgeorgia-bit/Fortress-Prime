@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-05-07T10:32:51.285Z",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "nodeCount": 16,
+  "edgeCount": 13,
+  "nodeTypes": {
+    "capability": 2,
+    "checker_run": 1,
+    "contradiction_cluster": 1,
+    "deployment": 1,
+    "evidence_bundle": 1,
+    "governance_boundary": 2,
+    "operational_phase": 1,
+    "operational_state": 1,
+    "remediation_issue": 1,
+    "review_queue": 1,
+    "reviewer_feedback": 1,
+    "rollback_event": 1,
+    "validation_run": 1,
+    "wiki_knowledge_node": 1
+  },
+  "edgeTypes": {
+    "blocks": 1,
+    "derives_from": 1,
+    "escalated_to": 1,
+    "excluded_by": 1,
+    "governed_by": 3,
+    "mitigated_by": 1,
+    "references": 1,
+    "supports": 1,
+    "validated_by": 3
+  },
+  "governanceNodes": [
+    "governance:no_signoff",
+    "governance:no_external_authority"
+  ],
+  "remediationNodes": [
+    "remediation:unresolved_232",
+    "contradiction:cluster_14"
+  ],
+  "evidenceNodes": [
+    "evidence:operational_memory"
+  ],
+  "deploymentNodes": [
+    "deployment:canonical_runtime",
+    "rollback:operational_memory_runtime"
+  ],
+  "unresolvedSourceBoundaryEdges": [
+    "edge:remediation_blocks_full_expansion",
+    "edge:remediation_excluded_by_governance"
+  ],
+  "authority": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE"
+  }
+}

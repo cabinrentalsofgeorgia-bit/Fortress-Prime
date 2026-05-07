@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T11:41:27.261Z",
+  "ok": true,
+  "filesChecked": [
+    "operational-memory/agent-orchestration/schemas/action-registry.schema.json",
+    "operational-memory/agent-orchestration/schemas/agent-execution-report.schema.json",
+    "operational-memory/agent-orchestration/schemas/agent-plan.schema.json",
+    "operational-memory/agent-orchestration/schemas/agent-task.schema.json",
+    "operational-memory/agent-orchestration/schemas/evidence-requirement.schema.json",
+    "operational-memory/agent-orchestration/schemas/hard-stop-policy.schema.json",
+    "operational-memory/agent-orchestration/schemas/task-risk-classification.schema.json",
+    "operational-memory/agent-orchestration/schemas/task-validation-gate.schema.json",
+    "operational-memory/agent-orchestration/registries/allowed-actions.json",
+    "operational-memory/agent-orchestration/registries/evidence-requirements.json",
+    "operational-memory/agent-orchestration/registries/forbidden-actions.json",
+    "operational-memory/agent-orchestration/registries/hard-stop-policies.json",
+    "operational-memory/agent-orchestration/registries/task-risk-classifications.json",
+    "operational-memory/agent-orchestration/registries/validation-gates.json",
+    "operational-memory/agent-orchestration/plans/agent-plan-20260507T113346Z.json",
+    "operational-memory/agent-orchestration/reports/agent-execution-report-20260507T113346Z.json"
+  ],
+  "errors": [],
+  "warnings": [],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governancePreserved": true
+}

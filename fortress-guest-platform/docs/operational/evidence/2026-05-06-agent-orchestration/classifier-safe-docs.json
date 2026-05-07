@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "classifiedAt": "2026-05-07T11:41:27.280Z",
+  "taskDescription": "create docs and run validation",
+  "riskClass": "safe_docs_only",
+  "allowedActions": [
+    "create_docs"
+  ],
+  "forbiddenActions": [],
+  "requiredValidations": [
+    "validate_agent_orchestration",
+    "governance_query_smoke",
+    "secret_auth_scan",
+    "authority_boundary_scan"
+  ],
+  "evidenceRequirements": [
+    "task_plan",
+    "execution_report",
+    "validation_summary",
+    "rollback_reference"
+  ],
+  "rollbackRequirements": [
+    "git_revertable_change",
+    "evidence_refs_recorded"
+  ],
+  "hardStops": [],
+  "hardStopPolicies": [
+    "secrets_exposure",
+    "confidential_text_exposure",
+    "restricted_boundary",
+    "schema_rls_policy_mutation",
+    "legal_authority",
+    "source_promotion",
+    "ingestion_or_vector_write",
+    "rollback_impossible"
+  ],
+  "humanReviewRequired": true,
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T11:04:54.158Z",
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED"
+  },
+  "governanceBoundaries": [
+    "path_metadata_only",
+    "no_document_body_text",
+    "no_auth_material"
+  ],
+  "validationStatus": {
+    "status": "GENERATED_GRAPH_INDEX"
+  },
+  "rollbackRefs": [
+    "delete_generated_index",
+    "git_revert"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "sourceRefs": [
+    "fortress-guest-platform/operational-memory/registries/wiki-knowledge-index.json"
+  ],
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/architecture/wiki-evidence-graph-model-2026-05-06.md"
+  ],
+  "nodes": [
+    {
+      "id": "wiki-node:1",
+      "type": "wiki_knowledge_node",
+      "path": "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
+      "category": "current_operational_index",
+      "freshness": "current"
+    },
+    {
+      "id": "wiki-node:2",
+      "type": "wiki_knowledge_node",
+      "path": "fortress-guest-platform/docs/architecture/full-platform-capability-audit-2026-05-06.md",
+      "category": "capability_audit",
+      "freshness": "current"
+    },
+    {
+      "id": "wiki-node:3",
+      "type": "wiki_knowledge_node",
+      "path": "fortress-guest-platform/docs/architecture/wiki-knowledge-plane-audit-2026-05-06.md",
+      "category": "knowledge_plane_audit",
+      "freshness": "current"
+    },
+    {
+      "id": "wiki-node:4",
+      "type": "wiki_knowledge_node",
+      "path": "fortress-guest-platform/docs/architecture/governance-maturity-audit-2026-05-06.md",
+      "category": "governance_audit",
+      "freshness": "current"
+    },
+    {
+      "id": "wiki-node:5",
+      "type": "wiki_knowledge_node",
+      "path": "fortress-guest-platform/docs/operational/fortress-legal-operational-runbook-index.md",
+      "category": "runbook_index",
+      "freshness": "active_but_needs_periodic_reconciliation"
+    },
+    {
+      "id": "wiki-node:6",
+      "type": "wiki_knowledge_node",
+      "path": "wiki/context-packs/fortress-legal-build-orientation.md",
+      "category": "wiki_context_pack",
+      "freshness": "external_wiki_reference"
+    },
+    {
+      "id": "wiki-node:7",
+      "type": "wiki_knowledge_node",
+      "path": "wiki/decisions/2026-05-06-fortress-prime-canonical-source.md",
+      "category": "wiki_decision",
+      "freshness": "external_wiki_reference"
+    },
+    {
+      "id": "wiki-node:8",
+      "type": "wiki_knowledge_node",
+      "path": "wiki/runbooks/production-human-review-gates.md",
+      "category": "wiki_runbook",
+      "freshness": "external_wiki_reference"
+    }
+  ],
+  "edges": [
+    {
+      "id": "wiki-edge:1",
+      "type": "references",
+      "from": "wiki-node:1",
+      "to": "capability:operational_graph",
+      "category": "current_operational_index"
+    },
+    {
+      "id": "wiki-edge:2",
+      "type": "references",
+      "from": "wiki-node:2",
+      "to": "capability:operational_graph",
+      "category": "capability_audit"
+    },
+    {
+      "id": "wiki-edge:3",
+      "type": "references",
+      "from": "wiki-node:3",
+      "to": "capability:operational_graph",
+      "category": "knowledge_plane_audit"
+    },
+    {
+      "id": "wiki-edge:4",
+      "type": "references",
+      "from": "wiki-node:4",
+      "to": "capability:operational_graph",
+      "category": "governance_audit"
+    },
+    {
+      "id": "wiki-edge:5",
+      "type": "references",
+      "from": "wiki-node:5",
+      "to": "capability:operational_graph",
+      "category": "runbook_index"
+    },
+    {
+      "id": "wiki-edge:6",
+      "type": "references",
+      "from": "wiki-node:6",
+      "to": "capability:operational_graph",
+      "category": "wiki_context_pack"
+    },
+    {
+      "id": "wiki-edge:7",
+      "type": "references",
+      "from": "wiki-node:7",
+      "to": "capability:operational_graph",
+      "category": "wiki_decision"
+    },
+    {
+      "id": "wiki-edge:8",
+      "type": "references",
+      "from": "wiki-node:8",
+      "to": "capability:operational_graph",
+      "category": "wiki_runbook"
+    }
+  ]
+}

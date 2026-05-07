@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hard-stop-policy.schema.json",
+  "title": "Fortress Legal Hard Stop Policy Registry",
+  "type": "object",
+  "required": ["schemaVersion", "policies", "standingLabels", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "policies": { "type": "array", "items": { "type": "object", "required": ["id", "trigger", "requiredAction"] } },
+    "standingLabels": { "type": "object" },
+    "governanceAssertions": { "$ref": "agent-task.schema.json#/$defs/governanceAssertions" }
+  }
+}

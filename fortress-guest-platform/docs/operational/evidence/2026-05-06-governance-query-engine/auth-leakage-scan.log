@@ -1,0 +1,3 @@
+Auth leakage scan
+PASS: no .auth paths in git status
+PASS: no concrete auth-state path markers in operational memory outputs/evidence

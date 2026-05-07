@@ -1,0 +1,121 @@
+{
+  "ok": true,
+  "query": "governance",
+  "generatedAt": "2026-05-07T10:32:51.305Z",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "nodes": [
+    {
+      "id": "governance:no_signoff",
+      "type": "governance_boundary",
+      "label": "No counsel signoff authority",
+      "governanceBoundaries": [
+        "no_signoff",
+        "human_review_required"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/governance-registry.json"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "governance:no_external_authority",
+      "type": "governance_boundary",
+      "label": "No external submission authority",
+      "governanceBoundaries": [
+        "no_external_submission",
+        "no_filing_service_email"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/governance-registry.json"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:state_governed_no_signoff",
+      "type": "governed_by",
+      "from": "state:production",
+      "to": "governance:no_signoff",
+      "fromType": "operational_state",
+      "toType": "governance_boundary",
+      "label": "state preserves counsel signoff pending",
+      "governanceBoundaries": [
+        "no_signoff"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/operational-state.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:state_governed_no_external",
+      "type": "governed_by",
+      "from": "state:production",
+      "to": "governance:no_external_authority",
+      "fromType": "operational_state",
+      "toType": "governance_boundary",
+      "label": "state preserves no external authority",
+      "governanceBoundaries": [
+        "no_external_submission"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/operational-state.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:remediation_excluded_by_governance",
+      "type": "excluded_by",
+      "from": "remediation:unresolved_232",
+      "to": "governance:no_signoff",
+      "fromType": "remediation_issue",
+      "toType": "governance_boundary",
+      "label": "unresolved sources excluded by governance",
+      "governanceBoundaries": [
+        "no_source_promotion"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": "EXCLUDED_FROM_RELIED_UPON_SECTIONS"
+    },
+    {
+      "id": "edge:feedback_governed_no_freeform",
+      "type": "governed_by",
+      "from": "reviewer_feedback:foundation",
+      "to": "governance:no_external_authority",
+      "fromType": "reviewer_feedback",
+      "toType": "governance_boundary",
+      "label": "feedback ledger prohibits external instructions and freeform legal text",
+      "governanceBoundaries": [
+        "no_freeform_legal_text"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true
+  }
+}

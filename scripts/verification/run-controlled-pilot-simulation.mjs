@@ -23,6 +23,27 @@ const requiredDocs = [
   "fortress-guest-platform/operational-memory/registries/remediation-registry.json",
   "fortress-guest-platform/operational-memory/registries/evidence-registry.json",
   "fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json",
+  "fortress-guest-platform/docs/architecture/operational-knowledge-graph-architecture-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/queryable-governance-model-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/wiki-evidence-graph-model-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/graph/graph.json",
+  "fortress-guest-platform/operational-memory/graph/graph-validation-report.json",
+  "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
+  "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
+  "fortress-guest-platform/operational-memory/context-packs/codex-session.json",
+  "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/agent-orchestration/registries/allowed-actions.json",
+  "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
+  "fortress-guest-platform/operational-memory/agent-orchestration/registries/hard-stop-policies.json",
+  "fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
+  "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+  "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
+  "fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs",
+  "fortress-guest-platform/scripts/agent-orchestration/replay-dry-run.mjs",
+  "fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -108,6 +129,30 @@ const simulation = {
   wikiKnowledgeIndexVisible: Boolean(checks.wikiKnowledgeIndex),
   reviewerLedgerFoundationVisible: Boolean(checks.reviewerLedgerFoundation),
   noRegistryLegalAuthority: Boolean(checks.operationalMemory),
+  operationalGraphVisible: Boolean(checks.operationalGraph),
+  governanceGraphVisible: Boolean(checks.governanceGraph),
+  evidenceGraphVisible: Boolean(checks.evidenceGraph),
+  remediationGraphVisible: Boolean(checks.remediationGraph),
+  graphValidationVisible: Boolean(checks.graphValidation),
+  noGraphLegalAuthority: Boolean(checks.operationalGraph),
+  governanceQueryEngineVisible: Boolean(checks.governanceQueryEngine),
+  agentContextVisible: Boolean(checks.agentContext),
+  safeNextActionsVisible: Boolean(checks.safeNextActionsVisible),
+  forbiddenActionsVisible: Boolean(checks.forbiddenActionsVisible),
+  signoffBlockersVisible: Boolean(checks.signoffBlockersVisible),
+  launchBlockersVisible: Boolean(checks.launchBlockersVisible),
+  agentOrchestrationVisible: Boolean(checks.agentOrchestration),
+  hardStopsVisible: Boolean(checks.hardStopsVisible),
+  allowedActionsVisible: Boolean(checks.allowedActionsVisible),
+  taskRiskClassifierVisible: Boolean(checks.taskRiskClassifier),
+  agentPlanGenerationVisible: Boolean(checks.agentPlanGeneration),
+  executionReportValidationVisible: Boolean(checks.executionReportValidation),
+  autonomousRehearsalVisible: Boolean(checks.autonomousRehearsal),
+  dryRunExecutionVisible: Boolean(checks.dryRunExecution),
+  hardStopEnforcementVisible: Boolean(checks.hardStopEnforcement),
+  replayValidationVisible: Boolean(checks.replayValidation),
+  blockedActionHandlingVisible: Boolean(checks.blockedActionHandling),
+  governanceAssertionVisibility: Boolean(checks.governanceAssertionVisibility),
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -138,6 +183,29 @@ const ok =
   Boolean(checks.evidenceRegistry) &&
   Boolean(checks.wikiKnowledgeIndex) &&
   Boolean(checks.reviewerLedgerFoundation) &&
+  Boolean(checks.operationalGraph) &&
+  Boolean(checks.governanceGraph) &&
+  Boolean(checks.evidenceGraph) &&
+  Boolean(checks.remediationGraph) &&
+  Boolean(checks.graphValidation) &&
+  Boolean(checks.governanceQueryEngine) &&
+  Boolean(checks.agentContext) &&
+  Boolean(checks.safeNextActionsVisible) &&
+  Boolean(checks.forbiddenActionsVisible) &&
+  Boolean(checks.signoffBlockersVisible) &&
+  Boolean(checks.launchBlockersVisible) &&
+  Boolean(checks.agentOrchestration) &&
+  Boolean(checks.hardStopsVisible) &&
+  Boolean(checks.allowedActionsVisible) &&
+  Boolean(checks.taskRiskClassifier) &&
+  Boolean(checks.agentPlanGeneration) &&
+  Boolean(checks.executionReportValidation) &&
+  Boolean(checks.autonomousRehearsal) &&
+  Boolean(checks.dryRunExecution) &&
+  Boolean(checks.hardStopEnforcement) &&
+  Boolean(checks.replayValidation) &&
+  Boolean(checks.blockedActionHandling) &&
+  Boolean(checks.governanceAssertionVisibility) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -164,6 +232,29 @@ const result = {
     evidenceRegistry: Boolean(checks.evidenceRegistry),
     wikiKnowledgeIndex: Boolean(checks.wikiKnowledgeIndex),
     reviewerLedgerFoundation: Boolean(checks.reviewerLedgerFoundation),
+    operationalGraph: Boolean(checks.operationalGraph),
+    governanceGraph: Boolean(checks.governanceGraph),
+    evidenceGraph: Boolean(checks.evidenceGraph),
+    remediationGraph: Boolean(checks.remediationGraph),
+    graphValidation: Boolean(checks.graphValidation),
+    governanceQueryEngine: Boolean(checks.governanceQueryEngine),
+    agentContext: Boolean(checks.agentContext),
+    safeNextActionsVisible: Boolean(checks.safeNextActionsVisible),
+    forbiddenActionsVisible: Boolean(checks.forbiddenActionsVisible),
+    signoffBlockersVisible: Boolean(checks.signoffBlockersVisible),
+    launchBlockersVisible: Boolean(checks.launchBlockersVisible),
+    agentOrchestration: Boolean(checks.agentOrchestration),
+    hardStopsVisible: Boolean(checks.hardStopsVisible),
+    allowedActionsVisible: Boolean(checks.allowedActionsVisible),
+    taskRiskClassifier: Boolean(checks.taskRiskClassifier),
+    agentPlanGeneration: Boolean(checks.agentPlanGeneration),
+    executionReportValidation: Boolean(checks.executionReportValidation),
+    autonomousRehearsal: Boolean(checks.autonomousRehearsal),
+    dryRunExecution: Boolean(checks.dryRunExecution),
+    hardStopEnforcement: Boolean(checks.hardStopEnforcement),
+    replayValidation: Boolean(checks.replayValidation),
+    blockedActionHandling: Boolean(checks.blockedActionHandling),
+    governanceAssertionVisibility: Boolean(checks.governanceAssertionVisibility),
   },
   negativeControls: {
     noDocumentBodyText: true,

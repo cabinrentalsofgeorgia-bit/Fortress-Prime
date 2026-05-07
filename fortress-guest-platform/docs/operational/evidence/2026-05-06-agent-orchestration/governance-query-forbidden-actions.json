@@ -1,0 +1,102 @@
+{
+  "ok": true,
+  "query": "forbidden-actions",
+  "argument": null,
+  "generatedAt": "2026-05-07T11:41:27.432Z",
+  "taxonomyRefs": [
+    "standing_state",
+    "current_capabilities",
+    "current_blockers",
+    "signoff_blockers",
+    "external_launch_blockers",
+    "evidence_for_phase",
+    "validation_for_capability",
+    "governance_boundaries",
+    "safe_next_actions",
+    "forbidden_actions",
+    "agent_operating_context",
+    "reviewer_operating_context",
+    "remediation_status",
+    "unresolved_source_boundary",
+    "deployment_readiness",
+    "rollback_readiness",
+    "human_review_requirements",
+    "phase_progression"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "result": {
+    "forbiddenActions": [
+      {
+        "action": "auto_signoff",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "final_legal_conclusion",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "filing_service_email_external_submission",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "restricted_content_review",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "unresolved_source_promotion",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "document_upload_or_ingestion",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "duplicate_vectors_or_document_rows",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "schema_rls_policy_mutation",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      },
+      {
+        "action": "secrets_or_auth_state_storage",
+        "reason": "Forbidden by governance registry and standing labels.",
+        "hardStopIfAttempted": true
+      }
+    ],
+    "hardStops": [
+      "secrets_exposure",
+      "confidential_text_exposure",
+      "restricted_content_boundary_violation",
+      "schema_rls_policy_mutation",
+      "uncontrolled_reviewer_authority",
+      "external_public_access_required",
+      "registry_legal_authority_risk"
+    ]
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}
