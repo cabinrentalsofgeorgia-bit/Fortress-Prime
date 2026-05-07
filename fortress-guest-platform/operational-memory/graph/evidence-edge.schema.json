@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": ["fortress-guest-platform/operational-memory/graph/relationship.schema.json"],
+  "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING" },
+  "governanceBoundaries": ["evidence_edges_path_metadata_only"],
+  "evidenceRefs": [],
+  "validationStatus": { "status": "SCHEMA_DEFINED" },
+  "rollbackRefs": ["git_revert"],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "allowedTypes": ["supports", "validated_by", "references", "generated_from"]
+}
