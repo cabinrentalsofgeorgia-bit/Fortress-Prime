@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "featureAlignmentOk": true,
+  "checkedAt": "2026-05-07T02:56:19.445Z",
+  "route": "https://crog-ai.com/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "httpStatus": 200,
+    "authenticatedMatter": true,
+    "signoffPending": true,
+    "validationVisible": true,
+    "lockedVisible": true,
+    "documents": true,
+    "completed": true,
+    "workbench": true,
+    "draftWorkProduct": true,
+    "learning": true,
+    "remediationMaturity": true,
+    "reviewOperations": true,
+    "reviewScaling": true,
+    "operationalCertification": true,
+    "noLoginError": true,
+    "noExternalSubmissionAuthority": true,
+    "noFinalLegalAdvice": true
+  },
+  "errors": [],
+  "httpErrors": [],
+  "requestFailures": [],
+  "errorSummary": {},
+  "responseUrl": "https://crog-ai.com/legal/cases/fortress-legal-production-review",
+  "xRequestId": null
+}

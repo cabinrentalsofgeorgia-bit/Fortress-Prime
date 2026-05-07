@@ -222,6 +222,55 @@ vi.mock("@/lib/legal-hooks", () => ({
           stop_conditions: ["secret_exposure", "uncontrolled_legal_automation"],
         },
       },
+      operational_certification: {
+        status: "CONTROLLED_PILOT_OPERATIONS_CERTIFICATION_READY",
+        certification_scope: "controlled_internal_reviewer_operations_only",
+        readiness_audit: {
+          production_route_verified: true,
+          authenticated_checker_required: true,
+          deployment_verifier_required: true,
+          rollback_required: true,
+          unresolved_source_issues_excluded: 232,
+          counsel_signoff_status: "COUNSEL_SIGNOFF_PENDING",
+          external_submission_authority: "NOT_AUTHORIZED",
+          final_legal_conclusions: "NOT_CREATED",
+          schema_rls_policy_mutation: "NOT_PERFORMED",
+        },
+        pilot_governance: {
+          pilot_mode: "controlled_internal_operations",
+          public_launch_enabled: false,
+          unrestricted_reviewer_access_enabled: false,
+          allowed_operations: ["queue_triage", "reviewer_onboarding"],
+          forbidden_operations: ["auto_signoff", "final_legal_conclusion", "external_submission"],
+        },
+        reviewer_onboarding: {
+          status: "GOVERNED_ONBOARDING_REQUIRED",
+          required_acknowledgments: [
+            "counsel_signoff_pending",
+            "not_authorized_external_submission",
+            "not_final_legal_advice",
+          ],
+          allowed_roles: ["operator_reviewer", "source_reviewer"],
+        },
+        rollback_certification: {
+          status: "ROLLBACK_READY_PENDING_PR_REVIEW",
+          git_revertable: true,
+          runtime_rollback_required: true,
+          verification_after_rollback: ["authenticated_checker", "deployment_verifier"],
+        },
+        governance_enforcement: {
+          status: "ENFORCEMENT_VERIFICATION_REQUIRED_EACH_RUN",
+          required_checks: [
+            "COUNSEL_SIGNOFF_PENDING",
+            "NOT_AUTHORIZED",
+            "NOT FINAL LEGAL ADVICE",
+          ],
+        },
+        operational_safety: {
+          status: "CERTIFIED_FOR_CONTROLLED_INTERNAL_PILOT_REVIEW",
+          certification_limitations: ["no_public_launch", "no_counsel_signoff", "no_new_ingestion"],
+        },
+      },
       pilot_readiness: {
         controlled_internal_review_ready: true,
         public_or_external_use_enabled: false,
@@ -243,6 +292,12 @@ describe("ReviewOperationsPanel", () => {
     render(<ReviewOperationsPanel slug="fortress-legal-production-review" />);
 
     expect(screen.getByText("Controlled Review Operations")).toBeInTheDocument();
+    expect(screen.getByText("Operational Readiness Certification")).toBeInTheDocument();
+    expect(screen.getByText("Pilot Governance")).toBeInTheDocument();
+    expect(screen.getByText("Reviewer Onboarding Governance")).toBeInTheDocument();
+    expect(screen.getByText("Rollback Certification")).toBeInTheDocument();
+    expect(screen.getByText("Governance Enforcement Verification")).toBeInTheDocument();
+    expect(screen.getByText("Operational Safety Certification")).toBeInTheDocument();
     expect(screen.getByText("Review Queue Operations")).toBeInTheDocument();
     expect(screen.getByText("Reviewer Assignment")).toBeInTheDocument();
     expect(screen.getByText("Workload Balancing")).toBeInTheDocument();
@@ -254,7 +309,7 @@ describe("ReviewOperationsPanel", () => {
     expect(screen.getByText("Escalation & Incident Readiness")).toBeInTheDocument();
     expect(screen.getByText("COUNSEL_SIGNOFF_PENDING")).toBeInTheDocument();
     expect(screen.getByText("NOT_AUTHORIZED")).toBeInTheDocument();
-    expect(screen.getByText("NOT FINAL LEGAL ADVICE")).toBeInTheDocument();
+    expect(screen.getAllByText("NOT FINAL LEGAL ADVICE").length).toBeGreaterThan(0);
     expect(screen.getAllByText("excluded from relied-upon sections").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/metadata only restricted/i).length).toBeGreaterThan(0);
     expect(screen.queryByText("FINAL_LEGAL_CONCLUSION")).not.toBeInTheDocument();

@@ -6,8 +6,10 @@ import { useReviewOperations } from "@/lib/legal-hooks";
 import {
   Activity,
   BarChart3,
+  ClipboardCheck,
   ClipboardList,
   GitBranch,
+  RotateCcw,
   ShieldCheck,
   TimerReset,
   UserRoundCheck,
@@ -92,6 +94,102 @@ export function ReviewOperationsPanel({ slug }: { slug: string }) {
         relied-upon sections; locked/restricted materials stay metadata only restricted; no review action creates
         signoff, final legal advice, or external submission authority.
       </div>
+
+      <section className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-xs font-semibold text-emerald-100 flex items-center gap-2">
+            <ClipboardCheck className="h-3.5 w-3.5 text-emerald-300" />
+            Operational Readiness Certification
+          </p>
+          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+            {label(data.operational_certification.status)}
+          </Badge>
+        </div>
+        <p className="text-[10px] text-zinc-500">
+          Scope: {label(data.operational_certification.certification_scope)}.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          <Metric label="Route Verified" value={data.operational_certification.readiness_audit.production_route_verified ? "Yes" : "No"} />
+          <Metric label="Excluded Issues" value={data.operational_certification.readiness_audit.unresolved_source_issues_excluded} />
+          <Metric label="Signoff" value={label(data.operational_certification.readiness_audit.counsel_signoff_status)} />
+          <Metric label="External Use" value={label(data.operational_certification.readiness_audit.external_submission_authority)} />
+          <Metric label="Schema/RLS" value={label(data.operational_certification.readiness_audit.schema_rls_policy_mutation)} />
+        </div>
+        <div className="grid gap-3 xl:grid-cols-3">
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Pilot Governance</p>
+            <p className="text-[10px] text-zinc-500">
+              {label(data.operational_certification.pilot_governance.pilot_mode)} / public launch {data.operational_certification.pilot_governance.public_launch_enabled ? "enabled" : "disabled"}.
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.operational_certification.pilot_governance.allowed_operations.map((operation) => (
+                <Badge key={operation} variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/30 text-[10px]">
+                  {label(operation)}
+                </Badge>
+              ))}
+              {data.operational_certification.pilot_governance.forbidden_operations.map((operation) => (
+                <Badge key={operation} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                  forbidden {label(operation)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Reviewer Onboarding Governance</p>
+            <p className="text-[10px] text-zinc-500">
+              {label(data.operational_certification.reviewer_onboarding.status)}
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.operational_certification.reviewer_onboarding.required_acknowledgments.map((ack) => (
+                <Badge key={ack} variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30 text-[10px]">
+                  acknowledge {label(ack)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100 flex items-center gap-1">
+              <RotateCcw className="h-3 w-3 text-cyan-300" />
+              Rollback Certification
+            </p>
+            <p className="text-[10px] text-zinc-500">
+              {label(data.operational_certification.rollback_certification.status)} / git revertable {data.operational_certification.rollback_certification.git_revertable ? "yes" : "no"}.
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.operational_certification.rollback_certification.verification_after_rollback.map((check) => (
+                <Badge key={check} variant="outline" className="text-[10px]">
+                  {label(check)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3 xl:grid-cols-2">
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Governance Enforcement Verification</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.operational_certification.governance_enforcement.required_checks.map((check) => (
+                <Badge key={check} variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+                  {label(check)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Operational Safety Certification</p>
+            <p className="text-[10px] text-zinc-500">
+              {label(data.operational_certification.operational_safety.status)}
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.operational_certification.operational_safety.certification_limitations.map((limitation) => (
+                <Badge key={limitation} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                  limit {label(limitation)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
         <Metric label="Review Queue" value={data.review_operations_summary.remediation_queue_depth} />
