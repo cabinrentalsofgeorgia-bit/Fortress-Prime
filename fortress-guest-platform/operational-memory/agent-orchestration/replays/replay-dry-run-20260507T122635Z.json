@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "replayId": "replay-dry-run-20260507T122635Z",
+  "generatedAt": "2026-05-07T12:26:35.246Z",
+  "traceRef": "fortress-guest-platform/operational-memory/agent-orchestration/traces/dry-run-20260507T122635Z.json",
+  "dryRunId": "dry-run-20260507T122635Z",
+  "status": "REPLAY_VALIDATED",
+  "errors": [],
+  "hardStopsRechecked": true,
+  "governanceAssertionsRechecked": true,
+  "destructiveOperationsExecuted": false,
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true,
+    "nonDestructiveDryRunOnly": true
+  }
+}
