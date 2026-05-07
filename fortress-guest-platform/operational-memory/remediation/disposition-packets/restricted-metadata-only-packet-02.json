@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T18:14:45.499Z",
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": [
+    "no_source_promotion",
+    "no_signoff",
+    "no_final_legal_advice",
+    "no_external_authority",
+    "metadata_only_restricted_handling",
+    "human_review_required"
+  ],
+  "rollbackRefs": [
+    "git_revert_ai_remediation_execution_commits"
+  ],
+  "packetId": "restricted-metadata-only-packet-02",
+  "packetType": "restricted-metadata-only-packet",
+  "issueIds": [
+    "issue-10",
+    "issue-20"
+  ],
+  "category": "restricted_metadata_only",
+  "summary": "2 metadata-only unresolved items prepared for restricted-metadata-only-packet reviewer disposition.",
+  "evidenceRefs": [
+    "/mnt/fortress_nas/audits/fortress-limited-signoff-candidate-20260506-153336.json",
+    "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json"
+  ],
+  "recommendedDisposition": "review_required_continue_exclusion_until_approved",
+  "requiredReviewerAction": "Confirm source attachment, narrowing, duplicate disposition, counsel routing, or continued exclusion.",
+  "prohibitedActions": [
+    "source_promotion",
+    "mark_resolved",
+    "counsel_signoff",
+    "final_legal_conclusion",
+    "external_submission",
+    "restricted_content_inspection",
+    "schema_rls_policy_mutation"
+  ],
+  "confidence": 0.68,
+  "humanReviewRequired": true,
+  "counselReviewRequired": true,
+  "sourcePromotionAllowed": false,
+  "legalConclusion": false,
+  "signoffAuthority": false,
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "packetHash": "66d5711f6f055fa17a402e67f679cfff87a7fbd2053058deda2904812035a5c5"
+}

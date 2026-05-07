@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T18:14:45.500Z",
+  "sourceRefs": [
+    "/mnt/fortress_nas/audits/fortress-limited-signoff-candidate-20260506-153336.json"
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": [
+    "no_source_promotion",
+    "no_signoff",
+    "no_final_legal_advice",
+    "no_external_authority",
+    "metadata_only_restricted_handling",
+    "human_review_required"
+  ],
+  "validationStatus": {
+    "status": "DISPOSITION_PACKETS_GENERATED_FOR_REVIEW_ONLY"
+  },
+  "rollbackRefs": [
+    "git_revert_ai_remediation_execution_commits"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "packets": [
+    {
+      "packetId": "missing-source-packet-01",
+      "packetType": "missing-source-packet",
+      "issueCount": 199,
+      "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/missing-source-packet-01.json",
+      "humanReviewRequired": true,
+      "counselReviewRequired": true,
+      "sourcePromotionAllowed": false
+    },
+    {
+      "packetId": "restricted-metadata-only-packet-02",
+      "packetType": "restricted-metadata-only-packet",
+      "issueCount": 2,
+      "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/restricted-metadata-only-packet-02.json",
+      "humanReviewRequired": true,
+      "counselReviewRequired": true,
+      "sourcePromotionAllowed": false
+    },
+    {
+      "packetId": "evidence-chain-packet-03",
+      "packetType": "evidence-chain-packet",
+      "issueCount": 17,
+      "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/evidence-chain-packet-03.json",
+      "humanReviewRequired": true,
+      "counselReviewRequired": true,
+      "sourcePromotionAllowed": false
+    },
+    {
+      "packetId": "contradiction-review-packet-04",
+      "packetType": "contradiction-review-packet",
+      "issueCount": 14,
+      "packetPath": "fortress-guest-platform/operational-memory/remediation/disposition-packets/contradiction-review-packet-04.json",
+      "humanReviewRequired": true,
+      "counselReviewRequired": true,
+      "sourcePromotionAllowed": false
+    }
+  ]
+}
