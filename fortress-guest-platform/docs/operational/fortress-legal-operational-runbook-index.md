@@ -172,6 +172,25 @@ Rules:
 - No auto-signoff.
 - Human approval required for high-risk proposals.
 
+## Controlled Human Operations Workflow
+
+Human operations are controlled internal pilot review operations only:
+
+- Readiness audit: `human-operations-readiness-audit-2026-05-06.md`
+- Maturity index: `human-operations-maturity-index.md`
+- Reviewer onboarding: `reviewer-onboarding-governance-model.md`
+- Operational feedback: `operational-feedback-capture-model.md`
+- Governance exceptions: `governance-exception-handling-2026-05-06.md`
+- Drift detection: `operational-drift-detection-model.md`
+- Incident rehearsal: `human-operations-incident-rehearsal-2026-05-06.md`
+
+Rules:
+
+- Keep feedback structured and free of confidential document text.
+- Halt on governance ambiguity, restricted-content warnings, unauthorized access, signoff/final-advice controls, or external-submission authority.
+- Use checker, deployment verifier, and controlled pilot simulation before expanding any human review exercise.
+- Persistent reviewer assignment writes remain deferred unless separately approved and rollbackable.
+
 ## Hard Stops
 
 Stop and write a hard-stop report if:

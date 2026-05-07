@@ -572,6 +572,48 @@ vi.mock("@/lib/legal-hooks", () => ({
           production_writes: "none",
         },
       },
+      human_operations: {
+        status: "CONTROLLED_HUMAN_OPERATIONS_READY",
+        operating_mode: "authenticated_internal_review_rehearsal_only",
+        reviewer_onboarding: {
+          status: "ONBOARDING_GOVERNANCE_VISIBLE",
+          capability_tiers: ["operator_reviewer", "source_reviewer"],
+          required_acknowledgments: ["COUNSEL_SIGNOFF_PENDING", "NOT_AUTHORIZED", "NOT FINAL LEGAL ADVICE"],
+          prohibited_operations: ["auto_signoff", "external_submission", "unresolved_source_promotion"],
+        },
+        operational_feedback: {
+          status: "STRUCTURED_FEEDBACK_READY_NO_FREEFORM_LEGAL_TEXT",
+          capture_mode: "aggregate_read_only_feedback_categories",
+          feedback_categories: [{ category: "queue_friction", severity: "high", count: 6 }],
+          forbidden_feedback_content: ["confidential_document_text", "privileged_content", "auth_or_secret_values"],
+        },
+        governance_exceptions: {
+          status: "EXCEPTION_HANDLING_VISIBLE",
+          exception_classes: ["unresolved_source_promotion_attempt", "restricted_content_visibility_concern"],
+          halt_conditions: ["restricted_content_boundary_uncertain", "unauthorized_access_detected"],
+        },
+        operational_drift: {
+          status: "DRIFT_DETECTION_ACTIVE_FOR_HUMAN_OPERATIONS",
+          drift_signals: [{ signal: "queue_depth_drift", state: "watch", count: 232 }],
+          response_options: ["observe", "governance_exception_review"],
+        },
+        incident_rehearsals: [{ scenario: "reviewer_confusion_escalation", result: "tabletop_ready" }],
+        ergonomics: {
+          improvements: ["reviewer_context_summary", "queue_aging_visibility"],
+          persistent_assignment_writes: "deferred",
+          production_writes: "none",
+        },
+        governance: {
+          counsel_signoff: "COUNSEL_SIGNOFF_PENDING",
+          external_submission_authority: "NOT_AUTHORIZED",
+          legal_advice_status: "NOT FINAL LEGAL ADVICE",
+          final_legal_conclusions: "NOT_CREATED",
+          schema_rls_policy_mutation: "NOT_PERFORMED",
+          contains_document_body_text: false,
+          contains_locked_content: false,
+          unresolved_source_promotion: false,
+        },
+      },
       pilot_readiness: {
         controlled_internal_review_ready: true,
         public_or_external_use_enabled: false,

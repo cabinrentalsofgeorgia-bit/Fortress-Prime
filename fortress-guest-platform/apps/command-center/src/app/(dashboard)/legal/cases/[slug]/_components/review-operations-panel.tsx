@@ -276,6 +276,100 @@ export function ReviewOperationsPanel({ slug }: { slug: string }) {
         </div>
       </section>
 
+      <section className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-xs font-semibold text-emerald-100 flex items-center gap-2">
+            <UserRoundCheck className="h-3.5 w-3.5 text-emerald-300" />
+            Controlled Human Operations
+          </p>
+          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+            {label(data.human_operations.status)}
+          </Badge>
+        </div>
+        <p className="text-[10px] text-zinc-500">
+          {label(data.human_operations.operating_mode)}. Human review remains governed, read-only for feedback, and subject to halt conditions.
+        </p>
+        <div className="grid gap-3 xl:grid-cols-3">
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Reviewer Onboarding Governance</p>
+            <p className="text-[10px] text-zinc-500">{label(data.human_operations.reviewer_onboarding.status)}</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.human_operations.reviewer_onboarding.required_acknowledgments.map((acknowledgment) => (
+                <Badge key={acknowledgment} variant="outline" className={`text-[10px] ${tone(acknowledgment)}`}>
+                  acknowledge {label(acknowledgment)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Operational Feedback Capture</p>
+            <p className="text-[10px] text-zinc-500">{label(data.human_operations.operational_feedback.capture_mode)}</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.human_operations.operational_feedback.feedback_categories.map((row) => (
+                <Badge key={row.category} variant="outline" className={`text-[10px] ${tone(row.severity)}`}>
+                  {label(row.category)} {row.count}
+                </Badge>
+              ))}
+              {data.human_operations.operational_feedback.forbidden_feedback_content.map((content) => (
+                <Badge key={content} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                  no {label(content)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Governance Exception Handling</p>
+            <p className="text-[10px] text-zinc-500">{label(data.human_operations.governance_exceptions.status)}</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.human_operations.governance_exceptions.halt_conditions.map((condition) => (
+                <Badge key={condition} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                  halt {label(condition)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3 xl:grid-cols-3">
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Operational Drift Detection</p>
+            <p className="text-[10px] text-zinc-500">{label(data.human_operations.operational_drift.status)}</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.human_operations.operational_drift.drift_signals.map((row) => (
+                <Badge key={row.signal} variant="outline" className={`text-[10px] ${tone(row.state)}`}>
+                  {label(row.signal)} {row.count}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Human Incident Rehearsal</p>
+            <div className="mt-1 space-y-1">
+              {data.human_operations.incident_rehearsals.slice(0, 5).map((rehearsal) => (
+                <div key={rehearsal.scenario} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  {label(rehearsal.scenario)} / {label(rehearsal.result)}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-950/70 p-2">
+            <p className="text-[11px] font-semibold text-zinc-100">Human Operations Ergonomics</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {data.human_operations.ergonomics.improvements.map((improvement) => (
+                <Badge key={improvement} variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+                  {label(improvement)}
+                </Badge>
+              ))}
+              <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
+                persistent reviewer assignment writes {label(data.human_operations.ergonomics.persistent_assignment_writes)}
+              </Badge>
+              <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
+                production writes {label(data.human_operations.ergonomics.production_writes)}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
         <Metric label="Review Queue" value={data.review_operations_summary.remediation_queue_depth} />
         <Metric label="Contradictions" value={data.review_operations_summary.contradiction_queue_depth} />

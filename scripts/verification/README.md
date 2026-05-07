@@ -46,6 +46,7 @@ The checker reports two top-level outcomes:
 - Review scaling visibility is included after the controlled-review-scaling phase. It checks for Reviewer Assignment, Workload Balancing, Queue Aging / SLA, Escalation & Incident Readiness, and explicit forbidden counsel-signoff/external-submission labels.
 - Operational certification visibility is included after the controlled-pilot certification phase. It checks for Operational Readiness Certification, Pilot Governance, Reviewer Onboarding Governance, Rollback Certification, Governance Enforcement Verification, Operational Safety Certification, and explicit no-public-launch / no-auto-signoff limits.
 - Internal pilot visibility is included after the controlled-internal-pilot phase. It checks for Controlled Internal Pilot Operations, allowed/forbidden pilot exercises, Pilot Throughput Metrics, Pilot Simulation / Drills, no production writes, and forbidden legal-signoff/external-submission labels.
+- Human operations visibility is included after the controlled-human-operations phase. It checks for Controlled Human Operations, Reviewer Onboarding Governance, Operational Feedback Capture, Governance Exception Handling, Operational Drift Detection, Human Incident Rehearsal, and explicit halt/no-write/no-source-promotion boundaries.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -60,7 +61,13 @@ For Fortress Legal production feature alignment, expected target values are:
     "reviewOperations": true,
     "reviewScaling": true,
     "operationalCertification": true,
-    "internalPilot": true
+    "internalPilot": true,
+    "humanOperations": true,
+    "feedbackCapture": true,
+    "reviewerOnboarding": true,
+    "governanceExceptions": true,
+    "driftDetection": true,
+    "humanEscalation": true
   }
 }
 ```

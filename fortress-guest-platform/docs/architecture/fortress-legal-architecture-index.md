@@ -209,6 +209,29 @@ Autonomous learning is bounded and auditable:
 - Preserves human/counsel gates.
 - Does not train external models on confidential legal data.
 
+## Controlled Human Operations
+
+Human operations maturity is implemented as a governed extension of the existing review operations read model:
+
+- Review queue maturity: `review-queue-maturity-model.md`
+- Reviewer assignment: `reviewer-assignment-framework.md`
+- Workload balancing: `reviewer-workload-balancing-model.md`
+- Internal pilot workload: `internal-pilot-workload-model.md`
+- Throughput instrumentation: `review-throughput-instrumentation-model.md`
+- Reviewer onboarding governance: `reviewer-onboarding-governance-model.md`
+- Operational feedback capture: `operational-feedback-capture-model.md`
+- Operational drift detection: `operational-drift-detection-model.md`
+- Governance exception handling: `governance-exception-handling-2026-05-06.md`
+
+Boundaries:
+
+- No signoff automation.
+- No final legal conclusions.
+- No external submission authority.
+- No unrestricted reviewer access.
+- No unresolved-source promotion.
+- No confidential text in feedback, logs, or evidence.
+
 ## Known Open Blockers
 
 - 232 source issues remain unresolved and excluded from relied-upon draft sections.
