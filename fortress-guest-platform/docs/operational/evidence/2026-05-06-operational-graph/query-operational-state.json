@@ -1,0 +1,131 @@
+{
+  "ok": true,
+  "query": "operational_state",
+  "generatedAt": "2026-05-07T10:32:51.411Z",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "nodes": [
+    {
+      "id": "state:production",
+      "type": "operational_state",
+      "label": "Production operational standing",
+      "governanceBoundaries": [
+        "graph_not_legal_authority",
+        "human_review_required"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/operational-state.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "capability:operational_memory",
+      "type": "capability",
+      "label": "Machine-readable operational memory",
+      "governanceBoundaries": [
+        "registry_not_legal_authority"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "capability:operational_graph",
+      "type": "capability",
+      "label": "Operational knowledge graph",
+      "governanceBoundaries": [
+        "graph_not_legal_authority",
+        "read_only_graph_visibility"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/graph/graph.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "phase:operational_graph",
+      "type": "operational_phase",
+      "label": "Operational knowledge graph and queryable governance",
+      "governanceBoundaries": [
+        "phase_preserves_governance",
+        "graph_read_only"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:phase_supports_graph",
+      "type": "supports",
+      "from": "phase:operational_graph",
+      "to": "capability:operational_graph",
+      "fromType": "operational_phase",
+      "toType": "capability",
+      "label": "phase creates graph capability",
+      "governanceBoundaries": [
+        "graph_read_only"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/graph/graph.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:state_governed_no_signoff",
+      "type": "governed_by",
+      "from": "state:production",
+      "to": "governance:no_signoff",
+      "fromType": "operational_state",
+      "toType": "governance_boundary",
+      "label": "state preserves counsel signoff pending",
+      "governanceBoundaries": [
+        "no_signoff"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/operational-state.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:state_governed_no_external",
+      "type": "governed_by",
+      "from": "state:production",
+      "to": "governance:no_external_authority",
+      "fromType": "operational_state",
+      "toType": "governance_boundary",
+      "label": "state preserves no external authority",
+      "governanceBoundaries": [
+        "no_external_submission"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/operational-state.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "wikiNodes": 8,
+  "evidenceNodes": 12,
+  "outputs": [
+    "operational-memory/graph/wiki-graph-index.json",
+    "operational-memory/graph/evidence-graph-index.json"
+  ]
+}

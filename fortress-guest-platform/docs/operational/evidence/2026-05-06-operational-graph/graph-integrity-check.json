@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "generatedAt": "2026-05-07T10:32:51.591Z",
+  "results": [
+    {
+      "name": "validate-knowledge-graph",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "summarize-knowledge-graph",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "query-governance",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "query-remediation",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "query-evidence",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "query-deployment",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "query-operational-state",
+      "exitCode": 0,
+      "ok": true
+    }
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE"
+  }
+}

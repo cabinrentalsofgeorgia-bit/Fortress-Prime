@@ -1,0 +1,135 @@
+{
+  "ok": true,
+  "query": "evidence",
+  "generatedAt": "2026-05-07T10:32:51.350Z",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "nodes": [
+    {
+      "id": "evidence:operational_memory",
+      "type": "evidence_bundle",
+      "label": "Operational memory validation evidence",
+      "governanceBoundaries": [
+        "evidence_metadata_only",
+        "no_confidential_text"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "checker:production_ui",
+      "type": "checker_run",
+      "label": "Authenticated production UI checker",
+      "governanceBoundaries": [
+        "authenticated_checker_no_text_sample",
+        "no_auth_state_printing"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker-final.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "validation:operational_memory",
+      "type": "validation_run",
+      "label": "Operational memory validation",
+      "governanceBoundaries": [
+        "validator_blocks_forbidden_authority",
+        "validator_blocks_secret_patterns"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/operational-memory-validation.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:evidence_validates_memory",
+      "type": "validated_by",
+      "from": "capability:operational_memory",
+      "to": "evidence:operational_memory",
+      "fromType": "capability",
+      "toType": "evidence_bundle",
+      "label": "evidence validates operational memory",
+      "governanceBoundaries": [
+        "evidence_metadata_only"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:deployment_validated_by_checker",
+      "type": "validated_by",
+      "from": "deployment:canonical_runtime",
+      "to": "checker:production_ui",
+      "fromType": "deployment",
+      "toType": "checker_run",
+      "label": "deployment validated by authenticated checker",
+      "governanceBoundaries": [
+        "authenticated_internal_only"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker-final.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:wiki_references_graph",
+      "type": "references",
+      "from": "wiki:operational_index",
+      "to": "capability:operational_graph",
+      "fromType": "wiki_knowledge_node",
+      "toType": "capability",
+      "label": "wiki index references graph capability",
+      "governanceBoundaries": [
+        "path_metadata_only"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/wiki-knowledge-index.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "edge:graph_validated_by_validator",
+      "type": "validated_by",
+      "from": "capability:operational_graph",
+      "to": "validation:operational_memory",
+      "fromType": "capability",
+      "toType": "validation_run",
+      "label": "graph validation extends operational memory validation",
+      "governanceBoundaries": [
+        "validator_blocks_forbidden_authority"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/graph/graph.json"
+      ],
+      "humanReviewRequired": false,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true
+  }
+}

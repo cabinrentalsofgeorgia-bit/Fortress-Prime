@@ -1,0 +1,119 @@
+{
+  "ok": true,
+  "query": "remediation",
+  "generatedAt": "2026-05-07T10:32:51.323Z",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "nodes": [
+    {
+      "id": "remediation:unresolved_232",
+      "type": "remediation_issue",
+      "label": "232 unresolved source issues excluded",
+      "governanceBoundaries": [
+        "unresolved_sources_excluded",
+        "no_auto_resolution",
+        "human_review_required"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": "EXCLUDED_FROM_RELIED_UPON_SECTIONS"
+    },
+    {
+      "id": "contradiction:cluster_14",
+      "type": "contradiction_cluster",
+      "label": "14 contradiction candidates require human review",
+      "governanceBoundaries": [
+        "contradictions_not_final_findings",
+        "human_review_required"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": null
+    },
+    {
+      "id": "review_queue:remediation",
+      "type": "review_queue",
+      "label": "Remediation review queue",
+      "governanceBoundaries": [
+        "review_queue_read_only_summary",
+        "no_source_promotion"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:remediation_blocks_full_expansion",
+      "type": "blocks",
+      "from": "remediation:unresolved_232",
+      "to": "capability:operational_graph",
+      "fromType": "remediation_issue",
+      "toType": "capability",
+      "label": "unresolved issues remain excluded and block relied-upon expansion",
+      "governanceBoundaries": [
+        "unresolved_sources_excluded"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": "EXCLUDED_FROM_RELIED_UPON_SECTIONS"
+    },
+    {
+      "id": "edge:remediation_excluded_by_governance",
+      "type": "excluded_by",
+      "from": "remediation:unresolved_232",
+      "to": "governance:no_signoff",
+      "fromType": "remediation_issue",
+      "toType": "governance_boundary",
+      "label": "unresolved sources excluded by governance",
+      "governanceBoundaries": [
+        "no_source_promotion"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/operational-memory/registries/remediation-registry.json"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": "EXCLUDED_FROM_RELIED_UPON_SECTIONS"
+    },
+    {
+      "id": "edge:contradictions_escalate_review",
+      "type": "escalated_to",
+      "from": "contradiction:cluster_14",
+      "to": "review_queue:remediation",
+      "fromType": "contradiction_cluster",
+      "toType": "review_queue",
+      "label": "contradictions require human remediation review",
+      "governanceBoundaries": [
+        "human_review_required"
+      ],
+      "evidenceRefs": [
+        "fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md"
+      ],
+      "humanReviewRequired": true,
+      "unresolvedSourceBoundary": null
+    }
+  ],
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true
+  }
+}
