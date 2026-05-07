@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T11:04:54.338Z",
+  "generatedAt": "2026-05-07T11:09:31.574Z",
   "contextPackType": "remediation-review",
   "standingLabels": {
     "productionStatus": "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
@@ -32,7 +32,7 @@
     "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
     "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
     "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
-    "CROG_AUTH_STATE=/home/admin/Fortress-Prime-auth-verify/.auth/crog-ai-gary.json node scripts/verification/check-crog-fortress-ui.mjs"
+    "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs"
   ],
   "safeNextActions": [
     {

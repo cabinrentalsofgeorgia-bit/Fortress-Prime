@@ -130,7 +130,7 @@ function agentContext() {
       "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
       "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
       "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
-      "CROG_AUTH_STATE=/home/admin/Fortress-Prime-auth-verify/.auth/crog-ai-gary.json node scripts/verification/check-crog-fortress-ui.mjs",
+      "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs",
     ],
     evidencePaths: [
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
