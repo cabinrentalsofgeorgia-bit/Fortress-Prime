@@ -143,6 +143,12 @@ const humanOperations = {
   taskRiskClassifier: Boolean(checkerChecks.taskRiskClassifier),
   agentPlanGeneration: Boolean(checkerChecks.agentPlanGeneration),
   executionReportValidation: Boolean(checkerChecks.executionReportValidation),
+  autonomousRehearsal: Boolean(checkerChecks.autonomousRehearsal),
+  dryRunExecution: Boolean(checkerChecks.dryRunExecution),
+  hardStopEnforcement: Boolean(checkerChecks.hardStopEnforcement),
+  replayValidation: Boolean(checkerChecks.replayValidation),
+  blockedActionHandling: Boolean(checkerChecks.blockedActionHandling),
+  governanceAssertionVisibility: Boolean(checkerChecks.governanceAssertionVisibility),
 };
 const ok =
   checks.publicRoutes.every((item) => item.ok) &&

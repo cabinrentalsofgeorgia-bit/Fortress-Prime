@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "allowedCategories": [
+    "validation-only",
+    "governance-query",
+    "evidence-summary",
+    "registry-update-simulation",
+    "remediation-triage-simulation",
+    "contradiction-review-simulation",
+    "queue-navigation-simulation",
+    "deployment-verification-simulation",
+    "rollback-tabletop",
+    "incident-tabletop",
+    "reviewer-guidance-simulation",
+    "context-generation",
+    "checker-verification",
+    "documentation-generation"
+  ],
+  "forbiddenCategories": [
+    "legal_signoff",
+    "final_legal_conclusion",
+    "external_submission",
+    "public_launch",
+    "restricted_content_inspection",
+    "confidential_text_output",
+    "schema_mutation",
+    "rls_mutation",
+    "source_promotion",
+    "production_data_mutation",
+    "unrestricted_reviewer_assignment",
+    "auth_bypass"
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceAssertions": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noLegalAuthority": true,
+    "noExternalAuthority": true,
+    "noSchemaMutation": true,
+    "noSourcePromotion": true,
+    "nonDestructiveDryRunOnly": true
+  }
+}

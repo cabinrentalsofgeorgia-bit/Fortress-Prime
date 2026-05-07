@@ -22,6 +22,8 @@ AGENT_ORCHESTRATION_DIR = ROOT / "operational-memory" / "agent-orchestration"
 AGENT_ORCHESTRATION_REGISTRY_DIR = AGENT_ORCHESTRATION_DIR / "registries"
 AGENT_ORCHESTRATION_PLAN_DIR = AGENT_ORCHESTRATION_DIR / "plans"
 AGENT_ORCHESTRATION_REPORT_DIR = AGENT_ORCHESTRATION_DIR / "reports"
+AGENT_ORCHESTRATION_TRACE_DIR = AGENT_ORCHESTRATION_DIR / "traces"
+AGENT_ORCHESTRATION_REPLAY_DIR = AGENT_ORCHESTRATION_DIR / "replays"
 
 REGISTRY_FILES = {
     "operational_state": "operational-state.json",
@@ -94,11 +96,18 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
     orchestration_validation = _load_optional_json(
         AGENT_ORCHESTRATION_DIR, "agent-orchestration-validation-report.json"
     )
+    dry_run_categories = _load_optional_json(AGENT_ORCHESTRATION_DIR, "dry-run-categories.json")
     orchestration_plan_files = (
         sorted(AGENT_ORCHESTRATION_PLAN_DIR.glob("*.json")) if AGENT_ORCHESTRATION_PLAN_DIR.exists() else []
     )
     orchestration_report_files = (
         sorted(AGENT_ORCHESTRATION_REPORT_DIR.glob("*.json")) if AGENT_ORCHESTRATION_REPORT_DIR.exists() else []
+    )
+    orchestration_trace_files = (
+        sorted(AGENT_ORCHESTRATION_TRACE_DIR.glob("*.json")) if AGENT_ORCHESTRATION_TRACE_DIR.exists() else []
+    )
+    orchestration_replay_files = (
+        sorted(AGENT_ORCHESTRATION_REPLAY_DIR.glob("*.json")) if AGENT_ORCHESTRATION_REPLAY_DIR.exists() else []
     )
     latest_plans = [
         _load_optional_json(AGENT_ORCHESTRATION_PLAN_DIR, path.name) for path in orchestration_plan_files[-5:]
@@ -106,6 +115,21 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
     latest_reports = [
         _load_optional_json(AGENT_ORCHESTRATION_REPORT_DIR, path.name) for path in orchestration_report_files[-5:]
     ]
+    latest_traces = [
+        _load_optional_json(AGENT_ORCHESTRATION_TRACE_DIR, path.name) for path in orchestration_trace_files[-6:]
+    ]
+    latest_replays = [
+        _load_optional_json(AGENT_ORCHESTRATION_REPLAY_DIR, path.name) for path in orchestration_replay_files[-6:]
+    ]
+    valid_traces = [trace for trace in latest_traces if trace]
+    all_traces = [
+        _load_optional_json(AGENT_ORCHESTRATION_TRACE_DIR, path.name) for path in orchestration_trace_files
+    ]
+    all_replays = [
+        _load_optional_json(AGENT_ORCHESTRATION_REPLAY_DIR, path.name) for path in orchestration_replay_files
+    ]
+    valid_all_traces = [trace for trace in all_traces if trace]
+    valid_all_replays = [replay for replay in all_replays if replay]
     context_pack_files = sorted(CONTEXT_PACK_DIR.glob("*.json")) if CONTEXT_PACK_DIR.exists() else []
     context_packs = []
     for path in context_pack_files:
@@ -158,6 +182,16 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "agentHardStopCount": len(orchestration_registries.get("hard_stop_policies", {}).get("policies", [])),
             "agentPlanCount": len(orchestration_plan_files),
             "agentReportCount": len(orchestration_report_files),
+            "dryRunTraceCount": len(valid_all_traces),
+            "dryRunReplayCount": len(valid_all_replays),
+            "dryRunHardStopCount": len(
+                [
+                    trace
+                    for trace in valid_all_traces
+                    if trace.get("status") in {"hard_stop", "DRY_RUN_BLOCKED"}
+                    or trace.get("hardStopsTriggered")
+                ]
+            ),
         },
         "registries": registries,
         "graph": {
@@ -242,6 +276,69 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
                 "noSourcePromotion": True,
             },
         },
+        "autonomousRehearsal": {
+            "status": (
+                "AUTONOMOUS_REHEARSAL_VISIBLE_READ_ONLY"
+                if dry_run_categories
+                else "AUTONOMOUS_REHEARSAL_NOT_AVAILABLE"
+            ),
+            "allowedCategories": dry_run_categories.get("allowedCategories", []) if dry_run_categories else [],
+            "forbiddenCategories": (
+                dry_run_categories.get("forbiddenCategories", []) if dry_run_categories else []
+            ),
+            "summary": {
+                "traceCount": len(valid_all_traces),
+                "replayCount": len(valid_all_replays),
+                "hardStopCount": len(
+                    [
+                        trace
+                        for trace in valid_all_traces
+                        if trace.get("status") in {"hard_stop", "DRY_RUN_BLOCKED"}
+                        or trace.get("hardStopsTriggered")
+                    ]
+                ),
+                "blockedActionCount": sum(len(trace.get("blockedActions", [])) for trace in valid_all_traces),
+                "validationGatePassCount": sum(
+                    len(trace.get("validationGatesPassed", [])) for trace in valid_all_traces
+                ),
+                "allReplaysValidated": all(
+                    replay.get("replayValidation", {}).get("ok") is True for replay in valid_all_replays
+                )
+                if valid_all_replays
+                else False,
+            },
+            "latestTraces": [
+                {
+                    "dryRunId": trace.get("dryRunId"),
+                    "category": trace.get("category"),
+                    "status": trace.get("status"),
+                    "hardStopsTriggered": trace.get("hardStopsTriggered", []),
+                    "blockedActions": trace.get("blockedActions", []),
+                }
+                for trace in valid_traces
+            ],
+            "latestReplays": [
+                {
+                    "replayId": replay.get("replayId"),
+                    "dryRunId": replay.get("dryRunId"),
+                    "ok": replay.get("replayValidation", {}).get("ok")
+                    if "replayValidation" in replay
+                    else replay.get("status") == "REPLAY_VALIDATED",
+                    "governancePreserved": replay.get("governanceAssertions", {}).get("noLegalAuthority"),
+                }
+                for replay in latest_replays
+                if replay
+            ],
+            "governanceAssertions": {
+                "noSecrets": True,
+                "noConfidentialText": True,
+                "noLegalAuthority": True,
+                "noExternalAuthority": True,
+                "noSchemaMutation": True,
+                "noSourcePromotion": True,
+                "nonDestructiveDryRunOnly": True,
+            },
+        },
         "negativeControls": {
             "noSecrets": all(registry.get("noSecrets") is True for registry in registries.values()),
             "noConfidentialText": all(registry.get("noConfidentialText") is True for registry in registries.values()),
@@ -253,6 +350,7 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "noGraphLegalAuthority": True,
             "noQueryEngineLegalAuthority": True,
             "noAgentExecutionLegalAuthority": True,
+            "noAutonomousRehearsalLegalAuthority": True,
             "readOnly": True,
         },
     }

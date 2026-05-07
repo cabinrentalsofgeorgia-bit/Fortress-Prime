@@ -161,7 +161,8 @@ await page
           body.includes("Controlled Human Operations") ||
           body.includes("Operational Feedback Capture") ||
           body.includes("Operational Memory / Machine-Readable Cognition") ||
-          body.includes("Operational Knowledge Graph / Queryable Governance"))
+          body.includes("Operational Knowledge Graph / Queryable Governance") ||
+          body.includes("Autonomous Operations Rehearsal / Governed Dry-Runs"))
       );
     },
     { timeout: 20000 },
@@ -325,6 +326,26 @@ result.checks.taskRiskClassifier =
   lowerText.includes("safe read only");
 result.checks.agentPlanGeneration = text.includes("Latest Agent Plans");
 result.checks.executionReportValidation = text.includes("Execution Reports");
+result.checks.autonomousRehearsal =
+  text.includes("Autonomous Operations Rehearsal / Governed Dry-Runs") &&
+  text.includes("autonomousRehearsal true") &&
+  text.includes("dry-run-only, not legal authority");
+result.checks.dryRunExecution =
+  text.includes("dryRunExecution true") &&
+  text.includes("Execution Traces") &&
+  text.includes("Allowed Dry-Run Categories");
+result.checks.hardStopEnforcement =
+  text.includes("hardStopEnforcement true") ||
+  (text.includes("Hard Stops") && text.includes("Forbidden Dry-Run Categories"));
+result.checks.replayValidation =
+  text.includes("Replay Validation") &&
+  (text.includes("replayValidation true") || text.includes("PASS"));
+result.checks.blockedActionHandling =
+  text.includes("blockedActionHandling true") ||
+  text.includes("Blocked Actions");
+result.checks.governanceAssertionVisibility =
+  text.includes("governanceAssertionVisibility true") &&
+  text.includes("non destructive dry run only true");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -386,7 +407,13 @@ result.featureAlignmentOk =
   result.checks.allowedActionsVisible &&
   result.checks.taskRiskClassifier &&
   result.checks.agentPlanGeneration &&
-  result.checks.executionReportValidation;
+  result.checks.executionReportValidation &&
+  result.checks.autonomousRehearsal &&
+  result.checks.dryRunExecution &&
+  result.checks.hardStopEnforcement &&
+  result.checks.replayValidation &&
+  result.checks.blockedActionHandling &&
+  result.checks.governanceAssertionVisibility;
 
 console.log(JSON.stringify(result, null, 2));
 

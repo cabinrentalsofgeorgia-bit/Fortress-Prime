@@ -46,6 +46,7 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
   const graphEdges = data.graph?.edges.slice(0, 6) ?? [];
   const queryEngine = data.governanceQueryEngine;
   const orchestration = data.agentOrchestration;
+  const rehearsal = data.autonomousRehearsal;
 
   return (
     <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 space-y-4">
@@ -250,6 +251,92 @@ export function OperationalMemoryPanel({ slug }: { slug: string }) {
               {orchestration.latestReports.slice(0, 3).map((report) => (
                 <div key={report.reportId} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
                   hard stops {report.hardStopsEncountered.length} / human review {String(report.humanReviewRequired)}
+                </div>
+              ))}
+            </section>
+          </div>
+        </div>
+      ) : null}
+
+      {rehearsal ? (
+        <div className="rounded border border-sky-500/30 bg-sky-500/5 p-3 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold text-sky-100">
+              Autonomous Operations Rehearsal / Governed Dry-Runs
+            </p>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="bg-sky-500/10 text-sky-200 border-sky-500/30 text-[10px]">
+                autonomousRehearsal true
+              </Badge>
+              <Badge variant="outline" className="bg-sky-500/10 text-sky-200 border-sky-500/30 text-[10px]">
+                dryRunExecution true
+              </Badge>
+              <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                dry-run-only, not legal authority
+              </Badge>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+            <Metric label="Dry-Run Traces" value={rehearsal.summary.traceCount} />
+            <Metric label="Replays" value={rehearsal.summary.replayCount} />
+            <Metric label="Hard Stops" value={rehearsal.summary.hardStopCount} />
+            <Metric label="Blocked Actions" value={rehearsal.summary.blockedActionCount} />
+            <Metric label="Validation Gates" value={rehearsal.summary.validationGatePassCount} />
+            <Metric label="Replay Validation" value={rehearsal.summary.allReplaysValidated ? "PASS" : "REVIEW"} />
+          </div>
+          <div className="grid gap-3 xl:grid-cols-3">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Allowed Dry-Run Categories</p>
+              <div className="flex flex-wrap gap-1">
+                {rehearsal.allowedCategories.slice(0, 8).map((category) => (
+                  <Badge key={category} variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+                    {label(category)}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Forbidden Dry-Run Categories</p>
+              <div className="flex flex-wrap gap-1">
+                {rehearsal.forbiddenCategories.slice(0, 8).map((category) => (
+                  <Badge key={category} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                    {label(category)}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Governance Assertions</p>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline" className="bg-sky-500/10 text-sky-300 border-sky-500/30 text-[10px]">
+                  hardStopEnforcement true
+                </Badge>
+                <Badge variant="outline" className="bg-sky-500/10 text-sky-300 border-sky-500/30 text-[10px]">
+                  blockedActionHandling true
+                </Badge>
+                <Badge variant="outline" className="bg-sky-500/10 text-sky-300 border-sky-500/30 text-[10px]">
+                  governanceAssertionVisibility true
+                </Badge>
+              </div>
+              <p className="text-[10px] text-zinc-500">
+                non destructive dry run only {String(rehearsal.governanceAssertions.nonDestructiveDryRunOnly)}.
+              </p>
+            </section>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Execution Traces</p>
+              {rehearsal.latestTraces.slice(0, 4).map((trace) => (
+                <div key={trace.dryRunId} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  {label(trace.category ?? "dry_run")} / {label(trace.status ?? "simulated")}
+                </div>
+              ))}
+            </section>
+            <section className="rounded border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+              <p className="text-xs font-semibold text-zinc-100">Replay Validation</p>
+              {rehearsal.latestReplays.slice(0, 4).map((replay) => (
+                <div key={replay.replayId} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300">
+                  replayValidation {String(replay.ok)} / governance preserved {String(replay.governancePreserved)}
                 </div>
               ))}
             </section>

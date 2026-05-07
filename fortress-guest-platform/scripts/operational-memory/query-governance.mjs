@@ -47,12 +47,13 @@ const negativeControls = {
 
 const safeNextActions = [
   {
-    action: "Review PRs for operational-memory and operational-graph governance scope",
-    reason: "The current phase depends on graph and registry foundations remaining read-only and metadata-only.",
+    action: "Review autonomous rehearsal dry-run traces and replay evidence",
+    reason: "Governed dry-runs now exercise hard stops, replay validation, and evidence-backed orchestration without production mutation.",
     requiredAuthority: "senior_engineer_or_governance_reviewer",
     evidenceRefs: [
-      "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
-      "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
+      "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+      "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/",
     ],
     humanReviewRequired: true,
   },
@@ -118,7 +119,7 @@ function validationFor(target) {
 function agentContext() {
   return {
     canonicalRepo: "/home/admin/Fortress-Prime",
-    currentWorktree: "/home/admin/Fortress-Prime-operational-memory",
+    currentWorktree: "/home/admin/Fortress-Prime-autonomous-rehearsal",
     recommendedBaseBranch: "release/fortress-legal-knowledge-graph",
     standingLabels,
     verifiedCapabilities: capabilityList().map((capability) => capability.id),
@@ -130,6 +131,8 @@ function agentContext() {
       "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
       "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
       "node fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
+      "node fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs --category validation-only",
+      "node fortress-guest-platform/scripts/agent-orchestration/summarize-dry-run.mjs",
       "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
       "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs",
     ],
@@ -138,8 +141,14 @@ function agentContext() {
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/",
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-autonomous-rehearsal/",
     ],
     readFirst: [
+      "fortress-guest-platform/docs/architecture/autonomous-rehearsal-architecture-2026-05-06.md",
+      "fortress-guest-platform/docs/operational/autonomous-rehearsal-scenarios-2026-05-06.md",
+      "fortress-guest-platform/operational-memory/agent-orchestration/dry-run-categories.json",
+      "fortress-guest-platform/scripts/agent-orchestration/run-dry-run-task.mjs",
+      "fortress-guest-platform/scripts/agent-orchestration/replay-dry-run.mjs",
       "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
       "fortress-guest-platform/operational-memory/agent-orchestration/registries/allowed-actions.json",
       "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
@@ -150,7 +159,7 @@ function agentContext() {
       "fortress-guest-platform/operational-memory/registries/operational-state.json",
       "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
     ],
-    nextRecommendedPhase: "controlled_agent_orchestration_review_and_safe_task_use",
+    nextRecommendedPhase: "controlled_autonomous_rehearsal_review_and_dry_run_use",
     prBranchExpectations: {
       branchPrefix: "release/fortress-legal-",
       draftPrRequired: true,
@@ -174,8 +183,8 @@ function reviewerContext() {
 
 function phaseRecommendation() {
   return {
-    recommendedPhase: "controlled_agent_orchestration_review_and_safe_task_use",
-    reason: "Governance query outputs can now feed validation-gated agent task plans and execution reports without crossing legal authority boundaries.",
+    recommendedPhase: "controlled_autonomous_rehearsal_review_and_dry_run_use",
+    reason: "Agent orchestration can now be exercised through non-destructive dry-runs with hard-stop enforcement, replay validation, and evidence-backed traces.",
     requiredAuthority: "operator_or_engineering_lead",
     humanReviewRequired: true,
     blockedHigherAuthorityActions: [
