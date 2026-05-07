@@ -156,8 +156,10 @@ await page
           body.includes("Governance Enforcement Verification") ||
           body.includes("Operational Safety Certification")) &&
         (body.includes("Controlled Internal Pilot Operations") ||
-          body.includes("Pilot Throughput Metrics") ||
-          body.includes("Forbidden Pilot Actions"))
+      body.includes("Pilot Throughput Metrics") ||
+          body.includes("Forbidden Pilot Actions") ||
+          body.includes("Controlled Human Operations") ||
+          body.includes("Operational Feedback Capture"))
       );
     },
     { timeout: 20000 },
@@ -222,6 +224,33 @@ result.checks.internalPilot =
   text.includes("production writes none") &&
   text.includes("forbidden legal signoff") &&
   text.includes("forbidden external submission");
+result.checks.humanOperations =
+  text.includes("Controlled Human Operations") &&
+  text.includes("Reviewer Onboarding Governance") &&
+  text.includes("Operational Feedback Capture") &&
+  text.includes("Governance Exception Handling") &&
+  text.includes("Operational Drift Detection") &&
+  text.includes("Human Incident Rehearsal");
+result.checks.feedbackCapture =
+  text.includes("Operational Feedback Capture") &&
+  text.includes("confidential document text") &&
+  text.includes("auth or secret values");
+result.checks.reviewerOnboarding =
+  text.includes("Reviewer Onboarding Governance") &&
+  text.includes("acknowledge COUNSEL SIGNOFF PENDING") &&
+  text.includes("acknowledge NOT AUTHORIZED") &&
+  text.includes("acknowledge NOT FINAL LEGAL ADVICE");
+result.checks.governanceExceptions =
+  text.includes("Governance Exception Handling") &&
+  text.includes("halt restricted content boundary uncertain") &&
+  text.includes("halt unauthorized access detected");
+result.checks.driftDetection =
+  text.includes("Operational Drift Detection") &&
+  text.includes("queue depth drift");
+result.checks.humanEscalation =
+  text.includes("Human Incident Rehearsal") &&
+  text.includes("reviewer confusion escalation") &&
+  text.includes("tabletop ready");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -254,7 +283,13 @@ result.featureAlignmentOk =
   result.checks.reviewOperations &&
   result.checks.reviewScaling &&
   result.checks.operationalCertification &&
-  result.checks.internalPilot;
+  result.checks.internalPilot &&
+  result.checks.humanOperations &&
+  result.checks.feedbackCapture &&
+  result.checks.reviewerOnboarding &&
+  result.checks.governanceExceptions &&
+  result.checks.driftDetection &&
+  result.checks.humanEscalation;
 
 console.log(JSON.stringify(result, null, 2));
 

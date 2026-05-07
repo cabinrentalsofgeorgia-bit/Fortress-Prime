@@ -1322,6 +1322,48 @@ export interface ReviewOperationsResponse {
       production_writes: string;
     };
   };
+  human_operations: {
+    status: string;
+    operating_mode: string;
+    reviewer_onboarding: {
+      status: string;
+      capability_tiers: string[];
+      required_acknowledgments: string[];
+      prohibited_operations: string[];
+    };
+    operational_feedback: {
+      status: string;
+      capture_mode: string;
+      feedback_categories: Array<{ category: string; severity: string; count: number }>;
+      forbidden_feedback_content: string[];
+    };
+    governance_exceptions: {
+      status: string;
+      exception_classes: string[];
+      halt_conditions: string[];
+    };
+    operational_drift: {
+      status: string;
+      drift_signals: Array<{ signal: string; state: string; count: number }>;
+      response_options: string[];
+    };
+    incident_rehearsals: Array<{ scenario: string; result: string }>;
+    ergonomics: {
+      improvements: string[];
+      persistent_assignment_writes: string;
+      production_writes: string;
+    };
+    governance: {
+      counsel_signoff: string;
+      external_submission_authority: string;
+      legal_advice_status: string;
+      final_legal_conclusions: string;
+      schema_rls_policy_mutation: string;
+      contains_document_body_text: boolean;
+      contains_locked_content: boolean;
+      unresolved_source_promotion: boolean;
+    };
+  };
   pilot_readiness: {
     controlled_internal_review_ready: boolean;
     public_or_external_use_enabled: boolean;

@@ -108,11 +108,23 @@ const checks = {
 };
 
 const checker = runChecker();
+const checkerChecks = checker.checks ?? {};
+const humanOperations = {
+  visibility: Boolean(checkerChecks.humanOperations),
+  feedbackCapture: Boolean(checkerChecks.feedbackCapture),
+  reviewerOnboarding: Boolean(checkerChecks.reviewerOnboarding),
+  governanceExceptions: Boolean(checkerChecks.governanceExceptions),
+  driftDetection: Boolean(checkerChecks.driftDetection),
+  humanEscalationOnly: Boolean(checkerChecks.humanEscalation),
+};
 const ok =
   checks.publicRoutes.every((item) => item.ok) &&
   checks.unauthenticatedGuards.every((item) => item.ok) &&
   checks.services.every((item) => item.active) &&
-  (checker.skipped || checker.ok);
+  (checker.skipped ||
+    (checker.ok &&
+      checker.featureAlignmentOk &&
+      Object.values(humanOperations).every(Boolean)));
 
 const result = {
   ok,
@@ -121,6 +133,7 @@ const result = {
   matterPath,
   checks,
   authenticatedChecker: checker,
+  humanOperations,
   governance: {
     counselSignoff: "COUNSEL_SIGNOFF_PENDING",
     externalSubmissionAuthority: "NOT_AUTHORIZED",

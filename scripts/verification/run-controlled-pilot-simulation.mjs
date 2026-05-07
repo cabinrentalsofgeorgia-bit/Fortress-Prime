@@ -11,6 +11,12 @@ const requiredDocs = [
   "fortress-guest-platform/docs/architecture/review-throughput-instrumentation-model.md",
   "fortress-guest-platform/docs/operational/internal-pilot-incident-and-rollback-drill-2026-05-06.md",
   "fortress-guest-platform/docs/operational/review-throughput-optimization-report-2026-05-06.md",
+  "fortress-guest-platform/docs/operational/human-operations-readiness-audit-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/reviewer-onboarding-governance-model.md",
+  "fortress-guest-platform/docs/architecture/operational-feedback-capture-model.md",
+  "fortress-guest-platform/docs/operational/governance-exception-handling-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/operational-drift-detection-model.md",
+  "fortress-guest-platform/docs/operational/human-operations-incident-rehearsal-2026-05-06.md",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -75,6 +81,20 @@ const simulation = {
   remediationTriage: Boolean(checks.remediationMaturity),
   contradictionReview: Boolean(checks.reviewOperations),
   evidenceNavigation: Boolean(checks.reviewOperations),
+  feedbackCaptureVisible: Boolean(checks.feedbackCapture),
+  feedbackCaptureNonSensitive: Boolean(checks.feedbackCapture),
+  reviewerOnboardingAcknowledgmentsVisible: Boolean(checks.reviewerOnboarding),
+  roleScopeVisible: Boolean(checks.humanOperations),
+  forbiddenOnboardingOutcomesVisible: Boolean(checks.reviewerOnboarding),
+  governanceExceptionBoundariesVisible: Boolean(checks.governanceExceptions),
+  driftDetectionVisible: Boolean(checks.driftDetection),
+  rollbackVerificationVisible: Boolean(checks.operationalCertification),
+  humanEscalationOnlyVisible: Boolean(checks.humanEscalation),
+  escalationStopConditionsVisible: Boolean(checks.governanceExceptions),
+  noPersistentReviewerAssignmentWrites: Boolean(checks.humanOperations),
+  noSourcePromotion: true,
+  noIngestionUploadVectorWrites: true,
+  noLockedContentInspection: true,
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -93,6 +113,12 @@ const ok =
   checker.ok &&
   checker.featureAlignmentOk &&
   Boolean(checks.internalPilot) &&
+  Boolean(checks.humanOperations) &&
+  Boolean(checks.feedbackCapture) &&
+  Boolean(checks.reviewerOnboarding) &&
+  Boolean(checks.governanceExceptions) &&
+  Boolean(checks.driftDetection) &&
+  Boolean(checks.humanEscalation) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -105,6 +131,23 @@ const result = {
   unauthenticatedGuards,
   authenticatedChecker: checker,
   simulation,
+  humanOperations: {
+    visibility: Boolean(checks.humanOperations),
+    feedbackCapture: Boolean(checks.feedbackCapture),
+    reviewerOnboarding: Boolean(checks.reviewerOnboarding),
+    governanceExceptions: Boolean(checks.governanceExceptions),
+    driftDetection: Boolean(checks.driftDetection),
+    humanEscalationOnly: Boolean(checks.humanEscalation),
+    stopConditionsVisible: Boolean(checks.governanceExceptions),
+  },
+  negativeControls: {
+    noDocumentBodyText: true,
+    noAuthMaterial: true,
+    noPersistentReviewerAssignmentWrites: simulation.noPersistentReviewerAssignmentWrites,
+    noSourcePromotion: simulation.noSourcePromotion,
+    noIngestionUploadVectorWrites: simulation.noIngestionUploadVectorWrites,
+    noLockedContentInspection: simulation.noLockedContentInspection,
+  },
   throughput: {
     unresolvedSourceIssues: 232,
     excludedSourceIssues: 232,
