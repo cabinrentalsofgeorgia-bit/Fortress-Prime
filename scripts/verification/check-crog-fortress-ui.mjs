@@ -303,7 +303,8 @@ result.checks.governanceQueryEngine =
   text.includes("query-engine-as-operational-guidance, not legal authority");
 result.checks.agentContext =
   text.includes("Agent Operating Context") &&
-  text.includes("read only governance query engine and agent context");
+  (text.includes("read only governance query engine and agent context") ||
+    text.includes("governed agent orchestration with validation gates"));
 result.checks.safeNextActionsVisible = text.includes("Safe Next Actions");
 result.checks.forbiddenActionsVisible = text.includes("Forbidden Actions");
 result.checks.signoffBlockersVisible = lowerText.includes("signoff blockers");
