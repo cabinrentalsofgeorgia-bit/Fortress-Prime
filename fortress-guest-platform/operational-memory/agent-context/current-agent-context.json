@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T11:01:53.516Z",
+  "sourceRefs": [
+    "fortress-guest-platform/scripts/operational-memory/query-governance.mjs",
+    "fortress-guest-platform/operational-memory/queries/query-taxonomy.json"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": [
+    "agent_context_not_legal_authority",
+    "human_review_required"
+  ],
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/"
+  ],
+  "validationStatus": {
+    "status": "GENERATED_FROM_GOVERNANCE_QUERY_ENGINE"
+  },
+  "rollbackRefs": [
+    "delete_generated_context",
+    "git_revert"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "canonicalRepo": "/home/admin/Fortress-Prime",
+  "currentWorktree": "/home/admin/Fortress-Prime-operational-memory",
+  "recommendedBaseBranch": "release/fortress-legal-knowledge-graph",
+  "verifiedCapabilities": [
+    "canonicalization",
+    "feature_alignment",
+    "operational_hardening",
+    "remediation_maturity",
+    "review_operations",
+    "review_scaling",
+    "operational_certification",
+    "internal_pilot",
+    "human_operations",
+    "capability_audit",
+    "operational_memory",
+    "operational_graph"
+  ],
+  "knownBlockers": [
+    "232_unresolved_source_issues_excluded",
+    "counsel_signoff_pending",
+    "public_launch_forbidden",
+    "external_legal_operations_forbidden",
+    "persistent_reviewer_assignment_writes_deferred",
+    "operational_graph_complete_pending_review"
+  ],
+  "safeOperatingMode": "read_only_governance_query_engine_and_agent_context",
+  "hardStops": [
+    "secrets_exposure",
+    "confidential_text_exposure",
+    "restricted_content_boundary_violation",
+    "schema_rls_policy_mutation",
+    "uncontrolled_reviewer_authority",
+    "external_public_access_required",
+    "registry_legal_authority_risk"
+  ],
+  "forbiddenOperations": [
+    "auto_signoff",
+    "final_legal_conclusion",
+    "filing_service_email_external_submission",
+    "restricted_content_review",
+    "unresolved_source_promotion",
+    "document_upload_or_ingestion",
+    "duplicate_vectors_or_document_rows",
+    "schema_rls_policy_mutation",
+    "secrets_or_auth_state_storage"
+  ],
+  "validationCommands": [
+    "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
+    "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
+    "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
+    "CROG_AUTH_STATE=/home/admin/Fortress-Prime-auth-verify/.auth/crog-ai-gary.json node scripts/verification/check-crog-fortress-ui.mjs"
+  ],
+  "evidencePaths": [
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/"
+  ],
+  "readFirst": [
+    "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+    "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
+    "fortress-guest-platform/operational-memory/graph/graph.json",
+    "fortress-guest-platform/operational-memory/registries/operational-state.json",
+    "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json"
+  ],
+  "nextRecommendedPhase": "controlled_governance_query_review_and_agent_context_use",
+  "prBranchExpectations": {
+    "branchPrefix": "release/fortress-legal-",
+    "draftPrRequired": true,
+    "commitDiscipline": "small_focused_commits"
+  },
+  "negativeControls": {
+    "noSecrets": true,
+    "noConfidentialText": true,
+    "noCounselSignoffAuthority": true,
+    "noFinalLegalConclusionAuthority": true,
+    "noExternalSubmissionAuthority": true,
+    "noSourcePromotion": true,
+    "noSchemaRlsPolicyMutation": true,
+    "readOnly": true
+  }
+}
