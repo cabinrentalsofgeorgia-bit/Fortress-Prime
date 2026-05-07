@@ -1,0 +1,84 @@
+
+> @fortress/command-center@0.1.0 lint
+> eslint
+
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/command/triage/page.tsx
+  8:3  warning  'BookOpen' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/command/yield/_components/yield-shell.tsx
+  49:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/command/yield/_components/yield-shell.tsx:49:7
+  47 |   useEffect(() => {
+  48 |     if (!selectedPropertyId && activeProperties.length > 0) {
+> 49 |       setSelectedPropertyId(activeProperties[0].id);
+     |       ^^^^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  50 |     }
+  51 |   }, [activeProperties, selectedPropertyId]);
+  52 |  react-hooks/set-state-in-effect
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/growth/redirect-remaps/_components/redirect-remap-shell.tsx
+  18:15  warning  'SeoRedirectRemapQueueItem' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/system-health/_components/infrastructure-radar.tsx
+  3:46  warning  '_nodes' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/trust-review/_components/trust-review-detail.tsx
+  114:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/trust-review/_components/trust-review-detail.tsx:114:7
+  112 |   useEffect(() => {
+  113 |     if (escalation.data) {
+> 114 |       setPayloadDraft(prettyJson(escalation.data.proposed_payload));
+      |       ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  115 |     }
+  116 |   }, [escalation.data]);
+  117 |  react-hooks/set-state-in-effect
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/trust-review/_components/trust-review-queue.tsx
+  142:9  warning  The 'items' logical expression could make the dependencies of useMemo Hook (at line 149) change on every render. To fix this, wrap the initialization of 'items' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/vrs/_components/hunter-ops-queue.tsx
+  169:95   error  Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+  231:66   error  Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+  231:120  error  Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+  232:64   error  Comments inside children section of tag should be placed inside braces  react/jsx-no-comment-textnodes
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/app/(dashboard)/vrs/_components/taylor-quote-dashboard.tsx
+  63:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/components/tape-chart.tsx
+  116:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/components/tape-chart.tsx:116:5
+  114 |     const fit = computeFitWindow(reservations);
+  115 |     if (!fit) return;
+> 116 |     setViewStart(fit.viewStart);
+      |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  117 |     setDaysToShow(fit.daysToShow);
+  118 |     autoFitOnceRef.current = true;
+  119 |   }, [reservations]);  react-hooks/set-state-in-effect
+
+/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/src/lib/archive-page.tsx
+  453:9  warning  `next/script`'s `beforeInteractive` strategy should not be used outside of `pages/_document.js`. See: https://nextjs.org/docs/messages/no-before-interactive-script-outside-document  @next/next/no-before-interactive-script-outside-document
+
+✖ 13 problems (7 errors, 6 warnings)
