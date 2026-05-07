@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "generatedAt": "2026-05-07T18:17:10.059Z",
   "sourceRefs": [
     "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md"
   ],
@@ -18,10 +18,15 @@
   ],
   "evidenceRefs": [
     "fortress-guest-platform/operational-memory/graph/graph.json",
-    "fortress-guest-platform/operational-memory/registries/operational-state.json"
+    "fortress-guest-platform/operational-memory/registries/operational-state.json",
+    "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json"
   ],
-  "validationStatus": { "status": "QUERY_TAXONOMY_DEFINED" },
-  "rollbackRefs": ["git_revert"],
+  "validationStatus": {
+    "status": "QUERY_TAXONOMY_DEFINED"
+  },
+  "rollbackRefs": [
+    "git_revert"
+  ],
   "noSecrets": true,
   "noConfidentialText": true,
   "queries": [
@@ -42,170 +47,711 @@
     "deployment_readiness",
     "rollback_readiness",
     "human_review_requirements",
-    "phase_progression"
+    "phase_progression",
+    "remediation_classification",
+    "remediation_clusters",
+    "safe_automation_candidates",
+    "disposition_packets",
+    "reviewer_work_queues",
+    "signoff_blocking_sources",
+    "counsel_review_required_items"
   ],
   "definitions": {
     "standing_state": {
       "purpose": "Report current standing labels and validation posture.",
-      "requiredInputs": ["operational-state", "graph"],
-      "allowedOutputs": ["standingLabels", "validationStatus", "knownBlockers"],
-      "forbiddenOutputs": ["signoff", "finalLegalAdvice", "externalAuthority"],
-      "governingLabels": ["COUNSEL_SIGNOFF_PENDING", "NOT_AUTHORIZED", "NOT FINAL LEGAL ADVICE"],
-      "evidenceRequirements": ["operational-state registry"],
-      "safetyAssertions": ["noSecrets", "noConfidentialText", "humanReviewRequired"]
+      "requiredInputs": [
+        "operational-state",
+        "graph"
+      ],
+      "allowedOutputs": [
+        "standingLabels",
+        "validationStatus",
+        "knownBlockers"
+      ],
+      "forbiddenOutputs": [
+        "signoff",
+        "finalLegalAdvice",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-state registry"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired"
+      ]
     },
     "current_capabilities": {
       "purpose": "List verified operational capabilities and limitations.",
-      "requiredInputs": ["capability-registry"],
-      "allowedOutputs": ["capabilityIds", "maturityLevel", "evidencePath", "limitations"],
-      "forbiddenOutputs": ["legalConclusion", "signoffAuthority"],
-      "governingLabels": ["COUNSEL_SIGNOFF_PENDING"],
-      "evidenceRequirements": ["capability evidence paths"],
-      "safetyAssertions": ["metadataOnly"]
+      "requiredInputs": [
+        "capability-registry"
+      ],
+      "allowedOutputs": [
+        "capabilityIds",
+        "maturityLevel",
+        "evidencePath",
+        "limitations"
+      ],
+      "forbiddenOutputs": [
+        "legalConclusion",
+        "signoffAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING"
+      ],
+      "evidenceRequirements": [
+        "capability evidence paths"
+      ],
+      "safetyAssertions": [
+        "metadataOnly"
+      ]
     },
     "current_blockers": {
       "purpose": "List blockers preventing broader legal operations.",
-      "requiredInputs": ["operational-state", "remediation-registry"],
-      "allowedOutputs": ["knownBlockers", "unresolvedSourceCount"],
-      "forbiddenOutputs": ["sourcePromotion"],
-      "governingLabels": ["unresolved_sources_excluded"],
-      "evidenceRequirements": ["remediation registry"],
-      "safetyAssertions": ["humanReviewRequired"]
+      "requiredInputs": [
+        "operational-state",
+        "remediation-registry"
+      ],
+      "allowedOutputs": [
+        "knownBlockers",
+        "unresolvedSourceCount"
+      ],
+      "forbiddenOutputs": [
+        "sourcePromotion"
+      ],
+      "governingLabels": [
+        "unresolved_sources_excluded"
+      ],
+      "evidenceRequirements": [
+        "remediation registry"
+      ],
+      "safetyAssertions": [
+        "humanReviewRequired"
+      ]
     },
     "signoff_blockers": {
       "purpose": "Explain why counsel signoff remains pending.",
-      "requiredInputs": ["operational-state", "governance-registry", "remediation-registry"],
-      "allowedOutputs": ["counselStatus", "blockerReasons", "humanReviewRequired"],
-      "forbiddenOutputs": ["counselSignoffComplete"],
-      "governingLabels": ["COUNSEL_SIGNOFF_PENDING"],
-      "evidenceRequirements": ["governance registry", "remediation registry"],
-      "safetyAssertions": ["noSignoffAutomation"]
+      "requiredInputs": [
+        "operational-state",
+        "governance-registry",
+        "remediation-registry"
+      ],
+      "allowedOutputs": [
+        "counselStatus",
+        "blockerReasons",
+        "humanReviewRequired"
+      ],
+      "forbiddenOutputs": [
+        "counselSignoffComplete"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING"
+      ],
+      "evidenceRequirements": [
+        "governance registry",
+        "remediation registry"
+      ],
+      "safetyAssertions": [
+        "noSignoffAutomation"
+      ]
     },
     "external_launch_blockers": {
       "purpose": "Explain why public/external legal operations remain forbidden.",
-      "requiredInputs": ["operational-state", "governance-registry"],
-      "allowedOutputs": ["externalAuthorityStatus", "blockerReasons"],
-      "forbiddenOutputs": ["externalSubmissionAuthorized"],
-      "governingLabels": ["NOT_AUTHORIZED"],
-      "evidenceRequirements": ["governance registry"],
-      "safetyAssertions": ["noExternalAuthority"]
+      "requiredInputs": [
+        "operational-state",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "externalAuthorityStatus",
+        "blockerReasons"
+      ],
+      "forbiddenOutputs": [
+        "externalSubmissionAuthorized"
+      ],
+      "governingLabels": [
+        "NOT_AUTHORIZED"
+      ],
+      "evidenceRequirements": [
+        "governance registry"
+      ],
+      "safetyAssertions": [
+        "noExternalAuthority"
+      ]
     },
     "evidence_for_phase": {
       "purpose": "Return evidence refs for a phase or capability.",
-      "requiredInputs": ["evidence-registry", "capability-registry"],
-      "allowedOutputs": ["phase", "evidencePath", "status"],
-      "forbiddenOutputs": ["documentBodyText"],
-      "governingLabels": ["no_confidential_text"],
-      "evidenceRequirements": ["evidence registry"],
-      "safetyAssertions": ["pathMetadataOnly"]
+      "requiredInputs": [
+        "evidence-registry",
+        "capability-registry"
+      ],
+      "allowedOutputs": [
+        "phase",
+        "evidencePath",
+        "status"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText"
+      ],
+      "governingLabels": [
+        "no_confidential_text"
+      ],
+      "evidenceRequirements": [
+        "evidence registry"
+      ],
+      "safetyAssertions": [
+        "pathMetadataOnly"
+      ]
     },
     "validation_for_capability": {
       "purpose": "Return checker or validator references for a capability.",
-      "requiredInputs": ["capability-registry", "graph-validation-report"],
-      "allowedOutputs": ["checkerFlag", "validationRefs", "evidencePath"],
-      "forbiddenOutputs": ["authState"],
-      "governingLabels": ["no_auth_material"],
-      "evidenceRequirements": ["validation report"],
-      "safetyAssertions": ["noSecrets"]
+      "requiredInputs": [
+        "capability-registry",
+        "graph-validation-report"
+      ],
+      "allowedOutputs": [
+        "checkerFlag",
+        "validationRefs",
+        "evidencePath"
+      ],
+      "forbiddenOutputs": [
+        "authState"
+      ],
+      "governingLabels": [
+        "no_auth_material"
+      ],
+      "evidenceRequirements": [
+        "validation report"
+      ],
+      "safetyAssertions": [
+        "noSecrets"
+      ]
     },
     "governance_boundaries": {
       "purpose": "List current forbidden operations and hard stops.",
-      "requiredInputs": ["governance-registry"],
-      "allowedOutputs": ["forbiddenOperations", "hardStops"],
-      "forbiddenOutputs": ["overrideAuthority"],
-      "governingLabels": ["human_review_required"],
-      "evidenceRequirements": ["governance registry"],
-      "safetyAssertions": ["noGovernanceOverride"]
+      "requiredInputs": [
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "forbiddenOperations",
+        "hardStops"
+      ],
+      "forbiddenOutputs": [
+        "overrideAuthority"
+      ],
+      "governingLabels": [
+        "human_review_required"
+      ],
+      "evidenceRequirements": [
+        "governance registry"
+      ],
+      "safetyAssertions": [
+        "noGovernanceOverride"
+      ]
     },
     "safe_next_actions": {
       "purpose": "Recommend bounded next engineering actions.",
-      "requiredInputs": ["operational-state", "graph"],
-      "allowedOutputs": ["action", "reason", "authorityRequired", "evidenceRefs"],
-      "forbiddenOutputs": ["legalAdvice", "signoff", "externalSubmission"],
-      "governingLabels": ["COUNSEL_SIGNOFF_PENDING", "NOT_AUTHORIZED"],
-      "evidenceRequirements": ["graph", "operational-state"],
-      "safetyAssertions": ["humanReviewRequired"]
+      "requiredInputs": [
+        "operational-state",
+        "graph"
+      ],
+      "allowedOutputs": [
+        "action",
+        "reason",
+        "authorityRequired",
+        "evidenceRefs"
+      ],
+      "forbiddenOutputs": [
+        "legalAdvice",
+        "signoff",
+        "externalSubmission"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED"
+      ],
+      "evidenceRequirements": [
+        "graph",
+        "operational-state"
+      ],
+      "safetyAssertions": [
+        "humanReviewRequired"
+      ]
     },
     "forbidden_actions": {
       "purpose": "List operations agents and reviewers must not perform.",
-      "requiredInputs": ["governance-registry"],
-      "allowedOutputs": ["forbiddenOperations", "hardStops"],
-      "forbiddenOutputs": ["exceptionsWithoutApproval"],
-      "governingLabels": ["hard_stops"],
-      "evidenceRequirements": ["governance registry"],
-      "safetyAssertions": ["noOverride"]
+      "requiredInputs": [
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "forbiddenOperations",
+        "hardStops"
+      ],
+      "forbiddenOutputs": [
+        "exceptionsWithoutApproval"
+      ],
+      "governingLabels": [
+        "hard_stops"
+      ],
+      "evidenceRequirements": [
+        "governance registry"
+      ],
+      "safetyAssertions": [
+        "noOverride"
+      ]
     },
     "agent_operating_context": {
       "purpose": "Provide deterministic startup context for AI agents.",
-      "requiredInputs": ["registries", "graph", "query taxonomy"],
-      "allowedOutputs": ["repo", "branchRules", "readFirst", "validationCommands", "forbiddenOperations"],
-      "forbiddenOutputs": ["secrets", "authState", "documentText"],
-      "governingLabels": ["query_engine_as_operational_guidance_not_legal_authority"],
-      "evidenceRequirements": ["agent context registry"],
-      "safetyAssertions": ["noSecrets", "noConfidentialText"]
+      "requiredInputs": [
+        "registries",
+        "graph",
+        "query taxonomy"
+      ],
+      "allowedOutputs": [
+        "repo",
+        "branchRules",
+        "readFirst",
+        "validationCommands",
+        "forbiddenOperations"
+      ],
+      "forbiddenOutputs": [
+        "secrets",
+        "authState",
+        "documentText"
+      ],
+      "governingLabels": [
+        "query_engine_as_operational_guidance_not_legal_authority"
+      ],
+      "evidenceRequirements": [
+        "agent context registry"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText"
+      ]
     },
     "reviewer_operating_context": {
       "purpose": "Provide safe reviewer context and boundaries.",
-      "requiredInputs": ["governance-registry", "remediation-registry"],
-      "allowedOutputs": ["reviewMode", "humanReviewRequired", "blockedActions"],
-      "forbiddenOutputs": ["signoffShortcut"],
-      "governingLabels": ["COUNSEL_SIGNOFF_PENDING"],
-      "evidenceRequirements": ["governance registry"],
-      "safetyAssertions": ["humanReviewRequired"]
+      "requiredInputs": [
+        "governance-registry",
+        "remediation-registry"
+      ],
+      "allowedOutputs": [
+        "reviewMode",
+        "humanReviewRequired",
+        "blockedActions"
+      ],
+      "forbiddenOutputs": [
+        "signoffShortcut"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING"
+      ],
+      "evidenceRequirements": [
+        "governance registry"
+      ],
+      "safetyAssertions": [
+        "humanReviewRequired"
+      ]
     },
     "remediation_status": {
       "purpose": "Report remediation posture.",
-      "requiredInputs": ["remediation-registry"],
-      "allowedOutputs": ["unresolvedSourceIssues", "exclusionStatus", "categories"],
-      "forbiddenOutputs": ["autoResolvedItems"],
-      "governingLabels": ["unresolved_sources_excluded"],
-      "evidenceRequirements": ["remediation registry"],
-      "safetyAssertions": ["noAutoResolution"]
+      "requiredInputs": [
+        "remediation-registry"
+      ],
+      "allowedOutputs": [
+        "unresolvedSourceIssues",
+        "exclusionStatus",
+        "categories"
+      ],
+      "forbiddenOutputs": [
+        "autoResolvedItems"
+      ],
+      "governingLabels": [
+        "unresolved_sources_excluded"
+      ],
+      "evidenceRequirements": [
+        "remediation registry"
+      ],
+      "safetyAssertions": [
+        "noAutoResolution"
+      ]
     },
     "unresolved_source_boundary": {
       "purpose": "Report unresolved-source exclusion boundaries.",
-      "requiredInputs": ["remediation-registry", "graph"],
-      "allowedOutputs": ["exclusionStatus", "humanReviewRequired"],
-      "forbiddenOutputs": ["reliedUponPromotion"],
-      "governingLabels": ["EXCLUDED_FROM_RELIED_UPON_SECTIONS"],
-      "evidenceRequirements": ["graph exclusion edges"],
-      "safetyAssertions": ["noSourcePromotion"]
+      "requiredInputs": [
+        "remediation-registry",
+        "graph"
+      ],
+      "allowedOutputs": [
+        "exclusionStatus",
+        "humanReviewRequired"
+      ],
+      "forbiddenOutputs": [
+        "reliedUponPromotion"
+      ],
+      "governingLabels": [
+        "EXCLUDED_FROM_RELIED_UPON_SECTIONS"
+      ],
+      "evidenceRequirements": [
+        "graph exclusion edges"
+      ],
+      "safetyAssertions": [
+        "noSourcePromotion"
+      ]
     },
     "deployment_readiness": {
       "purpose": "Report deployment verification status.",
-      "requiredInputs": ["evidence-registry", "graph"],
-      "allowedOutputs": ["deploymentVerifier", "serviceStatus", "rollbackRefs"],
-      "forbiddenOutputs": ["schemaMutation"],
-      "governingLabels": ["Schema/RLS/policy mutation: NOT_PERFORMED"],
-      "evidenceRequirements": ["deployment evidence"],
-      "safetyAssertions": ["noSchemaMutation"]
+      "requiredInputs": [
+        "evidence-registry",
+        "graph"
+      ],
+      "allowedOutputs": [
+        "deploymentVerifier",
+        "serviceStatus",
+        "rollbackRefs"
+      ],
+      "forbiddenOutputs": [
+        "schemaMutation"
+      ],
+      "governingLabels": [
+        "Schema/RLS/policy mutation: NOT_PERFORMED"
+      ],
+      "evidenceRequirements": [
+        "deployment evidence"
+      ],
+      "safetyAssertions": [
+        "noSchemaMutation"
+      ]
     },
     "rollback_readiness": {
       "purpose": "Report rollback posture.",
-      "requiredInputs": ["graph", "evidence-registry"],
-      "allowedOutputs": ["rollbackRefs", "rollbackPlan"],
-      "forbiddenOutputs": ["destructiveCommands"],
-      "governingLabels": ["rollback_ready"],
-      "evidenceRequirements": ["rollback evidence"],
-      "safetyAssertions": ["gitRevertable"]
+      "requiredInputs": [
+        "graph",
+        "evidence-registry"
+      ],
+      "allowedOutputs": [
+        "rollbackRefs",
+        "rollbackPlan"
+      ],
+      "forbiddenOutputs": [
+        "destructiveCommands"
+      ],
+      "governingLabels": [
+        "rollback_ready"
+      ],
+      "evidenceRequirements": [
+        "rollback evidence"
+      ],
+      "safetyAssertions": [
+        "gitRevertable"
+      ]
     },
     "human_review_requirements": {
       "purpose": "List items requiring human or counsel review.",
-      "requiredInputs": ["graph", "governance-registry", "remediation-registry"],
-      "allowedOutputs": ["humanReviewRequiredNodes", "reasons"],
-      "forbiddenOutputs": ["automatedDecision"],
-      "governingLabels": ["human_review_required"],
-      "evidenceRequirements": ["graph"],
-      "safetyAssertions": ["noAutonomousLegalJudgment"]
+      "requiredInputs": [
+        "graph",
+        "governance-registry",
+        "remediation-registry"
+      ],
+      "allowedOutputs": [
+        "humanReviewRequiredNodes",
+        "reasons"
+      ],
+      "forbiddenOutputs": [
+        "automatedDecision"
+      ],
+      "governingLabels": [
+        "human_review_required"
+      ],
+      "evidenceRequirements": [
+        "graph"
+      ],
+      "safetyAssertions": [
+        "noAutonomousLegalJudgment"
+      ]
     },
     "phase_progression": {
       "purpose": "Recommend the next operational phase.",
-      "requiredInputs": ["operational-state", "capability-registry"],
-      "allowedOutputs": ["recommendedPhase", "reason", "requiredAuthority"],
-      "forbiddenOutputs": ["publicLaunch", "externalLegalOps"],
-      "governingLabels": ["NOT_AUTHORIZED"],
-      "evidenceRequirements": ["current validation evidence"],
-      "safetyAssertions": ["controlledInternalOnly"]
+      "requiredInputs": [
+        "operational-state",
+        "capability-registry"
+      ],
+      "allowedOutputs": [
+        "recommendedPhase",
+        "reason",
+        "requiredAuthority"
+      ],
+      "forbiddenOutputs": [
+        "publicLaunch",
+        "externalLegalOps"
+      ],
+      "governingLabels": [
+        "NOT_AUTHORIZED"
+      ],
+      "evidenceRequirements": [
+        "current validation evidence"
+      ],
+      "safetyAssertions": [
+        "controlledInternalOnly"
+      ]
+    },
+    "remediation_classification": {
+      "purpose": "Report metadata-only AI remediation classification summary.",
+      "requiredInputs": [
+        "ai-remediation-execution artifacts",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "counts",
+        "ids",
+        "packetRefs",
+        "queueRefs",
+        "evidenceRefs",
+        "reviewRequirements"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText",
+        "sourcePromotion",
+        "legalConclusion",
+        "signoffAuthority",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-memory/remediation metadata artifacts"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired",
+        "noSourcePromotion"
+      ]
+    },
+    "remediation_clusters": {
+      "purpose": "Report metadata-only remediation cluster summary.",
+      "requiredInputs": [
+        "ai-remediation-execution artifacts",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "counts",
+        "ids",
+        "packetRefs",
+        "queueRefs",
+        "evidenceRefs",
+        "reviewRequirements"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText",
+        "sourcePromotion",
+        "legalConclusion",
+        "signoffAuthority",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-memory/remediation metadata artifacts"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired",
+        "noSourcePromotion"
+      ]
+    },
+    "safe_automation_candidates": {
+      "purpose": "Report recommendation-only automation candidates requiring human approval.",
+      "requiredInputs": [
+        "ai-remediation-execution artifacts",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "counts",
+        "ids",
+        "packetRefs",
+        "queueRefs",
+        "evidenceRefs",
+        "reviewRequirements"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText",
+        "sourcePromotion",
+        "legalConclusion",
+        "signoffAuthority",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-memory/remediation metadata artifacts"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired",
+        "noSourcePromotion"
+      ]
+    },
+    "disposition_packets": {
+      "purpose": "Report generated non-authoritative remediation disposition packets.",
+      "requiredInputs": [
+        "ai-remediation-execution artifacts",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "counts",
+        "ids",
+        "packetRefs",
+        "queueRefs",
+        "evidenceRefs",
+        "reviewRequirements"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText",
+        "sourcePromotion",
+        "legalConclusion",
+        "signoffAuthority",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-memory/remediation metadata artifacts"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired",
+        "noSourcePromotion"
+      ]
+    },
+    "reviewer_work_queues": {
+      "purpose": "Report reviewer queue summaries for human disposition.",
+      "requiredInputs": [
+        "ai-remediation-execution artifacts",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "counts",
+        "ids",
+        "packetRefs",
+        "queueRefs",
+        "evidenceRefs",
+        "reviewRequirements"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText",
+        "sourcePromotion",
+        "legalConclusion",
+        "signoffAuthority",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-memory/remediation metadata artifacts"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired",
+        "noSourcePromotion"
+      ]
+    },
+    "signoff_blocking_sources": {
+      "purpose": "Report unresolved source categories blocking signoff.",
+      "requiredInputs": [
+        "ai-remediation-execution artifacts",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "counts",
+        "ids",
+        "packetRefs",
+        "queueRefs",
+        "evidenceRefs",
+        "reviewRequirements"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText",
+        "sourcePromotion",
+        "legalConclusion",
+        "signoffAuthority",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-memory/remediation metadata artifacts"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired",
+        "noSourcePromotion"
+      ]
+    },
+    "counsel_review_required_items": {
+      "purpose": "Report issue IDs requiring counsel review without source promotion.",
+      "requiredInputs": [
+        "ai-remediation-execution artifacts",
+        "governance-registry"
+      ],
+      "allowedOutputs": [
+        "counts",
+        "ids",
+        "packetRefs",
+        "queueRefs",
+        "evidenceRefs",
+        "reviewRequirements"
+      ],
+      "forbiddenOutputs": [
+        "documentBodyText",
+        "sourcePromotion",
+        "legalConclusion",
+        "signoffAuthority",
+        "externalAuthority"
+      ],
+      "governingLabels": [
+        "COUNSEL_SIGNOFF_PENDING",
+        "NOT_AUTHORIZED",
+        "NOT FINAL LEGAL ADVICE"
+      ],
+      "evidenceRequirements": [
+        "operational-memory/remediation metadata artifacts"
+      ],
+      "safetyAssertions": [
+        "noSecrets",
+        "noConfidentialText",
+        "humanReviewRequired",
+        "noSourcePromotion"
+      ]
     }
   }
 }

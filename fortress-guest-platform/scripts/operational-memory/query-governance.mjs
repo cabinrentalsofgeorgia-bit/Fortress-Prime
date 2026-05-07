@@ -7,6 +7,7 @@ const root = process.cwd().endsWith("fortress-guest-platform")
 const registryDir = join(root, "operational-memory", "registries");
 const graphDir = join(root, "operational-memory", "graph");
 const queryDir = join(root, "operational-memory", "queries");
+const aiRemediationDir = join(root, "operational-memory", "remediation");
 const outDir = join(root, "operational-memory", "query-results");
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
@@ -20,6 +21,11 @@ const wiki = readJson(join(registryDir, "wiki-knowledge-index.json"));
 const graph = readJson(join(graphDir, "graph.json"));
 const graphValidation = readJson(join(graphDir, "graph-validation-report.json"));
 const taxonomy = readJson(join(queryDir, "query-taxonomy.json"));
+const aiRemediationClassification = readJson(join(aiRemediationDir, "ai-remediation-classification.json"));
+const aiRemediationClusters = readJson(join(aiRemediationDir, "remediation-clusters.json"));
+const safeAutomationCandidates = readJson(join(aiRemediationDir, "safe-automation-candidates.json"));
+const dispositionPacketIndex = readJson(join(aiRemediationDir, "disposition-packet-index.json"));
+const reviewerWorkQueues = readJson(join(aiRemediationDir, "reviewer-work-queues.json"));
 
 const command = process.argv[2] ?? "standing";
 const arg = process.argv[3] ?? null;
@@ -65,10 +71,14 @@ const safeNextActions = [
     humanReviewRequired: true,
   },
   {
-    action: "Plan structured remediation review without source promotion",
-    reason: "232 unresolved source issues remain excluded and require human review.",
+    action: "Review AI remediation disposition packets without source promotion",
+    reason: "232 unresolved source issues have metadata-only classifications, clusters, safe automation candidates, disposition packets, and reviewer queues.",
     requiredAuthority: "counsel_or_source_review_lead",
-    evidenceRefs: ["fortress-guest-platform/operational-memory/registries/remediation-registry.json"],
+    evidenceRefs: [
+      "fortress-guest-platform/operational-memory/remediation/ai-remediation-classification.json",
+      "fortress-guest-platform/operational-memory/remediation/disposition-packet-index.json",
+      "fortress-guest-platform/operational-memory/remediation/reviewer-work-queues.json",
+    ],
     humanReviewRequired: true,
   },
 ];
@@ -181,6 +191,22 @@ function reviewerContext() {
   };
 }
 
+function aiRemediationSummary() {
+  return {
+    unresolvedIssueCount: aiRemediationClassification.unresolvedIssueCount,
+    classificationSummary: aiRemediationClassification.summary,
+    clusterCount: aiRemediationClusters.clusters.length,
+    safeAutomationCandidateCount: safeAutomationCandidates.candidates.length,
+    dispositionPacketCount: dispositionPacketIndex.packets.length,
+    reviewerQueueCount: reviewerWorkQueues.queues.length,
+    sourcePromotionAllowed: false,
+    legalConclusion: false,
+    signoffAuthority: false,
+    humanReviewRequired: true,
+    counselReviewRequired: true,
+  };
+}
+
 function phaseRecommendation() {
   return {
     recommendedPhase: "controlled_autonomous_rehearsal_review_and_dry_run_use",
@@ -221,6 +247,68 @@ const queryHandlers = {
     categories: remediation.categories,
     noAutoResolution: remediation.noAutoResolution,
     humanReviewRequired: true,
+    aiRemediationExecution: aiRemediationSummary(),
+  }),
+  "remediation-classification": () => ({
+    summary: aiRemediationClassification.summary,
+    issueCount: aiRemediationClassification.unresolvedIssueCount,
+    sampleIssueIds: aiRemediationClassification.issues.slice(0, 10).map((issue) => issue.issueId),
+    sourcePromotionAllowed: false,
+    humanReviewRequired: true,
+  }),
+  "remediation-clusters": () => ({
+    clusterCount: aiRemediationClusters.clusters.length,
+    clusters: aiRemediationClusters.clusters.map((cluster) => ({
+      clusterId: cluster.clusterId,
+      clusterType: cluster.clusterType,
+      issueCount: cluster.issueIds.length,
+      automationSafety: cluster.automationSafety,
+      humanReviewRequired: cluster.humanReviewRequired,
+    })),
+  }),
+  "safe-automation-candidates": () => ({
+    candidateCount: safeAutomationCandidates.candidates.length,
+    candidates: safeAutomationCandidates.candidates.map((candidate) => ({
+      candidateId: candidate.candidateId,
+      candidateType: candidate.candidateType,
+      issueCount: candidate.issueIds.length,
+      requiredHumanApproval: candidate.requiredHumanApproval,
+      sourcePromotionAllowed: candidate.sourcePromotionAllowed,
+      legalConclusion: candidate.legalConclusion,
+      signoffAuthority: candidate.signoffAuthority,
+    })),
+  }),
+  "disposition-packets": () => ({
+    packetCount: dispositionPacketIndex.packets.length,
+    packets: dispositionPacketIndex.packets,
+    sourcePromotionAllowed: false,
+    legalConclusion: false,
+    signoffAuthority: false,
+  }),
+  "reviewer-work-queues": () => ({
+    queueCount: reviewerWorkQueues.queues.length,
+    queues: reviewerWorkQueues.queues.map((queue) => ({
+      queueId: queue.queueId,
+      itemCount: queue.itemCount,
+      packetRefs: queue.packetRefs,
+      priority: queue.priority,
+      reviewRole: queue.reviewRole,
+      humanReviewRequired: queue.humanReviewRequired,
+      sourcePromotionAllowed: queue.sourcePromotionAllowed,
+    })),
+  }),
+  "signoff-blocking-sources": () => ({
+    unresolvedIssueCount: aiRemediationClassification.unresolvedIssueCount,
+    blockerCategories: aiRemediationClassification.summary.byCategory,
+    counselReviewRequired: aiRemediationClassification.summary.counselReviewRequired,
+    sourcePromotionAllowed: false,
+    signoffAuthority: false,
+  }),
+  "counsel-review-required-items": () => ({
+    count: aiRemediationClassification.issues.filter((issue) => issue.counselReviewRequired).length,
+    issueIds: aiRemediationClassification.issues.filter((issue) => issue.counselReviewRequired).map((issue) => issue.issueId),
+    humanReviewRequired: true,
+    signoffAuthority: false,
   }),
   "rollback-readiness": () => ({
     rollbackRefs: graph.rollbackRefs,
