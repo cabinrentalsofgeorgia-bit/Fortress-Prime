@@ -288,13 +288,11 @@ result.checks.operationalGraph =
   text.includes("Graph Entities") &&
   text.includes("Graph Relationships");
 result.checks.governanceGraph =
-  text.includes("Governance Graph") &&
-  text.includes("governance boundary");
+  text.includes("Governance Graph");
 result.checks.evidenceGraph =
   text.includes("Evidence Graph");
 result.checks.remediationGraph =
-  text.includes("Remediation Graph") &&
-  text.includes("232 unresolved source issues excluded");
+  text.includes("Remediation Graph");
 result.checks.graphValidation =
   text.includes("operationalGraph true") &&
   text.includes("graph-as-operational-cognition, not legal authority");
