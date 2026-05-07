@@ -336,6 +336,58 @@ vi.mock("@/lib/legal-hooks", () => ({
       },
     },
   }),
+  useRemediationMaturity: () => ({
+    isLoading: false,
+    error: null,
+    data: {
+      case_slug: "fortress-legal-production-review",
+      status: "SOURCE_REMEDIATION_MATURITY_READY_FOR_REVIEW",
+      source_manifests: {
+        targeted_source_completion_execution_id: "fortress-targeted-source-completion-test",
+        limited_signoff_candidate_execution_id: "fortress-limited-signoff-candidate-test",
+        source_link_repair_execution_id: "fortress-source-link-repair-test",
+        source_remediation_execution_id: "fortress-source-remediation-test",
+      },
+      governance: {
+        counsel_signoff: "COUNSEL_SIGNOFF_PENDING",
+        external_submission_authority: "NOT_AUTHORIZED",
+        final_legal_conclusions: "NOT_CREATED",
+        legal_advice_status: "NOT FINAL LEGAL ADVICE",
+        unresolved_items_excluded_from_relied_upon_sections: true,
+        locked_restricted_handling: "METADATA_ONLY",
+        auto_resolution: "DISABLED",
+      },
+      remediation_summary: {
+        unresolved_total: 232,
+        unsupported_or_missing_source: 230,
+        locked_restricted_no_review: 2,
+        evidence_needed: 230,
+        counsel_review_required: 16,
+        verified_subset_count: 65,
+        limited_packet_available: true,
+      },
+      classification_counts: {
+        by_item_type: [],
+        by_materiality_tier: [],
+        by_confidence_state: [{ state: "source_missing", count: 230 }],
+        by_review_lane: [],
+      },
+      priority_model: {
+        name: "FORTRESS_SOURCE_REVIEW_PRIORITY_V1",
+        factors: [],
+        automation_boundary: "ranking_only_no_source_resolution",
+      },
+      priority_queue: [],
+      review_workflows: [],
+      evidence_lineage: {
+        lineage_chain: ["source_integrity", "remediation_maturity_read_model"],
+        mutation_model: "read_only_derived_view",
+        rollback_model: "git_revert_and_manifest_recheck",
+        silent_state_transitions_allowed: false,
+      },
+      observability: { metrics: [], checker_assertions: [] },
+    },
+  }),
 }));
 
 import { CounselSignoffStrategyPacket } from "@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet";
@@ -353,6 +405,7 @@ describe("CounselSignoffStrategyPacket", () => {
     expect(screen.getByText("Source Link Repair")).toBeInTheDocument();
     expect(screen.getByText("Targeted Source Completion")).toBeInTheDocument();
     expect(screen.getByText("Limited Signoff Candidate Packet")).toBeInTheDocument();
+    expect(screen.getByText("Remediation Maturity / Review Queue")).toBeInTheDocument();
     expect(screen.getByText(/Export snapshot contains no document body text and no locked content/)).toBeInTheDocument();
 
     const operatorButton = screen.getByText("Operator Acknowledge");

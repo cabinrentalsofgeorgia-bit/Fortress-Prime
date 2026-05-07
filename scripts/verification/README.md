@@ -41,6 +41,7 @@ The checker reports two top-level outcomes:
 
 - `ok`: authenticated matter baseline is intact, `COUNSEL_SIGNOFF_PENDING` is visible, no login error is present, and the page does not expose final-advice or external-submission authority labels.
 - `featureAlignmentOk`: `ok` plus Source Integrity / Validation, Workbench, Draft Work Product, and Autonomous Learning visibility.
+- Remediation maturity visibility is included in `featureAlignmentOk` after the review-maturity phase. It checks for Remediation Maturity, Review Confidence, Evidence Lineage, and unresolved-source exclusion labels.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -50,7 +51,8 @@ For Fortress Legal production feature alignment, expected target values are:
   "featureAlignmentOk": true,
   "checks": {
     "draftWorkProduct": true,
-    "learning": true
+    "learning": true,
+    "remediationMaturity": true
   }
 }
 ```

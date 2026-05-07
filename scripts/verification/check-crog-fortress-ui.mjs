@@ -142,7 +142,10 @@ await page
           body.includes("Draft Statement of Facts")) &&
         (body.includes("Autonomous Learning") ||
           body.includes("Learning signals") ||
-          body.includes("Next-best actions"))
+          body.includes("Next-best actions")) &&
+        (body.includes("Remediation Maturity") ||
+          body.includes("Review Confidence") ||
+          body.includes("Evidence Lineage"))
       );
     },
     { timeout: 20000 },
@@ -169,6 +172,11 @@ result.checks.learning =
   text.includes("Autonomous Learning") ||
   text.includes("Learning signals") ||
   text.includes("Next-best actions");
+result.checks.remediationMaturity =
+  text.includes("Remediation Maturity") &&
+  text.includes("Review Confidence") &&
+  text.includes("Evidence Lineage") &&
+  text.includes("excluded from relied-upon sections");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -196,7 +204,8 @@ result.featureAlignmentOk =
   result.checks.validationVisible &&
   result.checks.workbench &&
   result.checks.draftWorkProduct &&
-  result.checks.learning;
+  result.checks.learning &&
+  result.checks.remediationMaturity;
 
 console.log(JSON.stringify(result, null, 2));
 

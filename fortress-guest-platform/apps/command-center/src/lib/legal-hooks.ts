@@ -36,6 +36,7 @@ import type {
   SourceLinkRepairResponse,
   SourceRemediationResponse,
   TargetedSourceCompletionResponse,
+  RemediationMaturityResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -63,6 +64,7 @@ const KEYS = {
   counselSignoffDecision: (slug: string) => ["legal", "counsel-signoff-decision", slug] as const,
   autonomousLearning: (slug: string) => ["legal", "autonomous-learning", slug] as const,
   draftWorkProduct: (slug: string) => ["legal", "draft-work-product", slug] as const,
+  remediationMaturity: (slug: string) => ["legal", "remediation-maturity", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -231,6 +233,17 @@ export function useDraftWorkProduct(slug: string) {
     queryFn: () =>
       api.get<DraftWorkProductResponse>(
         `/api/internal/legal/cases/${slug}/draft-work-product`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useRemediationMaturity(slug: string) {
+  return useQuery({
+    queryKey: KEYS.remediationMaturity(slug),
+    queryFn: () =>
+      api.get<RemediationMaturityResponse>(
+        `/api/internal/legal/cases/${slug}/remediation-maturity`,
       ),
     enabled: !!slug,
   });

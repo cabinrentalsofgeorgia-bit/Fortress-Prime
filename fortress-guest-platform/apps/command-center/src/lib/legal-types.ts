@@ -1063,6 +1063,80 @@ export interface LimitedSignoffCandidateResponse {
   manifest_path?: string;
 }
 
+export interface RemediationMaturityQueueItem {
+  item_id: string;
+  item_type: string;
+  materiality_tier: string;
+  blocker_type: string;
+  source_status: string;
+  confidence_state: string;
+  review_lane: string;
+  priority_score: number;
+  counsel_review_required: boolean;
+  evidence_needed: boolean;
+  locked_restricted_involved: boolean;
+  can_proceed_without_this_item: boolean;
+  signoff_impact: string;
+  required_next_action: string;
+}
+
+export interface RemediationMaturityResponse {
+  case_slug: string;
+  status: string;
+  source_manifests: {
+    targeted_source_completion_execution_id: string;
+    limited_signoff_candidate_execution_id: string;
+    source_link_repair_execution_id: string;
+    source_remediation_execution_id: string;
+  };
+  governance: {
+    counsel_signoff: string;
+    external_submission_authority: string;
+    final_legal_conclusions: string;
+    legal_advice_status: string;
+    unresolved_items_excluded_from_relied_upon_sections: boolean;
+    locked_restricted_handling: string;
+    auto_resolution: string;
+  };
+  remediation_summary: {
+    unresolved_total: number;
+    unsupported_or_missing_source: number;
+    locked_restricted_no_review: number;
+    evidence_needed: number;
+    counsel_review_required: number;
+    verified_subset_count: number;
+    limited_packet_available: boolean;
+  };
+  classification_counts: {
+    by_item_type: Array<{ key: string; count: number }>;
+    by_materiality_tier: Array<{ key: string; count: number }>;
+    by_confidence_state: Array<{ state: string; count: number }>;
+    by_review_lane: Array<{ lane: string; count: number }>;
+  };
+  priority_model: {
+    name: string;
+    factors: string[];
+    automation_boundary: string;
+  };
+  priority_queue: RemediationMaturityQueueItem[];
+  review_workflows: Array<{
+    workflow: string;
+    authority: string;
+    allowed_actions: string[];
+    forbidden_actions: string[];
+  }>;
+  evidence_lineage: {
+    lineage_chain: string[];
+    mutation_model: string;
+    rollback_model: string;
+    silent_state_transitions_allowed: boolean;
+  };
+  observability: {
+    metrics: string[];
+    checker_assertions: string[];
+  };
+}
+
 export type CounselSignoffDecisionType =
   | "operator_review_acknowledgment"
   | "counsel_review_acknowledgment"
