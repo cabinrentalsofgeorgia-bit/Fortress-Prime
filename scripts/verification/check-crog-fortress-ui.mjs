@@ -306,8 +306,8 @@ result.checks.agentContext =
   text.includes("read only governance query engine and agent context");
 result.checks.safeNextActionsVisible = text.includes("Safe Next Actions");
 result.checks.forbiddenActionsVisible = text.includes("Forbidden Actions");
-result.checks.signoffBlockersVisible = text.includes("Signoff Blockers");
-result.checks.launchBlockersVisible = text.includes("Launch Blockers");
+result.checks.signoffBlockersVisible = lowerText.includes("signoff blockers");
+result.checks.launchBlockersVisible = lowerText.includes("launch blockers");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
