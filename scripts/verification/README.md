@@ -47,6 +47,7 @@ The checker reports two top-level outcomes:
 - Operational certification visibility is included after the controlled-pilot certification phase. It checks for Operational Readiness Certification, Pilot Governance, Reviewer Onboarding Governance, Rollback Certification, Governance Enforcement Verification, Operational Safety Certification, and explicit no-public-launch / no-auto-signoff limits.
 - Internal pilot visibility is included after the controlled-internal-pilot phase. It checks for Controlled Internal Pilot Operations, allowed/forbidden pilot exercises, Pilot Throughput Metrics, Pilot Simulation / Drills, no production writes, and forbidden legal-signoff/external-submission labels.
 - Human operations visibility is included after the controlled-human-operations phase. It checks for Controlled Human Operations, Reviewer Onboarding Governance, Operational Feedback Capture, Governance Exception Handling, Operational Drift Detection, Human Incident Rehearsal, and explicit halt/no-write/no-source-promotion boundaries.
+- Operational memory visibility is included after the machine-readable cognition phase. It checks for Operational Memory / Machine-Readable Cognition, Governance Registry, Remediation Registry, Evidence Registry, Capability Registry, Wiki / App / Evidence Knowledge Index, and Reviewer Feedback Ledger Foundation.
 
 For Fortress Legal production feature alignment, expected target values are:
 
@@ -67,7 +68,13 @@ For Fortress Legal production feature alignment, expected target values are:
     "reviewerOnboarding": true,
     "governanceExceptions": true,
     "driftDetection": true,
-    "humanEscalation": true
+    "humanEscalation": true,
+    "operationalMemory": true,
+    "governanceRegistry": true,
+    "remediationRegistry": true,
+    "evidenceRegistry": true,
+    "wikiKnowledgeIndex": true,
+    "reviewerLedgerFoundation": true
   }
 }
 ```

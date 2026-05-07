@@ -159,7 +159,8 @@ await page
       body.includes("Pilot Throughput Metrics") ||
           body.includes("Forbidden Pilot Actions") ||
           body.includes("Controlled Human Operations") ||
-          body.includes("Operational Feedback Capture"))
+          body.includes("Operational Feedback Capture") ||
+          body.includes("Operational Memory / Machine-Readable Cognition"))
       );
     },
     { timeout: 20000 },
@@ -251,6 +252,34 @@ result.checks.humanEscalation =
   text.includes("Human Incident Rehearsal") &&
   text.includes("reviewer confusion escalation") &&
   text.includes("tabletop ready");
+result.checks.operationalMemory =
+  text.includes("Operational Memory / Machine-Readable Cognition") &&
+  text.includes("registry-as-operational-memory") &&
+  text.includes("Governance Registry") &&
+  text.includes("Remediation Registry") &&
+  text.includes("Evidence Registry") &&
+  text.includes("Capability Registry") &&
+  text.includes("Wiki / App / Evidence Knowledge Index") &&
+  text.includes("Reviewer Feedback Ledger Foundation");
+result.checks.governanceRegistry =
+  text.includes("Governance Registry") &&
+  text.includes("forbidden auto signoff") &&
+  text.includes("forbidden final legal conclusion") &&
+  text.includes("forbidden filing service email external submission");
+result.checks.remediationRegistry =
+  text.includes("Remediation Registry") &&
+  text.includes("EXCLUDED FROM RELIED UPON SECTIONS") &&
+  text.includes("no auto resolution true");
+result.checks.evidenceRegistry =
+  text.includes("Evidence Registry") &&
+  text.includes("capability audit");
+result.checks.wikiKnowledgeIndex =
+  text.includes("Wiki / App / Evidence Knowledge Index") &&
+  text.includes("current operational index");
+result.checks.reviewerLedgerFoundation =
+  text.includes("Reviewer Feedback Ledger Foundation") &&
+  text.includes("EMPTY LEDGER FOUNDATION") &&
+  text.includes("no freeform legal text true");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -289,7 +318,13 @@ result.featureAlignmentOk =
   result.checks.reviewerOnboarding &&
   result.checks.governanceExceptions &&
   result.checks.driftDetection &&
-  result.checks.humanEscalation;
+  result.checks.humanEscalation &&
+  result.checks.operationalMemory &&
+  result.checks.governanceRegistry &&
+  result.checks.remediationRegistry &&
+  result.checks.evidenceRegistry &&
+  result.checks.wikiKnowledgeIndex &&
+  result.checks.reviewerLedgerFoundation;
 
 console.log(JSON.stringify(result, null, 2));
 
