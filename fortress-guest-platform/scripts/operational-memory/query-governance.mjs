@@ -123,27 +123,34 @@ function agentContext() {
     standingLabels,
     verifiedCapabilities: capabilityList().map((capability) => capability.id),
     knownBlockers: state.knownBlockers,
-    safeOperatingMode: "read_only_governance_query_engine_and_agent_context",
+    safeOperatingMode: "governed_agent_orchestration_with_validation_gates",
     hardStops: governance.hardStops,
     forbiddenOperations: governance.forbiddenOperations,
     validationCommands: [
       "node fortress-guest-platform/scripts/operational-memory/validate-operational-memory.mjs",
       "node fortress-guest-platform/scripts/operational-memory/validate-knowledge-graph.mjs",
+      "node fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
       "node fortress-guest-platform/scripts/operational-memory/query-governance.mjs standing",
       "CROG_AUTH_STATE=/path/to/local-untracked-auth-state.json node scripts/verification/check-crog-fortress-ui.mjs",
     ],
     evidencePaths: [
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
       "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/",
+      "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/",
     ],
     readFirst: [
+      "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
+      "fortress-guest-platform/operational-memory/agent-orchestration/registries/allowed-actions.json",
+      "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
+      "fortress-guest-platform/operational-memory/agent-orchestration/registries/hard-stop-policies.json",
       "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
       "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
       "fortress-guest-platform/operational-memory/graph/graph.json",
       "fortress-guest-platform/operational-memory/registries/operational-state.json",
       "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
     ],
-    nextRecommendedPhase: "controlled_governance_query_review_and_agent_context_use",
+    nextRecommendedPhase: "controlled_agent_orchestration_review_and_safe_task_use",
     prBranchExpectations: {
       branchPrefix: "release/fortress-legal-",
       draftPrRequired: true,
@@ -167,8 +174,8 @@ function reviewerContext() {
 
 function phaseRecommendation() {
   return {
-    recommendedPhase: "controlled_governance_query_review_and_agent_context_use",
-    reason: "Operational memory and graph are visible and validated; the next useful step is using query outputs to guide agents/reviewers without crossing governance boundaries.",
+    recommendedPhase: "controlled_agent_orchestration_review_and_safe_task_use",
+    reason: "Governance query outputs can now feed validation-gated agent task plans and execution reports without crossing legal authority boundaries.",
     requiredAuthority: "operator_or_engineering_lead",
     humanReviewRequired: true,
     blockedHigherAuthorityActions: [
