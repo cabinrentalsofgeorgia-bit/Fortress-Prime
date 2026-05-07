@@ -33,6 +33,11 @@ const requiredDocs = [
   "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
   "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
   "fortress-guest-platform/operational-memory/context-packs/codex-session.json",
+  "fortress-guest-platform/docs/architecture/agent-execution-governance-architecture-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/agent-orchestration/registries/allowed-actions.json",
+  "fortress-guest-platform/operational-memory/agent-orchestration/registries/forbidden-actions.json",
+  "fortress-guest-platform/operational-memory/agent-orchestration/registries/hard-stop-policies.json",
+  "fortress-guest-platform/scripts/agent-orchestration/validate-agent-orchestration.mjs",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -130,6 +135,12 @@ const simulation = {
   forbiddenActionsVisible: Boolean(checks.forbiddenActionsVisible),
   signoffBlockersVisible: Boolean(checks.signoffBlockersVisible),
   launchBlockersVisible: Boolean(checks.launchBlockersVisible),
+  agentOrchestrationVisible: Boolean(checks.agentOrchestration),
+  hardStopsVisible: Boolean(checks.hardStopsVisible),
+  allowedActionsVisible: Boolean(checks.allowedActionsVisible),
+  taskRiskClassifierVisible: Boolean(checks.taskRiskClassifier),
+  agentPlanGenerationVisible: Boolean(checks.agentPlanGeneration),
+  executionReportValidationVisible: Boolean(checks.executionReportValidation),
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -171,6 +182,12 @@ const ok =
   Boolean(checks.forbiddenActionsVisible) &&
   Boolean(checks.signoffBlockersVisible) &&
   Boolean(checks.launchBlockersVisible) &&
+  Boolean(checks.agentOrchestration) &&
+  Boolean(checks.hardStopsVisible) &&
+  Boolean(checks.allowedActionsVisible) &&
+  Boolean(checks.taskRiskClassifier) &&
+  Boolean(checks.agentPlanGeneration) &&
+  Boolean(checks.executionReportValidation) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -208,6 +225,12 @@ const result = {
     forbiddenActionsVisible: Boolean(checks.forbiddenActionsVisible),
     signoffBlockersVisible: Boolean(checks.signoffBlockersVisible),
     launchBlockersVisible: Boolean(checks.launchBlockersVisible),
+    agentOrchestration: Boolean(checks.agentOrchestration),
+    hardStopsVisible: Boolean(checks.hardStopsVisible),
+    allowedActionsVisible: Boolean(checks.allowedActionsVisible),
+    taskRiskClassifier: Boolean(checks.taskRiskClassifier),
+    agentPlanGeneration: Boolean(checks.agentPlanGeneration),
+    executionReportValidation: Boolean(checks.executionReportValidation),
   },
   negativeControls: {
     noDocumentBodyText: true,

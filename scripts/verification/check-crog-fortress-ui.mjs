@@ -308,6 +308,22 @@ result.checks.safeNextActionsVisible = text.includes("Safe Next Actions");
 result.checks.forbiddenActionsVisible = text.includes("Forbidden Actions");
 result.checks.signoffBlockersVisible = lowerText.includes("signoff blockers");
 result.checks.launchBlockersVisible = lowerText.includes("launch blockers");
+result.checks.agentOrchestration =
+  text.includes("Agent Execution Governance / Safe Task Orchestration") &&
+  text.includes("agentOrchestration true") &&
+  text.includes("governed operations, not legal authority");
+result.checks.hardStopsVisible =
+  text.includes("Hard Stop Policies") &&
+  lowerText.includes("secrets exposure") &&
+  lowerText.includes("legal authority");
+result.checks.allowedActionsVisible =
+  text.includes("Allowed Agent Actions") &&
+  lowerText.includes("read operational state");
+result.checks.taskRiskClassifier =
+  text.includes("Task Risk Classifier / Plan Validation") &&
+  lowerText.includes("safe read only");
+result.checks.agentPlanGeneration = text.includes("Latest Agent Plans");
+result.checks.executionReportValidation = text.includes("Execution Reports");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -363,7 +379,13 @@ result.featureAlignmentOk =
   result.checks.safeNextActionsVisible &&
   result.checks.forbiddenActionsVisible &&
   result.checks.signoffBlockersVisible &&
-  result.checks.launchBlockersVisible;
+  result.checks.launchBlockersVisible &&
+  result.checks.agentOrchestration &&
+  result.checks.hardStopsVisible &&
+  result.checks.allowedActionsVisible &&
+  result.checks.taskRiskClassifier &&
+  result.checks.agentPlanGeneration &&
+  result.checks.executionReportValidation;
 
 console.log(JSON.stringify(result, null, 2));
 
