@@ -23,6 +23,7 @@
     { "phase": "capability_audit", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/", "status": "present" },
     { "phase": "operational_memory", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/", "status": "present" },
     { "phase": "operational_graph", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/", "status": "present" },
-    { "phase": "governance_query_engine", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/", "status": "present" }
+    { "phase": "governance_query_engine", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/", "status": "present" },
+    { "phase": "agent_orchestration", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/", "status": "present" }
   ]
 }

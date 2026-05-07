@@ -4,7 +4,7 @@ import { join } from "node:path";
 const root = process.cwd().endsWith("fortress-guest-platform")
   ? process.cwd()
   : join(process.cwd(), "fortress-guest-platform");
-const evidenceRoot = join(root, "docs", "operational", "evidence", "2026-05-06-governance-query-engine");
+const evidenceRoot = join(root, "docs", "operational", "evidence", "2026-05-06-agent-orchestration");
 const output = join(root, "operational-memory", "registries", "operational-state.generated.json");
 
 function readEvidence(name) {
@@ -37,9 +37,12 @@ const registry = {
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/authenticated-checker-final.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/deployment-verifier-final.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-governance-query-engine/pilot-simulation-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/authenticated-checker-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/deployment-verifier-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-agent-orchestration/pilot-simulation-final.json",
   ],
   standingLabels: {
-    productionStatus: "PRODUCTION_GOVERNANCE_QUERY_ENGINE_COMPLETE_PENDING_REVIEW",
+    productionStatus: "PRODUCTION_AGENT_ORCHESTRATION_COMPLETE_PENDING_REVIEW",
     counselStatus: "COUNSEL_SIGNOFF_PENDING",
     externalSubmissionAuthority: "NOT_AUTHORIZED",
     finalLegalConclusions: "NOT_CREATED",
@@ -57,6 +60,7 @@ const registry = {
     operationalMemory: checker?.checks?.operationalMemory === true,
     operationalGraph: checker?.checks?.operationalGraph === true,
     governanceQueryEngine: checker?.checks?.governanceQueryEngine === true,
+    agentOrchestration: checker?.checks?.agentOrchestration === true,
   },
   rollbackRefs: ["delete_generated_preview", "git_revert"],
   noSecrets: true,
@@ -66,7 +70,12 @@ const registry = {
     "counsel_signoff_pending",
     "persistent_reviewer_assignment_writes_deferred",
   ],
-  hardStops: ["registry_legal_authority_risk", "secret_exposure_risk", "schema_rls_policy_mutation_required"],
+  hardStops: [
+    "registry_legal_authority_risk",
+    "secret_exposure_risk",
+    "schema_rls_policy_mutation_required",
+    "agent_task_runner_would_become_legal_authority",
+  ],
 };
 
 writeFileSync(output, `${JSON.stringify(registry, null, 2)}\n`);
