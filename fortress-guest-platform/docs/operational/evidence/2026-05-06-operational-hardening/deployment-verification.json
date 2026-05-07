@@ -1,0 +1,108 @@
+{
+  "ok": true,
+  "checkedAt": "2026-05-07T01:44:46.622Z",
+  "baseUrl": "https://crog-ai.com",
+  "matterPath": "/legal/cases/fortress-legal-production-review",
+  "checks": {
+    "publicRoutes": [
+      {
+        "path": "/",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 119
+      },
+      {
+        "path": "/legal/cases/fortress-legal-production-review",
+        "status": 200,
+        "ok": true,
+        "duration_ms": 58
+      }
+    ],
+    "unauthenticatedGuards": [
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/draft-work-product",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 21
+      },
+      {
+        "path": "/api/internal/legal/cases/fortress-legal-production-review/autonomous-learning",
+        "status": 401,
+        "ok": true,
+        "duration_ms": 23
+      }
+    ],
+    "services": [
+      {
+        "unit": "crog-ai-frontend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "fortress-backend.service",
+        "active": true,
+        "status": "active"
+      },
+      {
+        "unit": "cloudflared.service",
+        "active": true,
+        "status": "active"
+      }
+    ]
+  },
+  "authenticatedChecker": {
+    "skipped": false,
+    "exitCode": 0,
+    "ok": true,
+    "featureAlignmentOk": true,
+    "checks": {
+      "httpStatus": 200,
+      "authenticatedMatter": true,
+      "signoffPending": true,
+      "validationVisible": true,
+      "lockedVisible": true,
+      "documents": true,
+      "completed": true,
+      "workbench": true,
+      "draftWorkProduct": true,
+      "learning": true,
+      "noLoginError": true,
+      "noExternalSubmissionAuthority": true,
+      "noFinalLegalAdvice": true
+    },
+    "errorSummary": {
+      "missing_route": 1,
+      "backend_or_bff_failure": 2
+    },
+    "httpErrors": [
+      {
+        "status": 404,
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/vrs/leads?_rsc=tww92",
+        "classification": "missing_route"
+      },
+      {
+        "status": 500,
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/api/properties/?limit=1000",
+        "classification": "backend_or_bff_failure"
+      },
+      {
+        "status": 500,
+        "method": "GET",
+        "resourceType": "fetch",
+        "url": "https://crog-ai.com/api/properties/?limit=1000",
+        "classification": "backend_or_bff_failure"
+      }
+    ],
+    "stderr": ""
+  },
+  "governance": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  }
+}
