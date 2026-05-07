@@ -22,11 +22,49 @@ const browser = await chromium.launch({ headless: true, executablePath });
 const context = await browser.newContext({ storageState });
 const page = await context.newPage();
 
+function sanitizeUrl(raw) {
+  try {
+    const parsed = new URL(raw);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (/token|key|auth|session|code|password|secret|signature/i.test(key)) {
+        parsed.searchParams.set(key, "REDACTED");
+      }
+    }
+    return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+  } catch {
+    return raw.split("?")[0];
+  }
+}
+
+function classifyFailure({ status, url: rawUrl, resourceType }) {
+  const pathname = (() => {
+    try {
+      return new URL(rawUrl).pathname;
+    } catch {
+      return rawUrl;
+    }
+  })();
+  if (status === 401 || status === 403) return "auth_guard";
+  if (status === 404 && pathname.startsWith("/api/")) return "missing_api_route_or_manifest";
+  if (status === 404 && ["script", "stylesheet", "image", "font"].includes(resourceType)) {
+    return "missing_asset";
+  }
+  if (status === 404) return "missing_route";
+  if (status >= 500 && pathname.startsWith("/api/")) return "backend_or_bff_failure";
+  if (status >= 500) return "runtime_failure";
+  return "http_failure";
+}
+
 const result = {
   ok: false,
+  featureAlignmentOk: false,
+  checkedAt: new Date().toISOString(),
   route: url,
   checks: {},
   errors: [],
+  httpErrors: [],
+  requestFailures: [],
+  errorSummary: {},
 };
 
 page.on("console", (msg) => {
@@ -35,8 +73,53 @@ page.on("console", (msg) => {
   }
 });
 
-const response = await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
+page.on("response", (res) => {
+  const status = res.status();
+  if (status < 400) return;
+  const request = res.request();
+  const failure = {
+    status,
+    method: request.method(),
+    resourceType: request.resourceType(),
+    url: sanitizeUrl(res.url()),
+    classification: classifyFailure({
+      status,
+      url: res.url(),
+      resourceType: request.resourceType(),
+    }),
+  };
+  result.httpErrors.push(failure);
+  result.errorSummary[failure.classification] =
+    (result.errorSummary[failure.classification] ?? 0) + 1;
+});
+
+page.on("requestfailed", (request) => {
+  result.requestFailures.push({
+    method: request.method(),
+    resourceType: request.resourceType(),
+    url: sanitizeUrl(request.url()),
+    failure: request.failure()?.errorText?.slice(0, 200) ?? "unknown",
+  });
+});
+
+const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 result.checks.httpStatus = response?.status();
+result.responseUrl = response ? sanitizeUrl(response.url()) : null;
+result.xRequestId = response?.headers()["x-request-id"] ?? null;
+await page.waitForLoadState("load", { timeout: 15000 }).catch(() => {});
+await page
+  .waitForFunction(
+    () => {
+      const body = document.body?.innerText ?? "";
+      return (
+        body.includes("Fortress Legal Production Review") ||
+        body.includes("COUNSEL_SIGNOFF_PENDING") ||
+        body.includes("Invalid email or password")
+      );
+    },
+    { timeout: 30000 },
+  )
+  .catch(() => {});
 
 async function bodyText() {
   return await page.locator("body").innerText({ timeout: 30000 });
@@ -49,36 +132,36 @@ result.checks.signoffPending = text.includes("COUNSEL_SIGNOFF_PENDING");
 result.checks.validationVisible = text.includes("Counsel Validation") || text.includes("Validation");
 result.checks.lockedVisible = text.includes("Locked");
 
-const labels = [
-  "Documents",
-  "Vault",
-  "Workbench",
-  "Counsel Review Workbench",
-  "Strategy",
-  "Draft Work Product",
-  "Autonomous Learning",
-  "Panopticon",
-  "Deliberation",
-  "Vanguard",
-];
+await page
+  .waitForFunction(
+    () => {
+      const body = document.body?.innerText ?? "";
+      return (
+        (body.includes("Draft Work Product") ||
+          body.includes("Draft Internal Memo") ||
+          body.includes("Draft Statement of Facts")) &&
+        (body.includes("Autonomous Learning") ||
+          body.includes("Learning signals") ||
+          body.includes("Next-best actions")) &&
+        (body.includes("Remediation Maturity") ||
+          body.includes("Review Confidence") ||
+          body.includes("Evidence Lineage"))
+      );
+    },
+    { timeout: 20000 },
+  )
+  .catch(() => {});
+text += "\n" + (await bodyText());
 
-for (const label of labels) {
-  try {
-    const locator = page.getByText(label, { exact: false }).first();
-    if (await locator.count()) {
-      await locator.click({ timeout: 3000 }).catch(() => {});
-      await page.waitForTimeout(500);
-      text += "\n" + (await bodyText());
-    }
-  } catch {
-    // Continue collecting best-effort UI evidence from other panels.
-  }
-}
-
+result.checks.authenticatedMatter = text.includes("Fortress Legal Production Review");
+result.checks.signoffPending = text.includes("COUNSEL_SIGNOFF_PENDING");
+result.checks.validationVisible = text.includes("Counsel Validation") || text.includes("Validation");
+result.checks.lockedVisible = text.includes("Locked");
 result.checks.documents = text.includes("Documents") || text.includes("Vault");
 result.checks.completed = text.includes("Completed") || text.includes("78");
 result.checks.workbench =
   text.includes("Counsel Review Workbench") ||
+  text.includes("Workbench") ||
   text.includes("Issue Matrix") ||
   text.includes("Evidence Binders");
 result.checks.draftWorkProduct =
@@ -89,7 +172,20 @@ result.checks.learning =
   text.includes("Autonomous Learning") ||
   text.includes("Learning signals") ||
   text.includes("Next-best actions");
+result.checks.remediationMaturity =
+  text.includes("Remediation Maturity") &&
+  text.includes("Review Confidence") &&
+  text.includes("Evidence Lineage") &&
+  text.includes("excluded from relied-upon sections");
 result.checks.noLoginError = !text.includes("Invalid email or password");
+result.checks.noExternalSubmissionAuthority =
+  !text.includes("AUTHORIZED_FOR_FILING") &&
+  !text.includes("AUTHORIZED_FOR_SERVICE") &&
+  !text.includes("AUTHORIZED_FOR_EXTERNAL_SUBMISSION");
+result.checks.noFinalLegalAdvice =
+  !text.includes("FINAL_LEGAL_CONCLUSION") &&
+  !text.includes("FINAL_LEGAL_ADVICE") &&
+  !text.includes("AUTHORIZED_FINAL_LEGAL_CONCLUSION");
 
 if (includeTextSample) {
   result.visibleTextSample = text.slice(0, 2500);
@@ -99,7 +195,17 @@ result.ok =
   result.checks.httpStatus === 200 &&
   result.checks.authenticatedMatter &&
   result.checks.signoffPending &&
-  result.checks.noLoginError;
+  result.checks.noLoginError &&
+  result.checks.noExternalSubmissionAuthority &&
+  result.checks.noFinalLegalAdvice;
+
+result.featureAlignmentOk =
+  result.ok &&
+  result.checks.validationVisible &&
+  result.checks.workbench &&
+  result.checks.draftWorkProduct &&
+  result.checks.learning &&
+  result.checks.remediationMaturity;
 
 console.log(JSON.stringify(result, null, 2));
 

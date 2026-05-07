@@ -173,10 +173,11 @@ export function useFinancialDailyCalibration(params?: {
 // ---------------------------------------------------------------------------
 // Properties
 // ---------------------------------------------------------------------------
-export function useProperties() {
+export function useProperties(options?: { enabled?: boolean }) {
   return useQuery<Property[]>({
     queryKey: ["properties", { limit: 1000 }],
     queryFn: () => api.get("/api/properties/", { limit: 1000 }),
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -364,10 +365,14 @@ export function useDepartingToday() {
 // ---------------------------------------------------------------------------
 // Guests
 // ---------------------------------------------------------------------------
-export function useGuests(params?: Record<string, string | number | boolean | undefined>) {
+export function useGuests(
+  params?: Record<string, string | number | boolean | undefined>,
+  options?: { enabled?: boolean },
+) {
   return useQuery<Guest[]>({
     queryKey: ["guests", params],
     queryFn: () => api.get("/api/guests/", params),
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -475,10 +480,14 @@ export function useUnreadMessages() {
 // ---------------------------------------------------------------------------
 // Work Orders
 // ---------------------------------------------------------------------------
-export function useWorkOrders(params?: Record<string, string | number | boolean | undefined>) {
+export function useWorkOrders(
+  params?: Record<string, string | number | boolean | undefined>,
+  options?: { enabled?: boolean },
+) {
   return useQuery<WorkOrder[]>({
     queryKey: ["work-orders", params],
     queryFn: () => api.get("/api/work-orders/", params),
+    enabled: options?.enabled ?? true,
   });
 }
 

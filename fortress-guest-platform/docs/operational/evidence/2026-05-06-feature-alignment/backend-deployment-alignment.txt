@@ -1,0 +1,25 @@
+deployment stamp: 20260506-213100-feature-alignment
+source backend: /home/admin/Fortress-Prime-feature-alignment/fortress-guest-platform/backend
+runtime backend: /home/admin/Fortress-Prime-runtime-main-20260504/fortress-guest-platform/backend
+rollback dir: /home/admin/Fortress-Prime-runtime-main-20260504/feature-alignment-backend-rollback-20260506-213100-feature-alignment
+files:
+api/legal_workbench.py
+services/legal_counsel_workbench.py
+services/legal_counsel_validation.py
+services/legal_counsel_signoff_packet.py
+services/legal_source_integrity_validation.py
+services/legal_source_remediation.py
+services/legal_source_link_repair.py
+services/legal_targeted_source_completion.py
+services/legal_limited_signoff_candidate_packet.py
+services/legal_counsel_signoff_decision.py
+services/legal_autonomous_learning_loop.py
+services/legal_draft_work_product.py
+backend status:
+active
+frontend status:
+active
+http-root:
+200
+http-matter-route:
+200

@@ -51,6 +51,23 @@ const PUBLIC_FGP_PATH_PREFIXES = [
   "/api/dispatch/",
 ];
 
+function upstreamLabel(base: string, fallback: string): string {
+  try {
+    const parsed = new URL(base);
+    return `${fallback}:${parsed.port || (parsed.protocol === "https:" ? "443" : "80")}`;
+  } catch {
+    return fallback;
+  }
+}
+
+function operationalLog(event: string, details: Record<string, unknown>) {
+  console.log(JSON.stringify({ event, route: "command-center-bff", ...details }));
+}
+
+function operationalError(event: string, details: Record<string, unknown>) {
+  console.error(JSON.stringify({ event, route: "command-center-bff", ...details }));
+}
+
 function resolveUpstream(pathname: string): { base: string; isCC: boolean; isCrogAI: boolean } {
   const isCC = COMMAND_CENTER_PREFIXES.some((p) => pathname.startsWith(p));
   const isCrogAI = CROG_AI_PREFIXES.some((p) => pathname.startsWith(p));
@@ -168,16 +185,22 @@ async function proxy(
   const pathname = request.nextUrl.pathname;
   const { base, isCC, isCrogAI } = resolveUpstream(pathname);
   const target = `${base}${pathname}${request.nextUrl.search}`;
-  const upstream = isCC ? "CC:9800" : isCrogAI ? "CROG-AI:8026" : "FGP:8100";
+  const upstream = isCC
+    ? upstreamLabel(base, "CC")
+    : isCrogAI
+      ? upstreamLabel(base, "CROG-AI")
+      : upstreamLabel(base, "FGP");
 
   const token = extractToken(request);
   const headers = buildUpstreamHeaders(request, token, isCC, isCrogAI, pathname);
 
-  console.log(
-    `[BFF] ${request.method} ${pathname} → ${upstream}` +
-      ` | auth=${token ? `Bearer(${token.slice(0, 8)}…)` : "NONE"}` +
-      `${isCC && token ? " | cookie-injected" : ""}`,
-  );
+  operationalLog("bff_proxy_request", {
+    method: request.method,
+    pathname,
+    upstream,
+    auth_present: Boolean(token),
+    cookie_injected: isCC && Boolean(token),
+  });
 
   try {
     const hasBody = !["GET", "HEAD"].includes(request.method);
@@ -198,15 +221,22 @@ async function proxy(
       res.headers.get("content-type") || "application/json";
 
     if (status === 401) {
-      console.error(
-        `[BFF] AUTH FAILURE 401 ← ${upstream} | path=${pathname}` +
-          ` | token=${token ? "present" : "MISSING"}` +
-          ` | cookie-injected=${isCC && !!token}`,
-      );
+      operationalError("bff_auth_failure", {
+        method: request.method,
+        pathname,
+        upstream,
+        status,
+        auth_present: Boolean(token),
+        cookie_injected: isCC && Boolean(token),
+      });
     } else {
-      console.log(
-        `[BFF] ${request.method} ${pathname} ← ${status} (${contentType})`,
-      );
+      operationalLog("bff_proxy_response", {
+        method: request.method,
+        pathname,
+        upstream,
+        status,
+        content_type: contentType,
+      });
     }
 
     const responseHeaders = new Headers();
@@ -264,9 +294,12 @@ async function proxy(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(
-      `[BFF] FATAL ${request.method} ${pathname} → ${upstream}: ${message}`,
-    );
+    operationalError("bff_proxy_fatal", {
+      method: request.method,
+      pathname,
+      upstream,
+      error: message.slice(0, 300),
+    });
     return NextResponse.json(
       {
         type: "https://fortress/errors/upstream-unreachable",

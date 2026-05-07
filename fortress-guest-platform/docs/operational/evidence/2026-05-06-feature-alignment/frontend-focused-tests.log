@@ -1,0 +1,9 @@
+
+ RUN  v4.1.1 /home/admin/Fortress-Prime-feature-alignment/fortress-guest-platform/apps/command-center
+
+
+ Test Files  5 passed (5)
+      Tests  5 passed (5)
+   Start at  21:23:52
+   Duration  687ms (transform 350ms, setup 159ms, import 1.22s, tests 218ms, environment 1.25s)
+

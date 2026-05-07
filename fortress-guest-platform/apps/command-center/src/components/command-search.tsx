@@ -525,9 +525,9 @@ export function CommandSearch() {
   const recordRecentCommand = useAppStore((s) => s.recordRecentCommand);
   const commandAuditTrail = useAppStore((s) => s.commandAuditTrail);
   const recordCommandAudit = useAppStore((s) => s.recordCommandAudit);
-  const { data: properties } = useProperties();
-  const { data: guests } = useGuests();
-  const { data: workOrders } = useWorkOrders();
+  const { data: properties } = useProperties({ enabled: open });
+  const { data: guests } = useGuests(undefined, { enabled: open });
+  const { data: workOrders } = useWorkOrders(undefined, { enabled: open });
   const legalCasesQuery = useLegalCases();
   const syncVrsLedger = useSyncVrsLedger();
   const autoScheduleHousekeeping = useAutoScheduleHousekeeping();
