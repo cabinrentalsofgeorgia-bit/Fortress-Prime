@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": ["fortress-guest-platform/docs/architecture/wiki-knowledge-plane-audit-2026-05-06.md"],
+  "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING", "externalSubmissionAuthority": "NOT_AUTHORIZED" },
+  "governanceBoundaries": ["index_paths_titles_categories_only", "no_document_body_text"],
+  "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md"],
+  "validationStatus": { "status": "CURATED_INITIAL_INDEX" },
+  "rollbackRefs": ["git_revert"],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "entries": [
+    { "path": "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md", "category": "current_operational_index", "freshness": "current" },
+    { "path": "fortress-guest-platform/docs/architecture/full-platform-capability-audit-2026-05-06.md", "category": "capability_audit", "freshness": "current" },
+    { "path": "fortress-guest-platform/docs/architecture/wiki-knowledge-plane-audit-2026-05-06.md", "category": "knowledge_plane_audit", "freshness": "current" },
+    { "path": "fortress-guest-platform/docs/architecture/governance-maturity-audit-2026-05-06.md", "category": "governance_audit", "freshness": "current" },
+    { "path": "fortress-guest-platform/docs/operational/fortress-legal-operational-runbook-index.md", "category": "runbook_index", "freshness": "active_but_needs_periodic_reconciliation" },
+    { "path": "wiki/context-packs/fortress-legal-build-orientation.md", "category": "wiki_context_pack", "freshness": "external_wiki_reference" },
+    { "path": "wiki/decisions/2026-05-06-fortress-prime-canonical-source.md", "category": "wiki_decision", "freshness": "external_wiki_reference" },
+    { "path": "wiki/runbooks/production-human-review-gates.md", "category": "wiki_runbook", "freshness": "external_wiki_reference" }
+  ]
+}

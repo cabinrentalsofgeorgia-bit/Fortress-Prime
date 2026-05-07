@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": ["fortress-guest-platform/docs/architecture/governance-maturity-audit-2026-05-06.md"],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": ["human_review_required", "registry_not_legal_authority"],
+  "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md"],
+  "validationStatus": { "status": "CONSERVATIVE" },
+  "rollbackRefs": ["git_revert"],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "hardStops": [
+    "secrets_exposure",
+    "confidential_text_exposure",
+    "restricted_content_boundary_violation",
+    "schema_rls_policy_mutation",
+    "uncontrolled_reviewer_authority",
+    "external_public_access_required",
+    "registry_legal_authority_risk"
+  ],
+  "forbiddenOperations": [
+    "auto_signoff",
+    "final_legal_conclusion",
+    "filing_service_email_external_submission",
+    "restricted_content_review",
+    "unresolved_source_promotion",
+    "document_upload_or_ingestion",
+    "duplicate_vectors_or_document_rows",
+    "schema_rls_policy_mutation",
+    "secrets_or_auth_state_storage"
+  ]
+}
