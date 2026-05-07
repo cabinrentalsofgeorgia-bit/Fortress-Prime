@@ -362,6 +362,7 @@ class GlobalAuthMiddleware(BaseHTTPMiddleware):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("x-request-id", uuid.uuid4().hex[:12])
+        request.state.request_id = request_id
         start = time.perf_counter()
 
         try:
@@ -523,11 +524,17 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 @app.get("/health")
 async def health_check():
+    from backend.core.deployment_fingerprint import deployment_fingerprint
+
     return {
         "status": "healthy",
         "service": "Fortress Guest Platform",
         "version": "1.0.0",
         "environment": settings.environment,
+        "deployment": deployment_fingerprint(
+            service="fortress-prime-backend",
+            version=str(app.version or "unknown"),
+        ),
     }
 
 

@@ -22,12 +22,49 @@ const browser = await chromium.launch({ headless: true, executablePath });
 const context = await browser.newContext({ storageState });
 const page = await context.newPage();
 
+function sanitizeUrl(raw) {
+  try {
+    const parsed = new URL(raw);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (/token|key|auth|session|code|password|secret|signature/i.test(key)) {
+        parsed.searchParams.set(key, "REDACTED");
+      }
+    }
+    return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+  } catch {
+    return raw.split("?")[0];
+  }
+}
+
+function classifyFailure({ status, url: rawUrl, resourceType }) {
+  const pathname = (() => {
+    try {
+      return new URL(rawUrl).pathname;
+    } catch {
+      return rawUrl;
+    }
+  })();
+  if (status === 401 || status === 403) return "auth_guard";
+  if (status === 404 && pathname.startsWith("/api/")) return "missing_api_route_or_manifest";
+  if (status === 404 && ["script", "stylesheet", "image", "font"].includes(resourceType)) {
+    return "missing_asset";
+  }
+  if (status === 404) return "missing_route";
+  if (status >= 500 && pathname.startsWith("/api/")) return "backend_or_bff_failure";
+  if (status >= 500) return "runtime_failure";
+  return "http_failure";
+}
+
 const result = {
   ok: false,
   featureAlignmentOk: false,
+  checkedAt: new Date().toISOString(),
   route: url,
   checks: {},
   errors: [],
+  httpErrors: [],
+  requestFailures: [],
+  errorSummary: {},
 };
 
 page.on("console", (msg) => {
@@ -36,8 +73,39 @@ page.on("console", (msg) => {
   }
 });
 
+page.on("response", (res) => {
+  const status = res.status();
+  if (status < 400) return;
+  const request = res.request();
+  const failure = {
+    status,
+    method: request.method(),
+    resourceType: request.resourceType(),
+    url: sanitizeUrl(res.url()),
+    classification: classifyFailure({
+      status,
+      url: res.url(),
+      resourceType: request.resourceType(),
+    }),
+  };
+  result.httpErrors.push(failure);
+  result.errorSummary[failure.classification] =
+    (result.errorSummary[failure.classification] ?? 0) + 1;
+});
+
+page.on("requestfailed", (request) => {
+  result.requestFailures.push({
+    method: request.method(),
+    resourceType: request.resourceType(),
+    url: sanitizeUrl(request.url()),
+    failure: request.failure()?.errorText?.slice(0, 200) ?? "unknown",
+  });
+});
+
 const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 result.checks.httpStatus = response?.status();
+result.responseUrl = response ? sanitizeUrl(response.url()) : null;
+result.xRequestId = response?.headers()["x-request-id"] ?? null;
 await page.waitForLoadState("load", { timeout: 15000 }).catch(() => {});
 await page
   .waitForFunction(
