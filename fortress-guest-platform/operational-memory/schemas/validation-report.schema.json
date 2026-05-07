@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fortress-legal/validation-report.schema.json",
+  "title": "Fortress Legal Operational Memory Validation Report",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "ok", "registriesChecked", "errors", "warnings", "standingLabels", "noSecrets", "noConfidentialText"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "ok": { "type": "boolean" },
+    "registriesChecked": { "type": "array", "items": { "type": "string" } },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "standingLabels": { "type": "object" },
+    "noSecrets": { "type": "boolean" },
+    "noConfidentialText": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fortress-legal/reviewer-feedback-ledger.schema.json",
+  "title": "Fortress Legal Reviewer Feedback Ledger",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "sourceRefs", "standingLabels", "governanceBoundaries", "evidenceRefs", "validationStatus", "rollbackRefs", "noSecrets", "noConfidentialText", "humanReviewRequired", "ledgerPurpose", "allowedFeedbackTypes", "prohibitedFeedbackContent", "noFreeformLegalText", "entries"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "sourceRefs": { "type": "array", "items": { "type": "string" } },
+    "standingLabels": { "type": "object" },
+    "governanceBoundaries": { "type": "array", "items": { "type": "string" } },
+    "evidenceRefs": { "type": "array", "items": { "type": "string" } },
+    "validationStatus": { "type": "object" },
+    "rollbackRefs": { "type": "array", "items": { "type": "string" } },
+    "noSecrets": { "const": true },
+    "noConfidentialText": { "const": true },
+    "humanReviewRequired": { "const": true },
+    "ledgerPurpose": { "type": "string" },
+    "allowedFeedbackTypes": { "type": "array", "items": { "type": "string" } },
+    "prohibitedFeedbackContent": { "type": "array", "items": { "type": "string" } },
+    "noFreeformLegalText": { "const": true },
+    "entries": { "type": "array", "items": { "type": "object" } }
+  },
+  "additionalProperties": true
+}
