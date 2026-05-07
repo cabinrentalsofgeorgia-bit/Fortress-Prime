@@ -1,0 +1,223 @@
+"use client";
+
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useReviewOperations } from "@/lib/legal-hooks";
+import {
+  Activity,
+  BarChart3,
+  ClipboardList,
+  GitBranch,
+  ShieldCheck,
+  TimerReset,
+} from "lucide-react";
+
+function Metric({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3">
+      <p className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="text-lg font-semibold text-zinc-100">{value}</p>
+    </div>
+  );
+}
+
+function tone(value: string) {
+  if (value.includes("restricted") || value.includes("locked")) return "bg-purple-500/10 text-purple-300 border-purple-500/30";
+  if (value.includes("contradiction")) return "bg-amber-500/10 text-amber-300 border-amber-500/30";
+  if (value.includes("source_missing") || value.includes("evidence")) return "bg-red-500/10 text-red-300 border-red-500/30";
+  if (value.includes("tier_1") || value.includes("critical")) return "bg-orange-500/10 text-orange-300 border-orange-500/30";
+  return "bg-blue-500/10 text-blue-300 border-blue-500/30";
+}
+
+function label(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+export function ReviewOperationsPanel({ slug }: { slug: string }) {
+  const { data, isLoading, error } = useReviewOperations(slug);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-zinc-800 bg-zinc-950/80 p-4 space-y-3">
+        <Skeleton className="h-6 w-80" />
+        <Skeleton className="h-28 w-full" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-4 text-sm text-zinc-400">
+        Controlled review operations read model is not available yet.
+      </div>
+    );
+  }
+
+  const remediationItems = data.queues.remediation_review.items.slice(0, 6);
+  const contradictionItems = data.queues.contradiction_review.items.slice(0, 4);
+  const evidenceItems = data.queues.evidence_navigation.items.slice(0, 4);
+
+  return (
+    <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold text-cyan-200 flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Controlled Review Operations
+          </p>
+          <p className="text-xs text-zinc-400">
+            {data.status.replaceAll("_", " ")} / {data.governance.review_operations_mode.replaceAll("_", " ")}
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Badge variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+            DRAFT / COUNSEL REVIEW REQUIRED
+          </Badge>
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30 text-[10px]">
+            {data.governance.counsel_signoff}
+          </Badge>
+          <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
+            {data.governance.external_submission_authority}
+          </Badge>
+          <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
+            {data.governance.legal_advice_status}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-cyan-100">
+        Review operations are read-only queue and analytics views. Unresolved source issues remain excluded from
+        relied-upon sections; locked/restricted materials stay metadata only restricted; no review action creates
+        signoff, final legal advice, or external submission authority.
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+        <Metric label="Review Queue" value={data.review_operations_summary.remediation_queue_depth} />
+        <Metric label="Contradictions" value={data.review_operations_summary.contradiction_queue_depth} />
+        <Metric label="Evidence Pivots" value={data.review_operations_summary.evidence_navigation_items} />
+        <Metric label="High Priority" value={data.review_operations_summary.high_priority_items} />
+        <Metric label="Unassigned" value={data.review_operations_summary.reviewer_owner_unassigned} />
+        <Metric label="Verified Subset" value={data.review_operations_summary.verified_subset_count} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr_0.9fr]">
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <TimerReset className="h-3.5 w-3.5 text-cyan-300" />
+            Review Queue Operations
+          </p>
+          <div className="space-y-2">
+            {remediationItems.map((item) => (
+              <div key={`${item.item_type}-${item.item_id}`} className="rounded border border-zinc-800 bg-zinc-900/70 p-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs text-zinc-100">{label(item.item_type)} / {item.item_id}</p>
+                  <Badge variant="outline" className="text-[10px]">
+                    {label(item.owner_placeholder)}
+                  </Badge>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <Badge variant="outline" className={`text-[10px] ${tone(item.materiality_tier)}`}>
+                    {label(item.materiality_tier)}
+                  </Badge>
+                  <Badge variant="outline" className={`text-[10px] ${tone(item.review_lane)}`}>
+                    {label(item.review_lane)}
+                  </Badge>
+                  <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
+                    {label(item.audit_state)}
+                  </Badge>
+                  <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
+                    excluded from relied-upon sections
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <GitBranch className="h-3.5 w-3.5 text-amber-300" />
+            Contradiction Review
+          </p>
+          {data.queues.contradiction_review.severity_levels.map((level) => (
+            <div key={level.level} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-zinc-200">{label(level.level)}</span>
+                <Badge variant="outline" className={`text-[10px] ${tone(level.level)}`}>human review</Badge>
+              </div>
+              <p className="mt-1 text-[10px] text-zinc-500">{level.rule}</p>
+            </div>
+          ))}
+          {contradictionItems.map((item) => (
+            <div key={`${item.item_id}-contradiction`} className="rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5 text-[11px] text-amber-100">
+              {item.item_id} / {label(item.review_state)} / score {item.priority_score}
+            </div>
+          ))}
+        </section>
+
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
+            Evidence Navigator
+          </p>
+          {data.queues.evidence_navigation.groups.map((group) => (
+            <div key={group.item_type} className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1.5">
+              <span className="text-xs text-zinc-200">{label(group.item_type)}</span>
+              <Badge variant="outline" className="text-[10px]">{group.count}</Badge>
+            </div>
+          ))}
+          {evidenceItems.map((item) => (
+            <div key={`${item.item_id}-evidence`} className="rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1.5 text-[11px] text-zinc-300">
+              {item.item_id} / {label(item.staleness_indicator)} / {item.locked_restricted_involved ? "metadata only restricted" : "metadata safe"}
+            </div>
+          ))}
+        </section>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <BarChart3 className="h-3.5 w-3.5 text-blue-300" />
+            Review Analytics
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Metric label="Baseline Queue" value={data.review_analytics.throughput_model.baseline_queue_depth} />
+            <Metric label="Human Review Required" value={data.review_analytics.throughput_model.human_review_required} />
+            <Metric label="Safe Auto Resolutions" value={data.review_analytics.throughput_model.safe_auto_resolutions} />
+            <Metric label="Completed This Phase" value={data.review_analytics.throughput_model.completed_this_phase} />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {data.review_analytics.confidence_distribution.map((row) => (
+              <Badge key={row.state} variant="outline" className={`text-[10px] ${tone(row.state)}`}>
+                {label(row.state)} {row.count}
+              </Badge>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <Activity className="h-3.5 w-3.5 text-cyan-300" />
+            Controlled Pilot Readiness
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Metric label="Internal Review Ready" value={data.pilot_readiness.controlled_internal_review_ready ? "Yes" : "No"} />
+            <Metric label="External Use Enabled" value={data.pilot_readiness.public_or_external_use_enabled ? "Yes" : "No"} />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {data.pilot_readiness.required_controls.map((control) => (
+              <Badge key={control} variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 text-[10px]">
+                {label(control)}
+              </Badge>
+            ))}
+            {data.pilot_readiness.forbidden_operations.map((operation) => (
+              <Badge key={operation} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                forbidden {label(operation)}
+              </Badge>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}

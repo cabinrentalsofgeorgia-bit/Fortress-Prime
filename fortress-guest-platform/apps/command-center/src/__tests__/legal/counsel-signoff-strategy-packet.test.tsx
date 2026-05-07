@@ -388,6 +388,76 @@ vi.mock("@/lib/legal-hooks", () => ({
       observability: { metrics: [], checker_assertions: [] },
     },
   }),
+  useReviewOperations: () => ({
+    isLoading: false,
+    error: null,
+    data: {
+      case_slug: "fortress-legal-production-review",
+      status: "CONTROLLED_REVIEW_OPERATIONS_READY",
+      source_manifests: {
+        targeted_source_completion_execution_id: "fortress-targeted-source-completion-test",
+        limited_signoff_candidate_execution_id: "fortress-limited-signoff-candidate-test",
+        source_link_repair_execution_id: "fortress-source-link-repair-test",
+        source_remediation_execution_id: "fortress-source-remediation-test",
+      },
+      governance: {
+        counsel_signoff: "COUNSEL_SIGNOFF_PENDING",
+        external_submission_authority: "NOT_AUTHORIZED",
+        final_legal_conclusions: "NOT_CREATED",
+        legal_advice_status: "NOT FINAL LEGAL ADVICE",
+        unresolved_items_excluded_from_relied_upon_sections: true,
+        locked_restricted_handling: "METADATA_ONLY",
+        auto_resolution: "DISABLED",
+        review_operations_mode: "controlled_internal_review_only",
+        state_mutation: "read_only_review_operations_view",
+      },
+      review_operations_summary: {
+        unresolved_total: 232,
+        remediation_queue_depth: 232,
+        contradiction_queue_depth: 14,
+        evidence_navigation_items: 90,
+        high_priority_items: 21,
+        reviewer_owner_unassigned: 232,
+        excluded_source_ratio: 1,
+        verified_subset_count: 65,
+      },
+      queues: {
+        remediation_review: { summary: { queue_depth: 232 }, items: [] },
+        contradiction_review: {
+          summary: { queue_depth: 14 },
+          severity_levels: [{ level: "critical", rule: "tier_1_high_materiality contradiction" }],
+          items: [],
+        },
+        evidence_navigation: {
+          summary: { queue_depth: 90 },
+          groups: [{ item_type: "timeline_event", count: 40 }],
+          items: [],
+        },
+        escalation_review: { summary: { queue_depth: 16 }, items: [] },
+      },
+      review_analytics: {
+        confidence_distribution: [{ state: "source_missing", count: 230 }],
+        review_lane_distribution: [{ lane: "contradiction_review", count: 14 }],
+        item_type_distribution: [{ item_type: "contradiction_candidate", count: 14 }],
+        throughput_model: {
+          baseline_queue_depth: 232,
+          completed_this_phase: 0,
+          safe_auto_resolutions: 0,
+          human_review_required: 232,
+        },
+      },
+      pilot_readiness: {
+        controlled_internal_review_ready: true,
+        public_or_external_use_enabled: false,
+        required_controls: ["authenticated_staff_access"],
+        forbidden_operations: ["auto_signoff"],
+      },
+      observability: {
+        checker_assertions: ["review_operations_visible"],
+        metrics: ["remediation_queue_depth"],
+      },
+    },
+  }),
 }));
 
 import { CounselSignoffStrategyPacket } from "@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet";
@@ -406,6 +476,7 @@ describe("CounselSignoffStrategyPacket", () => {
     expect(screen.getByText("Targeted Source Completion")).toBeInTheDocument();
     expect(screen.getByText("Limited Signoff Candidate Packet")).toBeInTheDocument();
     expect(screen.getByText("Remediation Maturity / Review Queue")).toBeInTheDocument();
+    expect(screen.getByText("Controlled Review Operations")).toBeInTheDocument();
     expect(screen.getByText(/Export snapshot contains no document body text and no locked content/)).toBeInTheDocument();
 
     const operatorButton = screen.getByText("Operator Acknowledge");

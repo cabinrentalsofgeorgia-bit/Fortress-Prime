@@ -145,7 +145,10 @@ await page
           body.includes("Next-best actions")) &&
         (body.includes("Remediation Maturity") ||
           body.includes("Review Confidence") ||
-          body.includes("Evidence Lineage"))
+          body.includes("Evidence Lineage")) &&
+        (body.includes("Controlled Review Operations") ||
+          body.includes("Review Queue Operations") ||
+          body.includes("Controlled Pilot Readiness"))
       );
     },
     { timeout: 20000 },
@@ -177,6 +180,14 @@ result.checks.remediationMaturity =
   text.includes("Review Confidence") &&
   text.includes("Evidence Lineage") &&
   text.includes("excluded from relied-upon sections");
+result.checks.reviewOperations =
+  text.includes("Controlled Review Operations") &&
+  text.includes("Review Queue Operations") &&
+  text.includes("Contradiction Review") &&
+  text.includes("Evidence Navigator") &&
+  text.includes("Review Analytics") &&
+  text.includes("Controlled Pilot Readiness") &&
+  text.includes("excluded from relied-upon sections");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -205,7 +216,8 @@ result.featureAlignmentOk =
   result.checks.workbench &&
   result.checks.draftWorkProduct &&
   result.checks.learning &&
-  result.checks.remediationMaturity;
+  result.checks.remediationMaturity &&
+  result.checks.reviewOperations;
 
 console.log(JSON.stringify(result, null, 2));
 

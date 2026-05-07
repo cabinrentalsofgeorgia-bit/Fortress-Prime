@@ -37,6 +37,7 @@ import type {
   SourceRemediationResponse,
   TargetedSourceCompletionResponse,
   RemediationMaturityResponse,
+  ReviewOperationsResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -65,6 +66,7 @@ const KEYS = {
   autonomousLearning: (slug: string) => ["legal", "autonomous-learning", slug] as const,
   draftWorkProduct: (slug: string) => ["legal", "draft-work-product", slug] as const,
   remediationMaturity: (slug: string) => ["legal", "remediation-maturity", slug] as const,
+  reviewOperations: (slug: string) => ["legal", "review-operations", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -244,6 +246,17 @@ export function useRemediationMaturity(slug: string) {
     queryFn: () =>
       api.get<RemediationMaturityResponse>(
         `/api/internal/legal/cases/${slug}/remediation-maturity`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useReviewOperations(slug: string) {
+  return useQuery({
+    queryKey: KEYS.reviewOperations(slug),
+    queryFn: () =>
+      api.get<ReviewOperationsResponse>(
+        `/api/internal/legal/cases/${slug}/review-operations`,
       ),
     enabled: !!slug,
   });

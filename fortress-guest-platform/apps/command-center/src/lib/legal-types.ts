@@ -1080,6 +1080,14 @@ export interface RemediationMaturityQueueItem {
   required_next_action: string;
 }
 
+export interface ReviewOperationsQueueItem extends RemediationMaturityQueueItem {
+  review_state: string;
+  owner_placeholder: string;
+  age_band: string;
+  staleness_indicator: string;
+  audit_state: string;
+}
+
 export interface RemediationMaturityResponse {
   case_slug: string;
   status: string;
@@ -1134,6 +1142,67 @@ export interface RemediationMaturityResponse {
   observability: {
     metrics: string[];
     checker_assertions: string[];
+  };
+}
+
+export interface ReviewOperationsResponse {
+  case_slug: string;
+  status: string;
+  source_manifests: RemediationMaturityResponse["source_manifests"];
+  governance: RemediationMaturityResponse["governance"] & {
+    review_operations_mode: string;
+    state_mutation: string;
+  };
+  review_operations_summary: {
+    unresolved_total: number;
+    remediation_queue_depth: number;
+    contradiction_queue_depth: number;
+    evidence_navigation_items: number;
+    high_priority_items: number;
+    reviewer_owner_unassigned: number;
+    excluded_source_ratio: number;
+    verified_subset_count: number;
+  };
+  queues: {
+    remediation_review: {
+      summary: Record<string, number>;
+      items: ReviewOperationsQueueItem[];
+    };
+    contradiction_review: {
+      summary: Record<string, number>;
+      severity_levels: Array<{ level: string; rule: string }>;
+      items: ReviewOperationsQueueItem[];
+    };
+    evidence_navigation: {
+      summary: Record<string, number>;
+      groups: Array<{ item_type: string; count: number }>;
+      items: ReviewOperationsQueueItem[];
+    };
+    escalation_review: {
+      summary: Record<string, number>;
+      items: ReviewOperationsQueueItem[];
+    };
+  };
+  review_analytics: {
+    confidence_distribution: Array<{ state: string; count: number }>;
+    review_lane_distribution: Array<{ lane: string; count: number }>;
+    item_type_distribution: Array<{ item_type: string; count: number }>;
+    throughput_model: {
+      baseline_queue_depth: number;
+      completed_this_phase: number;
+      safe_auto_resolutions: number;
+      human_review_required: number;
+    };
+  };
+  pilot_readiness: {
+    controlled_internal_review_ready: boolean;
+    public_or_external_use_enabled: boolean;
+    required_controls: string[];
+    forbidden_operations: string[];
+  };
+  observability: {
+    checker_assertions: string[];
+    metrics: string[];
   };
 }
 

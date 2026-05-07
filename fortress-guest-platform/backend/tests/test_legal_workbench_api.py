@@ -779,3 +779,79 @@ async def test_counsel_signoff_capture_requires_explicit_scope(monkeypatch):
     assert blocked.status_code == 400
     assert allowed.status_code == 200
     assert allowed.json()["signoff_status"] == "OPERATOR_REVIEW_ACKNOWLEDGMENT"
+
+
+@pytest.mark.asyncio
+async def test_review_operations_endpoint_returns_read_only_queue(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "build_review_operations",
+        lambda slug: {
+            "case_slug": slug,
+            "status": "CONTROLLED_REVIEW_OPERATIONS_READY",
+            "governance": {
+                "counsel_signoff": "COUNSEL_SIGNOFF_PENDING",
+                "external_submission_authority": "NOT_AUTHORIZED",
+                "final_legal_conclusions": "NOT_CREATED",
+                "legal_advice_status": "NOT FINAL LEGAL ADVICE",
+                "state_mutation": "read_only_review_operations_view",
+            },
+            "review_operations_summary": {
+                "unresolved_total": 232,
+                "remediation_queue_depth": 232,
+                "contradiction_queue_depth": 14,
+                "evidence_navigation_items": 90,
+                "high_priority_items": 21,
+                "reviewer_owner_unassigned": 232,
+                "excluded_source_ratio": 1,
+                "verified_subset_count": 65,
+            },
+            "queues": {
+                "remediation_review": {"items": []},
+                "contradiction_review": {"items": []},
+                "evidence_navigation": {"items": []},
+            },
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/review-operations")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "CONTROLLED_REVIEW_OPERATIONS_READY"
+    assert body["governance"]["counsel_signoff"] == "COUNSEL_SIGNOFF_PENDING"
+    assert body["governance"]["external_submission_authority"] == "NOT_AUTHORIZED"
+    assert body["governance"]["state_mutation"] == "read_only_review_operations_view"
+    assert body["review_operations_summary"]["unresolved_total"] == 232
+
+
+@pytest.mark.asyncio
+async def test_review_operations_endpoint_rejects_wrong_scope(monkeypatch):
+    def fake_build_review_operations(slug):
+        raise ValueError("review_operations_scope_refused")
+
+    monkeypatch.setattr(legal_workbench_api, "build_review_operations", fake_build_review_operations)
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/missing/review-operations")
+
+    assert response.status_code == 403

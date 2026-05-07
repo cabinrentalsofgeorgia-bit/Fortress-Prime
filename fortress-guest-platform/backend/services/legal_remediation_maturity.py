@@ -215,3 +215,160 @@ def build_remediation_maturity(case_slug: str) -> dict[str, Any] | None:
             ],
         },
     }
+
+
+def _queue_summary(queue: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "queue_depth": len(queue),
+        "tier_1_items": sum(1 for item in queue if "tier_1" in str(item.get("materiality_tier"))),
+        "contradiction_items": sum(1 for item in queue if item.get("item_type") == "contradiction_candidate"),
+        "evidence_needed": sum(1 for item in queue if item.get("evidence_needed")),
+        "restricted_metadata_only": sum(1 for item in queue if item.get("locked_restricted_involved")),
+        "excluded_from_relied_upon_sections": len(queue),
+    }
+
+
+def _ops_queue_item(item: dict[str, Any]) -> dict[str, Any]:
+    safe = _safe_queue_item(item)
+    safe.update(
+        {
+            "review_state": "human_review_required",
+            "owner_placeholder": item.get("owner_placeholder") or "unassigned",
+            "age_band": "baseline_backlog",
+            "staleness_indicator": "needs_review_sla",
+            "audit_state": "lineage_preserved",
+        }
+    )
+    return safe
+
+
+def build_review_operations(case_slug: str) -> dict[str, Any] | None:
+    if case_slug != ALLOWED_SLUG:
+        raise ValueError("review_operations_scope_refused")
+
+    maturity = build_remediation_maturity(case_slug)
+    targeted = load_latest_targeted_source_completion(case_slug)
+    limited = load_latest_limited_signoff_candidate(case_slug)
+    if maturity is None or targeted is None or limited is None:
+        return None
+
+    unresolved = list(limited.get("unresolved_blocker_register_v2") or [])
+    full_queue = [_ops_queue_item(item) for item in unresolved]
+    full_queue.sort(key=lambda item: int(item["priority_score"]), reverse=True)
+    contradiction_queue = [item for item in full_queue if item.get("item_type") == "contradiction_candidate"]
+    evidence_queue = [
+        item
+        for item in full_queue
+        if item.get("item_type") in {"timeline_event", "evidence_binder", "entity_dossier"}
+    ]
+
+    confidence_counts = Counter(str(item["confidence_state"]) for item in full_queue)
+    lane_counts = Counter(str(item["review_lane"]) for item in full_queue)
+    item_type_counts = Counter(str(item["item_type"]) for item in full_queue)
+
+    return {
+        "case_slug": case_slug,
+        "status": "CONTROLLED_REVIEW_OPERATIONS_READY",
+        "source_manifests": maturity["source_manifests"],
+        "governance": maturity["governance"] | {
+            "review_operations_mode": "controlled_internal_review_only",
+            "state_mutation": "read_only_review_operations_view",
+        },
+        "review_operations_summary": {
+            "unresolved_total": len(full_queue),
+            "remediation_queue_depth": len(full_queue),
+            "contradiction_queue_depth": len(contradiction_queue),
+            "evidence_navigation_items": len(evidence_queue),
+            "high_priority_items": sum(
+                1 for item in full_queue if "tier_1" in str(item.get("materiality_tier"))
+            ),
+            "reviewer_owner_unassigned": sum(1 for item in full_queue if item.get("owner_placeholder") == "unassigned"),
+            "excluded_source_ratio": 1.0 if full_queue else 0.0,
+            "verified_subset_count": maturity["remediation_summary"]["verified_subset_count"],
+        },
+        "queues": {
+            "remediation_review": {
+                "summary": _queue_summary(full_queue),
+                "items": full_queue[:40],
+            },
+            "contradiction_review": {
+                "summary": _queue_summary(contradiction_queue),
+                "severity_levels": [
+                    {"level": "critical", "rule": "tier_1_high_materiality contradiction"},
+                    {"level": "elevated", "rule": "tier_2 contradiction"},
+                    {"level": "standard", "rule": "remaining contradiction candidate"},
+                ],
+                "items": contradiction_queue[:20],
+            },
+            "evidence_navigation": {
+                "summary": _queue_summary(evidence_queue),
+                "groups": [
+                    {"item_type": key, "count": item_type_counts[key]}
+                    for key in ("timeline_event", "entity_dossier", "evidence_binder")
+                    if item_type_counts[key]
+                ],
+                "items": evidence_queue[:20],
+            },
+            "escalation_review": {
+                "summary": _queue_summary(
+                    [item for item in full_queue if item.get("counsel_review_required") or item.get("locked_restricted_involved")]
+                ),
+                "items": [
+                    item
+                    for item in full_queue
+                    if item.get("counsel_review_required") or item.get("locked_restricted_involved")
+                ][:20],
+            },
+        },
+        "review_analytics": {
+            "confidence_distribution": [
+                {"state": key, "count": confidence_counts[key]} for key in sorted(confidence_counts)
+            ],
+            "review_lane_distribution": [
+                {"lane": key, "count": lane_counts[key]} for key in sorted(lane_counts)
+            ],
+            "item_type_distribution": [
+                {"item_type": key, "count": item_type_counts[key]} for key in sorted(item_type_counts)
+            ],
+            "throughput_model": {
+                "baseline_queue_depth": len(full_queue),
+                "completed_this_phase": 0,
+                "safe_auto_resolutions": 0,
+                "human_review_required": len(full_queue),
+            },
+        },
+        "pilot_readiness": {
+            "controlled_internal_review_ready": True,
+            "public_or_external_use_enabled": False,
+            "required_controls": [
+                "authenticated_staff_access",
+                "unresolved_source_exclusion",
+                "metadata_only_restricted_handling",
+                "rollback_artifacts",
+                "checker_and_deployment_verifier",
+            ],
+            "forbidden_operations": [
+                "auto_signoff",
+                "final_legal_conclusion",
+                "external_submission",
+                "locked_content_agent_review",
+                "schema_rls_policy_mutation",
+            ],
+        },
+        "observability": {
+            "checker_assertions": [
+                "review_operations_visible",
+                "controlled_review_queues_visible",
+                "contradiction_review_visible",
+                "review_analytics_visible",
+                "pilot_readiness_visible",
+            ],
+            "metrics": [
+                "remediation_queue_depth",
+                "contradiction_queue_depth",
+                "evidence_navigation_items",
+                "confidence_distribution",
+                "excluded_source_ratio",
+            ],
+        },
+    }
