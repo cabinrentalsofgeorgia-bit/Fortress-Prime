@@ -151,7 +151,10 @@ await page
           body.includes("Controlled Pilot Readiness")) &&
         (body.includes("Reviewer Assignment") ||
           body.includes("Workload Balancing") ||
-          body.includes("Queue Aging / SLA"))
+          body.includes("Queue Aging / SLA")) &&
+        (body.includes("Operational Readiness Certification") ||
+          body.includes("Governance Enforcement Verification") ||
+          body.includes("Operational Safety Certification"))
       );
     },
     { timeout: 20000 },
@@ -198,6 +201,15 @@ result.checks.reviewScaling =
   text.includes("Escalation & Incident Readiness") &&
   text.includes("forbidden counsel signoff") &&
   text.includes("forbidden external submission authority");
+result.checks.operationalCertification =
+  text.includes("Operational Readiness Certification") &&
+  text.includes("Pilot Governance") &&
+  text.includes("Reviewer Onboarding Governance") &&
+  text.includes("Rollback Certification") &&
+  text.includes("Governance Enforcement Verification") &&
+  text.includes("Operational Safety Certification") &&
+  text.includes("limit no public launch") &&
+  text.includes("forbidden auto signoff");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -228,7 +240,8 @@ result.featureAlignmentOk =
   result.checks.learning &&
   result.checks.remediationMaturity &&
   result.checks.reviewOperations &&
-  result.checks.reviewScaling;
+  result.checks.reviewScaling &&
+  result.checks.operationalCertification;
 
 console.log(JSON.stringify(result, null, 2));
 

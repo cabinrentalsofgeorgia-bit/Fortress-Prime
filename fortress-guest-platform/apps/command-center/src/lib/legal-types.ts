@@ -1238,6 +1238,47 @@ export interface ReviewOperationsResponse {
       stop_conditions: string[];
     };
   };
+  operational_certification: {
+    status: string;
+    certification_scope: string;
+    readiness_audit: {
+      production_route_verified: boolean;
+      authenticated_checker_required: boolean;
+      deployment_verifier_required: boolean;
+      rollback_required: boolean;
+      unresolved_source_issues_excluded: number;
+      counsel_signoff_status: string;
+      external_submission_authority: string;
+      final_legal_conclusions: string;
+      schema_rls_policy_mutation: string;
+    };
+    pilot_governance: {
+      pilot_mode: string;
+      public_launch_enabled: boolean;
+      unrestricted_reviewer_access_enabled: boolean;
+      allowed_operations: string[];
+      forbidden_operations: string[];
+    };
+    reviewer_onboarding: {
+      status: string;
+      required_acknowledgments: string[];
+      allowed_roles: string[];
+    };
+    rollback_certification: {
+      status: string;
+      git_revertable: boolean;
+      runtime_rollback_required: boolean;
+      verification_after_rollback: string[];
+    };
+    governance_enforcement: {
+      status: string;
+      required_checks: string[];
+    };
+    operational_safety: {
+      status: string;
+      certification_limitations: string[];
+    };
+  };
   pilot_readiness: {
     controlled_internal_review_ready: boolean;
     public_or_external_use_enabled: boolean;

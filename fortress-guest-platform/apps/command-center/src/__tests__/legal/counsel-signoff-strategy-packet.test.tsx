@@ -486,6 +486,47 @@ vi.mock("@/lib/legal-hooks", () => ({
           stop_conditions: ["secret_exposure"],
         },
       },
+      operational_certification: {
+        status: "CONTROLLED_PILOT_OPERATIONS_CERTIFICATION_READY",
+        certification_scope: "controlled_internal_reviewer_operations_only",
+        readiness_audit: {
+          production_route_verified: true,
+          authenticated_checker_required: true,
+          deployment_verifier_required: true,
+          rollback_required: true,
+          unresolved_source_issues_excluded: 232,
+          counsel_signoff_status: "COUNSEL_SIGNOFF_PENDING",
+          external_submission_authority: "NOT_AUTHORIZED",
+          final_legal_conclusions: "NOT_CREATED",
+          schema_rls_policy_mutation: "NOT_PERFORMED",
+        },
+        pilot_governance: {
+          pilot_mode: "controlled_internal_operations",
+          public_launch_enabled: false,
+          unrestricted_reviewer_access_enabled: false,
+          allowed_operations: ["queue_triage"],
+          forbidden_operations: ["auto_signoff", "external_submission"],
+        },
+        reviewer_onboarding: {
+          status: "GOVERNED_ONBOARDING_REQUIRED",
+          required_acknowledgments: ["counsel_signoff_pending"],
+          allowed_roles: ["operator_reviewer"],
+        },
+        rollback_certification: {
+          status: "ROLLBACK_READY_PENDING_PR_REVIEW",
+          git_revertable: true,
+          runtime_rollback_required: true,
+          verification_after_rollback: ["authenticated_checker"],
+        },
+        governance_enforcement: {
+          status: "ENFORCEMENT_VERIFICATION_REQUIRED_EACH_RUN",
+          required_checks: ["COUNSEL_SIGNOFF_PENDING", "NOT_AUTHORIZED"],
+        },
+        operational_safety: {
+          status: "CERTIFIED_FOR_CONTROLLED_INTERNAL_PILOT_REVIEW",
+          certification_limitations: ["no_public_launch"],
+        },
+      },
       pilot_readiness: {
         controlled_internal_review_ready: true,
         public_or_external_use_enabled: false,
