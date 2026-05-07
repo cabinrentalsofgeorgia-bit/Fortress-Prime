@@ -1,0 +1,1 @@
+backend pytest: not run; broad backend pytest requires local POSTGRES_API_URI/TEST_DATABASE_URL and was intentionally avoided in this canonicalization pass to prevent unintended DB coupling.

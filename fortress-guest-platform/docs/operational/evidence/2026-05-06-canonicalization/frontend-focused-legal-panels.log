@@ -1,0 +1,13 @@
+
+> @fortress/command-center@0.1.0 test
+> vitest run src/__tests__/legal/draft-work-product-panel.test.tsx src/__tests__/legal/autonomous-learning-loop-panel.test.tsx src/__tests__/legal/limited-signoff-candidate-panel.test.tsx src/__tests__/legal/counsel-signoff-decision-workflow.test.tsx
+
+
+ RUN  v4.1.1 /home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center
+
+
+ Test Files  4 passed (4)
+      Tests  4 passed (4)
+   Start at  21:03:12
+   Duration  640ms (transform 273ms, setup 121ms, import 959ms, tests 146ms, environment 931ms)
+
