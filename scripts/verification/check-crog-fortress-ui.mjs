@@ -297,6 +297,17 @@ result.checks.remediationGraph =
 result.checks.graphValidation =
   text.includes("operationalGraph true") &&
   text.includes("graph-as-operational-cognition, not legal authority");
+result.checks.governanceQueryEngine =
+  text.includes("Governance Query Engine / Agent Operating Context") &&
+  text.includes("governanceQueryEngine true") &&
+  text.includes("query-engine-as-operational-guidance, not legal authority");
+result.checks.agentContext =
+  text.includes("Agent Operating Context") &&
+  text.includes("read only governance query engine and agent context");
+result.checks.safeNextActionsVisible = text.includes("Safe Next Actions");
+result.checks.forbiddenActionsVisible = text.includes("Forbidden Actions");
+result.checks.signoffBlockersVisible = text.includes("Signoff Blockers");
+result.checks.launchBlockersVisible = text.includes("Launch Blockers");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -346,7 +357,13 @@ result.featureAlignmentOk =
   result.checks.governanceGraph &&
   result.checks.evidenceGraph &&
   result.checks.remediationGraph &&
-  result.checks.graphValidation;
+  result.checks.graphValidation &&
+  result.checks.governanceQueryEngine &&
+  result.checks.agentContext &&
+  result.checks.safeNextActionsVisible &&
+  result.checks.forbiddenActionsVisible &&
+  result.checks.signoffBlockersVisible &&
+  result.checks.launchBlockersVisible;
 
 console.log(JSON.stringify(result, null, 2));
 

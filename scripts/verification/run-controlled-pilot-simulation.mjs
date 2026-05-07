@@ -29,6 +29,10 @@ const requiredDocs = [
   "fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md",
   "fortress-guest-platform/operational-memory/graph/graph.json",
   "fortress-guest-platform/operational-memory/graph/graph-validation-report.json",
+  "fortress-guest-platform/docs/architecture/governance-query-engine-architecture-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/queries/query-taxonomy.json",
+  "fortress-guest-platform/operational-memory/agent-context/current-agent-context.json",
+  "fortress-guest-platform/operational-memory/context-packs/codex-session.json",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -120,6 +124,12 @@ const simulation = {
   remediationGraphVisible: Boolean(checks.remediationGraph),
   graphValidationVisible: Boolean(checks.graphValidation),
   noGraphLegalAuthority: Boolean(checks.operationalGraph),
+  governanceQueryEngineVisible: Boolean(checks.governanceQueryEngine),
+  agentContextVisible: Boolean(checks.agentContext),
+  safeNextActionsVisible: Boolean(checks.safeNextActionsVisible),
+  forbiddenActionsVisible: Boolean(checks.forbiddenActionsVisible),
+  signoffBlockersVisible: Boolean(checks.signoffBlockersVisible),
+  launchBlockersVisible: Boolean(checks.launchBlockersVisible),
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -155,6 +165,12 @@ const ok =
   Boolean(checks.evidenceGraph) &&
   Boolean(checks.remediationGraph) &&
   Boolean(checks.graphValidation) &&
+  Boolean(checks.governanceQueryEngine) &&
+  Boolean(checks.agentContext) &&
+  Boolean(checks.safeNextActionsVisible) &&
+  Boolean(checks.forbiddenActionsVisible) &&
+  Boolean(checks.signoffBlockersVisible) &&
+  Boolean(checks.launchBlockersVisible) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -186,6 +202,12 @@ const result = {
     evidenceGraph: Boolean(checks.evidenceGraph),
     remediationGraph: Boolean(checks.remediationGraph),
     graphValidation: Boolean(checks.graphValidation),
+    governanceQueryEngine: Boolean(checks.governanceQueryEngine),
+    agentContext: Boolean(checks.agentContext),
+    safeNextActionsVisible: Boolean(checks.safeNextActionsVisible),
+    forbiddenActionsVisible: Boolean(checks.forbiddenActionsVisible),
+    signoffBlockersVisible: Boolean(checks.signoffBlockersVisible),
+    launchBlockersVisible: Boolean(checks.launchBlockersVisible),
   },
   negativeControls: {
     noDocumentBodyText: true,
