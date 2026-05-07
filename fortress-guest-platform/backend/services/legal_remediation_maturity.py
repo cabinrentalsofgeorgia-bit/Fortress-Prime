@@ -230,16 +230,68 @@ def _queue_summary(queue: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _ops_queue_item(item: dict[str, Any]) -> dict[str, Any]:
     safe = _safe_queue_item(item)
+    review_lane = safe["review_lane"]
+    locked = bool(safe["locked_restricted_involved"])
+    counsel = bool(safe["counsel_review_required"])
+    if locked:
+        owner_role_hint = "privilege_counsel_metadata_review"
+    elif counsel or review_lane == "contradiction_review":
+        owner_role_hint = "counsel_or_senior_reviewer"
+    elif review_lane == "evidence_attachment_required":
+        owner_role_hint = "source_reviewer"
+    else:
+        owner_role_hint = "operator_reviewer"
+
+    priority_score = int(safe["priority_score"])
+    if priority_score >= 120:
+        sla_band = "critical_24h"
+        escalation_state = "escalate_if_unassigned"
+    elif priority_score >= 80:
+        sla_band = "high_48h"
+        escalation_state = "queue_manager_review"
+    elif priority_score >= 40:
+        sla_band = "standard_5d"
+        escalation_state = "standard_queue"
+    else:
+        sla_band = "low_10d"
+        escalation_state = "watchlist"
+
     safe.update(
         {
             "review_state": "human_review_required",
             "owner_placeholder": item.get("owner_placeholder") or "unassigned",
+            "owner_role_hint": owner_role_hint,
             "age_band": "baseline_backlog",
             "staleness_indicator": "needs_review_sla",
+            "sla_band": sla_band,
+            "escalation_state": escalation_state,
+            "workload_weight": max(1, min(5, round(priority_score / 35))),
             "audit_state": "lineage_preserved",
         }
     )
     return safe
+
+
+def _distribution(items: list[dict[str, Any]], field: str, output_key: str | None = None) -> list[dict[str, Any]]:
+    counts = Counter(str(item.get(field) or "unknown") for item in items)
+    key_name = output_key or field
+    return [{key_name: key, "count": counts[key]} for key in sorted(counts)]
+
+
+def _workload_summary(items: list[dict[str, Any]]) -> dict[str, Any]:
+    total_weight = sum(int(item.get("workload_weight") or 1) for item in items)
+    return {
+        "total_workload_weight": total_weight,
+        "unassigned_items": sum(1 for item in items if item.get("owner_placeholder") == "unassigned"),
+        "counsel_or_senior_reviewer_items": sum(
+            1 for item in items if item.get("owner_role_hint") == "counsel_or_senior_reviewer"
+        ),
+        "source_reviewer_items": sum(1 for item in items if item.get("owner_role_hint") == "source_reviewer"),
+        "privilege_metadata_items": sum(
+            1 for item in items if item.get("owner_role_hint") == "privilege_counsel_metadata_review"
+        ),
+        "critical_sla_items": sum(1 for item in items if item.get("sla_band") == "critical_24h"),
+    }
 
 
 def build_review_operations(case_slug: str) -> dict[str, Any] | None:
@@ -265,6 +317,9 @@ def build_review_operations(case_slug: str) -> dict[str, Any] | None:
     confidence_counts = Counter(str(item["confidence_state"]) for item in full_queue)
     lane_counts = Counter(str(item["review_lane"]) for item in full_queue)
     item_type_counts = Counter(str(item["item_type"]) for item in full_queue)
+    owner_role_counts = Counter(str(item["owner_role_hint"]) for item in full_queue)
+    sla_counts = Counter(str(item["sla_band"]) for item in full_queue)
+    escalation_counts = Counter(str(item["escalation_state"]) for item in full_queue)
 
     return {
         "case_slug": case_slug,
@@ -336,6 +391,86 @@ def build_review_operations(case_slug: str) -> dict[str, Any] | None:
                 "safe_auto_resolutions": 0,
                 "human_review_required": len(full_queue),
             },
+            "reviewer_workload_distribution": [
+                {"owner_role_hint": key, "count": owner_role_counts[key]}
+                for key in sorted(owner_role_counts)
+            ],
+            "sla_distribution": [
+                {"sla_band": key, "count": sla_counts[key]} for key in sorted(sla_counts)
+            ],
+            "escalation_distribution": [
+                {"escalation_state": key, "count": escalation_counts[key]}
+                for key in sorted(escalation_counts)
+            ],
+        },
+        "reviewer_operations": {
+            "status": "CONTROLLED_REVIEW_SCALING_READY",
+            "assignment_model": {
+                "mode": "derived_reviewer_role_hints_no_persistent_assignment",
+                "authority_boundary": "queue_manager_may_assign_review_work_no_legal_signoff",
+                "reviewer_groups": [
+                    "operator_reviewer",
+                    "source_reviewer",
+                    "counsel_or_senior_reviewer",
+                    "privilege_counsel_metadata_review",
+                ],
+                "forbidden_assignment_effects": [
+                    "source_auto_resolution",
+                    "relied_upon_promotion",
+                    "counsel_signoff",
+                    "final_legal_conclusion",
+                    "external_submission_authority",
+                ],
+            },
+            "workload_balancing": {
+                "model": "metadata_only_weighted_queue_balancing",
+                "summary": _workload_summary(full_queue),
+                "distribution": [
+                    {"owner_role_hint": key, "count": owner_role_counts[key]}
+                    for key in sorted(owner_role_counts)
+                ],
+            },
+            "queue_aging_sla": {
+                "model": "sla_targets_for_review_attention_only",
+                "baseline_age_source": "existing_manifest_backlog_no_state_mutation",
+                "targets": [
+                    {"sla_band": "critical_24h", "target": "review_owner_assigned_within_24h"},
+                    {"sla_band": "high_48h", "target": "review_owner_assigned_within_48h"},
+                    {"sla_band": "standard_5d", "target": "review_triage_within_5_business_days"},
+                    {"sla_band": "low_10d", "target": "review_when_capacity_available"},
+                ],
+                "distribution": [
+                    {"sla_band": key, "count": sla_counts[key]} for key in sorted(sla_counts)
+                ],
+            },
+            "escalation_governance": {
+                "model": "human_escalation_only",
+                "distribution": [
+                    {"escalation_state": key, "count": escalation_counts[key]}
+                    for key in sorted(escalation_counts)
+                ],
+                "incident_triggers": [
+                    "auth_boundary_failure",
+                    "public_exposure_risk",
+                    "restricted_content_boundary_risk",
+                    "schema_rls_policy_change_request",
+                    "attempted_auto_signoff",
+                    "attempted_final_legal_conclusion",
+                    "attempted_external_submission",
+                ],
+            },
+            "incident_readiness": {
+                "status": "READY_FOR_CONTROLLED_INTERNAL_PILOT",
+                "rollback_required": True,
+                "stop_conditions": [
+                    "secret_exposure",
+                    "privileged_content_exposure",
+                    "restricted_content_boundary_violation",
+                    "auth_failure",
+                    "production_instability",
+                    "uncontrolled_legal_automation",
+                ],
+            },
         },
         "pilot_readiness": {
             "controlled_internal_review_ready": True,
@@ -358,6 +493,10 @@ def build_review_operations(case_slug: str) -> dict[str, Any] | None:
         "observability": {
             "checker_assertions": [
                 "review_operations_visible",
+                "reviewer_assignment_visible",
+                "workload_balancing_visible",
+                "queue_sla_visible",
+                "incident_readiness_visible",
                 "controlled_review_queues_visible",
                 "contradiction_review_visible",
                 "review_analytics_visible",
@@ -369,6 +508,9 @@ def build_review_operations(case_slug: str) -> dict[str, Any] | None:
                 "evidence_navigation_items",
                 "confidence_distribution",
                 "excluded_source_ratio",
+                "reviewer_workload_distribution",
+                "sla_distribution",
+                "escalation_distribution",
             ],
         },
     }

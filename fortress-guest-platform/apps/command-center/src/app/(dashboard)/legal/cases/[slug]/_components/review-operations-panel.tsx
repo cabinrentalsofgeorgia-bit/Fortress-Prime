@@ -10,6 +10,8 @@ import {
   GitBranch,
   ShieldCheck,
   TimerReset,
+  UserRoundCheck,
+  Users,
 } from "lucide-react";
 
 function Metric({ label, value }: { label: string; value: number | string }) {
@@ -100,6 +102,70 @@ export function ReviewOperationsPanel({ slug }: { slug: string }) {
         <Metric label="Verified Subset" value={data.review_operations_summary.verified_subset_count} />
       </div>
 
+      <div className="grid gap-4 xl:grid-cols-[1fr_1fr_1fr]">
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <UserRoundCheck className="h-3.5 w-3.5 text-cyan-300" />
+            Reviewer Assignment
+          </p>
+          <p className="text-[10px] text-zinc-500">
+            {label(data.reviewer_operations.assignment_model.mode)} / {label(data.reviewer_operations.assignment_model.authority_boundary)}
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {data.reviewer_operations.assignment_model.reviewer_groups.map((group) => (
+              <Badge key={group} variant="outline" className={`text-[10px] ${tone(group)}`}>
+                {label(group)}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1 pt-1 border-t border-zinc-800">
+            {data.reviewer_operations.assignment_model.forbidden_assignment_effects.map((effect) => (
+              <Badge key={effect} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+                forbidden {label(effect)}
+              </Badge>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <Users className="h-3.5 w-3.5 text-blue-300" />
+            Workload Balancing
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Metric label="Weight" value={data.reviewer_operations.workload_balancing.summary.total_workload_weight} />
+            <Metric label="Unassigned" value={data.reviewer_operations.workload_balancing.summary.unassigned_items} />
+            <Metric label="Source Review" value={data.reviewer_operations.workload_balancing.summary.source_reviewer_items} />
+            <Metric label="Counsel Lane" value={data.reviewer_operations.workload_balancing.summary.counsel_or_senior_reviewer_items} />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {data.reviewer_operations.workload_balancing.distribution.map((row) => (
+              <Badge key={row.owner_role_hint} variant="outline" className={`text-[10px] ${tone(row.owner_role_hint)}`}>
+                {label(row.owner_role_hint)} {row.count}
+              </Badge>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+          <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+            <TimerReset className="h-3.5 w-3.5 text-amber-300" />
+            Queue Aging / SLA
+          </p>
+          <p className="text-[10px] text-zinc-500">
+            {label(data.reviewer_operations.queue_aging_sla.model)} / {label(data.reviewer_operations.queue_aging_sla.baseline_age_source)}
+          </p>
+          {data.reviewer_operations.queue_aging_sla.targets.map((target) => (
+            <div key={target.sla_band} className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900/70 px-2 py-1.5">
+              <span className="text-xs text-zinc-200">{label(target.sla_band)}</span>
+              <Badge variant="outline" className={`text-[10px] ${tone(target.sla_band)}`}>
+                {label(target.target)}
+              </Badge>
+            </div>
+          ))}
+        </section>
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr_0.9fr]">
         <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
           <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
@@ -124,6 +190,12 @@ export function ReviewOperationsPanel({ slug }: { slug: string }) {
                   </Badge>
                   <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
                     {label(item.audit_state)}
+                  </Badge>
+                  <Badge variant="outline" className={`text-[10px] ${tone(item.sla_band)}`}>
+                    {label(item.sla_band)}
+                  </Badge>
+                  <Badge variant="outline" className={`text-[10px] ${tone(item.escalation_state)}`}>
+                    {label(item.escalation_state)}
                   </Badge>
                   <Badge variant="outline" className="bg-zinc-900 text-zinc-300 border-zinc-700 text-[10px]">
                     excluded from relied-upon sections
@@ -192,6 +264,11 @@ export function ReviewOperationsPanel({ slug }: { slug: string }) {
                 {label(row.state)} {row.count}
               </Badge>
             ))}
+            {data.review_analytics.sla_distribution.map((row) => (
+              <Badge key={row.sla_band} variant="outline" className={`text-[10px] ${tone(row.sla_band)}`}>
+                {label(row.sla_band)} {row.count}
+              </Badge>
+            ))}
           </div>
         </section>
 
@@ -218,6 +295,30 @@ export function ReviewOperationsPanel({ slug }: { slug: string }) {
           </div>
         </section>
       </div>
+
+      <section className="rounded-md border border-zinc-800 bg-zinc-950/70 p-3 space-y-2">
+        <p className="text-xs font-semibold text-zinc-100 flex items-center gap-2">
+          <Activity className="h-3.5 w-3.5 text-red-300" />
+          Escalation & Incident Readiness
+        </p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Metric label="Incident Status" value={label(data.reviewer_operations.incident_readiness.status)} />
+          <Metric label="Rollback Required" value={data.reviewer_operations.incident_readiness.rollback_required ? "Yes" : "No"} />
+          <Metric label="Escalation Model" value={label(data.reviewer_operations.escalation_governance.model)} />
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {data.reviewer_operations.escalation_governance.distribution.map((row) => (
+            <Badge key={row.escalation_state} variant="outline" className={`text-[10px] ${tone(row.escalation_state)}`}>
+              {label(row.escalation_state)} {row.count}
+            </Badge>
+          ))}
+          {data.reviewer_operations.incident_readiness.stop_conditions.map((condition) => (
+            <Badge key={condition} variant="outline" className="bg-red-500/10 text-red-300 border-red-500/30 text-[10px]">
+              stop {label(condition)}
+            </Badge>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
