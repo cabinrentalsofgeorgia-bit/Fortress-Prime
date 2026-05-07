@@ -30,6 +30,8 @@ vi.mock("@/lib/legal-hooks", () => ({
   useCounselSignoffPacket: () => ({ data: null, isLoading: false, error: null }),
   useCounselSignoffAction: () => ({ mutate: vi.fn(), isPending: false }),
   useCounselSignoffReopen: () => ({ mutate: vi.fn(), isPending: false }),
+  useCounselSignoffDecision: () => ({ data: null, isLoading: false, error: null }),
+  useCounselSignoffDecisionAction: () => ({ mutate: vi.fn(), isPending: false }),
   useSourceIntegrity: () => ({ data: null, isLoading: false, error: null }),
   useSourceRemediation: () => ({ data: null, isLoading: false, error: null }),
   useSourceLinkRepair: () => ({ data: null, isLoading: false, error: null }),
@@ -102,6 +104,15 @@ vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-validation-wor
 }));
 vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-strategy-packet", () => ({
   CounselSignoffStrategyPacket: () => <div data-testid="counsel-signoff-strategy-packet" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/counsel-signoff-decision-workflow", () => ({
+  CounselSignoffDecisionWorkflow: () => <div data-testid="counsel-signoff-decision-workflow" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/autonomous-learning-loop-panel", () => ({
+  AutonomousLearningLoopPanel: () => <div data-testid="autonomous-learning-loop-panel" />,
+}));
+vi.mock("@/app/(dashboard)/legal/cases/[slug]/_components/draft-work-product-panel", () => ({
+  DraftWorkProductPanel: () => <div data-testid="draft-work-product-panel" />,
 }));
 vi.mock("@/components/access/role-gated-action", () => ({
   RoleGatedAction: ({ children }: { children: React.ReactNode }) => <>{children}</>,
