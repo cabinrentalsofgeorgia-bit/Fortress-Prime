@@ -21,6 +21,7 @@
     { "phase": "internal_pilot", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-internal-pilot/", "status": "present" },
     { "phase": "human_operations", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-human-operations/", "status": "present" },
     { "phase": "capability_audit", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/", "status": "present" },
-    { "phase": "operational_memory", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/", "status": "present" }
+    { "phase": "operational_memory", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/", "status": "present" },
+    { "phase": "operational_graph", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/", "status": "present" }
   ]
 }

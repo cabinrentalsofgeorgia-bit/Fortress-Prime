@@ -4,10 +4,11 @@
   "sourceRefs": [
     "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/summary.md"
   ],
   "standingLabels": {
-    "productionStatus": "PRODUCTION_OPERATIONAL_MEMORY_COMPLETE_PENDING_REVIEW",
+    "productionStatus": "PRODUCTION_OPERATIONAL_GRAPH_COMPLETE_PENDING_REVIEW",
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED",
     "finalLegalConclusions": "NOT_CREATED",
@@ -26,7 +27,11 @@
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker.json",
     "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier.json",
-    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json"
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/authenticated-checker-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/deployment-verifier-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/pilot-simulation-final.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/knowledge-graph-validation.json"
   ],
   "validationStatus": {
     "authenticatedChecker": "PASS",
@@ -35,7 +40,8 @@
     "featureAlignmentOk": true,
     "internalPilot": true,
     "humanOperations": true,
-    "operationalMemory": "PASS"
+    "operationalMemory": "PASS",
+    "operationalGraph": "PASS"
   },
   "rollbackRefs": [
     "git_revert_operational_memory_commits",
@@ -49,7 +55,7 @@
     "public_launch_forbidden",
     "external_legal_operations_forbidden",
     "persistent_reviewer_assignment_writes_deferred",
-    "operational_memory_complete_pending_review"
+    "operational_graph_complete_pending_review"
   ],
   "hardStops": [
     "secret_exposure_risk",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-07T10:26:45.788Z",
+  "generatedAt": "2026-05-07T10:29:32.028Z",
   "standingLabels": {
     "counselStatus": "COUNSEL_SIGNOFF_PENDING",
     "externalSubmissionAuthority": "NOT_AUTHORIZED"
@@ -102,6 +102,13 @@
       "phase": "operational_memory",
       "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/",
       "status": "present"
+    },
+    {
+      "id": "evidence:operational_graph",
+      "type": "evidence_bundle",
+      "phase": "operational_graph",
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-graph/",
+      "status": "present"
     }
   ],
   "edges": [
@@ -181,6 +188,13 @@
       "from": "evidence:operational_memory",
       "to": "capability:operational_memory",
       "phase": "operational_memory"
+    },
+    {
+      "id": "evidence-edge:operational_graph",
+      "type": "supports",
+      "from": "evidence:operational_graph",
+      "to": "capability:operational_graph",
+      "phase": "operational_graph"
     }
   ]
 }
