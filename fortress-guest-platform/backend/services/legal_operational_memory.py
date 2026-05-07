@@ -164,7 +164,7 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
                     }
                 ]
             ),
-            "forbiddenOperations": governance.get("forbiddenOperations", []),
+            "forbiddenOperations": registries["governance"].get("forbiddenOperations", []),
             "signoffBlockers": [
                 "COUNSEL_SIGNOFF_PENDING",
                 "232_unresolved_source_issues_excluded",
