@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-plan.schema.json",
+  "title": "Fortress Legal Agent Plan",
+  "type": "object",
+  "required": ["schemaVersion", "planId", "taskId", "riskClass", "plannedActions", "validationGates", "requiredEvidence", "rollbackPlan", "standingLabels", "humanReviewRequired", "governanceAssertions"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "planId": { "type": "string" },
+    "taskId": { "type": "string" },
+    "riskClass": { "type": "string" },
+    "plannedActions": { "type": "array", "items": { "type": "object" } },
+    "skippedActions": { "type": "array", "items": { "type": "object" } },
+    "blockedActions": { "type": "array", "items": { "type": "object" } },
+    "validationGates": { "type": "array", "items": { "type": "string" } },
+    "requiredEvidence": { "type": "array", "items": { "type": "string" } },
+    "rollbackPlan": { "type": "string" },
+    "standingLabels": { "type": "object" },
+    "humanReviewRequired": { "type": "boolean" },
+    "governanceAssertions": { "$ref": "agent-task.schema.json#/$defs/governanceAssertions" }
+  }
+}
