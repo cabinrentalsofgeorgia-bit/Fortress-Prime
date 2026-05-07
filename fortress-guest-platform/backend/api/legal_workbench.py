@@ -30,6 +30,7 @@ from backend.services.legal_autonomous_learning_loop import (
 from backend.services.legal_counsel_workbench import load_latest_workbench
 from backend.services.legal_draft_work_product import load_latest_draft_work_product
 from backend.services.legal_limited_signoff_candidate_packet import load_latest_limited_signoff_candidate
+from backend.services.legal_operational_memory import load_operational_memory
 from backend.services.legal_remediation_maturity import build_remediation_maturity, build_review_operations
 from backend.services.legal_source_integrity_validation import load_latest_source_integrity
 from backend.services.legal_source_link_repair import load_latest_source_link_repair
@@ -290,6 +291,17 @@ async def get_review_operations(slug: str):
         raise HTTPException(status_code=403, detail=str(exc)) from None
     if packet is None:
         raise HTTPException(status_code=404, detail="Review operations state not found.")
+    return packet
+
+
+@router.get("/cases/{slug}/operational-memory", summary="Get read-only operational memory registries")
+async def get_operational_memory(slug: str):
+    try:
+        packet = load_operational_memory(slug)
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from None
+    if packet is None:
+        raise HTTPException(status_code=404, detail="Operational memory registries not found.")
     return packet
 
 
