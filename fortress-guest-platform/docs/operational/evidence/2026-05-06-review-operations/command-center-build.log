@@ -1,0 +1,118 @@
+
+> @fortress/command-center@0.1.0 build
+> next build && node ../../scripts/sync-next-standalone-assets.mjs
+
+▲ Next.js 16.1.6 (Turbopack)
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.5s
+  Running TypeScript ...
+  Collecting page data using 19 workers ...
+  Generating static pages using 19 workers (0/19) ...
+  Generating static pages using 19 workers (4/19) 
+  Generating static pages using 19 workers (9/19) 
+  Generating static pages using 19 workers (14/19) 
+✓ Generating static pages using 19 workers (19/19) in 98.2ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /acquisition/pipeline
+├ ƒ /admin
+├ ƒ /admin/payouts
+├ ƒ /agreements
+├ ƒ /ai-engine
+├ ƒ /analytics
+├ ƒ /analytics/insights
+├ ƒ /api/[...path]
+├ ƒ /api/admin/payouts/[...path]
+├ ƒ /api/admin/prime/stream
+├ ƒ /api/auth/[...path]
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/auth/sso
+├ ƒ /api/intelligence/feed/latest
+├ ƒ /api/legal/council/[jobId]/stream
+├ ƒ /api/legal/council/stream
+├ ƒ /api/login
+├ ƒ /api/system-health
+├ ƒ /api/system/sensors
+├ ƒ /api/telemetry/checkout-parity
+├ ƒ /api/telemetry/funnel-hq
+├ ƒ /api/telemetry/parity-dashboard
+├ ƒ /api/telemetry/sovereign-pulse
+├ ƒ /api/vrs/[...path]
+├ ƒ /automations
+├ ƒ /command
+├ ƒ /command/checkout-parity
+├ ƒ /command/parity
+├ ƒ /command/quote-control
+├ ƒ /command/settings/staff
+├ ƒ /command/sovereign-pulse
+├ ƒ /command/triage
+├ ƒ /command/yield
+├ ƒ /connectivity
+├ ƒ /damage-claims
+├ ƒ /email-intake
+├ ƒ /financial/hedge-fund
+├ ƒ /growth
+├ ƒ /growth/ab-testing
+├ ƒ /growth/migration
+├ ƒ /growth/redirect-remaps
+├ ƒ /growth/sem-telemetry
+├ ƒ /growth/seo-approval
+├ ƒ /growth/seo-copilot
+├ ƒ /guestbooks
+├ ƒ /guestbooks/extras
+├ ƒ /guests
+├ ƒ /guests/[id]
+├ ƒ /housekeeping
+├ ƒ /intelligence
+├ ƒ /intelligence/market-shadow
+├ ƒ /iot
+├ ƒ /legal
+├ ƒ /legal/cases/[slug]
+├ ƒ /legal/cases/[slug]/deposition/[targetId]/print
+├ ƒ /legal/cases/[slug]/war-room
+├ ƒ /legal/council
+├ ƒ /legal/email-intake
+├ ○ /login
+├ ƒ /messages
+├ ƒ /nemo-command-center
+├ ƒ /payments
+├ ƒ /prime
+├ ƒ /properties
+├ ƒ /properties/[id]
+├ ƒ /reservations
+├ ○ /robots.txt
+├ ƒ /seo-review
+├ ƒ /seo-review/[id]
+├ ƒ /seo/review
+├ ƒ /settings
+├ ƒ /settings/agreement-templates
+├ ○ /sitemap.xml
+├ ○ /sso
+├ ƒ /system-health
+├ ƒ /trust-review
+├ ƒ /trust-review/[id]
+├ ƒ /vault
+├ ƒ /vrs
+├ ƒ /vrs/dispatch
+├ ƒ /vrs/hunter
+├ ƒ /vrs/leads
+├ ƒ /vrs/leads/[id]
+├ ƒ /vrs/quotes
+└ ƒ /work-orders
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+sync-next-standalone-assets: static -> /home/admin/Fortress-Prime-review-operations/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center/.next/static
+sync-next-standalone-assets: public -> /home/admin/Fortress-Prime-review-operations/fortress-guest-platform/apps/command-center/.next/standalone/apps/command-center/public
