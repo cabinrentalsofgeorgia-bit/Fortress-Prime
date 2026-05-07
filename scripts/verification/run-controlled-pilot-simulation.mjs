@@ -23,6 +23,12 @@ const requiredDocs = [
   "fortress-guest-platform/operational-memory/registries/remediation-registry.json",
   "fortress-guest-platform/operational-memory/registries/evidence-registry.json",
   "fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json",
+  "fortress-guest-platform/docs/architecture/operational-knowledge-graph-architecture-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/queryable-governance-model-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/wiki-evidence-graph-model-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/reviewer-remediation-lineage-model-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/graph/graph.json",
+  "fortress-guest-platform/operational-memory/graph/graph-validation-report.json",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -108,6 +114,12 @@ const simulation = {
   wikiKnowledgeIndexVisible: Boolean(checks.wikiKnowledgeIndex),
   reviewerLedgerFoundationVisible: Boolean(checks.reviewerLedgerFoundation),
   noRegistryLegalAuthority: Boolean(checks.operationalMemory),
+  operationalGraphVisible: Boolean(checks.operationalGraph),
+  governanceGraphVisible: Boolean(checks.governanceGraph),
+  evidenceGraphVisible: Boolean(checks.evidenceGraph),
+  remediationGraphVisible: Boolean(checks.remediationGraph),
+  graphValidationVisible: Boolean(checks.graphValidation),
+  noGraphLegalAuthority: Boolean(checks.operationalGraph),
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -138,6 +150,11 @@ const ok =
   Boolean(checks.evidenceRegistry) &&
   Boolean(checks.wikiKnowledgeIndex) &&
   Boolean(checks.reviewerLedgerFoundation) &&
+  Boolean(checks.operationalGraph) &&
+  Boolean(checks.governanceGraph) &&
+  Boolean(checks.evidenceGraph) &&
+  Boolean(checks.remediationGraph) &&
+  Boolean(checks.graphValidation) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -164,6 +181,11 @@ const result = {
     evidenceRegistry: Boolean(checks.evidenceRegistry),
     wikiKnowledgeIndex: Boolean(checks.wikiKnowledgeIndex),
     reviewerLedgerFoundation: Boolean(checks.reviewerLedgerFoundation),
+    operationalGraph: Boolean(checks.operationalGraph),
+    governanceGraph: Boolean(checks.governanceGraph),
+    evidenceGraph: Boolean(checks.evidenceGraph),
+    remediationGraph: Boolean(checks.remediationGraph),
+    graphValidation: Boolean(checks.graphValidation),
   },
   negativeControls: {
     noDocumentBodyText: true,

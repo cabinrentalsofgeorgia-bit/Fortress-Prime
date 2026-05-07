@@ -160,7 +160,8 @@ await page
           body.includes("Forbidden Pilot Actions") ||
           body.includes("Controlled Human Operations") ||
           body.includes("Operational Feedback Capture") ||
-          body.includes("Operational Memory / Machine-Readable Cognition"))
+          body.includes("Operational Memory / Machine-Readable Cognition") ||
+          body.includes("Operational Knowledge Graph / Queryable Governance"))
       );
     },
     { timeout: 20000 },
@@ -280,6 +281,23 @@ result.checks.reviewerLedgerFoundation =
   text.includes("Reviewer Feedback Ledger Foundation") &&
   text.includes("EMPTY LEDGER FOUNDATION") &&
   text.includes("no freeform legal text true");
+result.checks.operationalGraph =
+  text.includes("Operational Knowledge Graph / Queryable Governance") &&
+  text.includes("operationalGraph true") &&
+  text.includes("graph-as-operational-cognition, not legal authority") &&
+  text.includes("Graph Entities") &&
+  text.includes("Graph Relationships");
+result.checks.governanceGraph =
+  text.includes("Governance Graph") &&
+  text.includes("governance boundary");
+result.checks.evidenceGraph =
+  text.includes("Evidence Graph");
+result.checks.remediationGraph =
+  text.includes("Remediation Graph") &&
+  text.includes("232 unresolved source issues excluded");
+result.checks.graphValidation =
+  text.includes("operationalGraph true") &&
+  text.includes("graph-as-operational-cognition, not legal authority");
 result.checks.noLoginError = !text.includes("Invalid email or password");
 result.checks.noExternalSubmissionAuthority =
   !text.includes("AUTHORIZED_FOR_FILING") &&
@@ -324,7 +342,12 @@ result.featureAlignmentOk =
   result.checks.remediationRegistry &&
   result.checks.evidenceRegistry &&
   result.checks.wikiKnowledgeIndex &&
-  result.checks.reviewerLedgerFoundation;
+  result.checks.reviewerLedgerFoundation &&
+  result.checks.operationalGraph &&
+  result.checks.governanceGraph &&
+  result.checks.evidenceGraph &&
+  result.checks.remediationGraph &&
+  result.checks.graphValidation;
 
 console.log(JSON.stringify(result, null, 2));
 

@@ -126,6 +126,11 @@ const humanOperations = {
   evidenceRegistry: Boolean(checkerChecks.evidenceRegistry),
   wikiKnowledgeIndex: Boolean(checkerChecks.wikiKnowledgeIndex),
   reviewerLedgerFoundation: Boolean(checkerChecks.reviewerLedgerFoundation),
+  operationalGraph: Boolean(checkerChecks.operationalGraph),
+  governanceGraph: Boolean(checkerChecks.governanceGraph),
+  evidenceGraph: Boolean(checkerChecks.evidenceGraph),
+  remediationGraph: Boolean(checkerChecks.remediationGraph),
+  graphValidation: Boolean(checkerChecks.graphValidation),
 };
 const ok =
   checks.publicRoutes.every((item) => item.ok) &&
