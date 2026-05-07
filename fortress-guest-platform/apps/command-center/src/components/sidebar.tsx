@@ -131,7 +131,12 @@ export function Sidebar() {
                 return (
                   <li key={`${section.sector}-${item.label}`}>
                     {isRouteItem(item) && href ? (
-                      <Link href={href} className={itemClasses} title={collapsed ? item.label : undefined}>
+                      <Link
+                        href={href}
+                        prefetch={false}
+                        className={itemClasses}
+                        title={collapsed ? item.label : undefined}
+                      >
                         {content}
                       </Link>
                     ) : (

@@ -1,0 +1,14 @@
+execution=fortress-operational-hardening-20260506-215100-operational-hardening
+source_commit=c2a7f92fc78f122caf352581a246f73ea6a658a1
+frontend_source=/home/admin/Fortress-Prime-operational-hardening/fortress-guest-platform/apps/command-center/.next
+frontend_runtime=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next
+frontend_rollback=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next.rollback-20260506-215100-operational-hardening
+backend_source=/home/admin/Fortress-Prime-operational-hardening/fortress-guest-platform
+backend_runtime=/home/admin/Fortress-Prime-runtime-main-20260504/fortress-guest-platform
+backend_rollback=/home/admin/Fortress-Prime-runtime-main-20260504/operational-hardening-backend-rollback-20260506-215100-operational-hardening
+raw_document_upload=NOT_PERFORMED
+ingest=NOT_PERFORMED
+vectors=NOT_PERFORMED
+schema_rls_policy_mutation=NOT_PERFORMED
+signoff=NOT_PERFORMED
+external_submission=NOT_AUTHORIZED
