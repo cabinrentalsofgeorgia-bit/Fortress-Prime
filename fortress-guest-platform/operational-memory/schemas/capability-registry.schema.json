@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fortress-legal/capability-registry.schema.json",
+  "title": "Fortress Legal Capability Registry",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "sourceRefs", "standingLabels", "governanceBoundaries", "evidenceRefs", "validationStatus", "rollbackRefs", "noSecrets", "noConfidentialText", "capabilities"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "sourceRefs": { "type": "array", "items": { "type": "string" } },
+    "standingLabels": { "type": "object" },
+    "governanceBoundaries": { "type": "array", "items": { "type": "string" } },
+    "evidenceRefs": { "type": "array", "items": { "type": "string" } },
+    "validationStatus": { "type": "object" },
+    "rollbackRefs": { "type": "array", "items": { "type": "string" } },
+    "noSecrets": { "const": true },
+    "noConfidentialText": { "const": true },
+    "capabilities": { "type": "array", "items": { "type": "object", "required": ["id", "status", "maturityLevel", "limitations"] } }
+  },
+  "additionalProperties": true
+}

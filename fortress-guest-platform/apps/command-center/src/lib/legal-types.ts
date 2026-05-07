@@ -1376,6 +1376,65 @@ export interface ReviewOperationsResponse {
   };
 }
 
+export interface OperationalMemoryResponse {
+  schemaVersion: string;
+  matterSlug: string;
+  status: string;
+  standingLabels: Record<string, string>;
+  governanceBoundaries: string[];
+  validationStatus: Record<string, string | boolean>;
+  summary: {
+    capabilityCount: number;
+    evidenceDirectoryCount: number;
+    wikiKnowledgeEntries: number;
+    reviewerFeedbackEntries: number;
+    unresolvedSourceIssues: number;
+    reviewerLedgerMode: string;
+  };
+  registries: {
+    operational_state: Record<string, unknown>;
+    capabilities: {
+      capabilities: Array<{
+        id: string;
+        status: string;
+        maturityLevel: string;
+        checkerFlag?: string;
+        evidencePath?: string;
+        limitations: string[];
+      }>;
+    };
+    governance: {
+      forbiddenOperations: string[];
+      hardStops: string[];
+    };
+    evidence: {
+      evidenceDirectories: Array<{ phase: string; path: string; status: string }>;
+    };
+    remediation: {
+      unresolvedSourceIssues: number;
+      unresolvedSourceExclusionStatus: string;
+      noAutoResolution: boolean;
+      categories: string[];
+    };
+    reviewer_feedback_ledger: {
+      ledgerPurpose: string;
+      allowedFeedbackTypes: string[];
+      prohibitedFeedbackContent: string[];
+      noFreeformLegalText: boolean;
+      entries: unknown[];
+    };
+    wiki_knowledge_index: {
+      entries: Array<{ path: string; category: string; freshness: string; title?: string }>;
+    };
+    validation_report: {
+      ok: boolean;
+      errors: string[];
+      warnings: string[];
+    };
+  };
+  negativeControls: Record<string, boolean>;
+}
+
 export type CounselSignoffDecisionType =
   | "operator_review_acknowledgment"
   | "counsel_review_acknowledgment"

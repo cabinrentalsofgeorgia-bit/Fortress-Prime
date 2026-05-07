@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": ["fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md"],
+  "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING", "externalSubmissionAuthority": "NOT_AUTHORIZED" },
+  "governanceBoundaries": ["no_confidential_text_in_evidence", "no_auth_material_in_evidence"],
+  "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/"],
+  "validationStatus": { "status": "INDEXED_INITIAL" },
+  "rollbackRefs": ["evidence_docs_are_git_revertable"],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "checksumStrategy": "path_and_git_hash_now_file_checksums_future",
+  "evidenceDirectories": [
+    { "phase": "canonicalization", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-canonicalization/", "status": "present" },
+    { "phase": "feature_alignment", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-feature-alignment/", "status": "present" },
+    { "phase": "operational_hardening", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-hardening/", "status": "present" },
+    { "phase": "remediation_maturity", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-remediation-maturity/", "status": "present" },
+    { "phase": "review_operations", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-operations/", "status": "present" },
+    { "phase": "review_scaling", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-scaling/", "status": "present" },
+    { "phase": "operational_certification", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-certification/", "status": "present" },
+    { "phase": "internal_pilot", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-internal-pilot/", "status": "present" },
+    { "phase": "human_operations", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-human-operations/", "status": "present" },
+    { "phase": "capability_audit", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/", "status": "present" },
+    { "phase": "operational_memory", "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/", "status": "present" }
+  ]
+}

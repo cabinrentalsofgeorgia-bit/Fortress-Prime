@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-05-07T04:18:31.668Z",
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_MEMORY_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "capabilityCount": 11,
+  "activeCapabilityIds": [
+    "canonicalization",
+    "feature_alignment",
+    "operational_hardening",
+    "remediation_maturity",
+    "review_operations",
+    "review_scaling",
+    "operational_certification",
+    "internal_pilot",
+    "human_operations",
+    "capability_audit",
+    "operational_memory"
+  ],
+  "governanceBoundaryCount": 9,
+  "unresolvedSourceIssues": 232,
+  "unresolvedSourceExclusionStatus": "EXCLUDED_FROM_RELIED_UPON_SECTIONS",
+  "evidenceDirectoryCount": 11,
+  "wikiKnowledgeEntries": 8,
+  "reviewerFeedbackEntries": 0,
+  "reviewerLedgerMode": "EMPTY_LEDGER_FOUNDATION",
+  "blockers": [
+    "232_unresolved_source_issues_excluded",
+    "counsel_signoff_pending",
+    "public_launch_forbidden",
+    "external_legal_operations_forbidden",
+    "persistent_reviewer_assignment_writes_deferred",
+    "operational_memory_complete_pending_review"
+  ],
+  "authority": {
+    "counselSignoff": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE"
+  }
+}

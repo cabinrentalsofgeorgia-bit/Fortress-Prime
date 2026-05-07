@@ -58,6 +58,7 @@ import { CounselSignoffStrategyPacket } from "./counsel-signoff-strategy-packet"
 import { CounselSignoffDecisionWorkflow } from "./counsel-signoff-decision-workflow";
 import { AutonomousLearningLoopPanel } from "./autonomous-learning-loop-panel";
 import { DraftWorkProductPanel } from "./draft-work-product-panel";
+import { OperationalMemoryPanel } from "./operational-memory-panel";
 import type { ExtractionStatus } from "@/lib/legal-types";
 
 type GraphNode = {
@@ -409,6 +410,7 @@ export function CaseDetailShell({ slug }: { slug: string }) {
 
         {/* ── TAB 0: STRATEGY PACKET / COUNSEL SIGNOFF ── */}
         <TabsContent value="strategy-packet" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+          <OperationalMemoryPanel slug={slug} />
           <CounselSignoffDecisionWorkflow slug={slug} />
           <AutonomousLearningLoopPanel slug={slug} />
           <DraftWorkProductPanel slug={slug} />

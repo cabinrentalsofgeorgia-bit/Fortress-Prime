@@ -17,6 +17,12 @@ const requiredDocs = [
   "fortress-guest-platform/docs/operational/governance-exception-handling-2026-05-06.md",
   "fortress-guest-platform/docs/architecture/operational-drift-detection-model.md",
   "fortress-guest-platform/docs/operational/human-operations-incident-rehearsal-2026-05-06.md",
+  "fortress-guest-platform/docs/architecture/operational-memory-architecture-2026-05-06.md",
+  "fortress-guest-platform/operational-memory/registries/operational-state.json",
+  "fortress-guest-platform/operational-memory/registries/governance-registry.json",
+  "fortress-guest-platform/operational-memory/registries/remediation-registry.json",
+  "fortress-guest-platform/operational-memory/registries/evidence-registry.json",
+  "fortress-guest-platform/operational-memory/registries/reviewer-feedback-ledger.json",
 ];
 
 async function probe(path, expectedStatuses) {
@@ -95,6 +101,13 @@ const simulation = {
   noSourcePromotion: true,
   noIngestionUploadVectorWrites: true,
   noLockedContentInspection: true,
+  operationalMemoryVisible: Boolean(checks.operationalMemory),
+  governanceRegistryVisible: Boolean(checks.governanceRegistry),
+  remediationRegistryVisible: Boolean(checks.remediationRegistry),
+  evidenceRegistryVisible: Boolean(checks.evidenceRegistry),
+  wikiKnowledgeIndexVisible: Boolean(checks.wikiKnowledgeIndex),
+  reviewerLedgerFoundationVisible: Boolean(checks.reviewerLedgerFoundation),
+  noRegistryLegalAuthority: Boolean(checks.operationalMemory),
   incidentRollbackDocs: docs.every((doc) => doc.exists),
   governanceLabels: Boolean(
     checks.signoffPending &&
@@ -119,6 +132,12 @@ const ok =
   Boolean(checks.governanceExceptions) &&
   Boolean(checks.driftDetection) &&
   Boolean(checks.humanEscalation) &&
+  Boolean(checks.operationalMemory) &&
+  Boolean(checks.governanceRegistry) &&
+  Boolean(checks.remediationRegistry) &&
+  Boolean(checks.evidenceRegistry) &&
+  Boolean(checks.wikiKnowledgeIndex) &&
+  Boolean(checks.reviewerLedgerFoundation) &&
   !simulation.signoffFinalExternalControlsExposed;
 
 const result = {
@@ -139,6 +158,12 @@ const result = {
     driftDetection: Boolean(checks.driftDetection),
     humanEscalationOnly: Boolean(checks.humanEscalation),
     stopConditionsVisible: Boolean(checks.governanceExceptions),
+    operationalMemory: Boolean(checks.operationalMemory),
+    governanceRegistry: Boolean(checks.governanceRegistry),
+    remediationRegistry: Boolean(checks.remediationRegistry),
+    evidenceRegistry: Boolean(checks.evidenceRegistry),
+    wikiKnowledgeIndex: Boolean(checks.wikiKnowledgeIndex),
+    reviewerLedgerFoundation: Boolean(checks.reviewerLedgerFoundation),
   },
   negativeControls: {
     noDocumentBodyText: true,

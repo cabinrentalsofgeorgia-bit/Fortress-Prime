@@ -106,6 +106,47 @@ async def test_counsel_validation_endpoint_returns_manifest(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_operational_memory_endpoint_returns_read_only_registry(monkeypatch):
+    monkeypatch.setattr(
+        legal_workbench_api,
+        "load_operational_memory",
+        lambda slug: {
+            "matterSlug": slug,
+            "status": "OPERATIONAL_MEMORY_VISIBLE_READ_ONLY",
+            "standingLabels": {
+                "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+                "externalSubmissionAuthority": "NOT_AUTHORIZED",
+            },
+            "negativeControls": {
+                "noCounselSignoffAuthority": True,
+                "noFinalLegalConclusionAuthority": True,
+                "noExternalSubmissionAuthority": True,
+                "readOnly": True,
+            },
+        },
+    )
+
+    app = FastAPI()
+    app.include_router(legal_workbench_api.router, prefix="/api/internal/legal")
+
+    async def override_current_user():
+        return SimpleNamespace(id="u1", email="manager@example.test", role="manager", is_active=True)
+
+    app.dependency_overrides[get_current_user] = override_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/internal/legal/cases/fortress-legal-production-review/operational-memory")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "OPERATIONAL_MEMORY_VISIBLE_READ_ONLY"
+    assert body["standingLabels"]["counselStatus"] == "COUNSEL_SIGNOFF_PENDING"
+    assert body["negativeControls"]["readOnly"] is True
+    assert body["negativeControls"]["noExternalSubmissionAuthority"] is True
+
+
+@pytest.mark.asyncio
 async def test_counsel_validation_action_never_uses_final_legal_conclusion(monkeypatch):
     def fake_apply_validation_action(slug, **kwargs):
         assert slug == "fortress-legal-production-review"

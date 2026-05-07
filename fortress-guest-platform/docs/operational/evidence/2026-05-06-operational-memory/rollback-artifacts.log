@@ -1,0 +1,12 @@
+rollback_dir=/home/admin/Fortress-Prime-runtime-main-20260504/operational-memory-rollback-20260507-001457
+frontend_root=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center
+backend_root=/home/admin/Fortress-Prime-runtime-main-20260504/fortress-guest-platform
+copied_frontend_next=true
+copied_backend_api=backend/api/legal_workbench.py
+copied_backend_service=backend/services/legal_operational_memory.py
+copied_operational_memory=operational-memory
+restart_method=sudo systemctl restart fortress-backend.service crog-ai-frontend.service
+schema_rls_policy_mutation=NOT_PERFORMED
+signoff=NOT_RECORDED
+external_submission_authority=NOT_AUTHORIZED
+updated_runtime_operational_memory_registry=true

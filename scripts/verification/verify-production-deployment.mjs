@@ -99,6 +99,10 @@ const checks = {
       401,
       403,
     ]),
+    await probe("/api/internal/legal/cases/fortress-legal-production-review/operational-memory", [
+      401,
+      403,
+    ]),
   ],
   services: [
     systemdActive("crog-ai-frontend.service"),
@@ -116,6 +120,12 @@ const humanOperations = {
   governanceExceptions: Boolean(checkerChecks.governanceExceptions),
   driftDetection: Boolean(checkerChecks.driftDetection),
   humanEscalationOnly: Boolean(checkerChecks.humanEscalation),
+  operationalMemory: Boolean(checkerChecks.operationalMemory),
+  governanceRegistry: Boolean(checkerChecks.governanceRegistry),
+  remediationRegistry: Boolean(checkerChecks.remediationRegistry),
+  evidenceRegistry: Boolean(checkerChecks.evidenceRegistry),
+  wikiKnowledgeIndex: Boolean(checkerChecks.wikiKnowledgeIndex),
+  reviewerLedgerFoundation: Boolean(checkerChecks.reviewerLedgerFoundation),
 };
 const ok =
   checks.publicRoutes.every((item) => item.ok) &&

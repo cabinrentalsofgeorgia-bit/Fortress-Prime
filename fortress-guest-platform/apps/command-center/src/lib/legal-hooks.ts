@@ -38,6 +38,7 @@ import type {
   TargetedSourceCompletionResponse,
   RemediationMaturityResponse,
   ReviewOperationsResponse,
+  OperationalMemoryResponse,
 } from "./legal-types";
 
 const KEYS = {
@@ -67,6 +68,7 @@ const KEYS = {
   draftWorkProduct: (slug: string) => ["legal", "draft-work-product", slug] as const,
   remediationMaturity: (slug: string) => ["legal", "remediation-maturity", slug] as const,
   reviewOperations: (slug: string) => ["legal", "review-operations", slug] as const,
+  operationalMemory: (slug: string) => ["legal", "operational-memory", slug] as const,
 };
 
 /* ── Queries ──────────────────────────────────────────────────── */
@@ -257,6 +259,17 @@ export function useReviewOperations(slug: string) {
     queryFn: () =>
       api.get<ReviewOperationsResponse>(
         `/api/internal/legal/cases/${slug}/review-operations`,
+      ),
+    enabled: !!slug,
+  });
+}
+
+export function useOperationalMemory(slug: string) {
+  return useQuery({
+    queryKey: KEYS.operationalMemory(slug),
+    queryFn: () =>
+      api.get<OperationalMemoryResponse>(
+        `/api/internal/legal/cases/${slug}/operational-memory`,
       ),
     enabled: !!slug,
   });

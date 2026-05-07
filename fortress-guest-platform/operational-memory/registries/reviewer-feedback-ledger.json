@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": ["fortress-guest-platform/docs/architecture/operational-feedback-capture-model.md"],
+  "standingLabels": { "counselStatus": "COUNSEL_SIGNOFF_PENDING", "externalSubmissionAuthority": "NOT_AUTHORIZED", "legalAdviceStatus": "NOT FINAL LEGAL ADVICE" },
+  "governanceBoundaries": ["no_freeform_legal_text", "no_confidential_text", "no_signoff_statements"],
+  "evidenceRefs": ["fortress-guest-platform/docs/operational/evidence/2026-05-06-human-operations/"],
+  "validationStatus": { "status": "EMPTY_LEDGER_FOUNDATION" },
+  "rollbackRefs": ["git_revert", "entries_empty"],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "humanReviewRequired": true,
+  "ledgerPurpose": "structured_operational_feedback_and_disposition_foundation_not_legal_authority",
+  "allowedFeedbackTypes": [
+    "navigation_friction",
+    "queue_confusion",
+    "evidence_chain_unclear",
+    "contradiction_review_needed",
+    "remediation_priority_unclear",
+    "governance_boundary_question",
+    "escalation_needed",
+    "reviewer_training_needed",
+    "operational_drift_observed"
+  ],
+  "prohibitedFeedbackContent": [
+    "confidential_legal_text",
+    "privileged_content",
+    "legal_conclusions",
+    "signoff_statements",
+    "external_submission_instructions",
+    "restricted_document_content",
+    "auth_or_secret_material"
+  ],
+  "noFreeformLegalText": true,
+  "entries": []
+}

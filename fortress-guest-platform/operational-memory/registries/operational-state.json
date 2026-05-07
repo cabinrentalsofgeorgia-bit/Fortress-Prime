@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-06T23:59:00-04:00",
+  "sourceRefs": [
+    "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/summary.md"
+  ],
+  "standingLabels": {
+    "productionStatus": "PRODUCTION_OPERATIONAL_MEMORY_COMPLETE_PENDING_REVIEW",
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED",
+    "finalLegalConclusions": "NOT_CREATED",
+    "legalAdviceStatus": "NOT FINAL LEGAL ADVICE",
+    "schemaRlsPolicyMutation": "NOT_PERFORMED"
+  },
+  "governanceBoundaries": [
+    "registry_as_operational_memory_not_legal_authority",
+    "unresolved_sources_excluded",
+    "metadata_only_restricted_handling",
+    "human_review_required"
+  ],
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/authenticated-checker.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/deployment-verifier.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/pilot-simulation.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/authenticated-checker.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/deployment-verifier.json",
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-memory/pilot-simulation.json"
+  ],
+  "validationStatus": {
+    "authenticatedChecker": "PASS",
+    "deploymentVerifier": "PASS",
+    "pilotSimulation": "PASS",
+    "featureAlignmentOk": true,
+    "internalPilot": true,
+    "humanOperations": true,
+    "operationalMemory": "PASS"
+  },
+  "rollbackRefs": [
+    "git_revert_operational_memory_commits",
+    "no_runtime_data_mutation"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "knownBlockers": [
+    "232_unresolved_source_issues_excluded",
+    "counsel_signoff_pending",
+    "public_launch_forbidden",
+    "external_legal_operations_forbidden",
+    "persistent_reviewer_assignment_writes_deferred",
+    "operational_memory_complete_pending_review"
+  ],
+  "hardStops": [
+    "secret_exposure_risk",
+    "privileged_content_exposure_risk",
+    "restricted_content_boundary_violation",
+    "schema_rls_policy_mutation_required",
+    "uncontrolled_legal_automation_risk",
+    "registry_would_become_legal_authority"
+  ]
+}

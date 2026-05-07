@@ -1,0 +1,1314 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-05-07T04:18:31.583Z",
+  "sourceRefs": [
+    "fortress-guest-platform/docs/architecture",
+    "fortress-guest-platform/docs/operational",
+    "/home/admin/fortress-legal-production-work/fortress-legal-wiki/wiki"
+  ],
+  "standingLabels": {
+    "counselStatus": "COUNSEL_SIGNOFF_PENDING",
+    "externalSubmissionAuthority": "NOT_AUTHORIZED"
+  },
+  "governanceBoundaries": [
+    "index_paths_titles_categories_only",
+    "no_document_body_text"
+  ],
+  "evidenceRefs": [
+    "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md"
+  ],
+  "validationStatus": {
+    "status": "GENERATED_INDEX_PREVIEW"
+  },
+  "rollbackRefs": [
+    "delete_generated_preview"
+  ],
+  "noSecrets": true,
+  "noConfidentialText": true,
+  "entries": [
+    {
+      "path": "fortress-guest-platform/docs/architecture/ai-assisted-operations-audit-2026-05-06.md",
+      "title": "AI-Assisted Operations Audit - 2026-05-06",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/contradiction-review-model.md",
+      "title": "Fortress Legal Contradiction Review Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/evidence-lineage-model.md",
+      "title": "Evidence Lineage Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/fortress-legal-architecture-index.md",
+      "title": "Fortress Legal Canonical Architecture Index",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/fortress-legal-observability-map.md",
+      "title": "Fortress Legal Observability Map",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/fortress-legal-operational-index.md",
+      "title": "Fortress Legal Canonical Operational Knowledge Index",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/full-platform-capability-audit-2026-05-06.md",
+      "title": "Fortress Legal Full Platform Capability Audit - 2026-05-06",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/governance-enforcement-verification.md",
+      "title": "Fortress Legal Governance Enforcement Verification",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/governance-maturity-audit-2026-05-06.md",
+      "title": "Governance And Operational Maturity Audit - 2026-05-06",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/internal-pilot-workload-model.md",
+      "title": "Fortress Legal Internal Pilot Workload Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/operational-drift-detection-model.md",
+      "title": "Operational Drift Detection Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/operational-feedback-capture-model.md",
+      "title": "Operational Feedback Capture Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/operational-memory-architecture-2026-05-06.md",
+      "title": "Operational Memory Architecture - 2026-05-06",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/pilot-governance-certification-framework.md",
+      "title": "Fortress Legal Pilot Governance Certification Framework",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/queue-aging-sla-model.md",
+      "title": "Fortress Legal Queue Aging and SLA Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/remediation-observability-map.md",
+      "title": "Remediation Observability Map",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/review-analytics-model.md",
+      "title": "Fortress Legal Review Analytics Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/review-escalation-incident-governance.md",
+      "title": "Fortress Legal Review Escalation and Incident Governance",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/review-queue-maturity-model.md",
+      "title": "Fortress Legal Review Queue Maturity Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/review-throughput-instrumentation-model.md",
+      "title": "Fortress Legal Review Throughput Instrumentation Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/reviewer-assignment-framework.md",
+      "title": "Fortress Legal Reviewer Assignment Framework",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/reviewer-onboarding-governance-model.md",
+      "title": "Reviewer Onboarding Governance Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/reviewer-workload-balancing-model.md",
+      "title": "Fortress Legal Reviewer Workload Balancing Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/source-remediation-governance-model.md",
+      "title": "Source Remediation Governance Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/source-remediation-priority-model.md",
+      "title": "Source Remediation Priority Model",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/wiki-knowledge-plane-audit-2026-05-06.md",
+      "title": "Wiki / Knowledge-Plane Audit - 2026-05-06",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/architecture/world-class-future-state-architecture-2026-05-06.md",
+      "title": "World-Class Future-State Architecture - 2026-05-06",
+      "category": "architecture",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/BRAIN-rag-probe-results-2026-04-29.md",
+      "title": "Phase A5 — BRAIN + RAG Probe Results (2026-04-29)",
+      "category": "operational",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/controlled-internal-pilot-execution-plan-2026-05-06.md",
+      "title": "Fortress Legal Controlled Internal Pilot Execution Plan - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/controlled-review-pilot-readiness-2026-05-06.md",
+      "title": "Fortress Legal Controlled Review Pilot Readiness - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/controlled-review-scaling-pilot-readiness-2026-05-06.md",
+      "title": "Fortress Legal Controlled Review Scaling Pilot Readiness - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/deployment-repeatability-plan-2026-05-06.md",
+      "title": "Fortress Legal Deployment Repeatability Plan - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-canonicalization/validation-summary.md",
+      "title": "Fortress Legal Canonicalization Validation Summary",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-capability-audit/summary.md",
+      "title": "Capability And Knowledge-Plane Audit Evidence Summary - 2026-05-06",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-feature-alignment/validation-summary.md",
+      "title": "Fortress Legal Feature Alignment Validation Summary",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-human-operations/summary.md",
+      "title": "Controlled Human Operations Evidence Summary - 2026-05-06",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-internal-pilot/summary.md",
+      "title": "Controlled Internal Pilot Evidence Summary - 2026-05-06",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-internal-reviewer-tabletop/summary.md",
+      "title": "Internal Reviewer Tabletop Evidence Summary - 2026-05-06",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-certification/summary.md",
+      "title": "Operational Certification Validation Evidence",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-operational-hardening/validation-summary.md",
+      "title": "Operational Hardening Validation Summary",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-remediation-maturity/validation-summary.md",
+      "title": "Remediation Maturity Validation Summary",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-operations/summary.md",
+      "title": "Review Operations Maturity Validation Evidence",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/evidence/2026-05-06-review-scaling/summary.md",
+      "title": "Controlled Review Scaling Validation Evidence",
+      "category": "evidence_summary",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/feature-alignment-drift-audit-2026-05-06.md",
+      "title": "Fortress Legal Production Feature Alignment Drift Audit",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/feature-alignment-execution-plan-2026-05-06.md",
+      "title": "Fortress Legal Production Feature Alignment Execution Plan",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/fortress-legal-agent-operating-model.md",
+      "title": "Fortress Legal Agent Operating Model",
+      "category": "operational",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/fortress-legal-operational-runbook-index.md",
+      "title": "Fortress Legal Operational Runbook Index",
+      "category": "operational",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/fortress-legal-repo-drift-inventory-2026-05-06.md",
+      "title": "Fortress Legal Repository Drift Inventory",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/fortress-legal-source-of-truth-consolidation-2026-05-06.md",
+      "title": "Fortress Legal Source Of Truth Consolidation - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/governance-exception-handling-2026-05-06.md",
+      "title": "Governance Exception Handling - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/human-operations-incident-rehearsal-2026-05-06.md",
+      "title": "Human Operations Incident Rehearsal - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/human-operations-maturity-index.md",
+      "title": "Human Operations Maturity Index",
+      "category": "operational",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/human-operations-readiness-audit-2026-05-06.md",
+      "title": "Fortress Legal Human Operations Readiness Audit - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/incident-response-procedures-2026-05-06.md",
+      "title": "Fortress Legal Incident Response Procedures - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/internal-pilot-incident-and-rollback-drill-2026-05-06.md",
+      "title": "Fortress Legal Internal Pilot Incident and Rollback Drill - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/internal-reviewer-tabletop-operational-validation-2026-05-06.md",
+      "title": "Fortress Legal Internal Reviewer Tabletop and Operational Validation - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/operational-readiness-audit-2026-05-06.md",
+      "title": "Fortress Legal Operational Readiness Audit - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/operational-safety-certification-2026-05-06.md",
+      "title": "Fortress Legal Operational Safety Certification - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/production-error-audit-2026-05-06.md",
+      "title": "Fortress Legal Production Error Audit - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/review-system-maturity-plan-2026-05-06.md",
+      "title": "Fortress Legal Review System Maturity Plan - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/review-throughput-audit-2026-05-06.md",
+      "title": "Fortress Legal Review Throughput Audit - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/review-throughput-optimization-report-2026-05-06.md",
+      "title": "Fortress Legal Review Throughput Optimization Report - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/reviewer-navigation-improvements-2026-05-06.md",
+      "title": "Fortress Legal Reviewer Navigation Improvements - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/reviewer-onboarding-governance-2026-05-06.md",
+      "title": "Fortress Legal Reviewer Onboarding Governance - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/reviewer-operations-audit-2026-05-06.md",
+      "title": "Fortress Legal Reviewer Operations Audit - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/rollback-certification-2026-05-06.md",
+      "title": "Fortress Legal Rollback Certification - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/service-health-hardening-2026-05-06.md",
+      "title": "Fortress Legal Service Health Hardening - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/source-remediation-audit-2026-05-06.md",
+      "title": "Fortress Legal Source Remediation Audit - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "fortress-guest-platform/docs/operational/source-remediation-operating-model-2026-05-06.md",
+      "title": "Fortress Legal Source Remediation Operating Model - 2026-05-06",
+      "category": "operational",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/architecture/controlled-pilot-retrieval-architecture.md",
+      "title": "Controlled Pilot Retrieval Architecture",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/architecture/current-app-state.md",
+      "title": "Current App State",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/architecture/first-auth-build-plan.md",
+      "title": "First Auth Build Plan",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/architecture/first-rls-implementation-plan.md",
+      "title": "First RLS Implementation Plan",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/architecture/system-architecture.md",
+      "title": "System Architecture",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/architecture/system-overview.md",
+      "title": "System Overview",
+      "category": "architecture",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-hosted-staging-supabase-rehearsal.md",
+      "title": "Hosted Staging Supabase Rehearsal",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-production-readiness-audit.md",
+      "title": "Production Readiness Audit",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-production-readiness-rerun.md",
+      "title": "Production Readiness Audit Rerun",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-production-supabase-backup-snapshot-evidence.md",
+      "title": "Production Supabase Backup/Snapshot Evidence",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-spark-2-staging-control-plane-rehearsal.md",
+      "title": "Spark-2 Staging Control Plane Rehearsal",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-spark-2-staging-deployment-approval.md",
+      "title": "Spark-2 Staging Deployment Approval",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-spark-2-staging-deployment-attempt.md",
+      "title": "Spark-2 Staging Deployment Attempt",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-spark-2-staging-deployment-evidence-reconciliation.md",
+      "title": "Spark-2 Staging Deployment Evidence Reconciliation",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-04-spark-2-staging-deployment-evidence.md",
+      "title": "Spark-2 Staging Deployment Evidence",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-dependency-advisory-remediation.md",
+      "title": "Dependency Advisory Remediation - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-final-production-readiness-audit.md",
+      "title": "Final Production Readiness Audit - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-production-approval-record.md",
+      "title": "Production Approval Record - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-production-drift-audit.md",
+      "title": "Production Drift Audit - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-production-migration-dry-run.md",
+      "title": "Production Migration Dry-Run - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-production-supabase-migration-verification.md",
+      "title": "Production Supabase Migration Verification - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-spark-2-production-deployment-evidence.md",
+      "title": "Spark-2 Production Deployment Evidence - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-05-synthetic-first-use-dry-run.md",
+      "title": "Synthetic First-Use Dry Run - 2026-05-05",
+      "category": "wiki_audit",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-controlled-activation-adoption.md",
+      "title": "Controlled Activation Adoption - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-controlled-activation-footprint-classification.md",
+      "title": "Controlled Activation Footprint Classification - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-production-retrieval-auditability-observability-foundation.md",
+      "title": "Production Retrieval Auditability and Observability Foundation - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-production-retrieval-persistence-schema-rls.md",
+      "title": "Production Retrieval Persistence Schema/RLS - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-production-verification-env-spark-2.md",
+      "title": "Production Verification Environment - Spark-2 - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-source-of-truth-consolidation.md",
+      "title": "Source-of-Truth Consolidation Audit",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-synthetic-retrieval-audit-lineage-certification.md",
+      "title": "Synthetic Retrieval Audit Lineage Certification - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-synthetic-retrieval-auditability-observability-extension.md",
+      "title": "Synthetic Retrieval Auditability Observability Extension - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-06-synthetic-retrieval-certification.md",
+      "title": "Synthetic Retrieval Certification - 2026-05-06",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-07-counsel-review-governance-consolidation.md",
+      "title": "Counsel Review Governance Consolidation - 2026-05-07",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-07-supervised-agent-counsel-review-ui-acceptance.md",
+      "title": "Supervised Agent Counsel Review UI Acceptance - 2026-05-07",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/2026-05-07-supervised-multi-agent-legal-ops-foundation.md",
+      "title": "Supervised Multi-Agent Legal Operations Foundation - 2026-05-07",
+      "category": "wiki_audit",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/audits/evidence/2026-05-05-first-production-bootstrap-prep-001/README.md",
+      "title": "First Production Bootstrap Prep Evidence 001",
+      "category": "evidence_summary",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/audits/evidence/2026-05-05-first-real-legal-data-pilot-preflight-001/README.md",
+      "title": "First Real Legal-Data Pilot Preflight Evidence 001",
+      "category": "evidence_summary",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-ai-document-generation-foundation.md",
+      "title": "Fortress Legal AI-Assisted Document Generation Foundation Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-attorney-admin-review-workflow.md",
+      "title": "Fortress Legal Attorney/Admin Review Workflow Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-audit-retention-visibility-policy.md",
+      "title": "Fortress Legal Audit Retention And Visibility Policy Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-build-orientation.md",
+      "title": "Fortress Legal Build Orientation",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-client-clarification-requests.md",
+      "title": "Fortress Legal Client Clarification Requests Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-client-intake-mvp.md",
+      "title": "Fortress Legal Client Intake MVP Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-client-portal-read-only.md",
+      "title": "Fortress Legal Client Portal Read-Only Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-database-rls.md",
+      "title": "Fortress Legal Database Authorization And Supabase RLS Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-document-storage-access-control.md",
+      "title": "Fortress Legal Document Storage And Access Control Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-external-interaction-safety-audit.md",
+      "title": "Fortress Legal External Interaction Safety And Audit Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-hosted-staging-supabase-rehearsal.md",
+      "title": "Fortress Legal Hosted Staging Supabase Rehearsal Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-internal-document-metadata-ui.md",
+      "title": "Fortress Legal Internal Document Metadata UI Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-internal-generation-review-ui.md",
+      "title": "Fortress Legal Internal Generation And Review UI Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-internal-workflow-polish.md",
+      "title": "Fortress Legal Internal Workflow Polish Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-matter-access-model.md",
+      "title": "Fortress Legal Matter Access Model Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-operator-experience-reliability-hardening.md",
+      "title": "Fortress Legal Operator Experience And Reliability Hardening Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-organization-membership-hardening.md",
+      "title": "Fortress Legal Organization Membership Hardening Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-production-supabase-target-rollback-planning.md",
+      "title": "Fortress Legal Production Supabase Target And Rollback Planning Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-roles-authorization.md",
+      "title": "Fortress Legal Roles And Authorization Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-spark-2-staging-control-plane-rehearsal.md",
+      "title": "Fortress Legal Spark-2 Staging Control Plane Rehearsal Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/context-packs/fortress-legal-template-driven-generation-flows.md",
+      "title": "Fortress Legal Template-Driven Generation Flows Context Pack",
+      "category": "wiki_context_pack",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-ai-document-generation-foundation.md",
+      "title": "ADR: AI Document Generation Foundation",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-attorney-admin-review-workflow.md",
+      "title": "ADR: Attorney/Admin Review Workflow",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-auth-and-authorization-foundation.md",
+      "title": "ADR: Auth And Authorization Foundation",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-client-clarification-requests.md",
+      "title": "Client Clarification Requests",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-client-intake-mvp.md",
+      "title": "ADR: Client Intake MVP",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-client-portal-read-only.md",
+      "title": "Client Portal Read-Only",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-database-authorization-and-rls.md",
+      "title": "ADR: Database Authorization And Supabase RLS",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-document-storage-access-control.md",
+      "title": "ADR: Document Storage And Access Control",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-external-interaction-safety-and-audit.md",
+      "title": "External Interaction Safety And Audit",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-internal-generation-review-ui.md",
+      "title": "ADR: Internal Generation And Review UI",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-internal-workflow-polish.md",
+      "title": "ADR: Internal Workflow Polish",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-matter-access-foundation.md",
+      "title": "ADR: Matter Access Foundation",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-organization-membership-hardening.md",
+      "title": "ADR: Organization Membership Hardening",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-03-template-driven-generation-flows.md",
+      "title": "ADR: Template-Driven Generation Flows",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-audit-retention-and-visibility-policy.md",
+      "title": "ADR: Audit Retention And Visibility Policy",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-document-export-egress-control.md",
+      "title": "ADR: Document Export And Egress Control",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-document-retention-and-legal-hold-policy.md",
+      "title": "ADR: Document Retention And Legal Hold Policy",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-hosted-staging-supabase-rehearsal.md",
+      "title": "ADR: Hosted Staging Supabase Rehearsal",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-hosted-supabase-bootstrap-reconciliation-gate.md",
+      "title": "ADR: Hosted Supabase Bootstrap And Reconciliation Gate",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-internal-document-metadata-ui.md",
+      "title": "ADR: Internal Document Metadata UI",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-operator-experience-reliability-hardening.md",
+      "title": "ADR: Operator Experience And Reliability Hardening",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-production-supabase-target-and-rollback.md",
+      "title": "Production Supabase Target And Rollback",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-04-spark-2-staging-deployment.md",
+      "title": "Spark-2 Staging Deployment",
+      "category": "wiki_decision",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/decisions/2026-05-06-fortress-prime-canonical-source.md",
+      "title": "Decision: Fortress-Prime Is Canonical Fortress Legal Source",
+      "category": "wiki_decision",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/decisions/2026-05-06-retrieval-audit-event-model.md",
+      "title": "Retrieval Audit Event Model",
+      "category": "wiki_decision",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/entities/document-entity.md",
+      "title": "Document Entity",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/entities/matter-entity.md",
+      "title": "Matter Entity",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/ai-document-generation-foundation-implementation-plan.md",
+      "title": "AI Document Generation Foundation Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/attorney-admin-review-workflow-implementation-plan.md",
+      "title": "Attorney/Admin Review Workflow Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/client-clarification-requests-implementation-plan.md",
+      "title": "Client Clarification Requests Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/client-intake-mvp-implementation-plan.md",
+      "title": "Client Intake MVP Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/client-portal-read-only-implementation-plan.md",
+      "title": "Client Portal Read-Only Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/controlled-dependency-update-plan.md",
+      "title": "Controlled Dependency Update Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/document-storage-access-control-implementation-plan.md",
+      "title": "Document Storage Access Control Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/external-interaction-safety-and-audit-implementation-plan.md",
+      "title": "External Interaction Safety And Audit Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/fortress-legal-canonicalization-plan.md",
+      "title": "Fortress Legal Canonicalization Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/hosted-staging-supabase-rehearsal-implementation-plan.md",
+      "title": "Hosted Staging Supabase Rehearsal Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/hosted-supabase-bootstrap-reconciliation-gate-implementation-plan.md",
+      "title": "Hosted Supabase Bootstrap And Reconciliation Gate Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/internal-document-metadata-ui-implementation-plan.md",
+      "title": "Internal Document Metadata UI Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/internal-generation-review-ui-implementation-plan.md",
+      "title": "Internal Generation And Review UI Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/internal-workflow-polish-implementation-plan.md",
+      "title": "Internal Workflow Polish Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/matter-access-foundation-implementation-plan.md",
+      "title": "Matter Access Foundation Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/operator-experience-reliability-hardening-implementation-plan.md",
+      "title": "Operator Experience And Reliability Hardening Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/organization-membership-hardening-implementation-plan.md",
+      "title": "Organization Membership Hardening Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/production-deployment-governance-plan.md",
+      "title": "Production Deployment Governance Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/production-promotion-from-staged-go-evidence-plan.md",
+      "title": "Production Promotion From Staged GO Evidence Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/production-supabase-target-and-rollback-implementation-plan.md",
+      "title": "Production Supabase Target And Rollback Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/spark-2-staging-deployment-implementation-plan.md",
+      "title": "Spark-2 Staging Deployment Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/implementation-plans/template-driven-generation-flows-implementation-plan.md",
+      "title": "Template-Driven Generation Flows Implementation Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/legal-domain/ai-behavior-boundaries.md",
+      "title": "AI Behavior Boundaries",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/legal-domain/legal-boundaries.md",
+      "title": "Legal Boundaries",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/operations/fortress-legal-llm-wiki-operating-model.md",
+      "title": "Fortress Legal LLM Wiki Operating Model",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/operations/retrieval-observability-failure-model.md",
+      "title": "Retrieval Observability and Failure Model",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/product/mvp-scope.md",
+      "title": "MVP Scope",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/product/product-vision.md",
+      "title": "Product Vision",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/product/users-and-roles.md",
+      "title": "Users And Roles",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/production/production-deployment-governance-plan.md",
+      "title": "Production Deployment Governance Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/production/production-promotion-from-staged-go-evidence-plan.md",
+      "title": "Production Promotion From Staged GO Evidence Plan",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/risks/legal-risk-register.md",
+      "title": "Legal Risk Register",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/risks/risk-register.md",
+      "title": "Risk Register",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-05-first-production-bootstrap-prep.md",
+      "title": "First Production Bootstrap Prep - 2026-05-05",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-05-first-real-legal-data-pilot-prep.md",
+      "title": "First Real Legal-Data Pilot Prep - 2026-05-05",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-06-controlled-activation-next-phase-prep.md",
+      "title": "Controlled Activation Next Phase Prep - 2026-05-06",
+      "category": "wiki_runbook",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-06-controlled-activation-operator-decision-packet.md",
+      "title": "Controlled Activation Operator Decision Packet - 2026-05-06",
+      "category": "wiki_runbook",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-06-controlled-synthetic-production-retrieval-activation-packet.md",
+      "title": "Controlled Synthetic Production Retrieval Activation Packet - 2026-05-06",
+      "category": "wiki_runbook",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-06-first-production-bootstrap-renewal-approval-packet.md",
+      "title": "First Production Bootstrap Renewal Approval Packet - 2026-05-06",
+      "category": "wiki_runbook",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-06-production-retrieval-audit-persistence-schema-approval-packet.md",
+      "title": "Production Retrieval Audit Persistence Schema Approval Packet",
+      "category": "wiki_runbook",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-06-production-retrieval-persistence-renewed-approval-packet.md",
+      "title": "Production Retrieval Persistence Renewed Approval Packet - 2026-05-06",
+      "category": "wiki_runbook",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/runbooks/2026-05-07-production-retrieval-persistence-schema-approval-packet.md",
+      "title": "Production Retrieval Persistence Schema Approval Packet - 2026-05-07",
+      "category": "wiki_runbook",
+      "freshness": "current_or_recent"
+    },
+    {
+      "path": "wiki/runbooks/first-real-legal-data-pilot-packet.md",
+      "title": "First Real Legal-Data Pilot Packet",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/hosted-staging-supabase-target-record.md",
+      "title": "Hosted Staging Supabase Target Record",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/hosted-supabase-rls-verification.md",
+      "title": "Hosted Supabase RLS Verification Runbook",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/post-production-hosted-verification-plan.md",
+      "title": "Post-Production Hosted Verification Plan",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/production-approval-packet.md",
+      "title": "Production Approval Packet",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/production-cleanup-purge-design-packet.md",
+      "title": "Production Cleanup/Purge Design Packet",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/production-human-review-gates.md",
+      "title": "Production Human Review Gates",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/production-retrieval-auditability-gating-runbook.md",
+      "title": "Production Retrieval Auditability Gating Runbook",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/production-rollback-plan.md",
+      "title": "Production Rollback Plan",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/production-secrets-path-confirmation.md",
+      "title": "Production Secrets Path Confirmation",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/production-supabase-target-record.md",
+      "title": "Production Supabase Target Record",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/retrieval-audit-lineage-runbook.md",
+      "title": "Retrieval Audit Lineage Runbook",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/supabase-hosted-environment-setup-checklist.md",
+      "title": "Supabase Hosted Environment Setup Checklist",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/runbooks/synthetic-retrieval-certification-runbook.md",
+      "title": "Synthetic Retrieval Certification Runbook",
+      "category": "wiki_runbook",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/templates/retrieval-certification-report-template.md",
+      "title": "Retrieval Certification Report Template",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/testing/testing-strategy.md",
+      "title": "Testing Strategy",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/workflows/README.md",
+      "title": "Workflows",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    },
+    {
+      "path": "wiki/workflows/client-intake-workflow.md",
+      "title": "Client Intake Workflow",
+      "category": "knowledge",
+      "freshness": "historical_or_needs_review"
+    }
+  ]
+}
