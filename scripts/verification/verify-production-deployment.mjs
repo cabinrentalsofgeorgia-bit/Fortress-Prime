@@ -91,6 +91,10 @@ const checks = {
       401,
       403,
     ]),
+    await probe("/api/internal/legal/cases/fortress-legal-production-review/remediation-maturity", [
+      401,
+      403,
+    ]),
   ],
   services: [
     systemdActive("crog-ai-frontend.service"),

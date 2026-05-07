@@ -1,0 +1,2 @@
+frontend_rollback=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next.rollback-20260506-220600-remediation-maturity
+backend_rollback=/home/admin/Fortress-Prime-runtime-main-20260504/remediation-maturity-backend-rollback-20260506-220600-remediation-maturity

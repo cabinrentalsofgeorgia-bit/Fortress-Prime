@@ -1,0 +1,14 @@
+execution=fortress-remediation-maturity-20260506-220600-remediation-maturity
+source_commit=0ab9381c1f3022df1b9b4bdf1364df606c9d16c2
+frontend_source=/home/admin/Fortress-Prime-remediation-maturity/fortress-guest-platform/apps/command-center/.next
+frontend_runtime=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next
+frontend_rollback=/home/admin/Fortress-Prime/fortress-guest-platform/apps/command-center/.next.rollback-20260506-220600-remediation-maturity
+backend_source=/home/admin/Fortress-Prime-remediation-maturity/fortress-guest-platform
+backend_runtime=/home/admin/Fortress-Prime-runtime-main-20260504/fortress-guest-platform
+backend_rollback=/home/admin/Fortress-Prime-runtime-main-20260504/remediation-maturity-backend-rollback-20260506-220600-remediation-maturity
+raw_document_upload=NOT_PERFORMED
+ingest=NOT_PERFORMED
+vectors=NOT_PERFORMED
+schema_rls_policy_mutation=NOT_PERFORMED
+signoff=NOT_PERFORMED
+external_submission=NOT_AUTHORIZED
