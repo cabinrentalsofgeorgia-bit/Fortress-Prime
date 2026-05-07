@@ -185,7 +185,12 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
             "dryRunTraceCount": len(valid_all_traces),
             "dryRunReplayCount": len(valid_all_replays),
             "dryRunHardStopCount": len(
-                [trace for trace in valid_all_traces if trace.get("status") == "hard_stop"]
+                [
+                    trace
+                    for trace in valid_all_traces
+                    if trace.get("status") in {"hard_stop", "DRY_RUN_BLOCKED"}
+                    or trace.get("hardStopsTriggered")
+                ]
             ),
         },
         "registries": registries,
@@ -285,7 +290,12 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
                 "traceCount": len(valid_all_traces),
                 "replayCount": len(valid_all_replays),
                 "hardStopCount": len(
-                    [trace for trace in valid_all_traces if trace.get("status") == "hard_stop"]
+                    [
+                        trace
+                        for trace in valid_all_traces
+                        if trace.get("status") in {"hard_stop", "DRY_RUN_BLOCKED"}
+                        or trace.get("hardStopsTriggered")
+                    ]
                 ),
                 "blockedActionCount": sum(len(trace.get("blockedActions", [])) for trace in valid_all_traces),
                 "validationGatePassCount": sum(
@@ -311,7 +321,9 @@ def load_operational_memory(slug: str) -> dict[str, Any] | None:
                 {
                     "replayId": replay.get("replayId"),
                     "dryRunId": replay.get("dryRunId"),
-                    "ok": replay.get("replayValidation", {}).get("ok"),
+                    "ok": replay.get("replayValidation", {}).get("ok")
+                    if "replayValidation" in replay
+                    else replay.get("status") == "REPLAY_VALIDATED",
                     "governancePreserved": replay.get("governanceAssertions", {}).get("noLegalAuthority"),
                 }
                 for replay in latest_replays
